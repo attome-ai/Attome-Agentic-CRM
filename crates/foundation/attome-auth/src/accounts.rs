@@ -1178,9 +1178,7 @@ mod tests {
         let result =
             verify_google_id_token_at(&unconnected_pool(), &issuer, "client-id", &credential).await;
 
-        let err = result
-            .err()
-            .expect("a connection closed mid-exchange must fail");
+        let err = result.expect_err("a connection closed mid-exchange must fail");
         assert_no_credential_in(&err, &logs, &credential);
         assert_credential_absent_from(&server.await.unwrap(), &credential);
     }
@@ -1202,7 +1200,7 @@ mod tests {
         let result =
             verify_google_id_token_at(&unconnected_pool(), &issuer, "client-id", &credential).await;
 
-        let err = result.err().expect("an undecodable body must fail");
+        let err = result.expect_err("an undecodable body must fail");
         assert_no_credential_in(&err, &logs, &credential);
         assert_credential_absent_from(&server.await.unwrap(), &credential);
     }

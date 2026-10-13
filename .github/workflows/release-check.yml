@@ -62,7 +62,20 @@ jobs:
       # compiler and clippy messages into annotations on the run.
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: attome release --check
-        run: cargo run -p attome -- release --check
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo run -p attome -- release --check 2>&1 | tee release-check.log
+      # GitHub shows at most 10 error annotations per step, so the full list of
+      # failures goes into one annotation: errors, their locations, and failed
+      # tests, readable through the public checks API.
+      - name: summarize failures
+        if: failure()
+        shell: bash
+        run: |
+          grep -E '^(error|warning)(\[|:)|^ *--> |^---- .* stdout ----|panicked at|^test .* FAILED|^Diff in' release-check.log | head -400 > failures.txt || true
+          body=$(sed -e 's/%/%25/g' failures.txt | awk '{printf "%s%%0A", $0}')
+          echo "::error title=release check failures::${body}"
 
   windows:
     name: release check (windows)
@@ -72,4 +85,17 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: attome release --check
-        run: cargo run -p attome -- release --check
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo run -p attome -- release --check 2>&1 | tee release-check.log
+      # GitHub shows at most 10 error annotations per step, so the full list of
+      # failures goes into one annotation: errors, their locations, and failed
+      # tests, readable through the public checks API.
+      - name: summarize failures
+        if: failure()
+        shell: bash
+        run: |
+          grep -E '^(error|warning)(\[|:)|^ *--> |^---- .* stdout ----|panicked at|^test .* FAILED|^Diff in' release-check.log | head -400 > failures.txt || true
+          body=$(sed -e 's/%/%25/g' failures.txt | awk '{printf "%s%%0A", $0}')
+          echo "::error title=release check failures::${body}"
