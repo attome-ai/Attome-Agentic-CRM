@@ -111,7 +111,7 @@ fn test_config(direct_url: &str) -> AppConfig {
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
         direct_url = direct_url,
     );
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 // `attome_db::create_pool` reads `DATABASE_URL`/`APP_ENV` synchronously; this

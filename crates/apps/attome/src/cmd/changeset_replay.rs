@@ -913,7 +913,7 @@ mod tests {
     #[test]
     fn the_fixture_changesets_check_and_order() {
         let root =
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts/changesets/fixtures/valid");
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../scripts/changesets/fixtures/valid");
         let docs = ordered_documents(&[root]).expect("the valid fixtures check and order");
         assert!(!docs.is_empty());
     }

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:42c9cc912b4ccf6e77d275ab7b8f73bc43daba220d18a082b0e289ed80eac1ec",
+  "checksum": "sha256:5f1fc5ac5881feeb3dee7a59969d5488c47f3b39bec07f9a493bed7bf9c4f96f",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-glossary.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

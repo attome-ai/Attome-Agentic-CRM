@@ -136,7 +136,7 @@ fn test_config(replica_max_lag_secs: Option<u64>) -> AppConfig {
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
     );
 
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), false)
 }
 
 /// Builds a real `AppState` with a genuine primary/replica pair, same shape

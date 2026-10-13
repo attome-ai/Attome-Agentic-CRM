@@ -379,7 +379,7 @@ fn test_config(direct_url: &str, model_base_url: &str, ai_enabled: bool) -> AppC
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
         ai_enabled = ai_enabled,
     );
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 static ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());

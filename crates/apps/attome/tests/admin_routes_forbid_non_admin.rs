@@ -125,7 +125,7 @@ fn test_config() -> AppConfig {
         pepper = THROWAWAY_PEPPER,
         allowed_origin = ALLOWED_ORIGIN,
     );
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 async fn test_app(config: AppConfig) -> Option<(axum::Router, AppState)> {

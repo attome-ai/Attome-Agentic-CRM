@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:e92b52c8d3aef4f93b2636565b78c11bebedfe977651c5bd7c8eac2c9ffe524d",
+  "checksum": "sha256:db4a742f3a002fe0b6df6d8c2a0210548c93d8c033abab71769788bd8caf1109",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-compliance-legal-matter.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

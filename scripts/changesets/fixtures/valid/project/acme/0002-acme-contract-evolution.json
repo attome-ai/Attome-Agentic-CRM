@@ -1,6 +1,6 @@
 {
   "author": "dev@attome.local",
-  "checksum": "sha256:8d03d7364881ed933a3925e5d12e93a9c9b50fce5de931cdb3315f0673d7df77",
+  "checksum": "sha256:0763674fc4a69e557f80188c5babab991670f106623490d6989bc85b5279b481",
   "closed_at": "2026-09-30T09:30:00Z",
   "description": "Phase 2 example (D-788): renames the renewal date in place, converts the free-text contract value to currency in place, adds and removes status choices, sets the list view columns, seeds a contract type by business key, and deletes a legacy field.",
   "format": "attome-changeset/v1",

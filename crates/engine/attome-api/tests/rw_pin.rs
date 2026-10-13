@@ -137,7 +137,7 @@ fn test_config(sticky_primary_ttl_secs: u64, replica_max_lag_secs: u64) -> AppCo
         jwt_secret = THROWAWAY_JWT_SECRET,
     );
 
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 async fn test_system(

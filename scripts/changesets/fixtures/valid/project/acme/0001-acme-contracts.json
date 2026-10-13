@@ -1,6 +1,6 @@
 {
   "author": "dev@attome.local",
-  "checksum": "sha256:3c4a3376a891685744625765a39dc9b5df216b81f2da76a7eaffa6c09779e526",
+  "checksum": "sha256:d94fb2394f9fc6d208e93735488e2a45afda45716df78e3550fff477766ff44c",
   "closed_at": "2026-09-29T10:20:00Z",
   "description": "Adds a renewal date to contracts for Acme, names it in Arabic, and retires the old free-text renewal note.",
   "format": "attome-changeset/v1",

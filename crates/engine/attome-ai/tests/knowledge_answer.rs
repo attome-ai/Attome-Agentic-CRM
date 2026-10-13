@@ -160,7 +160,7 @@ fn test_config(direct_url: &str, base_url: &str, model: &str) -> AppConfig {
         direct_url = direct_url,
     );
     let mut config: AppConfig =
-        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig");
+        attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true);
     config.inference.generation.base_url = base_url.to_owned();
     config.inference.generation.model = model.to_owned();
     config.inference.generation.request_timeout_secs = 10;

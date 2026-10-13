@@ -129,7 +129,7 @@ fn test_config(direct_url: &str, ai_on: bool) -> AppConfig {
         direct_url = direct_url,
         ai_on = ai_on,
     );
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 // SAFETY: see `attome-workflow/tests/execution.rs`'s identical `ENV_LOCK` doc

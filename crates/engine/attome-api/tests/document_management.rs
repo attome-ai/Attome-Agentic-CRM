@@ -135,7 +135,7 @@ fn test_config() -> AppConfig {
         bucket = s3_bucket(),
     );
 
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 async fn test_system() -> Option<EngineSystem> {

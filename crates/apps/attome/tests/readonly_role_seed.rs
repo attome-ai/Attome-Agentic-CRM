@@ -90,7 +90,7 @@ fn test_config(readonly_password: Option<&str>) -> AppConfig {
         readonly_block = readonly_block,
     );
 
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 /// `None` when there is no throwaway database configured — unwrap with

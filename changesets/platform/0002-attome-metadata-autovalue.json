@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:d95f22527f217449505fdefceae4c47bd0bf2e3f0e4e2343542aa8f3551a999b",
+  "checksum": "sha256:19e4f74d79b4255dc077f9a4966bba901de851cc0e59dc7c7917ab690d9166ab",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-metadata-autovalue.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

@@ -105,7 +105,7 @@ fn test_config() -> AppConfig {
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6380".into()),
     );
 
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 async fn insert_state_model(db: &DbPool, entity_logicalname: &str) {

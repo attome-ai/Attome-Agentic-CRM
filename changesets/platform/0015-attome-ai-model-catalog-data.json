@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:95b2b818382e9723aa79f6f89171239e25972e3f721f3c42f4336a727bc7aba2",
+  "checksum": "sha256:10a08ae70dda6ac90c7e05a952a97ffaecba29bb10ad324e96934348ddff8840",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-model-catalog-data.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

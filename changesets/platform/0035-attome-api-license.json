@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:d9a05707bdc6aee383635018b51519e4c744ed686adce4f79fed9a4c5f672d54",
+  "checksum": "sha256:d62e4abf00b01eddbbe6b755d506005f289849f393b053b3d40d5c73748a7ae1",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-license.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

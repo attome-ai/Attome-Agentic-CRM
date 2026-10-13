@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:10955495edfca732606ea63f28aeb8186b43bc68348728028c3a209f9d892254",
+  "checksum": "sha256:8eeec0d8fd82a6f0206c6654774fedac6b1045770e931c048d85b8a5b27a84a2",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-search-saved-search.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

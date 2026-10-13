@@ -533,6 +533,27 @@ pub fn point_config_at(config: &mut attome_config::AppConfig, url: &str) {
     config.database.dbname = parts.dbname;
 }
 
+/// `config` pointed at this process's throwaway database: the migrated one
+/// when `migrated` is true, the bare one otherwise. Left unchanged when no
+/// test database is configured, so the caller's skip path still works. A
+/// test's config builder ends with this, so every pool built from it reaches
+/// the throwaway database whatever `APP_ENV` is.
+#[cfg(feature = "app-config")]
+pub fn with_test_database(
+    mut config: attome_config::AppConfig,
+    migrated: bool,
+) -> attome_config::AppConfig {
+    let url = if migrated {
+        migrated_db_url()
+    } else {
+        test_db_url()
+    };
+    if let Some(url) = url {
+        point_config_at(&mut config, &url);
+    }
+    config
+}
+
 /// One multi-threaded runtime shared by every test in a binary that uses
 /// [`run_shared`]: pools built in one test stay usable in the next, which a
 /// per-test `#[tokio::test]` runtime would kill on exit.

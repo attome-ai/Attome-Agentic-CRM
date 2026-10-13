@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:47b48686174a3d4517934c55c9d8f22fa739839b52896cfd454a882ba6370f29",
+  "checksum": "sha256:9b7488de212ba3293187507d5f0b504f1aabd24d8845b84f0ca3a9def3eae693",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-security.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

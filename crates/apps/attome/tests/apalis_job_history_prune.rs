@@ -77,7 +77,7 @@ fn test_config() -> AppConfig {
         "security": { "bootstrap_admin_email": null },
         "jobs": { "history_retention_days": 7, "dead_letter_retention_days": 30 }
     }"#;
-    serde_json::from_str(json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 async fn test_pool() -> Option<attome_db::DbPool> {

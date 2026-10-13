@@ -104,7 +104,7 @@ fn test_config() -> AppConfig {
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
         jwt_secret = THROWAWAY_JWT_SECRET,
     );
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 /// A pool whose every connection acts as `role` for privilege checks and

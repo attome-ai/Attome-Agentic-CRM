@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:9ef98e87fe68e25242af15986bac1b334385bc5eb64f248440af1071bfe3fc7a",
+  "checksum": "sha256:b894837ca0e42918a9f5fbef31cf1438aef14e4f13b1662dce6b428c4b075de9",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-capability-pack.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:d42ccc4dd19d691d1c7b8db241b567dd1346d53b1dd0d8cdf2c6a7aa393adff5",
+  "checksum": "sha256:0f0eb608c5bbe13043c52c0473a985c2b738f3570ed87a2f1d11d8a026b1b1fc",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-grc.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

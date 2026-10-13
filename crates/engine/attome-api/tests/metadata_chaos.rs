@@ -118,7 +118,7 @@ fn test_config() -> AppConfig {
         jwt_secret = THROWAWAY_JWT_SECRET,
     );
 
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 /// One independent "node" — its own registry, subscriber and watermark

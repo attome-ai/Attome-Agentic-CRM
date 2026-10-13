@@ -1,6 +1,6 @@
 {
   "author": "dev@attome.local",
-  "checksum": "sha256:6f221a380f8ec7ab3714b2210417be6b9055a4cfa1b5f912930d468853df9ba7",
+  "checksum": "sha256:33bf590a327b275250efd035255ce0ae353c6b3f81e860e80b08f965a25b4623",
   "closed_at": "2026-09-29T09:30:00Z",
   "description": "Adds a priority to service tickets, a triage view sorted by it, access for the Service Desk Agent role, and the Hardware category.",
   "format": "attome-changeset/v1",

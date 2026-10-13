@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:b60523c1118d1f52aaae6021637cde73447a22366b8e7168da2bdc8650902689",
+  "checksum": "sha256:018f644528cea3a070472de60be3d6e8958510ae18234b3cb306ec4d498949e4",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-communication-event.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

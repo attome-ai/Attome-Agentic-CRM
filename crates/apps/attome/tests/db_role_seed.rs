@@ -98,7 +98,7 @@ fn test_config(migrator_password: Option<&str>, runtime_password: Option<&str>) 
         runtime_block = runtime_block,
     );
 
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 /// `None` when there is no throwaway database configured — unwrap with

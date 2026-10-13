@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:e72635141e75082a5bedc505b80637e77d739347244878a40b51a0f6e8c52c2b",
+  "checksum": "sha256:aef38f3c7f3d3b66ae14a138ba3fc2eae20a1ef2095e56079abc64d32eacdac4",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-profiler-finding.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:634e6461c7aea26bf110cb9d490851493d23ef7068f32b6ed350554ac02027e7",
+  "checksum": "sha256:fbd38868cea51f71778e22bf8fd2811f3261950ef265dd46560903865597bc8b",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/xrm-reminder.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

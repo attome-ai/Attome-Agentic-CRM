@@ -136,7 +136,7 @@ fn test_config(chainer_enabled: bool) -> AppConfig {
         chainer_enabled = chainer_enabled,
     );
 
-    serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
+    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
 }
 
 async fn test_system(chainer_enabled: bool) -> Option<EngineSystem> {

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:531fb6b863d9a25d04092cb1f0571567e2140207cdf112e34df8bdb02a51336e",
+  "checksum": "sha256:61b53f80e95aec97c563f42ae3490a30747874d4ff517be3d69df935dbc94e1b",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/xrm-core-authentication-type-data.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

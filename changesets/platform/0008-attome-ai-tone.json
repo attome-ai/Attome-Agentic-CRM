@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:3eef9acf73f56471ac95e0207d60bd11d9a466177006e41343acb5f1077ad9ec",
+  "checksum": "sha256:d5250fcea37d06daabe253e72d231f5be0638b035e90d0250fcaa748ea1861f9",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-tone.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",

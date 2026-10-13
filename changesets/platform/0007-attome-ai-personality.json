@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:ceb8e2702d4af4d3b74d2d16afea6c84f8f3f0152d04f3cb8f1e0d6768ff1ab5",
+  "checksum": "sha256:87166bec0e1962dcdba659e798a2e6709fca4027e65e76038d26bc2ee140723f",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-personality.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
