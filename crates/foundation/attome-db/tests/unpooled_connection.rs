@@ -23,6 +23,11 @@
 //! cargo test -p attome-db --test unpooled_connection
 //! ```
 
+#![allow(
+    unsafe_code,
+    reason = "`NonDebugAppEnv` sets APP_ENV for one test and restores it on drop"
+)]
+
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 

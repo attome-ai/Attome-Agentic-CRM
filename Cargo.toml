@@ -5,6 +5,7 @@ members = [
     "crates/foundation/attome-config",
     "crates/foundation/attome-testkit",
     "crates/foundation/attome-db",
+    "crates/foundation/attome-cache",
     "crates/sdk/attome-sdk",
     "crates/apps/attome",
 ]
@@ -28,12 +29,17 @@ attome-types   = { path = "crates/foundation/attome-types" }
 attome-config  = { path = "crates/foundation/attome-config" }
 attome-testkit = { path = "crates/foundation/attome-testkit" }
 attome-db      = { path = "crates/foundation/attome-db" }
+attome-cache   = { path = "crates/foundation/attome-cache" }
 attome-sdk     = { path = "crates/sdk/attome-sdk" }
 
 # External crates
+arc-swap      = "1"
 axum          = { version = "0.8", features = ["macros"] }
 chrono        = { version = "0.4", features = ["serde"] }
 dotenvy       = "0.15"
+fred          = { version = "9", features = ["subscriber-client", "enable-rustls", "i-scripts", "i-streams", "sentinel-auth"] }
+metrics       = "0.24"
+moka          = { version = "0.12", features = ["future"] }
 opentelemetry = "0.32"
 serde         = { version = "1", features = ["derive"] }
 serde_ignored = "0.1"

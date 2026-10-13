@@ -133,9 +133,12 @@ async fn a_waiting_migrator_is_bounded_by_the_peer_budget_not_the_table_lock_bud
 
     // Scenario 1: a budget below one lock_timeout window.
     let started = Instant::now();
-    let outcome =
-        attome_db::run_migrations_with_migrator_lock_budget(&pool, &MIGRATOR, Duration::from_secs(1))
-            .await;
+    let outcome = attome_db::run_migrations_with_migrator_lock_budget(
+        &pool,
+        &MIGRATOR,
+        Duration::from_secs(1),
+    )
+    .await;
     let elapsed = started.elapsed();
     match &outcome {
         Err(MigrateError::Execute(source)) => assert_eq!(

@@ -1,3 +1,13 @@
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true
 allow-print-in-tests  = true
+
+# `Pool::begin` is disallowed everywhere except `attome_db::tx::begin`, which
+# maps pool exhaustion (acquire timeout, closed pool) to `AppError::Overloaded`,
+# a 503, instead of a masked 500. Each documented exception carries
+# `#[expect(clippy::disallowed_methods, reason = "...")]`; integration tests
+# that open transactions directly carry a file-level `allow`. The path must be
+# sqlx's defining path; the `sqlx::Pool::begin` re-export does not match.
+disallowed-methods = [
+    { path = "sqlx_core::pool::Pool::begin", reason = "use attome_db::tx::begin, which maps pool exhaustion to AppError::Overloaded (503)" },
+]

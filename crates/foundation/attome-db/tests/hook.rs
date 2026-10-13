@@ -114,7 +114,9 @@ async fn chain_order_rollback_and_no_hook() {
     let first = RecordingHook { name: "first" };
     let second = RecordingHook { name: "second" };
     let chain = Chain(&first, &second);
-    let mut tx = attome_db::tx::begin(&pool).await.expect("begin the mutation");
+    let mut tx = attome_db::tx::begin(&pool)
+        .await
+        .expect("begin the mutation");
     sqlx::query("INSERT INTO hook_probe (id) VALUES (1)")
         .execute(&mut *tx)
         .await
@@ -123,7 +125,9 @@ async fn chain_order_rollback_and_no_hook() {
         .before_commit(&mut tx, &Probe { id: 1 })
         .await
         .expect("both hooks must succeed");
-    attome_db::tx::commit(tx).await.expect("commit the mutation");
+    attome_db::tx::commit(tx)
+        .await
+        .expect("commit the mutation");
     let order: Vec<String> = sqlx::query_scalar("SELECT hook FROM hook_probe_order ORDER BY seq")
         .fetch_all(&pool)
         .await
@@ -146,7 +150,9 @@ async fn chain_order_rollback_and_no_hook() {
     };
     let failing = FailingHook { name: "failing" };
     let chain = Chain(&first, &failing);
-    let mut tx = attome_db::tx::begin(&pool).await.expect("begin the mutation");
+    let mut tx = attome_db::tx::begin(&pool)
+        .await
+        .expect("begin the mutation");
     sqlx::query("INSERT INTO hook_probe (id) VALUES (2)")
         .execute(&mut *tx)
         .await
@@ -169,7 +175,9 @@ async fn chain_order_rollback_and_no_hook() {
     );
 
     // 3. NoHook leaves the mutation exactly as it was.
-    let mut tx = attome_db::tx::begin(&pool).await.expect("begin the mutation");
+    let mut tx = attome_db::tx::begin(&pool)
+        .await
+        .expect("begin the mutation");
     sqlx::query("INSERT INTO hook_probe (id) VALUES (3)")
         .execute(&mut *tx)
         .await
@@ -178,7 +186,9 @@ async fn chain_order_rollback_and_no_hook() {
         .before_commit(&mut tx, &Probe { id: 3 })
         .await
         .expect("NoHook never fails");
-    attome_db::tx::commit(tx).await.expect("commit the mutation");
+    attome_db::tx::commit(tx)
+        .await
+        .expect("commit the mutation");
     assert_eq!(
         count_probe(&pool, 3).await,
         1,

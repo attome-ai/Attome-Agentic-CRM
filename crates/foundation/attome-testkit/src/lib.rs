@@ -13,6 +13,10 @@
 //! does, next to its Postgres service), a missing database is a failure
 //! instead: there it means the wiring broke.
 //!
+//! **Redis too.** [`test_redis`] and [`skip_if_no_redis!`] do the same for
+//! tests that need Redis or Dragonfly, from `TEST_REDIS_HOST`/`TEST_REDIS_PORT`,
+//! with [`REQUIRE_REDIS_ENV`] as the switch that makes a skip a failure.
+//!
 //! **Never a real database.** The URL's database name must not look like a
 //! development or production database; [`test_db_url`] refuses names
 //! containing `dev`, `prod` or `live`.
@@ -82,9 +86,13 @@ fn provision() -> Result<Option<String>, String> {
         return Ok(None);
     };
 
-    let mut url = url::Url::parse(&base).map_err(|error| format!("DATABASE_URL is not a URL: {error}"))?;
+    let mut url =
+        url::Url::parse(&base).map_err(|error| format!("DATABASE_URL is not a URL: {error}"))?;
     let current = url.path().trim_start_matches('/').to_ascii_lowercase();
-    if let Some(part) = FORBIDDEN_NAME_PARTS.iter().find(|part| current.contains(*part)) {
+    if let Some(part) = FORBIDDEN_NAME_PARTS
+        .iter()
+        .find(|part| current.contains(*part))
+    {
         return Err(format!(
             "refusing DATABASE_URL: its database name `{current}` contains `{part}`; point it at a \
              throwaway server database such as `postgres`"
@@ -127,7 +135,9 @@ fn create_database(admin_url: &str, name: &str) -> Result<(), String> {
             .execute(&mut conn)
             .await
             .map_err(|error| format!("CREATE DATABASE {name}: {error}"))?;
-        conn.close().await.map_err(|error| format!("close: {error}"))?;
+        conn.close()
+            .await
+            .map_err(|error| format!("close: {error}"))?;
         Ok(())
     })
 }
@@ -177,6 +187,62 @@ macro_rules! skip_if_no_db {
                     module_path!(),
                     line!(),
                     $crate::skip_remedy(),
+                );
+                return;
+            }
+        }
+    };
+}
+
+/// Set this to turn a missing test Redis into a failure.
+pub const REQUIRE_REDIS_ENV: &str = "ATTOME_TEST_REQUIRE_REDIS";
+
+/// The test Redis (or Dragonfly) as `(host, port)`, from `TEST_REDIS_HOST` and
+/// `TEST_REDIS_PORT` (defaults `127.0.0.1` and `6379` when only one is set),
+/// or `None` when neither is set. Panics when [`REQUIRE_REDIS_ENV`] is set
+/// but no Redis is configured, or the port is not a number.
+pub fn test_redis() -> Option<(String, u16)> {
+    let read = |name: &str| {
+        std::env::var(name)
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+    };
+    let host = read("TEST_REDIS_HOST");
+    let port = read("TEST_REDIS_PORT");
+    if host.is_none() && port.is_none() {
+        assert!(
+            std::env::var_os(REQUIRE_REDIS_ENV).is_none(),
+            "attome-testkit: TEST_REDIS_HOST/TEST_REDIS_PORT are not set, and \
+             {REQUIRE_REDIS_ENV} requires a test Redis"
+        );
+        return None;
+    }
+    let port = port
+        .map_or(Ok(6379), |port| port.parse::<u16>())
+        .unwrap_or_else(|error| {
+            panic!("attome-testkit: TEST_REDIS_PORT is not a port number: {error}")
+        });
+    Some((host.unwrap_or_else(|| "127.0.0.1".to_owned()), port))
+}
+
+/// Unwraps an `Option`, or prints why it is skipping because no test Redis is
+/// configured and returns from the calling test.
+///
+/// ```ignore
+/// let pool = skip_if_no_redis!(test_pool().await);
+/// ```
+#[macro_export]
+macro_rules! skip_if_no_redis {
+    ($opt:expr) => {
+        match $opt {
+            Some(value) => value,
+            None => {
+                eprintln!(
+                    "SKIP {}:{}: set TEST_REDIS_HOST/TEST_REDIS_PORT to a throwaway Redis to run \
+                     this; set {}=1 to make a skip here a failure",
+                    module_path!(),
+                    line!(),
+                    $crate::REQUIRE_REDIS_ENV,
                 );
                 return;
             }
