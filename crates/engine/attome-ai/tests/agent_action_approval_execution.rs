@@ -129,7 +129,10 @@ fn test_config(direct_url: &str, ai_on: bool) -> AppConfig {
         direct_url = direct_url,
         ai_on = ai_on,
     );
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 // SAFETY: see `attome-workflow/tests/execution.rs`'s identical `ENV_LOCK` doc
@@ -185,7 +188,7 @@ async fn test_state(ai_on: bool) -> Option<EngineState> {
 
 async fn seed_user(db: &attome_db::DbPool) -> Uuid {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("agent-action-approval-test-{user_id}"))
         .execute(db)

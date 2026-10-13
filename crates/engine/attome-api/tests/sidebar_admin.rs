@@ -216,7 +216,7 @@ fn session_cookie(user_id: Uuid) -> String {
 async fn seed_user(system: &EngineSystem, admin: bool) -> (Uuid, String) {
     let db = &system.state().base.db;
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("sidebar-admin-test-{user_id}"))
         .execute(db)

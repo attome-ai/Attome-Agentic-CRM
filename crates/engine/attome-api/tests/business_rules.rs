@@ -284,7 +284,7 @@ enum Auth {
 async fn seed_admin(system: &TestSystem) -> (Uuid, Auth) {
     let db = &system.state().base.db;
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("business-rules-test-admin-{user_id}"))
         .execute(db)
@@ -357,7 +357,7 @@ async fn create_role_with_privileges(system: &TestSystem, entity: &str, actions:
 async fn seed_role_user(system: &TestSystem, entity: &str) -> (Uuid, Auth, Uuid) {
     let db = &system.state().base.db;
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("business-rules-test-user-{user_id}"))
         .execute(db)

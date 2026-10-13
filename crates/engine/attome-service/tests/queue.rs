@@ -80,7 +80,10 @@ fn test_config() -> AppConfig {
         redis_host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "localhost".into()),
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
     );
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 /// Same env-var-mutation serialization `tests/clock.rs` documents
@@ -142,7 +145,7 @@ async fn ensure_seeded(db: &DbPool) {
 
 async fn insert_systemuser(db: &DbPool) -> Uuid {
     let id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(id)
         .bind(format!("queue-test-{id}"))
         .execute(db)

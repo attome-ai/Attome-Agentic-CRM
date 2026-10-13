@@ -144,7 +144,10 @@ fn test_config(direct_url: &str) -> AppConfig {
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
         direct_url = direct_url,
     );
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 // SAFETY: see `attome-workflow/tests/execution.rs`'s identical `ENV_LOCK` doc
@@ -365,7 +368,7 @@ async fn seed_agent_entities(state: &EngineState) {
 
 async fn seed_user(db: &DbPool) -> Uuid {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("agent-session-governance-{user_id}"))
         .execute(db)

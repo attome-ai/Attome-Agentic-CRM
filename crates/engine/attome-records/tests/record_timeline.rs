@@ -111,7 +111,10 @@ fn test_config(direct_url: &str) -> AppConfig {
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
         direct_url = direct_url,
     );
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 // `attome_db::create_pool` reads `DATABASE_URL`/`APP_ENV` synchronously; this
@@ -429,7 +432,7 @@ async fn entity_id(db: &DbPool, logicalname: &str) -> Uuid {
 
 async fn insert_user(db: &DbPool) -> Uuid {
     let id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(id)
         .bind(format!("timeline-test-{id}"))
         .execute(db)

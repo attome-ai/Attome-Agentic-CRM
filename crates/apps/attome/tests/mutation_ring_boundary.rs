@@ -77,8 +77,8 @@ fn workspace_root() -> PathBuf {
     // CARGO_MANIFEST_DIR is crates/server; the workspace root is two up.
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
-        .nth(2)
-        .expect("workspace root is two levels above crates/server")
+        .nth(3)
+        .expect("workspace root is three levels above crates/apps/attome")
         .to_path_buf()
 }
 

@@ -67,8 +67,8 @@ async fn seed_org(db: &DbPool, parent: Option<Uuid>) -> Uuid {
 async fn seed_user(db: &DbPool, home_org: Option<Uuid>) -> Uuid {
     let id = Uuid::now_v7();
     sqlx::query(
-        "INSERT INTO user_account (id, user_name, organization_ref, is_active) \
-         VALUES ($1, $2, $3, true)",
+        "INSERT INTO user_account (id, user_name, email, organization_ref, is_active) \
+         VALUES ($1, $2, $2 || '@test.invalid', $3, true)",
     )
     .bind(id)
     .bind(format!("test-user-{id}"))

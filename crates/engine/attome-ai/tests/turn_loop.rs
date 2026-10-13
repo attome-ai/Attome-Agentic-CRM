@@ -379,7 +379,10 @@ fn test_config(direct_url: &str, model_base_url: &str, ai_enabled: bool) -> AppC
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
         ai_enabled = ai_enabled,
     );
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 static ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -435,7 +438,7 @@ async fn test_state_inner(model_base_url: &str, ai_enabled: bool) -> Option<Engi
 
 async fn seed_user(db: &attome_db::DbPool) -> Uuid {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(attome_testkit::unique("turnloop"))
         .execute(db)

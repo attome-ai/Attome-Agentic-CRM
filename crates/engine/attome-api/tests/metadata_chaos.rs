@@ -118,7 +118,10 @@ fn test_config() -> AppConfig {
         jwt_secret = THROWAWAY_JWT_SECRET,
     );
 
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 /// One independent "node" — its own registry, subscriber and watermark
@@ -193,7 +196,7 @@ fn full_app(system: EngineSystem) -> axum::Router {
 async fn seed_admin(system: &EngineSystem) -> String {
     let db = &system.state().base.db;
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("metadata-chaos-test-admin-{user_id}"))
         .execute(db)

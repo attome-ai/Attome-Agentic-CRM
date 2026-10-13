@@ -1072,7 +1072,7 @@ async fn t05_no_staff_identity_reaches_the_portal() {
 #[tokio::test]
 async fn t06_no_staff_route_accepts_a_portal_session() {
     let w = skip_if_no_db!(world().await);
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../openapi.json");
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../openapi.json");
     let doc: Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     let token = w.a1.cookie.split_once('=').unwrap().1.to_owned();
     let bypass = |p: &str| {
@@ -1602,7 +1602,7 @@ async fn t14_file_fields_are_download_only_and_scoped() {
 /// T-15: no code on the portal path builds a staff `SecurityContext`.
 #[test]
 fn t15_no_security_context_is_built_on_the_portal_path() {
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
     let mut files = vec![root.join("crates/engine/attome-records/src/access_plan.rs")];
     // Every file under attome-portal/src, subdirectories included.
     let mut dirs = vec![root.join("crates/engine/attome-portal/src")];
@@ -2504,7 +2504,7 @@ async fn t33_a_non_admin_staff_session_is_refused_every_portal_admin_route() {
         "__Host-session_token={}",
         staff_session(&w.fx.base, staff).await
     );
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../openapi.json");
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../openapi.json");
     let doc: Value = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
     let concrete = |seg: &str| -> String {
         match seg {

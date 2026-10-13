@@ -111,9 +111,9 @@ fn find_bare_list_handlers(root: &Path) -> Vec<(PathBuf, usize)> {
 fn workspace_root() -> PathBuf {
     // `crates/server` -> workspace root is two levels up.
     Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .expect("crates/server sits two levels under the workspace root")
+        .ancestors()
+        .nth(3)
+        .expect("workspace root is three levels above crates/apps/attome")
         .to_path_buf()
 }
 

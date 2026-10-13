@@ -233,8 +233,8 @@ fn collect_sources() -> Vec<(String, String)> {
     // CARGO_MANIFEST_DIR is crates/server; the workspace root is two up.
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
-        .nth(2)
-        .expect("workspace root is two levels above crates/server")
+        .nth(3)
+        .expect("workspace root is three levels above crates/apps/attome")
         .join("crates");
 
     let mut out = Vec::new();

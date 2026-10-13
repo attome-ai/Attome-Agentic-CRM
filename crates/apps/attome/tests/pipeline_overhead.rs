@@ -436,7 +436,7 @@ async fn build_app() -> Option<(axum::Router, AppState, AppConfig)> {
 /// Returns (user id, token jti, cookie header value).
 async fn seed_user_and_cookie(state: &AppState) -> (Uuid, Uuid, String) {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("pipeline-bench-{user_id}"))
         .execute(&state.db)

@@ -33,7 +33,7 @@ async fn pool() -> Option<DbPool> {
 
 async fn seed_owner(db: &DbPool) -> Uuid {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("events-telemetry-test-{user_id}"))
         .execute(db)

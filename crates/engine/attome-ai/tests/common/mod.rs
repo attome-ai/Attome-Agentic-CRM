@@ -91,7 +91,10 @@ pub fn test_config(direct_url: &str) -> AppConfig {
         redis_host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "localhost".into()),
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
     );
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 pub static ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -160,7 +163,7 @@ pub async fn test_state_with(configure: impl FnOnce(&mut AppConfig)) -> Option<E
 
 pub async fn seed_user(db: &attome_db::DbPool, admin: bool) -> Uuid {
     let id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(id)
         .bind(attome_testkit::unique("record-write"))
         .execute(db)

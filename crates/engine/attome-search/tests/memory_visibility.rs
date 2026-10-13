@@ -40,7 +40,7 @@ async fn test_db() -> Option<DbPool> {
 }
 
 async fn seed_user(db: &DbPool, id: Uuid) {
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(id)
         .bind(format!("test-{}", id.simple()))
         .execute(db)

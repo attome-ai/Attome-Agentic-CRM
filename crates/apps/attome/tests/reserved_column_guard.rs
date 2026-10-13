@@ -97,14 +97,14 @@ use Classification::{ExcludesSystemCols, Projection, ServerConstructed};
 /// `ExcludesSystemCols`, and the test will hold you to it.
 const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
     (
-        "crates/engine/attome-metadata/src/crud.rs",
+        "crates/engine/attome-core/src/crud.rs",
         "insert",
         ServerConstructed,
         "attome-audit's `audit_header` row, built from a json! template in \
          attome-audit/src/service.rs — the only caller. Never a request body.",
     ),
     (
-        "crates/engine/attome-metadata/src/crud.rs",
+        "crates/engine/attome-core/src/crud.rs",
         "insert_many",
         ServerConstructed,
         "attome-audit's `audit_detail` per-field rows: same json! template \
@@ -132,19 +132,19 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
         "SELECT list of indexable attributes for the search corpus.",
     ),
     (
-        "crates/engine/attome-api/src/entity_crud/hierarchy.rs",
+        "crates/engine/attome-records/src/entity_crud/hierarchy.rs",
         "list_ancestors",
         Projection,
         "Recursive CTE over the hierarchy field; a read-only structural walk.",
     ),
     (
-        "crates/engine/attome-api/src/entity_crud/hierarchy.rs",
+        "crates/engine/attome-records/src/entity_crud/hierarchy.rs",
         "list_descendants",
         Projection,
         "Recursive CTE over the hierarchy field; a read-only structural walk.",
     ),
     (
-        "crates/engine/attome-api/src/entity_crud/upsert.rs",
+        "crates/engine/attome-records/src/entity_crud/upsert.rs",
         "upsert_record",
         ExcludesSystemCols,
         "The ON CONFLICT DO UPDATE branch — SEC-1's third site, found by hand \
@@ -153,21 +153,21 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
          exclusion.",
     ),
     (
-        "crates/engine/attome-api/src/entity_mutation.rs",
+        "crates/engine/attome-records/src/entity_mutation.rs",
         "build_insert_binds",
         ExcludesSystemCols,
         "The shared INSERT column-list builder, reached by create, upsert, \
          bulk and staged import.",
     ),
     (
-        "crates/engine/attome-api/src/entity_mutation.rs",
+        "crates/engine/attome-records/src/entity_mutation.rs",
         "build_update_binds",
         ExcludesSystemCols,
         "The shared UPDATE SET-clause builder — SEC-1 itself. Reached by the \
          interactive update path, bulk, staged import and merge alike.",
     ),
     (
-        "crates/engine/attome-api/src/entity_mutation.rs",
+        "crates/engine/attome-records/src/entity_mutation.rs",
         "guard_hierarchy_cycles",
         Projection,
         "Reads the hierarchy field to walk for a cycle before a write; the \
@@ -192,8 +192,8 @@ fn workspace_root() -> PathBuf {
     // CARGO_MANIFEST_DIR is crates/server; the workspace root is two up.
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
-        .nth(2)
-        .expect("workspace root is two levels above crates/server")
+        .nth(3)
+        .expect("workspace root is three levels above crates/apps/attome")
         .to_path_buf()
 }
 

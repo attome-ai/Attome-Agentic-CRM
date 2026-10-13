@@ -681,7 +681,7 @@ fn every_route_needs_system_admin() {
     attome_testkit::run_shared(async {
         let system = skip_if_no_db!(test_system().await);
         let user = Uuid::now_v7();
-        sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+        sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
             .bind(user)
             .bind(format!("changeset-plain-{user}"))
             .execute(&system.state.base.db)

@@ -118,9 +118,9 @@ const BASELINE: &[&str] = &[
 
 fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .expect("crates/server always has two ancestors")
+        .ancestors()
+        .nth(3)
+        .expect("workspace root is three levels above crates/apps/attome")
         .to_path_buf()
 }
 

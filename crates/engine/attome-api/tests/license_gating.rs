@@ -72,7 +72,7 @@ fn session_cookie(user_id: Uuid) -> String {
 /// privilege check, so no privileges are needed here.
 async fn seed_user(db: &attome_db::DbPool) -> String {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("license-gating-test-{user_id}"))
         .execute(db)
@@ -164,7 +164,10 @@ fn test_config() -> AppConfig {
         jwt_secret = THROWAWAY_JWT_SECRET,
     );
 
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 async fn test_system() -> Option<EngineSystem> {

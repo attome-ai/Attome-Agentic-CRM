@@ -74,7 +74,7 @@ async fn resource_allocation_entity_id(db: &DbPool) -> Uuid {
 
 async fn insert_user(db: &DbPool, name: &str) -> Uuid {
     let id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(id)
         .bind(format!("{name}-{id}"))
         .execute(db)

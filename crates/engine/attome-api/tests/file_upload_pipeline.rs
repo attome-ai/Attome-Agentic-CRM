@@ -146,7 +146,10 @@ fn test_config() -> AppConfig {
         bucket = s3_bucket(),
     );
 
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 /// `None` when there is no throwaway database configured — unwrap with
@@ -243,7 +246,7 @@ fn session_cookie(user_id: Uuid) -> String {
 async fn seed_admin(system: &EngineSystem) -> (Uuid, String) {
     let db = &system.state().base.db;
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("file-pipeline-test-admin-{user_id}"))
         .execute(db)

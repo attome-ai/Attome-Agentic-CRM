@@ -217,7 +217,7 @@ fn session_cookie(user_id: Uuid) -> String {
 /// A throwaway `system.admin` user: `(user_id, session_cookie)`.
 async fn seed_admin(db: &DbPool) -> (Uuid, String) {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("changeset-hooks-ui-{user_id}"))
         .execute(db)

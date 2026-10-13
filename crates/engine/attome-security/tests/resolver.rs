@@ -70,7 +70,7 @@ async fn seed_direct_grant(db: &DbPool) -> (Uuid, String) {
     let user_id = Uuid::now_v7();
     let key = format!("test.direct.{}", Uuid::now_v7());
 
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("test-user-{user_id}"))
         .execute(db)
@@ -135,7 +135,7 @@ async fn seed_role_grant(db: &DbPool) -> (Uuid, String) {
     let user_id = Uuid::now_v7();
     let key = format!("test.role.{}", Uuid::now_v7());
 
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("test-user-{user_id}"))
         .execute(db)
@@ -387,7 +387,7 @@ async fn rename_entity_privileges_preserves_grant() {
         .expect("seed privileges");
 
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("rename-test-{user_id}"))
         .execute(&db)
@@ -425,7 +425,7 @@ async fn role_grant_invalidate_forces_fresh_read() {
     let redis = test_redis().await;
 
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("role-invalidate-test-{user_id}"))
         .execute(&db)
@@ -875,7 +875,7 @@ async fn set_role_entity_depth(db: &DbPool, role_id: Uuid, entity_id: Uuid, read
 
 async fn seed_bare_user(db: &DbPool) -> Uuid {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("test-user-{user_id}"))
         .execute(db)

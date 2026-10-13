@@ -4491,7 +4491,7 @@ async fn event_count(db: &attome_db::DbPool, category: &str, operation: &str) ->
 
 /// `(METHOD /path, primary (category, operation))` for every mandatory mapping.
 fn mandatory_mappings() -> Vec<(String, String, String)> {
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../openapi.json");
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../openapi.json");
     let doc: Value = serde_json::from_str(
         &std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path:?}: {e}")),
     )

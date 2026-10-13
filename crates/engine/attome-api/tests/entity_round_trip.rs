@@ -291,7 +291,7 @@ fn session_cookie(user_id: Uuid) -> String {
 async fn seed_admin(system: &TestSystem) -> String {
     let db = &system.state().base.db;
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("round-trip-test-admin-{user_id}"))
         .execute(db)
@@ -5254,7 +5254,7 @@ fn merge_redirect_rejects_hierarchy_cycle() {
 async fn seed_admin_with_id(system: &TestSystem) -> (String, Uuid) {
     let db = &system.state().base.db;
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("round-trip-test-admin-{user_id}"))
         .execute(db)
@@ -6828,7 +6828,7 @@ fn restore_of_privilege_grant_is_visible_to_resolve_strict_immediately() {
 
         // A throwaway grantee with no privileges of its own yet.
         let grantee_id = Uuid::now_v7();
-        sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+        sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
             .bind(grantee_id)
             .bind(format!("c08-restore-grantee-{grantee_id}"))
             .execute(&db)

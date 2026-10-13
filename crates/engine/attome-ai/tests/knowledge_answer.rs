@@ -159,8 +159,10 @@ fn test_config(direct_url: &str, base_url: &str, model: &str) -> AppConfig {
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
         direct_url = direct_url,
     );
-    let mut config: AppConfig =
-        attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true);
+    let mut config: AppConfig = attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    );
     config.inference.generation.base_url = base_url.to_owned();
     config.inference.generation.model = model.to_owned();
     config.inference.generation.request_timeout_secs = 10;
@@ -277,7 +279,7 @@ async fn seed_once(db: &attome_db::DbPool) {
 
 async fn seed_user(db: &attome_db::DbPool) -> Uuid {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("knowledge-answer-test-{user_id}"))
         .execute(db)

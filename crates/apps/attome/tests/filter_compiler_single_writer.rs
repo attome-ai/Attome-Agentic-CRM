@@ -39,9 +39,9 @@ use std::path::{Path, PathBuf};
 /// helper `orphan_source_files.rs`/`crate_list_drift.rs` already use.
 fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(Path::parent)
-        .expect("crates/server always has two ancestors")
+        .ancestors()
+        .nth(3)
+        .expect("workspace root is three levels above crates/apps/attome")
         .to_path_buf()
 }
 

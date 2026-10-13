@@ -261,7 +261,7 @@ pub async fn delete_article(db: &DbPool, item: Uuid, source: Option<Uuid>) {
 /// fires) plus one share row per readable source. Returns `(user_id, role_id)`.
 pub async fn user_who_can_read(db: &DbPool, sources: &[Uuid]) -> (Uuid, Uuid) {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("kb-test-user-{user_id}"))
         .execute(db)

@@ -342,7 +342,7 @@ const EXCLUDED: &[(&str, &str)] = &[
 const MUTATING: &[&str] = &["post", "put", "patch", "delete"];
 
 fn workspace_root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..")
 }
 
 fn in_scope(path: &str) -> bool {

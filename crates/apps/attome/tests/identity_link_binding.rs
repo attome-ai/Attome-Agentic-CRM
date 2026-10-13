@@ -233,8 +233,8 @@ async fn seed_user_and_session_cookie(state: &AppState) -> (Uuid, String) {
     .await
     .expect("hash throwaway password");
     sqlx::query(
-        "INSERT INTO user_account (id, user_name, password_hash, is_active) \
-         VALUES ($1, $2, $3, true)",
+        "INSERT INTO user_account (id, user_name, email, password_hash, is_active) \
+         VALUES ($1, $2, $2 || '@test.invalid', $3, true)",
     )
     .bind(user_id)
     .bind(format!("identity-link-binding-{user_id}"))

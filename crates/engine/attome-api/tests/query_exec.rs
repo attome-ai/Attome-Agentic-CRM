@@ -333,7 +333,7 @@ fn build_app(system: EngineSystem) -> axum::Router {
 async fn seed_admin(system: &TestSystem) -> String {
     let db = &system.state().base.db;
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("query-exec-test-admin-{user_id}"))
         .execute(db)
@@ -365,7 +365,7 @@ async fn seed_admin(system: &TestSystem) -> String {
 async fn seed_user_with_privilege(system: &TestSystem, privilege_key: &str) -> String {
     let db = &system.state().base.db;
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("query-exec-test-user-{user_id}"))
         .execute(db)
@@ -1628,7 +1628,7 @@ fn stored_query_over_a_single_entity_respects_record_level_scoping() {
 /// separate role.
 async fn seed_rls_reader(db: &sqlx::PgPool, logicalname: &str) -> (Uuid, String, Uuid) {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("qexec-reader-{user_id}"))
         .execute(db)

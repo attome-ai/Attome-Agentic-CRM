@@ -106,7 +106,7 @@ async fn insert_ingest_row(db: &DbPool, event: &AuditEvent) {
 /// as an explicit env var to the child, which `attome_db::create_pool`
 /// prefers over the config file's `database` section.
 fn debug_config_path() -> std::path::PathBuf {
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../config.debug.json")
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../config.debug.json")
 }
 
 #[tokio::test]

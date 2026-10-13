@@ -64,7 +64,7 @@ const INTERACTIVE: &[(&str, &str)] = &[
 
 /// D-589's bulk surfaces: each must call the gate.
 const BULK: &[&str] = &[
-    "crates/engine/attome-server/src/data_export.rs",
+    "crates/engine/attome-api/src/data_export.rs",
     "crates/engine/attome-records/src/query_exec.rs",
     "crates/engine/attome-dashboard/src/pages.rs",
     "crates/engine/attome-search/src/aggregate.rs",

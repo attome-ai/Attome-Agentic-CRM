@@ -324,7 +324,7 @@ fn session_cookie(user_id: Uuid) -> String {
 
 async fn seed_admin(db: &PgPool) -> (Uuid, String) {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("rls-test-admin-{user_id}"))
         .execute(db)
@@ -433,7 +433,7 @@ async fn seed_user_with_privileges(
     actions: &[&str],
 ) -> (Uuid, String, Uuid) {
     let user_id = Uuid::now_v7();
-    sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
         .bind(format!("rls-test-user-{user_id}"))
         .execute(db)
@@ -1553,7 +1553,7 @@ fn update_role_access_level_endpoint_changes_enforcement_live() {
         let (record_id, _) = create_record_as(&app, &creator_cookie, &logicalname, "mine").await;
 
         let reader_id = Uuid::now_v7();
-        sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+        sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
             .bind(reader_id)
             .bind(format!("rls-test-reader-{reader_id}"))
             .execute(&db)
@@ -2183,7 +2183,7 @@ fn user_role_admin_endpoints_end_to_end() {
             create_record_as(&app, &creator_cookie, &logicalname, "user-role-owned").await;
 
         let target_id = Uuid::now_v7();
-        sqlx::query("INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)")
+        sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
             .bind(target_id)
             .bind(format!("rls-test-target-{target_id}"))
             .execute(&db)
@@ -5105,7 +5105,7 @@ fn bulk_surfaces_show_a_listed_role_only_its_listed_fields() {
         for role in [listed_role, legacy_role] {
             let user_id = Uuid::now_v7();
             sqlx::query(
-                "INSERT INTO user_account (id, user_name, is_active) VALUES ($1, $2, true)",
+                "INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)",
             )
             .bind(user_id)
             .bind(format!("rls-bulk-user-{user_id}"))

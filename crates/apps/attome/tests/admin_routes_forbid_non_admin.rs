@@ -125,7 +125,10 @@ fn test_config() -> AppConfig {
         pepper = THROWAWAY_PEPPER,
         allowed_origin = ALLOWED_ORIGIN,
     );
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 async fn test_app(config: AppConfig) -> Option<(axum::Router, AppState)> {
@@ -258,8 +261,8 @@ async fn seed_principal(state: &AppState, admin: bool) -> String {
 fn workspace_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
-        .nth(2)
-        .expect("workspace root is two levels above crates/server")
+        .nth(3)
+        .expect("workspace root is three levels above crates/apps/attome")
         .to_path_buf()
 }
 
