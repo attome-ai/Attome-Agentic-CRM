@@ -1538,7 +1538,7 @@ fn is_create_only(op: Op) -> bool {
 
 /// The module keys switched off on this deployment among `modules`.
 fn modules_off(state: &EngineState, modules: &[String]) -> Vec<String> {
-    let license = state.license.load();
+    let license = state.modules.load();
     modules
         .iter()
         .filter(|m| {
@@ -1687,10 +1687,7 @@ pub async fn plan(
 
     // Step 4: per operation, against live metadata as the batch changes it.
     let mut simulated = export_bundle(db).await?;
-    let full_license = attome_modules::ModuleSet {
-        module_bits: [u64::MAX; 4],
-        ..(*state.license.load_full()).clone()
-    };
+    let full_license = attome_modules::ModuleSet::from_bits([u64::MAX; 4]);
 
     // D-787 rule 7: declared business keys as the batch changes them.
     let mut keys = super::business_key::PlanKeys::default();

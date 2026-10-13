@@ -270,7 +270,7 @@ async fn update_module_configuration(
     .map_err(AppError::internal)?;
     tx.commit().await?;
 
-    state.license.store(std::sync::Arc::new(
+    state.modules.store(std::sync::Arc::new(
         signed.narrowed_by(Some((request.enabled, configured_module_bits(&modules)))),
     ));
 

@@ -75,20 +75,9 @@ async fn dependencies(State(state): State<EngineState>) -> Json<Value> {
     // license ... state" half of the finding this endpoint was extended for.
     // A cheap arc-swap load, same cost class as every other field read here —
     // never a DB round trip, so it costs nothing to include unconditionally.
-    // `mode` (M04 §4.1, `ModuleSet::mode`) tells the operator whether the
-    // boot-time load has run (`module_configuration`) or not (`degraded`).
-    //
-    // `is_paid` is kept only so this response's shape does not change: D-778
-    // and CLEANUP-REVIEW 1.1 removed the paid tier, and every licence the
-    // server loads was paid, so the field is now "not the pre-load degraded
-    // sentinel" — exactly the value it always carried.
-    let license = state.license.load();
-    let license_json = json!({
-        "mode": license.mode(),
-        "is_paid": !license.is_degraded(),
-        "expires": license.expires,
-        "max_users": license.max_users,
-    });
+    // The modules this deployment has on (attome-modules); there are no
+    // licences, seats or expiry dates in v2.
+    let modules: Vec<&str> = state.modules.load().names().collect();
 
     // D-344 (amends D-167) — the enforceable half. Everything above is a
     // *live* probe run for this request; this block is what the route-level
@@ -123,7 +112,7 @@ async fn dependencies(State(state): State<EngineState>) -> Json<Value> {
             "batch": { "worker_last_seen_age_seconds": batch_age.ok().flatten() },
         },
         "audit_chainer": audit,
-        "license": license_json,
+        "modules": modules,
         "capabilities": {
             "gated_routes": capabilities,
             "audit_ingest": {

@@ -1125,6 +1125,10 @@ pub struct PublishedDefinition {
 /// the pinned version is loaded, the per-query privilege gate and record
 /// scoping run against live security, and only the definition-shaped reads are
 /// replaced.
+#[expect(
+    clippy::expect_used,
+    reason = "each expect() here guards an invariant its message states"
+)]
 pub async fn execute_stored_query_with_definition(
     state: &EngineState,
     ctx: &attome_server::security::SecurityContext,

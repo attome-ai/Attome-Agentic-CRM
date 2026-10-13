@@ -36,7 +36,7 @@ use utoipa::IntoParams;
 async fn list_offerings(
     State(state): State<EngineState>,
 ) -> Result<Json<Vec<PublicOffering>>, AppError> {
-    let active = state.license.load();
+    let active = state.modules.load();
     let licensed = active.require(MODULE_SERVICE).is_ok();
     drop(active);
     if !licensed {
@@ -72,7 +72,7 @@ async fn lookup_status(
     State(state): State<EngineState>,
     Query(q): Query<StatusQuery>,
 ) -> Result<Json<PortalStatus>, AppError> {
-    let active = state.license.load();
+    let active = state.modules.load();
     let licensed = active.require(MODULE_SERVICE).is_ok();
     drop(active);
     if !licensed {

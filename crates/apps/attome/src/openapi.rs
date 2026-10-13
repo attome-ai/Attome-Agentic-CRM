@@ -56,15 +56,6 @@ fn build() -> utoipa::openapi::OpenApi {
     // and `trd-engine` sits above `attome-api` in the layer stack, so it has
     // no dependency on `attome-api` to merge this fragment from that layer
     // instead.
-    doc.merge(trd_engine::routes::openapi());
-    doc.merge(trd_engine::version_admin::openapi());
-    doc.merge(trd_engine::s2s_signals::openapi());
-    doc.merge(trd_engine::sessions::openapi());
-    doc.merge(trd_engine::connection_admin::openapi());
-    doc.merge(trd_engine::quote_stream::openapi());
-    doc.merge(trd_engine::experiment_admin::openapi());
-    doc.merge(trd_engine::replay::openapi());
-    doc.merge(trd_engine::emergency_controls::openapi());
     // This crate's own auth surface.
     doc.merge(crate::auth::openapi());
     // M53 Phase 1 (Omnichannel, web chat only, D-474) — the public web chat

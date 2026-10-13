@@ -129,7 +129,7 @@ impl EngineSystem {
     ///
     /// Consumes self — call `.state().clone()` before this if you need state for extra routes.
     pub fn core_routes(self) -> attome_server::RouteBundle {
-        let model_routes = self.registry.mounted_routes(self.state.license.clone());
+        let model_routes = self.registry.mounted_routes(self.state.modules.clone());
 
         // P-authz-revocation-epoch (D-116) goal (a): layered ahead of exactly
         // the five privileged/admin-gated bundles the plan names
@@ -245,13 +245,13 @@ impl EngineSystem {
             )
             .merge(license_gate(
                 attome_records::entity_crud::routes(),
-                self.state.license.clone(),
+                self.state.modules.clone(),
                 MODULE_CORE,
                 "core",
             ))
             .merge(license_gate(
                 attome_records::bulk::routes(),
-                self.state.license.clone(),
+                self.state.modules.clone(),
                 MODULE_CORE,
                 "core",
             ))
@@ -259,32 +259,32 @@ impl EngineSystem {
                 // M12 — record export, same `{entity}`-scoped shape as
                 // `bulk::routes()` immediately above.
                 crate::data_export::routes(),
-                self.state.license.clone(),
+                self.state.modules.clone(),
                 MODULE_CORE,
                 "core",
             ))
             .merge(license_gate(
                 // M12 — in-place bulk field transform, same shape.
                 crate::bulk_transform::routes(),
-                self.state.license.clone(),
+                self.state.modules.clone(),
                 MODULE_CORE,
                 "core",
             ))
             .merge(license_gate(
                 attome_content::admin::routes(),
-                self.state.license.clone(),
+                self.state.modules.clone(),
                 MODULE_CONTENT,
                 "content",
             ))
             .merge(license_gate(
                 attome_content::space_admin::routes(),
-                self.state.license.clone(),
+                self.state.modules.clone(),
                 MODULE_CONTENT,
                 "content",
             ))
             .merge(license_gate(
                 attome_content::template_admin::routes(),
-                self.state.license.clone(),
+                self.state.modules.clone(),
                 MODULE_CONTENT,
                 "content",
             ))
@@ -339,7 +339,7 @@ impl EngineSystem {
                 // other admin-gated bundle in this list gets.
                 license_gate(
                     attome_events::admin::routes(),
-                    self.state.license.clone(),
+                    self.state.modules.clone(),
                     MODULE_INTEGRATION,
                     "integration",
                 )
@@ -355,7 +355,7 @@ impl EngineSystem {
                 // not a mutating EngineModel).
                 license_gate(
                     attome_audit::admin::routes(),
-                    self.state.license.clone(),
+                    self.state.modules.clone(),
                     MODULE_AUDIT,
                     "audit",
                 )
@@ -372,7 +372,7 @@ impl EngineSystem {
                 // `communication::routes()` just below.
                 license_gate(
                     crate::audit_read::routes(),
-                    self.state.license.clone(),
+                    self.state.modules.clone(),
                     MODULE_AUDIT,
                     "audit",
                 ),
@@ -494,7 +494,7 @@ impl EngineSystem {
                 // gets.
                 license_gate(
                     crate::signoff::routes(),
-                    self.state.license.clone(),
+                    self.state.modules.clone(),
                     MODULE_AUDIT,
                     "audit",
                 )
@@ -596,7 +596,7 @@ impl EngineSystem {
                     self.state.clone(),
                     attome_security::strict_authz::strict_authz,
                 )),
-                self.state.license.clone(),
+                self.state.modules.clone(),
                 MODULE_OMNICHANNEL,
                 "omnichannel",
             ))
@@ -713,8 +713,8 @@ impl EngineSystemBuilder {
         // Loaded here, ahead of the platform-bundle applies below, not in its
         // original later position (next to the audit-signer/security-resolver
         // wiring): `apply_platform_bundle` checks each bundle's
-        // `requires.modules` against `state.license.load_full()` (D-478), and
-        // `EngineState::new` seeds that field with `ModuleSet::degraded()`
+        // `requires.modules` against `state.modules.load_full()` (D-478), and
+        // `EngineState::new` seeds that field with `ModuleSet::core_only()`
         // (zero module bits) until this runs. With the load left later, every
         // platform bundle's `requires.modules: ["core"]` (or any other
         // module) saw the degraded license and was unconditionally `Blocked:
@@ -724,7 +724,7 @@ impl EngineSystemBuilder {
         // `license`, both infra tables migrations already created,
         // with no dependency on the entity seeding this precedes.
         let license = load_license(&state.base.db).await;
-        state.license = Arc::new(ArcSwap::from_pointee(license));
+        state.modules = Arc::new(ArcSwap::from_pointee(license));
 
         // Self-register system entities — idempotent, safe on every startup.
         // P-db-privilege-separation / D-117: boot seeding is schema-adjacent
@@ -1057,7 +1057,7 @@ impl EngineSystemBuilder {
         // (rather than only checking expiry against the cached value), so
         // any replica self-heals to the latest imported license within a
         // bounded window without needing a dedicated pub/sub channel.
-        let license_arc = state.license.clone();
+        let license_arc = state.modules.clone();
         let db_bg = state.base.db.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(3600));
@@ -1812,10 +1812,10 @@ async fn catch_up(
 /// platform-bundle applies that run from `crates/server/src/boot.rs`, ahead
 /// of `EngineSystem::build()` (documented there: several engines' seeds must
 /// run before `.build()`'s `entity_privileges::seed_all`), each check
-/// `requires.modules` against `state.license`. `boot.rs` calls this directly
+/// `requires.modules` against `state.modules`. `boot.rs` calls this directly
 /// right after constructing `EngineState`, the same way `build()` does just
 /// below, so neither call site's platform bundles see the
-/// `ModuleSet::degraded()` `EngineState::new` seeds that field with.
+/// `ModuleSet::core_only()` `EngineState::new` seeds that field with.
 ///
 /// D-778 (supersedes D-635): no signed licence is ever checked. The result is
 /// [`ModuleSet::all_modules`] narrowed by the runtime module configuration

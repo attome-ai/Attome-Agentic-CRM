@@ -763,7 +763,7 @@ pub async fn run(
         // `load_full`, not `load`: an `arc_swap` guard is not `Send`, and this
         // snapshot lives across the step's awaits — which an HTTP handler's
         // future must be (C4). Same value, owned.
-        let license = state.license.load_full();
+        let license = state.modules.load_full();
         // THE tool list (I-2), recomputed against current state so a tool the
         // caller has just lost is not offered on the next step either.
         //

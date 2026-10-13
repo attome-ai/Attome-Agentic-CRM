@@ -3,6 +3,11 @@
 //! a provisioned writable entity, an agent session at the `Consequential`
 //! ceiling, and the dispatch / propose / confirm helpers that drive the real
 //! gate. Not every target uses every helper.
+
+#![allow(
+    unsafe_code,
+    reason = "the test sets process environment variables (std::env::set_var) before any thread reads them"
+)]
 #![allow(dead_code)]
 use std::sync::Arc;
 
@@ -147,11 +152,9 @@ pub async fn test_state_with(configure: impl FnOnce(&mut AppConfig)) -> Option<E
         storage,
     );
     let state = EngineState::new(base);
-    state.license.store(Arc::new(ModuleSet {
-        module_bits: [u64::MAX; 4],
-        max_users: u32::MAX,
-        expires: chrono::Utc::now() + chrono::Duration::days(365),
-    }));
+    state
+        .modules
+        .store(Arc::new(ModuleSet::from_bits([u64::MAX; 4])));
     Some(state)
 }
 

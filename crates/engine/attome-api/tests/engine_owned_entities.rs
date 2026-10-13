@@ -155,12 +155,10 @@ async fn test_app() -> Option<(EngineState, axum::Router)> {
         .expect("build EngineSystem");
     system
         .state()
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
     // `api_key` is registered as an entity by the server binary's boot
     // (`crates/server/src/boot.rs`), not by `EngineSystem::build`. Apply the same
     // platform bundle, under the licence just stored (it requires `core`), so

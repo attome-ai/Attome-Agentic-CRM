@@ -13,6 +13,11 @@
 //! therefore needs a real (if mostly bare) `EngineState`, not just a `DbPool`.
 //! `test_state` builds one the same way `attome-workflow/tests/execution.rs`
 //! does.
+
+#![allow(
+    unsafe_code,
+    reason = "the test sets process environment variables (std::env::set_var) before any thread reads them"
+)]
 use attome_config::AppConfig;
 use attome_core::EngineState;
 use attome_db::DbPool;

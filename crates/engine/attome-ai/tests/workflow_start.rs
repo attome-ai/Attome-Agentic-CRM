@@ -183,15 +183,11 @@ async fn an_unlicensed_workflow_module_is_absent() {
     let (f, starter) = skip_if_no_db!(with_starter().await);
     let mut bits = [u64::MAX; 4];
     bits[attome_modules::MODULE_WORKFLOW.word] &= !attome_modules::MODULE_WORKFLOW.mask;
-    f.state.license.store(Arc::new(ModuleSet {
-        module_bits: bits,
-        max_users: u32::MAX,
-        expires: chrono::Utc::now() + chrono::Duration::days(365),
-    }));
+    f.state.modules.store(Arc::new(ModuleSet::from_bits(bits)));
     let registry = ActionRegistry::new();
     let descriptor = registry.resolve("workflow.start").expect("registered");
     let inputs = GateInputs {
-        licensed: f.state.license.load().has(descriptor.module),
+        licensed: f.state.modules.load().has(descriptor.module),
         ai: &f.state.base.config.inference.ai,
         surface: None,
         external_effects_enabled: false,

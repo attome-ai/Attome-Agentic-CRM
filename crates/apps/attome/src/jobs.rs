@@ -1186,80 +1186,6 @@ async fn dispatch_platform_job(
         EngineJob::AuditV1CutoverCheckpoint => {
             audit_v1_cutover_checkpoint(&db, &config, &attome_state).await?;
         }
-        // document/TRADING-PLATFORM-PLAN.md Phase 3 — see this variant's doc
-        // comment in attome_jobs::job. Needs the full `EngineState`: the handler
-        // reads/writes `trd_backtest_run`/`trd_backtest_trade` through the
-        // generic entity engine's non-HTTP entry points
-        // (`attome_records::entity_crud`), same shape as `ReportRun`/
-        // `DocgenRender` just above.
-        EngineJob::RunBacktest { run_id } => {
-            trd_engine::backtest_job::run_backtest_job(&attome_state, run_id).await?;
-        }
-        // trd module (document/TRADING-PLATFORM-PLAN.md Phase 2). No
-        // `trd_engine::ingestion_job::BarSource` implementer exists in this
-        // workspace yet — `ingest_bars` is generic over one and nothing
-        // (not even the cTrader adapter skeleton, `trd_engine::ctrader`)
-        // implements it, since it was never asked to. Registering the job
-        // kind now (rather than leaving it out of the dispatch entirely)
-        // keeps the enum/queue plumbing real and ready; the handler fails
-        // loudly and honestly instead of either no-op'ing or pretending to
-        // ingest data that was never fetched. Wire a real `BarSource` here
-        // once a broker connection exists.
-        EngineJob::IngestHistoricalBars { symbol_id, .. } => {
-            return Err(Box::new(attome_types::AppError::internal(format!(
-                "IngestHistoricalBars: no broker BarSource is configured yet (symbol_id={symbol_id}) — \
-                 trd_engine::ctrader has no live connection wired to trd_engine::ingestion_job::BarSource"
-            ))));
-        }
-        EngineJob::AggregateTicksToBars {
-            symbol_id,
-            timeframe,
-            from,
-            to,
-        } => {
-            trd_engine::ingestion_job::aggregate_ticks_to_bars(
-                &attome_state,
-                symbol_id,
-                trd_timeframe_from_wire(&timeframe),
-                from,
-                to,
-            )
-            .await?;
-        }
-        EngineJob::AssessDataQuality {
-            symbol_id,
-            timeframe,
-            period_start,
-            period_end,
-        } => {
-            trd_engine::data_quality_job::run_quality_assessment(
-                &attome_state,
-                symbol_id,
-                trd_timeframe_from_wire(&timeframe),
-                period_start,
-                period_end,
-            )
-            .await?;
-        }
-        EngineJob::ComputeCorrelationSnapshot {
-            symbol_a_id,
-            symbol_b_id,
-            window_days,
-            timeframe,
-        } => {
-            trd_engine::correlation_job::compute_correlation_snapshot(
-                &attome_state,
-                symbol_a_id,
-                symbol_b_id,
-                window_days,
-                trd_timeframe_from_wire(&timeframe),
-            )
-            .await?;
-        }
-        EngineJob::RunPortfolioBacktest { run_id } => {
-            trd_engine::portfolio_backtest::run_portfolio_backtest_job(&attome_state, run_id)
-                .await?;
-        }
         // BAP-11b — the claim inside makes a duplicate delivery a no-op; an
         // `Err` (executor error, failed close-out) retries through backoff.
         EngineJob::ExecuteApprovedRequest { request_id } => {
@@ -1325,23 +1251,6 @@ async fn run_fleet_rollout_step(
     _target_id: uuid::Uuid,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     Err(NO_FLEET_CONSOLE.into())
-}
-
-/// Converts a `EngineJob` payload's wire-form timeframe string (`attome-jobs`
-/// can't depend on `trd_engine::types::Timeframe`, see that enum's job
-/// variants) back into the real type. Defaults to `D1` for an unrecognized
-/// string, matching the same fallback `trd_engine::routes`'s query-param
-/// parsing already uses, rather than failing the whole job over one bad
-/// field.
-fn trd_timeframe_from_wire(s: &str) -> trd_engine::Timeframe {
-    match s {
-        "1m" => trd_engine::Timeframe::M1,
-        "5m" => trd_engine::Timeframe::M5,
-        "15m" => trd_engine::Timeframe::M15,
-        "1h" => trd_engine::Timeframe::H1,
-        "4h" => trd_engine::Timeframe::H4,
-        _ => trd_engine::Timeframe::D1,
-    }
 }
 
 /// BJB-15 — rows per delete statement. The old single unbounded

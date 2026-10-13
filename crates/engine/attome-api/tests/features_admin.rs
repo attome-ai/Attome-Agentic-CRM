@@ -155,11 +155,10 @@ async fn test_system(
             bits
         }
     };
-    system.state().license.store(std::sync::Arc::new(ModuleSet {
-        module_bits,
-        max_users: u32::MAX,
-        expires: chrono::Utc::now() + chrono::Duration::days(365),
-    }));
+    system
+        .state()
+        .modules
+        .store(std::sync::Arc::new(ModuleSet::from_bits(module_bits)));
     Some(system)
 }
 

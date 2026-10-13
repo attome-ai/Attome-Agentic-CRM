@@ -211,14 +211,12 @@ async fn test_system_with(ai_on: bool) -> Option<(EngineSystem, attome_db::DbPoo
     // flips it back off deliberately.
     //
     // Stored AFTER `build()`, as `s2s.rs` does: `build()` loads the
-    // deployment's own licence into `state.license`, so a licence stored
+    // deployment's own licence into `state.modules`, so a licence stored
     // before it was overwritten with the degraded one and every AI route
     // answered 403 `feature_hidden`.
-    let mut license = ModuleSet::degraded();
-    license.max_users = 100;
-    license.expires = chrono::Utc::now() + chrono::Duration::days(1);
-    license.module_bits = [u64::MAX; 4];
-    system.state().license.store(Arc::new(license));
+    let mut license = ModuleSet::core_only();
+    license.bits() = [u64::MAX; 4];
+    system.state().modules.store(Arc::new(license));
     Some((system, db))
 }
 
@@ -1128,8 +1126,8 @@ async fn an_unlicensed_deployment_hides_the_whole_surface() {
     // `ActionModel` mounts under.
     system
         .state()
-        .license
-        .store(Arc::new(ModuleSet::degraded()));
+        .modules
+        .store(Arc::new(ModuleSet::core_only()));
     let app = full_app(system);
 
     let (status, _) = get(&app, "/api/v1/actions", &cookie).await;

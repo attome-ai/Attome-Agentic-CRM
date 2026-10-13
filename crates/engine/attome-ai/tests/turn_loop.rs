@@ -13,6 +13,10 @@
 //! ```
 
 #![allow(
+    unsafe_code,
+    reason = "the test sets process environment variables (std::env::set_var) before any thread reads them"
+)]
+#![allow(
     clippy::expect_used,
     clippy::unwrap_used,
     reason = "test helpers: a failed setup step should panic with its message"
@@ -423,11 +427,9 @@ async fn test_state_inner(model_base_url: &str, ai_enabled: bool) -> Option<Engi
         storage,
     );
     let state = EngineState::new(base);
-    state.license.store(Arc::new(ModuleSet {
-        module_bits: [u64::MAX; 4],
-        max_users: u32::MAX,
-        expires: chrono::Utc::now() + chrono::Duration::days(365),
-    }));
+    state
+        .modules
+        .store(Arc::new(ModuleSet::from_bits([u64::MAX; 4])));
     Some(state)
 }
 
@@ -1498,7 +1500,7 @@ async fn the_losing_claimer_is_refused_by_value_not_by_error() {
 /// **Row A-19 — the licence removed during a live turn.**
 ///
 /// The hook fires between step 1 and step 2, so the second dispatch meets a
-/// deployment that no longer holds the module. `state.license` is an
+/// deployment that no longer holds the module. `state.modules` is an
 /// `ArcSwap`, which is exactly why this is reachable at runtime: the gate
 /// re-reads it on every call rather than capturing it at turn start.
 ///
@@ -1515,18 +1517,14 @@ async fn a_licence_removed_mid_turn_stops_the_next_step() {
         .await
     );
 
-    let license = Arc::clone(&f.state.license);
+    let license = Arc::clone(&f.state.modules);
     f.model.on_request(
         2,
         Arc::new(move || {
             let license = Arc::clone(&license);
             Box::pin(async move {
                 // Every module bit cleared: the deployment no longer holds it.
-                license.store(Arc::new(ModuleSet {
-                    module_bits: [0; 4],
-                    max_users: 0,
-                    expires: chrono::Utc::now() + chrono::Duration::days(1),
-                }));
+                license.store(Arc::new(ModuleSet::from_bits([0; 4])));
             })
         }),
     );

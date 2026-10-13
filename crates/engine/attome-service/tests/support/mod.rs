@@ -14,6 +14,11 @@
 //!   reconciled rows.
 //! - **Audit and change-feed probes** that read both audit write paths
 //!   (`audit_header`, or `audit_ingest` when the chainer is on).
+
+#![allow(
+    unsafe_code,
+    reason = "the test sets process environment variables (std::env::set_var) before any thread reads them"
+)]
 #![allow(dead_code)]
 
 use std::collections::{HashMap, HashSet};

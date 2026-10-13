@@ -169,12 +169,10 @@ async fn build_test_system() -> Option<EngineSystem> {
     // licensed deployment would.
     system
         .state()
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
     Some(system)
 }
 
@@ -407,7 +405,7 @@ fn admin_gets_success_on_create_entity() {
 fn security_admin_routes_reachable_regardless_of_license_state() {
     attome_testkit::run_shared(async {
         // A fresh test DB has no license row, so EngineSystem::build() loads
-        // ModuleSet::degraded() (all module bits zero). Unlike genuinely
+        // ModuleSet::core_only() (all module bits zero). Unlike genuinely
         // licensable engines, attome-security's admin surface (whoami, privilege
         // grants) is mounted unconditionally in system.rs, NOT through the
         // ModelRegistry/license filter — an expired/degraded license must never

@@ -29,6 +29,10 @@
 //! ```
 
 #![allow(
+    unsafe_code,
+    reason = "the test sets process environment variables (std::env::set_var) before any thread reads them"
+)]
+#![allow(
     clippy::expect_used,
     clippy::unwrap_used,
     reason = "test helpers: a failed setup step should panic with its message"
@@ -135,11 +139,7 @@ fn test_config(direct_url: &str, ai_on: bool) -> AppConfig {
 static ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 fn full_license() -> Arc<ModuleSet> {
-    Arc::new(ModuleSet {
-        module_bits: [u64::MAX; 4],
-        max_users: u32::MAX,
-        expires: chrono::Utc::now() + chrono::Duration::days(365),
-    })
+    Arc::new(ModuleSet::from_bits([u64::MAX; 4]))
 }
 
 async fn test_state(ai_on: bool) -> Option<EngineState> {
@@ -179,7 +179,7 @@ async fn test_state(ai_on: bool) -> Option<EngineState> {
         storage,
     );
     let state = EngineState::new(base);
-    state.license.store(full_license());
+    state.modules.store(full_license());
     Some(state)
 }
 
@@ -521,7 +521,7 @@ async fn losing_the_licence_after_approval_invalidates_the_action() {
     let f = fixture(&state, false).await;
     let request = submit_and_approve(&state, &f).await;
 
-    state.license.store(Arc::new(ModuleSet::degraded()));
+    state.modules.store(Arc::new(ModuleSet::core_only()));
 
     assert_invalidated_and_nothing_ran(&state, &f, &request).await;
 }

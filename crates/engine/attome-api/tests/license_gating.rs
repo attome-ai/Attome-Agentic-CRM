@@ -101,10 +101,8 @@ impl EngineModel for TestPaidModel {
 }
 
 fn active_license_with(module_id: ModuleId) -> ModuleSet {
-    let mut license = ModuleSet::degraded();
-    license.max_users = 100;
-    license.expires = chrono::Utc::now() + chrono::Duration::days(1);
-    license.module_bits[module_id.word] |= module_id.mask;
+    let mut license = ModuleSet::core_only();
+    license.bits()[module_id.word] |= module_id.mask;
     license
 }
 
@@ -251,11 +249,11 @@ async fn imported_license_enables_module_without_restarting() {
     // Management PUT performs (the licence import route was deleted, D-790).
     let system = skip_if_no_db!(test_system().await);
     assert!(
-        !system.state().license.load().has(ModuleId::new(254)),
+        !system.state().modules.load().has(ModuleId::new(254)),
         "sanity check: the test module must not be licensed",
     );
     let cookie = seed_user(&system.state().base.db).await;
-    let license = system.state().license.clone();
+    let license = system.state().modules.clone();
     let app = full_app(system);
 
     let denied_request = Request::builder()
@@ -291,7 +289,7 @@ async fn imported_license_enables_module_without_restarting() {
 async fn license_degradation_blocks_next_request_without_restarting() {
     let system = skip_if_no_db!(test_system().await);
     let cookie = seed_user(&system.state().base.db).await;
-    let license = system.state().license.clone();
+    let license = system.state().modules.clone();
     license.store(Arc::new(active_license_with(ModuleId::new(254))));
     let app = full_app(system);
 
@@ -304,9 +302,9 @@ async fn license_degradation_blocks_next_request_without_restarting() {
     let res = app.clone().oneshot(allowed_request).await.expect("request");
     assert_eq!(res.status(), StatusCode::OK);
 
-    // This simulates the hourly recheck storing ModuleSet::degraded()
+    // This simulates the hourly recheck storing ModuleSet::core_only()
     // after it detects expiry. The Router remains the same instance.
-    license.store(Arc::new(ModuleSet::degraded()));
+    license.store(Arc::new(ModuleSet::core_only()));
 
     let denied_request = Request::builder()
         .method("GET")
@@ -348,7 +346,7 @@ async fn notification_dispatch_route_is_hidden_when_unlicensed() {
     assert!(
         !system
             .state()
-            .license
+            .modules
             .load()
             .has(attome_modules::MODULE_NOTIFICATION),
         "sanity check: notification must not be enabled once removed from the runtime module configuration",
@@ -391,7 +389,7 @@ async fn workflow_definitions_route_is_hidden_when_unlicensed() {
     assert!(
         !system
             .state()
-            .license
+            .modules
             .load()
             .has(attome_modules::MODULE_WORKFLOW),
         "sanity check: workflow must not be enabled once removed from the runtime module configuration",
@@ -440,7 +438,7 @@ async fn project_summary_route_is_hidden_when_unlicensed() {
     assert!(
         !system
             .state()
-            .license
+            .modules
             .load()
             .has(attome_modules::MODULE_PROJECT),
         "sanity check: project must not be enabled once removed from the runtime module configuration",
@@ -482,7 +480,7 @@ async fn report_widget_types_route_is_hidden_when_unlicensed() {
     assert!(
         !system
             .state()
-            .license
+            .modules
             .load()
             .has(attome_modules::MODULE_REPORT),
         "sanity check: report must not be enabled once removed from the runtime module configuration",

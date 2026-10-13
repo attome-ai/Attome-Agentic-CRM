@@ -994,6 +994,13 @@ mod invalidate_all_tests {
                 }
             })
         }
+
+        fn session_ip_allowlists<'a>(
+            &'a self,
+            _user_id: Uuid,
+        ) -> Pin<Box<dyn Future<Output = Result<Vec<Vec<String>>, AppError>> + Send + 'a>> {
+            Box::pin(async move { Ok(Vec::new()) })
+        }
     }
 
     fn handle(resolver: &Arc<CountingResolver>) -> SecurityResolverHandle {

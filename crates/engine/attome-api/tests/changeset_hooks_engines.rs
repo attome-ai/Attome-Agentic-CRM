@@ -169,12 +169,10 @@ async fn build_system(mode: &str) -> Option<(EngineState, axum::Router)> {
         .expect("build EngineSystem");
     system
         .state()
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
     let state = system.state().clone();
     let base_state = state.base.clone();
     let app = attome_server::ServerBuilder::new(base_state.clone(), (*base_state.config).clone())

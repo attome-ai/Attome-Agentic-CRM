@@ -166,12 +166,10 @@ async fn test_system(required_actions: &[&str]) -> Option<EngineSystem> {
         .expect("build EngineSystem");
     system
         .state()
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
 
     Some(system)
 }
@@ -1589,7 +1587,7 @@ async fn a_dashboard_only_licence_gets_widget_data_but_not_search_aggregate() {
     .await;
     let config = json!({ "data": { "source": deals, "measures": [{ "aggregation": "count" }] }});
     let dashboard = build_data_dashboard(&db, admin_id, &config).await;
-    let license = system.state().license.clone();
+    let license = system.state().modules.clone();
     let app = full_app(system);
     publish(&app, &admin_cookie, dashboard.dashboard_id, &db).await;
 
@@ -1598,11 +1596,9 @@ async fn a_dashboard_only_licence_gets_widget_data_but_not_search_aggregate() {
     let mut bits = [0u64; 4];
     bits[core.word] |= core.mask;
     bits[dash.word] |= dash.mask;
-    license.store(std::sync::Arc::new(attome_modules::ModuleSet {
-        module_bits: bits,
-        max_users: u32::MAX,
-        expires: chrono::Utc::now() + chrono::Duration::days(365),
-    }));
+    license.store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+        bits,
+    )));
 
     let (status, body) = widget_data(&app, &admin_cookie, &dashboard, json!({})).await;
     assert_eq!(status, StatusCode::OK, "{body}");

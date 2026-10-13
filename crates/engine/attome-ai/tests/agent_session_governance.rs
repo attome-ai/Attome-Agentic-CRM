@@ -42,6 +42,10 @@
 //! ```
 
 #![allow(
+    unsafe_code,
+    reason = "the test sets process environment variables (std::env::set_var) before any thread reads them"
+)]
+#![allow(
     clippy::expect_used,
     clippy::unwrap_used,
     reason = "test helpers: a failed setup step should panic with its message"
@@ -183,11 +187,9 @@ async fn test_state() -> Option<EngineState> {
         storage,
     );
     let state = EngineState::new(base);
-    state.license.store(Arc::new(ModuleSet {
-        module_bits: [u64::MAX; 4],
-        max_users: u32::MAX,
-        expires: chrono::Utc::now() + chrono::Duration::days(365),
-    }));
+    state
+        .modules
+        .store(Arc::new(ModuleSet::from_bits([u64::MAX; 4])));
     seed_agent_entities(&state).await;
     Some(state)
 }

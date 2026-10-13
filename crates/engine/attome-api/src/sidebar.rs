@@ -1195,7 +1195,7 @@ async fn get_sidebar(
     // privilege check above): disabling a module via
     // /api/v1/admin/license/modules is meant to hide that module's nav
     // everywhere until it's re-enabled, not just for non-admin users.
-    let active_license = state.license.load();
+    let active_license = state.modules.load();
     rows.retain(|row| module_visible(&active_license, &row.7));
 
     struct RawNode {

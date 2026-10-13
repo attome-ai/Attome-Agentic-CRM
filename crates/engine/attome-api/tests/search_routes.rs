@@ -188,11 +188,9 @@ async fn test_system() -> Option<(EngineSystem, attome_db::DbPool)> {
     // Fully licensed, so the route-level module gate is not what these tests
     // are measuring. `unlicensed_deployment_hides_the_whole_surface` below
     // flips it back off deliberately.
-    let mut license = ModuleSet::degraded();
-    license.max_users = 100;
-    license.expires = chrono::Utc::now() + chrono::Duration::days(1);
-    license.module_bits = [u64::MAX; 4];
-    state.license.store(Arc::new(license));
+    let mut license = ModuleSet::core_only();
+    license.bits() = [u64::MAX; 4];
+    state.modules.store(Arc::new(license));
 
     let system = EngineSystem::builder(state)
         .register(attome_search::SearchModel)
@@ -475,8 +473,8 @@ async fn an_unlicensed_deployment_hides_search() {
     let (_user, cookie) = seed_admin(&db).await;
     system
         .state()
-        .license
-        .store(Arc::new(ModuleSet::degraded()));
+        .modules
+        .store(Arc::new(ModuleSet::core_only()));
     let app = full_app(system);
 
     let (status, _) = get(&app, "/api/v1/search?q=acme", &cookie).await;

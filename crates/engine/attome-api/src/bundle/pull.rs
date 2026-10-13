@@ -235,7 +235,7 @@ pub async fn sync(state: &EngineState, actor: Option<Uuid>) -> Result<SyncOutcom
         });
     };
 
-    let license = state.license.load_full();
+    let license = state.modules.load_full();
     let plan = plan_bundle(
         &state.base.db_migrator,
         &license,

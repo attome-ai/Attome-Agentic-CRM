@@ -189,12 +189,10 @@ async fn test_system_with(config: AppConfig, ai_bundles: bool) -> Option<EngineS
     }
     system
         .state()
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
     Some(system)
 }
 
@@ -584,12 +582,10 @@ async fn unlicensed_deployment_returns_not_found_not_a_working_endpoint() {
     let system = skip_if_no_db!(test_system().await);
     system
         .state()
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [0u64; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [0u64; 4],
+        )));
     let app = full_app(system);
 
     let res = app

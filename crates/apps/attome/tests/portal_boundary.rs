@@ -115,11 +115,7 @@ fn test_config() -> AppConfig {
 }
 
 fn full_license() -> std::sync::Arc<attome_modules::ModuleSet> {
-    std::sync::Arc::new(attome_modules::ModuleSet {
-        module_bits: [u64::MAX; 4],
-        max_users: u32::MAX,
-        expires: chrono::Utc::now() + chrono::Duration::days(365),
-    })
+    std::sync::Arc::new(attome_modules::ModuleSet::from_bits([u64::MAX; 4]))
 }
 
 struct Fx {
@@ -168,11 +164,11 @@ async fn fixture() -> Option<Fx> {
         .build()
         .await
         .expect("build EngineSystem");
-    system.state().license.store(full_license());
+    system.state().modules.store(full_license());
 
     let xrm = system.state().clone();
     let base_state = xrm.base.clone();
-    let license = xrm.license.clone();
+    let license = xrm.modules.clone();
     let public_bundle = attome_server::RouteBundle::new(
         auth::public_routes(license, SecurityAuditor::from_state(&xrm))
             .with_state(base_state.clone()),

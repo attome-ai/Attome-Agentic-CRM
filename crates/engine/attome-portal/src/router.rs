@@ -75,7 +75,7 @@ const ENTITY: &str = "webportal_user";
 // ── Plumbing ──────────────────────────────────────────────────────────────────
 
 fn licensed(state: &EngineState) -> bool {
-    let license = state.license.load();
+    let license = state.modules.load();
     license.require(attome_modules::MODULE_PORTAL).is_ok()
 }
 

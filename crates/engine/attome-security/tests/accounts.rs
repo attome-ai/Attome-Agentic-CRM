@@ -28,21 +28,13 @@ use uuid::Uuid;
 /// callers), but since CLEANUP-REVIEW 1.2 (D-778) no path reads it to gate
 /// admission: there is no seat cap. The tests below prove that.
 fn test_license() -> attome_modules::ModuleSet {
-    // `core_only` is the crate's own constructor for "no signed licence" â€” the
-    // only field these paths read is `max_users`, and `u32::MAX` there is well
-    // above any count these tests create.
-    attome_modules::ModuleSet::core_only(u32::MAX)
+    attome_modules::ModuleSet::core_only()
 }
 
-/// A licence whose `max_users` equals the current active count, i.e. "no free
-/// seats" under the old gate. Used to prove nothing refuses on it any more; it
-/// reads the live count so the shared database's existing rows are included.
-async fn license_with_no_free_seats(db: &DbPool) -> attome_modules::ModuleSet {
-    let active: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM user_account WHERE is_active")
-        .fetch_one(db)
-        .await
-        .expect("count active seats");
-    attome_modules::ModuleSet::core_only(u32::try_from(active).expect("count fits u32"))
+/// The module set the seat tests pass: seats are gone (v2 has no licences),
+/// so any set must admit every account.
+async fn license_with_no_free_seats(_db: &DbPool) -> attome_modules::ModuleSet {
+    attome_modules::ModuleSet::core_only()
 }
 
 async fn test_db() -> Option<DbPool> {

@@ -24,6 +24,10 @@
 //! ```
 
 #![allow(
+    unsafe_code,
+    reason = "the test sets process environment variables (std::env::set_var) before any thread reads them"
+)]
+#![allow(
     clippy::expect_used,
     clippy::unwrap_used,
     reason = "test helpers: a failed setup step should panic with its message"
@@ -135,11 +139,7 @@ async fn seed_platform(db: &attome_db::DbPool) {
 }
 
 fn full_licence() -> Arc<ModuleSet> {
-    Arc::new(ModuleSet {
-        module_bits: [u64::MAX; 4],
-        max_users: u32::MAX,
-        expires: chrono::Utc::now() + chrono::Duration::days(365),
-    })
+    Arc::new(ModuleSet::from_bits([u64::MAX; 4]))
 }
 
 async fn test_state() -> Option<EngineState> {
@@ -176,7 +176,7 @@ async fn test_state() -> Option<EngineState> {
         storage,
     );
     let state = EngineState::new(base);
-    state.license.store(full_licence());
+    state.modules.store(full_licence());
     Some(state)
 }
 
@@ -726,11 +726,9 @@ async fn a_deactivated_account_invalidates_the_proposal() {
 async fn a_removed_licence_invalidates_the_proposal() {
     let f = skip_if_no_db!(fixture().await);
     let hash = f.propose_write("unlicensed").await;
-    f.state.license.store(Arc::new(ModuleSet {
-        module_bits: [0; 4],
-        max_users: u32::MAX,
-        expires: chrono::Utc::now() + chrono::Duration::days(365),
-    }));
+    f.state
+        .modules
+        .store(Arc::new(ModuleSet::from_bits([0; 4])));
 
     let outcome = f.confirm("unlicensed", &hash).await;
 
@@ -965,11 +963,9 @@ async fn changes_after_admission_do_not_cancel_the_admitted_execution() {
         .await
         .expect("revoke");
     revoke_privilege(&db, f.owner, "system.admin").await;
-    f.state.license.store(Arc::new(ModuleSet {
-        module_bits: [0; 4],
-        max_users: u32::MAX,
-        expires: chrono::Utc::now() + chrono::Duration::days(365),
-    }));
+    f.state
+        .modules
+        .store(Arc::new(ModuleSet::from_bits([0; 4])));
     holder.rollback().await.expect("release the business row");
 
     let outcome = confirm.await.expect("join").expect("confirm");
@@ -982,7 +978,7 @@ async fn changes_after_admission_do_not_cancel_the_admitted_execution() {
     assert_eq!(f.proposal("window").await.0, "executed");
 
     // The changes apply to what comes next.
-    f.state.license.store(full_licence());
+    f.state.modules.store(full_licence());
     assert!(matches!(
         f.confirm("window", &hash).await,
         ConfirmOutcome::Refused(ConfirmRefusal::AlreadyExecuted { .. })

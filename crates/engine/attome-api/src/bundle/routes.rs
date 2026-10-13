@@ -305,7 +305,7 @@ async fn plan_and_persist(
     super::model::check_format(&bundle.format).map_err(|e| AppError::Validation(e.to_string()))?;
     bundle.normalize();
 
-    let license = state.license.load_full();
+    let license = state.modules.load_full();
     let plan: BundlePlan = plan_bundle(
         &state.base.db_migrator,
         &license,
@@ -554,7 +554,7 @@ async fn drift(
     })?;
     applied.normalize();
 
-    let license = state.license.load_full();
+    let license = state.modules.load_full();
     let plan = plan_bundle(
         &state.base.db_migrator,
         &license,

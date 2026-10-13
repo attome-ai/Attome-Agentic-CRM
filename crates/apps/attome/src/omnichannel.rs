@@ -536,7 +536,7 @@ async fn dispatch_bot_handoff(
     let registry = ActionRegistry::new();
     let executors = Executors::new();
     let licensed = state
-        .license
+        .modules
         .load()
         .has(attome_ai::actions::bot_handoff::descriptor().module);
     let gate_inputs = GateInputs {
@@ -686,7 +686,7 @@ async fn send_message(
     headers: HeaderMap,
     Json(body): Json<SendMessageRequest>,
 ) -> Result<Json<SendMessageResponse>, AppError> {
-    let active = state.license.load();
+    let active = state.modules.load();
     let licensed = active.require(MODULE_OMNICHANNEL).is_ok();
     drop(active);
     if !licensed {
@@ -1091,7 +1091,7 @@ async fn poll_webchat_messages(
     State(state): State<EngineState>,
     Query(q): Query<PollQuery>,
 ) -> Result<Json<PollResponse>, AppError> {
-    let active = state.license.load();
+    let active = state.modules.load();
     let licensed = active.require(MODULE_OMNICHANNEL).is_ok();
     drop(active);
     if !licensed {

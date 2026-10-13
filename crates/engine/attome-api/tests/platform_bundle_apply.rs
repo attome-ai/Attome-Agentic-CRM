@@ -178,12 +178,10 @@ async fn test_system() -> Option<EngineSystem> {
         .expect("build EngineSystem");
     system
         .state()
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
     Some(system)
 }
 
@@ -202,7 +200,7 @@ fn load_platform_bundle(module: &str) -> Bundle {
 /// a stronger proof than hand-diffing JSON against Rust.
 async fn assert_platform_bundle_is_pure_noop(state: &EngineState, module: &str) {
     let bundle = load_platform_bundle(module);
-    let license = state.license.load_full();
+    let license = state.modules.load_full();
 
     let plan = plan_bundle(
         &state.base.db,
@@ -329,7 +327,7 @@ async fn dashboard_platform_bundle_is_a_pure_noop_against_the_old_seed_except_wi
     };
     let state = system.state();
     let bundle = load_platform_bundle("attome-dashboard");
-    let license = state.license.load_full();
+    let license = state.modules.load_full();
 
     let plan = plan_bundle(
         &state.base.db,

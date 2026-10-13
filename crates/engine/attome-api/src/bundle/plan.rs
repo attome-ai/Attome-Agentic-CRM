@@ -1295,18 +1295,11 @@ mod tests {
     }
 
     fn all_modules() -> ModuleSet {
-        ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(1),
-        }
+        ModuleSet::from_bits([u64::MAX; 4])
     }
 
     fn no_modules() -> ModuleSet {
-        ModuleSet {
-            module_bits: [0; 4],
-            ..all_modules()
-        }
+        ModuleSet::from_bits([0; 4])
     }
 
     fn allow() -> PlanOptions {

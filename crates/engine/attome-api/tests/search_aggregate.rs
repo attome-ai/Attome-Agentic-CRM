@@ -180,11 +180,9 @@ async fn test_system() -> Option<(EngineSystem, attome_db::DbPool)> {
     );
     let state = EngineState::new(base);
 
-    let mut license = ModuleSet::degraded();
-    license.max_users = 100;
-    license.expires = chrono::Utc::now() + chrono::Duration::days(1);
-    license.module_bits = [u64::MAX; 4];
-    state.license.store(Arc::new(license));
+    let mut license = ModuleSet::core_only();
+    license.bits() = [u64::MAX; 4];
+    state.modules.store(Arc::new(license));
 
     let system = EngineSystem::builder(state)
         .register(attome_search::SearchModel)
@@ -402,8 +400,8 @@ async fn aggregate_is_hidden_when_search_is_unlicensed() {
     let (system, db) = skip_if_no_db!(test_system().await);
     system
         .state()
-        .license
-        .store(Arc::new(ModuleSet::degraded()));
+        .modules
+        .store(Arc::new(ModuleSet::core_only()));
     let cookie = seed_admin(&db).await;
     let app = full_app(system);
 

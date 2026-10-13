@@ -648,14 +648,14 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
 
     let mut state = EngineState::new(base);
 
-    // `EngineState::new` seeds `state.license` with `ModuleSet::degraded()`
+    // `EngineState::new` seeds `state.modules` with `ModuleSet::core_only()`
     // (zero module bits) — loaded for real here, before this function's own
     // platform-bundle applies immediately below (D-478: each checks
-    // `requires.modules` against `state.license`). D-778: every module,
+    // `requires.modules` against `state.modules`). D-778: every module,
     // narrowed only by Module Management; no licence is checked.
     let t_license = std::time::Instant::now();
     let license = attome_api::load_license(&state.base.db).await;
-    state.license = std::sync::Arc::new(arc_swap::ArcSwap::from_pointee(license));
+    state.modules = std::sync::Arc::new(arc_swap::ArcSwap::from_pointee(license));
     attome_profiler::record("boot.license", t_license.elapsed());
 
     // Every seed from here to `trd-governance` below runs in each process that
@@ -1012,14 +1012,6 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         // (0420/0421), not runtime-provisioned entities, so there is no
         // seed to call before `.build()`.
         .register(attome_predict::PredictModel)
-        // trd module (Quantitative Trading, document/TRADING-PLATFORM-PLAN.md):
-        // route-mounting/license-gating only (D-383) — every `trd_*` entity
-        // is provisioned metadata (no seeded records, per that plan's
-        // decision 2), seeded post-`.build()` below alongside the
-        // `attome_report` seed, same reasoning: an owner/run_as-shaped lookup
-        // onto `user_account` only resolves once `.build()`'s
-        // internal `attome-security` platform bundle has applied.
-        .register(trd_engine::TrdModel)
         // Dashboard 10/10 Phase 6 — the Approvals `MyWorkProvider`, listed by
         // `GET /api/v1/my-work/*`. Project/Decisions providers the plan also
         // names are follow-up work, not yet implemented.
@@ -1095,18 +1087,6 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     )
     .await?;
 
-    // trd module (document/TRADING-PLATFORM-PLAN.md) — provisions every
-    // `trd_*` entity's metadata only (no seeded records, decision 2). Runs
-    // post-`.build()` for the same reason `attome_report`'s seed does just
-    // above: it is idempotent (`ensure_entity`/`ensure_attribute` reconcile),
-    // so re-running on a later boot is a no-op.
-    trd_engine::seed::seed(&system.state().base.db_migrator).await?;
-    // `trd_strategy`'s lifecycle state model (`trd_engine::lifecycle`) needs
-    // the full `EngineState`, not just the pool — see that module's own doc
-    // comment — so it runs as a separate call, after `trd_strategy` itself
-    // exists (the seed call directly above provisions it) and after
-    // `.build()`'s internal seed has given `EngineState` its Redis handle.
-    trd_engine::lifecycle::ensure(system.state()).await?;
     // Not a duplicate of `.build()`'s own `seed_all` (CLEANUP-REVIEW 1.5
     // checked): `attome_report{,_schedule}`, the bot-analytics bundles and every
     // `trd_*` entity above register only after `.build()` returns, so this

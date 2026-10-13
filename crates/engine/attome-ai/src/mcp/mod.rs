@@ -707,7 +707,7 @@ async fn tools_list(
 
     // C11 B5: `tools/list` honours the runtime AI switch, as the gate does.
     attome_core::ai_runtime_switch::refresh(&state.base.db).await;
-    let license = state.license.load();
+    let license = state.modules.load();
     let is_licensed = |module: attome_modules::ModuleId| license.has(module);
     let inputs = VisibilityInputs {
         is_licensed: &is_licensed,

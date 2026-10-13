@@ -1864,7 +1864,7 @@ async fn execute_route(
     let executors = attome_ai::Executors::new();
     let gate_inputs = attome_ai::GateInputs {
         licensed: state
-            .license
+            .modules
             .load()
             .has(attome_ai::actions::route_classify::descriptor().module),
         ai: &state.base.config.inference.ai,

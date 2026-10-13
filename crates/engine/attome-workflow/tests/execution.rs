@@ -22,6 +22,10 @@
 //! ```
 
 #![allow(
+    unsafe_code,
+    reason = "the test sets process environment variables (std::env::set_var) before any thread reads them"
+)]
+#![allow(
     clippy::expect_used,
     clippy::unwrap_used,
     reason = "test helpers: a failed setup step should panic with its message"
@@ -3182,12 +3186,10 @@ async fn an_agent_workflow_start_waits_for_approval_then_starts_exactly_one_inst
         attome_workflow::instance_admin::PublishedWorkflowStarter,
     ));
     state
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
     let db = state.base.db.clone();
     let owner = seed_user(&db).await;
     grant_system_admin(&db, owner).await;

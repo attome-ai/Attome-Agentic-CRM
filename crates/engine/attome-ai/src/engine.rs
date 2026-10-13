@@ -179,7 +179,7 @@ pub(crate) fn surface_for(module: ModuleId) -> Option<AiSurface> {
 /// `dispatch` refreshes it first (`ai_runtime_switch::refresh`).
 pub(crate) fn gate_inputs<'a>(state: &'a EngineState, module: ModuleId) -> GateInputs<'a> {
     GateInputs {
-        licensed: state.license.load().has(module),
+        licensed: state.modules.load().has(module),
         ai: attome_core::ai_runtime_switch::effective(&state.base.config.inference.ai),
         surface: surface_for(module),
         // I-7's deployment-wide air-gap switch. `trd-engine`'s Phase 4 work
@@ -264,7 +264,7 @@ async fn list_invocable_actions(
     let action_ctx = ActionContext::user(ctx.into_inner());
     // C11 B5: what is listed honours the runtime AI switch, as the gate does.
     attome_core::ai_runtime_switch::refresh(&state.base.db).await;
-    let license = state.license.load();
+    let license = state.modules.load();
     let is_licensed = |module: ModuleId| license.has(module);
     let inputs = VisibilityInputs {
         is_licensed: &is_licensed,

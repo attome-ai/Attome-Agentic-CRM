@@ -214,12 +214,10 @@ async fn build_test_system() -> Option<EngineSystem> {
         .expect("build EngineSystem");
     system
         .state()
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
     Some(system)
 }
 
@@ -538,7 +536,7 @@ async fn plan_queue_apply(
 }
 
 async fn plan_and_persist(state: &EngineState, bundle: &Bundle, allow_retire: bool) -> Uuid {
-    let license = state.license.load_full();
+    let license = state.modules.load_full();
     let plan = plan_bundle(
         &state.base.db,
         &license,
@@ -613,7 +611,7 @@ fn apply_creates_the_graph_then_is_idempotent_with_one_doorbell() {
     attome_testkit::run_shared(async {
         let system = skip_if_no_db!(test_system().await);
         let state = system.state().clone();
-        let license = state.license.load_full();
+        let license = state.modules.load_full();
         let db = &state.base.db;
 
         let graph = Graph::new();
@@ -931,7 +929,7 @@ fn retire_round_trip_soft_retires_and_reapply_reactivates_byte_identically() {
     attome_testkit::run_shared(async {
         let system = skip_if_no_db!(test_system().await);
         let state = system.state().clone();
-        let license = state.license.load_full();
+        let license = state.modules.load_full();
         let db = &state.base.db;
 
         let graph = Graph::new();
@@ -1304,7 +1302,7 @@ fn a_stale_claim_is_resumed_from_its_cursor_without_rechecking_the_basis() {
                 .map(|v| v.icon.as_str()),
             Some("las la-star")
         );
-        let license = state.license.load_full();
+        let license = state.modules.load_full();
         let converged = plan_bundle(db, &license, &desired, PlanOptions::default())
             .await
             .expect("plan after resume");
@@ -1433,7 +1431,7 @@ fn attribute_patch_never_creates_a_missing_entity_and_augments_an_existing_one()
     attome_testkit::run_shared(async {
         let system = skip_if_no_db!(test_system().await);
         let state = system.state().clone();
-        let license = state.license.load_full();
+        let license = state.modules.load_full();
         let db = &state.base.db;
 
         // ── Case 1: target entity does not exist live ──────────────────────────

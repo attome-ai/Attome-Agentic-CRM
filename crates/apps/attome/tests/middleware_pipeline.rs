@@ -172,17 +172,15 @@ async fn test_app_with_extra_routes(
     // licensed deployment would.
     system
         .state()
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
 
     let base_state = system.state().base.clone();
     // P-license-enforcement-hardening Phase 5 (d): public_routes now needs
     // the live license handle for seat enforcement.
-    let license = system.state().license.clone();
+    let license = system.state().modules.clone();
 
     let auth_bundle = attome_server::RouteBundle::new(
         auth::public_routes(

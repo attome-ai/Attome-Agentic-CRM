@@ -193,14 +193,12 @@ async fn test_system() -> Option<(EngineSystem, attome_db::DbPool)> {
     // is not what this suite measures.
     //
     // Stored AFTER `build()`, as `action_routes.rs` does: `build()` loads the
-    // deployment's own licence into `state.license`, so a licence stored
+    // deployment's own licence into `state.modules`, so a licence stored
     // before it was overwritten with the degraded one and every memory route
     // answered 403 `feature_hidden`.
-    let mut license = ModuleSet::degraded();
-    license.max_users = 100;
-    license.expires = chrono::Utc::now() + chrono::Duration::days(1);
-    license.module_bits = [u64::MAX; 4];
-    system.state().license.store(Arc::new(license));
+    let mut license = ModuleSet::core_only();
+    license.bits() = [u64::MAX; 4];
+    system.state().modules.store(Arc::new(license));
     Some((system, db))
 }
 

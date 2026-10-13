@@ -335,22 +335,14 @@ fn licensed_for(module: ModuleId) -> ModuleSet {
     let mut bits = [0u64; 4];
     bits[module.word] |= module.mask;
     bits[MODULE_CORE.word] |= MODULE_CORE.mask;
-    ModuleSet {
-        module_bits: bits,
-        max_users: 100,
-        expires: chrono::Utc::now() + chrono::Duration::days(30),
-    }
+    ModuleSet::from_bits(bits)
 }
 
 /// The exact licence the hole was reachable on: core only, nothing else.
 fn core_only_license() -> ModuleSet {
     let mut bits = [0u64; 4];
     bits[MODULE_CORE.word] |= MODULE_CORE.mask;
-    ModuleSet {
-        module_bits: bits,
-        max_users: 100,
-        expires: chrono::Utc::now() + chrono::Duration::days(30),
-    }
+    ModuleSet::from_bits(bits)
 }
 
 /// The same predicate `resolve.rs::require_entity_licensed` applies.
@@ -406,7 +398,7 @@ fn the_owning_module_bit_alone_opens_exactly_its_own_entities() {
 #[test]
 fn an_expired_or_degraded_license_reaches_nothing() {
     let map = production_map();
-    let license = ModuleSet::degraded();
+    let license = ModuleSet::core_only();
     for entity in map.entities() {
         assert!(!is_licensed(&map, entity, &license), "{entity} on degraded");
     }

@@ -78,7 +78,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
 /// — `AppState` lives in `attome-server` and must stay free of `xrm-*`
 /// knowledge (guidelines §1); only `register`/`google_login` actually
 /// extract it, every other route here ignores the extension. Every call
-/// site of this function must supply `system.state().license.clone()` (or
+/// site of this function must supply `system.state().modules.clone()` (or
 /// an equivalent handle) — see `main.rs` for the canonical wiring.
 ///
 /// `auditor` (audit plan 3.4, D-542 rule 4) is attached the same way: the

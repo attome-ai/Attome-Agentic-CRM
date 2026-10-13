@@ -138,12 +138,10 @@ async fn test_system() -> Option<EngineSystem> {
         .expect("build EngineSystem");
     system
         .state()
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
     Some(system)
 }
 
@@ -192,11 +190,10 @@ async fn dependencies_endpoint_is_reachable_with_no_auth_headers_at_all() {
     assert_eq!(body["clamav"]["enabled"], false);
     assert!(body["jobs"]["fast"].is_object());
     assert!(body["jobs"]["batch"].is_object());
-    // P-observability-completion — license state now reported here too.
-    // test_system() stores an all-modules-paid license before returning.
-    assert_eq!(body["license"]["is_paid"], true);
-    assert!(body["license"]["expires"].is_string());
-    assert_eq!(body["license"]["max_users"], u32::MAX);
+    // The modules this deployment has on; test_system() turns all of them on.
+    let modules = body["modules"].as_array().expect("modules is a list");
+    assert!(modules.iter().any(|m| m == "core"));
+    assert!(modules.iter().any(|m| m == "workflow"));
 }
 
 /// This endpoint must never affect `/health/ready`'s own status code —

@@ -118,7 +118,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     // needs the live license handle for seat enforcement — cloned before
     // `system.core_routes()` below consumes `system`, same reasoning as
     // `attome_state` above.
-    let license = system.state().license.clone();
+    let license = system.state().modules.clone();
     let db = base_state.db.clone();
     let db_migrator = base_state.db_migrator.clone();
 

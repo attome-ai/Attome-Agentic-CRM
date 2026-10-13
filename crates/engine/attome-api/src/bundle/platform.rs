@@ -97,10 +97,7 @@ async fn apply_body(state: &EngineState, module: &str, bundle_json: &str) -> Res
     // boot on `trd-governance`/`attome-service`, and a licence imported later
     // would find those engines' tables missing. Customer bundles promoted
     // through the admin API keep the real licence check (`bundle::apply`).
-    let platform_license = attome_modules::ModuleSet {
-        module_bits: [u64::MAX; 4],
-        ..(*state.license.load_full()).clone()
-    };
+    let platform_license = attome_modules::ModuleSet::from_bits([u64::MAX; 4]);
     let plan = plan_bundle(
         &state.base.db,
         &platform_license,

@@ -207,12 +207,10 @@ async fn test_system() -> Option<EngineSystem> {
         .expect("build EngineSystem");
     system
         .state()
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
     Some(system)
 }
 
@@ -301,7 +299,7 @@ async fn model_seed_resolves_a_provider_row_that_predates_derived_ids() {
     // would short-circuit before planning) compares the resolved id, so the
     // existing row is a no-op, not an update.
     let bundle: Bundle = serde_json::from_str(&by_key).expect("parse model data");
-    let license = state.license.load_full();
+    let license = state.modules.load_full();
     let plan = plan_bundle(
         &state.base.db,
         &license,

@@ -148,12 +148,10 @@ async fn test_system() -> Option<EngineSystem> {
         .expect("build EngineSystem");
     system
         .state()
-        .license
-        .store(std::sync::Arc::new(attome_modules::ModuleSet {
-            module_bits: [u64::MAX; 4],
-            max_users: u32::MAX,
-            expires: chrono::Utc::now() + chrono::Duration::days(365),
-        }));
+        .modules
+        .store(std::sync::Arc::new(attome_modules::ModuleSet::from_bits(
+            [u64::MAX; 4],
+        )));
     Some(system)
 }
 
@@ -232,7 +230,7 @@ async fn export_is_deterministic_and_self_plan_is_all_noop() {
     assert!(!uuid_like, "canonical export must not carry UUIDs");
 
     // Self-plan: all noop, nothing to retire, nothing blocked.
-    let license = system.state().license.load_full();
+    let license = system.state().modules.load_full();
     let plan = plan_bundle(db, &license, &first, PlanOptions::default())
         .await
         .expect("plan");
@@ -256,7 +254,7 @@ async fn export_is_deterministic_and_self_plan_is_all_noop() {
 async fn object_added_after_export_plans_as_retire_of_the_earlier_bundle() {
     let system = skip_if_no_db!(test_system().await);
     let db = &system.state().base.db;
-    let license = system.state().license.load_full();
+    let license = system.state().modules.load_full();
 
     let before = export_bundle(db).await.expect("export before");
 

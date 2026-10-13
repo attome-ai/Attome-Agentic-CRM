@@ -67,7 +67,7 @@ async fn view_page(
     State(state): State<EngineState>,
     Query(q): Query<ViewQuery>,
 ) -> Result<Json<PublicPageView>, AppError> {
-    if state.license.load().require(MODULE_CONTENT).is_err() {
+    if state.modules.load().require(MODULE_CONTENT).is_err() {
         return Err(AppError::NotFound);
     }
 
@@ -135,7 +135,7 @@ async fn vote_on_page(
     headers: HeaderMap,
     Json(body): Json<VoteBody>,
 ) -> Result<Json<VoteAck>, AppError> {
-    if state.license.load().require(MODULE_CONTENT).is_err() {
+    if state.modules.load().require(MODULE_CONTENT).is_err() {
         return Err(AppError::NotFound);
     }
 

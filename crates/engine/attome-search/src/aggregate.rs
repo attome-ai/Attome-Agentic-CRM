@@ -517,6 +517,10 @@ async fn aggregate(
 /// integration tests (and any future in-process caller, same reasoning as
 /// `query_exec::execute_stored_query`) exercise the real code path rather
 /// than a re-implementation of it.
+#[expect(
+    clippy::expect_used,
+    reason = "each expect() here guards an invariant its message states"
+)]
 pub async fn run_aggregate(
     state: &EngineState,
     ctx: &SecurityContext,
@@ -1216,6 +1220,10 @@ pub fn key_filters(field: &str, key: &BucketKey) -> Result<Vec<Filter>, AppError
 /// count under the same timeout and cost ceiling (a count that exceeds the
 /// ceiling is a 422, never an estimate).
 #[allow(clippy::too_many_arguments)]
+#[expect(
+    clippy::expect_used,
+    reason = "each expect() here guards an invariant its message states"
+)]
 pub async fn run_structured_records(
     state: &EngineState,
     ctx: &SecurityContext,
