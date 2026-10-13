@@ -1,0 +1,342 @@
+//! The closed catalogue of registered [`SettingDescriptor`]s (M02 §5, D-412).
+//!
+//! Mirrors `attome-ai`'s `actions/mod.rs::all()` — a hand-written `Vec`, not
+//! distributed registration, so the set of valid keys is a code review, not a
+//! runtime surprise. Add a new setting by adding it to `core_settings()` (or a
+//! new `fn` grouped by owning concern, pushed into `all()` below) — never by
+//! constructing a row directly, and never by inventing a key at write time
+//! (`attome-server::settings_admin` rejects anything `registry().get(key)` can't
+//! find).
+//!
+//! Two groups today:
+//! - `core_settings()` — real, runtime-editable examples covering all three
+//!   scopes, so the resolution-order test (`setting_store.rs`) has something
+//!   genuine to resolve against.
+//! - `reserved_boot_time_examples()` — a single illustrative descriptor
+//!   proving the boot-time-only guard actually rejects a write (M02 §6's
+//!   required test). It is deliberately not wired to any real `auth.*`
+//!   config value — see its own doc comment.
+
+use serde_json::json;
+
+use crate::setting_descriptor::{SettingDescriptor, SettingScope};
+
+pub(crate) fn all() -> Vec<SettingDescriptor> {
+    let mut all = core_settings();
+    all.extend(reserved_boot_time_examples());
+    all.extend(feature_flag_settings());
+    all.extend(action_settings());
+    all.extend(ai_settings());
+    all.extend(omnichannel_settings());
+    all
+}
+
+fn core_settings() -> Vec<SettingDescriptor> {
+    vec![
+        SettingDescriptor::new(
+            "core.locale",
+            "Preferred BCP-47 locale tag used for date/number formatting and \
+             (future) localized content. Inheritable at every scope: a user's \
+             own choice wins, then their organization's, then the \
+             deployment-wide default, then \"en-US\".",
+            || {
+                json!({
+                    "type": "string",
+                    "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+                })
+            },
+            &[
+                SettingScope::User,
+                SettingScope::Organization,
+                SettingScope::Deployment,
+            ],
+            false,
+            || json!("en-US"),
+        ),
+        SettingDescriptor::new(
+            "core.list_page_size",
+            "Default page size for admin list views. Deployment- or \
+             organization-scoped only — deliberately not user-overridable in \
+             this first slice, so a single descriptor still demonstrates a \
+             narrower `allowed_scopes` set than core.locale's.",
+            || {
+                json!({
+                    "type": "integer",
+                    "minimum": 10,
+                    "maximum": 200,
+                })
+            },
+            &[SettingScope::Organization, SettingScope::Deployment],
+            false,
+            || json!(25),
+        ),
+        SettingDescriptor::new(
+            "core.dark_mode_default",
+            "Deployment-wide default for whether new users start in dark \
+             mode. A user's own theme preference (client-local today, see \
+             sidebar-preferences.service.ts) always wins if set; this is only \
+             the fallback shown before they ever choose.",
+            || json!({"type": "boolean"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
+    ]
+}
+
+/// A single illustrative descriptor in a reserved namespace, existing only to
+/// prove `SettingRegistry::new`'s boot-time-only assertion and the write
+/// handler's 422 both actually fire (M02 §6). Deliberately NOT wired to the
+/// real `config.auth` section — `attome-config`'s session TTL stays the sole
+/// source of truth for that value; registering it here as `boot_time_only`
+/// only demonstrates the guard, it does not expose or shadow the real config.
+fn reserved_boot_time_examples() -> Vec<SettingDescriptor> {
+    vec![SettingDescriptor::new(
+        "auth.session_ttl_minutes",
+        "Illustrative only. Session lifetime is boot-time config \
+         (`config.json`'s auth section, D-038) precisely because a malformed \
+         value must fail the process at boot rather than take effect quietly \
+         mid-flight. This descriptor is registered solely so the runtime \
+         settings API has a real key to reject a write against — it does not \
+         read or influence the actual session TTL.",
+        || json!({"type": "integer"}),
+        &[SettingScope::Deployment],
+        true,
+        || serde_json::Value::Null,
+    )]
+}
+
+/// One `SettingDescriptor` per registered [`crate::feature_flag_descriptor::FeatureFlag`]
+/// (M95, D-430) — the storage half of the flag catalogue in
+/// `feature_flag_catalog.rs`. `FeatureFlagRegistry::new()` asserts every flag
+/// there has a matching entry here, so the two lists can't silently drift
+/// apart.
+///
+/// Each descriptor is deliberately `Deployment`-scope only: per-user/role
+/// targeting and the progressive-rollout percentage live *inside* the stored
+/// JSON value (`feature_flag_store::FeatureFlagPolicy`), not as additional
+/// `setting` rows at other scopes — `SettingScope` has no `Role`
+/// variant and adding one (plus the DB `CHECK` it would need) is out of
+/// scope for a change that rides entirely on the existing store. The schema
+/// only pins the top-level shape (`validate_against_schema`'s minimal
+/// subset has no nested-property support); `features_admin`'s write handler
+/// does the deeper structural/dependency validation before ever calling the
+/// shared `write_setting` path.
+fn feature_flag_settings() -> Vec<SettingDescriptor> {
+    vec![
+        SettingDescriptor::new(
+            "feature.core.beta_ui",
+            "Stored policy value for the core.beta_ui feature flag (M95, D-430): \
+             {deployment: bool, user_overrides: {\"<user_id>\": bool}, \
+             role_overrides: {\"<privilege_key>\": bool}, percentage: 0-100}.",
+            || json!({"type": "object"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!({"deployment": false}),
+        ),
+        SettingDescriptor::new(
+            "feature.core.beta_ui_advanced_panels",
+            "Stored policy value for the core.beta_ui_advanced_panels feature \
+             flag (M95, D-430) — same shape as feature.core.beta_ui.",
+            || json!({"type": "object"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!({"deployment": false}),
+        ),
+        SettingDescriptor::new(
+            "feature.project.gantt_v2_preview",
+            "Stored policy value for the project.gantt_v2_preview feature flag \
+             (M95, D-430) — same shape as feature.core.beta_ui. Gated on \
+             MODULE_PROJECT: this flag can never evaluate true for a \
+             deployment whose licence doesn't hold that module, regardless of \
+             this stored value.",
+            || json!({"type": "object"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!({"deployment": false}),
+        ),
+    ]
+}
+
+/// M98 Phase 1 (`record.update_field`, D-448) — the deployment-configured
+/// allow-list of `(entity, field)` pairs the action may write. The action's
+/// `RiskTier::Reversible` descriptor gates *whether* a caller may reach the
+/// action at all; this setting gates *what it may touch* once reached — a
+/// second, narrower boundary the static descriptor cannot express because it
+/// has no notion of `args`. `attome-ai`'s executor resolves this at
+/// `Deployment` scope only (no per-user override — an admin, not each agent
+/// session's owner, decides the blast radius) and refuses any `(entity,
+/// field)` pair not listed, for every caller, not only an agent — the action
+/// is scoped by descriptor to this set, full stop.
+///
+/// Shape: `{"<entity_logicalname>": ["<field_logicalname>", ...], ...}`.
+/// Default `{}` — nothing is writable until an admin opts fields in, the
+/// same fail-closed posture `feature.*`'s `{"deployment": false}` default
+/// uses. The minimal schema validator has no nested-property support (see
+/// `setting_store.rs`'s header), so — same trade-off `feature_flag_settings`
+/// already accepts — only the top-level `object` shape is schema-checked;
+/// `attome-ai`'s executor is the one place that actually walks the map.
+fn action_settings() -> Vec<SettingDescriptor> {
+    vec![
+        SettingDescriptor::new(
+            "ai.record_update_field_allowlist",
+            "Deployment-wide allow-list of entity/field pairs the \
+             record.update_field AI action may write: \
+             {\"<entity>\": [\"<field>\", ...]}. A pair not listed here is \
+             refused regardless of caller, risk ceiling, or approval — this is \
+             the action's own scope, not a privilege check.",
+            || json!({"type": "object"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!({}),
+        ),
+        mcp_entity_admission(),
+    ]
+}
+
+/// MCP entity admission (plan item M3.4, `mcp-excellence-10-10.md`; owner
+/// decision 2026-09-28, a runtime setting rather than an entity metadata
+/// flag). Which entities an **external agent on the MCP surface** may reach
+/// through the `record.*` tools, and with which verbs.
+///
+/// Shape: `{"<entity_logicalname>": ["read" | "create" | "update" | "delete", ...]}`.
+/// Default `{}` — **nothing is admitted** (default-deny, invariant MI-3): an
+/// MCP `record.*` call on an entity not listed, or with a verb not listed, is
+/// refused darkly. Admission only narrows: the caller's own privileges and
+/// record-level security still apply on top. `attome-ai` also refuses a
+/// code-owned set of security, identity, audit and licence entities even when
+/// this setting names them (`attome_ai::mcp::admission`).
+///
+/// Deployment scope only, same reasoning as the allow-list above: an admin,
+/// not each session owner, decides what an external agent may touch. Only the
+/// top-level `object` shape is schema-checked (the minimal validator has no
+/// nested support); `attome-ai` is the one place that walks the map, and an
+/// unrecognised verb there admits nothing.
+fn mcp_entity_admission() -> SettingDescriptor {
+    SettingDescriptor::new(
+        "ai.mcp_entity_admission",
+        "Entities an external MCP agent may reach through the record.* tools, \
+         and with which verbs: {\"<entity>\": [\"read\", \"create\", \
+         \"update\", \"delete\"]}. Default {} admits nothing. Security, \
+         identity, audit and licence entities are refused even if listed. \
+         The caller's own privileges still apply.",
+        || json!({"type": "object"}),
+        &[SettingScope::Deployment],
+        false,
+        || json!({}),
+    )
+}
+
+/// M35 (AI Memory, D-451). Deployment-scope only — memory retention is a
+/// deployment-wide policy question, not a per-user preference, matching
+/// `core.dark_mode_default`'s own reasoning for the same scope restriction.
+/// Read by `attome-compliance::retention::propose_retention_actions` (via
+/// `SettingsSnapshot::resolve`, `user_id`/`organization_ref` both `None`)
+/// exactly like every other runtime-editable setting — no separate config
+/// table, per M02/D-412.
+fn ai_settings() -> Vec<SettingDescriptor> {
+    vec![SettingDescriptor::new(
+        "ai.memory_retention_days",
+        "How many days a memory row (`memory`, M35) is kept after \
+         creation before the retention sweep proposes it for deletion. \
+         Applies uniformly across every scope_kind in v1. A deployment that \
+         wants to keep memory indefinitely should set a very large value \
+         rather than relying on an unset default — this key always has an \
+         effective value (the code default below).",
+        || {
+            json!({
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3650,
+            })
+        },
+        &[SettingScope::Deployment],
+        false,
+        || json!(365),
+    )]
+}
+
+/// M53 Phase 1 (Omnichannel, web chat only, D-474). Deployment-scope only —
+/// same "policy question, not a per-user preference" reasoning
+/// `ai_settings` above already gives for its own single-scope setting. Read
+/// by `attome_server::omnichannel_public` via `SettingsSnapshot::resolve`
+/// (`user_id`/`organization_ref` both `None`), same established pattern as
+/// every other runtime-editable setting.
+///
+/// Genuine conditional routing (which queue a given request goes to, by
+/// content/category) needs M45 rule authoring, which does not exist yet
+/// (`attome_service::routing`'s own doc comment documents the identical gap for
+/// M70) — `web_chat_default_queue_ref` is deliberately the simple,
+/// hardcoded-but-admin-configurable stand-in the module plan calls for: every
+/// new web-chat handoff routes to this one queue, full stop, until M45 Phase
+/// 2 ships a real rule table.
+fn omnichannel_settings() -> Vec<SettingDescriptor> {
+    vec![
+        SettingDescriptor::new(
+            "omnichannel.web_chat_default_queue_ref",
+            "The `service_work_queue.id` every new web-chat handoff's work \
+             request is routed to (`work_queue_ref`). Empty string (the \
+             default) means no default queue is configured — a handoff still \
+             creates the work request, just with no queue set, exactly as if \
+             an admin had not configured M84 queue routing for this channel \
+             at all.",
+            || json!({"type": "string"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(""),
+        ),
+        SettingDescriptor::new(
+            "omnichannel.web_chat_offline_message",
+            "Fixed auto-reply text shown to a web-chat visitor when \
+             `web_chat_calendar_ref` is configured and the current instant \
+             falls outside that calendar's business hours (`attome-calendar`, \
+             D-404). Not M45-conditional — a single fixed message for v1, \
+             same scope cut every other module this session has taken for a \
+             genuine M45 gap.",
+            || json!({"type": "string"}),
+            &[SettingScope::Deployment],
+            false,
+            || {
+                json!(
+                    "Our team is currently offline. We've received your \
+                     message and will follow up as soon as we're back."
+                )
+            },
+        ),
+        SettingDescriptor::new(
+            "omnichannel.web_chat_calendar_ref",
+            "Optional `calendar.id` (D-404/M83) whose business \
+             hours gate the web chat widget. Empty string (the default) \
+             means no business-hours check applies — the widget behaves as \
+             if it were always open, the same opt-in-by-configuration \
+             posture `service_sla_policy.calendar_ref`/`service_work_queue.calendar_ref` \
+             already establish. Plain string, not a `lookup` — calendars are \
+             a dedicated admin object, not a generic XRM entity (see either \
+             of those two attributes' own doc comments).",
+            || json!({"type": "string"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!(""),
+        ),
+    ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// MCP entity admission is default-deny (plan item M3.4): the code
+    /// default admits nothing, and only an admin's deployment-scope row can
+    /// change that — no per-user or per-organization override.
+    #[test]
+    fn mcp_entity_admission_defaults_to_nothing_admitted_at_deployment_scope_only() {
+        let descriptor = all()
+            .into_iter()
+            .find(|d| d.key == "ai.mcp_entity_admission")
+            .expect("ai.mcp_entity_admission must be registered");
+        assert_eq!((descriptor.default)(), json!({}));
+        assert_eq!(descriptor.allowed_scopes, &[SettingScope::Deployment]);
+        assert!(!descriptor.boot_time_only);
+        assert_eq!((descriptor.schema)(), json!({"type": "object"}));
+    }
+}

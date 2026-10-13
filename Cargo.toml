@@ -18,6 +18,7 @@ members = [
     "crates/foundation/attome-server",
     "crates/foundation/attome-approval",
     "crates/engine/attome-modules",
+    "crates/engine/attome-core",
     "crates/sdk/attome-sdk",
     "crates/apps/attome",
 ]
@@ -54,6 +55,7 @@ attome-auth      = { path = "crates/foundation/attome-auth" }
 attome-server    = { path = "crates/foundation/attome-server" }
 attome-approval  = { path = "crates/foundation/attome-approval" }
 attome-modules   = { path = "crates/engine/attome-modules" }
+attome-core      = { path = "crates/engine/attome-core" }
 attome-sdk       = { path = "crates/sdk/attome-sdk" }
 
 # External crates
@@ -70,6 +72,7 @@ bytes         = "1"
 chrono        = { version = "0.4", features = ["serde"] }
 chrono-tz     = "0.10"
 dotenvy       = "0.15"
+ed25519-dalek = { version = "3", features = ["serde"] }
 fred          = { version = "9", features = ["subscriber-client", "enable-rustls", "i-scripts", "i-streams", "sentinel-auth"] }
 futures-util  = "0.3"
 hex           = "0.4"
@@ -84,6 +87,7 @@ object_store  = { version = "0.14", features = ["aws"] }
 opentelemetry = "0.32"
 proptest      = "1"
 rand          = "0.8"
+regex         = "1"
 reqwest       = { version = "0.13", default-features = false, features = ["json", "form", "rustls"] }
 rsa           = "0.9"
 rustls        = { version = "0.23", default-features = false, features = ["std", "ring"] }

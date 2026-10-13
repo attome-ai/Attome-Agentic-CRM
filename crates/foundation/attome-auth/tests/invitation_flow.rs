@@ -79,6 +79,16 @@ fn dummy_email_job(to: &str) -> TestJob {
     }))
 }
 
+/// Queued jobs whose payload carries `email`: this test's own jobs only, so
+/// tests running in parallel on the same database cannot change the count.
+async fn email_jobs_for(db: &DbPool, email: &str) -> i64 {
+    sqlx::query_scalar("SELECT COUNT(*) FROM apalis.jobs WHERE job::text LIKE '%' || $1 || '%'")
+        .bind(email)
+        .fetch_one(db)
+        .await
+        .expect("count this test's jobs")
+}
+
 async fn invitation_token_count(db: &DbPool, email: &str) -> i64 {
     sqlx::query_scalar("SELECT COUNT(*) FROM invitation_token WHERE email = $1")
         .bind(email)
@@ -142,9 +152,7 @@ async fn commit_makes_both_the_invitation_and_its_email_job_visible() {
     let db = skip_if_no_db!(pool().await);
     let email = format!("invite-commit-{}@example.invalid", Uuid::now_v7());
 
-    let pending_before = attome_jobs::pending_count(&db, false)
-        .await
-        .expect("pending_count");
+    let pending_before = email_jobs_for(&db, &email).await;
     let admin_id = create_test_admin(&db).await;
 
     let mut tx = db.begin().await.expect("begin tx");
@@ -161,9 +169,7 @@ async fn commit_makes_both_the_invitation_and_its_email_job_visible() {
         1,
         "committed invitation row must be visible"
     );
-    let pending_after = attome_jobs::pending_count(&db, false)
-        .await
-        .expect("pending_count");
+    let pending_after = email_jobs_for(&db, &email).await;
     assert_eq!(
         pending_after,
         pending_before + 1,
@@ -182,9 +188,7 @@ async fn a_rolled_back_transaction_leaves_neither_the_invitation_nor_its_email_j
     let db = skip_if_no_db!(pool().await);
     let email = format!("invite-rollback-{}@example.invalid", Uuid::now_v7());
 
-    let pending_before = attome_jobs::pending_count(&db, false)
-        .await
-        .expect("pending_count");
+    let pending_before = email_jobs_for(&db, &email).await;
     let admin_id = create_test_admin(&db).await;
 
     let mut tx = db.begin().await.expect("begin tx");
@@ -201,9 +205,7 @@ async fn a_rolled_back_transaction_leaves_neither_the_invitation_nor_its_email_j
         0,
         "a rolled-back invitation row must not be visible"
     );
-    let pending_after = attome_jobs::pending_count(&db, false)
-        .await
-        .expect("pending_count");
+    let pending_after = email_jobs_for(&db, &email).await;
     assert_eq!(
         pending_after, pending_before,
         "a rolled-back email job must not be visible in apalis.jobs"

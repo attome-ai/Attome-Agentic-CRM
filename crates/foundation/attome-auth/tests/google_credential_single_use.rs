@@ -28,20 +28,17 @@ use attome_types::AppError;
 use fred::prelude::*;
 use uuid::Uuid;
 
-async fn redis_pool() -> RedisPool {
-    let host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-    let port: u16 = std::env::var("TEST_REDIS_PORT")
-        .unwrap_or_else(|_| "6379".into())
-        .parse()
-        .expect("TEST_REDIS_PORT must be a valid port number");
+/// The test Redis, or `None` (the caller skips) when none is configured.
+async fn redis_pool() -> Option<RedisPool> {
+    let (host, port) = attome_testkit::test_redis()?;
     let config = RedisConfig::from_url(&format!("redis://{host}:{port}"))
         .expect("build redis config from test host/port");
     let pool = RedisPool::new(config, None, None, None, 2).expect("build redis pool");
     pool.connect();
     pool.wait_for_connect()
         .await
-        .expect("connect to local test Redis/Dragonfly");
-    pool
+        .expect("connect to the test Redis");
+    Some(pool)
 }
 
 /// A pool that can never be reached: nothing listens on port 1.
@@ -61,7 +58,7 @@ fn in_an_hour() -> chrono::DateTime<chrono::Utc> {
 
 #[tokio::test]
 async fn a_second_presentation_of_the_same_credential_is_refused() {
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let credential = unique_credential();
 
     consume_google_credential(&redis, &credential, in_an_hour())
@@ -83,7 +80,7 @@ async fn a_second_presentation_of_the_same_credential_is_refused() {
 /// Exactly one of many concurrent presentations of one credential succeeds.
 #[tokio::test]
 async fn concurrent_presentations_admit_exactly_one() {
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let credential = unique_credential();
 
     let attempts = (0..16).map(|_| {
@@ -108,7 +105,7 @@ async fn concurrent_presentations_admit_exactly_one() {
 /// 60 s leeway, capped at two hours.
 #[tokio::test]
 async fn the_marker_expires_with_the_token() {
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let credential = unique_credential();
     let exp = chrono::Utc::now() + chrono::Duration::seconds(600);
 

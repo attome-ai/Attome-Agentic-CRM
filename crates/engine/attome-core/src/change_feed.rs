@@ -1,0 +1,477 @@
+//! The entity change feed — `entity_change_event` (migration `0091`)
+//! plus the per-consumer cursor migration `0104` added and the
+//! delete/restore/purge operations migration `0105` added — both D-358.
+//!
+//! **Why this lives in `attome-core` and not in `attome-server`.** `0091`'s own
+//! header calls the outbox "a platform-level fact, not a workflow-owned one",
+//! but its only writer was `attome_server::entity_mutation`, which is the top of
+//! the engine layer. `attome-metadata`'s purge path (`purge::scrub_record`) sits
+//! *below* `attome-server` and must emit too, and a search/notification consumer
+//! would sit beside it. A shared writer therefore has to live in the crate
+//! both can see. `attome-core` is that crate, and the outbox is exactly the
+//! kind of concept guidelines §1 says belongs here: more than one engine
+//! genuinely owns it.
+//!
+//! **Two consumption models, deliberately.**
+//!
+//! * `processed_at` — attome-workflow's original destructive claim
+//!   (`UPDATE ... WHERE processed_at IS NULL ... FOR UPDATE SKIP LOCKED`).
+//!   Unchanged, still workflow's, still correct *for exactly one consumer*.
+//! * [`read_batch`]/[`advance`] — a non-destructive per-consumer cursor. Every
+//!   consumer added from D-358 onward uses this. Nothing about it touches
+//!   `processed_at`, so the two coexist over the same rows.
+//!
+//! A consumer must NOT use both, and a second consumer must never use the
+//! first: see `0104`'s header for what the race silently does.
+//!
+//! **Ordering, stated exactly.** The feed is ordered by transaction-id
+//! *assignment* (when a transaction first wrote), not by commit time. A long
+//! transaction that started before a short one is delivered before it, even
+//! though it committed after. That is sound here for one specific reason: a
+//! feed row carries no payload — only `(entity, record_id, operation)` — so a
+//! consumer re-projects the record's CURRENT state and converges regardless of
+//! the order it learns about it. A consumer that applied event payloads in
+//! feed order would be wrong, which is why there are no payloads to apply.
+//! `change_feed.rs`'s
+//! `an_event_from_a_long_write_transaction_is_never_skipped` pins this.
+
+use attome_types::AppError;
+use sqlx::{Connection, PgConnection, Postgres, Transaction};
+use uuid::Uuid;
+
+/// Operations the feed carries. Kept as a typed enum rather than bare strings
+/// so a new operation is a compile error at every match site instead of a
+/// silently-ignored row, and so the wire values can never drift from
+/// `0105`'s `CHECK` constraint.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChangeOperation {
+    Create,
+    Update,
+    /// Soft delete (`is_active = false`) — of the target, or of a dependent
+    /// record a `CascadeDeactivate` policy touched in another entity.
+    Delete,
+    /// A soft-deleted record was made live again. A consumer holding a derived
+    /// copy must re-add it; without this the record is unfindable forever.
+    Restore,
+    /// The record's business columns were scrubbed to NULL. A consumer holding
+    /// a derived copy of that text must ERASE it, not merely hide it — the
+    /// copy inherits the original's erasure obligation
+    /// (P-data-protection-governance).
+    Purge,
+}
+
+impl ChangeOperation {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ChangeOperation::Create => "create",
+            ChangeOperation::Update => "update",
+            ChangeOperation::Delete => "delete",
+            ChangeOperation::Restore => "restore",
+            ChangeOperation::Purge => "purge",
+        }
+    }
+
+    /// `None` for an unrecognised value rather than an error: a consumer
+    /// running older code than the writer must skip an operation it does not
+    /// understand, not crash the drain. The reconciliation scan is what
+    /// eventually repairs anything a skip left behind.
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "create" => Some(ChangeOperation::Create),
+            "update" => Some(ChangeOperation::Update),
+            "delete" => Some(ChangeOperation::Delete),
+            "restore" => Some(ChangeOperation::Restore),
+            "purge" => Some(ChangeOperation::Purge),
+            _ => None,
+        }
+    }
+}
+
+/// One feed row as a cursor consumer sees it.
+#[derive(Clone, Debug)]
+pub struct ChangeEvent {
+    pub id: Uuid,
+    pub entity_logicalname: String,
+    pub record_id: Uuid,
+    /// The raw column value. Use [`ChangeEvent::operation`] to get the typed
+    /// form; a row whose operation this build does not recognise still
+    /// advances the cursor.
+    pub operation: String,
+    /// Set only for a row [`emit_named`] wrote (e.g. `"sla.breached"`);
+    /// `None` for an ordinary entity-change row [`emit`]/[`emit_many`]
+    /// wrote. REVIEW-2026-09-02 finding #3 — added so a consumer (M62's
+    /// `attome_events::filter::SubscriptionFilter`) can match on it.
+    pub event_name: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl ChangeEvent {
+    pub fn operation(&self) -> Option<ChangeOperation> {
+        ChangeOperation::parse(&self.operation)
+    }
+}
+
+/// Where a consumer's cursor currently sits.
+#[derive(Clone, Copy, Debug)]
+pub struct CursorPosition {
+    /// Exclusive lower bound, as a 64-bit transaction id. `0` for a consumer
+    /// that has never run, which reads the whole retained feed.
+    pub last_commit_xid: i64,
+    pub last_id: Option<Uuid>,
+}
+
+/// Writes one feed row in the CALLER'S transaction. This is the whole point of
+/// an outbox: an event can never exist for a write that rolled back, or be
+/// lost for one that committed. Passing a pooled connection instead of the
+/// mutating transaction's own would reintroduce exactly the dual-write bug
+/// `0091` exists to prevent.
+pub async fn emit(
+    conn: &mut PgConnection,
+    entity_logicalname: &str,
+    record_id: Uuid,
+    operation: ChangeOperation,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "INSERT INTO entity_change_event (entity_logicalname, record_id, operation) \
+         VALUES ($1, $2, $3)",
+    )
+    .bind(entity_logicalname)
+    .bind(record_id)
+    .bind(operation.as_str())
+    .execute(conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// M62 §3 "Domain events": writes one feed row carrying a non-NULL
+/// `event_name` — the additive column migration `0145` added, and the shape
+/// M62 Phase 2 describes ("engines publish named events... through the same
+/// outbox with `event_name`") but that no writer had used yet as of this
+/// crate's own `event_name` column comment. `event_name` is a caller-chosen
+/// dotted name (e.g. `sla.breached`, `sla.warning`) — this function does not
+/// validate its shape, same posture `operation` already has for a caller
+/// passing a typed [`ChangeOperation`].
+///
+/// Full M62 Phase 2 subscription routing (`attome-events`' filter/dispatch
+/// reading `event_name`) is not wired to this yet — that remains real,
+/// separate follow-up work (M62's own plan already tracks it as Phase 2).
+/// This function only makes the event durable and visible in the outbox for
+/// whenever that lands; the caller (M73's `sla.rs`/`clock.rs`) additionally
+/// acts on it directly and synchronously, the same "add the publish call,
+/// call the consumer directly" shape `sla.rs`'s own module doc already uses
+/// for `sweep_breaches` not yet being a `PlatformJob`.
+pub async fn emit_named(
+    conn: &mut PgConnection,
+    entity_logicalname: &str,
+    record_id: Uuid,
+    operation: ChangeOperation,
+    event_name: &str,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "INSERT INTO entity_change_event \
+             (entity_logicalname, record_id, operation, event_name) \
+         VALUES ($1, $2, $3, $4)",
+    )
+    .bind(entity_logicalname)
+    .bind(record_id)
+    .bind(operation.as_str())
+    .bind(event_name)
+    .execute(conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// Batch form of [`emit`] for a cascade, which touches an unbounded number of
+/// records in one statement. One multi-row INSERT via `UNNEST`, not a loop of
+/// round trips — a cascade over ten thousand dependents would otherwise turn
+/// one `UPDATE` into ten thousand INSERTs inside an open transaction
+/// (guidelines §14's N+1 rule, and §4's "keep transactions short").
+///
+/// All rows share the emitting transaction's `commit_xid`; `id` orders them
+/// within it.
+pub async fn emit_many(
+    conn: &mut PgConnection,
+    entity_logicalname: &str,
+    record_ids: &[Uuid],
+    operation: ChangeOperation,
+) -> Result<(), AppError> {
+    if record_ids.is_empty() {
+        return Ok(());
+    }
+    sqlx::query(
+        "INSERT INTO entity_change_event (entity_logicalname, record_id, operation) \
+         SELECT $1, r, $3 FROM UNNEST($2::uuid[]) AS r",
+    )
+    .bind(entity_logicalname)
+    .bind(record_ids)
+    .bind(operation.as_str())
+    .execute(conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// Transaction-typed convenience wrapper over [`emit`], for the many call
+/// sites that hold a `Transaction` rather than a bare `PgConnection`.
+pub async fn emit_tx(
+    tx: &mut Transaction<'_, Postgres>,
+    entity_logicalname: &str,
+    record_id: Uuid,
+    operation: ChangeOperation,
+) -> Result<(), AppError> {
+    emit(tx, entity_logicalname, record_id, operation).await
+}
+
+/// Reads this consumer's current position, creating a zero cursor on first
+/// call. `ON CONFLICT DO NOTHING` then `SELECT` rather than an upsert with
+/// `RETURNING`: two consumers racing their very first read must both end up
+/// reading the same existing row, not have one of them reset the other's
+/// position to zero.
+pub async fn cursor(conn: &mut PgConnection, consumer: &str) -> Result<CursorPosition, AppError> {
+    sqlx::query("INSERT INTO change_consumer_cursor (consumer) VALUES ($1) ON CONFLICT (consumer) DO NOTHING")
+        .bind(consumer)
+        .execute(&mut *conn)
+        .await
+        .map_err(AppError::internal)?;
+
+    let row: (i64, Option<Uuid>) = sqlx::query_as(
+        "SELECT last_commit_xid::text::bigint, last_id \
+         FROM change_consumer_cursor WHERE consumer = $1",
+    )
+    .bind(consumer)
+    .fetch_one(conn)
+    .await
+    .map_err(AppError::internal)?;
+
+    Ok(CursorPosition {
+        last_commit_xid: row.0,
+        last_id: row.1,
+    })
+}
+
+/// Reads up to `limit` events after `consumer`'s cursor, oldest first.
+///
+/// The `commit_xid < pg_snapshot_xmin(pg_current_snapshot())` gate is the
+/// correctness condition, not an optimisation: it restricts the read to
+/// transactions that have finished, which is what makes advancing the cursor
+/// safe. Dropping it — or replacing it with a time lag — reintroduces the
+/// silent event loss `0104`'s header describes.
+///
+/// Reading does not mark anything. A consumer that crashes mid-batch re-reads
+/// the same events on restart, so item processing must be idempotent.
+pub async fn read_batch(
+    conn: &mut PgConnection,
+    consumer: &str,
+    limit: i64,
+) -> Result<Vec<ChangeEvent>, AppError> {
+    let position = cursor(&mut *conn, consumer).await?;
+
+    #[allow(clippy::type_complexity)]
+    let rows: Vec<(
+        Uuid,
+        String,
+        Uuid,
+        String,
+        Option<String>,
+        chrono::DateTime<chrono::Utc>,
+    )> = sqlx::query_as(
+        "SELECT id, entity_logicalname, record_id, operation, event_name, created_at \
+         FROM entity_change_event \
+         WHERE commit_xid > $1::text::xid8 \
+           AND commit_xid < pg_snapshot_xmin(pg_current_snapshot()) \
+         ORDER BY commit_xid, id \
+         LIMIT $2",
+    )
+    .bind(position.last_commit_xid.to_string())
+    .bind(limit)
+    .fetch_all(conn)
+    .await
+    .map_err(AppError::internal)?;
+
+    Ok(rows
+        .into_iter()
+        .map(
+            |(id, entity_logicalname, record_id, operation, event_name, created_at)| ChangeEvent {
+                id,
+                entity_logicalname,
+                record_id,
+                operation,
+                event_name,
+                created_at,
+            },
+        )
+        .collect())
+}
+
+/// Advances `consumer`'s cursor past `event`.
+///
+/// Call this AFTER the batch's work is durable, and never in the same
+/// transaction as work that might roll back independently — the cursor is the
+/// only record that the work happened.
+///
+/// The `GREATEST` guard makes a late or duplicated advance a no-op instead of
+/// a rewind: two workers of the same consumer that overlap must not be able to
+/// move the cursor backwards and re-deliver an arbitrary amount of the feed.
+pub async fn advance(
+    conn: &mut PgConnection,
+    consumer: &str,
+    event: &ChangeEvent,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "UPDATE change_consumer_cursor \
+            SET last_commit_xid = GREATEST( \
+                    last_commit_xid, \
+                    (SELECT commit_xid FROM entity_change_event WHERE id = $2) \
+                ), \
+                last_id = $2, \
+                last_created_at = $3, \
+                updated_at = NOW() \
+          WHERE consumer = $1",
+    )
+    .bind(consumer)
+    .bind(event.id)
+    .bind(event.created_at)
+    .execute(conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// M01 §7 C-04 — rows deleted per `DELETE` inside one batch of [`prune`]'s
+/// loop. A first-ever run against years of unpruned history (D-358 shipped
+/// with no caller — see that item) can be an arbitrarily large backlog;
+/// `LIMIT` bounds every single statement/transaction to a modest size
+/// regardless, instead of one unbounded `DELETE` holding a lock over the
+/// whole backlog at once (guidelines §4 "keep transactions short", §9
+/// "bounded batch sizes").
+const PRUNE_BATCH_LIMIT: i64 = 10_000;
+
+/// M01 §7 C-04 — the advisory-lock key [`prune`] takes for every batch.
+/// `attome-core`'s own namespace (guidelines §2's
+/// `"{crate}/{operation}:{resource}"` convention); no per-resource suffix,
+/// since there is exactly one feed table to prune.
+const PRUNE_LOCK_KEY: &str = "attome-core/change-feed-prune";
+
+/// Deletes feed rows every consumer is finished with.
+///
+/// "Every consumer" is the load-bearing word, and it means both models:
+///
+/// * the slowest registered cursor (`MIN(last_commit_xid)`), and
+/// * attome-workflow's `processed_at` claim.
+///
+/// A prune that respected only one of them would delete events the other had
+/// not seen — the same silent loss the cursor exists to prevent, arriving from
+/// the retention side instead. `min_age` is a second, independent floor so a
+/// consumer that is merely *starting up* (its cursor row exists but has not
+/// advanced) cannot have the feed deleted out from under it.
+///
+/// Runs in bounded batches (`PRUNE_BATCH_LIMIT`), each its own short
+/// transaction guarded by `pg_try_advisory_xact_lock($1, hashtext($2))` on
+/// [`PRUNE_LOCK_KEY`] (guidelines §2's two-argument form, bound under
+/// [`crate::ADVISORY_LOCK_NAMESPACE`]) — re-acquired per batch rather than
+/// held for the whole run, so a concurrent run (a second scheduler tick on
+/// another node, or a slow previous run still going) only ever contends for
+/// one batch at a time instead of blocking behind the entire backlog. A run
+/// that loses the race for a batch stops immediately rather than spinning:
+/// deleting the same, idempotent, predicate-matched rows twice is harmless,
+/// but there is no reason to contend for it — the run already holding the
+/// lock (or the next scheduled tick) makes further progress.
+///
+/// Returns the total number of rows deleted across every batch.
+pub async fn prune(conn: &mut PgConnection, min_age: std::time::Duration) -> Result<u64, AppError> {
+    let age_seconds = min_age.as_secs_f64();
+    let mut total_deleted = 0u64;
+    loop {
+        let mut tx = conn.begin().await.map_err(AppError::internal)?;
+
+        let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+            .bind(crate::ADVISORY_LOCK_NAMESPACE)
+            .bind(PRUNE_LOCK_KEY)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+        if !locked {
+            break;
+        }
+
+        let deleted = sqlx::query(
+            "DELETE FROM entity_change_event \
+              WHERE id IN ( \
+                  SELECT e.id FROM entity_change_event e \
+                   WHERE e.processed_at IS NOT NULL \
+                     AND e.created_at < NOW() - make_interval(secs => $1) \
+                     AND e.commit_xid <= COALESCE( \
+                             (SELECT MIN(last_commit_xid) FROM change_consumer_cursor), \
+                             e.commit_xid \
+                         ) \
+                   LIMIT $2 \
+              )",
+        )
+        .bind(age_seconds)
+        .bind(PRUNE_BATCH_LIMIT)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?
+        .rows_affected();
+
+        tx.commit().await.map_err(AppError::internal)?;
+
+        total_deleted += deleted;
+        if deleted < PRUNE_BATCH_LIMIT as u64 {
+            break;
+        }
+    }
+    Ok(total_deleted)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn operation_wire_values_round_trip() {
+        for op in [
+            ChangeOperation::Create,
+            ChangeOperation::Update,
+            ChangeOperation::Delete,
+            ChangeOperation::Restore,
+            ChangeOperation::Purge,
+        ] {
+            assert_eq!(
+                ChangeOperation::parse(op.as_str()),
+                Some(op),
+                "every operation must survive a round trip through its wire value"
+            );
+        }
+    }
+
+    /// The five values here must be exactly the five in `0105`'s CHECK
+    /// constraint. A value added on one side only is either a write that
+    /// violates the constraint at runtime, or a constraint that admits
+    /// something no consumer can interpret.
+    #[test]
+    fn wire_values_match_the_check_constraint() {
+        let migration =
+            include_str!("../../../server/migrations/0105_entity_change_event_delete_op.sql");
+        for op in [
+            ChangeOperation::Create,
+            ChangeOperation::Update,
+            ChangeOperation::Delete,
+            ChangeOperation::Restore,
+            ChangeOperation::Purge,
+        ] {
+            assert!(
+                migration.contains(&format!("'{}'", op.as_str())),
+                "{} is missing from 0105's CHECK constraint",
+                op.as_str()
+            );
+        }
+    }
+
+    #[test]
+    fn unknown_operations_are_skipped_not_errors() {
+        assert_eq!(ChangeOperation::parse("merge"), None);
+    }
+}

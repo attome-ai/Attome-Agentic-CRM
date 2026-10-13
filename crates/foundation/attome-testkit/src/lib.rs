@@ -353,6 +353,12 @@ pub fn unique(prefix: &str) -> String {
     format!("{prefix}-{}", short(Uuid::now_v7()))
 }
 
+/// A unique entity logical name: `prefix` plus a fresh suffix, lowercase and
+/// underscore-separated, so a test's entity never collides with another's.
+pub fn unique_logicalname(prefix: &str) -> String {
+    format!("{prefix}_{}", short(Uuid::now_v7()))
+}
+
 /// A unique address at the reserved `.invalid` domain (RFC 2606), so a test
 /// fixture can never be delivered.
 pub fn unique_email(prefix: &str) -> String {
