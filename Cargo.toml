@@ -16,6 +16,8 @@ members = [
     "crates/foundation/attome-jobs",
     "crates/foundation/attome-auth",
     "crates/foundation/attome-server",
+    "crates/foundation/attome-approval",
+    "crates/engine/attome-modules",
     "crates/sdk/attome-sdk",
     "crates/apps/attome",
 ]
@@ -50,7 +52,9 @@ attome-email     = { path = "crates/foundation/attome-email" }
 attome-jobs      = { path = "crates/foundation/attome-jobs" }
 attome-auth      = { path = "crates/foundation/attome-auth" }
 attome-server    = { path = "crates/foundation/attome-server" }
-attome-sdk     = { path = "crates/sdk/attome-sdk" }
+attome-approval  = { path = "crates/foundation/attome-approval" }
+attome-modules   = { path = "crates/engine/attome-modules" }
+attome-sdk       = { path = "crates/sdk/attome-sdk" }
 
 # External crates
 aes-gcm       = { version = "0.10", features = ["aes"] }

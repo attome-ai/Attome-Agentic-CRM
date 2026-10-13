@@ -23,6 +23,13 @@
 //! same); the per-operation resident footprint is therefore
 //! (peak(c) − peak(1)) ÷ (c − 1).
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::print_stdout,
+    reason = "a developer-run example: printing results and panicking on setup failure is the point"
+)]
+
 use std::sync::{Arc, Barrier};
 use std::time::{Duration, Instant};
 
