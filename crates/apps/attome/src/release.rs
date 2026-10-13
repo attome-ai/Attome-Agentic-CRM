@@ -92,7 +92,8 @@ fn run(command: &mut Command, root: &Path, what: &str) -> Result<(), String> {
 /// The nearest directory, from the current one upwards, whose `Cargo.toml`
 /// declares a `[workspace]`.
 fn workspace_root() -> Result<PathBuf, String> {
-    let start = std::env::current_dir().map_err(|error| format!("no current directory: {error}"))?;
+    let start =
+        std::env::current_dir().map_err(|error| format!("no current directory: {error}"))?;
     for dir in start.ancestors() {
         let manifest = dir.join("Cargo.toml");
         if let Ok(text) = std::fs::read_to_string(&manifest)
@@ -112,7 +113,8 @@ fn rust_files(dir: &Path) -> Result<Vec<PathBuf>, String> {
         let entries = std::fs::read_dir(&current)
             .map_err(|error| format!("cannot read {}: {error}", current.display()))?;
         for entry in entries {
-            let entry = entry.map_err(|error| format!("cannot read {}: {error}", current.display()))?;
+            let entry =
+                entry.map_err(|error| format!("cannot read {}: {error}", current.display()))?;
             let path = entry.path();
             if path.is_dir() {
                 if path.file_name().is_some_and(|name| name == "target") {
@@ -133,10 +135,8 @@ mod tests {
     use super::*;
 
     fn scratch(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!(
-            "attome-release-test-{name}-{}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("attome-release-test-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
@@ -158,7 +158,9 @@ mod tests {
 
     #[test]
     fn format_batches_stay_small() {
-        let paths: Vec<PathBuf> = (0..101).map(|i| PathBuf::from(format!("f{i}.rs"))).collect();
+        let paths: Vec<PathBuf> = (0..101)
+            .map(|i| PathBuf::from(format!("f{i}.rs")))
+            .collect();
         let sizes: Vec<usize> = paths.chunks(FORMAT_BATCH).map(<[PathBuf]>::len).collect();
         assert_eq!(sizes, vec![40, 40, 21]);
     }
