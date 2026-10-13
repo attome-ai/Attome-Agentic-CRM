@@ -172,7 +172,7 @@ pub(crate) async fn narrow_by_runtime_configuration(
                 %error,
                 "failed to load runtime module configuration; the signed license applies un-narrowed"
             );
-            signed.clone()
+            *signed
         }
     }
 }

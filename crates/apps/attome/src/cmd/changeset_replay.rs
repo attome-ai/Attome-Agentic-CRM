@@ -606,7 +606,7 @@ async fn replay_into(
     Ok(export)
 }
 
-async fn run(args: Args) -> Result<bool, BoxError> {
+async fn replay(args: Args) -> Result<bool, BoxError> {
     if std::env::var_os("DATABASE_URL").is_some() {
         return Err(
             "unset DATABASE_URL: under APP_ENV=debug it overrides the database the \
@@ -709,7 +709,7 @@ pub fn run() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    match runtime.block_on(run(args)) {
+    match runtime.block_on(replay(args)) {
         Ok(true) => ExitCode::SUCCESS,
         Ok(false) => ExitCode::from(1),
         Err(e) => {

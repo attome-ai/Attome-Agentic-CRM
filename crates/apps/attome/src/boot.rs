@@ -571,6 +571,7 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     // underlying `apalis.jobs` table; `PlatformJobs` carries the fast/batch
     // pair so `main.rs`/`bin/worker.rs` can each register their own
     // per-queue `WorkerBuilder`/concurrency limit.
+    let jobs = attome_jobs::Jobs::<attome_core::jobs::EngineJob>::new(db.clone());
     tracing::info!("infrastructure clients ready");
     attome_profiler::record("boot.infrastructure", t_infrastructure.elapsed());
 

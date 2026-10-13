@@ -84,10 +84,10 @@ pub async fn run() {
         .json()
         .init();
 
-    std::process::exit(run().await);
+    std::process::exit(verify().await);
 }
 
-async fn run() -> i32 {
+async fn verify() -> i32 {
     let config = match AppConfig::from_file() {
         Ok(c) => c,
         Err(e) => {
