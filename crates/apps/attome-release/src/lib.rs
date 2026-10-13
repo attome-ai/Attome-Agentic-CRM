@@ -8,8 +8,8 @@
 //!    (which `cargo fmt --all` does).
 //! 2. **clippy**: `cargo clippy --workspace --all-targets --keep-going -- -D warnings`
 //!    (`--keep-going` so one broken crate does not hide the others' errors).
-//! 3. **tests**: `cargo test --workspace --no-fail-fast`, so one run reports every
-//!    failing test.
+//! 3. **tests**: `cargo test --workspace --no-fail-fast -- --test-threads=1`, so one run
+//!    reports every failing test.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -74,7 +74,15 @@ fn clippy(root: &Path) -> Result<(), String> {
 
 fn tests(root: &Path) -> Result<(), String> {
     let mut command = Command::new("cargo");
-    command.args(["test", "--workspace", "--no-fail-fast"]);
+    // One test thread per binary: the database-backed suites share one throwaway
+    // database per process, and concurrent metadata writes in it conflict.
+    command.args([
+        "test",
+        "--workspace",
+        "--no-fail-fast",
+        "--",
+        "--test-threads=1",
+    ]);
     run(&mut command, root, "cargo test")
 }
 

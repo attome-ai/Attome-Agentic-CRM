@@ -1,0 +1,6 @@
+# Each test is its own process with its own throwaway database. On Windows the
+# thousands of short-lived connections can exhaust the ephemeral TCP port range
+# (os error 10048), so parallelism is capped.
+[profile.default]
+test-threads = 6
+slow-timeout = { period = "60s", terminate-after = 3 }

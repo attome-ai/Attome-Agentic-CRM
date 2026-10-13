@@ -185,6 +185,10 @@ dbg_macro    = "deny"
 todo         = "deny"
 print_stdout = "warn"
 
+[profile.dev]
+# Line tables keep backtraces readable; full debug info made every test binary slow to link.
+debug = "line-tables-only"
+
 [profile.release]
 lto           = "thin"
 codegen-units = 1
