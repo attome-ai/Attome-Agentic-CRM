@@ -69,6 +69,11 @@
 //! consistent with anchoring being a best-effort, degrade-not-fail concern
 //! (D-027) even when triggered manually.
 
+#![allow(
+    clippy::print_stdout,
+    reason = "a command-line command reports to standard output"
+)]
+
 use attome_config::AppConfig;
 use attome_core::AuditSigner;
 use futures_util::StreamExt;

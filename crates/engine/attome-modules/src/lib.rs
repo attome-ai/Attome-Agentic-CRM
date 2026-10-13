@@ -8,6 +8,11 @@
 //!
 //! [`ModuleSet`] is a 256-bit set, so a check is one array index and one AND.
 
+/// This crate's advisory-lock namespace in the workspace registry
+/// (`crates/apps/attome/tests/advisory_lock_namespaces.rs`). Reserved: no
+/// lock uses it today, and an id is never reused or renumbered.
+pub const ADVISORY_LOCK_NAMESPACE: i32 = 27;
+
 /// The bits of a [`ModuleSet`]: 256 modules, 32 bytes.
 pub type ModuleBits = [u64; 4];
 

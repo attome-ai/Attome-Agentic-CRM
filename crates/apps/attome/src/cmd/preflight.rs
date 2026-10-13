@@ -33,6 +33,11 @@
 //! exits 0 and prints a pass/fail table otherwise. Reads config exactly like
 //! `server`/`migrate` do: `CONFIG_FILE` env var, or `config.json` /
 //! `config.debug.json` under `APP_ENV=debug`.
+
+#![allow(
+    clippy::print_stdout,
+    reason = "a command-line command reports to standard output"
+)]
 use std::process::ExitCode;
 
 use attome_config::AppConfig;

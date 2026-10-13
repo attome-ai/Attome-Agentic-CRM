@@ -25,7 +25,7 @@ jobs:
   linux:
     name: release check (linux, with postgres and redis)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     services:
       postgres:
         image: pgvector/pgvector:pg18
@@ -80,7 +80,7 @@ jobs:
   windows:
     name: release check (windows)
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1

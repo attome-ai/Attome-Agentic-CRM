@@ -17,6 +17,11 @@
 //! Exits 0 on any 2xx status line, exits 1 otherwise (connection failure,
 //! non-2xx status, or a response that doesn't even look like HTTP).
 
+#![allow(
+    clippy::print_stdout,
+    reason = "a command-line command reports to standard output"
+)]
+
 use std::env;
 use std::io::{Read, Write};
 use std::net::TcpStream;

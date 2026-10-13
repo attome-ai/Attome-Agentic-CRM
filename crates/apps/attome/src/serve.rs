@@ -1,3 +1,7 @@
+#![allow(
+    clippy::print_stdout,
+    reason = "a command-line command reports to standard output"
+)]
 use attome::auth;
 use attome::jobs::MigratorDb;
 

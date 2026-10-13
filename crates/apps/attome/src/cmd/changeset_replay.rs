@@ -61,6 +61,11 @@
 //! Exit status: 0 no difference (or no `--reference`), 1 differences found,
 //! 2 the replay itself failed, 64 bad arguments.
 
+#![allow(
+    clippy::print_stdout,
+    reason = "a command-line command reports to standard output"
+)]
+
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
