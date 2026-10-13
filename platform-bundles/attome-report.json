@@ -1,0 +1,9 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": []
+}

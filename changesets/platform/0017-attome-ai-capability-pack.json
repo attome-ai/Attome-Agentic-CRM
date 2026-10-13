@@ -1,0 +1,171 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:9ef98e87fe68e25242af15986bac1b334385bc5eb64f248440af1071bfe3fc7a",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-capability-pack.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "02881fb8-e4b1-72e3-8cd6-ab8a3c49f51a",
+  "layer": "platform",
+  "name": "attome-ai-capability-pack",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "AI Capability Pack",
+          "is_append_only": false,
+          "logicalname": "ai_capability_pack",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "ai_capability_pack"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Action IDs",
+          "field_type": "text",
+          "is_write_restricted": true,
+          "logicalname": "action_ids",
+          "options": {
+            "mask_description": "JSON array of action ids",
+            "pattern": "\\[\\s*(\"[A-Za-z][A-Za-z0-9_.]*\"\\s*(,\\s*\"[A-Za-z][A-Za-z0-9_.]*\"\\s*)*)?\\]"
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "ai_capability_pack",
+        "field": "action_ids"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "ai_capability_pack",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "ai_capability_pack",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_capability_pack",
+          "entity_mappings": [],
+          "name": "Active Capability Packs",
+          "required_privilege": "ai_capability_pack.read",
+          "sql": "SELECT id, name, description, action_ids FROM \"ai_capability_pack\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "ai_capability_pack",
+        "query": "Active Capability Packs"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_capability_pack",
+          "entity_mappings": [],
+          "name": "Inactive Capability Packs",
+          "required_privilege": "ai_capability_pack.read",
+          "sql": "SELECT id, name, description, action_ids FROM \"ai_capability_pack\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "ai_capability_pack",
+        "query": "Inactive Capability Packs"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_capability_pack",
+          "is_default": true,
+          "name": "Active Capability Packs",
+          "query": {
+            "entity": "ai_capability_pack",
+            "name": "Active Capability Packs"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "ai_capability_pack",
+        "view": "Active Capability Packs"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_capability_pack",
+          "is_default": false,
+          "name": "Inactive Capability Packs",
+          "query": {
+            "entity": "ai_capability_pack",
+            "name": "Inactive Capability Packs"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "ai_capability_pack",
+        "view": "Inactive Capability Packs"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 17,
+  "title": "Platform definitions: attome-ai-capability-pack"
+}

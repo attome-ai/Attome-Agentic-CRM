@@ -1,0 +1,118 @@
+{
+  "embedding_model": "BAAI/bge-m3",
+  "baseline": {
+    "fixture_fingerprint": "b532b4c6366498f6",
+    "scores": {
+      "answerable": {
+        "questions": 38,
+        "recall_at_5": 0.881578947368421,
+        "recall_at_10": 0.9605263157894737,
+        "mrr_at_10": 0.480733082706767,
+        "ndcg_at_10": 0.5936265130881763,
+        "complete_at_10": 0.9473684210526315
+      },
+      "answerable_by_language": {
+        "en": {
+          "questions": 25,
+          "recall_at_5": 0.86,
+          "recall_at_10": 0.94,
+          "mrr_at_10": 0.4990476190476191,
+          "ndcg_at_10": 0.5964989783035521,
+          "complete_at_10": 0.92
+        },
+        "ar": {
+          "questions": 10,
+          "recall_at_5": 0.9,
+          "recall_at_10": 1.0,
+          "mrr_at_10": 0.4708333333333333,
+          "ndcg_at_10": 0.608372672811704,
+          "complete_at_10": 1.0
+        },
+        "mixed": {
+          "questions": 3,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr_at_10": 0.3611111111111111,
+          "ndcg_at_10": 0.5205354372149502,
+          "complete_at_10": 1.0
+        }
+      },
+      "answerable_by_category": {
+        "exact_terminology": {
+          "questions": 8,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr_at_10": 0.38541666666666663,
+          "ndcg_at_10": 0.5447314139074061,
+          "complete_at_10": 1.0
+        },
+        "natural_question": {
+          "questions": 16,
+          "recall_at_5": 0.84375,
+          "recall_at_10": 0.96875,
+          "mrr_at_10": 0.597470238095238,
+          "ndcg_at_10": 0.6650951194882198,
+          "complete_at_10": 0.9375
+        },
+        "partial_overlap": {
+          "questions": 5,
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr_at_10": 0.36666666666666664,
+          "ndcg_at_10": 0.5273139591842653,
+          "complete_at_10": 1.0
+        },
+        "paraphrase": {
+          "questions": 9,
+          "recall_at_5": 0.7777777777777778,
+          "recall_at_10": 0.8888888888888888,
+          "mrr_at_10": 0.4212962962962963,
+          "ndcg_at_10": 0.5468738309287335,
+          "complete_at_10": 0.8888888888888888
+        }
+      },
+      "multi_hop": {
+        "questions": 3,
+        "recall_at_5": 0.5,
+        "recall_at_10": 0.8333333333333334,
+        "mrr_at_10": 0.611111111111111,
+        "ndcg_at_10": 0.5247707398727842,
+        "complete_at_10": 0.6666666666666666
+      },
+      "unanswerable": {
+        "questions": 9,
+        "unanswerable_retrieval_rate": 1.0,
+        "mean_sections_returned": 10.0
+      },
+      "unanswerable_by_language": {
+        "en": {
+          "questions": 5,
+          "unanswerable_retrieval_rate": 1.0,
+          "mean_sections_returned": 10.0
+        },
+        "ar": {
+          "questions": 2,
+          "unanswerable_retrieval_rate": 1.0,
+          "mean_sections_returned": 10.0
+        },
+        "mixed": {
+          "questions": 2,
+          "unanswerable_retrieval_rate": 1.0,
+          "mean_sections_returned": 10.0
+        }
+      },
+      "unanswerable_by_category": {
+        "natural_question": {
+          "questions": 4,
+          "unanswerable_retrieval_rate": 1.0,
+          "mean_sections_returned": 10.0
+        },
+        "loose_match": {
+          "questions": 5,
+          "unanswerable_retrieval_rate": 1.0,
+          "mean_sections_returned": 10.0
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1006 @@
+{
+  "corpus": [
+    {
+      "key": "acc-acme",
+      "entity": "account",
+      "title": "ACME Trading LLC",
+      "body": "Wholesale electronics distributor based in Dubai. Procurement handled by Sara Haddad.",
+      "exact_keys": [
+        "ACC-1001"
+      ],
+      "org": "main",
+      "age_days": 500
+    },
+    {
+      "key": "acc-acme-holdings",
+      "entity": "account",
+      "title": "ACME Holdings FZE",
+      "body": "Parent company of ACME Trading LLC, registered in the Jebel Ali free zone.",
+      "exact_keys": [
+        "ACC-1002"
+      ],
+      "org": "main",
+      "age_days": 500
+    },
+    {
+      "key": "acc-almaha",
+      "entity": "account",
+      "title": "شركة المها للتجارة",
+      "body": "موزع معدات مكتبية في الرياض ويتعامل مع الفروع الشرقية",
+      "exact_keys": [
+        "ACC-1003"
+      ],
+      "org": "main",
+      "age_days": 400
+    },
+    {
+      "key": "acc-alnoor",
+      "entity": "account",
+      "title": "مؤسسة النور للمقاولات",
+      "body": "مقاولات عامة وأعمال الصيانة الدورية للمباني",
+      "exact_keys": [
+        "ACC-1004"
+      ],
+      "org": "main",
+      "age_days": 400
+    },
+    {
+      "key": "acc-alsalam",
+      "entity": "account",
+      "title": "شركة السلام للنقل",
+      "body": "نقل بري بين الرياض وجدة والدمام",
+      "exact_keys": [
+        "ACC-1007"
+      ],
+      "org": "main",
+      "age_days": 300
+    },
+    {
+      "key": "acc-zenith",
+      "entity": "account",
+      "title": "Zenith Logistics",
+      "body": "Freight forwarding partner. Contract renewed annually each March.",
+      "exact_keys": [
+        "ACC-1005"
+      ],
+      "org": "main",
+      "age_days": 300
+    },
+    {
+      "key": "acc-northwind",
+      "entity": "account",
+      "title": "Northwind Supplies",
+      "body": "Office supplies and stationery vendor.",
+      "exact_keys": [
+        "ACC-1006"
+      ],
+      "org": "main",
+      "age_days": 250
+    },
+    {
+      "key": "acc-orbit",
+      "entity": "account",
+      "title": "Orbit Marine Services",
+      "body": "Ship chandlery and marine logistics for Gulf ports.",
+      "exact_keys": [
+        "ACC-1008"
+      ],
+      "org": "main",
+      "age_days": 250
+    },
+    {
+      "key": "acc-restricted",
+      "entity": "account",
+      "title": "Meridian Private Holdings",
+      "body": "Confidential client managed by the restricted business unit.",
+      "exact_keys": [
+        "ACC-9999"
+      ],
+      "org": "restricted",
+      "age_days": 100
+    },
+    {
+      "key": "inv-9001",
+      "entity": "invoice",
+      "title": "Invoice INV-9001 — ACME Trading LLC",
+      "body": "Wholesale electronics shipment, net 30 payment terms.",
+      "exact_keys": [
+        "INV-9001"
+      ],
+      "org": "main",
+      "age_days": 400
+    },
+    {
+      "key": "inv-9002",
+      "entity": "invoice",
+      "title": "Invoice INV-9002 — ACME Trading LLC",
+      "body": "Replacement units issued after the damaged shipment.",
+      "exact_keys": [
+        "INV-9002"
+      ],
+      "org": "main",
+      "age_days": 120
+    },
+    {
+      "key": "inv-9003",
+      "entity": "invoice",
+      "title": "Invoice INV-9003 — Zenith Logistics",
+      "body": "Freight charges for the second quarter.",
+      "exact_keys": [
+        "INV-9003"
+      ],
+      "org": "main",
+      "age_days": 60
+    },
+    {
+      "key": "inv-9004",
+      "entity": "invoice",
+      "title": "فاتورة INV-9004 — شركة المها للتجارة",
+      "body": "توريد أجهزة حاسب آلي وملحقاتها",
+      "exact_keys": [
+        "INV-9004"
+      ],
+      "org": "main",
+      "age_days": 30
+    },
+    {
+      "key": "inv-9005",
+      "entity": "invoice",
+      "title": "Invoice INV-9005 — Northwind Supplies",
+      "body": "Stationery order for the head office.",
+      "exact_keys": [
+        "INV-9005"
+      ],
+      "org": "main",
+      "age_days": 15
+    },
+    {
+      "key": "inv-9006",
+      "entity": "invoice",
+      "title": "فاتورة INV-9006 — مؤسسة النور للمقاولات",
+      "body": "أعمال صيانة وترميم في المستودع",
+      "exact_keys": [
+        "INV-9006"
+      ],
+      "org": "main",
+      "age_days": 20
+    },
+    {
+      "key": "inv-restricted",
+      "entity": "invoice",
+      "title": "Invoice INV-7777 — Meridian Private Holdings",
+      "body": "Quarterly retainer.",
+      "exact_keys": [
+        "INV-7777"
+      ],
+      "org": "restricted",
+      "age_days": 50
+    },
+    {
+      "key": "con-sara",
+      "entity": "contact",
+      "title": "Sara Haddad",
+      "body": "Procurement manager at ACME Trading LLC.",
+      "exact_keys": [
+        "CON-2001"
+      ],
+      "org": "main",
+      "age_days": 500
+    },
+    {
+      "key": "con-sarah-b",
+      "entity": "contact",
+      "title": "Sarah Bennett",
+      "body": "Accounts payable clerk at Northwind Supplies.",
+      "exact_keys": [
+        "CON-2004"
+      ],
+      "org": "main",
+      "age_days": 250
+    },
+    {
+      "key": "con-mohammed",
+      "entity": "contact",
+      "title": "Mohammed Al-Otaibi",
+      "body": "Operations lead at Zenith Logistics.",
+      "exact_keys": [
+        "CON-2003"
+      ],
+      "org": "main",
+      "age_days": 300
+    },
+    {
+      "key": "con-omar",
+      "entity": "contact",
+      "title": "عمر الشمري",
+      "body": "مدير المشتريات في شركة المها للتجارة",
+      "exact_keys": [
+        "CON-2002"
+      ],
+      "org": "main",
+      "age_days": 400
+    },
+    {
+      "key": "con-fatima",
+      "entity": "contact",
+      "title": "فاطمة الزهراني",
+      "body": "محاسبة في مؤسسة النور للمقاولات",
+      "exact_keys": [
+        "CON-2005"
+      ],
+      "org": "main",
+      "age_days": 400
+    },
+    {
+      "key": "con-ahmed",
+      "entity": "contact",
+      "title": "أحمد الفهد",
+      "body": "مندوب مبيعات لدى شركة السلام للنقل",
+      "exact_keys": [
+        "CON-2006"
+      ],
+      "org": "main",
+      "age_days": 300
+    },
+    {
+      "key": "tkt-5001",
+      "entity": "ticket",
+      "title": "Shipment delayed at customs",
+      "body": "ACME Trading shipment held at Jebel Ali customs pending documentation.",
+      "exact_keys": [
+        "TKT-5001"
+      ],
+      "org": "main",
+      "age_days": 5
+    },
+    {
+      "key": "tkt-5002",
+      "entity": "ticket",
+      "title": "Damaged units on delivery",
+      "body": "Three units arrived damaged and a replacement invoice was raised.",
+      "exact_keys": [
+        "TKT-5002"
+      ],
+      "org": "main",
+      "age_days": 90
+    },
+    {
+      "key": "tkt-5003",
+      "entity": "ticket",
+      "title": "طلب صيانة المكيفات",
+      "body": "طلب صيانة دورية لمكيفات المكتب الرئيسي في الرياض",
+      "exact_keys": [
+        "TKT-5003"
+      ],
+      "org": "main",
+      "age_days": 10
+    },
+    {
+      "key": "tkt-5004",
+      "entity": "ticket",
+      "title": "Password reset request",
+      "body": "User cannot access the portal after the password expired.",
+      "exact_keys": [
+        "TKT-5004"
+      ],
+      "org": "main",
+      "age_days": 2
+    },
+    {
+      "key": "tkt-5005",
+      "entity": "ticket",
+      "title": "Customs documentation missing",
+      "body": "Follow-up to the delayed Jebel Ali shipment.",
+      "exact_keys": [
+        "TKT-5005"
+      ],
+      "org": "main",
+      "age_days": 3
+    },
+    {
+      "key": "note-renewal",
+      "entity": "note",
+      "title": "Zenith contract renewal terms",
+      "body": "The annual freight contract renews in March with rates fixed for twelve months.",
+      "exact_keys": [
+        "NOTE-3001"
+      ],
+      "org": "main",
+      "age_days": 200
+    },
+    {
+      "key": "note-arabic",
+      "entity": "note",
+      "title": "سياسة الاسترجاع",
+      "body": "يمكن استرجاع البضائع خلال ثلاثين يوما من تاريخ الفاتورة",
+      "exact_keys": [
+        "NOTE-3002"
+      ],
+      "org": "main",
+      "age_days": 45
+    },
+    {
+      "key": "recency-target",
+      "entity": "ticket",
+      "title": "Monthly audit follow-up",
+      "body": "Discrepancy noted yesterday during the routine warehouse stock count; awaiting sign-off from the branch supervisor before the ledger is adjusted.",
+      "exact_keys": [
+        "TKT-5100"
+      ],
+      "org": "main",
+      "age_days": 0
+    }
+  ],
+  "filler": [
+    {
+      "key_prefix": "chaff",
+      "entity": "ticket",
+      "title": "Warehouse stock count {n}",
+      "body": "Warehouse stock count sheet {n}. Stock count completed for the warehouse.",
+      "count": 2000,
+      "age_days": 600
+    }
+  ],
+  "queries": [
+    {
+      "id": "ek-invoice-number",
+      "query": "INV-9001",
+      "kind": "exact_key",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "inv-9001",
+          "grade": 3
+        }
+      ],
+      "note": "A pasted invoice number must land at rank 1. If it does not, nothing else about ranking matters."
+    },
+    {
+      "id": "ek-lowercase",
+      "query": "inv-9003",
+      "kind": "exact_key",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "inv-9003",
+          "grade": 3
+        }
+      ],
+      "note": "The same key typed in lower case. The exact-key leg matches on the NORMALIZED key, so case must be irrelevant."
+    },
+    {
+      "id": "ek-account-code",
+      "query": "ACC-1005",
+      "kind": "exact_key",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-zenith",
+          "grade": 3
+        }
+      ],
+      "note": "An account code rather than an invoice number — the leg must not be invoice-shaped."
+    },
+    {
+      "id": "ek-ticket",
+      "query": "TKT-5001",
+      "kind": "exact_key",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "tkt-5001",
+          "grade": 3
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "ek-arabic-invoice",
+      "query": "INV-9004",
+      "kind": "exact_key",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "inv-9004",
+          "grade": 3
+        }
+      ],
+      "note": "A Latin key on an Arabic-titled record. Mixed script is the GCC norm and the key path must not care."
+    },
+    {
+      "id": "lx-acme",
+      "query": "ACME Trading",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-acme",
+          "grade": 3
+        },
+        {
+          "doc": "acc-acme-holdings",
+          "grade": 2
+        },
+        {
+          "doc": "inv-9001",
+          "grade": 2
+        },
+        {
+          "doc": "inv-9002",
+          "grade": 2
+        },
+        {
+          "doc": "tkt-5001",
+          "grade": 1
+        },
+        {
+          "doc": "con-sara",
+          "grade": 1
+        }
+      ],
+      "note": "Graded rather than binary: the account IS the answer, its invoices are relevant, the ticket merely mentions it. Binary judgments cannot express that difference, which is the whole difference between a good result list and a mediocre one."
+    },
+    {
+      "id": "lx-zenith-freight",
+      "query": "Zenith freight",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-zenith",
+          "grade": 3
+        },
+        {
+          "doc": "inv-9003",
+          "grade": 2
+        },
+        {
+          "doc": "note-renewal",
+          "grade": 2
+        },
+        {
+          "doc": "con-mohammed",
+          "grade": 1
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "lx-damaged-shipment",
+      "query": "damaged shipment",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "tkt-5002",
+          "grade": 3
+        },
+        {
+          "doc": "inv-9002",
+          "grade": 2
+        },
+        {
+          "doc": "tkt-5001",
+          "grade": 1
+        }
+      ],
+      "note": "Neither word appears in a title. Body matching must work or half of real search does not."
+    },
+    {
+      "id": "lx-customs",
+      "query": "customs documentation",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "tkt-5005",
+          "grade": 3
+        },
+        {
+          "doc": "tkt-5001",
+          "grade": 3
+        }
+      ],
+      "note": "Two equally-right answers. nDCG must reward returning both, not just one."
+    },
+    {
+      "id": "lx-password",
+      "query": "password reset",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "tkt-5004",
+          "grade": 3
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "lx-stationery",
+      "query": "stationery order",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "inv-9005",
+          "grade": 3
+        },
+        {
+          "doc": "acc-northwind",
+          "grade": 2
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "lx-marine",
+      "query": "marine logistics",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-orbit",
+          "grade": 3
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "lx-contract-renewal",
+      "query": "contract renewal March",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "note-renewal",
+          "grade": 3
+        },
+        {
+          "doc": "acc-zenith",
+          "grade": 2
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "lx-jebel-ali",
+      "query": "Jebel Ali",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "tkt-5001",
+          "grade": 3
+        },
+        {
+          "doc": "tkt-5005",
+          "grade": 2
+        },
+        {
+          "doc": "acc-acme-holdings",
+          "grade": 2
+        }
+      ],
+      "note": "A place name appearing in three different roles."
+    },
+    {
+      "id": "lx-plural",
+      "query": "invoices",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "inv-9002",
+          "grade": 2
+        },
+        {
+          "doc": "tkt-5002",
+          "grade": 2
+        },
+        {
+          "doc": "inv-9001",
+          "grade": 1
+        },
+        {
+          "doc": "inv-9003",
+          "grade": 1
+        },
+        {
+          "doc": "inv-9005",
+          "grade": 1
+        }
+      ],
+      "note": "A plural query against singular text. This is what stem_en exists for — without it the query matches nothing at all."
+    },
+    {
+      "id": "lx-procurement",
+      "query": "procurement manager",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "con-sara",
+          "grade": 3
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "lx-electronics",
+      "query": "wholesale electronics",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-acme",
+          "grade": 3
+        },
+        {
+          "doc": "inv-9001",
+          "grade": 2
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "lx-accounts-payable",
+      "query": "accounts payable",
+      "kind": "lexical",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "con-sarah-b",
+          "grade": 3
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "ar-taa-marbuta",
+      "query": "شركه المها",
+      "kind": "arabic",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-almaha",
+          "grade": 3
+        },
+        {
+          "doc": "inv-9004",
+          "grade": 2
+        },
+        {
+          "doc": "con-omar",
+          "grade": 2
+        }
+      ],
+      "note": "ة typed as ه — the single most common Arabic input variation. Unnormalized this returns ZERO results and reads to the user as 'no such customer'."
+    },
+    {
+      "id": "ar-alef-hamza",
+      "query": "مؤسسه النور",
+      "kind": "arabic",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-alnoor",
+          "grade": 3
+        },
+        {
+          "doc": "inv-9006",
+          "grade": 2
+        },
+        {
+          "doc": "con-fatima",
+          "grade": 2
+        }
+      ],
+      "note": "Hamza carrier plus ة→ه in one query, which is how it actually arrives."
+    },
+    {
+      "id": "ar-diacritics",
+      "query": "شَرِكَة السَلام",
+      "kind": "arabic",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-alsalam",
+          "grade": 3
+        },
+        {
+          "doc": "con-ahmed",
+          "grade": 2
+        }
+      ],
+      "note": "Fully vocalized input. Diacritics must be stripped on both sides or the two forms never meet."
+    },
+    {
+      "id": "ar-alef-variants",
+      "query": "احمد الفهد",
+      "kind": "arabic",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "con-ahmed",
+          "grade": 3
+        }
+      ],
+      "note": "أ typed as a bare ا. The record holds أحمد."
+    },
+    {
+      "id": "ar-yaa",
+      "query": "الشمرى",
+      "kind": "arabic",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "con-omar",
+          "grade": 3
+        }
+      ],
+      "note": "ى for ي at the end of a name — an Egyptian keyboard against a Gulf record."
+    },
+    {
+      "id": "ar-tatweel",
+      "query": "الريــــاض",
+      "kind": "arabic",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-almaha",
+          "grade": 2
+        },
+        {
+          "doc": "tkt-5003",
+          "grade": 2
+        },
+        {
+          "doc": "acc-alsalam",
+          "grade": 2
+        }
+      ],
+      "note": "Tatweel padding, which arrives from copy-pasted formatted documents."
+    },
+    {
+      "id": "ar-maintenance",
+      "query": "صيانة",
+      "kind": "arabic",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "tkt-5003",
+          "grade": 3
+        },
+        {
+          "doc": "inv-9006",
+          "grade": 2
+        },
+        {
+          "doc": "acc-alnoor",
+          "grade": 2
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "ar-return-policy",
+      "query": "سياسة الاسترجاع",
+      "kind": "arabic",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "note-arabic",
+          "grade": 3
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "ar-digits",
+      "query": "فاتورة ٩٠٠٤",
+      "kind": "arabic",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "inv-9004",
+          "grade": 2
+        }
+      ],
+      "note": "Arabic-Indic digits. A user reading an Arabic-locale document types ٩ where the index holds 9."
+    },
+    {
+      "id": "ar-transport",
+      "query": "نقل بري",
+      "kind": "arabic",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-alsalam",
+          "grade": 3
+        },
+        {
+          "doc": "con-ahmed",
+          "grade": 1
+        }
+      ],
+      "note": "The contact carries للنقل with its prefix and no بري at all; marginal, not relevant."
+    },
+    {
+      "id": "ar-mixed",
+      "query": "فاتورة INV-9004",
+      "kind": "arabic",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "inv-9004",
+          "grade": 3
+        }
+      ],
+      "note": "Mixed Arabic/Latin in one query — routine here, and the per-token stemmer choice is what makes it work. Both tokens are present in the target; asking an Arabic word to match an English-titled record would be asking for translation, not search."
+    },
+    {
+      "id": "fz-transposition",
+      "query": "Zenth Logistics",
+      "kind": "fuzzy",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-zenith",
+          "grade": 3
+        }
+      ],
+      "note": "One dropped letter. Trigram similarity on the title, which is why the fuzzy leg never touches the body."
+    },
+    {
+      "id": "fz-doubled",
+      "query": "Northwinnd Supplies",
+      "kind": "fuzzy",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-northwind",
+          "grade": 3
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "fz-name",
+      "query": "Mohamed Al-Otaibi",
+      "kind": "fuzzy",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "con-mohammed",
+          "grade": 3
+        }
+      ],
+      "note": "Mohammed/Mohamed — the most common name-spelling split in the region, and a pure lexical match misses it entirely."
+    },
+    {
+      "id": "fz-acme",
+      "query": "ACNE Trading",
+      "kind": "fuzzy",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-acme",
+          "grade": 3
+        },
+        {
+          "doc": "acc-acme-holdings",
+          "grade": 1
+        }
+      ],
+      "note": "The holdings company is graded MARGINAL, not relevant: a typo of the trading name is not a request for the parent, and grading it 2 would make the fixture demand a match that trigram similarity has no reason to produce."
+    },
+    {
+      "id": "fz-orbit",
+      "query": "Orbet Marine",
+      "kind": "fuzzy",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-orbit",
+          "grade": 3
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "px-acme",
+      "query": "ACME Tra",
+      "kind": "prefix",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-acme",
+          "grade": 3
+        },
+        {
+          "doc": "acc-acme-holdings",
+          "grade": 1
+        }
+      ],
+      "note": "Mid-word, as the omni-box sees it on keystroke eight. 'ACME Holdings' is not a prefix match and is graded marginal accordingly."
+    },
+    {
+      "id": "px-zen",
+      "query": "Zen",
+      "kind": "prefix",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-zenith",
+          "grade": 3
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "px-arabic",
+      "query": "شركة الم",
+      "kind": "prefix",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-almaha",
+          "grade": 3
+        }
+      ],
+      "note": "An Arabic prefix. Normalization runs before the LIKE, so a prefix typed with a variant letter still matches."
+    },
+    {
+      "id": "px-north",
+      "query": "Northw",
+      "kind": "prefix",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "acc-northwind",
+          "grade": 3
+        }
+      ],
+      "note": ""
+    },
+    {
+      "id": "rc-warehouse",
+      "query": "warehouse stock count",
+      "kind": "recency",
+      "caller": "primary",
+      "judgments": [
+        {
+          "doc": "recency-target",
+          "grade": 3,
+          "beyond_ceiling": true
+        }
+      ],
+      "note": "THE case the plan calls out. Two thousand older documents carry the query's exact wording in their titles and twice in their bodies; the record touched TODAY mentions it once, in passing, in a longer body — so it ranks last lexically and sits far past the per-leg ceiling of 500, never becoming a candidate at all. No ranking weight can rescue a document that was never retrieved — which is precisely why missed_entirely is reported separately from a low score. Expected to fail on recall until a recency-ordered leg exists; the baseline records that failure rather than hiding it."
+    },
+    {
+      "id": "fb-restricted-account",
+      "query": "Meridian Private Holdings",
+      "kind": "forbidden",
+      "caller": "narrowed",
+      "judgments": [],
+      "note": "The narrowed caller must get ZERO rows, not a lower-ranked row. Asserted as a hard assertion and never averaged into a metric — a mean absorbs a leak."
+    },
+    {
+      "id": "fb-restricted-key",
+      "query": "INV-7777",
+      "kind": "forbidden",
+      "caller": "narrowed",
+      "judgments": [],
+      "note": "The exact-key path bypasses relevance entirely, so it is the one most likely to bypass the visibility fragment too."
+    },
+    {
+      "id": "fb-restricted-fuzzy",
+      "query": "Meridien Privat",
+      "kind": "forbidden",
+      "caller": "narrowed",
+      "judgments": [],
+      "note": "Fuzzy is the sneakiest leak: a caller who cannot see a record can still CONFIRM its existence by watching a near-miss spelling start to match."
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "communication",
+      "display_name": "Communication",
+      "primary_name_attribute": "subject",
+      "is_append_only": true,
+      "attributes": [
+        { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true },
+        { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true },
+        { "logicalname": "channel", "display_name": "Channel", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["email", "internal", "web_chat", "portal", "call", "meeting", "other"], "multi": false } },
+        { "logicalname": "direction", "display_name": "Direction", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["inbound", "outbound"], "multi": false } },
+        { "logicalname": "subject", "display_name": "Subject", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "body", "display_name": "Body", "field_type": "text" },
+        { "logicalname": "status", "display_name": "Status", "field_type": "text" },
+        { "logicalname": "sent_at", "display_name": "Sent At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "author_id", "display_name": "Author", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "to_addresses", "display_name": "To", "field_type": "text" },
+        { "logicalname": "recipient_user_ids", "display_name": "Recipients", "field_type": "text" },
+        { "logicalname": "thread_id", "display_name": "Thread", "field_type": "lookup", "is_sortable": true, "is_filterable": true, "lookup_entity": "communication" },
+        { "logicalname": "in_reply_to", "display_name": "In Reply To", "field_type": "lookup", "is_filterable": true, "lookup_entity": "communication" },
+        { "logicalname": "message_id", "display_name": "Message-Id", "field_type": "text", "is_filterable": true },
+        { "logicalname": "references_header", "display_name": "References", "field_type": "text" }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "communication",
+      "name": "Active Communications",
+      "sql": "SELECT id, entity_name, record_id, channel, direction, subject, body, status, sent_at, author_id, to_addresses, recipient_user_ids, thread_id, in_reply_to, created_at, modified_at FROM communication WHERE is_active IS NOT FALSE",
+      "required_privilege": "communication.read"
+    },
+    {
+      "entity": "communication",
+      "name": "Communications (Related)",
+      "sql": "SELECT id, entity_name, record_id, channel, direction, subject, body, status, sent_at, author_id, to_addresses, recipient_user_ids, thread_id, in_reply_to, created_at, modified_at FROM communication WHERE is_active IS NOT FALSE",
+      "required_privilege": "communication.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "communication",
+      "name": "Active Communications",
+      "query": { "entity": "communication", "name": "Active Communications" },
+      "is_default": true
+    },
+    {
+      "entity": "communication",
+      "name": "Communications (Related)",
+      "query": { "entity": "communication", "name": "Communications (Related)" },
+      "is_default": false
+    }
+  ]
+}

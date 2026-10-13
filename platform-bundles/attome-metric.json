@@ -1,0 +1,69 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 453,
+    "modules": ["core"]
+  },
+  "privileges": [
+    { "key": "attome_metric.snapshot", "name": "Run as Metric Snapshot", "description": "Lets metric snapshots run a stored query under the metric service principal (D-786). Put it on a stored query's required_privilege to make that query usable as a metric source; held by the 'Metric Service' role." }
+  ],
+  "entities": [
+    {
+      "logicalname": "dashboard_metric_definition",
+      "display_name": "Metric Definition",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "key", "display_name": "Key", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "source_kind", "display_name": "Source Kind", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["query", "formula", "manual"], "multi": false } },
+        { "logicalname": "query_ref", "display_name": "Query", "field_type": "text", "is_filterable": true },
+        { "logicalname": "formula", "display_name": "Formula", "field_type": "text" },
+        { "logicalname": "unit", "display_name": "Unit", "field_type": "text" },
+        { "logicalname": "direction", "display_name": "Direction", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["higher_is_better", "lower", "target_band"], "multi": false } },
+        { "logicalname": "period", "display_name": "Period", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["day", "week", "month", "quarter", "year"], "multi": false } },
+        { "logicalname": "owner_ref", "display_name": "Owner", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "parent_ref", "display_name": "Parent Metric", "field_type": "lookup", "is_filterable": true, "lookup_entity": "dashboard_metric_definition" },
+        { "logicalname": "weight", "display_name": "Weight", "field_type": "number" }
+      ]
+    },
+    {
+      "logicalname": "dashboard_metric_target",
+      "display_name": "Metric Target",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "metric_ref", "display_name": "Metric", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_metric_definition" },
+        { "logicalname": "period_start", "display_name": "Period Start", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "target_value", "display_name": "Target Value", "field_type": "number", "is_required": true },
+        { "logicalname": "threshold_warn", "display_name": "Warn Threshold", "field_type": "number" },
+        { "logicalname": "threshold_crit", "display_name": "Critical Threshold", "field_type": "number" }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "dashboard_metric_definition", "name": "Active Metric Definitions", "sql": "SELECT id, name, key, source_kind, direction, period, owner_ref FROM dashboard_metric_definition WHERE is_active = true", "required_privilege": "dashboard_metric_definition.read" },
+    { "entity": "dashboard_metric_definition", "name": "Inactive Metric Definitions", "sql": "SELECT id, name, key, source_kind, direction, period, owner_ref FROM dashboard_metric_definition WHERE is_active = false", "required_privilege": "dashboard_metric_definition.read" },
+    { "entity": "dashboard_metric_target", "name": "Active Metric Targets", "sql": "SELECT id, metric_ref, period_start, target_value, threshold_warn, threshold_crit FROM dashboard_metric_target WHERE is_active = true", "required_privilege": "dashboard_metric_target.read" },
+    { "entity": "dashboard_metric_target", "name": "Inactive Metric Targets", "sql": "SELECT id, metric_ref, period_start, target_value, threshold_warn, threshold_crit FROM dashboard_metric_target WHERE is_active = false", "required_privilege": "dashboard_metric_target.read" }
+  ],
+  "views": [
+    { "entity": "dashboard_metric_definition", "name": "Active Metric Definitions", "query": { "entity": "dashboard_metric_definition", "name": "Active Metric Definitions" }, "is_default": true },
+    { "entity": "dashboard_metric_definition", "name": "Inactive Metric Definitions", "query": { "entity": "dashboard_metric_definition", "name": "Inactive Metric Definitions" }, "is_default": false },
+    { "entity": "dashboard_metric_target", "name": "Active Metric Targets", "query": { "entity": "dashboard_metric_target", "name": "Active Metric Targets" }, "is_default": true },
+    { "entity": "dashboard_metric_target", "name": "Inactive Metric Targets", "query": { "entity": "dashboard_metric_target", "name": "Inactive Metric Targets" }, "is_default": false }
+  ],
+  "roles": [
+    {
+      "name": "Metric Service",
+      "description": "The metric service principal's only role (D-786): query-backed metric snapshots run under it, never under the viewer or the caller. Ships with attome_metric.snapshot only; grant read on each entity a metric query reads through the role-grant admin API. Never grant administrator rights: the principal refuses to run as an admin.",
+      "access_level": 3,
+      "privileges": [
+        { "privilege": "attome_metric.snapshot" }
+      ],
+      "entity_access": [],
+      "field_security_profiles": []
+    }
+  ]
+}

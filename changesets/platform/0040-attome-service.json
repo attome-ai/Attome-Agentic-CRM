@@ -1,0 +1,3788 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:95c3a8e9a4241db710a5d79893b9fdc97921006c6b7916b6cb6617023576cea4",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-service.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "0f12be41-885e-798a-8d9a-46157c937565",
+  "layer": "platform",
+  "name": "attome-service",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Service Offering",
+          "is_append_only": false,
+          "logicalname": "service_offering",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "service_offering"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "SLA Calculation",
+          "is_append_only": true,
+          "logicalname": "service_sla_calculation"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "service_sla_calculation"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "SLA Clock",
+          "is_append_only": false,
+          "logicalname": "service_sla_clock"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "service_sla_clock"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "SLA Policy",
+          "is_append_only": false,
+          "logicalname": "service_sla_policy",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "service_sla_policy"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Ticket",
+          "is_append_only": false,
+          "logicalname": "service_ticket",
+          "primary_name_attribute": "title"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "service_ticket"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Work Queue",
+          "is_append_only": false,
+          "logicalname": "service_work_queue",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "service_work_queue"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Work Queue Member",
+          "is_append_only": false,
+          "logicalname": "service_work_queue_member"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "service_work_queue_member"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Work Request",
+          "is_append_only": false,
+          "logicalname": "service_work_request",
+          "primary_name_attribute": "title"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "service_work_request"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Approval Policy (M10, not yet wired)",
+          "field_type": "text",
+          "logicalname": "approval_policy_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "service_offering",
+        "field": "approval_policy_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Category",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "category",
+          "options": {
+            "choices": [
+              "it",
+              "hr",
+              "procurement",
+              "access",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "service_offering",
+        "field": "category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Default Priority",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "default_priority",
+          "options": {
+            "choices": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "service_offering",
+        "field": "default_priority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Default Queue (M84, not yet wired)",
+          "field_type": "text",
+          "logicalname": "default_queue_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "service_offering",
+        "field": "default_queue_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "service_offering",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Fulfilment (ticket | task | project | workflow:<def>)",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "fulfilment"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "service_offering",
+        "field": "fulfilment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Intake Form (M65/M56, not yet wired)",
+          "field_type": "text",
+          "logicalname": "intake_form_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "service_offering",
+        "field": "intake_form_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Active",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_active"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "service_offering",
+        "field": "is_active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Public (self-service portal)",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_public"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "service_offering",
+        "field": "is_public"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "service_offering",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Business Seconds Counted",
+          "field_type": "number",
+          "logicalname": "business_seconds"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "business_seconds"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Calculation Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "calculation_type",
+          "options": {
+            "choices": [
+              "apply",
+              "pause",
+              "resume",
+              "recalculate"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "calculation_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Calendar Content Hash (SHA-256)",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "calendar_content_hash"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "calendar_content_hash"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Calendar",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "calendar_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "calendar_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Calendar Time Zone Database Version",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "calendar_tzdb_version"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "calendar_tzdb_version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Detail",
+          "field_type": "text",
+          "logicalname": "detail"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "detail"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "End At",
+          "field_type": "date",
+          "is_sortable": true,
+          "logicalname": "end_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "end_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Outcome",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "outcome",
+          "options": {
+            "choices": [
+              "calculated",
+              "unresolved"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "outcome"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resulting Due At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "result_due_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "result_due_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Start At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "start_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "start_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Target Business Seconds",
+          "field_type": "number",
+          "logicalname": "target_business_seconds"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "target_business_seconds"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Unresolved Reason",
+          "field_type": "choice",
+          "is_filterable": true,
+          "logicalname": "unresolved_reason",
+          "options": {
+            "choices": [
+              "calendar_unresolved",
+              "calendar_no_working_time",
+              "business_hours_invalid",
+              "calculation_failed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "unresolved_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Elapsed Business Seconds",
+          "field_type": "number",
+          "logicalname": "elapsed_business_seconds"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "service_sla_clock",
+        "field": "elapsed_business_seconds"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Paused Reason",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "paused_reason",
+          "options": {
+            "choices": [
+              "waiting_customer",
+              "on_hold",
+              "out_of_scope"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "service_sla_clock",
+        "field": "paused_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "State",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "state",
+          "options": {
+            "choices": [
+              "running",
+              "paused"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "service_sla_clock",
+        "field": "state"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "State Changed At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "state_changed_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "service_sla_clock",
+        "field": "state_changed_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Unsettled Running Segments (JSON, awaiting a usable calendar)",
+          "field_type": "text",
+          "logicalname": "unsettled_segments"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "service_sla_clock",
+        "field": "unsettled_segments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Business Hours End (Minute Of Day, UTC)",
+          "field_type": "number",
+          "is_required": true,
+          "logicalname": "business_hours_end_minute"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "service_sla_policy",
+        "field": "business_hours_end_minute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Business Hours Start (Minute Of Day, UTC)",
+          "field_type": "number",
+          "is_required": true,
+          "logicalname": "business_hours_start_minute"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "service_sla_policy",
+        "field": "business_hours_start_minute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Calendar",
+          "field_type": "text",
+          "logicalname": "calendar_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "service_sla_policy",
+        "field": "calendar_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Active",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_active"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "service_sla_policy",
+        "field": "is_active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "service_sla_policy",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Priority",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "priority",
+          "options": {
+            "choices": [
+              "any",
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "service_sla_policy",
+        "field": "priority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resolution Target (Business Minutes)",
+          "field_type": "number",
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "resolution_target_minutes"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "service_sla_policy",
+        "field": "resolution_target_minutes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Severity (Incident SLA Selection)",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "severity",
+          "options": {
+            "choices": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "service_sla_policy",
+        "field": "severity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Warn At (% Of Target Elapsed)",
+          "field_type": "number",
+          "logicalname": "warn_at_percent"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "service_sla_policy",
+        "field": "warn_at_percent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Category",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "category",
+          "options": {
+            "choices": [
+              "it",
+              "hr",
+              "procurement",
+              "access",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "service_ticket",
+        "field": "category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Channel",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "channel",
+          "options": {
+            "choices": [
+              "web_chat",
+              "email",
+              "portal",
+              "phone",
+              "chat",
+              "walk_in"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "service_ticket",
+        "field": "channel"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Claimed At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "claimed_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "service_ticket",
+        "field": "claimed_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Contributing Factors (JSON array of text)",
+          "field_type": "text",
+          "logicalname": "contributing_factors"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "service_ticket",
+        "field": "contributing_factors"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "CSAT Score",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "csat_score"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "service_ticket",
+        "field": "csat_score"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "service_ticket",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Detected At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "detected_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "service_ticket",
+        "field": "detected_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Escalated At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "escalated_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "service_ticket",
+        "field": "escalated_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Escalation Level",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "escalation_level"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "service_ticket",
+        "field": "escalation_level"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Impact",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "impact",
+          "options": {
+            "choices": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "service_ticket",
+        "field": "impact"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Major Incident",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "major"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "service_ticket",
+        "field": "major"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Mitigated At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "mitigated_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "service_ticket",
+        "field": "mitigated_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Priority",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "priority",
+          "options": {
+            "choices": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "service_ticket",
+        "field": "priority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resolution Code",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "resolution_code"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "service_ticket",
+        "field": "resolution_code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resolution Due At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "resolution_due_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "service_ticket",
+        "field": "resolution_due_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resolved At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "resolved_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "service_ticket",
+        "field": "resolved_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Root Cause",
+          "field_type": "text",
+          "logicalname": "root_cause"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "service_ticket",
+        "field": "root_cause"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Severity",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "severity",
+          "options": {
+            "choices": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "service_ticket",
+        "field": "severity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "SLA Breached",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "sla_breached"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "service_ticket",
+        "field": "sla_breached"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "SLA Calculation Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "sla_calculation_status",
+          "options": {
+            "choices": [
+              "calculated",
+              "unresolved"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "service_ticket",
+        "field": "sla_calculation_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "SLA Unresolved Reason",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "sla_unresolved_reason",
+          "options": {
+            "choices": [
+              "calendar_unresolved",
+              "calendar_no_working_time",
+              "business_hours_invalid",
+              "calculation_failed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "service_ticket",
+        "field": "sla_unresolved_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "SLA Warning Sent",
+          "field_type": "bool",
+          "is_filterable": true,
+          "logicalname": "sla_warned"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "service_ticket",
+        "field": "sla_warned"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "new",
+              "open",
+              "in_progress",
+              "waiting_on_customer",
+              "resolved",
+              "closed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "service_ticket",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Ticket Number",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "ticket_number"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "service_ticket",
+        "field": "ticket_number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "ticket_type",
+          "options": {
+            "choices": [
+              "incident",
+              "request",
+              "problem",
+              "change"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "service_ticket",
+        "field": "ticket_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Title",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "title"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "service_ticket",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Calendar (Not Yet Wired)",
+          "field_type": "text",
+          "logicalname": "calendar_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "service_work_queue",
+        "field": "calendar_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Capacity Per Member",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "capacity"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "service_work_queue",
+        "field": "capacity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Distribution",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "distribution",
+          "options": {
+            "choices": [
+              "manual",
+              "round_robin",
+              "least_loaded",
+              "skill_match"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "service_work_queue",
+        "field": "distribution"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Escalate After (Minutes Idle)",
+          "field_type": "number",
+          "logicalname": "escalate_after_minutes"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "service_work_queue",
+        "field": "escalate_after_minutes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Active",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_active"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "service_work_queue",
+        "field": "is_active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "service_work_queue",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Required Skills (JSON array of text)",
+          "field_type": "text",
+          "logicalname": "required_skills"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "service_work_queue",
+        "field": "required_skills"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Active",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_active"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "service_work_queue_member",
+        "field": "is_active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Channel",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "channel",
+          "options": {
+            "choices": [
+              "web_chat",
+              "email",
+              "portal",
+              "phone",
+              "chat",
+              "walk_in"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "entity": "service_work_request",
+        "field": "channel"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "entity": "service_work_request",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Portal Access Id",
+          "field_type": "text",
+          "is_sensitive": true,
+          "logicalname": "portal_public_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "entity": "service_work_request",
+        "field": "portal_public_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Portal Access Secret Hash",
+          "field_type": "text",
+          "is_sensitive": true,
+          "logicalname": "portal_secret_hash"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "entity": "service_work_request",
+        "field": "portal_secret_hash"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Priority",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "priority",
+          "options": {
+            "choices": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "entity": "service_work_request",
+        "field": "priority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Queue (M84, not yet wired)",
+          "field_type": "text",
+          "logicalname": "queue_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "entity": "service_work_request",
+        "field": "queue_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "request_type",
+          "options": {
+            "choices": [
+              "project_request",
+              "change_request",
+              "issue_report",
+              "it_request",
+              "hr_request",
+              "access_request",
+              "custom"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "entity": "service_work_request",
+        "field": "request_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resolved As Entity",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "resolved_entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "entity": "service_work_request",
+        "field": "resolved_entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resolved As Record Id",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "resolved_record_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "entity": "service_work_request",
+        "field": "resolved_record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "new",
+              "triaged",
+              "converted",
+              "rejected"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "entity": "service_work_request",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Title",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "title"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "entity": "service_work_request",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Default SLA Policy",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "default_sla_policy_id",
+          "lookup_entity": "service_sla_policy"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "entity": "service_offering",
+        "field": "default_sla_policy_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "SLA Policy",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "sla_policy_ref",
+          "lookup_entity": "service_sla_policy"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "sla_policy_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Ticket",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "ticket_ref",
+          "lookup_entity": "service_ticket"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "entity": "service_sla_calculation",
+        "field": "ticket_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Ticket",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "ticket_ref",
+          "lookup_entity": "service_ticket"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "entity": "service_sla_clock",
+        "field": "ticket_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Assignee",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "assignee_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "entity": "service_ticket",
+        "field": "assignee_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Linked Project",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "linked_project_id",
+          "lookup_entity": "attome_project"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "entity": "service_ticket",
+        "field": "linked_project_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Parent Ticket",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "parent_ticket_id",
+          "lookup_entity": "service_ticket"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "entity": "service_ticket",
+        "field": "parent_ticket_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Queue",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "queue_id",
+          "lookup_entity": "team"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "entity": "service_ticket",
+        "field": "queue_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Requester",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "requester_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "entity": "service_ticket",
+        "field": "requester_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "SLA Policy",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "sla_policy_id",
+          "lookup_entity": "service_sla_policy"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "entity": "service_ticket",
+        "field": "sla_policy_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Work Queue",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "work_queue_ref",
+          "lookup_entity": "service_work_queue"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "entity": "service_ticket",
+        "field": "work_queue_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Escalation Recipient",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "escalation_recipient",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "entity": "service_work_queue",
+        "field": "escalation_recipient"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Last Assigned Member (Round Robin Pointer)",
+          "field_type": "lookup",
+          "logicalname": "last_assigned_member_ref",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "entity": "service_work_queue",
+        "field": "last_assigned_member_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Queue Lead",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "lead_ref",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "entity": "service_work_queue",
+        "field": "lead_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Queue",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "queue_ref",
+          "lookup_entity": "service_work_queue"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "entity": "service_work_queue_member",
+        "field": "queue_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Member",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "user_ref",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "entity": "service_work_queue_member",
+        "field": "user_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Service Offering",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "offering_id",
+          "lookup_entity": "service_offering"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "entity": "service_work_request",
+        "field": "offering_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Requester",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "requester_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "entity": "service_work_request",
+        "field": "requester_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "SLA Policy",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "sla_policy_id",
+          "lookup_entity": "service_sla_policy"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 108,
+      "target": {
+        "entity": "service_work_request",
+        "field": "sla_policy_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Work Queue",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "work_queue_ref",
+          "lookup_entity": "service_work_queue"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 109,
+      "target": {
+        "entity": "service_work_request",
+        "field": "work_queue_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_offering",
+          "entity_mappings": [],
+          "name": "Active Service Offerings",
+          "required_privilege": "service_offering.read",
+          "sql": "SELECT id FROM service_offering WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 110,
+      "target": {
+        "entity": "service_offering",
+        "query": "Active Service Offerings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_offering",
+          "entity_mappings": [],
+          "name": "Inactive Service Offerings",
+          "required_privilege": "service_offering.read",
+          "sql": "SELECT id FROM service_offering WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 111,
+      "target": {
+        "entity": "service_offering",
+        "query": "Inactive Service Offerings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_sla_calculation",
+          "entity_mappings": [],
+          "name": "Active SLA Calculations",
+          "required_privilege": "service_sla_calculation.read",
+          "sql": "SELECT id FROM service_sla_calculation WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 112,
+      "target": {
+        "entity": "service_sla_calculation",
+        "query": "Active SLA Calculations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_sla_calculation",
+          "entity_mappings": [],
+          "name": "Inactive SLA Calculations",
+          "required_privilege": "service_sla_calculation.read",
+          "sql": "SELECT id FROM service_sla_calculation WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 113,
+      "target": {
+        "entity": "service_sla_calculation",
+        "query": "Inactive SLA Calculations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_sla_clock",
+          "entity_mappings": [],
+          "name": "Active SLA Clocks",
+          "required_privilege": "service_sla_clock.read",
+          "sql": "SELECT id FROM service_sla_clock WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 114,
+      "target": {
+        "entity": "service_sla_clock",
+        "query": "Active SLA Clocks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_sla_clock",
+          "entity_mappings": [],
+          "name": "Inactive SLA Clocks",
+          "required_privilege": "service_sla_clock.read",
+          "sql": "SELECT id FROM service_sla_clock WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 115,
+      "target": {
+        "entity": "service_sla_clock",
+        "query": "Inactive SLA Clocks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_sla_policy",
+          "entity_mappings": [],
+          "name": "Active SLA Policys",
+          "required_privilege": "service_sla_policy.read",
+          "sql": "SELECT id FROM service_sla_policy WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 116,
+      "target": {
+        "entity": "service_sla_policy",
+        "query": "Active SLA Policys"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_sla_policy",
+          "entity_mappings": [],
+          "name": "Inactive SLA Policys",
+          "required_privilege": "service_sla_policy.read",
+          "sql": "SELECT id FROM service_sla_policy WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 117,
+      "target": {
+        "entity": "service_sla_policy",
+        "query": "Inactive SLA Policys"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "name": "Active Tickets",
+          "required_privilege": "service_ticket.read",
+          "sql": "SELECT id, ticket_number, title, status, priority, assignee_id, resolution_due_at, resolved_at, sla_policy_id, sla_breached, sla_warned, sla_calculation_status, sla_unresolved_reason FROM service_ticket WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 118,
+      "target": {
+        "entity": "service_ticket",
+        "query": "Active Tickets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "name": "Inactive Tickets",
+          "required_privilege": "service_ticket.read",
+          "sql": "SELECT id, ticket_number, title, status, priority, assignee_id, resolution_due_at, resolved_at, sla_policy_id, sla_breached, sla_warned, sla_calculation_status, sla_unresolved_reason FROM service_ticket WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 119,
+      "target": {
+        "entity": "service_ticket",
+        "query": "Inactive Tickets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "Queue Claim-To-Resolve, Minutes (Last 30 Days)",
+          "required_privilege": "service_ticket.read",
+          "sql": "SELECT work_queue_ref AS queue_ref, AVG(EXTRACT(EPOCH FROM (resolved_at - claimed_at)) / 60.0) AS value FROM service_ticket WHERE (is_active IS NULL OR is_active = true) AND work_queue_ref IS NOT NULL AND status IN ('resolved', 'closed') AND resolved_at IS NOT NULL AND claimed_at IS NOT NULL AND resolved_at >= NOW() - INTERVAL '30 days'"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 120,
+      "target": {
+        "entity": "service_ticket",
+        "query": "Queue Claim-To-Resolve, Minutes (Last 30 Days)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "SLA Attainment % (Last 30 Days)",
+          "required_privilege": "service_ticket.read",
+          "sql": "SELECT (COUNT(*) FILTER (WHERE sla_breached IS NOT TRUE))::float8 / NULLIF(COUNT(*), 0) * 100 AS value FROM service_ticket WHERE (is_active IS NULL OR is_active = true) AND sla_policy_id IS NOT NULL AND (sla_calculation_status IS NULL OR sla_calculation_status <> 'unresolved') AND status IN ('resolved', 'closed') AND resolved_at IS NOT NULL AND resolved_at >= NOW() - INTERVAL '30 days'"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 121,
+      "target": {
+        "entity": "service_ticket",
+        "query": "SLA Attainment % (Last 30 Days)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "SLA Breaches By Queue And Priority",
+          "required_privilege": "service_ticket.read",
+          "sql": "SELECT queue_id, priority, COUNT(*) AS breach_count FROM service_ticket WHERE (is_active IS NULL OR is_active = true) AND sla_breached = true GROUP BY queue_id, priority"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 122,
+      "target": {
+        "entity": "service_ticket",
+        "query": "SLA Breaches By Queue And Priority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "SLA Mean Time To Resolve, Minutes (Last 30 Days)",
+          "required_privilege": "service_ticket.read",
+          "sql": "SELECT AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) / 60.0) AS value FROM service_ticket WHERE (is_active IS NULL OR is_active = true) AND status IN ('resolved', 'closed') AND resolved_at IS NOT NULL AND resolved_at >= NOW() - INTERVAL '30 days'"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 123,
+      "target": {
+        "entity": "service_ticket",
+        "query": "SLA Mean Time To Resolve, Minutes (Last 30 Days)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_queue",
+          "entity_mappings": [],
+          "name": "Active Work Queues",
+          "required_privilege": "service_work_queue.read",
+          "sql": "SELECT id FROM service_work_queue WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 124,
+      "target": {
+        "entity": "service_work_queue",
+        "query": "Active Work Queues"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_queue",
+          "entity_mappings": [],
+          "name": "Inactive Work Queues",
+          "required_privilege": "service_work_queue.read",
+          "sql": "SELECT id FROM service_work_queue WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 125,
+      "target": {
+        "entity": "service_work_queue",
+        "query": "Inactive Work Queues"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_queue",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "Queue Average Wait, Minutes (Currently Unassigned Items)",
+          "required_privilege": "service_work_queue.read",
+          "sql": "SELECT work_queue_ref AS queue_ref, AVG(EXTRACT(EPOCH FROM (NOW() - created_at)) / 60.0) AS value FROM service_ticket WHERE (is_active IS NULL OR is_active = true) AND work_queue_ref IS NOT NULL AND assignee_id IS NULL AND status NOT IN ('resolved', 'closed') GROUP BY work_queue_ref"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 126,
+      "target": {
+        "entity": "service_work_queue",
+        "query": "Queue Average Wait, Minutes (Currently Unassigned Items)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_queue",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "Queue Depth (Open, Unassigned Items Per Queue)",
+          "required_privilege": "service_work_queue.read",
+          "sql": "SELECT work_queue_ref AS queue_ref, COUNT(*) AS value FROM service_ticket WHERE (is_active IS NULL OR is_active = true) AND work_queue_ref IS NOT NULL AND assignee_id IS NULL AND status NOT IN ('resolved', 'closed') GROUP BY work_queue_ref"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 127,
+      "target": {
+        "entity": "service_work_queue",
+        "query": "Queue Depth (Open, Unassigned Items Per Queue)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_queue_member",
+          "entity_mappings": [],
+          "name": "Active Work Queue Members",
+          "required_privilege": "service_work_queue_member.read",
+          "sql": "SELECT id FROM service_work_queue_member WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 128,
+      "target": {
+        "entity": "service_work_queue_member",
+        "query": "Active Work Queue Members"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_queue_member",
+          "entity_mappings": [],
+          "name": "Inactive Work Queue Members",
+          "required_privilege": "service_work_queue_member.read",
+          "sql": "SELECT id FROM service_work_queue_member WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 129,
+      "target": {
+        "entity": "service_work_queue_member",
+        "query": "Inactive Work Queue Members"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_request",
+          "entity_mappings": [],
+          "name": "Active Work Requests",
+          "required_privilege": "service_work_request.read",
+          "sql": "SELECT id FROM service_work_request WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 130,
+      "target": {
+        "entity": "service_work_request",
+        "query": "Active Work Requests"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_request",
+          "entity_mappings": [],
+          "name": "Inactive Work Requests",
+          "required_privilege": "service_work_request.read",
+          "sql": "SELECT id FROM service_work_request WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 131,
+      "target": {
+        "entity": "service_work_request",
+        "query": "Inactive Work Requests"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_offering",
+          "is_default": true,
+          "name": "Active Service Offerings",
+          "query": {
+            "entity": "service_offering",
+            "name": "Active Service Offerings"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 132,
+      "target": {
+        "entity": "service_offering",
+        "view": "Active Service Offerings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_offering",
+          "is_default": false,
+          "name": "Inactive Service Offerings",
+          "query": {
+            "entity": "service_offering",
+            "name": "Inactive Service Offerings"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 133,
+      "target": {
+        "entity": "service_offering",
+        "view": "Inactive Service Offerings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_sla_calculation",
+          "is_default": true,
+          "name": "Active SLA Calculations",
+          "query": {
+            "entity": "service_sla_calculation",
+            "name": "Active SLA Calculations"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 134,
+      "target": {
+        "entity": "service_sla_calculation",
+        "view": "Active SLA Calculations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_sla_calculation",
+          "is_default": false,
+          "name": "Inactive SLA Calculations",
+          "query": {
+            "entity": "service_sla_calculation",
+            "name": "Inactive SLA Calculations"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 135,
+      "target": {
+        "entity": "service_sla_calculation",
+        "view": "Inactive SLA Calculations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_sla_clock",
+          "is_default": true,
+          "name": "Active SLA Clocks",
+          "query": {
+            "entity": "service_sla_clock",
+            "name": "Active SLA Clocks"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 136,
+      "target": {
+        "entity": "service_sla_clock",
+        "view": "Active SLA Clocks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_sla_clock",
+          "is_default": false,
+          "name": "Inactive SLA Clocks",
+          "query": {
+            "entity": "service_sla_clock",
+            "name": "Inactive SLA Clocks"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 137,
+      "target": {
+        "entity": "service_sla_clock",
+        "view": "Inactive SLA Clocks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_sla_policy",
+          "is_default": true,
+          "name": "Active SLA Policys",
+          "query": {
+            "entity": "service_sla_policy",
+            "name": "Active SLA Policys"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 138,
+      "target": {
+        "entity": "service_sla_policy",
+        "view": "Active SLA Policys"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_sla_policy",
+          "is_default": false,
+          "name": "Inactive SLA Policys",
+          "query": {
+            "entity": "service_sla_policy",
+            "name": "Inactive SLA Policys"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 139,
+      "target": {
+        "entity": "service_sla_policy",
+        "view": "Inactive SLA Policys"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "is_default": true,
+          "name": "Active Tickets",
+          "query": {
+            "entity": "service_ticket",
+            "name": "Active Tickets"
+          },
+          "table_definition": [
+            {
+              "data_type": "text",
+              "display_name": "Ticket",
+              "is_clickable": false,
+              "is_searchable": true,
+              "is_sortable": true,
+              "is_visible": true,
+              "name": "ticket_number",
+              "route_template": ""
+            },
+            {
+              "data_type": "text",
+              "display_name": "Title",
+              "is_clickable": false,
+              "is_searchable": true,
+              "is_sortable": true,
+              "is_visible": true,
+              "name": "title",
+              "route_template": ""
+            },
+            {
+              "data_type": "choice",
+              "display_name": "Status",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": true,
+              "name": "status",
+              "route_template": ""
+            },
+            {
+              "data_type": "choice",
+              "display_name": "Priority",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": true,
+              "name": "priority",
+              "route_template": ""
+            },
+            {
+              "data_type": "lookup",
+              "display_name": "Assignee",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": true,
+              "name": "assignee_id",
+              "route_template": ""
+            },
+            {
+              "data_type": "date",
+              "display_name": "SLA",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": true,
+              "name": "resolution_due_at",
+              "route_template": ""
+            },
+            {
+              "data_type": "date",
+              "display_name": "Resolved At",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": false,
+              "name": "resolved_at",
+              "route_template": ""
+            },
+            {
+              "data_type": "lookup",
+              "display_name": "SLA Policy",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": false,
+              "name": "sla_policy_id",
+              "route_template": ""
+            },
+            {
+              "data_type": "bool",
+              "display_name": "SLA Breached",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": false,
+              "name": "sla_breached",
+              "route_template": ""
+            },
+            {
+              "data_type": "bool",
+              "display_name": "SLA Warned",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": false,
+              "name": "sla_warned",
+              "route_template": ""
+            },
+            {
+              "data_type": "choice",
+              "display_name": "SLA Calculation Status",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": false,
+              "name": "sla_calculation_status",
+              "route_template": ""
+            },
+            {
+              "data_type": "choice",
+              "display_name": "SLA Unresolved Reason",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": false,
+              "name": "sla_unresolved_reason",
+              "route_template": ""
+            }
+          ]
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 140,
+      "target": {
+        "entity": "service_ticket",
+        "view": "Active Tickets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "is_default": false,
+          "name": "Inactive Tickets",
+          "query": {
+            "entity": "service_ticket",
+            "name": "Inactive Tickets"
+          },
+          "table_definition": [
+            {
+              "data_type": "text",
+              "display_name": "Ticket",
+              "is_clickable": false,
+              "is_searchable": true,
+              "is_sortable": true,
+              "is_visible": true,
+              "name": "ticket_number",
+              "route_template": ""
+            },
+            {
+              "data_type": "text",
+              "display_name": "Title",
+              "is_clickable": false,
+              "is_searchable": true,
+              "is_sortable": true,
+              "is_visible": true,
+              "name": "title",
+              "route_template": ""
+            },
+            {
+              "data_type": "choice",
+              "display_name": "Status",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": true,
+              "name": "status",
+              "route_template": ""
+            },
+            {
+              "data_type": "choice",
+              "display_name": "Priority",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": true,
+              "name": "priority",
+              "route_template": ""
+            },
+            {
+              "data_type": "lookup",
+              "display_name": "Assignee",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": true,
+              "name": "assignee_id",
+              "route_template": ""
+            },
+            {
+              "data_type": "date",
+              "display_name": "SLA",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": true,
+              "name": "resolution_due_at",
+              "route_template": ""
+            },
+            {
+              "data_type": "date",
+              "display_name": "Resolved At",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": false,
+              "name": "resolved_at",
+              "route_template": ""
+            },
+            {
+              "data_type": "lookup",
+              "display_name": "SLA Policy",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": false,
+              "name": "sla_policy_id",
+              "route_template": ""
+            },
+            {
+              "data_type": "bool",
+              "display_name": "SLA Breached",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": false,
+              "name": "sla_breached",
+              "route_template": ""
+            },
+            {
+              "data_type": "bool",
+              "display_name": "SLA Warned",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": false,
+              "name": "sla_warned",
+              "route_template": ""
+            },
+            {
+              "data_type": "choice",
+              "display_name": "SLA Calculation Status",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": false,
+              "name": "sla_calculation_status",
+              "route_template": ""
+            },
+            {
+              "data_type": "choice",
+              "display_name": "SLA Unresolved Reason",
+              "is_clickable": false,
+              "is_searchable": false,
+              "is_sortable": true,
+              "is_visible": false,
+              "name": "sla_unresolved_reason",
+              "route_template": ""
+            }
+          ]
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 141,
+      "target": {
+        "entity": "service_ticket",
+        "view": "Inactive Tickets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_queue",
+          "is_default": true,
+          "name": "Active Work Queues",
+          "query": {
+            "entity": "service_work_queue",
+            "name": "Active Work Queues"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 142,
+      "target": {
+        "entity": "service_work_queue",
+        "view": "Active Work Queues"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_queue",
+          "is_default": false,
+          "name": "Inactive Work Queues",
+          "query": {
+            "entity": "service_work_queue",
+            "name": "Inactive Work Queues"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 143,
+      "target": {
+        "entity": "service_work_queue",
+        "view": "Inactive Work Queues"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_queue_member",
+          "is_default": true,
+          "name": "Active Work Queue Members",
+          "query": {
+            "entity": "service_work_queue_member",
+            "name": "Active Work Queue Members"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 144,
+      "target": {
+        "entity": "service_work_queue_member",
+        "view": "Active Work Queue Members"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_queue_member",
+          "is_default": false,
+          "name": "Inactive Work Queue Members",
+          "query": {
+            "entity": "service_work_queue_member",
+            "name": "Inactive Work Queue Members"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 145,
+      "target": {
+        "entity": "service_work_queue_member",
+        "view": "Inactive Work Queue Members"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_request",
+          "is_default": true,
+          "name": "Active Work Requests",
+          "query": {
+            "entity": "service_work_request",
+            "name": "Active Work Requests"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 146,
+      "target": {
+        "entity": "service_work_request",
+        "view": "Active Work Requests"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_work_request",
+          "is_default": false,
+          "name": "Inactive Work Requests",
+          "query": {
+            "entity": "service_work_request",
+            "name": "Inactive Work Requests"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 147,
+      "target": {
+        "entity": "service_work_request",
+        "view": "Inactive Work Requests"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "service_ticket",
+          "initial_state": "new",
+          "name": "Ticket Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 148,
+      "target": {
+        "entity": "service_ticket"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 27,
+          "from_state": "closed",
+          "name": "closed_to_in_progress",
+          "to_state": "in_progress"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 149,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "closed->in_progress"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 25,
+          "from_state": "closed",
+          "name": "closed_to_new",
+          "to_state": "new"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 150,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "closed->new"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 26,
+          "from_state": "closed",
+          "name": "closed_to_open",
+          "to_state": "open"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 151,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "closed->open"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 29,
+          "from_state": "closed",
+          "name": "closed_to_resolved",
+          "to_state": "resolved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 152,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "closed->resolved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 28,
+          "from_state": "closed",
+          "name": "closed_to_waiting_on_customer",
+          "to_state": "waiting_on_customer"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 153,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "closed->waiting_on_customer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 14,
+          "from_state": "in_progress",
+          "name": "in_progress_to_closed",
+          "to_state": "closed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 154,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "in_progress->closed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 10,
+          "from_state": "in_progress",
+          "name": "in_progress_to_new",
+          "to_state": "new"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 155,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "in_progress->new"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 11,
+          "from_state": "in_progress",
+          "name": "in_progress_to_open",
+          "to_state": "open"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 156,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "in_progress->open"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 13,
+          "from_state": "in_progress",
+          "name": "in_progress_to_resolved",
+          "to_state": "resolved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 157,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "in_progress->resolved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 12,
+          "from_state": "in_progress",
+          "name": "in_progress_to_waiting_on_customer",
+          "to_state": "waiting_on_customer"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 158,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "in_progress->waiting_on_customer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "from_state": "new",
+          "name": "new_to_closed",
+          "to_state": "closed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 159,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "new->closed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "from_state": "new",
+          "name": "new_to_in_progress",
+          "to_state": "in_progress"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 160,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "new->in_progress"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "from_state": "new",
+          "name": "new_to_open",
+          "to_state": "open"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 161,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "new->open"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "from_state": "new",
+          "name": "new_to_resolved",
+          "to_state": "resolved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 162,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "new->resolved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "from_state": "new",
+          "name": "new_to_waiting_on_customer",
+          "to_state": "waiting_on_customer"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 163,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "new->waiting_on_customer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 9,
+          "from_state": "open",
+          "name": "open_to_closed",
+          "to_state": "closed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 164,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "open->closed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 6,
+          "from_state": "open",
+          "name": "open_to_in_progress",
+          "to_state": "in_progress"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 165,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "open->in_progress"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "from_state": "open",
+          "name": "open_to_new",
+          "to_state": "new"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 166,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "open->new"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 8,
+          "from_state": "open",
+          "name": "open_to_resolved",
+          "to_state": "resolved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 167,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "open->resolved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 7,
+          "from_state": "open",
+          "name": "open_to_waiting_on_customer",
+          "to_state": "waiting_on_customer"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 168,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "open->waiting_on_customer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 24,
+          "from_state": "resolved",
+          "name": "resolved_to_closed",
+          "to_state": "closed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 169,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "resolved->closed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 22,
+          "from_state": "resolved",
+          "name": "resolved_to_in_progress",
+          "to_state": "in_progress"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 170,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "resolved->in_progress"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 20,
+          "from_state": "resolved",
+          "name": "resolved_to_new",
+          "to_state": "new"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 171,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "resolved->new"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 21,
+          "from_state": "resolved",
+          "name": "resolved_to_open",
+          "to_state": "open"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 172,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "resolved->open"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 23,
+          "from_state": "resolved",
+          "name": "resolved_to_waiting_on_customer",
+          "to_state": "waiting_on_customer"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 173,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "resolved->waiting_on_customer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 19,
+          "from_state": "waiting_on_customer",
+          "name": "waiting_on_customer_to_closed",
+          "to_state": "closed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 174,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "waiting_on_customer->closed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 17,
+          "from_state": "waiting_on_customer",
+          "name": "waiting_on_customer_to_in_progress",
+          "to_state": "in_progress"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 175,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "waiting_on_customer->in_progress"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 15,
+          "from_state": "waiting_on_customer",
+          "name": "waiting_on_customer_to_new",
+          "to_state": "new"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 176,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "waiting_on_customer->new"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 16,
+          "from_state": "waiting_on_customer",
+          "name": "waiting_on_customer_to_open",
+          "to_state": "open"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 177,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "waiting_on_customer->open"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 18,
+          "from_state": "waiting_on_customer",
+          "name": "waiting_on_customer_to_resolved",
+          "to_state": "resolved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 178,
+      "target": {
+        "entity": "service_ticket",
+        "transition": "waiting_on_customer->resolved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "service_work_request",
+          "initial_state": "new",
+          "name": "Work Request Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 179,
+      "target": {
+        "entity": "service_work_request"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "from_state": "new",
+          "guard_expression": "not is_null(resolved_record_id)",
+          "name": "Convert",
+          "to_state": "converted"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 180,
+      "target": {
+        "entity": "service_work_request",
+        "transition": "new->converted"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "from_state": "new",
+          "name": "Reject",
+          "to_state": "rejected"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 181,
+      "target": {
+        "entity": "service_work_request",
+        "transition": "new->rejected"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "from_state": "new",
+          "name": "Triage",
+          "to_state": "triaged"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 182,
+      "target": {
+        "entity": "service_work_request",
+        "transition": "new->triaged"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "from_state": "rejected",
+          "name": "Reopen",
+          "to_state": "new"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 183,
+      "target": {
+        "entity": "service_work_request",
+        "transition": "rejected->new"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 6,
+          "from_state": "triaged",
+          "guard_expression": "not is_null(resolved_record_id)",
+          "name": "Convert",
+          "to_state": "converted"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 184,
+      "target": {
+        "entity": "service_work_request",
+        "transition": "triaged->converted"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "from_state": "triaged",
+          "name": "Back To New",
+          "to_state": "new"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 185,
+      "target": {
+        "entity": "service_work_request",
+        "transition": "triaged->new"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "from_state": "triaged",
+          "name": "Reject",
+          "to_state": "rejected"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 186,
+      "target": {
+        "entity": "service_work_request",
+        "transition": "triaged->rejected"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "service"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 40,
+  "title": "Platform definitions: attome-service"
+}

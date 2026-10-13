@@ -1,0 +1,93 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "privileges": [
+    { "key": "webportal.trusted_login", "name": "Web Portal Trusted Login", "description": "S2S clients only: sign a portal's users in with a password and create accounts for free usernames, on portals with trusted_server_login on (D-779)" }
+  ],
+  "entities": [
+    {
+      "logicalname": "webportal",
+      "display_name": "Web Portal",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "keyword", "display_name": "Keyword", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "portal_type", "display_name": "Portal Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["anonymous", "authenticated", "mixed"], "multi": false } },
+        { "logicalname": "is_enabled", "display_name": "Enabled", "field_type": "bool", "is_filterable": true },
+        { "logicalname": "owning_team_ref", "display_name": "Owning Team", "field_type": "lookup", "is_filterable": true, "lookup_entity": "team" },
+        { "logicalname": "mfa_policy", "display_name": "MFA Policy", "field_type": "choice", "is_filterable": true, "options": { "choices": ["optional", "required"], "multi": false } }
+      ]
+    },
+    {
+      "logicalname": "webportal_user",
+      "display_name": "Web Portal User",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "email", "display_name": "Email", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "username", "display_name": "Username", "field_type": "text", "max_length": 64, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "webportal_ref", "display_name": "Web Portal", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "webportal" },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["invited", "active", "disabled"], "multi": false } }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "webportal",
+      "name": "Active Web Portals",
+      "sql": "SELECT id FROM webportal WHERE is_active = true",
+      "required_privilege": "webportal.read"
+    },
+    {
+      "entity": "webportal",
+      "name": "Inactive Web Portals",
+      "sql": "SELECT id FROM webportal WHERE is_active = false",
+      "required_privilege": "webportal.read"
+    },
+    {
+      "entity": "webportal_user",
+      "name": "Active Web Portal Users",
+      "sql": "SELECT id FROM webportal_user WHERE is_active = true",
+      "required_privilege": "webportal_user.read"
+    },
+    {
+      "entity": "webportal_user",
+      "name": "Inactive Web Portal Users",
+      "sql": "SELECT id FROM webportal_user WHERE is_active = false",
+      "required_privilege": "webportal_user.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "webportal",
+      "name": "Active Web Portals",
+      "query": { "entity": "webportal", "name": "Active Web Portals" },
+      "is_default": true
+    },
+    {
+      "entity": "webportal",
+      "name": "Inactive Web Portals",
+      "query": { "entity": "webportal", "name": "Inactive Web Portals" },
+      "is_default": false
+    },
+    {
+      "entity": "webportal_user",
+      "name": "Active Web Portal Users",
+      "query": { "entity": "webportal_user", "name": "Active Web Portal Users" },
+      "is_default": true
+    },
+    {
+      "entity": "webportal_user",
+      "name": "Inactive Web Portal Users",
+      "query": { "entity": "webportal_user", "name": "Inactive Web Portal Users" },
+      "is_default": false
+    }
+  ]
+}

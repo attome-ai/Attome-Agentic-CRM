@@ -1,0 +1,70 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "integration_system",
+      "display_name": "Integration System",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "kind", "display_name": "Kind", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["rest", "mailbox", "channel", "esign", "calendar", "file_drop"], "multi": false } },
+        { "logicalname": "base_url", "display_name": "Base URL", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "auth_type", "display_name": "Authentication", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["api_key", "oauth2_client_credentials", "basic", "hmac"], "multi": false } },
+        { "logicalname": "credential_ref", "display_name": "Credential Reference", "field_type": "text" },
+        { "logicalname": "rate_limit", "display_name": "Rate Limit (requests/min)", "field_type": "number" },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["active", "disabled", "error"], "multi": false } },
+        { "logicalname": "health_last_ok_at", "display_name": "Last Healthy At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "health_last_error", "display_name": "Last Health Error", "field_type": "text" },
+        { "logicalname": "service_principal_ref", "display_name": "Service Principal", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "config", "display_name": "Adapter Config", "field_type": "text" },
+        { "logicalname": "legacy_body_only_signature", "display_name": "Legacy Body-Only Webhook Signature", "field_type": "bool", "is_sortable": true, "is_filterable": true }
+      ]
+    },
+    {
+      "logicalname": "integration_event",
+      "display_name": "Integration Event",
+      "primary_name_attribute": "event_type",
+      "is_append_only": true,
+      "attributes": [
+        { "logicalname": "system_ref", "display_name": "Integration System", "field_type": "lookup", "is_required": true, "is_sortable": true, "is_filterable": true, "lookup_entity": "integration_system" },
+        { "logicalname": "event_type", "display_name": "Event Type", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "payload", "display_name": "Payload", "field_type": "text", "is_required": true },
+        { "logicalname": "processed", "display_name": "Processed", "field_type": "bool", "is_sortable": true, "is_filterable": true }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "integration_system",
+      "name": "Active Integration Systems",
+      "sql": "SELECT id, name, kind, base_url, auth_type, status, rate_limit, health_last_ok_at, health_last_error, created_at, modified_at, row_version FROM integration_system WHERE is_active IS NOT FALSE",
+      "required_privilege": "integration_system.read"
+    },
+    {
+      "entity": "integration_event",
+      "name": "Integration Events",
+      "sql": "SELECT id, created_at, system_ref, event_type, payload, processed FROM integration_event",
+      "required_privilege": "integration_event.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "integration_system",
+      "name": "Active Integration Systems",
+      "query": { "entity": "integration_system", "name": "Active Integration Systems" },
+      "is_default": true
+    },
+    {
+      "entity": "integration_event",
+      "name": "Integration Events",
+      "query": { "entity": "integration_event", "name": "Integration Events" },
+      "is_default": true
+    }
+  ]
+}

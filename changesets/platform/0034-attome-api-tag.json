@@ -1,0 +1,275 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:4a6fe4792d14edcfa0193d58904ab334361129a6708882fd5ba91378f81a115d",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-api-tag.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "76b53918-0588-7430-9ecf-61a9e0834005",
+  "layer": "platform",
+  "name": "attome-api-tag",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Tag Category",
+          "is_append_only": false,
+          "logicalname": "tag_category",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "tag_category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Tag Item",
+          "is_append_only": false,
+          "logicalname": "tag_item"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "tag_item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Color",
+          "field_type": "text",
+          "logicalname": "color"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "tag_category",
+        "field": "color"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "tag_category",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "tag_category",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Entity Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "tag_item",
+        "field": "entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Record Id",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "record_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "tag_item",
+        "field": "record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Category",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "category_id",
+          "lookup_entity": "tag_category"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "tag_item",
+        "field": "category_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "tag_category",
+          "entity_mappings": [],
+          "name": "Active Tag Categories",
+          "required_privilege": "tag_category.read",
+          "sql": "SELECT id, name, description, color, created_at FROM tag_category WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "tag_category",
+        "query": "Active Tag Categories"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "tag_item",
+          "entity_mappings": [],
+          "name": "Active Tag Items",
+          "required_privilege": "tag_item.read",
+          "sql": "SELECT id, category_id, entity_name, record_id, created_at FROM tag_item WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "tag_item",
+        "query": "Active Tag Items"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "tag_item",
+          "entity_mappings": [],
+          "name": "Tag Items (Related)",
+          "required_privilege": "tag_item.read",
+          "sql": "SELECT id, category_id, entity_name, record_id, created_at FROM tag_item WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "tag_item",
+        "query": "Tag Items (Related)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "tag_category",
+          "is_default": true,
+          "name": "Active Tag Categories",
+          "query": {
+            "entity": "tag_category",
+            "name": "Active Tag Categories"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "tag_category",
+        "view": "Active Tag Categories"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "tag_item",
+          "is_default": true,
+          "name": "Active Tag Items",
+          "query": {
+            "entity": "tag_item",
+            "name": "Active Tag Items"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "tag_item",
+        "view": "Active Tag Items"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "tag_item",
+          "is_default": false,
+          "name": "Tag Items (Related)",
+          "query": {
+            "entity": "tag_item",
+            "name": "Tag Items (Related)"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "tag_item",
+        "view": "Tag Items (Related)"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 34,
+  "title": "Platform definitions: attome-api-tag"
+}

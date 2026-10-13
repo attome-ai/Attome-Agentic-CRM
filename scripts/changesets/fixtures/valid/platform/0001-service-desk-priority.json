@@ -1,0 +1,121 @@
+{
+  "author": "dev@attome.local",
+  "checksum": "sha256:6f221a380f8ec7ab3714b2210417be6b9055a4cfa1b5f912930d468853df9ba7",
+  "closed_at": "2026-09-29T09:30:00Z",
+  "description": "Adds a priority to service tickets, a triage view sorted by it, access for the Service Desk Agent role, and the Hardware category.",
+  "format": "attome-changeset/v1",
+  "id": "01923f6e-8a4b-7c1d-9e2f-3a4b5c6d7e8f",
+  "layer": "platform",
+  "name": "service-desk-priority",
+  "opened_at": "2026-09-29T08:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Priority",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": false,
+          "is_sortable": true,
+          "logicalname": "priority",
+          "options": [
+            {
+              "label": "Low",
+              "value": 1
+            },
+            {
+              "label": "Normal",
+              "value": 2
+            },
+            {
+              "label": "High",
+              "value": 3
+            }
+          ]
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "service_ticket",
+        "field": "priority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "kind": "list",
+          "name": "Triage",
+          "query": {
+            "entity": "service_ticket",
+            "name": "triage"
+          },
+          "table_definition": {
+            "columns": [
+              "ticket_no",
+              "subject",
+              "priority",
+              "created_at"
+            ],
+            "sort": [
+              {
+                "direction": "desc",
+                "field": "priority"
+              }
+            ]
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "service_ticket",
+        "view": "Triage"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "read": "organization",
+          "write": "user"
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "service_ticket",
+        "role": "Service Desk Agent"
+      }
+    },
+    {
+      "args": {
+        "values": {
+          "code": "HW",
+          "name": "Hardware"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "service_category",
+        "key": {
+          "code": "HW"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "service"
+    ],
+    "platform": ">=4.2.0"
+  },
+  "scope": "platform",
+  "seq": 1,
+  "title": "Service desk: ticket priority and triage view"
+}

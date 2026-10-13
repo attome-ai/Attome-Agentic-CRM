@@ -1,0 +1,749 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:48f5b25b292e59b2655696d3800d9d3b0bb5c12064671359a679c8c86ec369cd",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-s2s.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "ac552440-2de7-72b3-be4b-2c06c5e99bc6",
+  "layer": "platform",
+  "name": "attome-s2s",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "S2S Access Log",
+          "is_append_only": true,
+          "logicalname": "s2s_access_log",
+          "primary_name_attribute": "path"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "s2s_access_log"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "S2S Client",
+          "is_append_only": false,
+          "logicalname": "s2s_client",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "s2s_client"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "S2S Permission",
+          "is_append_only": false,
+          "logicalname": "s2s_permission",
+          "primary_name_attribute": "entity_name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "s2s_permission"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Bytes Received",
+          "field_type": "number",
+          "logicalname": "bytes_received"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "s2s_access_log",
+        "field": "bytes_received"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Bytes Sent",
+          "field_type": "number",
+          "logicalname": "bytes_sent"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "s2s_access_log",
+        "field": "bytes_sent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Client Name",
+          "field_type": "text",
+          "logicalname": "client_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "s2s_access_log",
+        "field": "client_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Correlation ID",
+          "field_type": "text",
+          "logicalname": "correlation_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "s2s_access_log",
+        "field": "correlation_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Error Code",
+          "field_type": "text",
+          "logicalname": "error_code"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "s2s_access_log",
+        "field": "error_code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "IP Address",
+          "field_type": "text",
+          "logicalname": "ip_address"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "s2s_access_log",
+        "field": "ip_address"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Method",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "method"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "s2s_access_log",
+        "field": "method"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Nonce",
+          "field_type": "text",
+          "logicalname": "nonce"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "s2s_access_log",
+        "field": "nonce"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Path",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "path"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "s2s_access_log",
+        "field": "path"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Response Time ms",
+          "field_type": "number",
+          "logicalname": "response_time_ms"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "s2s_access_log",
+        "field": "response_time_ms"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status Code",
+          "field_type": "number",
+          "logicalname": "status_code"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "s2s_access_log",
+        "field": "status_code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Auto Disable Days",
+          "field_type": "number",
+          "logicalname": "auto_disable_days"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "s2s_client",
+        "field": "auto_disable_days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Client ID",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "client_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "s2s_client",
+        "field": "client_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "s2s_client",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Last Used At",
+          "field_type": "date",
+          "logicalname": "last_used_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "s2s_client",
+        "field": "last_used_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Max Concurrent",
+          "field_type": "number",
+          "logicalname": "max_concurrent"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "s2s_client",
+        "field": "max_concurrent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Max Payload Bytes",
+          "field_type": "number",
+          "logicalname": "max_payload_bytes"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "s2s_client",
+        "field": "max_payload_bytes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "s2s_client",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Rate Limit (rpm)",
+          "field_type": "number",
+          "logicalname": "rate_limit_rpm"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "s2s_client",
+        "field": "rate_limit_rpm"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "text",
+          "logicalname": "status"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "s2s_client",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Can Bulk",
+          "field_type": "bool",
+          "logicalname": "can_bulk"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "s2s_permission",
+        "field": "can_bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Can Create",
+          "field_type": "bool",
+          "logicalname": "can_create"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "s2s_permission",
+        "field": "can_create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Can Delete",
+          "field_type": "bool",
+          "logicalname": "can_delete"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "s2s_permission",
+        "field": "can_delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Can Export",
+          "field_type": "bool",
+          "logicalname": "can_export"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "s2s_permission",
+        "field": "can_export"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Can Read",
+          "field_type": "bool",
+          "logicalname": "can_read"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "s2s_permission",
+        "field": "can_read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Can Update",
+          "field_type": "bool",
+          "logicalname": "can_update"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "s2s_permission",
+        "field": "can_update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Entity Name",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "s2s_permission",
+        "field": "entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Client",
+          "field_type": "lookup",
+          "logicalname": "client_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "s2s_access_log",
+        "field": "client_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Service User",
+          "field_type": "lookup",
+          "logicalname": "service_user_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "s2s_client",
+        "field": "service_user_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Client",
+          "field_type": "lookup",
+          "is_required": true,
+          "logicalname": "client_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "s2s_permission",
+        "field": "client_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "s2s_access_log",
+          "entity_mappings": [],
+          "name": "S2S Access Log",
+          "required_privilege": "s2s_access_log.read",
+          "sql": "SELECT id, client_ref, client_name, method, path, status_code, response_time_ms, bytes_received, bytes_sent, correlation_id, ip_address, nonce, error_code, created_at FROM s2s_access_log"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "s2s_access_log",
+        "query": "S2S Access Log"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "s2s_client",
+          "entity_mappings": [],
+          "name": "Active S2S Clients",
+          "required_privilege": "s2s_client.read",
+          "sql": "SELECT id, name, client_id, description, status, service_user_ref, rate_limit_rpm, max_concurrent, allowed_cidrs, max_payload_bytes, auto_disable_days, last_used_at, row_version, created_at, updated_at FROM s2s_client WHERE is_deleted = FALSE AND is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "s2s_client",
+        "query": "Active S2S Clients"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "s2s_client",
+          "entity_mappings": [],
+          "name": "Inactive S2S Clients",
+          "required_privilege": "s2s_client.read",
+          "sql": "SELECT id, name, client_id, description, status, service_user_ref, rate_limit_rpm, max_concurrent, allowed_cidrs, max_payload_bytes, auto_disable_days, last_used_at, row_version, created_at, updated_at FROM s2s_client WHERE is_deleted = FALSE AND is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "s2s_client",
+        "query": "Inactive S2S Clients"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "s2s_permission",
+          "entity_mappings": [],
+          "name": "Active S2S Permissions",
+          "required_privilege": "s2s_permission.read",
+          "sql": "SELECT id, client_ref, entity_name, can_read, can_create, can_update, can_delete, can_export, can_bulk, row_version, created_at, updated_at FROM s2s_permission WHERE is_deleted = FALSE AND is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "s2s_permission",
+        "query": "Active S2S Permissions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "s2s_permission",
+          "entity_mappings": [],
+          "name": "Inactive S2S Permissions",
+          "required_privilege": "s2s_permission.read",
+          "sql": "SELECT id, client_ref, entity_name, can_read, can_create, can_update, can_delete, can_export, can_bulk, row_version, created_at, updated_at FROM s2s_permission WHERE is_deleted = FALSE AND is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "s2s_permission",
+        "query": "Inactive S2S Permissions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "s2s_access_log",
+          "is_default": true,
+          "name": "S2S Access Log",
+          "query": {
+            "entity": "s2s_access_log",
+            "name": "S2S Access Log"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "s2s_access_log",
+        "view": "S2S Access Log"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "s2s_client",
+          "is_default": true,
+          "name": "Active S2S Clients",
+          "query": {
+            "entity": "s2s_client",
+            "name": "Active S2S Clients"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "s2s_client",
+        "view": "Active S2S Clients"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "s2s_client",
+          "is_default": false,
+          "name": "Inactive S2S Clients",
+          "query": {
+            "entity": "s2s_client",
+            "name": "Inactive S2S Clients"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "s2s_client",
+        "view": "Inactive S2S Clients"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "s2s_permission",
+          "is_default": true,
+          "name": "Active S2S Permissions",
+          "query": {
+            "entity": "s2s_permission",
+            "name": "Active S2S Permissions"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "s2s_permission",
+        "view": "Active S2S Permissions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "s2s_permission",
+          "is_default": false,
+          "name": "Inactive S2S Permissions",
+          "query": {
+            "entity": "s2s_permission",
+            "name": "Inactive S2S Permissions"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "s2s_permission",
+        "view": "Inactive S2S Permissions"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 21,
+  "title": "Platform definitions: attome-s2s"
+}

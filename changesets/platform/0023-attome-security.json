@@ -1,0 +1,1427 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:47b48686174a3d4517934c55c9d8f22fa739839b52896cfd454a882ba6370f29",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-security.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "18cb4db6-7cb4-7d66-bd2e-21d72a45b797",
+  "layer": "platform",
+  "name": "attome-security",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Plan and apply changesets, follow the changeset ledger, read and decide release-report items, read the rollout status and the caller's own approval requests (D-792). Never approves; reads no records.",
+          "key": "metadata.rollout",
+          "name": "Metadata Rollout"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "metadata.rollout"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Create, edit, order, activate, and permission sidebar navigation items",
+          "key": "sidebar.manage",
+          "name": "Manage Sidebar"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "sidebar.manage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Full administrative access to every gated route",
+          "key": "system.admin",
+          "name": "System Admin"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "system.admin"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Organization",
+          "is_append_only": false,
+          "logicalname": "organization",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "organization"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Privilege",
+          "is_append_only": false,
+          "logicalname": "privilege",
+          "primary_name_attribute": "key"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "privilege"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Role",
+          "is_append_only": false,
+          "logicalname": "role",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "role"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User",
+          "is_append_only": false,
+          "logicalname": "user_account",
+          "primary_name_attribute": "email"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "user_account"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User Privilege Grant",
+          "is_append_only": false,
+          "logicalname": "user_account_mm_privilege"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "user_account_mm_privilege"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Team Membership",
+          "is_append_only": false,
+          "logicalname": "user_account_mm_team"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "user_account_mm_team"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Team",
+          "is_append_only": false,
+          "logicalname": "team",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "team"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "organization",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "privilege",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Key",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "key"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "privilege",
+        "field": "key"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "privilege",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "role",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "role",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Position Hierarchy Enabled",
+          "field_type": "bool",
+          "is_filterable": true,
+          "logicalname": "position_hierarchy_enabled"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "role",
+        "field": "position_hierarchy_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Authentication Type",
+          "field_type": "number",
+          "logicalname": "auth_type"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "user_account",
+        "field": "auth_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Currency",
+          "field_type": "number",
+          "logicalname": "currency"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "user_account",
+        "field": "currency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Email",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "email"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "user_account",
+        "field": "email"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Is Active",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_active"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "user_account",
+        "field": "is_active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Language",
+          "field_type": "number",
+          "logicalname": "language"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "user_account",
+        "field": "language"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Last Login",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "last_login"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "user_account",
+        "field": "last_login"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Locale",
+          "field_type": "text",
+          "logicalname": "locale"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "user_account",
+        "field": "locale"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Max Page Size",
+          "field_type": "number",
+          "logicalname": "max_page_size"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "user_account",
+        "field": "max_page_size"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Phone",
+          "field_type": "text",
+          "logicalname": "phone"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "user_account",
+        "field": "phone"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Profile Image",
+          "field_type": "file",
+          "logicalname": "profile_image"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "user_account",
+        "field": "profile_image"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "online",
+              "away",
+              "busy",
+              "offline"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "user_account",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Theme",
+          "field_type": "text",
+          "logicalname": "theme"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "user_account",
+        "field": "theme"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Timezone",
+          "field_type": "text",
+          "logicalname": "timezone"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "user_account",
+        "field": "timezone"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "user_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "user_account",
+        "field": "user_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "team",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "team",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Parent Organization",
+          "field_type": "lookup",
+          "logicalname": "organization_ref",
+          "lookup_entity": "organization"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "organization",
+        "field": "organization_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Organization",
+          "field_type": "lookup",
+          "logicalname": "organization_ref",
+          "lookup_entity": "organization"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "user_account",
+        "field": "organization_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Privilege",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "privilege_ref",
+          "lookup_entity": "privilege"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "user_account_mm_privilege",
+        "field": "privilege_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "user_ref",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "user_account_mm_privilege",
+        "field": "user_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Team",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "team_ref",
+          "lookup_entity": "team"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "user_account_mm_team",
+        "field": "team_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "user_ref",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "user_account_mm_team",
+        "field": "user_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Organization",
+          "field_type": "lookup",
+          "logicalname": "organization_ref",
+          "lookup_entity": "organization"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "team",
+        "field": "organization_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "organization",
+          "entity_mappings": [],
+          "name": "Active Organizations",
+          "required_privilege": "organization.read",
+          "sql": "SELECT id, name, created_at, is_active FROM organization WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "organization",
+        "query": "Active Organizations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "organization",
+          "entity_mappings": [],
+          "name": "Inactive Organizations",
+          "required_privilege": "organization.read",
+          "sql": "SELECT id, name, created_at, is_active FROM organization WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "organization",
+        "query": "Inactive Organizations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "privilege",
+          "entity_mappings": [],
+          "name": "Active Privileges",
+          "required_privilege": "privilege.read",
+          "sql": "SELECT id, key, name, description FROM privilege WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "privilege",
+        "query": "Active Privileges"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "privilege",
+          "entity_mappings": [],
+          "name": "Inactive Privileges",
+          "required_privilege": "privilege.read",
+          "sql": "SELECT id, key, name, description FROM privilege WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "privilege",
+        "query": "Inactive Privileges"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "role",
+          "entity_mappings": [],
+          "name": "Active Roles",
+          "required_privilege": "role.read",
+          "sql": "SELECT id, name, description, position_hierarchy_enabled FROM role WHERE is_deleted = false AND is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "role",
+        "query": "Active Roles"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "role",
+          "entity_mappings": [],
+          "name": "Inactive Roles",
+          "required_privilege": "role.read",
+          "sql": "SELECT id, name, description, position_hierarchy_enabled FROM role WHERE is_deleted = true OR is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "role",
+        "query": "Inactive Roles"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account",
+          "entity_mappings": [],
+          "name": "Active Users",
+          "required_privilege": "user_account.read",
+          "sql": "SELECT id, user_name, email, auth_type, last_login, organization_ref, currency, theme FROM user_account WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "user_account",
+        "query": "Active Users"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account",
+          "entity_mappings": [],
+          "name": "Inactive Users",
+          "required_privilege": "user_account.read",
+          "sql": "SELECT id, user_name, email, auth_type, last_login, organization_ref, currency, theme FROM user_account WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "user_account",
+        "query": "Inactive Users"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account",
+          "entity_mappings": [],
+          "name": "Users (Related)",
+          "required_privilege": "user_account.read",
+          "sql": "SELECT id, user_name, email, auth_type, last_login, organization_ref, currency, theme FROM user_account WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "user_account",
+        "query": "Users (Related)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account_mm_privilege",
+          "entity_mappings": [],
+          "name": "Active Privilege Grants",
+          "required_privilege": "user_account_mm_privilege.read",
+          "sql": "SELECT id, user_ref, privilege_ref, created_at FROM user_account_mm_privilege WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "user_account_mm_privilege",
+        "query": "Active Privilege Grants"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account_mm_privilege",
+          "entity_mappings": [],
+          "name": "Inactive Privilege Grants",
+          "required_privilege": "user_account_mm_privilege.read",
+          "sql": "SELECT id, user_ref, privilege_ref, created_at FROM user_account_mm_privilege WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "user_account_mm_privilege",
+        "query": "Inactive Privilege Grants"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account_mm_privilege",
+          "entity_mappings": [],
+          "name": "Privilege Grants (Related)",
+          "required_privilege": "user_account_mm_privilege.read",
+          "sql": "SELECT id, user_ref, privilege_ref, created_at FROM user_account_mm_privilege WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "user_account_mm_privilege",
+        "query": "Privilege Grants (Related)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account_mm_team",
+          "entity_mappings": [],
+          "name": "Active Team Memberships",
+          "required_privilege": "user_account_mm_team.read",
+          "sql": "SELECT id, user_ref, team_ref, created_at, updated_at FROM user_account_mm_team WHERE is_deleted = false AND is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "user_account_mm_team",
+        "query": "Active Team Memberships"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account_mm_team",
+          "entity_mappings": [],
+          "name": "Inactive Team Memberships",
+          "required_privilege": "user_account_mm_team.read",
+          "sql": "SELECT id, user_ref, team_ref, created_at, updated_at FROM user_account_mm_team WHERE is_deleted = false AND is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "user_account_mm_team",
+        "query": "Inactive Team Memberships"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account_mm_team",
+          "entity_mappings": [],
+          "name": "Team Memberships (Related)",
+          "required_privilege": "user_account_mm_team.read",
+          "sql": "SELECT id, user_ref, team_ref, created_at, updated_at FROM user_account_mm_team WHERE is_deleted = false AND is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "user_account_mm_team",
+        "query": "Team Memberships (Related)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "team",
+          "entity_mappings": [],
+          "name": "Active Teams",
+          "required_privilege": "team.read",
+          "sql": "SELECT id, name, description, organization_ref, created_at, updated_at FROM team WHERE is_deleted = false AND is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "team",
+        "query": "Active Teams"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "team",
+          "entity_mappings": [],
+          "name": "Inactive Teams",
+          "required_privilege": "team.read",
+          "sql": "SELECT id, name, description, organization_ref, created_at, updated_at FROM team WHERE is_deleted = false AND is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "team",
+        "query": "Inactive Teams"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "team",
+          "entity_mappings": [],
+          "name": "Teams (Related)",
+          "required_privilege": "team.read",
+          "sql": "SELECT id, name, description, organization_ref, created_at, updated_at FROM team WHERE is_deleted = false AND is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "team",
+        "query": "Teams (Related)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "organization",
+          "is_default": true,
+          "name": "Active Organizations",
+          "query": {
+            "entity": "organization",
+            "name": "Active Organizations"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "organization",
+        "view": "Active Organizations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "organization",
+          "is_default": false,
+          "name": "Inactive Organizations",
+          "query": {
+            "entity": "organization",
+            "name": "Inactive Organizations"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "organization",
+        "view": "Inactive Organizations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "privilege",
+          "is_default": true,
+          "name": "Active Privileges",
+          "query": {
+            "entity": "privilege",
+            "name": "Active Privileges"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "privilege",
+        "view": "Active Privileges"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "privilege",
+          "is_default": false,
+          "name": "Inactive Privileges",
+          "query": {
+            "entity": "privilege",
+            "name": "Inactive Privileges"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "privilege",
+        "view": "Inactive Privileges"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "role",
+          "is_default": true,
+          "name": "Active Roles",
+          "query": {
+            "entity": "role",
+            "name": "Active Roles"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "role",
+        "view": "Active Roles"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "role",
+          "is_default": false,
+          "name": "Inactive Roles",
+          "query": {
+            "entity": "role",
+            "name": "Inactive Roles"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "role",
+        "view": "Inactive Roles"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account",
+          "is_default": true,
+          "name": "Active Users",
+          "query": {
+            "entity": "user_account",
+            "name": "Active Users"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "user_account",
+        "view": "Active Users"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account",
+          "is_default": false,
+          "name": "Inactive Users",
+          "query": {
+            "entity": "user_account",
+            "name": "Inactive Users"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "user_account",
+        "view": "Inactive Users"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account",
+          "is_default": false,
+          "name": "Users (Related)",
+          "query": {
+            "entity": "user_account",
+            "name": "Users (Related)"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "user_account",
+        "view": "Users (Related)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account_mm_privilege",
+          "is_default": true,
+          "name": "Active Privilege Grants",
+          "query": {
+            "entity": "user_account_mm_privilege",
+            "name": "Active Privilege Grants"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "user_account_mm_privilege",
+        "view": "Active Privilege Grants"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account_mm_privilege",
+          "is_default": false,
+          "name": "Inactive Privilege Grants",
+          "query": {
+            "entity": "user_account_mm_privilege",
+            "name": "Inactive Privilege Grants"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "user_account_mm_privilege",
+        "view": "Inactive Privilege Grants"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account_mm_privilege",
+          "is_default": false,
+          "name": "Privilege Grants (Related)",
+          "query": {
+            "entity": "user_account_mm_privilege",
+            "name": "Privilege Grants (Related)"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "user_account_mm_privilege",
+        "view": "Privilege Grants (Related)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account_mm_team",
+          "is_default": true,
+          "name": "Active Team Memberships",
+          "query": {
+            "entity": "user_account_mm_team",
+            "name": "Active Team Memberships"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "user_account_mm_team",
+        "view": "Active Team Memberships"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account_mm_team",
+          "is_default": false,
+          "name": "Inactive Team Memberships",
+          "query": {
+            "entity": "user_account_mm_team",
+            "name": "Inactive Team Memberships"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "user_account_mm_team",
+        "view": "Inactive Team Memberships"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account_mm_team",
+          "is_default": false,
+          "name": "Team Memberships (Related)",
+          "query": {
+            "entity": "user_account_mm_team",
+            "name": "Team Memberships (Related)"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "user_account_mm_team",
+        "view": "Team Memberships (Related)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "team",
+          "is_default": true,
+          "name": "Active Teams",
+          "query": {
+            "entity": "team",
+            "name": "Active Teams"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "team",
+        "view": "Active Teams"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "team",
+          "is_default": false,
+          "name": "Inactive Teams",
+          "query": {
+            "entity": "team",
+            "name": "Inactive Teams"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "team",
+        "view": "Inactive Teams"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "team",
+          "is_default": false,
+          "name": "Teams (Related)",
+          "query": {
+            "entity": "team",
+            "name": "Teams (Related)"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "team",
+        "view": "Teams (Related)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 0,
+          "description": "The fleet console's rollout credential on a customer server (D-792): only metadata.rollout. Held by the password-less attome-rollout user an S2S rollout client is bound to. An apply it requests on a production server still needs a human approver (D-376).",
+          "name": "Rollout operator"
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "role": "Rollout operator"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "privilege": "metadata.rollout",
+        "role": "Rollout operator"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 23,
+  "title": "Platform definitions: attome-security"
+}

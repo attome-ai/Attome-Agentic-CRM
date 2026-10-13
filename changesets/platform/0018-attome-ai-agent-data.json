@@ -1,0 +1,45 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:526f01573647b3554392b875f93ea85557d066fd6f83417543a5cabef28980eb",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-agent-data.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "f1640a7f-83d9-722b-b583-d6c0258bb1c4",
+  "layer": "platform",
+  "name": "attome-ai-agent-data",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Placeholder scaffold linked to Example Model. Replace system_instructions and point primary_model_ref at a real, approved model before using this agent -- or delete this record entirely.",
+          "name": "Example Agent",
+          "primary_model_ref": "06658cdd-737a-5d13-be31-6b953ace2fbe",
+          "status": "draft",
+          "system_instructions": "You are a helpful assistant. Replace these instructions before using this agent."
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "ai_agent",
+        "key": {
+          "name": "Example Agent"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 18,
+  "title": "Platform definitions: attome-ai-agent-data"
+}

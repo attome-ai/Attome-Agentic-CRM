@@ -1,0 +1,51 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "attome_report",
+      "display_name": "Report",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "query_ref", "display_name": "Query", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "parameters", "display_name": "Default Parameters", "field_type": "text" },
+        { "logicalname": "format", "display_name": "Format", "field_type": "choice", "is_required": true, "is_filterable": true, "options": { "choices": ["csv", "xlsx"], "multi": false } },
+        { "logicalname": "owner", "display_name": "Owner", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "is_template", "display_name": "Template", "field_type": "bool", "is_filterable": true }
+      ]
+    },
+    {
+      "logicalname": "report_schedule",
+      "display_name": "Report Schedule",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "report_ref", "display_name": "Report", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "attome_report" },
+        { "logicalname": "rrule", "display_name": "Recurrence Rule", "field_type": "text", "is_required": true },
+        { "logicalname": "run_as", "display_name": "Run As", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "recipients", "display_name": "Recipients", "field_type": "text" },
+        { "logicalname": "delivery", "display_name": "Delivery", "field_type": "choice", "is_required": true, "is_filterable": true, "options": { "choices": ["in_app", "email_link"], "multi": false } },
+        { "logicalname": "skip_if_empty", "display_name": "Skip If Empty", "field_type": "bool" },
+        { "logicalname": "next_run_at", "display_name": "Next Run", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "last_run_at", "display_name": "Last Run", "field_type": "date", "is_sortable": true }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "attome_report", "name": "Active Reports", "sql": "SELECT id FROM \"attome_report\" WHERE is_active = true", "required_privilege": "attome_report.read" },
+    { "entity": "attome_report", "name": "Inactive Reports", "sql": "SELECT id FROM \"attome_report\" WHERE is_active = false", "required_privilege": "attome_report.read" },
+    { "entity": "report_schedule", "name": "Active Report Schedules", "sql": "SELECT id FROM \"report_schedule\" WHERE is_active = true", "required_privilege": "report_schedule.read" },
+    { "entity": "report_schedule", "name": "Inactive Report Schedules", "sql": "SELECT id FROM \"report_schedule\" WHERE is_active = false", "required_privilege": "report_schedule.read" }
+  ],
+  "views": [
+    { "entity": "attome_report", "name": "Active Reports", "query": { "entity": "attome_report", "name": "Active Reports" }, "is_default": true },
+    { "entity": "attome_report", "name": "Inactive Reports", "query": { "entity": "attome_report", "name": "Inactive Reports" }, "is_default": false },
+    { "entity": "report_schedule", "name": "Active Report Schedules", "query": { "entity": "report_schedule", "name": "Active Report Schedules" }, "is_default": true },
+    { "entity": "report_schedule", "name": "Inactive Report Schedules", "query": { "entity": "report_schedule", "name": "Inactive Report Schedules" }, "is_default": false }
+  ]
+}

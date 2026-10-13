@@ -6,8 +6,10 @@
 //! 1. **format**: `rustfmt --check` on every `.rs` file under `crates/`, in
 //!    batches, so a large workspace never overflows the Windows command line
 //!    (which `cargo fmt --all` does).
-//! 2. **clippy**: `cargo clippy --workspace --all-targets -- -D warnings`.
-//! 3. **tests**: `cargo test --workspace`.
+//! 2. **clippy**: `cargo clippy --workspace --all-targets --keep-going -- -D warnings`
+//!    (`--keep-going` so one broken crate does not hide the others' errors).
+//! 3. **tests**: `cargo test --workspace --no-fail-fast`, so one run reports every
+//!    failing test.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -64,6 +66,7 @@ fn clippy(root: &Path) -> Result<(), String> {
         "clippy",
         "--workspace",
         "--all-targets",
+        "--keep-going",
         "--",
         "-D",
         "warnings",
@@ -73,7 +76,7 @@ fn clippy(root: &Path) -> Result<(), String> {
 
 fn tests(root: &Path) -> Result<(), String> {
     let mut command = Command::new("cargo");
-    command.args(["test", "--workspace"]);
+    command.args(["test", "--workspace", "--no-fail-fast"]);
     run(&mut command, root, "cargo test")
 }
 

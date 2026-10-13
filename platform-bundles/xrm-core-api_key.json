@@ -1,0 +1,33 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 453,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "api_key",
+      "display_name": "API Key",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "user_ref", "display_name": "User", "field_type": "lookup", "is_required": true },
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true },
+        { "logicalname": "public_key", "display_name": "Public Key", "field_type": "text", "is_required": true },
+        { "logicalname": "secret_hash", "display_name": "Secret Hash", "field_type": "text", "is_required": true, "is_sensitive": true },
+        { "logicalname": "created_at", "display_name": "Created At", "field_type": "date" },
+        { "logicalname": "last_used_at", "display_name": "Last Used At", "field_type": "date" },
+        { "logicalname": "is_active", "display_name": "Is Active", "field_type": "bool" }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "api_key", "name": "Active API Keys", "sql": "SELECT id, user_ref, name, public_key, created_at, last_used_at, is_active FROM api_key WHERE is_active IS NOT FALSE", "required_privilege": "api_key.read" },
+    { "entity": "api_key", "name": "Inactive API Keys", "sql": "SELECT id, user_ref, name, public_key, created_at, last_used_at, is_active FROM api_key WHERE is_active = false", "required_privilege": "api_key.read" }
+  ],
+  "views": [
+    { "entity": "api_key", "name": "Active API Keys", "query": { "entity": "api_key", "name": "Active API Keys" }, "is_default": true },
+    { "entity": "api_key", "name": "Inactive API Keys", "query": { "entity": "api_key", "name": "Inactive API Keys" }, "is_default": false }
+  ]
+}

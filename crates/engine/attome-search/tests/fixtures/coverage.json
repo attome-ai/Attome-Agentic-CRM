@@ -1,0 +1,215 @@
+{
+  "questions": [
+    {
+      "id": "cv-replacement",
+      "question": "Why was a replacement invoice raised for ACME Trading?",
+      "query": "replacement damaged units",
+      "caller": "primary",
+      "required": [
+        {
+          "doc": "tkt-5002",
+          "fact": "the units arrived damaged on delivery — the CAUSE"
+        },
+        {
+          "doc": "inv-9002",
+          "fact": "the replacement invoice that was issued — the CONSEQUENCE"
+        }
+      ],
+      "expect": "complete",
+      "note": "The canonical two-hop question. Retrieving only the invoice yields 'a replacement was issued' with no reason; retrieving only the ticket yields a complaint with no resolution. Either half alone reads as a complete answer, which is exactly why nDCG cannot see the failure."
+    },
+    {
+      "id": "cv-customs",
+      "question": "What is holding up the Jebel Ali shipment and what is still outstanding?",
+      "query": "customs documentation",
+      "caller": "primary",
+      "required": [
+        {
+          "doc": "tkt-5001",
+          "fact": "the shipment is held at customs pending documentation"
+        },
+        {
+          "doc": "tkt-5005",
+          "fact": "the follow-up recording that the documentation is still missing"
+        }
+      ],
+      "expect": "complete",
+      "note": "Two tickets on one incident. Answering from the first alone reports a problem that has since progressed."
+    },
+    {
+      "id": "cv-zenith-renewal",
+      "question": "When does the Zenith freight contract renew, and on what terms?",
+      "query": "Zenith contract",
+      "caller": "primary",
+      "required": [
+        {
+          "doc": "acc-zenith",
+          "fact": "the account record stating the contract renews annually each March"
+        },
+        {
+          "doc": "note-renewal",
+          "fact": "the note stating rates are fixed for twelve months"
+        }
+      ],
+      "expect": "complete",
+      "note": "The date and the terms live in different records. An answer with the date and not the rates is the failure mode a completion-rate gate catches and a mean does not."
+    },
+    {
+      "id": "cv-acme-procurement",
+      "question": "Who handles procurement at ACME Trading and what do they buy?",
+      "query": "ACME procurement",
+      "caller": "primary",
+      "required": [
+        {
+          "doc": "con-sara",
+          "fact": "the named procurement manager"
+        },
+        {
+          "doc": "acc-acme",
+          "fact": "what the company actually distributes"
+        }
+      ],
+      "expect": "complete",
+      "note": ""
+    },
+    {
+      "id": "cv-stationery",
+      "question": "Which supplier provides stationery, and what was last ordered?",
+      "query": "Northwind stationery",
+      "caller": "primary",
+      "required": [
+        {
+          "doc": "acc-northwind",
+          "fact": "the vendor record"
+        },
+        {
+          "doc": "inv-9005",
+          "fact": "the stationery order itself"
+        }
+      ],
+      "expect": "complete",
+      "note": ""
+    },
+    {
+      "id": "cv-acme-structure",
+      "question": "How are ACME Trading and ACME Holdings related?",
+      "query": "ACME",
+      "caller": "primary",
+      "required": [
+        {
+          "doc": "acc-acme",
+          "fact": "the trading company"
+        },
+        {
+          "doc": "acc-acme-holdings",
+          "fact": "the parent, and the free-zone registration"
+        }
+      ],
+      "expect": "complete",
+      "note": "A relationship question: neither record alone states the relationship usefully."
+    },
+    {
+      "id": "cv-alsalam-rep",
+      "question": "من هو مندوب المبيعات في شركة السلام وما نشاط الشركة؟",
+      "query": "شركة السلام للنقل",
+      "caller": "primary",
+      "required": [
+        {
+          "doc": "acc-alsalam",
+          "fact": "نشاط الشركة: نقل بري بين المدن"
+        },
+        {
+          "doc": "con-ahmed",
+          "fact": "اسم مندوب المبيعات"
+        }
+      ],
+      "expect": "complete",
+      "note": "The Arabic two-hop case. Arabic coverage is not a translation of the English cases: an engine can pass every English coverage question and fail every Arabic one, because the step that breaks (normalization) is upstream of retrieval entirely."
+    },
+    {
+      "id": "cv-almaha-invoice",
+      "question": "ما الذي وردته شركة المها ومن هو مسؤول المشتريات لديها؟",
+      "query": "شركة المها",
+      "caller": "primary",
+      "required": [
+        {
+          "doc": "acc-almaha",
+          "fact": "نشاط الشركة"
+        },
+        {
+          "doc": "inv-9004",
+          "fact": "ما تم توريده"
+        },
+        {
+          "doc": "con-omar",
+          "fact": "مسؤول المشتريات"
+        }
+      ],
+      "expect": "complete",
+      "note": "Three documents in Arabic. A three-fact set is where mean coverage flatters most — two of three is 0.67 and a completely wrong answer."
+    },
+    {
+      "id": "cv-alnoor-maintenance",
+      "question": "ما هي أعمال الصيانة المطلوبة والفواتير المرتبطة بها؟",
+      "query": "صيانة",
+      "caller": "primary",
+      "required": [
+        {
+          "doc": "tkt-5003",
+          "fact": "طلب الصيانة"
+        },
+        {
+          "doc": "inv-9006",
+          "fact": "فاتورة أعمال الصيانة"
+        }
+      ],
+      "expect": "complete",
+      "note": ""
+    },
+    {
+      "id": "cv-meridian-restricted",
+      "question": "What does Meridian Private Holdings pay, and how often?",
+      "query": "Meridian retainer",
+      "caller": "narrowed",
+      "required": [
+        {
+          "doc": "acc-restricted",
+          "fact": "the client record"
+        },
+        {
+          "doc": "inv-restricted",
+          "fact": "the quarterly retainer amount"
+        }
+      ],
+      "expect": "incomplete_by_permission",
+      "note": "A question whose evidence the caller may not see. The REQUIRED outcome is 'unanswerable', not a partial answer: an agent that answers from the fragment it could reach is worse than one that refuses, because the user cannot tell the difference between a complete answer and a confidently incomplete one. Retrieval enforcing permissions is only half the property — this is the other half."
+    },
+    {
+      "id": "cv-unanswerable-absent",
+      "question": "What is our policy on cryptocurrency payments?",
+      "query": "cryptocurrency payment policy",
+      "caller": "primary",
+      "required": [],
+      "expect": "unanswerable",
+      "note": "Nothing in the corpus is about this. The façade must abstain — an empty result set is a CORRECT answer when it is true, and a retrieval system that never says 'I don't know' has not been tested for the failure that matters most."
+    },
+    {
+      "id": "cv-unanswerable-plausible",
+      "question": "When does the ACME Trading contract expire?",
+      "query": "ACME contract expiry date",
+      "caller": "primary",
+      "required": [],
+      "expect": "unanswerable",
+      "note": "The HARD one: every term is in the corpus, so retrieval returns plausible, well-ranked, high-scoring rows — the ACME account, its invoices, the Zenith renewal note. None answers the question. This is precisely where a confident wrong answer comes from, and it is invisible to nDCG because the returned rows genuinely are relevant to the words."
+    },
+    {
+      "id": "cv-unanswerable-arabic",
+      "question": "ما هي سياسة العمل عن بعد؟",
+      "query": "سياسة العمل عن بعد",
+      "caller": "primary",
+      "required": [],
+      "expect": "unanswerable",
+      "note": "Arabic. Abstention tested in one language only is abstention that fails silently in the other."
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "record_sets": [
+    {
+      "entity": "ai_provider",
+      "key_fields": ["name"],
+      "rows": [
+        {
+          "provider_id": "example-provider",
+          "name": "Example Provider",
+          "description": "Placeholder scaffold, not connected to any real service. Replace provider_type/endpoint_url with your own AI provider's details, set status to operational_live, then create or edit Example Model to point at it -- or delete this record entirely.",
+          "provider_type": "custom",
+          "api_protocol": "openai-completions",
+          "status": "closed"
+        }
+      ]
+    }
+  ]
+}

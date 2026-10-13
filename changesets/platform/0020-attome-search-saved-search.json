@@ -1,0 +1,178 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:10955495edfca732606ea63f28aeb8186b43bc68348728028c3a209f9d892254",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-search-saved-search.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "70aab8d1-9bd0-77a2-8007-35517978c824",
+  "layer": "platform",
+  "name": "attome-search-saved-search",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Saved Search",
+          "is_append_only": false,
+          "logicalname": "saved_search",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "saved_search"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Alert on new results",
+          "field_type": "bool",
+          "is_filterable": true,
+          "logicalname": "alert_enabled"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "saved_search",
+        "field": "alert_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Facets",
+          "field_type": "text",
+          "logicalname": "facets"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "saved_search",
+        "field": "facets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Filters",
+          "field_type": "text",
+          "logicalname": "filters"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "saved_search",
+        "field": "filters"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Last Seen Result Count",
+          "field_type": "number",
+          "logicalname": "last_seen_result_count"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "saved_search",
+        "field": "last_seen_result_count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "saved_search",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Query",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "query_text"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "saved_search",
+        "field": "query_text"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "saved_search",
+          "entity_mappings": [],
+          "name": "My Saved Searches",
+          "required_privilege": "saved_search.read",
+          "sql": "SELECT id, name, query_text, filters, facets, alert_enabled, last_seen_result_count, row_version, created_at, modified_at FROM saved_search WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "saved_search",
+        "query": "My Saved Searches"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "saved_search",
+          "is_default": true,
+          "name": "My Saved Searches",
+          "query": {
+            "entity": "saved_search",
+            "name": "My Saved Searches"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "saved_search",
+        "view": "My Saved Searches"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 20,
+  "title": "Platform definitions: attome-search-saved-search"
+}

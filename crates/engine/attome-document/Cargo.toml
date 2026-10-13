@@ -1,0 +1,46 @@
+[package]
+name         = "attome-document"
+description  = "Attome's document management: folders, files and versions."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+attome-audit.workspace    = true
+attome-config.workspace   = true
+attome-core.workspace     = true
+attome-db.workspace       = true
+attome-jobs.workspace     = true
+attome-modules.workspace  = true
+attome-records.workspace  = true
+attome-security.workspace = true
+attome-server.workspace   = true
+attome-storage.workspace  = true
+attome-types.workspace    = true
+axum.workspace            = true
+bytes.workspace           = true
+chrono.workspace          = true
+futures-util.workspace    = true
+hex.workspace             = true
+infer.workspace           = true
+object_store.workspace    = true
+serde.workspace           = true
+serde_json.workspace      = true
+sha2.workspace            = true
+sqlx.workspace            = true
+tokio.workspace           = true
+tracing.workspace         = true
+utoipa.workspace          = true
+uuid.workspace            = true
+
+[dev-dependencies]
+attome-testkit.workspace = true
+tokio                    = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true

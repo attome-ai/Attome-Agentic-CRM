@@ -1,0 +1,208 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:42c9cc912b4ccf6e77d275ab7b8f73bc43daba220d18a082b0e289ed80eac1ec",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-api-glossary.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "39993c54-762a-7b59-9f62-778e20a16540",
+  "layer": "platform",
+  "name": "attome-api-glossary",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Glossary Term",
+          "is_append_only": false,
+          "logicalname": "glossary_term",
+          "primary_name_attribute": "term"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "glossary_term"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Definition",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "definition"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "glossary_term",
+        "field": "definition"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Data Domain",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "domain_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "glossary_term",
+        "field": "domain_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Primary Attribute",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "primary_attribute_logicalname"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "glossary_term",
+        "field": "primary_attribute_logicalname"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Primary Entity",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "primary_entity_logicalname"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "glossary_term",
+        "field": "primary_entity_logicalname"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "draft",
+              "approved",
+              "deprecated"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "glossary_term",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Synonyms",
+          "field_type": "text",
+          "logicalname": "synonyms"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "glossary_term",
+        "field": "synonyms"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Term",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "term"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "glossary_term",
+        "field": "term"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "glossary_term",
+          "entity_mappings": [],
+          "name": "Active Glossary Terms",
+          "required_privilege": "glossary_term.read",
+          "sql": "SELECT id, term, definition, domain_ref, synonyms, status, primary_entity_logicalname, primary_attribute_logicalname, row_version, created_at, modified_at FROM glossary_term WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "glossary_term",
+        "query": "Active Glossary Terms"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "glossary_term",
+          "is_default": true,
+          "name": "Active Glossary Terms",
+          "query": {
+            "entity": "glossary_term",
+            "name": "Active Glossary Terms"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "glossary_term",
+        "view": "Active Glossary Terms"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 30,
+  "title": "Platform definitions: attome-api-glossary"
+}

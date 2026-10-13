@@ -177,4 +177,25 @@ impl SecurityResolver for EngineSecurityResolver {
     ) -> Pin<Box<dyn Future<Output = Result<(), AppError>> + Send + 'a>> {
         Box::pin(async move { self.cache.invalidate_sync(user_id).await })
     }
+
+    /// The IP allow-lists of the restrictive roles `user_id` holds, uncached
+    /// so a role edit applies to the next request.
+    fn session_ip_allowlists<'a>(
+        &'a self,
+        user_id: Uuid,
+    ) -> Pin<Box<dyn Future<Output = Result<Vec<Vec<String>>, AppError>> + Send + 'a>> {
+        Box::pin(async move {
+            sqlx::query_scalar(
+                "SELECT r.ip_allowlist
+                 FROM user_account_mm_role ur
+                 JOIN role r ON r.id = ur.role_ref AND r.is_deleted = false
+                 WHERE ur.user_ref = $1 AND ur.is_deleted = false
+                   AND r.ip_allowlist IS NOT NULL AND array_length(r.ip_allowlist, 1) > 0",
+            )
+            .bind(user_id)
+            .fetch_all(self.cache.db())
+            .await
+            .map_err(AppError::internal)
+        })
+    }
 }

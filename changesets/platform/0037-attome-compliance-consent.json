@@ -1,0 +1,488 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:4fcb0b2ff7f517b1d983690b7f9305074e98078d01f91deb81ececca9907bd73",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-compliance-consent.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "b52f7e6b-0590-763e-8e41-06a9379d04ed",
+  "layer": "platform",
+  "name": "attome-compliance-consent",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Consent",
+          "is_append_only": true,
+          "logicalname": "audit_consent"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "audit_consent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Consent Purpose",
+          "is_append_only": false,
+          "logicalname": "audit_consent_purpose",
+          "primary_name_attribute": "key"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "audit_consent_purpose"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Evidence",
+          "field_type": "text",
+          "is_sensitive": true,
+          "logicalname": "evidence"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "audit_consent",
+        "field": "evidence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Granted At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "granted_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "audit_consent",
+        "field": "granted_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Regarding Entity",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "regarding_entity"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "audit_consent",
+        "field": "regarding_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Regarding Id",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "regarding_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "audit_consent",
+        "field": "regarding_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Source",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "source",
+          "options": {
+            "choices": [
+              "form",
+              "api",
+              "import"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "audit_consent",
+        "field": "source"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "granted",
+              "withdrawn",
+              "expired"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "audit_consent",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Subject Reference",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": true,
+          "is_sortable": true,
+          "logicalname": "subject_reference"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "audit_consent",
+        "field": "subject_reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Withdrawn At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "withdrawn_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "audit_consent",
+        "field": "withdrawn_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "audit_consent_purpose",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Required",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_required"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "audit_consent_purpose",
+        "field": "is_required"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Key",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "key"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "audit_consent_purpose",
+        "field": "key"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Lawful Basis",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "lawful_basis",
+          "options": {
+            "choices": [
+              "consent",
+              "contract",
+              "legal_obligation",
+              "vital_interest",
+              "public_task",
+              "legitimate_interest"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "audit_consent_purpose",
+        "field": "lawful_basis"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Retention Period",
+          "field_type": "text",
+          "logicalname": "retention_period"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "audit_consent_purpose",
+        "field": "retention_period"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Purpose",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "purpose_ref",
+          "lookup_entity": "audit_consent_purpose"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "audit_consent",
+        "field": "purpose_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_consent",
+          "entity_mappings": [],
+          "name": "Active Consents",
+          "required_privilege": "audit_consent.read",
+          "sql": "SELECT id FROM \"audit_consent\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "audit_consent",
+        "query": "Active Consents"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_consent",
+          "entity_mappings": [],
+          "name": "Inactive Consents",
+          "required_privilege": "audit_consent.read",
+          "sql": "SELECT id FROM \"audit_consent\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "audit_consent",
+        "query": "Inactive Consents"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_consent_purpose",
+          "entity_mappings": [],
+          "name": "Active Consent Purposes",
+          "required_privilege": "audit_consent_purpose.read",
+          "sql": "SELECT id FROM \"audit_consent_purpose\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "audit_consent_purpose",
+        "query": "Active Consent Purposes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_consent_purpose",
+          "entity_mappings": [],
+          "name": "Inactive Consent Purposes",
+          "required_privilege": "audit_consent_purpose.read",
+          "sql": "SELECT id FROM \"audit_consent_purpose\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "audit_consent_purpose",
+        "query": "Inactive Consent Purposes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_consent",
+          "is_default": true,
+          "name": "Active Consents",
+          "query": {
+            "entity": "audit_consent",
+            "name": "Active Consents"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "audit_consent",
+        "view": "Active Consents"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_consent",
+          "is_default": false,
+          "name": "Inactive Consents",
+          "query": {
+            "entity": "audit_consent",
+            "name": "Inactive Consents"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "audit_consent",
+        "view": "Inactive Consents"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_consent_purpose",
+          "is_default": true,
+          "name": "Active Consent Purposes",
+          "query": {
+            "entity": "audit_consent_purpose",
+            "name": "Active Consent Purposes"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "audit_consent_purpose",
+        "view": "Active Consent Purposes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_consent_purpose",
+          "is_default": false,
+          "name": "Inactive Consent Purposes",
+          "query": {
+            "entity": "audit_consent_purpose",
+            "name": "Inactive Consent Purposes"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "audit_consent_purpose",
+        "view": "Inactive Consent Purposes"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 37,
+  "title": "Platform definitions: attome-compliance-consent"
+}

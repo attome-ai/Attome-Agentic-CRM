@@ -1,0 +1,321 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:e92b52c8d3aef4f93b2636565b78c11bebedfe977651c5bd7c8eac2c9ffe524d",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-compliance-legal-matter.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "fef8405c-3fd1-7574-a098-ae1d8571df11",
+  "layer": "platform",
+  "name": "attome-compliance-legal-matter",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Legal Matter",
+          "is_append_only": false,
+          "logicalname": "audit_legal_matter",
+          "primary_name_attribute": "reference"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "audit_legal_matter"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Collected At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "collected_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "audit_legal_matter",
+        "field": "collected_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Collected Record Count",
+          "field_type": "number",
+          "is_filterable": true,
+          "logicalname": "collected_record_count"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "audit_legal_matter",
+        "field": "collected_record_count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Custodian",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "custodian"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "audit_legal_matter",
+        "field": "custodian"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Opened At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "opened_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "audit_legal_matter",
+        "field": "opened_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Package Checksum",
+          "field_type": "text",
+          "logicalname": "package_checksum"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "audit_legal_matter",
+        "field": "package_checksum"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Package Reference",
+          "field_type": "text",
+          "logicalname": "package_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "audit_legal_matter",
+        "field": "package_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Reference",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "reference"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "audit_legal_matter",
+        "field": "reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Released At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "released_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "audit_legal_matter",
+        "field": "released_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Scope Entity",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "scope_entity"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "audit_legal_matter",
+        "field": "scope_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Scope Filter",
+          "field_type": "text",
+          "logicalname": "scope_filter"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "audit_legal_matter",
+        "field": "scope_filter"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "open",
+              "collecting",
+              "collected",
+              "releasing",
+              "released",
+              "closed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "audit_legal_matter",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_legal_matter",
+          "entity_mappings": [],
+          "name": "Active Legal Matters",
+          "required_privilege": "audit_legal_matter.read",
+          "sql": "SELECT id FROM \"audit_legal_matter\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "audit_legal_matter",
+        "query": "Active Legal Matters"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_legal_matter",
+          "entity_mappings": [],
+          "name": "Inactive Legal Matters",
+          "required_privilege": "audit_legal_matter.read",
+          "sql": "SELECT id FROM \"audit_legal_matter\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "audit_legal_matter",
+        "query": "Inactive Legal Matters"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_legal_matter",
+          "is_default": true,
+          "name": "Active Legal Matters",
+          "query": {
+            "entity": "audit_legal_matter",
+            "name": "Active Legal Matters"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "audit_legal_matter",
+        "view": "Active Legal Matters"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_legal_matter",
+          "is_default": false,
+          "name": "Inactive Legal Matters",
+          "query": {
+            "entity": "audit_legal_matter",
+            "name": "Inactive Legal Matters"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "audit_legal_matter",
+        "view": "Inactive Legal Matters"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 38,
+  "title": "Platform definitions: attome-compliance-legal-matter"
+}

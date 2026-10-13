@@ -1,0 +1,30 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 453,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "saved_search",
+      "display_name": "Saved Search",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "query_text", "display_name": "Query", "field_type": "text", "is_required": true },
+        { "logicalname": "filters", "display_name": "Filters", "field_type": "text" },
+        { "logicalname": "facets", "display_name": "Facets", "field_type": "text" },
+        { "logicalname": "alert_enabled", "display_name": "Alert on new results", "field_type": "bool", "is_filterable": true },
+        { "logicalname": "last_seen_result_count", "display_name": "Last Seen Result Count", "field_type": "number" }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "saved_search", "name": "My Saved Searches", "sql": "SELECT id, name, query_text, filters, facets, alert_enabled, last_seen_result_count, row_version, created_at, modified_at FROM saved_search WHERE is_active IS NOT FALSE", "required_privilege": "saved_search.read" }
+  ],
+  "views": [
+    { "entity": "saved_search", "name": "My Saved Searches", "query": { "entity": "saved_search", "name": "My Saved Searches" }, "is_default": true }
+  ]
+}

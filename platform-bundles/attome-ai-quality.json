@@ -1,0 +1,15 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "queries": [
+    {
+      "name": "AI Suggestion Acceptance Rate (Last 7 Days)",
+      "sql": "SELECT (COUNT(*) FILTER (WHERE outcome IN ('accepted', 'edited')))::float8 / NULLIF(COUNT(*) FILTER (WHERE outcome != 'pending'), 0) * 100 AS value FROM ai_suggestion_outcome WHERE created_at >= NOW() - INTERVAL '7 days'",
+      "is_report": true
+    }
+  ]
+}

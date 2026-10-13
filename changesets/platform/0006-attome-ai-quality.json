@@ -1,0 +1,39 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:18935f09beb7fee986a7d299e7ffa529ffe0e083d8cc42ab5beb47908a52daf8",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-quality.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "207b12fb-c792-7d14-9469-22dcce3c93d1",
+  "layer": "platform",
+  "name": "attome-ai-quality",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "AI Suggestion Acceptance Rate (Last 7 Days)",
+          "sql": "SELECT (COUNT(*) FILTER (WHERE outcome IN ('accepted', 'edited')))::float8 / NULLIF(COUNT(*) FILTER (WHERE outcome != 'pending'), 0) * 100 AS value FROM ai_suggestion_outcome WHERE created_at >= NOW() - INTERVAL '7 days'"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "AI Suggestion Acceptance Rate (Last 7 Days)"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 6,
+  "title": "Platform definitions: attome-ai-quality"
+}

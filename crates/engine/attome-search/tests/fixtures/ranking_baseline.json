@@ -1,0 +1,48 @@
+{
+  "fixture_fingerprint": "38cbc294039925f8",
+  "k": 10,
+  "overall": {
+    "queries": 39,
+    "ndcg": 0.874987363186239,
+    "mrr": 0.8910256410256411,
+    "recall": 0.9358974358974359
+  },
+  "by_kind": {
+    "exact_key": {
+      "queries": 5,
+      "ndcg": 1.0,
+      "mrr": 1.0,
+      "recall": 1.0
+    },
+    "lexical": {
+      "queries": 13,
+      "ndcg": 0.8295282963189512,
+      "mrr": 0.8653846153846154,
+      "recall": 0.8846153846153846
+    },
+    "arabic": {
+      "queries": 11,
+      "ndcg": 0.9648373841796976,
+      "mrr": 1.0,
+      "recall": 1.0
+    },
+    "fuzzy": {
+      "queries": 5,
+      "ndcg": 0.8358357839711743,
+      "mrr": 0.8,
+      "recall": 1.0
+    },
+    "prefix": {
+      "queries": 4,
+      "ndcg": 0.8870622915711037,
+      "mrr": 0.875,
+      "recall": 1.0
+    },
+    "recency": {
+      "queries": 1,
+      "ndcg": 0.0,
+      "mrr": 0.0,
+      "recall": 0.0
+    }
+  }
+}

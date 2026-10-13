@@ -1,0 +1,46 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:95b2b818382e9723aa79f6f89171239e25972e3f721f3c42f4336a727bc7aba2",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-model-catalog-data.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "cd544914-80bf-7880-a872-b4c8666eb7b5",
+  "layer": "platform",
+  "name": "attome-ai-model-catalog-data",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "approval_status": "pending",
+          "description": "Placeholder scaffold linked to Example Provider. Replace provider_model_id with a real model id once inference.generation is configured, then set approval_status to approved -- until then, no action can invoke it (model_registry::require_approved_model refuses any provider_model_id that isn't approved).",
+          "model_type": "chat",
+          "name": "Example Model",
+          "provider_model_id": "not-configured",
+          "provider_ref": "40b62547-d004-5140-971f-d8df162701da"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "ai_model",
+        "key": {
+          "name": "Example Model"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 15,
+  "title": "Platform definitions: attome-ai-model-catalog-data"
+}

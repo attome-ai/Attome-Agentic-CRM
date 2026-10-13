@@ -1,0 +1,45 @@
+[package]
+name = "attome-s2s-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+# P-verification-depth-hardening (splits P-enterprise-maturity-backlog item 1,
+# triggered 2026-07-30) — fuzz target for attome-s2s's canonical-message/HMAC
+# verification path, the "S2S canonical-message parsing" entry point item 1
+# names by name. `verify_hmac` takes three attacker-influenced byte strings
+# (the request's own method/path/body-hash/timestamp/nonce line, the
+# `X-S2S-Signature` header, and — indirectly — the stored client secret) and
+# must never panic regardless of what bytes arrive.
+#
+# Deliberately NOT a workspace member — see attome-auth/fuzz/Cargo.toml's header
+# comment for the reasoning (nightly toolchain, cargo-fuzz's own sub-crate
+# convention), identical here.
+#
+# NOT built or run in the session that created this scaffold — no Rust
+# toolchain available (see document/detailed-plans/
+# P-verification-depth-hardening.md §10 TODO 4). Run once available:
+#   cargo install cargo-fuzz
+#   cargo +nightly fuzz run fuzz_verify_hmac -- -max_total_time=60
+
+[package.metadata]
+cargo-fuzz = true
+
+# Empty table, deliberate — see attome-auth/fuzz/Cargo.toml's identical comment:
+# keeps this crate out of the root repo's `[workspace] members` list instead
+# of erroring `cargo build --workspace`/`cargo test --workspace` at the root.
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+
+[dependencies.attome-s2s]
+path = ".."
+
+[[bin]]
+name = "fuzz_verify_hmac"
+path = "fuzz_targets/fuzz_verify_hmac.rs"
+test = false
+doc = false
+bench = false

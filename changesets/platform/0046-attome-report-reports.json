@@ -1,0 +1,468 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:ba53e0f0f60abbfe8565cc384930c19570d9f9e8e8734fb2274ef2c6e17e4df5",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-report-reports.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "7986e697-9392-71a1-afa3-b45f7585feee",
+  "layer": "platform",
+  "name": "attome-report-reports",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Report",
+          "is_append_only": false,
+          "logicalname": "attome_report",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "attome_report"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Report Schedule",
+          "is_append_only": false,
+          "logicalname": "report_schedule"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "report_schedule"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Format",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "format",
+          "options": {
+            "choices": [
+              "csv",
+              "xlsx"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "attome_report",
+        "field": "format"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Template",
+          "field_type": "bool",
+          "is_filterable": true,
+          "logicalname": "is_template"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "attome_report",
+        "field": "is_template"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "attome_report",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Default Parameters",
+          "field_type": "text",
+          "logicalname": "parameters"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "attome_report",
+        "field": "parameters"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Query",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "query_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "attome_report",
+        "field": "query_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Delivery",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "delivery",
+          "options": {
+            "choices": [
+              "in_app",
+              "email_link"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "report_schedule",
+        "field": "delivery"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Last Run",
+          "field_type": "date",
+          "is_sortable": true,
+          "logicalname": "last_run_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "report_schedule",
+        "field": "last_run_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Next Run",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "next_run_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "report_schedule",
+        "field": "next_run_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Recipients",
+          "field_type": "text",
+          "logicalname": "recipients"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "report_schedule",
+        "field": "recipients"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Recurrence Rule",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "rrule"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "report_schedule",
+        "field": "rrule"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Skip If Empty",
+          "field_type": "bool",
+          "logicalname": "skip_if_empty"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "report_schedule",
+        "field": "skip_if_empty"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "owner",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "attome_report",
+        "field": "owner"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Report",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "report_ref",
+          "lookup_entity": "attome_report"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "report_schedule",
+        "field": "report_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Run As",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "run_as",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "report_schedule",
+        "field": "run_as"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_report",
+          "entity_mappings": [],
+          "name": "Active Reports",
+          "required_privilege": "attome_report.read",
+          "sql": "SELECT id FROM \"attome_report\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "attome_report",
+        "query": "Active Reports"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_report",
+          "entity_mappings": [],
+          "name": "Inactive Reports",
+          "required_privilege": "attome_report.read",
+          "sql": "SELECT id FROM \"attome_report\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "attome_report",
+        "query": "Inactive Reports"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "report_schedule",
+          "entity_mappings": [],
+          "name": "Active Report Schedules",
+          "required_privilege": "report_schedule.read",
+          "sql": "SELECT id FROM \"report_schedule\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "report_schedule",
+        "query": "Active Report Schedules"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "report_schedule",
+          "entity_mappings": [],
+          "name": "Inactive Report Schedules",
+          "required_privilege": "report_schedule.read",
+          "sql": "SELECT id FROM \"report_schedule\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "report_schedule",
+        "query": "Inactive Report Schedules"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_report",
+          "is_default": true,
+          "name": "Active Reports",
+          "query": {
+            "entity": "attome_report",
+            "name": "Active Reports"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "attome_report",
+        "view": "Active Reports"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_report",
+          "is_default": false,
+          "name": "Inactive Reports",
+          "query": {
+            "entity": "attome_report",
+            "name": "Inactive Reports"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "attome_report",
+        "view": "Inactive Reports"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "report_schedule",
+          "is_default": true,
+          "name": "Active Report Schedules",
+          "query": {
+            "entity": "report_schedule",
+            "name": "Active Report Schedules"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "report_schedule",
+        "view": "Active Report Schedules"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "report_schedule",
+          "is_default": false,
+          "name": "Inactive Report Schedules",
+          "query": {
+            "entity": "report_schedule",
+            "name": "Inactive Report Schedules"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "report_schedule",
+        "view": "Inactive Report Schedules"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 46,
+  "title": "Platform definitions: attome-report-reports"
+}

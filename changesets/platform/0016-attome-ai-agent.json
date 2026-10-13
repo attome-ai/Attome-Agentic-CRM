@@ -1,0 +1,795 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:bd337b29b8c586efe0aa2a8420de9a1c37212c1fb5e2f09aaf7292648b04444b",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-agent.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "8d524c0a-bd24-7673-805f-9b2f5671296c",
+  "layer": "platform",
+  "name": "attome-ai-agent",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Agent",
+          "is_append_only": false,
+          "logicalname": "ai_agent",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "ai_agent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Agent Policy",
+          "is_append_only": false,
+          "logicalname": "ai_agent_policy",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "ai_agent_policy"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Color",
+          "field_type": "color",
+          "logicalname": "color"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "ai_agent",
+        "field": "color"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Default Language",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "default_language",
+          "options": {
+            "choices": [
+              "english",
+              "spanish",
+              "french",
+              "german",
+              "portuguese",
+              "arabic",
+              "chinese",
+              "japanese"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "ai_agent",
+        "field": "default_language"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "ai_agent",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Icon",
+          "field_type": "icon",
+          "logicalname": "icon"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "ai_agent",
+        "field": "icon"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "ai_agent",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Response Style",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "response_style",
+          "options": {
+            "choices": [
+              "concise",
+              "detailed",
+              "conversational",
+              "structured",
+              "step_by_step",
+              "executive",
+              "technical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "ai_agent",
+        "field": "response_style"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Knowledge Retrieval",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "retrieval_mode",
+          "options": {
+            "choices": [
+              "tool_invoked",
+              "pre_retrieved"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "ai_agent",
+        "field": "retrieval_mode"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Seed",
+          "field_type": "number",
+          "logicalname": "seed"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "ai_agent",
+        "field": "seed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "draft",
+              "testing",
+              "active",
+              "suspended",
+              "archived"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "ai_agent",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "System Instructions",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "system_instructions"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "ai_agent",
+        "field": "system_instructions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Temperature",
+          "field_type": "number",
+          "logicalname": "temperature"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "ai_agent",
+        "field": "temperature"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Top P",
+          "field_type": "number",
+          "logicalname": "top_p"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "ai_agent",
+        "field": "top_p"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Allowed Actions",
+          "field_type": "choice",
+          "is_write_restricted": true,
+          "logicalname": "allowed_action_ids",
+          "options": {
+            "choices": [
+              "agent.kill",
+              "agent.pause",
+              "agent.playground_complete",
+              "agent.resume",
+              "approval.status",
+              "article.draft",
+              "bot.handoff",
+              "graph.traverse",
+              "knowledge.answer",
+              "memory.forget",
+              "memory.remember",
+              "query.execute",
+              "record.classify",
+              "record.create",
+              "record.delete",
+              "record.get",
+              "record.restore",
+              "record.summarize",
+              "record.update",
+              "record.update_field",
+              "route.classify",
+              "search.knowledge",
+              "search.records",
+              "workflow.start"
+            ],
+            "multi": true
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "ai_agent_policy",
+        "field": "allowed_action_ids"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Capability Packs",
+          "field_type": "text",
+          "is_write_restricted": true,
+          "logicalname": "capability_pack_refs",
+          "options": {
+            "mask_description": "JSON array of capability pack ids",
+            "pattern": "\\[\\s*(\"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\"\\s*(,\\s*\"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\"\\s*)*)?\\]"
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "ai_agent_policy",
+        "field": "capability_pack_refs"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "ai_agent_policy",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Knowledge Sources",
+          "field_type": "text",
+          "is_write_restricted": true,
+          "logicalname": "knowledge_source_refs",
+          "options": {
+            "mask_description": "JSON array of knowledge data source ids",
+            "pattern": "\\[\\s*(\"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\"\\s*(,\\s*\"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\"\\s*)*)?\\]"
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "ai_agent_policy",
+        "field": "knowledge_source_refs"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Max Invocations per Session",
+          "field_type": "number",
+          "is_write_restricted": true,
+          "logicalname": "max_invocations_per_session",
+          "options": {
+            "min": 1
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "ai_agent_policy",
+        "field": "max_invocations_per_session"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Max Session Duration (minutes)",
+          "field_type": "number",
+          "is_write_restricted": true,
+          "logicalname": "max_session_duration_minutes",
+          "options": {
+            "min": 1
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "ai_agent_policy",
+        "field": "max_session_duration_minutes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Max Tokens per Session",
+          "field_type": "number",
+          "is_write_restricted": true,
+          "logicalname": "max_tokens_per_session",
+          "options": {
+            "max": 200000,
+            "min": 1
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "ai_agent_policy",
+        "field": "max_tokens_per_session"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Max Writes per Day",
+          "field_type": "number",
+          "is_write_restricted": true,
+          "logicalname": "max_writes_per_day",
+          "options": {
+            "min": 1
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "ai_agent_policy",
+        "field": "max_writes_per_day"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "ai_agent_policy",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Risk Ceiling",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "is_write_restricted": true,
+          "logicalname": "risk_ceiling",
+          "options": {
+            "choices": [
+              "read",
+              "reversible",
+              "consequential"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "ai_agent_policy",
+        "field": "risk_ceiling"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Fallback Model 2",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "fallback_model_2_ref",
+          "lookup_entity": "ai_model"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "ai_agent",
+        "field": "fallback_model_2_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Fallback Model",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "fallback_model_ref",
+          "lookup_entity": "ai_model"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "ai_agent",
+        "field": "fallback_model_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Policy",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_write_restricted": true,
+          "logicalname": "policy_ref",
+          "lookup_entity": "ai_agent_policy"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "ai_agent",
+        "field": "policy_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Primary Model",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "primary_model_ref",
+          "lookup_entity": "ai_model"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "ai_agent",
+        "field": "primary_model_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_agent",
+          "entity_mappings": [],
+          "name": "Active Agents",
+          "required_privilege": "ai_agent.read",
+          "sql": "SELECT id, name, description, status, icon, color, primary_model_ref, response_style, default_language FROM \"ai_agent\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "ai_agent",
+        "query": "Active Agents"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_agent",
+          "entity_mappings": [],
+          "name": "Inactive Agents",
+          "required_privilege": "ai_agent.read",
+          "sql": "SELECT id, name, description, status, icon, color, primary_model_ref, response_style, default_language FROM \"ai_agent\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "ai_agent",
+        "query": "Inactive Agents"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_agent_policy",
+          "entity_mappings": [],
+          "name": "Active Agent Policies",
+          "required_privilege": "ai_agent_policy.read",
+          "sql": "SELECT id, name, description, risk_ceiling, max_invocations_per_session, max_writes_per_day, max_tokens_per_session, max_session_duration_minutes FROM \"ai_agent_policy\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "ai_agent_policy",
+        "query": "Active Agent Policies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_agent_policy",
+          "entity_mappings": [],
+          "name": "Inactive Agent Policies",
+          "required_privilege": "ai_agent_policy.read",
+          "sql": "SELECT id, name, description, risk_ceiling, max_invocations_per_session, max_writes_per_day, max_tokens_per_session, max_session_duration_minutes FROM \"ai_agent_policy\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "ai_agent_policy",
+        "query": "Inactive Agent Policies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_agent",
+          "is_default": true,
+          "name": "Active Agents",
+          "query": {
+            "entity": "ai_agent",
+            "name": "Active Agents"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "ai_agent",
+        "view": "Active Agents"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_agent",
+          "is_default": false,
+          "name": "Inactive Agents",
+          "query": {
+            "entity": "ai_agent",
+            "name": "Inactive Agents"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "ai_agent",
+        "view": "Inactive Agents"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_agent_policy",
+          "is_default": true,
+          "name": "Active Agent Policies",
+          "query": {
+            "entity": "ai_agent_policy",
+            "name": "Active Agent Policies"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "ai_agent_policy",
+        "view": "Active Agent Policies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_agent_policy",
+          "is_default": false,
+          "name": "Inactive Agent Policies",
+          "query": {
+            "entity": "ai_agent_policy",
+            "name": "Inactive Agent Policies"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "ai_agent_policy",
+        "view": "Inactive Agent Policies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_a": "ai_agent",
+          "entity_b": "ai_personality",
+          "name": "ai_agent_personality",
+          "role_a": "agents",
+          "role_b": "personalities"
+        }
+      },
+      "op": "upsert_relationship",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "relationship": "ai_agent_personality"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_a": "ai_agent",
+          "entity_b": "ai_tone",
+          "name": "ai_agent_tone",
+          "role_a": "agents",
+          "role_b": "tones"
+        }
+      },
+      "op": "upsert_relationship",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "relationship": "ai_agent_tone"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 16,
+  "title": "Platform definitions: attome-ai-agent"
+}

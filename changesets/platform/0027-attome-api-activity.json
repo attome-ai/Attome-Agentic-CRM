@@ -1,0 +1,386 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:5d4dfa3e36a8fcf9841c1ddf85dbbb835dc3bf91bf95ef709ae50ae1dd9b288f",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-api-activity.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "29070e30-b9ec-7716-a2cd-9dfb8276da0d",
+  "layer": "platform",
+  "name": "attome-api-activity",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Activity",
+          "is_append_only": false,
+          "logicalname": "activity",
+          "primary_name_attribute": "subject"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "activity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Activity Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "activity_type",
+          "options": {
+            "choices": [
+              "task",
+              "phone_call"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "activity",
+        "field": "activity_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Completed At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "completed_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "activity",
+        "field": "completed_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "activity",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Direction",
+          "field_type": "choice",
+          "is_filterable": true,
+          "logicalname": "direction",
+          "options": {
+            "choices": [
+              "inbound",
+              "outbound"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "activity",
+        "field": "direction"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Due At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "due_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "activity",
+        "field": "due_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Duration (minutes)",
+          "field_type": "number",
+          "logicalname": "duration_minutes"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "activity",
+        "field": "duration_minutes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Entity Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "activity",
+        "field": "entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Priority",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "priority",
+          "options": {
+            "choices": [
+              "low",
+              "normal",
+              "high"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "activity",
+        "field": "priority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Record Id",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "record_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "activity",
+        "field": "record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "open",
+              "completed",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "activity",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Subject",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "subject"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "activity",
+        "field": "subject"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "activity",
+          "entity_mappings": [],
+          "name": "Active Activities",
+          "required_privilege": "activity.read",
+          "sql": "SELECT id, subject, activity_type, status, priority, due_at, completed_at, direction, duration_minutes, description, entity_name, record_id, owner_ref, row_version, created_at, modified_at FROM activity WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "activity",
+        "query": "Active Activities"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "activity",
+          "is_default": true,
+          "name": "Active Activities",
+          "query": {
+            "entity": "activity",
+            "name": "Active Activities"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "activity",
+        "view": "Active Activities"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "activity",
+          "initial_state": "open",
+          "name": "Activity Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "activity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "from_state": "cancelled",
+          "name": "Reopen",
+          "to_state": "open"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "activity",
+        "transition": "cancelled->open"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "from_state": "completed",
+          "name": "Reopen",
+          "to_state": "open"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "activity",
+        "transition": "completed->open"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "from_state": "open",
+          "name": "Cancel",
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "activity",
+        "transition": "open->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "from_state": "open",
+          "name": "Complete",
+          "to_state": "completed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "activity",
+        "transition": "open->completed"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 27,
+  "title": "Platform definitions: attome-api-activity"
+}

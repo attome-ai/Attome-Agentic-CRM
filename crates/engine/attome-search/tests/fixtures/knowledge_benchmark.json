@@ -1,0 +1,222 @@
+{
+  "status": "frozen",
+  "collections": [
+    { "key": "general", "name": "General Policies" },
+    { "key": "hr", "name": "HR Policies" },
+    { "key": "finance", "name": "Finance Policies" }
+  ],
+  "callers": [
+    { "key": "staff", "readable": ["general"], "note": "An ordinary employee." },
+    { "key": "hr_officer", "readable": ["general", "hr"], "note": "Reads HR policies as well." },
+    { "key": "finance_officer", "readable": ["general", "finance"], "note": "Reads finance policies as well." },
+    { "key": "all_access", "readable": ["general", "hr", "finance"], "note": "Reads every collection; the positive control for permission cases." },
+    { "key": "no_access", "readable": [], "note": "Reads no collection at all." }
+  ],
+  "articles": [
+    {
+      "key": "travel-expenses",
+      "collection": "general",
+      "language": "en",
+      "title": "Travel and Expense Reimbursement",
+      "text": "All business travel must be booked through the corporate travel desk.\n\n# Booking\n\nFlights under six hours are booked in economy class. Flights of six hours or longer may be booked in business class with written director approval. Hotels are capped at 900 AED per night in the GCC and 250 USD per night elsewhere.\n\n# Per Diem\n\nEmployees receive a daily allowance of 400 AED for trips inside the UAE and 150 USD per day abroad. The allowance covers meals and local transport, and it is not paid for days on which the client provides meals.\n\n# Claims\n\nSubmit expense claims with original receipts within 30 days of returning. Claims submitted later than 30 days require approval from the Chief Financial Officer. Reimbursement is paid with the next monthly salary."
+    },
+    {
+      "key": "it-security",
+      "collection": "general",
+      "language": "en",
+      "title": "Information Security Standards",
+      "text": "These standards apply to every employee, contractor and company device.\n\n# Passwords\n\nPasswords must be at least 14 characters long and must be changed every 90 days. Multi-factor authentication is mandatory for email, VPN and every finance system. Never share a password, including with the service desk.\n\n# Lost or Stolen Devices\n\nReport a lost or stolen laptop or phone to the IT service desk within one hour, even outside working hours. The device will be remotely wiped. File a police report if the device was stolen and send the reference number to the service desk.\n\n# Removable Media\n\nUSB storage devices are blocked on company laptops by default. An exception can be requested from the security team for a fixed period and a named business purpose."
+    },
+    {
+      "key": "remote-work",
+      "collection": "general",
+      "language": "en",
+      "title": "Remote Work Policy",
+      "text": "# Eligibility\n\nEmployees who have completed their probation period may work from home up to two days per week, with their line manager's agreement. Roles that require on-site presence, such as reception and warehouse staff, are not eligible.\n\n# Equipment and Allowance\n\nThe company provides a laptop and headset. Eligible employees receive a home internet allowance of 100 AED per month, paid with salary.\n\n# Core Hours\n\nWhether at home or in the office, employees must be reachable during core hours from 10:00 to 15:00 Gulf Standard Time, Monday to Friday."
+    },
+    {
+      "key": "office-access",
+      "collection": "general",
+      "language": "en",
+      "title": "Office Access and Visitors",
+      "text": "# Access Badges\n\nEvery employee must wear a visible access badge inside the office. A forgotten badge can be replaced with a one-day temporary badge from reception.\n\n# Visitors\n\nVisitors must be registered in the visitor system at least 24 hours before arrival and must be escorted by their host at all times. Visitors may not enter the server room.\n\n# After-Hours Access\n\nThe office is open from 07:00 to 20:00. Access outside these hours requires a request to facilities approved by a department head."
+    },
+    {
+      "key": "leave-policy",
+      "collection": "hr",
+      "language": "en",
+      "title": "Leave Entitlements",
+      "text": "# Annual Leave\n\nEmployees are entitled to 30 calendar days of paid annual leave per year after completing one year of service. Up to 10 unused days may be carried over to the following year, and any remaining balance expires on 31 March.\n\n# Sick Leave\n\nA medical certificate is required for sick leave longer than two consecutive days. Sick leave taken on the day before or after a public holiday always requires a certificate.\n\n# Hajj Leave\n\nMuslim employees may take unpaid leave of up to 30 days once during their employment to perform Hajj. Requests must be submitted at least two months in advance."
+    },
+    {
+      "key": "performance-reviews",
+      "collection": "hr",
+      "language": "en",
+      "title": "Performance Review Cycle",
+      "text": "# Timeline\n\nMid-year check-ins take place in July. Annual performance reviews are completed in January, and rating decisions are communicated by the end of February.\n\n# Rating Scale\n\nPerformance is rated on a five-point scale from Unsatisfactory to Outstanding. Employees rated Outstanding are considered first for promotion.\n\n# Appeals\n\nAn employee who disagrees with a rating may appeal in writing to their HR business partner within 14 days of receiving it. The appeal is decided by a panel that does not include the original reviewer."
+    },
+    {
+      "key": "procurement",
+      "collection": "finance",
+      "language": "en",
+      "title": "Procurement Approvals",
+      "text": "# Approval Thresholds\n\nPurchases up to 10,000 AED can be approved by the line manager. Purchases between 10,000 and 50,000 AED need the department head. Purchases above 50,000 AED need three competing quotations and approval from the Chief Financial Officer.\n\n# Vendor Onboarding\n\nA new vendor must provide a valid trade license, a VAT registration certificate and bank details on company letterhead before the first purchase order is issued.\n\n# Payment Terms\n\nStandard payment terms are 45 days from the date a valid tax invoice is received."
+    },
+    {
+      "key": "vat-invoicing",
+      "collection": "finance",
+      "language": "en",
+      "title": "VAT and Invoicing",
+      "text": "# Tax Invoices\n\nEvery tax invoice we issue must show our Tax Registration Number, the customer's name and address, the VAT rate of 5 percent and the VAT amount in AED.\n\n# Credit Notes\n\nA credit note must reference the original invoice number and be issued within 14 days of agreeing a refund with the customer.\n\n# Foreign Currency\n\nInvoices may be issued in USD, but the VAT amount must also be shown in AED using the Central Bank exchange rate on the invoice date."
+    },
+    {
+      "key": "ar-customer-complaints",
+      "collection": "general",
+      "language": "ar",
+      "title": "سياسة التعامل مع شكاوى العملاء",
+      "text": "تنطبق هذه السياسة على جميع قنوات خدمة العملاء.\n\n# استلام الشكوى\n\nتُسجَّل كل شكوى في نظام إدارة علاقات العملاء فور استلامها، سواء وصلت عبر الهاتف أو البريد الإلكتروني أو الموقع الإلكتروني، ويحصل العميل على رقم مرجعي.\n\n# مدة الرد\n\nيجب الإقرار باستلام الشكوى خلال يومي عمل، وحلّها خلال عشرة أيام عمل من تاريخ استلامها.\n\n# التصعيد\n\nإذا لم تُحلّ الشكوى خلال المدة المحددة، تُصعَّد تلقائيًا إلى مدير خدمة العملاء، ويُبلَّغ العميل بالتصعيد كتابيًا."
+    },
+    {
+      "key": "ar-data-retention",
+      "collection": "general",
+      "language": "ar",
+      "title": "الاحتفاظ بالسجلات",
+      "text": "# مدد الاحتفاظ\n\nيُحتفظ بالعقود لمدة عشر سنوات بعد انتهائها، وبالفواتير والسجلات المالية لمدة خمس سنوات، وبملفات الموظفين لمدة سنتين بعد انتهاء الخدمة.\n\n# الإتلاف\n\nلا يجوز إتلاف أي سجل قبل انتهاء مدة الاحتفاظ به، ويتطلب الإتلاف موافقة كتابية من إدارة الامتثال.\n\n# النسخ الإلكترونية\n\nتخضع النسخ الإلكترونية للمدد نفسها، وتُحذف من أنظمة النسخ الاحتياطي خلال تسعين يومًا من تاريخ الإتلاف المعتمد."
+    },
+    {
+      "key": "ar-ramadan-hours",
+      "collection": "hr",
+      "language": "ar",
+      "title": "ساعات العمل خلال شهر رمضان",
+      "text": "# ساعات الدوام\n\nتُخفَّض ساعات العمل خلال شهر رمضان إلى ست ساعات يوميًا، من التاسعة صباحًا حتى الثالثة عصرًا، لجميع الموظفين.\n\n# العمل عن بعد في رمضان\n\nيجوز للموظفين المؤهلين للعمل عن بعد زيادة أيام العمل من المنزل إلى ثلاثة أيام أسبوعيًا خلال شهر رمضان، بعد موافقة المدير المباشر.\n\n# الاجتماعات\n\nيُفضَّل ألا تُعقد الاجتماعات بعد الساعة الثانية ظهرًا خلال شهر رمضان."
+    },
+    {
+      "key": "mixed-onboarding",
+      "collection": "general",
+      "language": "mixed",
+      "title": "New Joiner Onboarding دليل الموظف الجديد",
+      "text": "Welcome to the company. مرحبًا بك في الشركة.\n\n# First Day - اليوم الأول\n\nBring your original passport and Emirates ID (الهوية الإماراتية) to reception at 08:30. Collect your laptop from the IT service desk after your ID photo is taken.\n\n# Payroll Setup - إعداد الراتب\n\nSalaries are paid through the Wage Protection System (WPS). أرسل رقم الآيبان IBAN الخاص بحسابك البنكي إلى قسم الرواتب خلال أسبوعك الأول، وإلا سيتأخر راتبك الأول.\n\n# التدريب الإلزامي - Mandatory Training\n\nيجب على كل موظف جديد إكمال دورتي Code of Conduct و Information Security خلال أسبوعين من تاريخ الانضمام، عبر منصة التعلّم الإلكتروني."
+    }
+  ],
+  "questions": [
+    { "id": "en-exact-01", "question": "per diem allowance", "language": "en", "category": "exact_terminology", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "travel-expenses#Per Diem", "grade": 3 }] },
+    { "id": "en-exact-02", "question": "multi-factor authentication", "language": "en", "category": "exact_terminology", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "it-security#Passwords", "grade": 3 }] },
+    { "id": "en-exact-03", "question": "core hours Gulf Standard Time", "language": "en", "category": "exact_terminology", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "remote-work#Core Hours", "grade": 3 }] },
+    { "id": "en-exact-04", "question": "Hajj leave", "language": "en", "category": "exact_terminology", "caller": "hr_officer", "answerable": true,
+      "judgments": [{ "doc": "leave-policy#Hajj Leave", "grade": 3 }] },
+    { "id": "en-exact-05", "question": "vendor onboarding trade license", "language": "en", "category": "exact_terminology", "caller": "finance_officer", "answerable": true,
+      "judgments": [{ "doc": "procurement#Vendor Onboarding", "grade": 3 }] },
+
+    { "id": "en-nat-01", "question": "How long do I have to submit my expense claims after a trip?", "language": "en", "category": "natural_question", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "travel-expenses#Claims", "grade": 3 }] },
+    { "id": "en-nat-02", "question": "What should I do if my laptop is stolen?", "language": "en", "category": "natural_question", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "it-security#Lost or Stolen Devices", "grade": 3 }] },
+    { "id": "en-nat-03", "question": "How many days can I work from home each week?", "language": "en", "category": "natural_question", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "remote-work#Eligibility", "grade": 3 }] },
+    { "id": "en-nat-04", "question": "Can visitors go into the server room?", "language": "en", "category": "natural_question", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "office-access#Visitors", "grade": 3 }] },
+    { "id": "en-nat-05", "question": "How many days of annual leave can I carry over to next year?", "language": "en", "category": "natural_question", "caller": "hr_officer", "answerable": true,
+      "judgments": [{ "doc": "leave-policy#Annual Leave", "grade": 3 }] },
+    { "id": "en-nat-06", "question": "Who approves a purchase above 50,000 AED?", "language": "en", "category": "natural_question", "caller": "finance_officer", "answerable": true,
+      "judgments": [{ "doc": "procurement#Approval Thresholds", "grade": 3 }] },
+    { "id": "en-nat-07", "question": "What is the deadline for appealing my performance rating?", "language": "en", "category": "natural_question", "caller": "hr_officer", "answerable": true,
+      "judgments": [{ "doc": "performance-reviews#Appeals", "grade": 3 }, { "doc": "performance-reviews#Rating Scale", "grade": 1 }] },
+
+    { "id": "en-partial-01", "question": "hotel budget limit for a Riyadh trip", "language": "en", "category": "partial_overlap", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "travel-expenses#Booking", "grade": 3 }, { "doc": "travel-expenses#Per Diem", "grade": 1 }],
+      "note": "Only 'hotel' and 'trip' appear in the corpus; 'budget', 'limit' and 'Riyadh' do not." },
+    { "id": "en-partial-02", "question": "USB drive exception approval form", "language": "en", "category": "partial_overlap", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "it-security#Removable Media", "grade": 3 }] },
+    { "id": "en-partial-03", "question": "credit note deadline after a refund agreement", "language": "en", "category": "partial_overlap", "caller": "finance_officer", "answerable": true,
+      "judgments": [{ "doc": "vat-invoicing#Credit Notes", "grade": 3 }] },
+
+    { "id": "en-para-01", "question": "How much pocket money do I get for food on business trips outside the country?", "language": "en", "category": "paraphrase", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "travel-expenses#Per Diem", "grade": 3 }, { "doc": "travel-expenses#Booking", "grade": 1 }] },
+    { "id": "en-para-02", "question": "How often must I update my login credentials?", "language": "en", "category": "paraphrase", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "it-security#Passwords", "grade": 3 }],
+      "note": "Shares no content word with the answer. A lexical baseline should miss it." },
+    { "id": "en-para-03", "question": "Is there a stipend for home broadband?", "language": "en", "category": "paraphrase", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "remote-work#Equipment and Allowance", "grade": 3 }] },
+    { "id": "en-para-04", "question": "Can a guest wander around unaccompanied?", "language": "en", "category": "paraphrase", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "office-access#Visitors", "grade": 3 }] },
+    { "id": "en-para-05", "question": "When do I find out my yearly appraisal result?", "language": "en", "category": "paraphrase", "caller": "hr_officer", "answerable": true,
+      "judgments": [{ "doc": "performance-reviews#Timeline", "grade": 3 }] },
+
+    { "id": "ar-exact-01", "question": "مدة الرد على الشكوى", "language": "ar", "category": "exact_terminology", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "ar-customer-complaints#مدة الرد", "grade": 3 }] },
+    { "id": "ar-exact-02", "question": "إتلاف السجلات", "language": "ar", "category": "exact_terminology", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "ar-data-retention#الإتلاف", "grade": 3 }, { "doc": "ar-data-retention#النسخ الإلكترونية", "grade": 2 }] },
+    { "id": "ar-nat-01", "question": "كم يومًا يستغرق حل شكوى العميل؟", "language": "ar", "category": "natural_question", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "ar-customer-complaints#مدة الرد", "grade": 3 }] },
+    { "id": "ar-nat-02", "question": "ما هي مدة الاحتفاظ بالعقود؟", "language": "ar", "category": "natural_question", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "ar-data-retention#مدد الاحتفاظ", "grade": 3 }],
+      "note": "The question says مدة, the heading says مدد, and the text says بالعقود with a prefix — a morphology case." },
+    { "id": "ar-nat-03", "question": "ما ساعات الدوام في رمضان؟", "language": "ar", "category": "natural_question", "caller": "hr_officer", "answerable": true,
+      "judgments": [{ "doc": "ar-ramadan-hours#ساعات الدوام", "grade": 3 }] },
+    { "id": "ar-partial-01", "question": "تصعيد الشكوى إلى الإدارة العليا", "language": "ar", "category": "partial_overlap", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "ar-customer-complaints#التصعيد", "grade": 3 }] },
+    { "id": "ar-partial-02", "question": "موعد الاجتماعات المسائية في رمضان", "language": "ar", "category": "partial_overlap", "caller": "hr_officer", "answerable": true,
+      "judgments": [{ "doc": "ar-ramadan-hours#الاجتماعات", "grade": 3 }] },
+    { "id": "ar-para-01", "question": "متى يجب إبلاغ العميل بأننا تلقينا ملاحظته؟", "language": "ar", "category": "paraphrase", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "ar-customer-complaints#مدة الرد", "grade": 3 }, { "doc": "ar-customer-complaints#استلام الشكوى", "grade": 1 }] },
+    { "id": "ar-para-02", "question": "هل يمكنني التخلص من الملفات القديمة بنفسي؟", "language": "ar", "category": "paraphrase", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "ar-data-retention#الإتلاف", "grade": 3 }] },
+
+    { "id": "mx-exact-01", "question": "دورة Code of Conduct", "language": "mixed", "category": "exact_terminology", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "mixed-onboarding#التدريب الإلزامي - Mandatory Training", "grade": 3 }] },
+    { "id": "mx-nat-01", "question": "متى أرسل IBAN إلى قسم الرواتب؟", "language": "mixed", "category": "natural_question", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "mixed-onboarding#Payroll Setup - إعداد الراتب", "grade": 3 }] },
+    { "id": "mx-nat-02", "question": "What should I bring on my first day? الهوية الإماراتية؟", "language": "mixed", "category": "natural_question", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "mixed-onboarding#First Day - اليوم الأول", "grade": 3 }] },
+
+    { "id": "xl-01", "question": "How quickly must customer complaints be resolved?", "language": "en", "category": "paraphrase", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "ar-customer-complaints#مدة الرد", "grade": 3 }],
+      "note": "Cross-lingual: an English question whose only answer is written in Arabic." },
+    { "id": "xl-02", "question": "كم عدد أيام الإجازة السنوية؟", "language": "ar", "category": "paraphrase", "caller": "hr_officer", "answerable": true,
+      "judgments": [{ "doc": "leave-policy#Annual Leave", "grade": 3 }],
+      "note": "Cross-lingual: an Arabic question whose only answer is written in English." },
+    { "id": "xl-03", "question": "When is my first salary paid if I send my bank details late?", "language": "en", "category": "natural_question", "caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "mixed-onboarding#Payroll Setup - إعداد الراتب", "grade": 3 }],
+      "note": "The consequence of sending the IBAN late is stated only in the Arabic sentence of a mixed section." },
+
+    { "id": "mh-01", "question": "If my laptop is stolen on a business trip, who do I report it to and how do I claim the costs back?", "language": "en", "category": "natural_question", "caller": "staff", "answerable": true, "multi_hop": true,
+      "judgments": [{ "doc": "it-security#Lost or Stolen Devices", "grade": 3 }, { "doc": "travel-expenses#Claims", "grade": 2 }] },
+    { "id": "mh-02", "question": "How many days can I work from home during Ramadan compared with the rest of the year?", "language": "en", "category": "natural_question", "caller": "hr_officer", "answerable": true, "multi_hop": true,
+      "judgments": [{ "doc": "remote-work#Eligibility", "grade": 3 }, { "doc": "ar-ramadan-hours#العمل عن بعد في رمضان", "grade": 3 }],
+      "note": "Also cross-lingual: the Ramadan half of the answer is written in Arabic." },
+    { "id": "mh-03", "question": "Which course must new joiners finish within two weeks, and what password rules does it relate to?", "language": "en", "category": "natural_question", "caller": "staff", "answerable": true, "multi_hop": true,
+      "judgments": [{ "doc": "mixed-onboarding#التدريب الإلزامي - Mandatory Training", "grade": 3 }, { "doc": "it-security#Passwords", "grade": 2 }] },
+
+    { "id": "un-en-01", "question": "Do we get a gym membership discount?", "language": "en", "category": "natural_question", "caller": "staff", "answerable": false,
+      "note": "No content word in this question appears in any article the caller can read." },
+    { "id": "un-en-02", "question": "What is the maternity leave entitlement?", "language": "en", "category": "natural_question", "caller": "hr_officer", "answerable": false,
+      "note": "A near miss: the corpus has a leave policy, with 'Leave Entitlements' as its title, but says nothing about maternity leave." },
+    { "id": "un-ar-01", "question": "هل توجد تغطية تأمين صحي للوالدين؟", "language": "ar", "category": "natural_question", "caller": "staff", "answerable": false },
+    { "id": "un-mx-01", "question": "كيف أطلب parking permit للموظفين؟", "language": "mixed", "category": "natural_question", "caller": "staff", "answerable": false },
+
+    { "id": "lm-en-01", "question": "What is the dress code for the server room?", "language": "en", "category": "loose_match", "caller": "staff", "answerable": false,
+      "note": "'server room' appears in the visitor rules, which say nothing about dress code." },
+    { "id": "lm-en-02", "question": "Can I claim a gym membership as a business expense?", "language": "en", "category": "loose_match", "caller": "staff", "answerable": false,
+      "note": "'claim', 'business' and 'expense' all appear in the travel policy, which covers travel costs only." },
+    { "id": "lm-en-03", "question": "What is the core curriculum for leadership training?", "language": "en", "category": "loose_match", "caller": "staff", "answerable": false,
+      "note": "'core' (core hours) and 'training' (onboarding) appear in unrelated sections." },
+    { "id": "lm-ar-01", "question": "ما سياسة بدل السكن؟", "language": "ar", "category": "loose_match", "caller": "staff", "answerable": false,
+      "note": "'سياسة' appears in the complaints policy's title and first sentence; nothing covers a housing allowance." },
+    { "id": "lm-mx-01", "question": "هل يوجد reception desk في فرع دبي؟", "language": "mixed", "category": "loose_match", "caller": "staff", "answerable": false,
+      "note": "'reception' appears in the badge and first-day sections; there is nothing about branches." },
+
+    { "id": "perm-01", "question": "How many days of annual leave do I get?", "language": "en", "category": "permission_restricted", "caller": "staff", "control_caller": "hr_officer", "answerable": true,
+      "judgments": [{ "doc": "leave-policy#Annual Leave", "grade": 3 }] },
+    { "id": "perm-02", "question": "Who approves purchases above 50,000 AED?", "language": "en", "category": "permission_restricted", "caller": "staff", "control_caller": "finance_officer", "answerable": true,
+      "judgments": [{ "doc": "procurement#Approval Thresholds", "grade": 3 }] },
+    { "id": "perm-03", "question": "How long do I have to submit expense claims?", "language": "en", "category": "permission_restricted", "caller": "no_access", "control_caller": "staff", "answerable": true,
+      "judgments": [{ "doc": "travel-expenses#Claims", "grade": 3 }] },
+    { "id": "perm-04", "question": "ما ساعات الدوام في رمضان؟", "language": "ar", "category": "permission_restricted", "caller": "finance_officer", "control_caller": "hr_officer", "answerable": true,
+      "judgments": [{ "doc": "ar-ramadan-hours#ساعات الدوام", "grade": 3 }] },
+    { "id": "perm-05", "question": "VAT rate on tax invoices", "language": "en", "category": "permission_restricted", "caller": "hr_officer", "control_caller": "finance_officer", "answerable": true,
+      "judgments": [{ "doc": "vat-invoicing#Tax Invoices", "grade": 3 }] }
+  ]
+}

@@ -1,0 +1,48 @@
+[package]
+name         = "attome-workflow"
+description  = "Attome's workflow engine: definitions, versions, triggers, instances and node runs."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+attome-ai.workspace           = true
+attome-approval.workspace     = true
+attome-audit.workspace        = true
+attome-config.workspace       = true
+attome-core.workspace         = true
+attome-db.workspace           = true
+attome-jobs.workspace         = true
+attome-metadata.workspace     = true
+attome-modules.workspace      = true
+attome-notification.workspace = true
+attome-records.workspace      = true
+attome-security.workspace     = true
+attome-server.workspace       = true
+attome-types.workspace        = true
+axum.workspace                = true
+chrono.workspace              = true
+metrics.workspace             = true
+reqwest.workspace             = true
+serde.workspace               = true
+serde_json.workspace          = true
+sha2.workspace                = true
+sqlx.workspace                = true
+tracing.workspace             = true
+utoipa.workspace              = true
+uuid.workspace                = true
+
+[dev-dependencies]
+attome-cache.workspace    = true
+attome-metadata.workspace = true
+attome-storage.workspace  = true
+attome-testkit.workspace  = true
+tokio                     = { workspace = true, features = ["macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true

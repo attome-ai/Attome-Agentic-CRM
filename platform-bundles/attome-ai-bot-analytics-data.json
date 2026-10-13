@@ -1,0 +1,70 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 494,
+    "modules": [
+      "core"
+    ]
+  },
+  "record_sets": [
+    {
+      "entity": "dashboard_metric_definition",
+      "key_fields": [
+        "key"
+      ],
+      "rows": [
+        {
+          "name": "AI Assistant Turns Started",
+          "key": "ai.assistant.turns_7d",
+          "description": "Turns the assistant started in the last 7 days, on every surface.",
+          "source_kind": "query",
+          "query_ref": "e0d8f0a1-2fea-5f1f-9ca6-96c27b6e1e93",
+          "unit": "turns",
+          "direction": "higher_is_better",
+          "period": "week"
+        },
+        {
+          "name": "AI Assistant Completion Rate",
+          "key": "ai.assistant.completion_rate_7d",
+          "description": "Share of turns ended in the last 7 days that completed with an answer.",
+          "source_kind": "query",
+          "query_ref": "7a34639e-d8e5-5c04-b893-e200c172f3f4",
+          "unit": "%",
+          "direction": "higher_is_better",
+          "period": "week"
+        },
+        {
+          "name": "AI Assistant Tool Calls",
+          "key": "ai.assistant.tool_calls_7d",
+          "description": "Tool calls the assistant proposed in the last 7 days; a reopened proposal is not a new call.",
+          "source_kind": "query",
+          "query_ref": "e04f5a0b-d1ab-5653-9b2d-0c00a0cc1984",
+          "unit": "calls",
+          "direction": "higher_is_better",
+          "period": "week"
+        },
+        {
+          "name": "AI Assistant Handoffs",
+          "key": "ai.assistant.handoffs_7d",
+          "description": "Conversations the assistant handed to a person in the last 7 days.",
+          "source_kind": "query",
+          "query_ref": "24daedb6-ec15-555f-8eb9-5505bcbdde08",
+          "unit": "handoffs",
+          "direction": "lower",
+          "period": "week"
+        },
+        {
+          "name": "AI Assistant Thumbs-Up Share",
+          "key": "ai.assistant.thumbs_up_share_7d",
+          "description": "Share of thumbs votes cast or changed in the last 7 days that were up.",
+          "source_kind": "query",
+          "query_ref": "098f305e-87d7-559d-9ae1-492cbc813cfb",
+          "unit": "%",
+          "direction": "higher_is_better",
+          "period": "week"
+        }
+      ]
+    }
+  ]
+}

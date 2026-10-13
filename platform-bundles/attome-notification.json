@@ -1,0 +1,56 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "notification_template",
+      "display_name": "Notification Template",
+      "primary_name_attribute": "template_key",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "template_key", "display_name": "Template Key", "field_type": "text", "is_required": true },
+        { "logicalname": "locale", "display_name": "Locale", "field_type": "text", "is_required": true },
+        { "logicalname": "subject", "display_name": "Subject", "field_type": "text" },
+        { "logicalname": "body_html", "display_name": "Body (HTML)", "field_type": "text" },
+        { "logicalname": "body_text", "display_name": "Body (Text)", "field_type": "text", "is_required": true },
+        { "logicalname": "default_channels", "display_name": "Default Channels (comma-separated: in_app,email,sms,push,chat)", "field_type": "text" },
+        { "logicalname": "escalate_after_minutes", "display_name": "Escalate After (minutes)", "field_type": "number" },
+        { "logicalname": "escalate_channels", "display_name": "Escalate Channels (comma-separated)", "field_type": "text" },
+        { "logicalname": "consent_purpose_key", "display_name": "Consent Purpose Key (marketing-channel gate)", "field_type": "text" },
+        { "logicalname": "is_mandatory", "display_name": "Mandatory (ignores user notification preferences)", "field_type": "bool" }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "notification_template",
+      "name": "Active Notification Templates",
+      "sql": "SELECT id, template_key, locale, subject, body_html, body_text, default_channels, escalate_after_minutes, escalate_channels, consent_purpose_key, row_version, created_at, modified_at FROM notification_template WHERE is_active = TRUE",
+      "required_privilege": "notification_template.read"
+    },
+    {
+      "entity": "notification_template",
+      "name": "Inactive Notification Templates",
+      "sql": "SELECT id, template_key, locale, subject, body_html, body_text, default_channels, escalate_after_minutes, escalate_channels, consent_purpose_key, row_version, created_at, modified_at FROM notification_template WHERE is_active = FALSE",
+      "required_privilege": "notification_template.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "notification_template",
+      "name": "Active Notification Templates",
+      "query": { "entity": "notification_template", "name": "Active Notification Templates" },
+      "is_default": true
+    },
+    {
+      "entity": "notification_template",
+      "name": "Inactive Notification Templates",
+      "query": { "entity": "notification_template", "name": "Inactive Notification Templates" },
+      "is_default": false
+    }
+  ]
+}

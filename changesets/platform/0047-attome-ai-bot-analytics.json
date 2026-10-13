@@ -1,0 +1,112 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:c11823bd740db6f7383b5f85a5837223346b8c92f04afc1e964fa9c0f1caecbd",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-bot-analytics.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "c3bddcc1-c1a8-7af1-9a2c-f26df922f2de",
+  "layer": "platform",
+  "name": "attome-ai-bot-analytics",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "AI Assistant Completion Rate (Last 7 Days)",
+          "required_privilege": "attome_metric.snapshot",
+          "sql": "SELECT COUNT(*) FILTER (WHERE payload->>'terminal_state' = 'completed')::float8 / NULLIF(COUNT(*), 0) * 100 AS value FROM ai_conversation_event WHERE event_type = 'turn.completed' AND created_at >= NOW() - INTERVAL '7 days'"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "AI Assistant Completion Rate (Last 7 Days)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "AI Assistant Handoffs (Last 7 Days)",
+          "required_privilege": "attome_metric.snapshot",
+          "sql": "SELECT COUNT(*)::float8 AS value FROM action_invocation WHERE action_id = 'bot.handoff' AND outcome = 'completed' AND initiator = 1 AND created_at >= NOW() - INTERVAL '7 days'"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "AI Assistant Handoffs (Last 7 Days)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "AI Assistant Thumbs-Up Share (Last 7 Days)",
+          "required_privilege": "attome_metric.snapshot",
+          "sql": "SELECT COUNT(*) FILTER (WHERE vote = 'up')::float8 / NULLIF(COUNT(*), 0) * 100 AS value FROM ai_message_feedback WHERE updated_at >= NOW() - INTERVAL '7 days'"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "AI Assistant Thumbs-Up Share (Last 7 Days)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "AI Assistant Tool Calls (Last 7 Days)",
+          "required_privilege": "attome_metric.snapshot",
+          "sql": "SELECT COUNT(*)::float8 AS value FROM ai_conversation_event WHERE event_type = 'tool.call.proposed' AND NOT COALESCE((payload->>'reopened')::boolean, false) AND created_at >= NOW() - INTERVAL '7 days'"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "AI Assistant Tool Calls (Last 7 Days)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "AI Assistant Turns Started (Last 7 Days)",
+          "required_privilege": "attome_metric.snapshot",
+          "sql": "SELECT COUNT(*)::float8 AS value FROM ai_conversation_event WHERE event_type = 'turn.started' AND created_at >= NOW() - INTERVAL '7 days'"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "AI Assistant Turns Started (Last 7 Days)"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 47,
+  "title": "Platform definitions: attome-ai-bot-analytics"
+}

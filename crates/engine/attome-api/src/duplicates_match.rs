@@ -1,0 +1,666 @@
+//! D-432 / M13 (Master Data Management, scoped to dedup + survivorship
+//! only) — the matching job: `EngineJob::DataMatchSweep`'s handler.
+//!
+//! Reads a bounded batch off the entity-change outbox cursor
+//! (`attome_core::change_feed`, consumer key [`CONSUMER`] — same
+//! non-destructive per-consumer cursor model `attome_events::dispatch` already
+//! uses, chosen over `attome-workflow`'s destructive `processed_at` claim
+//! because this is exactly the "a second consumer added from D-358 onward"
+//! case that model exists for), and for every `create`/`update`/`restore`
+//! event, evaluates each of that entity's active `match_rule` rows
+//! against the rest of the table, writing an `duplicate_candidate`
+//! row for every peer that clears the rule's `threshold`.
+//!
+//! ## Comparators — what's real and what isn't (verified 2026-08-27)
+//!
+//! `exact` and `normalized` need no infrastructure beyond ordinary SQL.
+//! `trigram` is genuine, already-shipped infrastructure: migration `0107`
+//! runs `CREATE EXTENSION pg_trgm` and attome-search's `FuzzyLeg`
+//! (`legs/stage1.rs`) already calls `similarity()` against it — the "M11
+//! fuzzy leg" the module plan's `Depends on` line names. This module calls
+//! the same `similarity()` function directly (not through attome-search's
+//! `search_index`, which is a different, title-only corpus keyed to
+//! search *retrieval* — a match rule compares two arbitrary records' own
+//! field values instead), which needs no additional index: `similarity()` is
+//! a plain SQL function once the extension exists, and a per-field GIN index
+//! is a retrieval-time optimization this Phase-1 scope doesn't need. There is
+//! **no** equivalent per-field embedding infrastructure — `0122_search_
+//! embedding.sql` embeds the search corpus (title/body of an indexed
+//! record), not arbitrary attribute values — so `embedding` is accepted at
+//! the wire/schema level (`MatchField::comparator`, this module) but rejected
+//! with a typed `422 Validation` at rule-save time
+//! (`duplicates_admin::validate_match_fields`) rather than silently ignored
+//! or ever reaching this module.
+//!
+//! ## Scoring
+//!
+//! Each field is a boolean per-field indicator, not a continuous one — the
+//! plan's own "trigram ≥ t" phrasing is a threshold comparator, the same
+//! shape as `exact`/`normalized`, not a raw similarity score. A field where
+//! either side is null contributes to neither the numerator nor the
+//! denominator ("no evidence" — a rule with one field and one side null never
+//! produces a candidate). The rule's score is the weighted average of every
+//! field that DID have evidence:
+//!
+//! ```text
+//! score = Σ(weight_i × indicator_i) / Σ(weight_i)   over fields with evidence
+//! ```
+//!
+//! A candidate pair is written when `score >= rule.threshold` and at least
+//! one field had evidence (an all-null comparison never matches, regardless
+//! of threshold).
+//!
+//! ## Blocking keys (REVIEW-2026-09-02 finding #5)
+//!
+//! A field can be marked [`MatchField::is_blocking_key`]. When a rule has at
+//! least one, the candidate peer set is first narrowed to rows that clear
+//! that field's own comparator on its own terms (an exact/normalized
+//! equality, or a trigram `similarity() >= min_similarity`) — the standard
+//! record-linkage blocking technique: a peer can only be structurally
+//! excluded if it could never have contributed a nonzero indicator on the
+//! blocking field(s) in the first place, so blocking a field a true
+//! duplicate pair actually agrees on never loses that pair. [`MAX_BLOCKED_
+//! CANDIDATES`] is then a pure safety valve against a pathologically
+//! non-selective blocking key (e.g. a near-constant column), not the primary
+//! narrowing mechanism.
+//!
+//! **A rule with no blocking key configured scans every active peer, with no
+//! cap.** Previously every rule — blocked or not — was capped at 5,000 rows
+//! ordered by `id`, an arbitrary cutoff unrelated to similarity: any entity
+//! over that size silently never matched a true duplicate outside the
+//! sampled prefix, regardless of how similar it was. That was a correctness
+//! bug, not a performance tuning knob, so the fix removes the cap entirely
+//! for an unblocked rule rather than raising it — the admin's tool for
+//! keeping a large entity's sweep fast is to mark a selective field as a
+//! blocking key, not a platform-wide row ceiling that quietly drops matches.
+
+use attome_core::{EngineState, change_feed, quote_ident};
+use attome_types::AppError;
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+use utoipa::ToSchema;
+use uuid::Uuid;
+
+/// `change_consumer_cursor.consumer` key — see `attome_core::
+/// change_feed`'s module doc for why this non-destructive cursor model is
+/// required for any consumer added after attome-workflow's original
+/// `processed_at` claim.
+const CONSUMER: &str = "mdm/match-sweep";
+
+/// Outbox events read per tick — same order of magnitude as `attome_events::
+/// dispatch`'s per-subscription batch and `attome_workflow::entity_trigger`'s
+/// `DISPATCH_BATCH_SIZE`.
+const OUTBOX_BATCH_LIMIT: i64 = 200;
+
+/// See this module's doc comment, "Blocking keys". Applies only when at
+/// least one field is `is_blocking_key` — a safety valve on the *blocked*
+/// candidate set, not the primary way this module bounds work.
+const MAX_BLOCKED_CANDIDATES: i64 = 5000;
+
+/// Candidate pairs kept per (changed record, rule) — the top-scoring peers
+/// only, not every peer that cleared the threshold, so one very duplicate-y
+/// record can't flood the steward queue from a single sweep tick.
+const TOP_CANDIDATES_PER_RULE: i64 = 5;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub(crate) enum Comparator {
+    Exact,
+    Normalized,
+    Trigram,
+    /// Schema-accepted, never runnable — see this module's doc comment.
+    Embedding,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub(crate) struct MatchField {
+    pub field: String,
+    pub comparator: Comparator,
+    pub weight: f64,
+    /// `trigram` only — the `pg_trgm` similarity floor a pair must clear to
+    /// count as a match on this field. Defaults to `pg_trgm`'s own default
+    /// (0.3, the same constant `attome-search`'s `FuzzyLeg` uses) when absent.
+    #[serde(default)]
+    pub min_similarity: Option<f64>,
+    /// REVIEW-2026-09-02 finding #5 — see this module's doc comment,
+    /// "Blocking keys". `#[serde(default)]` so an existing rule saved before
+    /// this field existed deserializes as `false` on every field (its old
+    /// behavior: no blocking, full scan under the old cap) rather than
+    /// failing to parse.
+    #[serde(default)]
+    pub is_blocking_key: bool,
+}
+
+struct MatchRule {
+    id: Uuid,
+    fields: Vec<MatchField>,
+    threshold: f64,
+    auto_merge: bool,
+}
+
+#[derive(Default, Debug)]
+pub struct MatchSweepStats {
+    pub events_processed: usize,
+    pub candidates_written: usize,
+    pub auto_merge_submitted: usize,
+}
+
+/// `EngineJob::DataMatchSweep`'s handler — see `attome_core::jobs::EngineJob::
+/// DataMatchSweep`'s doc comment for the job contract.
+pub async fn run_match_sweep(state: &EngineState) -> Result<MatchSweepStats, AppError> {
+    let mut stats = MatchSweepStats::default();
+    let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
+    let events = change_feed::read_batch(&mut conn, CONSUMER, OUTBOX_BATCH_LIMIT).await?;
+    if events.is_empty() {
+        return Ok(stats);
+    }
+
+    // Dedup within the batch — a record touched by several events in one
+    // tick (e.g. two rapid updates) is evaluated once, not once per event.
+    // `delete`/`purge` are skipped: a retired record can neither be a new
+    // duplicate nor usefully surface one (its candidate rows, if any, are
+    // left for a steward to dismiss — this sweep does not clean those up,
+    // same "propose, never silently reconcile" posture the rest of this
+    // module takes).
+    let mut seen = std::collections::HashSet::new();
+    for event in &events {
+        stats.events_processed += 1;
+        let Some(op) = event.operation() else {
+            continue;
+        };
+        if !matches!(
+            op,
+            change_feed::ChangeOperation::Create
+                | change_feed::ChangeOperation::Update
+                | change_feed::ChangeOperation::Restore
+        ) {
+            continue;
+        }
+        if !seen.insert((event.entity_logicalname.clone(), event.record_id)) {
+            continue;
+        }
+        if let Err(e) = evaluate_record(
+            state,
+            &event.entity_logicalname,
+            event.record_id,
+            &mut stats,
+        )
+        .await
+        {
+            // One record's evaluation failing (a rule referencing a field
+            // that was since removed, a transient DB error) must not stall
+            // the whole sweep — same "one subscription's failure doesn't
+            // stop the tick" posture `attome_events::dispatch::dispatch_pending`
+            // takes for the same reason.
+            tracing::warn!(
+                entity = %event.entity_logicalname,
+                record_id = %event.record_id,
+                error = %e,
+                "mdm match sweep: evaluating one record failed, continuing"
+            );
+        }
+    }
+
+    if let Some(last) = events.last() {
+        change_feed::advance(&mut conn, CONSUMER, last).await?;
+    }
+    Ok(stats)
+}
+
+async fn load_active_match_rules(
+    db: &attome_db::DbPool,
+    entity_logicalname: &str,
+) -> Result<Vec<MatchRule>, AppError> {
+    let rows: Vec<(Uuid, Value, f64, bool)> = sqlx::query_as(
+        "SELECT id, fields, threshold::float8, auto_merge \
+           FROM match_rule \
+          WHERE entity_logicalname = $1 AND is_active AND NOT is_deleted",
+    )
+    .bind(entity_logicalname)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+
+    let mut rules = Vec::with_capacity(rows.len());
+    for (id, fields_json, threshold, auto_merge) in rows {
+        let fields: Vec<MatchField> = serde_json::from_value(fields_json)
+            .map_err(|e| AppError::internal(format!("corrupt match_rule({id}).fields: {e}")))?;
+        rules.push(MatchRule {
+            id,
+            fields,
+            threshold,
+            auto_merge,
+        });
+    }
+    Ok(rules)
+}
+
+async fn evaluate_record(
+    state: &EngineState,
+    entity_logicalname: &str,
+    record_id: Uuid,
+    stats: &mut MatchSweepStats,
+) -> Result<(), AppError> {
+    let rules = load_active_match_rules(&state.base.db, entity_logicalname).await?;
+    if rules.is_empty() {
+        return Ok(());
+    }
+    // Validated against the live metadata registry — never trust the rule's
+    // own `fields[].field` strings as identifiers without this (guidelines
+    // §4: dynamic identifiers must come from validated metadata).
+    let (_, entity_name, attrs, is_append_only) =
+        attome_records::entity_crud::resolve_entity(state, entity_logicalname).await?;
+    if is_append_only {
+        return Ok(());
+    }
+    let known_fields: std::collections::HashSet<&str> =
+        attrs.iter().map(|a| a.logicalname.as_str()).collect();
+    let table = quote_ident(&entity_name);
+
+    for rule in &rules {
+        // A rule naming a field that no longer exists on this entity (a
+        // field was deleted after the rule was saved) is skipped for that
+        // field's contribution entirely, same "degrade, don't crash the
+        // sweep" posture the outer loop already takes — not a reason to
+        // refuse the whole rule if other fields still resolve.
+        let usable_fields: Vec<&MatchField> = rule
+            .fields
+            .iter()
+            .filter(|f| {
+                f.comparator != Comparator::Embedding && known_fields.contains(f.field.as_str())
+            })
+            .collect();
+        if usable_fields.is_empty() {
+            continue;
+        }
+
+        let target =
+            match fetch_target_values(&state.base.db, &table, record_id, &usable_fields).await? {
+                Some(v) => v,
+                None => return Ok(()), // record no longer active/visible — nothing to match against.
+            };
+
+        let candidates = score_peers(
+            &state.base.db,
+            &table,
+            record_id,
+            &usable_fields,
+            &target,
+            rule.threshold,
+        )
+        .await?;
+
+        for (peer_id, score) in candidates {
+            let (a, b) = if record_id < peer_id {
+                (record_id, peer_id)
+            } else {
+                (peer_id, record_id)
+            };
+            let low_risk = rule.auto_merge && is_low_risk(state, &entity_name, a, b).await?;
+            let inserted =
+                insert_candidate(&state.base.db, &entity_name, a, b, rule.id, score, low_risk)
+                    .await?;
+            if inserted {
+                stats.candidates_written += 1;
+                if low_risk && submit_auto_merge_request(state, &entity_name, a, b).await? {
+                    stats.auto_merge_submitted += 1;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Fetches `record_id`'s own value for every usable field, cast to text —
+/// keeping every comparison uniformly text-typed regardless of the
+/// underlying column type (same `::text` normalization
+/// `data_profile_admin::profile_field` already uses for a generic per-field
+/// scan). `None` when the record is missing or inactive.
+async fn fetch_target_values(
+    db: &attome_db::DbPool,
+    table: &str,
+    record_id: Uuid,
+    fields: &[&MatchField],
+) -> Result<Option<Map<String, Value>>, AppError> {
+    let cols = fields
+        .iter()
+        .map(|f| {
+            format!(
+                "{}::text AS {}",
+                quote_ident(&f.field),
+                quote_ident(&f.field)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let row: Option<Value> = sqlx::query_scalar(&format!(
+        "SELECT row_to_json(t) FROM (SELECT {cols} FROM {table} WHERE id = $1 AND is_active = true) t"
+    ))
+    .bind(record_id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    match row {
+        Some(Value::Object(obj)) => Ok(Some(obj)),
+        _ => Ok(None),
+    }
+}
+
+/// One SQL parameter this module builds dynamically — never a raw
+/// interpolated literal (guidelines §4: bind every runtime value, including
+/// admin-configured ones like a rule's `weight`/`min_similarity`, not just
+/// end-user request data).
+enum Bind {
+    Text(Option<String>),
+    Num(f64),
+}
+
+/// The per-field boolean-indicator SQL fragment, referencing peer column
+/// `p."{field}"` and the target's own value / the field's weight / (trigram
+/// only) its similarity floor as bound parameters at the given placeholder
+/// positions. `NULL` (no evidence) when either side is null.
+fn field_indicator_sql(
+    target_placeholder: usize,
+    min_sim_placeholder: usize,
+    field: &MatchField,
+) -> String {
+    let col = quote_ident(&field.field);
+    match field.comparator {
+        Comparator::Exact => format!(
+            "CASE WHEN p.{col} IS NOT NULL AND ${target_placeholder}::text IS NOT NULL \
+                  THEN (CASE WHEN p.{col}::text = ${target_placeholder}::text THEN 1.0 ELSE 0.0 END) \
+                  ELSE NULL END"
+        ),
+        Comparator::Normalized => format!(
+            "CASE WHEN p.{col} IS NOT NULL AND ${target_placeholder}::text IS NOT NULL \
+                  THEN (CASE WHEN lower(regexp_replace(trim(both from p.{col}::text), '\\s+', ' ', 'g')) \
+                             = lower(regexp_replace(trim(both from ${target_placeholder}::text), '\\s+', ' ', 'g')) \
+                        THEN 1.0 ELSE 0.0 END) \
+                  ELSE NULL END"
+        ),
+        Comparator::Trigram => format!(
+            "CASE WHEN p.{col} IS NOT NULL AND ${target_placeholder}::text IS NOT NULL \
+                  THEN (CASE WHEN similarity(p.{col}::text, ${target_placeholder}::text) >= ${min_sim_placeholder}::float8 \
+                             THEN 1.0 ELSE 0.0 END) \
+                  ELSE NULL END"
+        ),
+        Comparator::Embedding => "NULL".to_owned(),
+    }
+}
+
+/// The per-field blocking predicate for a field marked [`MatchField::
+/// is_blocking_key`] — true only when this field's evidence could possibly
+/// have contributed a nonzero indicator in [`field_indicator_sql`] (same
+/// comparator, same threshold), so blocking on a field a true duplicate pair
+/// agrees on never excludes that pair. SQL's own NULL propagation handles
+/// "no evidence" (either side null) the same way the indicator does — no
+/// explicit null guard needed here.
+fn field_blocking_sql(
+    target_placeholder: usize,
+    min_sim_placeholder: usize,
+    field: &MatchField,
+) -> String {
+    let col = quote_ident(&field.field);
+    match field.comparator {
+        Comparator::Exact => {
+            format!("p.{col}::text = ${target_placeholder}::text")
+        }
+        Comparator::Normalized => format!(
+            "lower(regexp_replace(trim(both from p.{col}::text), '\\s+', ' ', 'g')) \
+             = lower(regexp_replace(trim(both from ${target_placeholder}::text), '\\s+', ' ', 'g'))"
+        ),
+        Comparator::Trigram => format!(
+            "similarity(p.{col}::text, ${target_placeholder}::text) >= ${min_sim_placeholder}::float8"
+        ),
+        Comparator::Embedding => "FALSE".to_owned(),
+    }
+}
+
+/// Scores `record_id` against its entity's other live rows — every one of
+/// them if the rule has no blocking key, or only those that clear at least
+/// one blocking field (up to [`MAX_BLOCKED_CANDIDATES`]) otherwise — and
+/// returns the top [`TOP_CANDIDATES_PER_RULE`] that clear `threshold`,
+/// highest score first. See this module's doc comment, "Blocking keys".
+async fn score_peers(
+    db: &attome_db::DbPool,
+    table: &str,
+    record_id: Uuid,
+    fields: &[&MatchField],
+    target: &Map<String, Value>,
+    threshold: f64,
+) -> Result<Vec<(Uuid, f64)>, AppError> {
+    let peer_cols = fields
+        .iter()
+        .map(|f| quote_ident(&f.field))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let mut numer_terms = Vec::with_capacity(fields.len());
+    let mut denom_terms = Vec::with_capacity(fields.len());
+    let mut blocking_terms = Vec::new();
+    // $1 is the excluded record id (bound below); every other runtime value
+    // — target value, weight, and (trigram) similarity floor — gets its own
+    // placeholder, never interpolated as a literal.
+    let mut binds: Vec<Bind> = Vec::with_capacity(fields.len() * 3);
+    let mut next_placeholder = 2usize;
+    for field in fields {
+        let target_placeholder = next_placeholder;
+        next_placeholder += 1;
+        binds.push(Bind::Text(
+            target
+                .get(&field.field)
+                .and_then(Value::as_str)
+                .map(str::to_owned),
+        ));
+
+        let weight_placeholder = next_placeholder;
+        next_placeholder += 1;
+        binds.push(Bind::Num(field.weight));
+
+        // Trigram is the only comparator that reads a placeholder here;
+        // every other arm ignores `min_sim_placeholder` — allocate it
+        // unconditionally anyway so the placeholder numbering stays simple
+        // and correct regardless of comparator mix.
+        let min_sim_placeholder = next_placeholder;
+        next_placeholder += 1;
+        binds.push(Bind::Num(field.min_similarity.unwrap_or(0.3)));
+
+        let indicator = field_indicator_sql(target_placeholder, min_sim_placeholder, field);
+        numer_terms.push(format!(
+            "COALESCE(${weight_placeholder}::float8 * ({indicator}), 0)"
+        ));
+        denom_terms.push(format!(
+            "(CASE WHEN ({indicator}) IS NULL THEN 0 ELSE ${weight_placeholder}::float8 END)"
+        ));
+
+        if field.is_blocking_key {
+            blocking_terms.push(field_blocking_sql(
+                target_placeholder,
+                min_sim_placeholder,
+                field,
+            ));
+        }
+    }
+    let numer = numer_terms.join(" + ");
+    let denom = denom_terms.join(" + ");
+    let threshold_placeholder = next_placeholder;
+    binds.push(Bind::Num(threshold));
+
+    // See this module's doc comment, "Blocking keys": no blocking field
+    // configured means no cap at all (correctness over speed — every active
+    // peer is scored); a blocking field narrows the candidate set to rows
+    // that clear it, with `MAX_BLOCKED_CANDIDATES` as a pure safety valve.
+    let (candidate_filter, candidate_limit) = if blocking_terms.is_empty() {
+        (String::from("TRUE"), String::new())
+    } else {
+        (
+            format!("({})", blocking_terms.join(" OR ")),
+            format!("ORDER BY id LIMIT {MAX_BLOCKED_CANDIDATES}"),
+        )
+    };
+
+    let sql = format!(
+        "WITH capped AS ( \
+             SELECT id, {peer_cols} FROM {table} \
+              WHERE is_active = true AND id <> $1 AND {candidate_filter} \
+              {candidate_limit} \
+         ), scored AS ( \
+             SELECT p.id, ({numer}) / NULLIF({denom}, 0) AS score FROM capped p \
+         ) \
+         SELECT id, score FROM scored \
+          WHERE score IS NOT NULL AND score >= ${threshold_placeholder}::float8 \
+          ORDER BY score DESC LIMIT {TOP_CANDIDATES_PER_RULE}"
+    );
+
+    let mut q = sqlx::query_as::<_, (Uuid, f64)>(&sql).bind(record_id);
+    for b in binds {
+        q = match b {
+            Bind::Text(v) => q.bind(v),
+            Bind::Num(v) => q.bind(v),
+        };
+    }
+    q.fetch_all(db).await.map_err(AppError::internal)
+}
+
+/// D-432 / M13 — the auto-merge gate's other half (alongside
+/// `match_rule.auto_merge`): both records must be judged safe for
+/// unattended consolidation before this sweep will even *offer* it via a
+/// `attome_approval` request (execution still requires a human decision either
+/// way — see `admin_security_context`'s doc comment in `entity_crud::merge`).
+/// "Low risk" here means neither record is depended on by any other entity's
+/// lookup field — a merge that would redirect zero dependent rows can only
+/// ever touch the two records it names, which bounds the blast radius of a
+/// wrong auto-merge to something a steward reviewing the resulting audit
+/// trail can trivially undo (re-split is not implemented, but nothing
+/// *else* was silently rewritten). A record with any dependents is never
+/// auto-merge-eligible, regardless of rule/score — it only ever reaches the
+/// ordinary steward queue.
+async fn is_low_risk(
+    state: &EngineState,
+    entity_name: &str,
+    record_a: Uuid,
+    record_b: Uuid,
+) -> Result<bool, AppError> {
+    let entity_id = match state.entities.load().get(entity_name) {
+        Some(meta) => meta.entity_id,
+        None => return Ok(false),
+    };
+    let dependents = state.entities.load().dependents_of(entity_id);
+    if dependents.is_empty() {
+        return Ok(true);
+    }
+    for (dep_entity, dep_field, _) in &dependents {
+        let dep_table = quote_ident(dep_entity);
+        let dep_field_ident = quote_ident(dep_field);
+        let referenced: bool = sqlx::query_scalar(&format!(
+            "SELECT EXISTS(SELECT 1 FROM {dep_table} WHERE {dep_field_ident} = ANY($1))"
+        ))
+        .bind(vec![record_a, record_b])
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        if referenced {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+/// Writes one candidate row, canonicalizing pair order (caller already
+/// passes `a < b`). `ON CONFLICT DO NOTHING` on the pair's unique index
+/// (migration `0218`) — a pair already recorded (in any status, including a
+/// steward's prior `dismissed`) is never re-flagged, see that migration's
+/// header. Returns whether a new row was actually inserted.
+async fn insert_candidate(
+    db: &attome_db::DbPool,
+    entity_name: &str,
+    a: Uuid,
+    b: Uuid,
+    match_rule_id: Uuid,
+    score: f64,
+    auto_merge_eligible: bool,
+) -> Result<bool, AppError> {
+    let inserted: Option<Uuid> = sqlx::query_scalar(
+        "INSERT INTO duplicate_candidate \
+             (entity_logicalname, record_a, record_b, match_rule_id, score, auto_merge_eligible) \
+         VALUES ($1, $2, $3, $4, $5, $6) \
+         ON CONFLICT (entity_logicalname, record_a, record_b) DO NOTHING \
+         RETURNING id",
+    )
+    .bind(entity_name)
+    .bind(a)
+    .bind(b)
+    .bind(match_rule_id)
+    .bind(score as f32)
+    .bind(auto_merge_eligible)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(inserted.is_some())
+}
+
+/// D-432 / M13 — submits the `mdm.auto_merge` four-eyes request
+/// (`attome_approval::submit`, `requested_by = attome_approval::POLICY_ACTOR_ID`
+/// — the system, not a human, proposed this) for a freshly-written
+/// auto-merge-eligible candidate, and records the request id back onto the
+/// candidate row so the duplicates admin surface can show its status.
+/// Deliberately calls `attome_approval::submit` directly rather than
+/// `attome_audit::approval::gate` — `gate()` only submits a request when the
+/// deployment's `approval.required_actions` config opts `mdm.auto_merge`
+/// in; skipping straight to `submit` makes the four-eyes step mandatory for
+/// *every* auto-merge regardless of that config, matching guidelines §7/§2:
+/// no destructive automation without a human decision in the loop, ever,
+/// not merely by default.
+async fn submit_auto_merge_request(
+    state: &EngineState,
+    entity_name: &str,
+    canonical_id: Uuid,
+    duplicate_id: Uuid,
+) -> Result<bool, AppError> {
+    // Only one outstanding auto-merge request per candidate pair — a repeat
+    // sweep tick that re-scores the same still-open candidate must not pile
+    // up duplicate approval requests for it.
+    let already_requested: bool = sqlx::query_scalar(
+        "SELECT approval_request_id IS NOT NULL \
+           FROM duplicate_candidate \
+          WHERE entity_logicalname = $1 AND record_a = $2 AND record_b = $3",
+    )
+    .bind(entity_name)
+    .bind(canonical_id)
+    .bind(duplicate_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .unwrap_or(true);
+    if already_requested {
+        return Ok(false);
+    }
+
+    let payload = serde_json::json!({
+        "entity": entity_name,
+        "canonical_id": canonical_id,
+        "duplicate_id": duplicate_id,
+    });
+    let request = attome_approval::submit(
+        &state.base.db,
+        crate::duplicates_admin::ACTION_MDM_AUTO_MERGE,
+        payload,
+        attome_approval::POLICY_ACTOR_ID,
+        1,
+        chrono::Duration::hours(72),
+    )
+    .await?;
+
+    sqlx::query(
+        "UPDATE duplicate_candidate SET approval_request_id = $4, row_version = row_version + 1 \
+          WHERE entity_logicalname = $1 AND record_a = $2 AND record_b = $3",
+    )
+    .bind(entity_name)
+    .bind(canonical_id)
+    .bind(duplicate_id)
+    .bind(request.id)
+    .execute(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(true)
+}

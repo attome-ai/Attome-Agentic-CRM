@@ -1,0 +1,48 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "workflow_definition",
+      "display_name": "Workflow",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "logicalname", "display_name": "Logical Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "workflow_definition",
+      "name": "Active Workflows",
+      "sql": "SELECT id, name, logicalname, created_at, updated_at, row_version FROM workflow_definition WHERE is_deleted = FALSE AND is_active = TRUE",
+      "required_privilege": "workflow_definition.read"
+    },
+    {
+      "entity": "workflow_definition",
+      "name": "Inactive Workflows",
+      "sql": "SELECT id, name, logicalname, created_at, updated_at, row_version FROM workflow_definition WHERE is_deleted = FALSE AND is_active = FALSE",
+      "required_privilege": "workflow_definition.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "workflow_definition",
+      "name": "Active Workflows",
+      "query": { "entity": "workflow_definition", "name": "Active Workflows" },
+      "is_default": true
+    },
+    {
+      "entity": "workflow_definition",
+      "name": "Inactive Workflows",
+      "query": { "entity": "workflow_definition", "name": "Inactive Workflows" },
+      "is_default": false
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+//! The closed catalogue.
+//!
+//! Every action the platform can invoke is declared here. Adding one is a code
+//! change and a release (invariant I-5) — there is no runtime registration
+//! path, no plugin loader, and no "temporarily, just for the chatbot" list.
+//!
+//! **P1-A's first slice is read-only and deliberately small.** `record.get`
+//! and `query.execute` need no search engine and no knowledge base, which is
+//! the whole reason AI fields ship before either: a summarise-this-record
+//! field operates on the record already open in the form.
+//! `search.knowledge` registered with the Knowledge Base pipeline (M37/D-489);
+//! `search.records` registered at C5, wrapping the same `execute_search` the
+//! `GET /api/v1/search` route calls.
+
+pub mod agent_playground;
+pub mod agent_supervise;
+pub mod bot_handoff;
+pub mod classify;
+pub mod draft_article;
+pub mod graph;
+pub mod knowledge;
+pub mod knowledge_answer;
+pub mod memory;
+pub mod read;
+pub mod record_update_field;
+pub mod record_write;
+pub mod route_classify;
+pub mod search_records;
+pub mod workflow;
+
+use crate::descriptor::ActionDescriptor;
+
+/// Every registered descriptor, in declaration order. `ActionRegistry` sorts
+/// them; this is just the source of truth for what exists.
+pub fn all() -> Vec<ActionDescriptor> {
+    let mut all = read::descriptors();
+    all.push(draft_article::descriptor());
+    all.extend(graph::descriptors());
+    all.push(knowledge::descriptor());
+    all.push(knowledge_answer::descriptor());
+    all.push(classify::descriptor());
+    all.push(bot_handoff::descriptor());
+    all.push(record_update_field::descriptor());
+    all.extend(record_write::descriptors());
+    all.push(search_records::descriptor());
+    all.extend(workflow::descriptors());
+    all.extend(memory::descriptors());
+    all.push(route_classify::descriptor());
+    all.extend(agent_supervise::descriptors());
+    all.push(agent_playground::descriptor());
+    all
+}
+
+/// Every executor. `execute::executors_cover_every_registered_action` pins this
+/// against `all()` — a descriptor with no executor is an action a model can see
+/// and cannot invoke, which teaches it that refusals are normal.
+///
+/// `pub(crate)`: `execute::Executors` is the only holder, so no other crate can
+/// obtain an executor and call it around `dispatch` and the gate (C5).
+pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
+    let mut all = read::executors();
+    all.push(Box::new(draft_article::ArticleDraft));
+    all.extend(graph::executors());
+    all.push(Box::new(knowledge::SearchKnowledge));
+    all.push(Box::new(knowledge_answer::KnowledgeAnswer));
+    all.push(Box::new(classify::RecordClassify));
+    all.push(Box::new(bot_handoff::BotHandoff));
+    all.push(Box::new(record_update_field::RecordUpdateField));
+    all.extend(record_write::executors());
+    all.push(Box::new(search_records::SearchRecords));
+    all.extend(workflow::executors());
+    all.extend(memory::executors());
+    all.push(Box::new(route_classify::RouteClassify));
+    all.extend(agent_supervise::executors());
+    all.push(Box::new(agent_playground::AgentPlaygroundComplete));
+    all
+}

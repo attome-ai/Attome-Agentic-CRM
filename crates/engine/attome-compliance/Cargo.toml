@@ -1,0 +1,42 @@
+[package]
+name         = "attome-compliance"
+description  = "Attome's data protection and governance: consent, data subject requests, retention and legal matters."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+attome-audit.workspace    = true
+attome-auth.workspace     = true
+attome-core.workspace     = true
+attome-db.workspace       = true
+attome-document.workspace = true
+attome-jobs.workspace     = true
+attome-metadata.workspace = true
+attome-modules.workspace  = true
+attome-search.workspace   = true
+attome-security.workspace = true
+attome-server.workspace   = true
+attome-types.workspace    = true
+axum.workspace            = true
+bytes.workspace           = true
+chrono.workspace          = true
+futures-util.workspace    = true
+hex.workspace             = true
+object_store.workspace    = true
+serde.workspace           = true
+serde_json.workspace      = true
+sha2.workspace            = true
+sqlx.workspace            = true
+tokio.workspace           = true
+tracing.workspace         = true
+utoipa.workspace          = true
+uuid.workspace            = true
+
+[lints]
+workspace = true

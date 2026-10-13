@@ -1,0 +1,41 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "reminder",
+      "display_name": "Reminder",
+      "primary_name_attribute": "note",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "user_ref", "display_name": "Remind", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true, "is_filterable": true, "max_length": 128 },
+        { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true, "is_filterable": true, "max_length": 64 },
+        { "logicalname": "remind_at", "display_name": "Remind At", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "note", "display_name": "Note", "field_type": "text", "max_length": 1000 },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["pending", "sent", "dismissed"], "multi": false } },
+        { "logicalname": "status_reason", "display_name": "Status Reason", "field_type": "text", "max_length": 64 }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "reminder",
+      "name": "Active Reminders",
+      "sql": "SELECT id, user_ref, entity_name, record_id, remind_at, note, status, status_reason, created_at FROM reminder WHERE is_active IS NOT FALSE",
+      "required_privilege": "reminder.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "reminder",
+      "name": "Active Reminders",
+      "query": { "entity": "reminder", "name": "Active Reminders" },
+      "is_default": true
+    }
+  ]
+}

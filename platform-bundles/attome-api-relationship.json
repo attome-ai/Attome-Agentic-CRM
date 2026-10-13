@@ -1,0 +1,39 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "record_relationship",
+      "display_name": "Record Relationship",
+      "is_append_only": true,
+      "attributes": [
+        { "logicalname": "from_entity_name", "display_name": "From Entity", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "from_record_id", "display_name": "From Record Id", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "to_entity_name", "display_name": "To Entity", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "to_record_id", "display_name": "To Record Id", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "relationship_type", "display_name": "Relationship Type", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "created_by", "display_name": "Created By", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "record_relationship",
+      "name": "Active Record Relationships",
+      "sql": "SELECT id, from_entity_name, from_record_id, to_entity_name, to_record_id, relationship_type, created_by, created_at FROM record_relationship WHERE is_active IS NOT FALSE",
+      "required_privilege": "record_relationship.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "record_relationship",
+      "name": "Active Record Relationships",
+      "query": { "entity": "record_relationship", "name": "Active Record Relationships" },
+      "is_default": true
+    }
+  ]
+}

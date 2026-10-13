@@ -1,0 +1,180 @@
+{
+  "author": "dev@attome.local",
+  "checksum": "sha256:8d03d7364881ed933a3925e5d12e93a9c9b50fce5de931cdb3315f0673d7df77",
+  "closed_at": "2026-09-30T09:30:00Z",
+  "description": "Phase 2 example (D-788): renames the renewal date in place, converts the free-text contract value to currency in place, adds and removes status choices, sets the list view columns, seeds a contract type by business key, and deletes a legacy field.",
+  "format": "attome-changeset/v1",
+  "id": "01923f72-2222-7333-8444-555566667777",
+  "layer": "project",
+  "name": "acme-contract-evolution",
+  "opened_at": "2026-09-30T08:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "new_name": "renewal_on"
+      },
+      "op": "rename_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "contract",
+        "field": "renewal_date"
+      }
+    },
+    {
+      "args": {
+        "conversion": {
+          "from_type": "text"
+        },
+        "field_type": "currency"
+      },
+      "op": "change_field_type",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "contract",
+        "field": "contract_value"
+      }
+    },
+    {
+      "args": {
+        "after": "active",
+        "label": "On hold",
+        "value": "on_hold"
+      },
+      "op": "add_choice_value",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "contract",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "field": "status",
+        "kind": "map_values",
+        "map": {
+          "draft_legacy": "draft"
+        },
+        "on_unmapped": "keep"
+      },
+      "op": "data_step",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "contract"
+      }
+    },
+    {
+      "args": {
+        "field": "currency_code",
+        "kind": "set_default",
+        "value": "BHD"
+      },
+      "op": "data_step",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "contract"
+      }
+    },
+    {
+      "args": {
+        "columns": [
+          {
+            "name": "name"
+          },
+          {
+            "name": "renewal_on"
+          },
+          {
+            "name": "contract_value"
+          }
+        ],
+        "sort": [
+          {
+            "direction": "asc",
+            "field": "renewal_on"
+          }
+        ]
+      },
+      "op": "set_view_columns",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "contract",
+        "view": "active_contracts"
+      }
+    },
+    {
+      "args": {
+        "changed": [
+          "business_key",
+          "is_reference_data"
+        ],
+        "definition": {
+          "business_key": [
+            "code"
+          ],
+          "display_name": "Contract type",
+          "is_reference_data": true,
+          "logicalname": "contract_type"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "contract_type"
+      }
+    },
+    {
+      "args": {
+        "values": {
+          "code": "SVC",
+          "name": "Service"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "contract_type",
+        "key": {
+          "code": "SVC"
+        }
+      }
+    },
+    {
+      "args": {
+        "value": "draft_legacy"
+      },
+      "op": "remove_choice_value",
+      "phase": "contract",
+      "seq": 9,
+      "target": {
+        "entity": "contract",
+        "field": "status"
+      }
+    },
+    {
+      "op": "delete_field",
+      "phase": "contract",
+      "seq": 10,
+      "target": {
+        "entity": "contract",
+        "field": "value_text"
+      }
+    }
+  ],
+  "requires": {
+    "after": [
+      "project/acme/0001-acme-contracts"
+    ],
+    "platform": ">=4.3.0"
+  },
+  "scope": "acme",
+  "seq": 2,
+  "title": "Acme: contract value as money, renewal renamed"
+}

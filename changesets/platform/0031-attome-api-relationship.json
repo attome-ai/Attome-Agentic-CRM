@@ -1,0 +1,185 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:7ab73daee7fa8f362bccf213b101fff6d99586f5e8414a7fe67e2eebf249ff77",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-api-relationship.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "3e552066-0a06-78c1-bb69-1c0b4128e329",
+  "layer": "platform",
+  "name": "attome-api-relationship",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Record Relationship",
+          "is_append_only": true,
+          "logicalname": "record_relationship"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "record_relationship"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "From Entity",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "from_entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "record_relationship",
+        "field": "from_entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "From Record Id",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "from_record_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "record_relationship",
+        "field": "from_record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Relationship Type",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "relationship_type"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "record_relationship",
+        "field": "relationship_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "To Entity",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "to_entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "record_relationship",
+        "field": "to_entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "To Record Id",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "to_record_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "record_relationship",
+        "field": "to_record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Created By",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "created_by",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "record_relationship",
+        "field": "created_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "record_relationship",
+          "entity_mappings": [],
+          "name": "Active Record Relationships",
+          "required_privilege": "record_relationship.read",
+          "sql": "SELECT id, from_entity_name, from_record_id, to_entity_name, to_record_id, relationship_type, created_by, created_at FROM record_relationship WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "record_relationship",
+        "query": "Active Record Relationships"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "record_relationship",
+          "is_default": true,
+          "name": "Active Record Relationships",
+          "query": {
+            "entity": "record_relationship",
+            "name": "Active Record Relationships"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "record_relationship",
+        "view": "Active Record Relationships"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 31,
+  "title": "Platform definitions: attome-api-relationship"
+}

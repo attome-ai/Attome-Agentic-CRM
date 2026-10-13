@@ -1,0 +1,71 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "tag_category",
+      "display_name": "Tag Category",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "color", "display_name": "Color", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "tag_item",
+      "display_name": "Tag Item",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "category_id", "display_name": "Category", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "tag_category" },
+        { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true, "is_filterable": true }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "tag_category",
+      "name": "Active Tag Categories",
+      "sql": "SELECT id, name, description, color, created_at FROM tag_category WHERE is_active IS NOT FALSE",
+      "required_privilege": "tag_category.read"
+    },
+    {
+      "entity": "tag_item",
+      "name": "Active Tag Items",
+      "sql": "SELECT id, category_id, entity_name, record_id, created_at FROM tag_item WHERE is_active IS NOT FALSE",
+      "required_privilege": "tag_item.read"
+    },
+    {
+      "entity": "tag_item",
+      "name": "Tag Items (Related)",
+      "sql": "SELECT id, category_id, entity_name, record_id, created_at FROM tag_item WHERE is_active IS NOT FALSE",
+      "required_privilege": "tag_item.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "tag_category",
+      "name": "Active Tag Categories",
+      "query": { "entity": "tag_category", "name": "Active Tag Categories" },
+      "is_default": true
+    },
+    {
+      "entity": "tag_item",
+      "name": "Active Tag Items",
+      "query": { "entity": "tag_item", "name": "Active Tag Items" },
+      "is_default": true
+    },
+    {
+      "entity": "tag_item",
+      "name": "Tag Items (Related)",
+      "query": { "entity": "tag_item", "name": "Tag Items (Related)" },
+      "is_default": false
+    }
+  ]
+}

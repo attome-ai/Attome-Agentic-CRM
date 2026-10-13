@@ -1,0 +1,51 @@
+[package]
+name         = "attome-docgen"
+description  = "Attome's document generation from templates and records."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+attome-audit.workspace    = true
+attome-config.workspace   = true
+attome-core.workspace     = true
+attome-db.workspace       = true
+attome-document.workspace = true
+attome-html.workspace     = true
+attome-jobs.workspace     = true
+attome-metadata.workspace = true
+attome-modules.workspace  = true
+attome-records.workspace  = true
+attome-rules.workspace    = true
+attome-security.workspace = true
+attome-server.workspace   = true
+attome-storage.workspace  = true
+attome-types.workspace    = true
+axum.workspace            = true
+chrono.workspace          = true
+futures-util.workspace    = true
+hex.workspace             = true
+object_store.workspace    = true
+regex.workspace           = true
+reqwest                   = { workspace = true, features = ["stream"] }
+serde.workspace           = true
+serde_json.workspace      = true
+sha2.workspace            = true
+sqlx.workspace            = true
+tracing.workspace         = true
+utoipa.workspace          = true
+uuid.workspace            = true
+
+[dev-dependencies]
+attome-cache.workspace    = true
+attome-metadata.workspace = true
+attome-testkit.workspace  = true
+tokio                     = { workspace = true, features = ["macros", "rt-multi-thread", "net", "io-util", "time"] }
+
+[lints]
+workspace = true

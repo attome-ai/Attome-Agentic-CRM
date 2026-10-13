@@ -1,0 +1,215 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:8ffdf4f9e8ee6938b8027895f715b56b371acfa47b324fc04733cd7b617cb8fb",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-document.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "57f44f1b-71c0-7bb2-b650-cd7ca7f49ef8",
+  "layer": "platform",
+  "name": "attome-document",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Document",
+          "is_append_only": false,
+          "logicalname": "attome_document",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "attome_document"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Entity Name",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "attome_document",
+        "field": "entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "File",
+          "field_type": "file",
+          "logicalname": "file"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "attome_document",
+        "field": "file"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Folder",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "folder"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "attome_document",
+        "field": "folder"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "attome_document",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Record Id",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "record_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "attome_document",
+        "field": "record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Source Field",
+          "field_type": "text",
+          "logicalname": "source_field"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "attome_document",
+        "field": "source_field"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_document",
+          "entity_mappings": [],
+          "name": "Active Documents",
+          "required_privilege": "attome_document.read",
+          "sql": "SELECT id, name, entity_name, record_id, folder, file, source_field, row_version, created_at, modified_at FROM attome_document WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "attome_document",
+        "query": "Active Documents"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_document",
+          "entity_mappings": [],
+          "name": "Inactive Documents",
+          "required_privilege": "attome_document.read",
+          "sql": "SELECT id, name, entity_name, record_id, folder, file, source_field, row_version, created_at, modified_at FROM attome_document WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "attome_document",
+        "query": "Inactive Documents"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_document",
+          "is_default": true,
+          "name": "Active Documents",
+          "query": {
+            "entity": "attome_document",
+            "name": "Active Documents"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "attome_document",
+        "view": "Active Documents"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_document",
+          "is_default": false,
+          "name": "Inactive Documents",
+          "query": {
+            "entity": "attome_document",
+            "name": "Inactive Documents"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "attome_document",
+        "view": "Inactive Documents"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 25,
+  "title": "Platform definitions: attome-document"
+}

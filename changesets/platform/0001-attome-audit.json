@@ -1,0 +1,1507 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:fa3e0ab09efbbb749f6e6093097f83ee79e5e7fe56b97ce71d99cb72eab9c1f9",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-audit.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "00ecbd0f-0220-7071-a938-c41ffb739c1a",
+  "layer": "platform",
+  "name": "attome-audit",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Audit Config",
+          "is_append_only": false,
+          "logicalname": "audit_config",
+          "primary_name_attribute": "entity_name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "audit_config"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Audit Detail",
+          "is_append_only": true,
+          "logicalname": "audit_detail",
+          "primary_name_attribute": "field_name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "audit_detail"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Audit Header",
+          "is_append_only": true,
+          "logicalname": "audit_header",
+          "primary_name_attribute": "entity_name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "audit_header"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Audit Snapshot",
+          "is_append_only": true,
+          "logicalname": "audit_snapshot",
+          "primary_name_attribute": "entity_name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "audit_snapshot"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Capture Snapshot",
+          "field_type": "bool",
+          "logicalname": "capture_snapshot"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "audit_config",
+        "field": "capture_snapshot"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Entity Name",
+          "field_type": "text",
+          "logicalname": "entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "audit_config",
+        "field": "entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Environment Mask",
+          "field_type": "number",
+          "logicalname": "environment_mask"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "audit_config",
+        "field": "environment_mask"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Field Name",
+          "field_type": "text",
+          "logicalname": "field_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "audit_config",
+        "field": "field_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Is Active",
+          "field_type": "bool",
+          "logicalname": "is_active"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "audit_config",
+        "field": "is_active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Is Audited",
+          "field_type": "bool",
+          "logicalname": "is_audited"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "audit_config",
+        "field": "is_audited"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Operation Mask",
+          "field_type": "number",
+          "logicalname": "operation_mask"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "audit_config",
+        "field": "operation_mask"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Sensitive Fields",
+          "field_type": "text",
+          "logicalname": "sensitive_fields"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "audit_config",
+        "field": "sensitive_fields"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Data Type",
+          "field_type": "number",
+          "logicalname": "data_type"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "audit_detail",
+        "field": "data_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Display Name",
+          "field_type": "text",
+          "logicalname": "display_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "audit_detail",
+        "field": "display_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Field Name",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "field_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "audit_detail",
+        "field": "field_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Is Active",
+          "field_type": "bool",
+          "logicalname": "is_active"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "audit_detail",
+        "field": "is_active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Is Sensitive",
+          "field_type": "bool",
+          "logicalname": "is_sensitive"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "audit_detail",
+        "field": "is_sensitive"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "New Display Value",
+          "field_type": "text",
+          "logicalname": "new_display_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "audit_detail",
+        "field": "new_display_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "New Lookup Entity",
+          "field_type": "text",
+          "logicalname": "new_lookup_entity"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "audit_detail",
+        "field": "new_lookup_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "New Lookup Name",
+          "field_type": "text",
+          "logicalname": "new_lookup_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "audit_detail",
+        "field": "new_lookup_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "New Value",
+          "field_type": "text",
+          "logicalname": "new_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "audit_detail",
+        "field": "new_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Old Display Value",
+          "field_type": "text",
+          "logicalname": "old_display_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "audit_detail",
+        "field": "old_display_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Old Lookup Entity",
+          "field_type": "text",
+          "logicalname": "old_lookup_entity"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "audit_detail",
+        "field": "old_lookup_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Old Lookup Name",
+          "field_type": "text",
+          "logicalname": "old_lookup_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "audit_detail",
+        "field": "old_lookup_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Old Value",
+          "field_type": "text",
+          "logicalname": "old_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "audit_detail",
+        "field": "old_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Value Mode",
+          "field_type": "number",
+          "logicalname": "value_mode"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "audit_detail",
+        "field": "value_mode"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Affected Count",
+          "field_type": "number",
+          "logicalname": "affected_count"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "audit_header",
+        "field": "affected_count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Agent Action",
+          "field_type": "text",
+          "logicalname": "agent_action_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "audit_header",
+        "field": "agent_action_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "AI Model",
+          "field_type": "text",
+          "logicalname": "ai_model_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "audit_header",
+        "field": "ai_model_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Browser",
+          "field_type": "text",
+          "logicalname": "browser"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "audit_header",
+        "field": "browser"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Category",
+          "field_type": "number",
+          "is_required": true,
+          "logicalname": "category"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "audit_header",
+        "field": "category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Changed On",
+          "field_type": "date",
+          "logicalname": "changed_on"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "audit_header",
+        "field": "changed_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Content Digest",
+          "field_type": "text",
+          "logicalname": "content_digest"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "audit_header",
+        "field": "content_digest"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Device Type",
+          "field_type": "number",
+          "logicalname": "device_type"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "audit_header",
+        "field": "device_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Entity Name",
+          "field_type": "text",
+          "logicalname": "entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "audit_header",
+        "field": "entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Event Comment",
+          "field_type": "text",
+          "logicalname": "event_comment"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "audit_header",
+        "field": "event_comment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Event Hash",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "event_hash"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "audit_header",
+        "field": "event_hash"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Event Index",
+          "field_type": "number",
+          "logicalname": "event_index"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "audit_header",
+        "field": "event_index"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Event Name",
+          "field_type": "text",
+          "logicalname": "event_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "audit_header",
+        "field": "event_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Failed Count",
+          "field_type": "number",
+          "logicalname": "failed_count"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "audit_header",
+        "field": "failed_count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Hash Version",
+          "field_type": "number",
+          "logicalname": "hash_version"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "audit_header",
+        "field": "hash_version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Initiator",
+          "field_type": "number",
+          "is_required": true,
+          "logicalname": "initiator"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "audit_header",
+        "field": "initiator"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "IP Address",
+          "field_type": "text",
+          "logicalname": "ip_address"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "audit_header",
+        "field": "ip_address"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Is Active",
+          "field_type": "bool",
+          "logicalname": "is_active"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "audit_header",
+        "field": "is_active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Occurrence Count",
+          "field_type": "number",
+          "logicalname": "occurrence_count"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "audit_header",
+        "field": "occurrence_count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Operation",
+          "field_type": "number",
+          "is_required": true,
+          "logicalname": "operation"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "audit_header",
+        "field": "operation"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Outcome",
+          "field_type": "number",
+          "logicalname": "outcome"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "audit_header",
+        "field": "outcome"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Previous Hash",
+          "field_type": "text",
+          "logicalname": "prev_hash"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "audit_header",
+        "field": "prev_hash"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Request ID",
+          "field_type": "text",
+          "logicalname": "request_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "audit_header",
+        "field": "request_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Requested Count",
+          "field_type": "number",
+          "logicalname": "requested_count"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "audit_header",
+        "field": "requested_count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Signature",
+          "field_type": "text",
+          "logicalname": "signature"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "audit_header",
+        "field": "signature"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Signing Key ID",
+          "field_type": "text",
+          "logicalname": "signing_key_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "audit_header",
+        "field": "signing_key_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Source",
+          "field_type": "number",
+          "logicalname": "source"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "audit_header",
+        "field": "source"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User Display Name",
+          "field_type": "text",
+          "logicalname": "user_display_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "audit_header",
+        "field": "user_display_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User Email",
+          "field_type": "text",
+          "is_sensitive": true,
+          "logicalname": "user_email"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "audit_header",
+        "field": "user_email"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User Job Name",
+          "field_type": "text",
+          "logicalname": "user_job_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "audit_header",
+        "field": "user_job_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User Name",
+          "field_type": "text",
+          "logicalname": "user_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "audit_header",
+        "field": "user_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Version After",
+          "field_type": "number",
+          "logicalname": "version_after"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "audit_header",
+        "field": "version_after"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Version Before",
+          "field_type": "number",
+          "logicalname": "version_before"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "audit_header",
+        "field": "version_before"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Entity Name",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "audit_snapshot",
+        "field": "entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Snapshot JSON",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "snapshot_json"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "audit_snapshot",
+        "field": "snapshot_json"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Trigger",
+          "field_type": "number",
+          "logicalname": "trigger"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "audit_snapshot",
+        "field": "trigger"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Version",
+          "field_type": "number",
+          "is_required": true,
+          "logicalname": "version"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "audit_snapshot",
+        "field": "version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Created By",
+          "field_type": "lookup",
+          "logicalname": "created_by"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "audit_config",
+        "field": "created_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Organization",
+          "field_type": "lookup",
+          "logicalname": "organization_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "audit_config",
+        "field": "organization_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Audit Header",
+          "field_type": "lookup",
+          "is_required": true,
+          "logicalname": "audit_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "audit_detail",
+        "field": "audit_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Organization",
+          "field_type": "lookup",
+          "logicalname": "organization_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "audit_detail",
+        "field": "organization_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Agent Session",
+          "field_type": "lookup",
+          "logicalname": "agent_session_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "audit_header",
+        "field": "agent_session_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Approval Request",
+          "field_type": "lookup",
+          "logicalname": "approval_request_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "audit_header",
+        "field": "approval_request_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Batch ID",
+          "field_type": "lookup",
+          "logicalname": "batch_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "audit_header",
+        "field": "batch_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Chain Batch",
+          "field_type": "lookup",
+          "logicalname": "chain_batch_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "audit_header",
+        "field": "chain_batch_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Correlation ID",
+          "field_type": "lookup",
+          "logicalname": "correlation_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "audit_header",
+        "field": "correlation_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Organization",
+          "field_type": "lookup",
+          "logicalname": "organization_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "audit_header",
+        "field": "organization_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Record ID",
+          "field_type": "lookup",
+          "logicalname": "record_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "audit_header",
+        "field": "record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Session",
+          "field_type": "lookup",
+          "logicalname": "session_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "audit_header",
+        "field": "session_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User ID",
+          "field_type": "lookup",
+          "logicalname": "user_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "audit_header",
+        "field": "user_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User Job",
+          "field_type": "lookup",
+          "logicalname": "user_job_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "audit_header",
+        "field": "user_job_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Audit Header",
+          "field_type": "lookup",
+          "logicalname": "audit_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "audit_snapshot",
+        "field": "audit_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Organization",
+          "field_type": "lookup",
+          "logicalname": "organization_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "entity": "audit_snapshot",
+        "field": "organization_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Record ID",
+          "field_type": "lookup",
+          "is_required": true,
+          "logicalname": "record_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "entity": "audit_snapshot",
+        "field": "record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_config",
+          "entity_mappings": [],
+          "name": "Active Audit Config",
+          "required_privilege": "audit_config.read",
+          "sql": "SELECT id, created_at, organization_ref, entity_name, field_name, operation_mask, is_audited, capture_snapshot, sensitive_fields, environment_mask, is_active FROM audit_config WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "entity": "audit_config",
+        "query": "Active Audit Config"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_config",
+          "entity_mappings": [],
+          "name": "Inactive Audit Config",
+          "required_privilege": "audit_config.read",
+          "sql": "SELECT id, created_at, organization_ref, entity_name, field_name, operation_mask, is_audited, capture_snapshot, sensitive_fields, environment_mask, is_active FROM audit_config WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "entity": "audit_config",
+        "query": "Inactive Audit Config"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_detail",
+          "entity_mappings": [],
+          "name": "Audit Detail List",
+          "required_privilege": "audit_detail.read",
+          "sql": "SELECT id, created_at, organization_ref, audit_ref, field_name, display_name, data_type, old_value, new_value, old_display_value, new_display_value, old_lookup_entity, old_lookup_name, new_lookup_entity, new_lookup_name, is_sensitive FROM audit_detail"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "entity": "audit_detail",
+        "query": "Audit Detail List"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_header",
+          "entity_mappings": [],
+          "name": "Audit Header List",
+          "required_privilege": "audit_header.read",
+          "sql": "SELECT id, created_at, organization_ref, is_active, category, entity_name, record_id, operation, version_before, version_after, user_id, user_name, user_display_name, user_email, user_job_ref, user_job_name, changed_on, source, ip_address, browser, device_type, correlation_id, batch_id, event_name, event_comment, initiator, agent_session_id, agent_action_id FROM audit_header"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "entity": "audit_header",
+        "query": "Audit Header List"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_snapshot",
+          "entity_mappings": [],
+          "name": "Audit Snapshot List",
+          "required_privilege": "audit_snapshot.read",
+          "sql": "SELECT id, created_at, organization_ref, audit_ref, entity_name, record_id, version, snapshot_json, trigger FROM audit_snapshot"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "entity": "audit_snapshot",
+        "query": "Audit Snapshot List"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_config",
+          "is_default": true,
+          "name": "Active Audit Config",
+          "query": {
+            "entity": "audit_config",
+            "name": "Active Audit Config"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "entity": "audit_config",
+        "view": "Active Audit Config"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_config",
+          "is_default": false,
+          "name": "Inactive Audit Config",
+          "query": {
+            "entity": "audit_config",
+            "name": "Inactive Audit Config"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "entity": "audit_config",
+        "view": "Inactive Audit Config"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_detail",
+          "is_default": true,
+          "name": "Audit Detail List",
+          "query": {
+            "entity": "audit_detail",
+            "name": "Audit Detail List"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "entity": "audit_detail",
+        "view": "Audit Detail List"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_header",
+          "is_default": true,
+          "name": "Audit Header List",
+          "query": {
+            "entity": "audit_header",
+            "name": "Audit Header List"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "entity": "audit_header",
+        "view": "Audit Header List"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "audit_snapshot",
+          "is_default": true,
+          "name": "Audit Snapshot List",
+          "query": {
+            "entity": "audit_snapshot",
+            "name": "Audit Snapshot List"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "entity": "audit_snapshot",
+        "view": "Audit Snapshot List"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 1,
+  "title": "Platform definitions: attome-audit"
+}

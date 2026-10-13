@@ -1,0 +1,60 @@
+{
+  "author": "dev@attome.local",
+  "checksum": "sha256:3c4a3376a891685744625765a39dc9b5df216b81f2da76a7eaffa6c09779e526",
+  "closed_at": "2026-09-29T10:20:00Z",
+  "description": "Adds a renewal date to contracts for Acme, names it in Arabic, and retires the old free-text renewal note.",
+  "format": "attome-changeset/v1",
+  "id": "01923f70-1111-7222-8333-444455556666",
+  "layer": "project",
+  "name": "acme-contracts",
+  "opened_at": "2026-09-29T10:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Renewal date",
+          "field_type": "date",
+          "logicalname": "renewal_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "contract",
+        "field": "renewal_date"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ التجديد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "locale": "ar",
+        "object_key": "contract.renewal_date",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "op": "retire_field",
+      "phase": "contract",
+      "seq": 3,
+      "target": {
+        "entity": "contract",
+        "field": "renewal_note"
+      }
+    }
+  ],
+  "requires": {
+    "after": [
+      "platform/platform/0001-service-desk-priority"
+    ],
+    "platform": ">=4.2.0"
+  },
+  "scope": "acme",
+  "seq": 1,
+  "title": "Acme: contract renewal date"
+}

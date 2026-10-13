@@ -1,0 +1,223 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:d95f22527f217449505fdefceae4c47bd0bf2e3f0e4e2343542aa8f3551a999b",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-metadata-autovalue.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "517006bc-4912-7cee-9cfb-3c115100c0c9",
+  "layer": "platform",
+  "name": "attome-metadata-autovalue",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Auto Value",
+          "is_append_only": false,
+          "logicalname": "autovalue",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "autovalue"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Field (attribute)",
+          "field_type": "text",
+          "is_sortable": true,
+          "logicalname": "attribute_logicalname"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "autovalue",
+        "field": "attribute_logicalname"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Entity (table)",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "entity_logicalname"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "autovalue",
+        "field": "entity_logicalname"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Format (e.g. AVG-{DDDD}-{YY-MM-DD})",
+          "field_type": "text",
+          "is_sortable": true,
+          "logicalname": "format"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "autovalue",
+        "field": "format"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Initial Value",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "initial_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "autovalue",
+        "field": "initial_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "autovalue",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Next Value",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "next_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "autovalue",
+        "field": "next_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Reset Counter",
+          "field_type": "choice",
+          "is_sortable": true,
+          "logicalname": "reset_scope",
+          "options": {
+            "choices": [
+              "never",
+              "yearly",
+              "monthly",
+              "daily"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "autovalue",
+        "field": "reset_scope"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Current Period",
+          "field_type": "text",
+          "is_sortable": true,
+          "logicalname": "scope_key"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "autovalue",
+        "field": "scope_key"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "autovalue",
+          "entity_mappings": [],
+          "name": "All Auto Values",
+          "required_privilege": "autovalue.read",
+          "sql": "SELECT id, name, entity_logicalname, attribute_logicalname, format, initial_value, next_value, reset_scope, scope_key, row_version, created_at, modified_at FROM autovalue WHERE is_active = TRUE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "autovalue",
+        "query": "All Auto Values"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "autovalue",
+          "is_default": true,
+          "name": "All Auto Values",
+          "query": {
+            "entity": "autovalue",
+            "name": "All Auto Values"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "autovalue",
+        "view": "All Auto Values"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 2,
+  "title": "Platform definitions: attome-metadata-autovalue"
+}

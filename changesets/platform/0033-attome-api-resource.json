@@ -1,0 +1,260 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:1c380c33306aa2f95bc19daf79d749b4333ed53316d0fb4c9513f088d6dba3ca",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-api-resource.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "272f2b35-06e5-7a89-b863-ed684ef90648",
+  "layer": "platform",
+  "name": "attome-api-resource",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resource Availability",
+          "is_append_only": false,
+          "logicalname": "resource_availability"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "resource_availability"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resource Skill",
+          "is_append_only": false,
+          "logicalname": "resource_skill",
+          "primary_name_attribute": "skill"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "resource_skill"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Leave End",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "leave_end"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "resource_availability",
+        "field": "leave_end"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Leave Start",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "leave_start"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "resource_availability",
+        "field": "leave_start"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Reason",
+          "field_type": "text",
+          "logicalname": "reason"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "resource_availability",
+        "field": "reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Skill",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "skill"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "resource_skill",
+        "field": "skill"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Skill Level",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "skill_level"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "resource_skill",
+        "field": "skill_level"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "user_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "resource_availability",
+        "field": "user_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "user_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "resource_skill",
+        "field": "user_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "resource_availability",
+          "entity_mappings": [],
+          "name": "Active Resource Availability",
+          "required_privilege": "resource_availability.read",
+          "sql": "SELECT id, user_id, leave_start, leave_end, reason, created_at FROM resource_availability WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "resource_availability",
+        "query": "Active Resource Availability"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "resource_skill",
+          "entity_mappings": [],
+          "name": "Active Resource Skills",
+          "required_privilege": "resource_skill.read",
+          "sql": "SELECT id, user_id, skill, skill_level, created_at FROM resource_skill WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "resource_skill",
+        "query": "Active Resource Skills"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "resource_availability",
+          "is_default": true,
+          "name": "Active Resource Availability",
+          "query": {
+            "entity": "resource_availability",
+            "name": "Active Resource Availability"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "resource_availability",
+        "view": "Active Resource Availability"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "resource_skill",
+          "is_default": true,
+          "name": "Active Resource Skills",
+          "query": {
+            "entity": "resource_skill",
+            "name": "Active Resource Skills"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "resource_skill",
+        "view": "Active Resource Skills"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 33,
+  "title": "Platform definitions: attome-api-resource"
+}

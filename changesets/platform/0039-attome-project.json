@@ -1,0 +1,4999 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:008d8bef7052f397bda0bab975b7f52e18d57875298fcbcb4aae34dc213bd619",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-project.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "43e8794a-055c-7354-aa15-2aaef94263c4",
+  "layer": "platform",
+  "name": "attome-project",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Approve or reject a project change request (M69 S3)",
+          "key": "project_change_request.approve",
+          "name": "project_change_request.approve"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "project_change_request.approve"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Approve or reject a submitted timesheet (M69 S3)",
+          "key": "project_timesheet.approve",
+          "name": "project_timesheet.approve"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "project_timesheet.approve"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project",
+          "is_append_only": false,
+          "logicalname": "attome_project",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "attome_project"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Baseline",
+          "is_append_only": true,
+          "logicalname": "project_baseline",
+          "primary_name_attribute": "label"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "project_baseline"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Baseline Item",
+          "is_append_only": true,
+          "logicalname": "project_baseline_item"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "project_baseline_item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Change Request",
+          "is_append_only": false,
+          "logicalname": "project_change_request",
+          "primary_name_attribute": "title"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "project_change_request"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Deliverable",
+          "is_append_only": false,
+          "logicalname": "project_deliverable",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "project_deliverable"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Issue",
+          "is_append_only": false,
+          "logicalname": "project_issue",
+          "primary_name_attribute": "title"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "project_issue"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Lesson",
+          "is_append_only": false,
+          "logicalname": "project_lesson"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "project_lesson"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Meeting",
+          "is_append_only": false,
+          "logicalname": "project_meeting",
+          "primary_name_attribute": "title"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "project_meeting"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Portfolio",
+          "is_append_only": false,
+          "logicalname": "project_portfolio",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "project_portfolio"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Program",
+          "is_append_only": false,
+          "logicalname": "project_program",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "project_program"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resource Rate",
+          "is_append_only": false,
+          "logicalname": "project_resource_rate"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "project_resource_rate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project Team",
+          "is_append_only": false,
+          "logicalname": "project_team"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "project_team"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project Template",
+          "is_append_only": false,
+          "logicalname": "project_template",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "project_template"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Time Entry",
+          "is_append_only": false,
+          "logicalname": "project_time_entry"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "project_time_entry"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Timesheet",
+          "is_append_only": false,
+          "logicalname": "project_timesheet"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "project_timesheet"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Work Item",
+          "is_append_only": false,
+          "logicalname": "project_work_item",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "project_work_item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Work Item Dependency",
+          "is_append_only": false,
+          "logicalname": "project_work_item_dependency"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "project_work_item_dependency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resource Allocation",
+          "is_append_only": false,
+          "logicalname": "resource_allocation"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "resource_allocation"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Actual End Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "actual_end_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "attome_project",
+        "field": "actual_end_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Actual Start Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "actual_start_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "attome_project",
+        "field": "actual_start_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Assumptions",
+          "field_type": "text",
+          "logicalname": "assumptions"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "attome_project",
+        "field": "assumptions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Budget Amount",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "budget_amount"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "attome_project",
+        "field": "budget_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Budget Consumed",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "budget_consumed"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "attome_project",
+        "field": "budget_consumed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Constraints",
+          "field_type": "text",
+          "logicalname": "constraints"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "attome_project",
+        "field": "constraints"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Delivery Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "delivery_type",
+          "options": {
+            "choices": [
+              "managed_delivery",
+              "fixed_price",
+              "time_and_materials",
+              "internal"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "attome_project",
+        "field": "delivery_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "attome_project",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Health",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "health",
+          "options": {
+            "choices": [
+              "green",
+              "amber",
+              "red"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "attome_project",
+        "field": "health"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Confidential",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_confidential"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "attome_project",
+        "field": "is_confidential"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "attome_project",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Objectives",
+          "field_type": "text",
+          "logicalname": "objectives"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "attome_project",
+        "field": "objectives"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Priority",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "priority",
+          "options": {
+            "choices": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "attome_project",
+        "field": "priority"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project Code",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "project_code"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "attome_project",
+        "field": "project_code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Start Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "start_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "attome_project",
+        "field": "start_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "planning",
+              "active",
+              "on_hold",
+              "completed",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "attome_project",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Success Criteria",
+          "field_type": "text",
+          "logicalname": "success_criteria"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "attome_project",
+        "field": "success_criteria"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Target End Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "target_end_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "attome_project",
+        "field": "target_end_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Captured At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "captured_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "project_baseline",
+        "field": "captured_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Label",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "label"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "project_baseline",
+        "field": "label"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Trigger",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "trigger",
+          "options": {
+            "choices": [
+              "initial",
+              "change_request",
+              "manual"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "project_baseline",
+        "field": "trigger"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Planned Budget",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "planned_budget"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "project_baseline_item",
+        "field": "planned_budget"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Planned Due",
+          "field_type": "date",
+          "is_sortable": true,
+          "logicalname": "planned_due"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "project_baseline_item",
+        "field": "planned_due"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Planned Points",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "planned_points"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "project_baseline_item",
+        "field": "planned_points"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Planned Start",
+          "field_type": "date",
+          "is_sortable": true,
+          "logicalname": "planned_start"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "project_baseline_item",
+        "field": "planned_start"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "project_change_request",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Budget Impact",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "impact_budget"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "project_change_request",
+        "field": "impact_budget"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Schedule Impact (Days)",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "impact_schedule_days"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "project_change_request",
+        "field": "impact_schedule_days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Customer Facing",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_customer_facing"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "project_change_request",
+        "field": "is_customer_facing"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Requested Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "requested_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "project_change_request",
+        "field": "requested_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "pending",
+              "approved",
+              "rejected"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "project_change_request",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Title",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "title"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "project_change_request",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "project_deliverable",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Due Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "due_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "project_deliverable",
+        "field": "due_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "project_deliverable",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "draft",
+              "submitted",
+              "accepted",
+              "rejected"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "project_deliverable",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "project_issue",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Identified Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "identified_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "project_issue",
+        "field": "identified_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "issue_type",
+          "options": {
+            "choices": [
+              "issue",
+              "risk"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "project_issue",
+        "field": "issue_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Severity",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "severity",
+          "options": {
+            "choices": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "project_issue",
+        "field": "severity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "open",
+              "mitigating",
+              "resolved",
+              "closed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "project_issue",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Title",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "title"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "project_issue",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Category",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "category",
+          "options": {
+            "choices": [
+              "what_went_well",
+              "what_went_wrong",
+              "recurring_blocker",
+              "successful_practice"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "project_lesson",
+        "field": "category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "project_lesson",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "AI Generated",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_ai_generated"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "project_lesson",
+        "field": "is_ai_generated"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Attendees",
+          "field_type": "text",
+          "logicalname": "attendees"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "project_meeting",
+        "field": "attendees"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Notes",
+          "field_type": "text",
+          "logicalname": "notes"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "project_meeting",
+        "field": "notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Occurred At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "occurred_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "project_meeting",
+        "field": "occurred_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Title",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "title"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "project_meeting",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "project_portfolio",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "project_portfolio",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Strategic Objective",
+          "field_type": "text",
+          "logicalname": "strategic_objective"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "project_portfolio",
+        "field": "strategic_objective"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "project_program",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "project_program",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Billable Rate",
+          "field_type": "number",
+          "is_sensitive": true,
+          "is_sortable": true,
+          "logicalname": "billable_rate"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "project_resource_rate",
+        "field": "billable_rate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Effective Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "effective_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "project_resource_rate",
+        "field": "effective_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Internal Cost Rate",
+          "field_type": "number",
+          "is_sensitive": true,
+          "is_sortable": true,
+          "logicalname": "internal_cost_rate"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "project_resource_rate",
+        "field": "internal_cost_rate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Notes",
+          "field_type": "text",
+          "logicalname": "notes"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "project_team",
+        "field": "notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Relationship",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "relationship_type",
+          "options": {
+            "choices": [
+              "delivery",
+              "customer",
+              "vendor",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "entity": "project_team",
+        "field": "relationship_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "entity": "project_template",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Industry",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "industry"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "entity": "project_template",
+        "field": "industry"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Published",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_published"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "entity": "project_template",
+        "field": "is_published"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "entity": "project_template",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Source Bundle Ref",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "source_bundle_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "entity": "project_template",
+        "field": "source_bundle_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Entry Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "entry_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "entity": "project_time_entry",
+        "field": "entry_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Hours",
+          "field_type": "number",
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "hours"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "entity": "project_time_entry",
+        "field": "hours"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Billable",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "is_billable"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "entity": "project_time_entry",
+        "field": "is_billable"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Notes",
+          "field_type": "text",
+          "logicalname": "notes"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "entity": "project_time_entry",
+        "field": "notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Approved At",
+          "field_type": "date",
+          "is_sortable": true,
+          "logicalname": "approved_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "entity": "project_timesheet",
+        "field": "approved_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "draft",
+              "submitted",
+              "approved",
+              "rejected"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "entity": "project_timesheet",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Week Start Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "week_start_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "entity": "project_timesheet",
+        "field": "week_start_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "entity": "project_work_item",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Due Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "due_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "entity": "project_work_item",
+        "field": "due_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "item_type",
+          "options": {
+            "choices": [
+              "phase",
+              "task"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "entity": "project_work_item",
+        "field": "item_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "entity": "project_work_item",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Points",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "points"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "entity": "project_work_item",
+        "field": "points"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Sequence",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "sequence"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "entity": "project_work_item",
+        "field": "sequence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Start Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "start_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "entity": "project_work_item",
+        "field": "start_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "not_started",
+              "in_progress",
+              "done",
+              "blocked"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "entity": "project_work_item",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "dependency_type",
+          "options": {
+            "choices": [
+              "finish_to_start",
+              "start_to_start",
+              "finish_to_finish",
+              "start_to_finish"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "entity": "project_work_item_dependency",
+        "field": "dependency_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Lag (Days)",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "lag_days"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "entity": "project_work_item_dependency",
+        "field": "lag_days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Allocation %",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "allocation_percent"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "entity": "resource_allocation",
+        "field": "allocation_percent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "End Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "end_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "entity": "resource_allocation",
+        "field": "end_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Hours Per Week",
+          "field_type": "number",
+          "logicalname": "hours_per_week"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "entity": "resource_allocation",
+        "field": "hours_per_week"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Regarding Entity",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "regarding_entity"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "entity": "resource_allocation",
+        "field": "regarding_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Regarding Record",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "regarding_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "entity": "resource_allocation",
+        "field": "regarding_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Start Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "start_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "entity": "resource_allocation",
+        "field": "start_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Organization",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "organization_id",
+          "lookup_entity": "organization"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 108,
+      "target": {
+        "entity": "attome_project",
+        "field": "organization_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 109,
+      "target": {
+        "entity": "attome_project",
+        "field": "owner_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Program",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "program_id",
+          "lookup_entity": "project_program"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 110,
+      "target": {
+        "entity": "attome_project",
+        "field": "program_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Captured By",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "captured_by",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 111,
+      "target": {
+        "entity": "project_baseline",
+        "field": "captured_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "project_id",
+          "lookup_entity": "attome_project"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 112,
+      "target": {
+        "entity": "project_baseline",
+        "field": "project_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Baseline",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "baseline_id",
+          "lookup_entity": "project_baseline"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 113,
+      "target": {
+        "entity": "project_baseline_item",
+        "field": "baseline_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Work Item",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "work_item_id",
+          "lookup_entity": "project_work_item"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 114,
+      "target": {
+        "entity": "project_baseline_item",
+        "field": "work_item_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "project_id",
+          "lookup_entity": "attome_project"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 115,
+      "target": {
+        "entity": "project_change_request",
+        "field": "project_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Requested By",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "requested_by",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 116,
+      "target": {
+        "entity": "project_change_request",
+        "field": "requested_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "project_id",
+          "lookup_entity": "attome_project"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 117,
+      "target": {
+        "entity": "project_deliverable",
+        "field": "project_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Work Item",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "work_item_id",
+          "lookup_entity": "project_work_item"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 118,
+      "target": {
+        "entity": "project_deliverable",
+        "field": "work_item_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 119,
+      "target": {
+        "entity": "project_issue",
+        "field": "owner_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "project_id",
+          "lookup_entity": "attome_project"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 120,
+      "target": {
+        "entity": "project_issue",
+        "field": "project_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Applied To Template",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "applied_to_template_id",
+          "lookup_entity": "project_template"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 121,
+      "target": {
+        "entity": "project_lesson",
+        "field": "applied_to_template_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "project_id",
+          "lookup_entity": "attome_project"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 122,
+      "target": {
+        "entity": "project_lesson",
+        "field": "project_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Organizer",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "organizer_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 123,
+      "target": {
+        "entity": "project_meeting",
+        "field": "organizer_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "project_id",
+          "lookup_entity": "attome_project"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 124,
+      "target": {
+        "entity": "project_meeting",
+        "field": "project_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 125,
+      "target": {
+        "entity": "project_portfolio",
+        "field": "owner_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 126,
+      "target": {
+        "entity": "project_program",
+        "field": "owner_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Portfolio",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "portfolio_id",
+          "lookup_entity": "project_portfolio"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 127,
+      "target": {
+        "entity": "project_program",
+        "field": "portfolio_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "project_id",
+          "lookup_entity": "attome_project"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 128,
+      "target": {
+        "entity": "project_resource_rate",
+        "field": "project_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "user_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 129,
+      "target": {
+        "entity": "project_resource_rate",
+        "field": "user_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "project_id",
+          "lookup_entity": "attome_project"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 130,
+      "target": {
+        "entity": "project_team",
+        "field": "project_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Team",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "team_id",
+          "lookup_entity": "team"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 131,
+      "target": {
+        "entity": "project_team",
+        "field": "team_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Timesheet",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "timesheet_id",
+          "lookup_entity": "project_timesheet"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 132,
+      "target": {
+        "entity": "project_time_entry",
+        "field": "timesheet_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "user_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 133,
+      "target": {
+        "entity": "project_time_entry",
+        "field": "user_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Work Item",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "work_item_id",
+          "lookup_entity": "project_work_item"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 134,
+      "target": {
+        "entity": "project_time_entry",
+        "field": "work_item_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Approved By",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "approved_by",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 135,
+      "target": {
+        "entity": "project_timesheet",
+        "field": "approved_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "user_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 136,
+      "target": {
+        "entity": "project_timesheet",
+        "field": "user_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 137,
+      "target": {
+        "entity": "project_work_item",
+        "field": "owner_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Parent Work Item",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "parent_work_item_id",
+          "lookup_entity": "project_work_item"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 138,
+      "target": {
+        "entity": "project_work_item",
+        "field": "parent_work_item_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Project",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "project_id",
+          "lookup_entity": "attome_project"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 139,
+      "target": {
+        "entity": "project_work_item",
+        "field": "project_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Predecessor",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "predecessor_id",
+          "lookup_entity": "project_work_item"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 140,
+      "target": {
+        "entity": "project_work_item_dependency",
+        "field": "predecessor_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Successor",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "successor_id",
+          "lookup_entity": "project_work_item"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 141,
+      "target": {
+        "entity": "project_work_item_dependency",
+        "field": "successor_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Resource",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "user_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 142,
+      "target": {
+        "entity": "resource_allocation",
+        "field": "user_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_project",
+          "entity_mappings": [],
+          "name": "Active Projects",
+          "required_privilege": "attome_project.read",
+          "sql": "SELECT id FROM \"attome_project\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 143,
+      "target": {
+        "entity": "attome_project",
+        "query": "Active Projects"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_project",
+          "entity_mappings": [],
+          "name": "Inactive Projects",
+          "required_privilege": "attome_project.read",
+          "sql": "SELECT id FROM \"attome_project\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 144,
+      "target": {
+        "entity": "attome_project",
+        "query": "Inactive Projects"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_baseline",
+          "entity_mappings": [],
+          "name": "Active Baselines",
+          "required_privilege": "project_baseline.read",
+          "sql": "SELECT id FROM \"project_baseline\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 145,
+      "target": {
+        "entity": "project_baseline",
+        "query": "Active Baselines"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_baseline",
+          "entity_mappings": [],
+          "name": "Inactive Baselines",
+          "required_privilege": "project_baseline.read",
+          "sql": "SELECT id FROM \"project_baseline\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 146,
+      "target": {
+        "entity": "project_baseline",
+        "query": "Inactive Baselines"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_baseline_item",
+          "entity_mappings": [],
+          "name": "Active Baseline Items",
+          "required_privilege": "project_baseline_item.read",
+          "sql": "SELECT id FROM \"project_baseline_item\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 147,
+      "target": {
+        "entity": "project_baseline_item",
+        "query": "Active Baseline Items"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_baseline_item",
+          "entity_mappings": [],
+          "name": "Inactive Baseline Items",
+          "required_privilege": "project_baseline_item.read",
+          "sql": "SELECT id FROM \"project_baseline_item\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 148,
+      "target": {
+        "entity": "project_baseline_item",
+        "query": "Inactive Baseline Items"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_change_request",
+          "entity_mappings": [],
+          "name": "Active Change Requests",
+          "required_privilege": "project_change_request.read",
+          "sql": "SELECT id FROM \"project_change_request\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 149,
+      "target": {
+        "entity": "project_change_request",
+        "query": "Active Change Requests"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_change_request",
+          "entity_mappings": [],
+          "name": "Inactive Change Requests",
+          "required_privilege": "project_change_request.read",
+          "sql": "SELECT id FROM \"project_change_request\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 150,
+      "target": {
+        "entity": "project_change_request",
+        "query": "Inactive Change Requests"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_deliverable",
+          "entity_mappings": [],
+          "name": "Active Deliverables",
+          "required_privilege": "project_deliverable.read",
+          "sql": "SELECT id FROM \"project_deliverable\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 151,
+      "target": {
+        "entity": "project_deliverable",
+        "query": "Active Deliverables"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_deliverable",
+          "entity_mappings": [],
+          "name": "Inactive Deliverables",
+          "required_privilege": "project_deliverable.read",
+          "sql": "SELECT id FROM \"project_deliverable\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 152,
+      "target": {
+        "entity": "project_deliverable",
+        "query": "Inactive Deliverables"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_issue",
+          "entity_mappings": [],
+          "name": "Active Issues & Risks",
+          "required_privilege": "project_issue.read",
+          "sql": "SELECT id FROM \"project_issue\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 153,
+      "target": {
+        "entity": "project_issue",
+        "query": "Active Issues & Risks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_issue",
+          "entity_mappings": [],
+          "name": "Inactive Issues & Risks",
+          "required_privilege": "project_issue.read",
+          "sql": "SELECT id FROM \"project_issue\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 154,
+      "target": {
+        "entity": "project_issue",
+        "query": "Inactive Issues & Risks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_lesson",
+          "entity_mappings": [],
+          "name": "Active Lessons",
+          "required_privilege": "project_lesson.read",
+          "sql": "SELECT id FROM \"project_lesson\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 155,
+      "target": {
+        "entity": "project_lesson",
+        "query": "Active Lessons"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_lesson",
+          "entity_mappings": [],
+          "name": "Inactive Lessons",
+          "required_privilege": "project_lesson.read",
+          "sql": "SELECT id FROM \"project_lesson\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 156,
+      "target": {
+        "entity": "project_lesson",
+        "query": "Inactive Lessons"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_meeting",
+          "entity_mappings": [],
+          "name": "Active Meetings",
+          "required_privilege": "project_meeting.read",
+          "sql": "SELECT id FROM \"project_meeting\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 157,
+      "target": {
+        "entity": "project_meeting",
+        "query": "Active Meetings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_meeting",
+          "entity_mappings": [],
+          "name": "Inactive Meetings",
+          "required_privilege": "project_meeting.read",
+          "sql": "SELECT id FROM \"project_meeting\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 158,
+      "target": {
+        "entity": "project_meeting",
+        "query": "Inactive Meetings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_portfolio",
+          "entity_mappings": [],
+          "name": "Active Portfolios",
+          "required_privilege": "project_portfolio.read",
+          "sql": "SELECT id FROM \"project_portfolio\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 159,
+      "target": {
+        "entity": "project_portfolio",
+        "query": "Active Portfolios"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_portfolio",
+          "entity_mappings": [],
+          "name": "Inactive Portfolios",
+          "required_privilege": "project_portfolio.read",
+          "sql": "SELECT id FROM \"project_portfolio\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 160,
+      "target": {
+        "entity": "project_portfolio",
+        "query": "Inactive Portfolios"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_program",
+          "entity_mappings": [],
+          "name": "Active Programs",
+          "required_privilege": "project_program.read",
+          "sql": "SELECT id FROM \"project_program\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 161,
+      "target": {
+        "entity": "project_program",
+        "query": "Active Programs"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_program",
+          "entity_mappings": [],
+          "name": "Inactive Programs",
+          "required_privilege": "project_program.read",
+          "sql": "SELECT id FROM \"project_program\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 162,
+      "target": {
+        "entity": "project_program",
+        "query": "Inactive Programs"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_resource_rate",
+          "entity_mappings": [],
+          "name": "Active Resource Rates",
+          "required_privilege": "project_resource_rate.read",
+          "sql": "SELECT id FROM \"project_resource_rate\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 163,
+      "target": {
+        "entity": "project_resource_rate",
+        "query": "Active Resource Rates"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_resource_rate",
+          "entity_mappings": [],
+          "name": "Inactive Resource Rates",
+          "required_privilege": "project_resource_rate.read",
+          "sql": "SELECT id FROM \"project_resource_rate\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 164,
+      "target": {
+        "entity": "project_resource_rate",
+        "query": "Inactive Resource Rates"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_team",
+          "entity_mappings": [],
+          "name": "Active Project Teams",
+          "required_privilege": "project_team.read",
+          "sql": "SELECT id FROM \"project_team\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 165,
+      "target": {
+        "entity": "project_team",
+        "query": "Active Project Teams"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_team",
+          "entity_mappings": [],
+          "name": "Inactive Project Teams",
+          "required_privilege": "project_team.read",
+          "sql": "SELECT id FROM \"project_team\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 166,
+      "target": {
+        "entity": "project_team",
+        "query": "Inactive Project Teams"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_template",
+          "entity_mappings": [],
+          "name": "Active Project Templates",
+          "required_privilege": "project_template.read",
+          "sql": "SELECT id FROM \"project_template\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 167,
+      "target": {
+        "entity": "project_template",
+        "query": "Active Project Templates"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_template",
+          "entity_mappings": [],
+          "name": "Inactive Project Templates",
+          "required_privilege": "project_template.read",
+          "sql": "SELECT id FROM \"project_template\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 168,
+      "target": {
+        "entity": "project_template",
+        "query": "Inactive Project Templates"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_time_entry",
+          "entity_mappings": [],
+          "name": "Active Time Entries",
+          "required_privilege": "project_time_entry.read",
+          "sql": "SELECT id FROM \"project_time_entry\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 169,
+      "target": {
+        "entity": "project_time_entry",
+        "query": "Active Time Entries"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_time_entry",
+          "entity_mappings": [],
+          "name": "Inactive Time Entries",
+          "required_privilege": "project_time_entry.read",
+          "sql": "SELECT id FROM \"project_time_entry\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 170,
+      "target": {
+        "entity": "project_time_entry",
+        "query": "Inactive Time Entries"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_timesheet",
+          "entity_mappings": [],
+          "name": "Active Timesheets",
+          "required_privilege": "project_timesheet.read",
+          "sql": "SELECT id FROM \"project_timesheet\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 171,
+      "target": {
+        "entity": "project_timesheet",
+        "query": "Active Timesheets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_timesheet",
+          "entity_mappings": [],
+          "name": "Inactive Timesheets",
+          "required_privilege": "project_timesheet.read",
+          "sql": "SELECT id FROM \"project_timesheet\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 172,
+      "target": {
+        "entity": "project_timesheet",
+        "query": "Inactive Timesheets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_work_item",
+          "entity_mappings": [],
+          "name": "Active Tasks",
+          "required_privilege": "project_work_item.read",
+          "sql": "SELECT id FROM \"project_work_item\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 173,
+      "target": {
+        "entity": "project_work_item",
+        "query": "Active Tasks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_work_item",
+          "entity_mappings": [],
+          "name": "Inactive Tasks",
+          "required_privilege": "project_work_item.read",
+          "sql": "SELECT id FROM \"project_work_item\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 174,
+      "target": {
+        "entity": "project_work_item",
+        "query": "Inactive Tasks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_work_item_dependency",
+          "entity_mappings": [],
+          "name": "Active Work Item Dependencies",
+          "required_privilege": "project_work_item_dependency.read",
+          "sql": "SELECT id FROM \"project_work_item_dependency\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 175,
+      "target": {
+        "entity": "project_work_item_dependency",
+        "query": "Active Work Item Dependencies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_work_item_dependency",
+          "entity_mappings": [],
+          "name": "Inactive Work Item Dependencies",
+          "required_privilege": "project_work_item_dependency.read",
+          "sql": "SELECT id FROM \"project_work_item_dependency\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 176,
+      "target": {
+        "entity": "project_work_item_dependency",
+        "query": "Inactive Work Item Dependencies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "resource_allocation",
+          "entity_mappings": [],
+          "name": "Active Resource Allocations",
+          "required_privilege": "resource_allocation.read",
+          "sql": "SELECT id FROM \"resource_allocation\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 177,
+      "target": {
+        "entity": "resource_allocation",
+        "query": "Active Resource Allocations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "resource_allocation",
+          "entity_mappings": [],
+          "name": "Inactive Resource Allocations",
+          "required_privilege": "resource_allocation.read",
+          "sql": "SELECT id FROM \"resource_allocation\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 178,
+      "target": {
+        "entity": "resource_allocation",
+        "query": "Inactive Resource Allocations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_project",
+          "is_default": true,
+          "name": "Active Projects",
+          "query": {
+            "entity": "attome_project",
+            "name": "Active Projects"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 179,
+      "target": {
+        "entity": "attome_project",
+        "view": "Active Projects"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_project",
+          "is_default": false,
+          "name": "Inactive Projects",
+          "query": {
+            "entity": "attome_project",
+            "name": "Inactive Projects"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 180,
+      "target": {
+        "entity": "attome_project",
+        "view": "Inactive Projects"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_baseline",
+          "is_default": true,
+          "name": "Active Baselines",
+          "query": {
+            "entity": "project_baseline",
+            "name": "Active Baselines"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 181,
+      "target": {
+        "entity": "project_baseline",
+        "view": "Active Baselines"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_baseline",
+          "is_default": false,
+          "name": "Inactive Baselines",
+          "query": {
+            "entity": "project_baseline",
+            "name": "Inactive Baselines"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 182,
+      "target": {
+        "entity": "project_baseline",
+        "view": "Inactive Baselines"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_baseline_item",
+          "is_default": true,
+          "name": "Active Baseline Items",
+          "query": {
+            "entity": "project_baseline_item",
+            "name": "Active Baseline Items"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 183,
+      "target": {
+        "entity": "project_baseline_item",
+        "view": "Active Baseline Items"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_baseline_item",
+          "is_default": false,
+          "name": "Inactive Baseline Items",
+          "query": {
+            "entity": "project_baseline_item",
+            "name": "Inactive Baseline Items"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 184,
+      "target": {
+        "entity": "project_baseline_item",
+        "view": "Inactive Baseline Items"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_change_request",
+          "is_default": true,
+          "name": "Active Change Requests",
+          "query": {
+            "entity": "project_change_request",
+            "name": "Active Change Requests"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 185,
+      "target": {
+        "entity": "project_change_request",
+        "view": "Active Change Requests"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_change_request",
+          "is_default": false,
+          "name": "Inactive Change Requests",
+          "query": {
+            "entity": "project_change_request",
+            "name": "Inactive Change Requests"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 186,
+      "target": {
+        "entity": "project_change_request",
+        "view": "Inactive Change Requests"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_deliverable",
+          "is_default": true,
+          "name": "Active Deliverables",
+          "query": {
+            "entity": "project_deliverable",
+            "name": "Active Deliverables"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 187,
+      "target": {
+        "entity": "project_deliverable",
+        "view": "Active Deliverables"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_deliverable",
+          "is_default": false,
+          "name": "Inactive Deliverables",
+          "query": {
+            "entity": "project_deliverable",
+            "name": "Inactive Deliverables"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 188,
+      "target": {
+        "entity": "project_deliverable",
+        "view": "Inactive Deliverables"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_issue",
+          "is_default": true,
+          "name": "Active Issues & Risks",
+          "query": {
+            "entity": "project_issue",
+            "name": "Active Issues & Risks"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 189,
+      "target": {
+        "entity": "project_issue",
+        "view": "Active Issues & Risks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_issue",
+          "is_default": false,
+          "name": "Inactive Issues & Risks",
+          "query": {
+            "entity": "project_issue",
+            "name": "Inactive Issues & Risks"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 190,
+      "target": {
+        "entity": "project_issue",
+        "view": "Inactive Issues & Risks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_lesson",
+          "is_default": true,
+          "name": "Active Lessons",
+          "query": {
+            "entity": "project_lesson",
+            "name": "Active Lessons"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 191,
+      "target": {
+        "entity": "project_lesson",
+        "view": "Active Lessons"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_lesson",
+          "is_default": false,
+          "name": "Inactive Lessons",
+          "query": {
+            "entity": "project_lesson",
+            "name": "Inactive Lessons"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 192,
+      "target": {
+        "entity": "project_lesson",
+        "view": "Inactive Lessons"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_meeting",
+          "is_default": true,
+          "name": "Active Meetings",
+          "query": {
+            "entity": "project_meeting",
+            "name": "Active Meetings"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 193,
+      "target": {
+        "entity": "project_meeting",
+        "view": "Active Meetings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_meeting",
+          "is_default": false,
+          "name": "Inactive Meetings",
+          "query": {
+            "entity": "project_meeting",
+            "name": "Inactive Meetings"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 194,
+      "target": {
+        "entity": "project_meeting",
+        "view": "Inactive Meetings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_portfolio",
+          "is_default": true,
+          "name": "Active Portfolios",
+          "query": {
+            "entity": "project_portfolio",
+            "name": "Active Portfolios"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 195,
+      "target": {
+        "entity": "project_portfolio",
+        "view": "Active Portfolios"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_portfolio",
+          "is_default": false,
+          "name": "Inactive Portfolios",
+          "query": {
+            "entity": "project_portfolio",
+            "name": "Inactive Portfolios"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 196,
+      "target": {
+        "entity": "project_portfolio",
+        "view": "Inactive Portfolios"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_program",
+          "is_default": true,
+          "name": "Active Programs",
+          "query": {
+            "entity": "project_program",
+            "name": "Active Programs"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 197,
+      "target": {
+        "entity": "project_program",
+        "view": "Active Programs"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_program",
+          "is_default": false,
+          "name": "Inactive Programs",
+          "query": {
+            "entity": "project_program",
+            "name": "Inactive Programs"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 198,
+      "target": {
+        "entity": "project_program",
+        "view": "Inactive Programs"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_resource_rate",
+          "is_default": true,
+          "name": "Active Resource Rates",
+          "query": {
+            "entity": "project_resource_rate",
+            "name": "Active Resource Rates"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 199,
+      "target": {
+        "entity": "project_resource_rate",
+        "view": "Active Resource Rates"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_resource_rate",
+          "is_default": false,
+          "name": "Inactive Resource Rates",
+          "query": {
+            "entity": "project_resource_rate",
+            "name": "Inactive Resource Rates"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 200,
+      "target": {
+        "entity": "project_resource_rate",
+        "view": "Inactive Resource Rates"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_team",
+          "is_default": true,
+          "name": "Active Project Teams",
+          "query": {
+            "entity": "project_team",
+            "name": "Active Project Teams"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 201,
+      "target": {
+        "entity": "project_team",
+        "view": "Active Project Teams"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_team",
+          "is_default": false,
+          "name": "Inactive Project Teams",
+          "query": {
+            "entity": "project_team",
+            "name": "Inactive Project Teams"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 202,
+      "target": {
+        "entity": "project_team",
+        "view": "Inactive Project Teams"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_template",
+          "is_default": true,
+          "name": "Active Project Templates",
+          "query": {
+            "entity": "project_template",
+            "name": "Active Project Templates"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 203,
+      "target": {
+        "entity": "project_template",
+        "view": "Active Project Templates"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_template",
+          "is_default": false,
+          "name": "Inactive Project Templates",
+          "query": {
+            "entity": "project_template",
+            "name": "Inactive Project Templates"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 204,
+      "target": {
+        "entity": "project_template",
+        "view": "Inactive Project Templates"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_time_entry",
+          "is_default": true,
+          "name": "Active Time Entries",
+          "query": {
+            "entity": "project_time_entry",
+            "name": "Active Time Entries"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 205,
+      "target": {
+        "entity": "project_time_entry",
+        "view": "Active Time Entries"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_time_entry",
+          "is_default": false,
+          "name": "Inactive Time Entries",
+          "query": {
+            "entity": "project_time_entry",
+            "name": "Inactive Time Entries"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 206,
+      "target": {
+        "entity": "project_time_entry",
+        "view": "Inactive Time Entries"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_timesheet",
+          "is_default": true,
+          "name": "Active Timesheets",
+          "query": {
+            "entity": "project_timesheet",
+            "name": "Active Timesheets"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 207,
+      "target": {
+        "entity": "project_timesheet",
+        "view": "Active Timesheets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_timesheet",
+          "is_default": false,
+          "name": "Inactive Timesheets",
+          "query": {
+            "entity": "project_timesheet",
+            "name": "Inactive Timesheets"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 208,
+      "target": {
+        "entity": "project_timesheet",
+        "view": "Inactive Timesheets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_work_item",
+          "is_default": true,
+          "name": "Active Tasks",
+          "query": {
+            "entity": "project_work_item",
+            "name": "Active Tasks"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 209,
+      "target": {
+        "entity": "project_work_item",
+        "view": "Active Tasks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_work_item",
+          "is_default": false,
+          "name": "Inactive Tasks",
+          "query": {
+            "entity": "project_work_item",
+            "name": "Inactive Tasks"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 210,
+      "target": {
+        "entity": "project_work_item",
+        "view": "Inactive Tasks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_work_item",
+          "is_default": false,
+          "kind": "kanban",
+          "name": "Task Board",
+          "query": {
+            "entity": "project_work_item",
+            "name": "Active Tasks"
+          },
+          "view_metadata": {
+            "state_field": "status"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 211,
+      "target": {
+        "entity": "project_work_item",
+        "view": "Task Board"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_work_item_dependency",
+          "is_default": true,
+          "name": "Active Work Item Dependencies",
+          "query": {
+            "entity": "project_work_item_dependency",
+            "name": "Active Work Item Dependencies"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 212,
+      "target": {
+        "entity": "project_work_item_dependency",
+        "view": "Active Work Item Dependencies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "project_work_item_dependency",
+          "is_default": false,
+          "name": "Inactive Work Item Dependencies",
+          "query": {
+            "entity": "project_work_item_dependency",
+            "name": "Inactive Work Item Dependencies"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 213,
+      "target": {
+        "entity": "project_work_item_dependency",
+        "view": "Inactive Work Item Dependencies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "resource_allocation",
+          "is_default": true,
+          "name": "Active Resource Allocations",
+          "query": {
+            "entity": "resource_allocation",
+            "name": "Active Resource Allocations"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 214,
+      "target": {
+        "entity": "resource_allocation",
+        "view": "Active Resource Allocations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "resource_allocation",
+          "is_default": false,
+          "name": "Inactive Resource Allocations",
+          "query": {
+            "entity": "resource_allocation",
+            "name": "Inactive Resource Allocations"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 215,
+      "target": {
+        "entity": "resource_allocation",
+        "view": "Inactive Resource Allocations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Decides project change requests and timesheets: the approve privilege on both, plus the read and update access the decision routes need. Nobody can approve a change request they requested or a timesheet that is their own (transition guard).",
+          "name": "Project Approver"
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 216,
+      "target": {
+        "role": "Project Approver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 217,
+      "target": {
+        "privilege": "project_change_request.approve",
+        "role": "Project Approver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 218,
+      "target": {
+        "privilege": "project_change_request.read",
+        "role": "Project Approver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 219,
+      "target": {
+        "privilege": "project_change_request.update",
+        "role": "Project Approver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 220,
+      "target": {
+        "privilege": "project_timesheet.approve",
+        "role": "Project Approver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 221,
+      "target": {
+        "privilege": "project_timesheet.read",
+        "role": "Project Approver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 222,
+      "target": {
+        "privilege": "project_timesheet.update",
+        "role": "Project Approver"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "attome_project",
+          "initial_state": "planning",
+          "name": "Project Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 223,
+      "target": {
+        "entity": "attome_project"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "from_state": "active",
+          "name": "Cancel",
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 224,
+      "target": {
+        "entity": "attome_project",
+        "transition": "active->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "from_state": "active",
+          "name": "Complete",
+          "to_state": "completed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 225,
+      "target": {
+        "entity": "attome_project",
+        "transition": "active->completed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "from_state": "active",
+          "name": "Put On Hold",
+          "to_state": "on_hold"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 226,
+      "target": {
+        "entity": "attome_project",
+        "transition": "active->on_hold"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 10,
+          "from_state": "cancelled",
+          "name": "Reinstate",
+          "to_state": "planning"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 227,
+      "target": {
+        "entity": "attome_project",
+        "transition": "cancelled->planning"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 9,
+          "from_state": "completed",
+          "name": "Reopen",
+          "to_state": "active"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 228,
+      "target": {
+        "entity": "attome_project",
+        "transition": "completed->active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 6,
+          "from_state": "on_hold",
+          "name": "Resume",
+          "to_state": "active"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 229,
+      "target": {
+        "entity": "attome_project",
+        "transition": "on_hold->active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 8,
+          "from_state": "on_hold",
+          "name": "Cancel",
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 230,
+      "target": {
+        "entity": "attome_project",
+        "transition": "on_hold->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 7,
+          "from_state": "on_hold",
+          "name": "Back To Planning",
+          "to_state": "planning"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 231,
+      "target": {
+        "entity": "attome_project",
+        "transition": "on_hold->planning"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "from_state": "planning",
+          "name": "Start",
+          "to_state": "active"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 232,
+      "target": {
+        "entity": "attome_project",
+        "transition": "planning->active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "from_state": "planning",
+          "name": "Cancel",
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 233,
+      "target": {
+        "entity": "attome_project",
+        "transition": "planning->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "from_state": "planning",
+          "name": "Put On Hold",
+          "to_state": "on_hold"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 234,
+      "target": {
+        "entity": "attome_project",
+        "transition": "planning->on_hold"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "project_change_request",
+          "initial_state": "pending",
+          "name": "Change Request Decision",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 235,
+      "target": {
+        "entity": "project_change_request"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "from_state": "pending",
+          "guard_expression": "current_user != requested_by",
+          "name": "approve",
+          "required_privilege": "project_change_request.approve",
+          "to_state": "approved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 236,
+      "target": {
+        "entity": "project_change_request",
+        "transition": "pending->approved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "from_state": "pending",
+          "guard_expression": "current_user != requested_by",
+          "name": "reject",
+          "required_privilege": "project_change_request.approve",
+          "to_state": "rejected"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 237,
+      "target": {
+        "entity": "project_change_request",
+        "transition": "pending->rejected"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "project_deliverable",
+          "initial_state": "draft",
+          "name": "Deliverable Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 238,
+      "target": {
+        "entity": "project_deliverable"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "from_state": "draft",
+          "name": "Submit",
+          "to_state": "submitted"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 239,
+      "target": {
+        "entity": "project_deliverable",
+        "transition": "draft->submitted"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "from_state": "rejected",
+          "name": "Rework",
+          "to_state": "draft"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 240,
+      "target": {
+        "entity": "project_deliverable",
+        "transition": "rejected->draft"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "from_state": "submitted",
+          "name": "Accept",
+          "to_state": "accepted"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 241,
+      "target": {
+        "entity": "project_deliverable",
+        "transition": "submitted->accepted"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "from_state": "submitted",
+          "name": "Withdraw",
+          "to_state": "draft"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 242,
+      "target": {
+        "entity": "project_deliverable",
+        "transition": "submitted->draft"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "from_state": "submitted",
+          "name": "Reject",
+          "to_state": "rejected"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 243,
+      "target": {
+        "entity": "project_deliverable",
+        "transition": "submitted->rejected"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "project_issue",
+          "initial_state": "open",
+          "name": "Issue Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 244,
+      "target": {
+        "entity": "project_issue"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 8,
+          "from_state": "closed",
+          "name": "Reopen",
+          "to_state": "open"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 245,
+      "target": {
+        "entity": "project_issue",
+        "transition": "closed->open"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "from_state": "mitigating",
+          "name": "Close",
+          "to_state": "closed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 246,
+      "target": {
+        "entity": "project_issue",
+        "transition": "mitigating->closed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "from_state": "mitigating",
+          "name": "Stop Mitigation",
+          "to_state": "open"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 247,
+      "target": {
+        "entity": "project_issue",
+        "transition": "mitigating->open"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "from_state": "mitigating",
+          "name": "Resolve",
+          "to_state": "resolved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 248,
+      "target": {
+        "entity": "project_issue",
+        "transition": "mitigating->resolved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "from_state": "open",
+          "name": "Close",
+          "to_state": "closed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 249,
+      "target": {
+        "entity": "project_issue",
+        "transition": "open->closed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "from_state": "open",
+          "name": "Start Mitigation",
+          "to_state": "mitigating"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 250,
+      "target": {
+        "entity": "project_issue",
+        "transition": "open->mitigating"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "from_state": "open",
+          "name": "Resolve",
+          "to_state": "resolved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 251,
+      "target": {
+        "entity": "project_issue",
+        "transition": "open->resolved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 6,
+          "from_state": "resolved",
+          "name": "Close",
+          "to_state": "closed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 252,
+      "target": {
+        "entity": "project_issue",
+        "transition": "resolved->closed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 7,
+          "from_state": "resolved",
+          "name": "Reopen",
+          "to_state": "open"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 253,
+      "target": {
+        "entity": "project_issue",
+        "transition": "resolved->open"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "project_timesheet",
+          "initial_state": "draft",
+          "name": "Timesheet Approval",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 254,
+      "target": {
+        "entity": "project_timesheet"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "from_state": "draft",
+          "name": "submit",
+          "to_state": "submitted"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 255,
+      "target": {
+        "entity": "project_timesheet",
+        "transition": "draft->submitted"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "from_state": "rejected",
+          "name": "revise",
+          "to_state": "draft"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 256,
+      "target": {
+        "entity": "project_timesheet",
+        "transition": "rejected->draft"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "from_state": "submitted",
+          "guard_expression": "current_user != user_id",
+          "name": "approve",
+          "required_privilege": "project_timesheet.approve",
+          "to_state": "approved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 257,
+      "target": {
+        "entity": "project_timesheet",
+        "transition": "submitted->approved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "from_state": "submitted",
+          "guard_expression": "current_user != user_id",
+          "name": "reject",
+          "required_privilege": "project_timesheet.approve",
+          "to_state": "rejected"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 258,
+      "target": {
+        "entity": "project_timesheet",
+        "transition": "submitted->rejected"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "project_work_item",
+          "initial_state": "not_started",
+          "name": "Work Item Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 259,
+      "target": {
+        "entity": "project_work_item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 11,
+          "from_state": "blocked",
+          "name": "blocked_to_done",
+          "to_state": "done"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 260,
+      "target": {
+        "entity": "project_work_item",
+        "transition": "blocked->done"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 10,
+          "from_state": "blocked",
+          "name": "blocked_to_in_progress",
+          "to_state": "in_progress"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 261,
+      "target": {
+        "entity": "project_work_item",
+        "transition": "blocked->in_progress"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 9,
+          "from_state": "blocked",
+          "name": "blocked_to_not_started",
+          "to_state": "not_started"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 262,
+      "target": {
+        "entity": "project_work_item",
+        "transition": "blocked->not_started"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 8,
+          "from_state": "done",
+          "name": "done_to_blocked",
+          "to_state": "blocked"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 263,
+      "target": {
+        "entity": "project_work_item",
+        "transition": "done->blocked"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 7,
+          "from_state": "done",
+          "name": "done_to_in_progress",
+          "to_state": "in_progress"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 264,
+      "target": {
+        "entity": "project_work_item",
+        "transition": "done->in_progress"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 6,
+          "from_state": "done",
+          "name": "done_to_not_started",
+          "to_state": "not_started"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 265,
+      "target": {
+        "entity": "project_work_item",
+        "transition": "done->not_started"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "from_state": "in_progress",
+          "name": "in_progress_to_blocked",
+          "to_state": "blocked"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 266,
+      "target": {
+        "entity": "project_work_item",
+        "transition": "in_progress->blocked"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "from_state": "in_progress",
+          "name": "in_progress_to_done",
+          "to_state": "done"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 267,
+      "target": {
+        "entity": "project_work_item",
+        "transition": "in_progress->done"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "from_state": "in_progress",
+          "name": "in_progress_to_not_started",
+          "to_state": "not_started"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 268,
+      "target": {
+        "entity": "project_work_item",
+        "transition": "in_progress->not_started"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "from_state": "not_started",
+          "name": "not_started_to_blocked",
+          "to_state": "blocked"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 269,
+      "target": {
+        "entity": "project_work_item",
+        "transition": "not_started->blocked"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "from_state": "not_started",
+          "name": "not_started_to_done",
+          "to_state": "done"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 270,
+      "target": {
+        "entity": "project_work_item",
+        "transition": "not_started->done"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "from_state": "not_started",
+          "name": "not_started_to_in_progress",
+          "to_state": "in_progress"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 271,
+      "target": {
+        "entity": "project_work_item",
+        "transition": "not_started->in_progress"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 39,
+  "title": "Platform definitions: attome-project"
+}

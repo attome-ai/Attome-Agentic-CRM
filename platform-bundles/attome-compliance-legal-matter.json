@@ -1,0 +1,33 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": { "platform_version": ">=4.0.1", "schema_version": 441, "modules": ["core"] },
+  "entities": [
+    {
+      "logicalname": "audit_legal_matter",
+      "display_name": "Legal Matter",
+      "primary_name_attribute": "reference",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "reference", "display_name": "Reference", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "custodian", "display_name": "Custodian", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "scope_entity", "display_name": "Scope Entity", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "scope_filter", "display_name": "Scope Filter", "field_type": "text" },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["open", "collecting", "collected", "releasing", "released", "closed"], "multi": false } },
+        { "logicalname": "collected_record_count", "display_name": "Collected Record Count", "field_type": "number", "is_filterable": true },
+        { "logicalname": "package_ref", "display_name": "Package Reference", "field_type": "text" },
+        { "logicalname": "package_checksum", "display_name": "Package Checksum", "field_type": "text" },
+        { "logicalname": "opened_at", "display_name": "Opened At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "collected_at", "display_name": "Collected At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "released_at", "display_name": "Released At", "field_type": "date", "is_sortable": true, "is_filterable": true }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "audit_legal_matter", "name": "Active Legal Matters", "sql": "SELECT id FROM \"audit_legal_matter\" WHERE is_active = true", "required_privilege": "audit_legal_matter.read" },
+    { "entity": "audit_legal_matter", "name": "Inactive Legal Matters", "sql": "SELECT id FROM \"audit_legal_matter\" WHERE is_active = false", "required_privilege": "audit_legal_matter.read" }
+  ],
+  "views": [
+    { "entity": "audit_legal_matter", "name": "Active Legal Matters", "query": { "entity": "audit_legal_matter", "name": "Active Legal Matters" }, "is_default": true },
+    { "entity": "audit_legal_matter", "name": "Inactive Legal Matters", "query": { "entity": "audit_legal_matter", "name": "Inactive Legal Matters" }, "is_default": false }
+  ]
+}

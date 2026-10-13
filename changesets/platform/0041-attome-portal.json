@@ -1,0 +1,465 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:1e6f3eebbb26da9fe060c3e4e5a6fe9ac8c8996e2ff158be20c1a4ff6f36d870",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-portal.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "bc004d46-60e5-7b70-94e6-9fcb1ff3747b",
+  "layer": "platform",
+  "name": "attome-portal",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "S2S clients only: sign a portal's users in with a password and create accounts for free usernames, on portals with trusted_server_login on (D-779)",
+          "key": "webportal.trusted_login",
+          "name": "Web Portal Trusted Login"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "webportal.trusted_login"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Web Portal",
+          "is_append_only": false,
+          "logicalname": "webportal",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "webportal"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Web Portal User",
+          "is_append_only": false,
+          "logicalname": "webportal_user",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "webportal_user"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "webportal",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Enabled",
+          "field_type": "bool",
+          "is_filterable": true,
+          "logicalname": "is_enabled"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "webportal",
+        "field": "is_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Keyword",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "keyword"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "webportal",
+        "field": "keyword"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "MFA Policy",
+          "field_type": "choice",
+          "is_filterable": true,
+          "logicalname": "mfa_policy",
+          "options": {
+            "choices": [
+              "optional",
+              "required"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "webportal",
+        "field": "mfa_policy"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "webportal",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Portal Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "portal_type",
+          "options": {
+            "choices": [
+              "anonymous",
+              "authenticated",
+              "mixed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "webportal",
+        "field": "portal_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Email",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "email"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "webportal_user",
+        "field": "email"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "webportal_user",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "invited",
+              "active",
+              "disabled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "webportal_user",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Username",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "username",
+          "max_length": 64
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "webportal_user",
+        "field": "username"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owning Team",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owning_team_ref",
+          "lookup_entity": "team"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "webportal",
+        "field": "owning_team_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Web Portal",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "webportal_ref",
+          "lookup_entity": "webportal"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "webportal_user",
+        "field": "webportal_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "webportal",
+          "entity_mappings": [],
+          "name": "Active Web Portals",
+          "required_privilege": "webportal.read",
+          "sql": "SELECT id FROM webportal WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "webportal",
+        "query": "Active Web Portals"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "webportal",
+          "entity_mappings": [],
+          "name": "Inactive Web Portals",
+          "required_privilege": "webportal.read",
+          "sql": "SELECT id FROM webportal WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "webportal",
+        "query": "Inactive Web Portals"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "webportal_user",
+          "entity_mappings": [],
+          "name": "Active Web Portal Users",
+          "required_privilege": "webportal_user.read",
+          "sql": "SELECT id FROM webportal_user WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "webportal_user",
+        "query": "Active Web Portal Users"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "webportal_user",
+          "entity_mappings": [],
+          "name": "Inactive Web Portal Users",
+          "required_privilege": "webportal_user.read",
+          "sql": "SELECT id FROM webportal_user WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "webportal_user",
+        "query": "Inactive Web Portal Users"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "webportal",
+          "is_default": true,
+          "name": "Active Web Portals",
+          "query": {
+            "entity": "webportal",
+            "name": "Active Web Portals"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "webportal",
+        "view": "Active Web Portals"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "webportal",
+          "is_default": false,
+          "name": "Inactive Web Portals",
+          "query": {
+            "entity": "webportal",
+            "name": "Inactive Web Portals"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "webportal",
+        "view": "Inactive Web Portals"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "webportal_user",
+          "is_default": true,
+          "name": "Active Web Portal Users",
+          "query": {
+            "entity": "webportal_user",
+            "name": "Active Web Portal Users"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "webportal_user",
+        "view": "Active Web Portal Users"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "webportal_user",
+          "is_default": false,
+          "name": "Inactive Web Portal Users",
+          "query": {
+            "entity": "webportal_user",
+            "name": "Inactive Web Portal Users"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "webportal_user",
+        "view": "Inactive Web Portal Users"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 41,
+  "title": "Platform definitions: attome-portal"
+}

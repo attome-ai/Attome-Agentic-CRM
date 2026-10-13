@@ -1,0 +1,47 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": { "platform_version": ">=4.0.1", "schema_version": 441, "modules": ["core"] },
+  "entities": [
+    {
+      "logicalname": "audit_consent_purpose",
+      "display_name": "Consent Purpose",
+      "primary_name_attribute": "key",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "key", "display_name": "Key", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "lawful_basis", "display_name": "Lawful Basis", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["consent", "contract", "legal_obligation", "vital_interest", "public_task", "legitimate_interest"], "multi": false } },
+        { "logicalname": "is_required", "display_name": "Required", "field_type": "bool", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "retention_period", "display_name": "Retention Period", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "audit_consent",
+      "display_name": "Consent",
+      "is_append_only": true,
+      "attributes": [
+        { "logicalname": "purpose_ref", "display_name": "Purpose", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "audit_consent_purpose" },
+        { "logicalname": "regarding_entity", "display_name": "Regarding Entity", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "regarding_id", "display_name": "Regarding Id", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "subject_reference", "display_name": "Subject Reference", "field_type": "text", "is_required": true, "is_sensitive": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["granted", "withdrawn", "expired"], "multi": false } },
+        { "logicalname": "granted_at", "display_name": "Granted At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "withdrawn_at", "display_name": "Withdrawn At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "source", "display_name": "Source", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["form", "api", "import"], "multi": false } },
+        { "logicalname": "evidence", "display_name": "Evidence", "field_type": "text", "is_sensitive": true }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "audit_consent_purpose", "name": "Active Consent Purposes", "sql": "SELECT id FROM \"audit_consent_purpose\" WHERE is_active = true", "required_privilege": "audit_consent_purpose.read" },
+    { "entity": "audit_consent_purpose", "name": "Inactive Consent Purposes", "sql": "SELECT id FROM \"audit_consent_purpose\" WHERE is_active = false", "required_privilege": "audit_consent_purpose.read" },
+    { "entity": "audit_consent", "name": "Active Consents", "sql": "SELECT id FROM \"audit_consent\" WHERE is_active = true", "required_privilege": "audit_consent.read" },
+    { "entity": "audit_consent", "name": "Inactive Consents", "sql": "SELECT id FROM \"audit_consent\" WHERE is_active = false", "required_privilege": "audit_consent.read" }
+  ],
+  "views": [
+    { "entity": "audit_consent_purpose", "name": "Active Consent Purposes", "query": { "entity": "audit_consent_purpose", "name": "Active Consent Purposes" }, "is_default": true },
+    { "entity": "audit_consent_purpose", "name": "Inactive Consent Purposes", "query": { "entity": "audit_consent_purpose", "name": "Inactive Consent Purposes" }, "is_default": false },
+    { "entity": "audit_consent", "name": "Active Consents", "query": { "entity": "audit_consent", "name": "Active Consents" }, "is_default": true },
+    { "entity": "audit_consent", "name": "Inactive Consents", "query": { "entity": "audit_consent", "name": "Inactive Consents" }, "is_default": false }
+  ]
+}

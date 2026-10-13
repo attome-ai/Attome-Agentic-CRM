@@ -1,0 +1,42 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 494,
+    "modules": [
+      "core"
+    ]
+  },
+  "queries": [
+    {
+      "name": "AI Assistant Turns Started (Last 7 Days)",
+      "sql": "SELECT COUNT(*)::float8 AS value FROM ai_conversation_event WHERE event_type = 'turn.started' AND created_at >= NOW() - INTERVAL '7 days'",
+      "is_report": true,
+      "required_privilege": "attome_metric.snapshot"
+    },
+    {
+      "name": "AI Assistant Completion Rate (Last 7 Days)",
+      "sql": "SELECT COUNT(*) FILTER (WHERE payload->>'terminal_state' = 'completed')::float8 / NULLIF(COUNT(*), 0) * 100 AS value FROM ai_conversation_event WHERE event_type = 'turn.completed' AND created_at >= NOW() - INTERVAL '7 days'",
+      "is_report": true,
+      "required_privilege": "attome_metric.snapshot"
+    },
+    {
+      "name": "AI Assistant Tool Calls (Last 7 Days)",
+      "sql": "SELECT COUNT(*)::float8 AS value FROM ai_conversation_event WHERE event_type = 'tool.call.proposed' AND NOT COALESCE((payload->>'reopened')::boolean, false) AND created_at >= NOW() - INTERVAL '7 days'",
+      "is_report": true,
+      "required_privilege": "attome_metric.snapshot"
+    },
+    {
+      "name": "AI Assistant Handoffs (Last 7 Days)",
+      "sql": "SELECT COUNT(*)::float8 AS value FROM action_invocation WHERE action_id = 'bot.handoff' AND outcome = 'completed' AND initiator = 1 AND created_at >= NOW() - INTERVAL '7 days'",
+      "is_report": true,
+      "required_privilege": "attome_metric.snapshot"
+    },
+    {
+      "name": "AI Assistant Thumbs-Up Share (Last 7 Days)",
+      "sql": "SELECT COUNT(*) FILTER (WHERE vote = 'up')::float8 / NULLIF(COUNT(*), 0) * 100 AS value FROM ai_message_feedback WHERE updated_at >= NOW() - INTERVAL '7 days'",
+      "is_report": true,
+      "required_privilege": "attome_metric.snapshot"
+    }
+  ]
+}

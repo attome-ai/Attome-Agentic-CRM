@@ -1,0 +1,412 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "project_portfolio", "display_name": "Portfolio", "primary_name_attribute": "name", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "owner_id", "display_name": "Owner", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
+        { "logicalname": "strategic_objective", "display_name": "Strategic Objective", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "project_program", "display_name": "Program", "primary_name_attribute": "name", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "owner_id", "display_name": "Owner", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
+        { "logicalname": "portfolio_id", "display_name": "Portfolio", "field_type": "lookup", "lookup_entity": "project_portfolio", "is_filterable": true }
+      ]
+    },
+    {
+      "logicalname": "attome_project", "display_name": "Project", "primary_name_attribute": "name", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "project_code", "display_name": "Project Code", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "organization_id", "display_name": "Organization", "field_type": "lookup", "lookup_entity": "organization", "is_required": true, "is_filterable": true },
+        { "logicalname": "delivery_type", "display_name": "Delivery Type", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["managed_delivery", "fixed_price", "time_and_materials", "internal"], "multi": false } },
+        { "logicalname": "owner_id", "display_name": "Owner", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["planning", "active", "on_hold", "completed", "cancelled"], "multi": false } },
+        { "logicalname": "health", "display_name": "Health", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["green", "amber", "red"], "multi": false } },
+        { "logicalname": "priority", "display_name": "Priority", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["low", "medium", "high", "critical"], "multi": false } },
+        { "logicalname": "is_confidential", "display_name": "Confidential", "field_type": "bool", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "budget_amount", "display_name": "Budget Amount", "field_type": "number", "is_sortable": true },
+        { "logicalname": "budget_consumed", "display_name": "Budget Consumed", "field_type": "number", "is_sortable": true },
+        { "logicalname": "start_date", "display_name": "Start Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "target_end_date", "display_name": "Target End Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "actual_start_date", "display_name": "Actual Start Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "actual_end_date", "display_name": "Actual End Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "objectives", "display_name": "Objectives", "field_type": "text" },
+        { "logicalname": "success_criteria", "display_name": "Success Criteria", "field_type": "text" },
+        { "logicalname": "assumptions", "display_name": "Assumptions", "field_type": "text" },
+        { "logicalname": "constraints", "display_name": "Constraints", "field_type": "text" },
+        { "logicalname": "program_id", "display_name": "Program", "field_type": "lookup", "lookup_entity": "project_program", "is_filterable": true }
+      ]
+    },
+    {
+      "logicalname": "project_work_item", "display_name": "Work Item", "primary_name_attribute": "name", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "project_id", "display_name": "Project", "field_type": "lookup", "lookup_entity": "attome_project", "is_required": true, "is_filterable": true },
+        { "logicalname": "parent_work_item_id", "display_name": "Parent Work Item", "field_type": "lookup", "lookup_entity": "project_work_item", "is_filterable": true },
+        { "logicalname": "item_type", "display_name": "Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["phase", "task"], "multi": false } },
+        { "logicalname": "points", "display_name": "Points", "field_type": "number", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["not_started", "in_progress", "done", "blocked"], "multi": false } },
+        { "logicalname": "owner_id", "display_name": "Owner", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
+        { "logicalname": "start_date", "display_name": "Start Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "due_date", "display_name": "Due Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "sequence", "display_name": "Sequence", "field_type": "number", "is_sortable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "project_work_item_dependency", "display_name": "Work Item Dependency", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "predecessor_id", "display_name": "Predecessor", "field_type": "lookup", "lookup_entity": "project_work_item", "is_required": true, "is_filterable": true },
+        { "logicalname": "successor_id", "display_name": "Successor", "field_type": "lookup", "lookup_entity": "project_work_item", "is_required": true, "is_filterable": true },
+        { "logicalname": "dependency_type", "display_name": "Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["finish_to_start", "start_to_start", "finish_to_finish", "start_to_finish"], "multi": false } },
+        { "logicalname": "lag_days", "display_name": "Lag (Days)", "field_type": "number", "is_sortable": true }
+      ]
+    },
+    {
+      "logicalname": "project_baseline", "display_name": "Baseline", "primary_name_attribute": "label", "is_append_only": true,
+      "attributes": [
+        { "logicalname": "project_id", "display_name": "Project", "field_type": "lookup", "lookup_entity": "attome_project", "is_required": true, "is_filterable": true },
+        { "logicalname": "label", "display_name": "Label", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "captured_at", "display_name": "Captured At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "captured_by", "display_name": "Captured By", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
+        { "logicalname": "trigger", "display_name": "Trigger", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["initial", "change_request", "manual"], "multi": false } }
+      ]
+    },
+    {
+      "logicalname": "project_baseline_item", "display_name": "Baseline Item", "is_append_only": true,
+      "attributes": [
+        { "logicalname": "baseline_id", "display_name": "Baseline", "field_type": "lookup", "lookup_entity": "project_baseline", "is_required": true, "is_filterable": true },
+        { "logicalname": "work_item_id", "display_name": "Work Item", "field_type": "lookup", "lookup_entity": "project_work_item", "is_required": true, "is_filterable": true },
+        { "logicalname": "planned_start", "display_name": "Planned Start", "field_type": "date", "is_sortable": true },
+        { "logicalname": "planned_due", "display_name": "Planned Due", "field_type": "date", "is_sortable": true },
+        { "logicalname": "planned_points", "display_name": "Planned Points", "field_type": "number", "is_sortable": true },
+        { "logicalname": "planned_budget", "display_name": "Planned Budget", "field_type": "number", "is_sortable": true }
+      ]
+    },
+    {
+      "logicalname": "project_resource_rate", "display_name": "Resource Rate", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "project_id", "display_name": "Project", "field_type": "lookup", "lookup_entity": "attome_project", "is_required": true, "is_filterable": true },
+        { "logicalname": "user_id", "display_name": "User", "field_type": "lookup", "lookup_entity": "user_account", "is_required": true, "is_filterable": true },
+        { "logicalname": "internal_cost_rate", "display_name": "Internal Cost Rate", "field_type": "number", "is_sensitive": true, "is_sortable": true },
+        { "logicalname": "billable_rate", "display_name": "Billable Rate", "field_type": "number", "is_sensitive": true, "is_sortable": true },
+        { "logicalname": "effective_date", "display_name": "Effective Date", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true }
+      ]
+    },
+    {
+      "logicalname": "project_timesheet", "display_name": "Timesheet", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "user_id", "display_name": "User", "field_type": "lookup", "lookup_entity": "user_account", "is_required": true, "is_filterable": true },
+        { "logicalname": "week_start_date", "display_name": "Week Start Date", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["draft", "submitted", "approved", "rejected"], "multi": false } },
+        { "logicalname": "approved_by", "display_name": "Approved By", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
+        { "logicalname": "approved_at", "display_name": "Approved At", "field_type": "date", "is_sortable": true }
+      ]
+    },
+    {
+      "logicalname": "project_time_entry", "display_name": "Time Entry", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "work_item_id", "display_name": "Work Item", "field_type": "lookup", "lookup_entity": "project_work_item", "is_required": true, "is_filterable": true },
+        { "logicalname": "user_id", "display_name": "User", "field_type": "lookup", "lookup_entity": "user_account", "is_required": true, "is_filterable": true },
+        { "logicalname": "entry_date", "display_name": "Entry Date", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "hours", "display_name": "Hours", "field_type": "number", "is_required": true, "is_sortable": true },
+        { "logicalname": "is_billable", "display_name": "Billable", "field_type": "bool", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "timesheet_id", "display_name": "Timesheet", "field_type": "lookup", "lookup_entity": "project_timesheet", "is_filterable": true },
+        { "logicalname": "notes", "display_name": "Notes", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "project_deliverable", "display_name": "Deliverable", "primary_name_attribute": "name", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "project_id", "display_name": "Project", "field_type": "lookup", "lookup_entity": "attome_project", "is_required": true, "is_filterable": true },
+        { "logicalname": "work_item_id", "display_name": "Work Item", "field_type": "lookup", "lookup_entity": "project_work_item", "is_filterable": true },
+        { "logicalname": "due_date", "display_name": "Due Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["draft", "submitted", "accepted", "rejected"], "multi": false } },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "project_issue", "display_name": "Issue", "primary_name_attribute": "title", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "title", "display_name": "Title", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "project_id", "display_name": "Project", "field_type": "lookup", "lookup_entity": "attome_project", "is_required": true, "is_filterable": true },
+        { "logicalname": "issue_type", "display_name": "Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["issue", "risk"], "multi": false } },
+        { "logicalname": "severity", "display_name": "Severity", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["low", "medium", "high", "critical"], "multi": false } },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["open", "mitigating", "resolved", "closed"], "multi": false } },
+        { "logicalname": "owner_id", "display_name": "Owner", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
+        { "logicalname": "identified_date", "display_name": "Identified Date", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "project_change_request", "display_name": "Change Request", "primary_name_attribute": "title", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "title", "display_name": "Title", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "project_id", "display_name": "Project", "field_type": "lookup", "lookup_entity": "attome_project", "is_required": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "impact_budget", "display_name": "Budget Impact", "field_type": "number", "is_sortable": true },
+        { "logicalname": "impact_schedule_days", "display_name": "Schedule Impact (Days)", "field_type": "number", "is_sortable": true },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["pending", "approved", "rejected"], "multi": false } },
+        { "logicalname": "is_customer_facing", "display_name": "Customer Facing", "field_type": "bool", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "requested_by", "display_name": "Requested By", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
+        { "logicalname": "requested_date", "display_name": "Requested Date", "field_type": "date", "is_sortable": true, "is_filterable": true }
+      ]
+    },
+    {
+      "logicalname": "project_team", "display_name": "Project Team", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "project_id", "display_name": "Project", "field_type": "lookup", "lookup_entity": "attome_project", "is_required": true, "is_filterable": true },
+        { "logicalname": "team_id", "display_name": "Team", "field_type": "lookup", "lookup_entity": "team", "is_required": true, "is_filterable": true },
+        { "logicalname": "relationship_type", "display_name": "Relationship", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["delivery", "customer", "vendor", "other"], "multi": false } },
+        { "logicalname": "notes", "display_name": "Notes", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "resource_allocation", "display_name": "Resource Allocation", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "user_id", "display_name": "Resource", "field_type": "lookup", "lookup_entity": "user_account", "is_required": true, "is_filterable": true },
+        { "logicalname": "regarding_entity", "display_name": "Regarding Entity", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "regarding_id", "display_name": "Regarding Record", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "allocation_percent", "display_name": "Allocation %", "field_type": "number", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "hours_per_week", "display_name": "Hours Per Week", "field_type": "number" },
+        { "logicalname": "start_date", "display_name": "Start Date", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "end_date", "display_name": "End Date", "field_type": "date", "is_sortable": true, "is_filterable": true }
+      ]
+    },
+    {
+      "logicalname": "project_template", "display_name": "Project Template", "primary_name_attribute": "name", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "source_bundle_ref", "display_name": "Source Bundle Ref", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "industry", "display_name": "Industry", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "is_published", "display_name": "Published", "field_type": "bool", "is_sortable": true, "is_filterable": true }
+      ]
+    },
+    {
+      "logicalname": "project_meeting", "display_name": "Meeting", "primary_name_attribute": "title", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "project_id", "display_name": "Project", "field_type": "lookup", "lookup_entity": "attome_project", "is_required": true, "is_filterable": true },
+        { "logicalname": "title", "display_name": "Title", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "occurred_at", "display_name": "Occurred At", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "organizer_id", "display_name": "Organizer", "field_type": "lookup", "lookup_entity": "user_account", "is_filterable": true },
+        { "logicalname": "attendees", "display_name": "Attendees", "field_type": "text" },
+        { "logicalname": "notes", "display_name": "Notes", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "project_lesson", "display_name": "Lesson", "is_append_only": false,
+      "attributes": [
+        { "logicalname": "project_id", "display_name": "Project", "field_type": "lookup", "lookup_entity": "attome_project", "is_required": true, "is_filterable": true },
+        { "logicalname": "category", "display_name": "Category", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["what_went_well", "what_went_wrong", "recurring_blocker", "successful_practice"], "multi": false } },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text", "is_required": true },
+        { "logicalname": "is_ai_generated", "display_name": "AI Generated", "field_type": "bool", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "applied_to_template_id", "display_name": "Applied To Template", "field_type": "lookup", "lookup_entity": "project_template", "is_filterable": true }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "project_portfolio", "name": "Active Portfolios", "sql": "SELECT id FROM \"project_portfolio\" WHERE is_active = true", "required_privilege": "project_portfolio.read" },
+    { "entity": "project_portfolio", "name": "Inactive Portfolios", "sql": "SELECT id FROM \"project_portfolio\" WHERE is_active = false", "required_privilege": "project_portfolio.read" },
+    { "entity": "project_program", "name": "Active Programs", "sql": "SELECT id FROM \"project_program\" WHERE is_active = true", "required_privilege": "project_program.read" },
+    { "entity": "project_program", "name": "Inactive Programs", "sql": "SELECT id FROM \"project_program\" WHERE is_active = false", "required_privilege": "project_program.read" },
+    { "entity": "attome_project", "name": "Active Projects", "sql": "SELECT id FROM \"attome_project\" WHERE is_active = true", "required_privilege": "attome_project.read" },
+    { "entity": "attome_project", "name": "Inactive Projects", "sql": "SELECT id FROM \"attome_project\" WHERE is_active = false", "required_privilege": "attome_project.read" },
+    { "entity": "project_work_item", "name": "Active Tasks", "sql": "SELECT id FROM \"project_work_item\" WHERE is_active = true", "required_privilege": "project_work_item.read" },
+    { "entity": "project_work_item", "name": "Inactive Tasks", "sql": "SELECT id FROM \"project_work_item\" WHERE is_active = false", "required_privilege": "project_work_item.read" },
+    { "entity": "project_work_item_dependency", "name": "Active Work Item Dependencies", "sql": "SELECT id FROM \"project_work_item_dependency\" WHERE is_active = true", "required_privilege": "project_work_item_dependency.read" },
+    { "entity": "project_work_item_dependency", "name": "Inactive Work Item Dependencies", "sql": "SELECT id FROM \"project_work_item_dependency\" WHERE is_active = false", "required_privilege": "project_work_item_dependency.read" },
+    { "entity": "project_baseline", "name": "Active Baselines", "sql": "SELECT id FROM \"project_baseline\" WHERE is_active = true", "required_privilege": "project_baseline.read" },
+    { "entity": "project_baseline", "name": "Inactive Baselines", "sql": "SELECT id FROM \"project_baseline\" WHERE is_active = false", "required_privilege": "project_baseline.read" },
+    { "entity": "project_baseline_item", "name": "Active Baseline Items", "sql": "SELECT id FROM \"project_baseline_item\" WHERE is_active = true", "required_privilege": "project_baseline_item.read" },
+    { "entity": "project_baseline_item", "name": "Inactive Baseline Items", "sql": "SELECT id FROM \"project_baseline_item\" WHERE is_active = false", "required_privilege": "project_baseline_item.read" },
+    { "entity": "project_resource_rate", "name": "Active Resource Rates", "sql": "SELECT id FROM \"project_resource_rate\" WHERE is_active = true", "required_privilege": "project_resource_rate.read" },
+    { "entity": "project_resource_rate", "name": "Inactive Resource Rates", "sql": "SELECT id FROM \"project_resource_rate\" WHERE is_active = false", "required_privilege": "project_resource_rate.read" },
+    { "entity": "project_timesheet", "name": "Active Timesheets", "sql": "SELECT id FROM \"project_timesheet\" WHERE is_active = true", "required_privilege": "project_timesheet.read" },
+    { "entity": "project_timesheet", "name": "Inactive Timesheets", "sql": "SELECT id FROM \"project_timesheet\" WHERE is_active = false", "required_privilege": "project_timesheet.read" },
+    { "entity": "project_time_entry", "name": "Active Time Entries", "sql": "SELECT id FROM \"project_time_entry\" WHERE is_active = true", "required_privilege": "project_time_entry.read" },
+    { "entity": "project_time_entry", "name": "Inactive Time Entries", "sql": "SELECT id FROM \"project_time_entry\" WHERE is_active = false", "required_privilege": "project_time_entry.read" },
+    { "entity": "project_deliverable", "name": "Active Deliverables", "sql": "SELECT id FROM \"project_deliverable\" WHERE is_active = true", "required_privilege": "project_deliverable.read" },
+    { "entity": "project_deliverable", "name": "Inactive Deliverables", "sql": "SELECT id FROM \"project_deliverable\" WHERE is_active = false", "required_privilege": "project_deliverable.read" },
+    { "entity": "project_issue", "name": "Active Issues & Risks", "sql": "SELECT id FROM \"project_issue\" WHERE is_active = true", "required_privilege": "project_issue.read" },
+    { "entity": "project_issue", "name": "Inactive Issues & Risks", "sql": "SELECT id FROM \"project_issue\" WHERE is_active = false", "required_privilege": "project_issue.read" },
+    { "entity": "project_change_request", "name": "Active Change Requests", "sql": "SELECT id FROM \"project_change_request\" WHERE is_active = true", "required_privilege": "project_change_request.read" },
+    { "entity": "project_change_request", "name": "Inactive Change Requests", "sql": "SELECT id FROM \"project_change_request\" WHERE is_active = false", "required_privilege": "project_change_request.read" },
+    { "entity": "project_team", "name": "Active Project Teams", "sql": "SELECT id FROM \"project_team\" WHERE is_active = true", "required_privilege": "project_team.read" },
+    { "entity": "project_team", "name": "Inactive Project Teams", "sql": "SELECT id FROM \"project_team\" WHERE is_active = false", "required_privilege": "project_team.read" },
+    { "entity": "resource_allocation", "name": "Active Resource Allocations", "sql": "SELECT id FROM \"resource_allocation\" WHERE is_active = true", "required_privilege": "resource_allocation.read" },
+    { "entity": "resource_allocation", "name": "Inactive Resource Allocations", "sql": "SELECT id FROM \"resource_allocation\" WHERE is_active = false", "required_privilege": "resource_allocation.read" },
+    { "entity": "project_template", "name": "Active Project Templates", "sql": "SELECT id FROM \"project_template\" WHERE is_active = true", "required_privilege": "project_template.read" },
+    { "entity": "project_template", "name": "Inactive Project Templates", "sql": "SELECT id FROM \"project_template\" WHERE is_active = false", "required_privilege": "project_template.read" },
+    { "entity": "project_meeting", "name": "Active Meetings", "sql": "SELECT id FROM \"project_meeting\" WHERE is_active = true", "required_privilege": "project_meeting.read" },
+    { "entity": "project_meeting", "name": "Inactive Meetings", "sql": "SELECT id FROM \"project_meeting\" WHERE is_active = false", "required_privilege": "project_meeting.read" },
+    { "entity": "project_lesson", "name": "Active Lessons", "sql": "SELECT id FROM \"project_lesson\" WHERE is_active = true", "required_privilege": "project_lesson.read" },
+    { "entity": "project_lesson", "name": "Inactive Lessons", "sql": "SELECT id FROM \"project_lesson\" WHERE is_active = false", "required_privilege": "project_lesson.read" }
+  ],
+  "views": [
+    { "entity": "project_portfolio", "name": "Active Portfolios", "query": { "entity": "project_portfolio", "name": "Active Portfolios" }, "is_default": true },
+    { "entity": "project_portfolio", "name": "Inactive Portfolios", "query": { "entity": "project_portfolio", "name": "Inactive Portfolios" }, "is_default": false },
+    { "entity": "project_program", "name": "Active Programs", "query": { "entity": "project_program", "name": "Active Programs" }, "is_default": true },
+    { "entity": "project_program", "name": "Inactive Programs", "query": { "entity": "project_program", "name": "Inactive Programs" }, "is_default": false },
+    { "entity": "attome_project", "name": "Active Projects", "query": { "entity": "attome_project", "name": "Active Projects" }, "is_default": true },
+    { "entity": "attome_project", "name": "Inactive Projects", "query": { "entity": "attome_project", "name": "Inactive Projects" }, "is_default": false },
+    { "entity": "project_work_item", "name": "Active Tasks", "query": { "entity": "project_work_item", "name": "Active Tasks" }, "is_default": true },
+    { "entity": "project_work_item", "name": "Inactive Tasks", "query": { "entity": "project_work_item", "name": "Inactive Tasks" }, "is_default": false },
+    { "entity": "project_work_item", "name": "Task Board", "query": { "entity": "project_work_item", "name": "Active Tasks" }, "is_default": false, "kind": "kanban", "view_metadata": { "state_field": "status" } },
+    { "entity": "project_work_item_dependency", "name": "Active Work Item Dependencies", "query": { "entity": "project_work_item_dependency", "name": "Active Work Item Dependencies" }, "is_default": true },
+    { "entity": "project_work_item_dependency", "name": "Inactive Work Item Dependencies", "query": { "entity": "project_work_item_dependency", "name": "Inactive Work Item Dependencies" }, "is_default": false },
+    { "entity": "project_baseline", "name": "Active Baselines", "query": { "entity": "project_baseline", "name": "Active Baselines" }, "is_default": true },
+    { "entity": "project_baseline", "name": "Inactive Baselines", "query": { "entity": "project_baseline", "name": "Inactive Baselines" }, "is_default": false },
+    { "entity": "project_baseline_item", "name": "Active Baseline Items", "query": { "entity": "project_baseline_item", "name": "Active Baseline Items" }, "is_default": true },
+    { "entity": "project_baseline_item", "name": "Inactive Baseline Items", "query": { "entity": "project_baseline_item", "name": "Inactive Baseline Items" }, "is_default": false },
+    { "entity": "project_resource_rate", "name": "Active Resource Rates", "query": { "entity": "project_resource_rate", "name": "Active Resource Rates" }, "is_default": true },
+    { "entity": "project_resource_rate", "name": "Inactive Resource Rates", "query": { "entity": "project_resource_rate", "name": "Inactive Resource Rates" }, "is_default": false },
+    { "entity": "project_timesheet", "name": "Active Timesheets", "query": { "entity": "project_timesheet", "name": "Active Timesheets" }, "is_default": true },
+    { "entity": "project_timesheet", "name": "Inactive Timesheets", "query": { "entity": "project_timesheet", "name": "Inactive Timesheets" }, "is_default": false },
+    { "entity": "project_time_entry", "name": "Active Time Entries", "query": { "entity": "project_time_entry", "name": "Active Time Entries" }, "is_default": true },
+    { "entity": "project_time_entry", "name": "Inactive Time Entries", "query": { "entity": "project_time_entry", "name": "Inactive Time Entries" }, "is_default": false },
+    { "entity": "project_deliverable", "name": "Active Deliverables", "query": { "entity": "project_deliverable", "name": "Active Deliverables" }, "is_default": true },
+    { "entity": "project_deliverable", "name": "Inactive Deliverables", "query": { "entity": "project_deliverable", "name": "Inactive Deliverables" }, "is_default": false },
+    { "entity": "project_issue", "name": "Active Issues & Risks", "query": { "entity": "project_issue", "name": "Active Issues & Risks" }, "is_default": true },
+    { "entity": "project_issue", "name": "Inactive Issues & Risks", "query": { "entity": "project_issue", "name": "Inactive Issues & Risks" }, "is_default": false },
+    { "entity": "project_change_request", "name": "Active Change Requests", "query": { "entity": "project_change_request", "name": "Active Change Requests" }, "is_default": true },
+    { "entity": "project_change_request", "name": "Inactive Change Requests", "query": { "entity": "project_change_request", "name": "Inactive Change Requests" }, "is_default": false },
+    { "entity": "project_team", "name": "Active Project Teams", "query": { "entity": "project_team", "name": "Active Project Teams" }, "is_default": true },
+    { "entity": "project_team", "name": "Inactive Project Teams", "query": { "entity": "project_team", "name": "Inactive Project Teams" }, "is_default": false },
+    { "entity": "resource_allocation", "name": "Active Resource Allocations", "query": { "entity": "resource_allocation", "name": "Active Resource Allocations" }, "is_default": true },
+    { "entity": "resource_allocation", "name": "Inactive Resource Allocations", "query": { "entity": "resource_allocation", "name": "Inactive Resource Allocations" }, "is_default": false },
+    { "entity": "project_template", "name": "Active Project Templates", "query": { "entity": "project_template", "name": "Active Project Templates" }, "is_default": true },
+    { "entity": "project_template", "name": "Inactive Project Templates", "query": { "entity": "project_template", "name": "Inactive Project Templates" }, "is_default": false },
+    { "entity": "project_meeting", "name": "Active Meetings", "query": { "entity": "project_meeting", "name": "Active Meetings" }, "is_default": true },
+    { "entity": "project_meeting", "name": "Inactive Meetings", "query": { "entity": "project_meeting", "name": "Inactive Meetings" }, "is_default": false },
+    { "entity": "project_lesson", "name": "Active Lessons", "query": { "entity": "project_lesson", "name": "Active Lessons" }, "is_default": true },
+    { "entity": "project_lesson", "name": "Inactive Lessons", "query": { "entity": "project_lesson", "name": "Inactive Lessons" }, "is_default": false }
+  ],
+  "privileges": [
+    { "key": "project_change_request.approve", "name": "project_change_request.approve", "description": "Approve or reject a project change request (M69 S3)" },
+    { "key": "project_timesheet.approve", "name": "project_timesheet.approve", "description": "Approve or reject a submitted timesheet (M69 S3)" }
+  ],
+  "roles": [
+    {
+      "name": "Project Approver",
+      "description": "Decides project change requests and timesheets: the approve privilege on both, plus the read and update access the decision routes need. Nobody can approve a change request they requested or a timesheet that is their own (transition guard).",
+      "privileges": [
+        { "privilege": "project_change_request.read" },
+        { "privilege": "project_change_request.update" },
+        { "privilege": "project_change_request.approve" },
+        { "privilege": "project_timesheet.read" },
+        { "privilege": "project_timesheet.update" },
+        { "privilege": "project_timesheet.approve" }
+      ],
+      "entity_access": [],
+      "field_security_profiles": []
+    }
+  ],
+  "state_models": [
+    {
+      "entity_logicalname": "project_change_request",
+      "name": "Change Request Decision",
+      "state_field": "status",
+      "initial_state": "pending",
+      "transitions": [
+        { "from_state": "pending", "to_state": "approved", "name": "approve", "display_order": 0, "required_privilege": "project_change_request.approve", "guard_expression": "current_user != requested_by" },
+        { "from_state": "pending", "to_state": "rejected", "name": "reject", "display_order": 1, "required_privilege": "project_change_request.approve", "guard_expression": "current_user != requested_by" }
+      ]
+    },
+    {
+      "entity_logicalname": "project_timesheet",
+      "name": "Timesheet Approval",
+      "state_field": "status",
+      "initial_state": "draft",
+      "transitions": [
+        { "from_state": "draft", "to_state": "submitted", "name": "submit", "display_order": 0 },
+        { "from_state": "submitted", "to_state": "approved", "name": "approve", "display_order": 1, "required_privilege": "project_timesheet.approve", "guard_expression": "current_user != user_id" },
+        { "from_state": "submitted", "to_state": "rejected", "name": "reject", "display_order": 2, "required_privilege": "project_timesheet.approve", "guard_expression": "current_user != user_id" },
+        { "from_state": "rejected", "to_state": "draft", "name": "revise", "display_order": 3 }
+      ]
+    },
+    {
+      "entity_logicalname": "project_work_item",
+      "name": "Work Item Lifecycle",
+      "state_field": "status",
+      "initial_state": "not_started",
+      "transitions": [
+        { "from_state": "not_started", "to_state": "in_progress", "name": "not_started_to_in_progress", "display_order": 0 },
+        { "from_state": "not_started", "to_state": "done", "name": "not_started_to_done", "display_order": 1 },
+        { "from_state": "not_started", "to_state": "blocked", "name": "not_started_to_blocked", "display_order": 2 },
+        { "from_state": "in_progress", "to_state": "not_started", "name": "in_progress_to_not_started", "display_order": 3 },
+        { "from_state": "in_progress", "to_state": "done", "name": "in_progress_to_done", "display_order": 4 },
+        { "from_state": "in_progress", "to_state": "blocked", "name": "in_progress_to_blocked", "display_order": 5 },
+        { "from_state": "done", "to_state": "not_started", "name": "done_to_not_started", "display_order": 6 },
+        { "from_state": "done", "to_state": "in_progress", "name": "done_to_in_progress", "display_order": 7 },
+        { "from_state": "done", "to_state": "blocked", "name": "done_to_blocked", "display_order": 8 },
+        { "from_state": "blocked", "to_state": "not_started", "name": "blocked_to_not_started", "display_order": 9 },
+        { "from_state": "blocked", "to_state": "in_progress", "name": "blocked_to_in_progress", "display_order": 10 },
+        { "from_state": "blocked", "to_state": "done", "name": "blocked_to_done", "display_order": 11 }
+      ]
+    },
+    {
+      "entity_logicalname": "attome_project",
+      "name": "Project Lifecycle",
+      "state_field": "status",
+      "initial_state": "planning",
+      "transitions": [
+        { "from_state": "planning", "to_state": "active", "name": "Start", "display_order": 0 },
+        { "from_state": "planning", "to_state": "on_hold", "name": "Put On Hold", "display_order": 1 },
+        { "from_state": "planning", "to_state": "cancelled", "name": "Cancel", "display_order": 2 },
+        { "from_state": "active", "to_state": "on_hold", "name": "Put On Hold", "display_order": 3 },
+        { "from_state": "active", "to_state": "completed", "name": "Complete", "display_order": 4 },
+        { "from_state": "active", "to_state": "cancelled", "name": "Cancel", "display_order": 5 },
+        { "from_state": "on_hold", "to_state": "active", "name": "Resume", "display_order": 6 },
+        { "from_state": "on_hold", "to_state": "planning", "name": "Back To Planning", "display_order": 7 },
+        { "from_state": "on_hold", "to_state": "cancelled", "name": "Cancel", "display_order": 8 },
+        { "from_state": "completed", "to_state": "active", "name": "Reopen", "display_order": 9 },
+        { "from_state": "cancelled", "to_state": "planning", "name": "Reinstate", "display_order": 10 }
+      ]
+    },
+    {
+      "entity_logicalname": "project_issue",
+      "name": "Issue Lifecycle",
+      "state_field": "status",
+      "initial_state": "open",
+      "transitions": [
+        { "from_state": "open", "to_state": "mitigating", "name": "Start Mitigation", "display_order": 0 },
+        { "from_state": "open", "to_state": "resolved", "name": "Resolve", "display_order": 1 },
+        { "from_state": "open", "to_state": "closed", "name": "Close", "display_order": 2 },
+        { "from_state": "mitigating", "to_state": "open", "name": "Stop Mitigation", "display_order": 3 },
+        { "from_state": "mitigating", "to_state": "resolved", "name": "Resolve", "display_order": 4 },
+        { "from_state": "mitigating", "to_state": "closed", "name": "Close", "display_order": 5 },
+        { "from_state": "resolved", "to_state": "closed", "name": "Close", "display_order": 6 },
+        { "from_state": "resolved", "to_state": "open", "name": "Reopen", "display_order": 7 },
+        { "from_state": "closed", "to_state": "open", "name": "Reopen", "display_order": 8 }
+      ]
+    },
+    {
+      "entity_logicalname": "project_deliverable",
+      "name": "Deliverable Lifecycle",
+      "state_field": "status",
+      "initial_state": "draft",
+      "transitions": [
+        { "from_state": "draft", "to_state": "submitted", "name": "Submit", "display_order": 0 },
+        { "from_state": "submitted", "to_state": "accepted", "name": "Accept", "display_order": 1 },
+        { "from_state": "submitted", "to_state": "rejected", "name": "Reject", "display_order": 2 },
+        { "from_state": "submitted", "to_state": "draft", "name": "Withdraw", "display_order": 3 },
+        { "from_state": "rejected", "to_state": "draft", "name": "Rework", "display_order": 4 }
+      ]
+    }
+  ]
+}

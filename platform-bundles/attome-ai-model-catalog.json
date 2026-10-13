@@ -1,0 +1,56 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "ai_model",
+      "display_name": "AI Model",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "provider_ref", "display_name": "Provider", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "ai_provider" },
+        { "logicalname": "provider_model_id", "display_name": "Provider Model ID", "field_type": "text", "is_required": true, "is_filterable": true },
+        {
+          "logicalname": "approval_status", "display_name": "Approval Status", "field_type": "choice",
+          "is_required": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["pending", "approved", "blocked"], "multi": false }
+        },
+        { "logicalname": "deployment_name", "display_name": "Deployment Name", "field_type": "text", "is_filterable": true },
+        { "logicalname": "version", "display_name": "Version", "field_type": "text", "is_filterable": true },
+        {
+          "logicalname": "model_type", "display_name": "Model Type", "field_type": "choice",
+          "is_required": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["chat", "embedding", "reranker", "vision", "speech", "multimodal", "other"], "multi": false }
+        },
+        { "logicalname": "context_window", "display_name": "Context Window", "field_type": "number", "is_filterable": true, "options": { "min": 0 } },
+        { "logicalname": "max_input_tokens", "display_name": "Max Input Tokens", "field_type": "number", "is_filterable": true, "options": { "min": 0 } },
+        { "logicalname": "max_output_tokens", "display_name": "Max Output Tokens", "field_type": "number", "is_filterable": true, "options": { "min": 0 } },
+        { "logicalname": "max_concurrent_requests", "display_name": "Maximum Concurrent Requests", "field_type": "number", "is_filterable": true, "options": { "min": 0 } },
+        { "logicalname": "input_cost", "display_name": "Input Cost", "field_type": "currency", "is_filterable": true, "options": { "min": 0 } },
+        { "logicalname": "output_cost", "display_name": "Output Cost", "field_type": "currency", "is_filterable": true, "options": { "min": 0 } },
+        { "logicalname": "cached_input_cost", "display_name": "Cached Input Cost", "field_type": "currency", "is_filterable": true, "options": { "min": 0 } },
+        {
+          "logicalname": "cost_unit", "display_name": "Cost Unit", "field_type": "choice",
+          "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["per_1m_tokens", "per_1k_tokens", "per_response", "per_minute", "per_image", "per_second"], "multi": false }
+        },
+        { "logicalname": "replacement_model_ref", "display_name": "Replacement Model", "field_type": "lookup", "is_filterable": true, "lookup_entity": "ai_model" },
+        { "logicalname": "knowledge_cutoff", "display_name": "Knowledge Cutoff", "field_type": "date", "is_sortable": true, "is_filterable": true }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "ai_model", "name": "Active AI Models", "sql": "SELECT id, name, description, provider_ref, provider_model_id, model_type, approval_status, deployment_name, context_window, input_cost, output_cost FROM \"ai_model\" WHERE is_active = true", "required_privilege": "ai_model.read" },
+    { "entity": "ai_model", "name": "Inactive AI Models", "sql": "SELECT id, name, description, provider_ref, provider_model_id, model_type, approval_status, deployment_name, context_window, input_cost, output_cost FROM \"ai_model\" WHERE is_active = false", "required_privilege": "ai_model.read" }
+  ],
+  "views": [
+    { "entity": "ai_model", "name": "Active AI Models", "query": { "entity": "ai_model", "name": "Active AI Models" }, "is_default": true },
+    { "entity": "ai_model", "name": "Inactive AI Models", "query": { "entity": "ai_model", "name": "Inactive AI Models" }, "is_default": false }
+  ]
+}

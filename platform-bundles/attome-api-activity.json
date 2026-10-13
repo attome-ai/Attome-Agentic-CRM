@@ -1,0 +1,59 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "activity",
+      "display_name": "Activity",
+      "primary_name_attribute": "subject",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "subject", "display_name": "Subject", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "activity_type", "display_name": "Activity Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["task", "phone_call"], "multi": false } },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "due_at", "display_name": "Due At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "completed_at", "display_name": "Completed At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "priority", "display_name": "Priority", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["low", "normal", "high"], "multi": false } },
+        { "logicalname": "direction", "display_name": "Direction", "field_type": "choice", "is_filterable": true, "options": { "choices": ["inbound", "outbound"], "multi": false } },
+        { "logicalname": "duration_minutes", "display_name": "Duration (minutes)", "field_type": "number" },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["open", "completed", "cancelled"], "multi": false } }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "activity",
+      "name": "Active Activities",
+      "sql": "SELECT id, subject, activity_type, status, priority, due_at, completed_at, direction, duration_minutes, description, entity_name, record_id, owner_ref, row_version, created_at, modified_at FROM activity WHERE is_active IS NOT FALSE",
+      "required_privilege": "activity.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "activity",
+      "name": "Active Activities",
+      "query": { "entity": "activity", "name": "Active Activities" },
+      "is_default": true
+    }
+  ],
+  "state_models": [
+    {
+      "entity_logicalname": "activity",
+      "name": "Activity Lifecycle",
+      "state_field": "status",
+      "initial_state": "open",
+      "transitions": [
+        { "from_state": "open", "to_state": "completed", "name": "Complete", "display_order": 0 },
+        { "from_state": "open", "to_state": "cancelled", "name": "Cancel", "display_order": 1 },
+        { "from_state": "completed", "to_state": "open", "name": "Reopen", "display_order": 2 },
+        { "from_state": "cancelled", "to_state": "open", "name": "Reopen", "display_order": 3 }
+      ]
+    }
+  ]
+}

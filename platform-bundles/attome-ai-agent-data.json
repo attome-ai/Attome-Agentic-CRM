@@ -1,0 +1,23 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "record_sets": [
+    {
+      "entity": "ai_agent",
+      "key_fields": ["name"],
+      "rows": [
+        {
+          "name": "Example Agent",
+          "description": "Placeholder scaffold linked to Example Model. Replace system_instructions and point primary_model_ref at a real, approved model before using this agent -- or delete this record entirely.",
+          "status": "draft",
+          "primary_model_ref": "06658cdd-737a-5d13-be31-6b953ace2fbe",
+          "system_instructions": "You are a helpful assistant. Replace these instructions before using this agent."
+        }
+      ]
+    }
+  ]
+}

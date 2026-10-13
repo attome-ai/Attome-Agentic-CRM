@@ -1,0 +1,245 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:1d4f5c8591f8c754ad8d4b60bbd19cb36bd611308d1122102b0f42a640c37039",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-docgen.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "38e577ad-d460-747b-b498-244d99cf5890",
+  "layer": "platform",
+  "name": "attome-docgen",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Document Template",
+          "is_append_only": false,
+          "logicalname": "docgen_template",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "docgen_template"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Attach To Field",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "attach_to_field"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "docgen_template",
+        "field": "attach_to_field"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Body",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "body"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "docgen_template",
+        "field": "body"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Target Entity",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "entity"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "docgen_template",
+        "field": "entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Format",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "format",
+          "options": {
+            "choices": [
+              "pdf"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "docgen_template",
+        "field": "format"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Margin (mm)",
+          "field_type": "number",
+          "logicalname": "margin_mm"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "docgen_template",
+        "field": "margin_mm"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "docgen_template",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Page Size",
+          "field_type": "choice",
+          "is_filterable": true,
+          "logicalname": "page_size",
+          "options": {
+            "choices": [
+              "A4",
+              "Letter"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "docgen_template",
+        "field": "page_size"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Stylesheet",
+          "field_type": "text",
+          "logicalname": "stylesheet"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "docgen_template",
+        "field": "stylesheet"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Version",
+          "field_type": "number",
+          "is_filterable": true,
+          "logicalname": "version"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "docgen_template",
+        "field": "version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "docgen_template",
+          "entity_mappings": [],
+          "name": "Active Templates",
+          "required_privilege": "docgen_template.read",
+          "sql": "SELECT id, name, entity, format, page_size, version, created_at, modified_at, row_version FROM docgen_template WHERE is_active = TRUE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "docgen_template",
+        "query": "Active Templates"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "docgen_template",
+          "is_default": true,
+          "name": "Active Templates",
+          "query": {
+            "entity": "docgen_template",
+            "name": "Active Templates"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "docgen_template",
+        "view": "Active Templates"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 4,
+  "title": "Platform definitions: attome-docgen"
+}

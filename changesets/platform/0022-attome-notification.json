@@ -1,0 +1,278 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:cd50fddeada495b1609b81ce94af93e134b2d615536cd7cffcfbcccaf4e1ac4a",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-notification.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "73fd8120-e0e9-7470-b4b0-6be70d1dde68",
+  "layer": "platform",
+  "name": "attome-notification",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Notification Template",
+          "is_append_only": false,
+          "logicalname": "notification_template",
+          "primary_name_attribute": "template_key"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "notification_template"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Body (HTML)",
+          "field_type": "text",
+          "logicalname": "body_html"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "notification_template",
+        "field": "body_html"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Body (Text)",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "body_text"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "notification_template",
+        "field": "body_text"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Consent Purpose Key (marketing-channel gate)",
+          "field_type": "text",
+          "logicalname": "consent_purpose_key"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "notification_template",
+        "field": "consent_purpose_key"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Default Channels (comma-separated: in_app,email,sms,push,chat)",
+          "field_type": "text",
+          "logicalname": "default_channels"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "notification_template",
+        "field": "default_channels"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Escalate After (minutes)",
+          "field_type": "number",
+          "logicalname": "escalate_after_minutes"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "notification_template",
+        "field": "escalate_after_minutes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Escalate Channels (comma-separated)",
+          "field_type": "text",
+          "logicalname": "escalate_channels"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "notification_template",
+        "field": "escalate_channels"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Mandatory (ignores user notification preferences)",
+          "field_type": "bool",
+          "logicalname": "is_mandatory"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "notification_template",
+        "field": "is_mandatory"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Locale",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "locale"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "notification_template",
+        "field": "locale"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Subject",
+          "field_type": "text",
+          "logicalname": "subject"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "notification_template",
+        "field": "subject"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Template Key",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "template_key"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "notification_template",
+        "field": "template_key"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "notification_template",
+          "entity_mappings": [],
+          "name": "Active Notification Templates",
+          "required_privilege": "notification_template.read",
+          "sql": "SELECT id, template_key, locale, subject, body_html, body_text, default_channels, escalate_after_minutes, escalate_channels, consent_purpose_key, row_version, created_at, modified_at FROM notification_template WHERE is_active = TRUE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "notification_template",
+        "query": "Active Notification Templates"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "notification_template",
+          "entity_mappings": [],
+          "name": "Inactive Notification Templates",
+          "required_privilege": "notification_template.read",
+          "sql": "SELECT id, template_key, locale, subject, body_html, body_text, default_channels, escalate_after_minutes, escalate_channels, consent_purpose_key, row_version, created_at, modified_at FROM notification_template WHERE is_active = FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "notification_template",
+        "query": "Inactive Notification Templates"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "notification_template",
+          "is_default": true,
+          "name": "Active Notification Templates",
+          "query": {
+            "entity": "notification_template",
+            "name": "Active Notification Templates"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "notification_template",
+        "view": "Active Notification Templates"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "notification_template",
+          "is_default": false,
+          "name": "Inactive Notification Templates",
+          "query": {
+            "entity": "notification_template",
+            "name": "Inactive Notification Templates"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "notification_template",
+        "view": "Inactive Notification Templates"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 22,
+  "title": "Platform definitions: attome-notification"
+}

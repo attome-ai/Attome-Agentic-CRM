@@ -1,0 +1,75 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "ai_provider",
+      "display_name": "AI Provider",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "provider_id", "display_name": "Provider ID", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "name", "display_name": "Display name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        {
+          "logicalname": "provider_type", "display_name": "Provider Type", "field_type": "choice",
+          "is_required": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["openai", "anthropic", "deepseek", "azure_openai", "aws_bedrock", "google_vertex_ai", "cohere", "mistral", "local_self_hosted", "custom"], "multi": false }
+        },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        {
+          "logicalname": "endpoint_url", "display_name": "Base URL", "field_type": "text",
+          "is_filterable": true,
+          "options": { "text_type": "url" }
+        },
+        {
+          "logicalname": "allow_external_endpoint", "display_name": "Allow external endpoint", "field_type": "bool",
+          "is_write_restricted": true, "is_filterable": true
+        },
+        {
+          "logicalname": "api_protocol", "display_name": "API protocol", "field_type": "choice",
+          "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["openai-completions", "openai-responses", "anthropic-messages"], "multi": false }
+        },
+        {
+          "logicalname": "status", "display_name": "Status", "field_type": "choice",
+          "is_required": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["operational_live", "operational_testing", "closed"], "multi": false }
+        },
+        {
+          "logicalname": "health_check", "display_name": "Health Check", "field_type": "choice",
+          "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["healthy", "degraded", "unhealthy", "unknown"], "multi": false }
+        },
+        { "logicalname": "last_health_check", "display_name": "Last Health Check", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        {
+          "logicalname": "data_residency", "display_name": "Data Residency", "field_type": "choice",
+          "is_filterable": true,
+          "options": { "choices": ["us", "eu", "uk", "apac", "global", "customer_controlled", "unknown"], "multi": false }
+        },
+        {
+          "logicalname": "capabilities", "display_name": "Capabilities", "field_type": "choice",
+          "is_filterable": true,
+          "options": { "choices": ["text_generation", "embeddings", "vision", "function_calling", "fine_tuning", "speech", "reranking"], "multi": true }
+        },
+        {
+          "logicalname": "training_data_usage", "display_name": "Training Data Usage", "field_type": "choice",
+          "is_filterable": true,
+          "options": { "choices": ["not_used", "used_unless_opted_out", "used", "unknown"], "multi": false }
+        },
+        { "logicalname": "credential_ref", "display_name": "Credential Reference", "field_type": "text", "is_filterable": true }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "ai_provider", "name": "Active Providers", "sql": "SELECT id, provider_id, name, provider_type, description, endpoint_url, api_protocol, status, health_check, data_residency FROM \"ai_provider\" WHERE is_active = true", "required_privilege": "ai_provider.read" },
+    { "entity": "ai_provider", "name": "Inactive Providers", "sql": "SELECT id, provider_id, name, provider_type, description, endpoint_url, api_protocol, status, health_check, data_residency FROM \"ai_provider\" WHERE is_active = false", "required_privilege": "ai_provider.read" }
+  ],
+  "views": [
+    { "entity": "ai_provider", "name": "Active Providers", "query": { "entity": "ai_provider", "name": "Active Providers" }, "is_default": true },
+    { "entity": "ai_provider", "name": "Inactive Providers", "query": { "entity": "ai_provider", "name": "Inactive Providers" }, "is_default": false }
+  ]
+}

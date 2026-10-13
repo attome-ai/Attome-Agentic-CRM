@@ -1,0 +1,60 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "resource_skill",
+      "display_name": "Resource Skill",
+      "primary_name_attribute": "skill",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "user_id", "display_name": "User", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "skill", "display_name": "Skill", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "skill_level", "display_name": "Skill Level", "field_type": "number", "is_sortable": true, "is_filterable": true }
+      ]
+    },
+    {
+      "logicalname": "resource_availability",
+      "display_name": "Resource Availability",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "user_id", "display_name": "User", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "leave_start", "display_name": "Leave Start", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "leave_end", "display_name": "Leave End", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "reason", "display_name": "Reason", "field_type": "text" }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "resource_skill",
+      "name": "Active Resource Skills",
+      "sql": "SELECT id, user_id, skill, skill_level, created_at FROM resource_skill WHERE is_active IS NOT FALSE",
+      "required_privilege": "resource_skill.read"
+    },
+    {
+      "entity": "resource_availability",
+      "name": "Active Resource Availability",
+      "sql": "SELECT id, user_id, leave_start, leave_end, reason, created_at FROM resource_availability WHERE is_active IS NOT FALSE",
+      "required_privilege": "resource_availability.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "resource_skill",
+      "name": "Active Resource Skills",
+      "query": { "entity": "resource_skill", "name": "Active Resource Skills" },
+      "is_default": true
+    },
+    {
+      "entity": "resource_availability",
+      "name": "Active Resource Availability",
+      "query": { "entity": "resource_availability", "name": "Active Resource Availability" },
+      "is_default": true
+    }
+  ]
+}

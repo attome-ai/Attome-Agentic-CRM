@@ -1,0 +1,77 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 463,
+    "modules": [
+      "core"
+    ]
+  },
+  "entities": [
+    {
+      "logicalname": "ai_capability_pack",
+      "display_name": "AI Capability Pack",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        {
+          "logicalname": "name",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_required": true,
+          "is_sortable": true,
+          "is_filterable": true
+        },
+        {
+          "logicalname": "description",
+          "display_name": "Description",
+          "field_type": "text"
+        },
+        {
+          "logicalname": "action_ids",
+          "display_name": "Action IDs",
+          "field_type": "text",
+          "is_write_restricted": true,
+          "options": {
+            "pattern": "\\[\\s*(\"[A-Za-z][A-Za-z0-9_.]*\"\\s*(,\\s*\"[A-Za-z][A-Za-z0-9_.]*\"\\s*)*)?\\]",
+            "mask_description": "JSON array of action ids"
+          }
+        }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "ai_capability_pack",
+      "name": "Active Capability Packs",
+      "sql": "SELECT id, name, description, action_ids FROM \"ai_capability_pack\" WHERE is_active = true",
+      "required_privilege": "ai_capability_pack.read"
+    },
+    {
+      "entity": "ai_capability_pack",
+      "name": "Inactive Capability Packs",
+      "sql": "SELECT id, name, description, action_ids FROM \"ai_capability_pack\" WHERE is_active = false",
+      "required_privilege": "ai_capability_pack.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "ai_capability_pack",
+      "name": "Active Capability Packs",
+      "query": {
+        "entity": "ai_capability_pack",
+        "name": "Active Capability Packs"
+      },
+      "is_default": true
+    },
+    {
+      "entity": "ai_capability_pack",
+      "name": "Inactive Capability Packs",
+      "query": {
+        "entity": "ai_capability_pack",
+        "name": "Inactive Capability Packs"
+      },
+      "is_default": false
+    }
+  ]
+}

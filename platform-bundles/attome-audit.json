@@ -1,0 +1,128 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": { "platform_version": ">=4.0.1", "schema_version": 441, "modules": ["core"] },
+  "entities": [
+    {
+      "logicalname": "audit_header",
+      "display_name": "Audit Header",
+      "primary_name_attribute": "entity_name",
+      "is_append_only": true,
+      "attributes": [
+        { "logicalname": "organization_ref", "display_name": "Organization", "field_type": "lookup" },
+        { "logicalname": "is_active", "display_name": "Is Active", "field_type": "bool" },
+        { "logicalname": "category", "display_name": "Category", "field_type": "number", "is_required": true },
+        { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text" },
+        { "logicalname": "record_id", "display_name": "Record ID", "field_type": "lookup" },
+        { "logicalname": "operation", "display_name": "Operation", "field_type": "number", "is_required": true },
+        { "logicalname": "version_before", "display_name": "Version Before", "field_type": "number" },
+        { "logicalname": "version_after", "display_name": "Version After", "field_type": "number" },
+        { "logicalname": "user_id", "display_name": "User ID", "field_type": "lookup" },
+        { "logicalname": "user_name", "display_name": "User Name", "field_type": "text" },
+        { "logicalname": "user_display_name", "display_name": "User Display Name", "field_type": "text" },
+        { "logicalname": "user_email", "display_name": "User Email", "field_type": "text", "is_sensitive": true },
+        { "logicalname": "user_job_ref", "display_name": "User Job", "field_type": "lookup" },
+        { "logicalname": "user_job_name", "display_name": "User Job Name", "field_type": "text" },
+        { "logicalname": "changed_on", "display_name": "Changed On", "field_type": "date" },
+        { "logicalname": "source", "display_name": "Source", "field_type": "number" },
+        { "logicalname": "ip_address", "display_name": "IP Address", "field_type": "text" },
+        { "logicalname": "browser", "display_name": "Browser", "field_type": "text" },
+        { "logicalname": "device_type", "display_name": "Device Type", "field_type": "number" },
+        { "logicalname": "correlation_id", "display_name": "Correlation ID", "field_type": "lookup" },
+        { "logicalname": "batch_id", "display_name": "Batch ID", "field_type": "lookup" },
+        { "logicalname": "event_name", "display_name": "Event Name", "field_type": "text" },
+        { "logicalname": "event_comment", "display_name": "Event Comment", "field_type": "text" },
+        { "logicalname": "event_index", "display_name": "Event Index", "field_type": "number" },
+        { "logicalname": "prev_hash", "display_name": "Previous Hash", "field_type": "text" },
+        { "logicalname": "event_hash", "display_name": "Event Hash", "field_type": "text", "is_required": true },
+        { "logicalname": "signing_key_id", "display_name": "Signing Key ID", "field_type": "text" },
+        { "logicalname": "signature", "display_name": "Signature", "field_type": "text" },
+        { "logicalname": "chain_batch_ref", "display_name": "Chain Batch", "field_type": "lookup" },
+        { "logicalname": "initiator", "display_name": "Initiator", "field_type": "number", "is_required": true },
+        { "logicalname": "agent_session_id", "display_name": "Agent Session", "field_type": "lookup" },
+        { "logicalname": "agent_action_id", "display_name": "Agent Action", "field_type": "text" },
+        { "logicalname": "hash_version", "display_name": "Hash Version", "field_type": "number" },
+        { "logicalname": "content_digest", "display_name": "Content Digest", "field_type": "text" },
+        { "logicalname": "request_id", "display_name": "Request ID", "field_type": "text" },
+        { "logicalname": "session_id", "display_name": "Session", "field_type": "lookup" },
+        { "logicalname": "ai_model_id", "display_name": "AI Model", "field_type": "text" },
+        { "logicalname": "approval_request_ref", "display_name": "Approval Request", "field_type": "lookup" },
+        { "logicalname": "outcome", "display_name": "Outcome", "field_type": "number" },
+        { "logicalname": "requested_count", "display_name": "Requested Count", "field_type": "number" },
+        { "logicalname": "affected_count", "display_name": "Affected Count", "field_type": "number" },
+        { "logicalname": "failed_count", "display_name": "Failed Count", "field_type": "number" },
+        { "logicalname": "occurrence_count", "display_name": "Occurrence Count", "field_type": "number" }
+      ]
+    },
+    {
+      "logicalname": "audit_detail",
+      "display_name": "Audit Detail",
+      "primary_name_attribute": "field_name",
+      "is_append_only": true,
+      "attributes": [
+        { "logicalname": "organization_ref", "display_name": "Organization", "field_type": "lookup" },
+        { "logicalname": "is_active", "display_name": "Is Active", "field_type": "bool" },
+        { "logicalname": "audit_ref", "display_name": "Audit Header", "field_type": "lookup", "is_required": true },
+        { "logicalname": "field_name", "display_name": "Field Name", "field_type": "text", "is_required": true },
+        { "logicalname": "display_name", "display_name": "Display Name", "field_type": "text" },
+        { "logicalname": "data_type", "display_name": "Data Type", "field_type": "number" },
+        { "logicalname": "old_value", "display_name": "Old Value", "field_type": "text" },
+        { "logicalname": "new_value", "display_name": "New Value", "field_type": "text" },
+        { "logicalname": "old_display_value", "display_name": "Old Display Value", "field_type": "text" },
+        { "logicalname": "new_display_value", "display_name": "New Display Value", "field_type": "text" },
+        { "logicalname": "old_lookup_entity", "display_name": "Old Lookup Entity", "field_type": "text" },
+        { "logicalname": "old_lookup_name", "display_name": "Old Lookup Name", "field_type": "text" },
+        { "logicalname": "new_lookup_entity", "display_name": "New Lookup Entity", "field_type": "text" },
+        { "logicalname": "new_lookup_name", "display_name": "New Lookup Name", "field_type": "text" },
+        { "logicalname": "is_sensitive", "display_name": "Is Sensitive", "field_type": "bool" },
+        { "logicalname": "value_mode", "display_name": "Value Mode", "field_type": "number" }
+      ]
+    },
+    {
+      "logicalname": "audit_snapshot",
+      "display_name": "Audit Snapshot",
+      "primary_name_attribute": "entity_name",
+      "is_append_only": true,
+      "attributes": [
+        { "logicalname": "organization_ref", "display_name": "Organization", "field_type": "lookup" },
+        { "logicalname": "audit_ref", "display_name": "Audit Header", "field_type": "lookup" },
+        { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true },
+        { "logicalname": "record_id", "display_name": "Record ID", "field_type": "lookup", "is_required": true },
+        { "logicalname": "version", "display_name": "Version", "field_type": "number", "is_required": true },
+        { "logicalname": "snapshot_json", "display_name": "Snapshot JSON", "field_type": "text", "is_required": true },
+        { "logicalname": "trigger", "display_name": "Trigger", "field_type": "number" }
+      ]
+    },
+    {
+      "logicalname": "audit_config",
+      "display_name": "Audit Config",
+      "primary_name_attribute": "entity_name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "organization_ref", "display_name": "Organization", "field_type": "lookup" },
+        { "logicalname": "created_by", "display_name": "Created By", "field_type": "lookup" },
+        { "logicalname": "is_active", "display_name": "Is Active", "field_type": "bool" },
+        { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text" },
+        { "logicalname": "field_name", "display_name": "Field Name", "field_type": "text" },
+        { "logicalname": "operation_mask", "display_name": "Operation Mask", "field_type": "number" },
+        { "logicalname": "is_audited", "display_name": "Is Audited", "field_type": "bool" },
+        { "logicalname": "capture_snapshot", "display_name": "Capture Snapshot", "field_type": "bool" },
+        { "logicalname": "sensitive_fields", "display_name": "Sensitive Fields", "field_type": "text" },
+        { "logicalname": "environment_mask", "display_name": "Environment Mask", "field_type": "number" }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "audit_header", "name": "Audit Header List", "sql": "SELECT id, created_at, organization_ref, is_active, category, entity_name, record_id, operation, version_before, version_after, user_id, user_name, user_display_name, user_email, user_job_ref, user_job_name, changed_on, source, ip_address, browser, device_type, correlation_id, batch_id, event_name, event_comment, initiator, agent_session_id, agent_action_id FROM audit_header", "required_privilege": "audit_header.read" },
+    { "entity": "audit_detail", "name": "Audit Detail List", "sql": "SELECT id, created_at, organization_ref, audit_ref, field_name, display_name, data_type, old_value, new_value, old_display_value, new_display_value, old_lookup_entity, old_lookup_name, new_lookup_entity, new_lookup_name, is_sensitive FROM audit_detail", "required_privilege": "audit_detail.read" },
+    { "entity": "audit_snapshot", "name": "Audit Snapshot List", "sql": "SELECT id, created_at, organization_ref, audit_ref, entity_name, record_id, version, snapshot_json, trigger FROM audit_snapshot", "required_privilege": "audit_snapshot.read" },
+    { "entity": "audit_config", "name": "Active Audit Config", "sql": "SELECT id, created_at, organization_ref, entity_name, field_name, operation_mask, is_audited, capture_snapshot, sensitive_fields, environment_mask, is_active FROM audit_config WHERE is_active IS NOT FALSE", "required_privilege": "audit_config.read" },
+    { "entity": "audit_config", "name": "Inactive Audit Config", "sql": "SELECT id, created_at, organization_ref, entity_name, field_name, operation_mask, is_audited, capture_snapshot, sensitive_fields, environment_mask, is_active FROM audit_config WHERE is_active = false", "required_privilege": "audit_config.read" }
+  ],
+  "views": [
+    { "entity": "audit_header", "name": "Audit Header List", "query": { "entity": "audit_header", "name": "Audit Header List" }, "is_default": true },
+    { "entity": "audit_detail", "name": "Audit Detail List", "query": { "entity": "audit_detail", "name": "Audit Detail List" }, "is_default": true },
+    { "entity": "audit_snapshot", "name": "Audit Snapshot List", "query": { "entity": "audit_snapshot", "name": "Audit Snapshot List" }, "is_default": true },
+    { "entity": "audit_config", "name": "Active Audit Config", "query": { "entity": "audit_config", "name": "Active Audit Config" }, "is_default": true },
+    { "entity": "audit_config", "name": "Inactive Audit Config", "query": { "entity": "audit_config", "name": "Inactive Audit Config" }, "is_default": false }
+  ]
+}

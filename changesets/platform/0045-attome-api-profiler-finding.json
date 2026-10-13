@@ -1,0 +1,337 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:e72635141e75082a5bedc505b80637e77d739347244878a40b51a0f6e8c52c2b",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-api-profiler-finding.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "fdcd392e-08de-7637-9961-e7621f22f4d9",
+  "layer": "platform",
+  "name": "attome-api-profiler-finding",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Profiler Finding",
+          "is_append_only": false,
+          "logicalname": "profiler_finding",
+          "primary_name_attribute": "title"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "profiler_finding"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Avg (ms)",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "avg_ms"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "profiler_finding",
+        "field": "avg_ms"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Last Seen At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "last_seen_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "profiler_finding",
+        "field": "last_seen_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Max (ms)",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "max_ms"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "profiler_finding",
+        "field": "max_ms"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Note",
+          "field_type": "text",
+          "logicalname": "note"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "profiler_finding",
+        "field": "note"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Object Ref",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "object_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "profiler_finding",
+        "field": "object_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Object Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "object_type",
+          "options": {
+            "choices": [
+              "entity",
+              "query",
+              "view",
+              "rule",
+              "workflow",
+              "dashboard_widget",
+              "action",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "profiler_finding",
+        "field": "object_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "P95 (ms)",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "p95_ms"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "profiler_finding",
+        "field": "p95_ms"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Probe Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "probe_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "profiler_finding",
+        "field": "probe_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Sample Count",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "sample_count"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "profiler_finding",
+        "field": "sample_count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "open",
+              "acknowledged",
+              "resolved"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "profiler_finding",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Title",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "title"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "profiler_finding",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "profiler_finding",
+          "entity_mappings": [],
+          "name": "Active Profiler Findings",
+          "required_privilege": "profiler_finding.read",
+          "sql": "SELECT id, title, object_type, object_ref, probe_name, p95_ms, avg_ms, sample_count, last_seen_at, status FROM profiler_finding WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "profiler_finding",
+        "query": "Active Profiler Findings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "profiler_finding",
+          "entity_mappings": [],
+          "name": "Inactive Profiler Findings",
+          "required_privilege": "profiler_finding.read",
+          "sql": "SELECT id, title, object_type, object_ref, probe_name, p95_ms, avg_ms, sample_count, last_seen_at, status FROM profiler_finding WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "profiler_finding",
+        "query": "Inactive Profiler Findings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "profiler_finding",
+          "is_default": true,
+          "name": "Active Profiler Findings",
+          "query": {
+            "entity": "profiler_finding",
+            "name": "Active Profiler Findings"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "profiler_finding",
+        "view": "Active Profiler Findings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "profiler_finding",
+          "is_default": false,
+          "name": "Inactive Profiler Findings",
+          "query": {
+            "entity": "profiler_finding",
+            "name": "Inactive Profiler Findings"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "profiler_finding",
+        "view": "Inactive Profiler Findings"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 45,
+  "title": "Platform definitions: attome-api-profiler-finding"
+}

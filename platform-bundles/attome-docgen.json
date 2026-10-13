@@ -1,0 +1,43 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "docgen_template",
+      "display_name": "Document Template",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "entity", "display_name": "Target Entity", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "format", "display_name": "Format", "field_type": "choice", "is_required": true, "is_filterable": true, "options": { "choices": ["pdf"], "multi": false } },
+        { "logicalname": "body", "display_name": "Body", "field_type": "text", "is_required": true },
+        { "logicalname": "stylesheet", "display_name": "Stylesheet", "field_type": "text" },
+        { "logicalname": "page_size", "display_name": "Page Size", "field_type": "choice", "is_filterable": true, "options": { "choices": ["A4", "Letter"], "multi": false } },
+        { "logicalname": "margin_mm", "display_name": "Margin (mm)", "field_type": "number" },
+        { "logicalname": "attach_to_field", "display_name": "Attach To Field", "field_type": "text", "is_filterable": true },
+        { "logicalname": "version", "display_name": "Version", "field_type": "number", "is_filterable": true }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "docgen_template",
+      "name": "Active Templates",
+      "sql": "SELECT id, name, entity, format, page_size, version, created_at, modified_at, row_version FROM docgen_template WHERE is_active = TRUE",
+      "required_privilege": "docgen_template.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "docgen_template",
+      "name": "Active Templates",
+      "query": { "entity": "docgen_template", "name": "Active Templates" },
+      "is_default": true
+    }
+  ]
+}

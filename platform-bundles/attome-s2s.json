@@ -1,0 +1,128 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "s2s_client",
+      "display_name": "S2S Client",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true },
+        { "logicalname": "client_id", "display_name": "Client ID", "field_type": "text", "is_required": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "status", "display_name": "Status", "field_type": "text" },
+        { "logicalname": "service_user_ref", "display_name": "Service User", "field_type": "lookup" },
+        { "logicalname": "rate_limit_rpm", "display_name": "Rate Limit (rpm)", "field_type": "number" },
+        { "logicalname": "max_concurrent", "display_name": "Max Concurrent", "field_type": "number" },
+        { "logicalname": "max_payload_bytes", "display_name": "Max Payload Bytes", "field_type": "number" },
+        { "logicalname": "auto_disable_days", "display_name": "Auto Disable Days", "field_type": "number" },
+        { "logicalname": "last_used_at", "display_name": "Last Used At", "field_type": "date" }
+      ]
+    },
+    {
+      "logicalname": "s2s_permission",
+      "display_name": "S2S Permission",
+      "primary_name_attribute": "entity_name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "client_ref", "display_name": "Client", "field_type": "lookup", "is_required": true },
+        { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true },
+        { "logicalname": "can_read", "display_name": "Can Read", "field_type": "bool" },
+        { "logicalname": "can_create", "display_name": "Can Create", "field_type": "bool" },
+        { "logicalname": "can_update", "display_name": "Can Update", "field_type": "bool" },
+        { "logicalname": "can_delete", "display_name": "Can Delete", "field_type": "bool" },
+        { "logicalname": "can_export", "display_name": "Can Export", "field_type": "bool" },
+        { "logicalname": "can_bulk", "display_name": "Can Bulk", "field_type": "bool" }
+      ]
+    },
+    {
+      "logicalname": "s2s_access_log",
+      "display_name": "S2S Access Log",
+      "primary_name_attribute": "path",
+      "is_append_only": true,
+      "attributes": [
+        { "logicalname": "client_ref", "display_name": "Client", "field_type": "lookup" },
+        { "logicalname": "client_name", "display_name": "Client Name", "field_type": "text" },
+        { "logicalname": "method", "display_name": "Method", "field_type": "text", "is_required": true },
+        { "logicalname": "path", "display_name": "Path", "field_type": "text", "is_required": true },
+        { "logicalname": "status_code", "display_name": "Status Code", "field_type": "number" },
+        { "logicalname": "response_time_ms", "display_name": "Response Time ms", "field_type": "number" },
+        { "logicalname": "bytes_received", "display_name": "Bytes Received", "field_type": "number" },
+        { "logicalname": "bytes_sent", "display_name": "Bytes Sent", "field_type": "number" },
+        { "logicalname": "correlation_id", "display_name": "Correlation ID", "field_type": "text" },
+        { "logicalname": "ip_address", "display_name": "IP Address", "field_type": "text" },
+        { "logicalname": "nonce", "display_name": "Nonce", "field_type": "text" },
+        { "logicalname": "error_code", "display_name": "Error Code", "field_type": "text" }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "s2s_client",
+      "name": "Active S2S Clients",
+      "sql": "SELECT id, name, client_id, description, status, service_user_ref, rate_limit_rpm, max_concurrent, allowed_cidrs, max_payload_bytes, auto_disable_days, last_used_at, row_version, created_at, updated_at FROM s2s_client WHERE is_deleted = FALSE AND is_active IS NOT FALSE",
+      "required_privilege": "s2s_client.read"
+    },
+    {
+      "entity": "s2s_client",
+      "name": "Inactive S2S Clients",
+      "sql": "SELECT id, name, client_id, description, status, service_user_ref, rate_limit_rpm, max_concurrent, allowed_cidrs, max_payload_bytes, auto_disable_days, last_used_at, row_version, created_at, updated_at FROM s2s_client WHERE is_deleted = FALSE AND is_active = false",
+      "required_privilege": "s2s_client.read"
+    },
+    {
+      "entity": "s2s_permission",
+      "name": "Active S2S Permissions",
+      "sql": "SELECT id, client_ref, entity_name, can_read, can_create, can_update, can_delete, can_export, can_bulk, row_version, created_at, updated_at FROM s2s_permission WHERE is_deleted = FALSE AND is_active IS NOT FALSE",
+      "required_privilege": "s2s_permission.read"
+    },
+    {
+      "entity": "s2s_permission",
+      "name": "Inactive S2S Permissions",
+      "sql": "SELECT id, client_ref, entity_name, can_read, can_create, can_update, can_delete, can_export, can_bulk, row_version, created_at, updated_at FROM s2s_permission WHERE is_deleted = FALSE AND is_active = false",
+      "required_privilege": "s2s_permission.read"
+    },
+    {
+      "entity": "s2s_access_log",
+      "name": "S2S Access Log",
+      "sql": "SELECT id, client_ref, client_name, method, path, status_code, response_time_ms, bytes_received, bytes_sent, correlation_id, ip_address, nonce, error_code, created_at FROM s2s_access_log",
+      "required_privilege": "s2s_access_log.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "s2s_client",
+      "name": "Active S2S Clients",
+      "query": { "entity": "s2s_client", "name": "Active S2S Clients" },
+      "is_default": true
+    },
+    {
+      "entity": "s2s_client",
+      "name": "Inactive S2S Clients",
+      "query": { "entity": "s2s_client", "name": "Inactive S2S Clients" },
+      "is_default": false
+    },
+    {
+      "entity": "s2s_permission",
+      "name": "Active S2S Permissions",
+      "query": { "entity": "s2s_permission", "name": "Active S2S Permissions" },
+      "is_default": true
+    },
+    {
+      "entity": "s2s_permission",
+      "name": "Inactive S2S Permissions",
+      "query": { "entity": "s2s_permission", "name": "Inactive S2S Permissions" },
+      "is_default": false
+    },
+    {
+      "entity": "s2s_access_log",
+      "name": "S2S Access Log",
+      "query": { "entity": "s2s_access_log", "name": "S2S Access Log" },
+      "is_default": true
+    }
+  ]
+}

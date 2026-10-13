@@ -1,0 +1,51 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "communication_event",
+      "display_name": "Communication Event",
+      "primary_name_attribute": "event_type",
+      "is_append_only": true,
+      "attributes": [
+        { "logicalname": "communication_id", "display_name": "Communication", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "communication" },
+        { "logicalname": "event_type", "display_name": "Event", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["queued", "sent", "delivered", "bounced", "opened", "failed", "suppressed"], "multi": false } },
+        { "logicalname": "detail", "display_name": "Detail", "field_type": "text" },
+        { "logicalname": "occurred_at", "display_name": "Occurred At", "field_type": "date", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "provider_message_id", "display_name": "Provider Message Id", "field_type": "text", "is_filterable": true }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "communication_event",
+      "name": "Communication Events",
+      "sql": "SELECT id, communication_id, event_type, detail, occurred_at, provider_message_id, created_at FROM communication_event WHERE is_active IS NOT FALSE",
+      "required_privilege": "communication_event.read"
+    },
+    {
+      "entity": "communication_event",
+      "name": "Communication Events (Related)",
+      "sql": "SELECT id, communication_id, event_type, detail, occurred_at, provider_message_id, created_at FROM communication_event WHERE is_active IS NOT FALSE",
+      "required_privilege": "communication_event.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "communication_event",
+      "name": "Communication Events",
+      "query": { "entity": "communication_event", "name": "Communication Events" },
+      "is_default": true
+    },
+    {
+      "entity": "communication_event",
+      "name": "Communication Events (Related)",
+      "query": { "entity": "communication_event", "name": "Communication Events (Related)" },
+      "is_default": false
+    }
+  ]
+}

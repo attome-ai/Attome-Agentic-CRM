@@ -1,0 +1,36 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "follow",
+      "display_name": "Follow",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "user_id", "display_name": "User", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true, "is_filterable": true },
+        { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true, "is_filterable": true }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "follow",
+      "name": "Active Follows",
+      "sql": "SELECT id, user_id, entity_name, record_id, created_at FROM follow WHERE is_active IS NOT FALSE",
+      "required_privilege": "follow.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "follow",
+      "name": "Active Follows",
+      "query": { "entity": "follow", "name": "Active Follows" },
+      "is_default": true
+    }
+  ]
+}

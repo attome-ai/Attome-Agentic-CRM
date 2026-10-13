@@ -1,0 +1,446 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:e5b918a3582bcf924b1aa3b7afb994f1f57c7005f9db153fe5185f88a4f44ce3",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-integration.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "2ae1ade3-a125-7f68-ad2e-72e89ff13381",
+  "layer": "platform",
+  "name": "attome-integration",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Integration Event",
+          "is_append_only": true,
+          "logicalname": "integration_event",
+          "primary_name_attribute": "event_type"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "integration_event"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Integration System",
+          "is_append_only": false,
+          "logicalname": "integration_system",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "integration_system"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Event Type",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "event_type"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "integration_event",
+        "field": "event_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Payload",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "payload"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "integration_event",
+        "field": "payload"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Processed",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "processed"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "integration_event",
+        "field": "processed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Authentication",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "auth_type",
+          "options": {
+            "choices": [
+              "api_key",
+              "oauth2_client_credentials",
+              "basic",
+              "hmac"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "integration_system",
+        "field": "auth_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Base URL",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "base_url"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "integration_system",
+        "field": "base_url"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Adapter Config",
+          "field_type": "text",
+          "logicalname": "config"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "integration_system",
+        "field": "config"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Credential Reference",
+          "field_type": "text",
+          "logicalname": "credential_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "integration_system",
+        "field": "credential_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Last Health Error",
+          "field_type": "text",
+          "logicalname": "health_last_error"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "integration_system",
+        "field": "health_last_error"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Last Healthy At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "health_last_ok_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "integration_system",
+        "field": "health_last_ok_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Kind",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "kind",
+          "options": {
+            "choices": [
+              "rest",
+              "mailbox",
+              "channel",
+              "esign",
+              "calendar",
+              "file_drop"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "integration_system",
+        "field": "kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Legacy Body-Only Webhook Signature",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "legacy_body_only_signature"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "integration_system",
+        "field": "legacy_body_only_signature"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "integration_system",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Rate Limit (requests/min)",
+          "field_type": "number",
+          "logicalname": "rate_limit"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "integration_system",
+        "field": "rate_limit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Service Principal",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "service_principal_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "integration_system",
+        "field": "service_principal_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "active",
+              "disabled",
+              "error"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "integration_system",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Integration System",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "system_ref",
+          "lookup_entity": "integration_system"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "integration_event",
+        "field": "system_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "integration_event",
+          "entity_mappings": [],
+          "name": "Integration Events",
+          "required_privilege": "integration_event.read",
+          "sql": "SELECT id, created_at, system_ref, event_type, payload, processed FROM integration_event"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "integration_event",
+        "query": "Integration Events"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "integration_system",
+          "entity_mappings": [],
+          "name": "Active Integration Systems",
+          "required_privilege": "integration_system.read",
+          "sql": "SELECT id, name, kind, base_url, auth_type, status, rate_limit, health_last_ok_at, health_last_error, created_at, modified_at, row_version FROM integration_system WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "integration_system",
+        "query": "Active Integration Systems"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "integration_event",
+          "is_default": true,
+          "name": "Integration Events",
+          "query": {
+            "entity": "integration_event",
+            "name": "Integration Events"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "integration_event",
+        "view": "Integration Events"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "integration_system",
+          "is_default": true,
+          "name": "Active Integration Systems",
+          "query": {
+            "entity": "integration_system",
+            "name": "Active Integration Systems"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "integration_system",
+        "view": "Active Integration Systems"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 5,
+  "title": "Platform definitions: attome-integration"
+}

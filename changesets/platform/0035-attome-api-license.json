@@ -1,0 +1,229 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:d9a05707bdc6aee383635018b51519e4c744ed686adce4f79fed9a4c5f672d54",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-api-license.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "692e4b70-1735-7eda-9e87-ce6efc9121da",
+  "layer": "platform",
+  "name": "attome-api-license",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "License",
+          "is_append_only": true,
+          "logicalname": "license",
+          "primary_name_attribute": "domain"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "license"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Deployment ID",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "deployment_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "license",
+        "field": "deployment_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Domain",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "domain"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "license",
+        "field": "domain"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Expiry",
+          "field_type": "date",
+          "is_required": true,
+          "logicalname": "expiry"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "license",
+        "field": "expiry"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Issued At",
+          "field_type": "date",
+          "is_required": true,
+          "logicalname": "issued_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "license",
+        "field": "issued_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Max Users",
+          "field_type": "number",
+          "is_required": true,
+          "logicalname": "max_users"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "license",
+        "field": "max_users"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Modules",
+          "field_type": "text",
+          "logicalname": "modules"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "license",
+        "field": "modules"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Signature",
+          "field_type": "text",
+          "is_required": true,
+          "is_sensitive": true,
+          "logicalname": "signature"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "license",
+        "field": "signature"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Signing Key ID",
+          "field_type": "text",
+          "logicalname": "signing_key_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "license",
+        "field": "signing_key_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Tier",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "tier"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "license",
+        "field": "tier"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "license",
+          "entity_mappings": [],
+          "name": "Licenses",
+          "required_privilege": "license.read",
+          "sql": "SELECT id, created_at, deployment_id, domain, tier, max_users, expiry, modules, issued_at FROM license"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "license",
+        "query": "Licenses"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "license",
+          "is_default": true,
+          "name": "Licenses",
+          "query": {
+            "entity": "license",
+            "name": "Licenses"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "license",
+        "view": "Licenses"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 35,
+  "title": "Platform definitions: attome-api-license"
+}

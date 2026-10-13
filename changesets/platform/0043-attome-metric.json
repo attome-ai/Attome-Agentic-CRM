@@ -1,0 +1,574 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:2fc06ddfa7357670d650f7bb3838f3575a57240f3b312597e772d8e67db12719",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-metric.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "81dde0c2-978e-7ca4-a736-dfaf42318414",
+  "layer": "platform",
+  "name": "attome-metric",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Lets metric snapshots run a stored query under the metric service principal (D-786). Put it on a stored query's required_privilege to make that query usable as a metric source; held by the 'Metric Service' role.",
+          "key": "attome_metric.snapshot",
+          "name": "Run as Metric Snapshot"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "attome_metric.snapshot"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Metric Definition",
+          "is_append_only": false,
+          "logicalname": "dashboard_metric_definition",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "dashboard_metric_definition"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Metric Target",
+          "is_append_only": false,
+          "logicalname": "dashboard_metric_target"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "dashboard_metric_target"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Direction",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "direction",
+          "options": {
+            "choices": [
+              "higher_is_better",
+              "lower",
+              "target_band"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "direction"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Formula",
+          "field_type": "text",
+          "logicalname": "formula"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "formula"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Key",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "key"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "key"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Period",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "period",
+          "options": {
+            "choices": [
+              "day",
+              "week",
+              "month",
+              "quarter",
+              "year"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "period"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Query",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "query_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "query_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Source Kind",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "source_kind",
+          "options": {
+            "choices": [
+              "query",
+              "formula",
+              "manual"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "source_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Unit",
+          "field_type": "text",
+          "logicalname": "unit"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "unit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Weight",
+          "field_type": "number",
+          "logicalname": "weight"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "weight"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Period Start",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "period_start"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "dashboard_metric_target",
+        "field": "period_start"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Target Value",
+          "field_type": "number",
+          "is_required": true,
+          "logicalname": "target_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "dashboard_metric_target",
+        "field": "target_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Critical Threshold",
+          "field_type": "number",
+          "logicalname": "threshold_crit"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "dashboard_metric_target",
+        "field": "threshold_crit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Warn Threshold",
+          "field_type": "number",
+          "logicalname": "threshold_warn"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "dashboard_metric_target",
+        "field": "threshold_warn"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_ref",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "owner_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Parent Metric",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "parent_ref",
+          "lookup_entity": "dashboard_metric_definition"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "field": "parent_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Metric",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "metric_ref",
+          "lookup_entity": "dashboard_metric_definition"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "dashboard_metric_target",
+        "field": "metric_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_metric_definition",
+          "entity_mappings": [],
+          "name": "Active Metric Definitions",
+          "required_privilege": "dashboard_metric_definition.read",
+          "sql": "SELECT id, name, key, source_kind, direction, period, owner_ref FROM dashboard_metric_definition WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "query": "Active Metric Definitions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_metric_definition",
+          "entity_mappings": [],
+          "name": "Inactive Metric Definitions",
+          "required_privilege": "dashboard_metric_definition.read",
+          "sql": "SELECT id, name, key, source_kind, direction, period, owner_ref FROM dashboard_metric_definition WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "query": "Inactive Metric Definitions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_metric_target",
+          "entity_mappings": [],
+          "name": "Active Metric Targets",
+          "required_privilege": "dashboard_metric_target.read",
+          "sql": "SELECT id, metric_ref, period_start, target_value, threshold_warn, threshold_crit FROM dashboard_metric_target WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "dashboard_metric_target",
+        "query": "Active Metric Targets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_metric_target",
+          "entity_mappings": [],
+          "name": "Inactive Metric Targets",
+          "required_privilege": "dashboard_metric_target.read",
+          "sql": "SELECT id, metric_ref, period_start, target_value, threshold_warn, threshold_crit FROM dashboard_metric_target WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "dashboard_metric_target",
+        "query": "Inactive Metric Targets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_metric_definition",
+          "is_default": true,
+          "name": "Active Metric Definitions",
+          "query": {
+            "entity": "dashboard_metric_definition",
+            "name": "Active Metric Definitions"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "view": "Active Metric Definitions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_metric_definition",
+          "is_default": false,
+          "name": "Inactive Metric Definitions",
+          "query": {
+            "entity": "dashboard_metric_definition",
+            "name": "Inactive Metric Definitions"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "dashboard_metric_definition",
+        "view": "Inactive Metric Definitions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_metric_target",
+          "is_default": true,
+          "name": "Active Metric Targets",
+          "query": {
+            "entity": "dashboard_metric_target",
+            "name": "Active Metric Targets"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "dashboard_metric_target",
+        "view": "Active Metric Targets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_metric_target",
+          "is_default": false,
+          "name": "Inactive Metric Targets",
+          "query": {
+            "entity": "dashboard_metric_target",
+            "name": "Inactive Metric Targets"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "dashboard_metric_target",
+        "view": "Inactive Metric Targets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "The metric service principal's only role (D-786): query-backed metric snapshots run under it, never under the viewer or the caller. Ships with attome_metric.snapshot only; grant read on each entity a metric query reads through the role-grant admin API. Never grant administrator rights: the principal refuses to run as an admin.",
+          "name": "Metric Service"
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "role": "Metric Service"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "privilege": "attome_metric.snapshot",
+        "role": "Metric Service"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 43,
+  "title": "Platform definitions: attome-metric"
+}

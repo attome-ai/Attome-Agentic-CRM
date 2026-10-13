@@ -1,0 +1,26 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "authentication_type",
+      "display_name": "Authentication Type",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "authentication_type", "name": "All Authentication Types", "sql": "SELECT id FROM \"authentication_type\" WHERE is_active = true", "required_privilege": "authentication_type.read" }
+  ],
+  "views": [
+    { "entity": "authentication_type", "name": "All Authentication Types", "query": { "entity": "authentication_type", "name": "All Authentication Types" }, "is_default": true }
+  ]
+}

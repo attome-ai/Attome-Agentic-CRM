@@ -1,0 +1,112 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:0b9d9875bdcacd76bc30ece5ba5d3a1535f820442b2d3643b337815a24c281fb",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/xrm-core-authentication-type.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "35350430-7129-7ad3-ab00-a20667e23bf9",
+  "layer": "platform",
+  "name": "xrm-core-authentication-type",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Authentication Type",
+          "is_append_only": false,
+          "logicalname": "authentication_type",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "authentication_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "authentication_type",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "authentication_type",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "authentication_type",
+          "entity_mappings": [],
+          "name": "All Authentication Types",
+          "required_privilege": "authentication_type.read",
+          "sql": "SELECT id FROM \"authentication_type\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "authentication_type",
+        "query": "All Authentication Types"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "authentication_type",
+          "is_default": true,
+          "name": "All Authentication Types",
+          "query": {
+            "entity": "authentication_type",
+            "name": "All Authentication Types"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "authentication_type",
+        "view": "All Authentication Types"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 10,
+  "title": "Platform definitions: xrm-core-authentication-type"
+}

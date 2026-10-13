@@ -73,7 +73,7 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -E '^(error|warning)(\[|:)|^ *--> |^---- .* stdout ----|panicked at|^test .* FAILED|^Diff in' release-check.log | head -400 > failures.txt || true
+          sed -e 's/\x1b\[[0-9;]*m//g' release-check.log | grep -E '^(error|warning)(\[|:)|^ *--> |^---- .* stdout ----|panicked at|^test .* FAILED|^Diff in' | head -400 > failures.txt || true
           body=$(sed -e 's/%/%25/g' failures.txt | awk '{printf "%s%%0A", $0}')
           echo "::error title=release check failures::${body}"
 
@@ -96,6 +96,6 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -E '^(error|warning)(\[|:)|^ *--> |^---- .* stdout ----|panicked at|^test .* FAILED|^Diff in' release-check.log | head -400 > failures.txt || true
+          sed -e 's/\x1b\[[0-9;]*m//g' release-check.log | grep -E '^(error|warning)(\[|:)|^ *--> |^---- .* stdout ----|panicked at|^test .* FAILED|^Diff in' | head -400 > failures.txt || true
           body=$(sed -e 's/%/%25/g' failures.txt | awk '{printf "%s%%0A", $0}')
           echo "::error title=release check failures::${body}"

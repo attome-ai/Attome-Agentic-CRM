@@ -1,0 +1,112 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:ceb8e2702d4af4d3b74d2d16afea6c84f8f3f0152d04f3cb8f1e0d6768ff1ab5",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-personality.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "ee1d6bc3-41e3-7e00-9ead-e353bb3e0ab5",
+  "layer": "platform",
+  "name": "attome-ai-personality",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Personality",
+          "is_append_only": false,
+          "logicalname": "ai_personality",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "ai_personality"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "ai_personality",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "ai_personality",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_personality",
+          "entity_mappings": [],
+          "name": "All Personalities",
+          "required_privilege": "ai_personality.read",
+          "sql": "SELECT id, name, description FROM \"ai_personality\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "ai_personality",
+        "query": "All Personalities"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ai_personality",
+          "is_default": true,
+          "name": "All Personalities",
+          "query": {
+            "entity": "ai_personality",
+            "name": "All Personalities"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "ai_personality",
+        "view": "All Personalities"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 7,
+  "title": "Platform definitions: attome-ai-personality"
+}

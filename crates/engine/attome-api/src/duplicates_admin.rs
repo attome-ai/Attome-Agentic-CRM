@@ -1,0 +1,1184 @@
+//! D-432 / M13 (Master Data Management, scoped to dedup + survivorship
+//! only) — the admin surface: `match_rule` and
+//! `survivorship_rule` CRUD, plus the `duplicate_candidate`
+//! steward queue (`/api/v1/admin/data/duplicates*`). `system.admin` only,
+//! mounted with `strict_authz` — same posture as every other M12/M13
+//! `/admin/data/*` surface (`data_profile_admin.rs`, `data_mapping_admin.rs`).
+//!
+//! The matching job itself (`EngineJob::DataMatchSweep`) lives in
+//! `duplicates_match.rs`; the merge execution this module's `merge_candidate`
+//! and `approval_admin::execute_approved`'s `ACTION_MDM_AUTO_MERGE` arm both
+//! call is `entity_crud::do_merge_core` — this file never duplicates that
+//! logic, only decides *when* to call it.
+
+use attome_core::EngineState;
+use attome_server::authz::{Admin, Authorized};
+use attome_types::{AppError, ErrorResponse, PaginatedResponse};
+use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
+use axum::{
+    Json, Router,
+    extract::{Path, Query, State},
+    http::StatusCode,
+    routing::{get, post},
+};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::HashSet;
+use utoipa::{IntoParams, ToSchema};
+use uuid::Uuid;
+
+use crate::duplicates_match::{Comparator, MatchField};
+use attome_audit::{
+    AuditCategory, AuditEvent, AuditOperation, AuditRequestContext, AuditSource, audit_service,
+};
+use attome_records::entity_crud;
+
+/// The gated action `duplicates_match::submit_auto_merge_request` submits
+/// and `approval_admin::execute_approved` dispatches — see
+/// `duplicates_match::submit_auto_merge_request`'s doc comment for why this
+/// is submitted unconditionally rather than only when `approval.
+/// required_actions` opts it in.
+pub const ACTION_MDM_AUTO_MERGE: &str = "mdm.auto_merge";
+
+// ── Match rules ─────────────────────────────────────────────────────────────
+
+fn validate_match_fields(
+    known_fields: &HashSet<&str>,
+    fields: &[MatchField],
+) -> Result<(), AppError> {
+    if fields.is_empty() {
+        return Err(AppError::Validation(
+            "a match rule must specify at least one field".into(),
+        ));
+    }
+    for f in fields {
+        if f.comparator == Comparator::Embedding {
+            return Err(AppError::Validation(format!(
+                "field '{}': comparator 'embedding' is schema-accepted but not implemented yet \
+                 — there is no per-field embedding source (attome-search's embeddings cover its own \
+                 title/body search corpus, not arbitrary attribute values); use 'exact', \
+                 'normalized', or 'trigram'",
+                f.field
+            )));
+        }
+        if !known_fields.contains(f.field.as_str()) {
+            return Err(AppError::Validation(format!(
+                "field '{}' does not exist on this entity",
+                f.field
+            )));
+        }
+        if f.weight <= 0.0 {
+            return Err(AppError::Validation(format!(
+                "field '{}': weight must be positive",
+                f.field
+            )));
+        }
+        if let Some(m) = f.min_similarity
+            && !(0.0..=1.0).contains(&m)
+        {
+            return Err(AppError::Validation(format!(
+                "field '{}': min_similarity must be between 0 and 1",
+                f.field
+            )));
+        }
+    }
+    Ok(())
+}
+
+const MATCH_RULE_COLUMNS: &str = "id, entity_logicalname, name, is_active, fields, \
+     threshold::float8, auto_merge, row_version, created_at, updated_at, created_by";
+
+#[derive(sqlx::FromRow)]
+struct MatchRuleRow {
+    id: Uuid,
+    entity_logicalname: String,
+    name: String,
+    is_active: bool,
+    fields: Value,
+    threshold: f64,
+    auto_merge: bool,
+    row_version: i64,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+    created_by: Uuid,
+}
+
+#[derive(Serialize, ToSchema)]
+struct MatchRuleView {
+    id: Uuid,
+    entity_logicalname: String,
+    name: String,
+    is_active: bool,
+    fields: Vec<MatchField>,
+    threshold: f64,
+    auto_merge: bool,
+    row_version: i64,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+    created_by: Uuid,
+}
+
+impl TryFrom<MatchRuleRow> for MatchRuleView {
+    type Error = AppError;
+
+    fn try_from(row: MatchRuleRow) -> Result<Self, AppError> {
+        let fields: Vec<MatchField> = serde_json::from_value(row.fields)
+            .map_err(|e| AppError::internal(format!("corrupt match_rule.fields: {e}")))?;
+        Ok(Self {
+            id: row.id,
+            entity_logicalname: row.entity_logicalname,
+            name: row.name,
+            is_active: row.is_active,
+            fields,
+            threshold: row.threshold,
+            auto_merge: row.auto_merge,
+            row_version: row.row_version,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            created_by: row.created_by,
+        })
+    }
+}
+
+#[derive(Deserialize, IntoParams)]
+struct ListMatchRulesQuery {
+    entity: Option<String>,
+    /// One-based: page 1 is the first page.
+    page: Option<i64>,
+    page_size: Option<i64>,
+}
+
+/// `GET /api/v1/admin/data/match-rules` — `system.admin` only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/data/match-rules",
+    tag = "admin",
+    params(ListMatchRulesQuery),
+    responses(
+        (status = 200, description = "Success", body = PaginatedResponse<MatchRuleView>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_match_rules(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(q): Query<ListMatchRulesQuery>,
+) -> Result<Json<PaginatedResponse<MatchRuleView>>, AppError> {
+    let PageWindow {
+        page,
+        page_size,
+        offset,
+    } = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
+
+    let rows: Vec<MatchRuleRow> = sqlx::query_as(&format!(
+        "SELECT {MATCH_RULE_COLUMNS} FROM match_rule \
+          WHERE NOT is_deleted AND ($1::text IS NULL OR entity_logicalname = $1) \
+          ORDER BY name ASC OFFSET $2 LIMIT $3"
+    ))
+    .bind(&q.entity)
+    .bind(offset)
+    .bind(page_size)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM match_rule \
+          WHERE NOT is_deleted AND ($1::text IS NULL OR entity_logicalname = $1)",
+    )
+    .bind(&q.entity)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    let items = rows
+        .into_iter()
+        .map(TryInto::try_into)
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
+}
+
+#[derive(Deserialize, ToSchema)]
+struct CreateMatchRuleBody {
+    entity: String,
+    name: String,
+    #[serde(default = "default_true")]
+    is_active: bool,
+    fields: Vec<MatchField>,
+    threshold: f64,
+    #[serde(default)]
+    auto_merge: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+/// `POST /api/v1/admin/data/match-rules` — `system.admin` only.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/data/match-rules",
+    tag = "admin",
+    request_body = CreateMatchRuleBody,
+    responses(
+        (status = 201, description = "Success", body = MatchRuleView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Configuration, AuditOperation::Create)])))),
+)]
+async fn create_match_rule(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(body): Json<CreateMatchRuleBody>,
+) -> Result<(StatusCode, Json<MatchRuleView>), AppError> {
+    let name = body.name.trim();
+    if name.is_empty() {
+        return Err(AppError::Validation("name must not be empty".into()));
+    }
+    if body.threshold <= 0.0 || body.threshold > 1.0 {
+        return Err(AppError::Validation(
+            "threshold must be greater than 0 and at most 1".into(),
+        ));
+    }
+    let (_, entity_name, attrs, _) = entity_crud::resolve_entity(&state, &body.entity).await?;
+    let known: HashSet<&str> = attrs.iter().map(|a| a.logicalname.as_str()).collect();
+    validate_match_fields(&known, &body.fields)?;
+    let fields_json = serde_json::to_value(&body.fields).map_err(AppError::internal)?;
+
+    let rule_id = Uuid::now_v7();
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row: MatchRuleRow = sqlx::query_as(&format!(
+        "INSERT INTO match_rule \
+             (id, entity_logicalname, name, is_active, fields, threshold, auto_merge, row_version, created_by) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8) \
+         RETURNING {MATCH_RULE_COLUMNS}"
+    ))
+    .bind(rule_id)
+    .bind(&entity_name)
+    .bind(name)
+    .bind(body.is_active)
+    .bind(&fields_json)
+    .bind(body.threshold)
+    .bind(body.auto_merge)
+    .bind(ctx.user_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    audit_service(&state)
+        .write_in_tx(
+            &mut tx,
+            AuditEvent {
+                organization_ref: org_ref,
+                category: AuditCategory::Configuration,
+                entity_name: Some(entity_name.clone()),
+                record_id: Some(rule_id),
+                operation: AuditOperation::Create,
+                version_before: None,
+                version_after: None,
+                user_context: user_ctx,
+                changed_on: Utc::now(),
+                source: AuditSource::Api,
+                request_context: AuditRequestContext::default(),
+                correlation_id: None,
+                batch_id: None,
+                event_name: Some("match_rule_created".to_owned()),
+                event_comment: Some(format!("match rule {name:?} on {entity_name}")),
+                changed_fields: vec![],
+                snapshot_json: None,
+            },
+        )
+        .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok((StatusCode::CREATED, Json(row.try_into()?)))
+}
+
+#[derive(Deserialize, ToSchema)]
+struct UpdateMatchRuleBody {
+    name: Option<String>,
+    is_active: Option<bool>,
+    fields: Option<Vec<MatchField>>,
+    threshold: Option<f64>,
+    auto_merge: Option<bool>,
+    row_version: i64,
+}
+
+/// `PUT /api/v1/admin/data/match-rules/{id}` — `system.admin` only.
+/// `entity` is immutable after creation (delete and recreate to retarget a
+/// rule) — same posture `approval_policy_admin::update_policy` takes for
+/// `action_type`.
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/data/match-rules/{id}",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    request_body = UpdateMatchRuleBody,
+    responses(
+        (status = 200, description = "Success", body = MatchRuleView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Match rule not found", body = ErrorResponse),
+        (status = 409, description = "row_version is stale", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
+async fn update_match_rule(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<UpdateMatchRuleBody>,
+) -> Result<Json<MatchRuleView>, AppError> {
+    if let Some(name) = &body.name
+        && name.trim().is_empty()
+    {
+        return Err(AppError::Validation("name must not be empty".into()));
+    }
+    if let Some(t) = body.threshold
+        && (t <= 0.0 || t > 1.0)
+    {
+        return Err(AppError::Validation(
+            "threshold must be greater than 0 and at most 1".into(),
+        ));
+    }
+
+    let fields_json = match &body.fields {
+        Some(fields) => {
+            let entity_logicalname: Option<String> = sqlx::query_scalar(
+                "SELECT entity_logicalname FROM match_rule WHERE id = $1 AND NOT is_deleted",
+            )
+            .bind(id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            let entity_logicalname = entity_logicalname.ok_or(AppError::NotFound)?;
+            let (_, _, attrs, _) = entity_crud::resolve_entity(&state, &entity_logicalname).await?;
+            let known: HashSet<&str> = attrs.iter().map(|a| a.logicalname.as_str()).collect();
+            validate_match_fields(&known, fields)?;
+            Some(serde_json::to_value(fields).map_err(AppError::internal)?)
+        }
+        None => None,
+    };
+
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row: Option<MatchRuleRow> = sqlx::query_as(&format!(
+        "UPDATE match_rule \
+         SET name = COALESCE($3, name), \
+             is_active = COALESCE($4, is_active), \
+             fields = COALESCE($5, fields), \
+             threshold = COALESCE($6, threshold), \
+             auto_merge = COALESCE($7, auto_merge), \
+             row_version = row_version + 1, \
+             updated_at = NOW() \
+         WHERE id = $1 AND row_version = $2 AND NOT is_deleted \
+         RETURNING {MATCH_RULE_COLUMNS}"
+    ))
+    .bind(id)
+    .bind(body.row_version)
+    .bind(body.name.as_deref().map(str::trim))
+    .bind(body.is_active)
+    .bind(&fields_json)
+    .bind(body.threshold)
+    .bind(body.auto_merge)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+
+    let row = match row {
+        Some(row) => row,
+        None => {
+            let exists: bool = sqlx::query_scalar(
+                "SELECT EXISTS(SELECT 1 FROM match_rule WHERE id = $1 AND NOT is_deleted)",
+            )
+            .bind(id)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+            return Err(if exists {
+                AppError::VersionConflict
+            } else {
+                AppError::NotFound
+            });
+        }
+    };
+    let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    audit_service(&state)
+        .write_in_tx(
+            &mut tx,
+            AuditEvent {
+                organization_ref: org_ref,
+                category: AuditCategory::Configuration,
+                entity_name: Some(row.entity_logicalname.clone()),
+                record_id: Some(id),
+                operation: AuditOperation::Update,
+                version_before: None,
+                version_after: None,
+                user_context: user_ctx,
+                changed_on: Utc::now(),
+                source: AuditSource::Api,
+                request_context: AuditRequestContext::default(),
+                correlation_id: None,
+                batch_id: None,
+                event_name: Some("match_rule_updated".to_owned()),
+                event_comment: None,
+                changed_fields: vec![],
+                snapshot_json: None,
+            },
+        )
+        .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Json(row.try_into()?))
+}
+
+/// `DELETE /api/v1/admin/data/match-rules/{id}` — `system.admin` only.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/admin/data/match-rules/{id}",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 204, description = "Success"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Match rule not found", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Configuration, AuditOperation::SoftDelete)])))),
+)]
+async fn delete_match_rule(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, AppError> {
+    let entity_logicalname: Option<String> = sqlx::query_scalar(
+        "SELECT entity_logicalname FROM match_rule WHERE id = $1 AND NOT is_deleted",
+    )
+    .bind(id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(entity_logicalname) = entity_logicalname else {
+        return Err(AppError::NotFound);
+    };
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let result = sqlx::query(
+        "UPDATE match_rule SET is_deleted = TRUE, row_version = row_version + 1, \
+             updated_at = NOW() WHERE id = $1 AND NOT is_deleted",
+    )
+    .bind(id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound);
+    }
+    let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    audit_service(&state)
+        .write_in_tx(
+            &mut tx,
+            AuditEvent {
+                organization_ref: org_ref,
+                category: AuditCategory::Configuration,
+                entity_name: Some(entity_logicalname),
+                record_id: Some(id),
+                operation: AuditOperation::SoftDelete,
+                version_before: None,
+                version_after: None,
+                user_context: user_ctx,
+                changed_on: Utc::now(),
+                source: AuditSource::Api,
+                request_context: AuditRequestContext::default(),
+                correlation_id: None,
+                batch_id: None,
+                event_name: Some("match_rule_deleted".to_owned()),
+                event_comment: None,
+                changed_fields: vec![],
+                snapshot_json: None,
+            },
+        )
+        .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+// ── Survivorship rules ──────────────────────────────────────────────────────
+
+const SURVIVORSHIP_STRATEGIES: &[&str] =
+    &["most_recent", "most_complete", "source_priority", "manual"];
+
+const SURVIVORSHIP_COLUMNS: &str = "id, entity_logicalname, field_logicalname, strategy, \
+     priority_owner_ids, row_version, created_at, updated_at, created_by";
+
+#[derive(sqlx::FromRow, Serialize, ToSchema)]
+struct SurvivorshipRuleView {
+    id: Uuid,
+    entity_logicalname: String,
+    field_logicalname: String,
+    strategy: String,
+    priority_owner_ids: Option<Vec<Uuid>>,
+    row_version: i64,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+    created_by: Uuid,
+}
+
+#[derive(Deserialize, IntoParams)]
+struct ListSurvivorshipQuery {
+    entity: Option<String>,
+    /// One-based: page 1 is the first page.
+    page: Option<i64>,
+    page_size: Option<i64>,
+}
+
+/// `GET /api/v1/admin/data/survivorship-rules` — `system.admin` only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/data/survivorship-rules",
+    tag = "admin",
+    params(ListSurvivorshipQuery),
+    responses(
+        (status = 200, description = "Success", body = PaginatedResponse<SurvivorshipRuleView>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_survivorship_rules(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(q): Query<ListSurvivorshipQuery>,
+) -> Result<Json<PaginatedResponse<SurvivorshipRuleView>>, AppError> {
+    let PageWindow {
+        page,
+        page_size,
+        offset,
+    } = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
+
+    let items: Vec<SurvivorshipRuleView> = sqlx::query_as(&format!(
+        "SELECT {SURVIVORSHIP_COLUMNS} FROM survivorship_rule \
+          WHERE NOT is_deleted AND ($1::text IS NULL OR entity_logicalname = $1) \
+          ORDER BY entity_logicalname ASC, field_logicalname ASC OFFSET $2 LIMIT $3"
+    ))
+    .bind(&q.entity)
+    .bind(offset)
+    .bind(page_size)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM survivorship_rule \
+          WHERE NOT is_deleted AND ($1::text IS NULL OR entity_logicalname = $1)",
+    )
+    .bind(&q.entity)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
+}
+
+#[derive(Deserialize, ToSchema)]
+struct CreateSurvivorshipRuleBody {
+    entity: String,
+    field: String,
+    strategy: String,
+    #[serde(default)]
+    priority_owner_ids: Vec<Uuid>,
+}
+
+/// `POST /api/v1/admin/data/survivorship-rules` — `system.admin` only.
+/// `409` when an active rule for this `(entity, field)` already exists
+/// (migration `0219`'s partial unique index) — update the existing one
+/// instead.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/data/survivorship-rules",
+    tag = "admin",
+    request_body = CreateSurvivorshipRuleBody,
+    responses(
+        (status = 201, description = "Success", body = SurvivorshipRuleView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 409, description = "An active rule for this (entity, field) already exists", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Configuration, AuditOperation::Create)])))),
+)]
+async fn create_survivorship_rule(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(body): Json<CreateSurvivorshipRuleBody>,
+) -> Result<(StatusCode, Json<SurvivorshipRuleView>), AppError> {
+    if !SURVIVORSHIP_STRATEGIES.contains(&body.strategy.as_str()) {
+        return Err(AppError::Validation(format!(
+            "strategy must be one of: {}",
+            SURVIVORSHIP_STRATEGIES.join(", ")
+        )));
+    }
+    let (_, entity_name, attrs, _) = entity_crud::resolve_entity(&state, &body.entity).await?;
+    if !attrs.iter().any(|a| a.logicalname == body.field) {
+        return Err(AppError::Validation(format!(
+            "field '{}' does not exist on this entity",
+            body.field
+        )));
+    }
+
+    let rule_id = Uuid::now_v7();
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row: SurvivorshipRuleView = sqlx::query_as(&format!(
+        "INSERT INTO survivorship_rule \
+             (id, entity_logicalname, field_logicalname, strategy, priority_owner_ids, row_version, created_by) \
+         VALUES ($1, $2, $3, $4, $5, 0, $6) \
+         RETURNING {SURVIVORSHIP_COLUMNS}"
+    ))
+    .bind(rule_id)
+    .bind(&entity_name)
+    .bind(&body.field)
+    .bind(&body.strategy)
+    .bind(&body.priority_owner_ids)
+    .bind(ctx.user_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| {
+        if attome_db::is_unique_violation(&e) {
+            AppError::Conflict("an active survivorship rule for this (entity, field) already exists")
+        } else {
+            AppError::internal(e)
+        }
+    })?;
+    let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    audit_service(&state)
+        .write_in_tx(
+            &mut tx,
+            AuditEvent {
+                organization_ref: org_ref,
+                category: AuditCategory::Configuration,
+                entity_name: Some(entity_name.clone()),
+                record_id: Some(rule_id),
+                operation: AuditOperation::Create,
+                version_before: None,
+                version_after: None,
+                user_context: user_ctx,
+                changed_on: Utc::now(),
+                source: AuditSource::Api,
+                request_context: AuditRequestContext::default(),
+                correlation_id: None,
+                batch_id: None,
+                event_name: Some("survivorship_rule_created".to_owned()),
+                event_comment: Some(format!("{entity_name}.{}", body.field)),
+                changed_fields: vec![],
+                snapshot_json: None,
+            },
+        )
+        .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok((StatusCode::CREATED, Json(row)))
+}
+
+/// `DELETE /api/v1/admin/data/survivorship-rules/{id}` — `system.admin`
+/// only. The (entity, field) reverts to the implicit `most_complete`
+/// default.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/admin/data/survivorship-rules/{id}",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 204, description = "Success"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Survivorship rule not found", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Configuration, AuditOperation::SoftDelete)])))),
+)]
+async fn delete_survivorship_rule(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, AppError> {
+    let entity_logicalname: Option<String> = sqlx::query_scalar(
+        "SELECT entity_logicalname FROM survivorship_rule WHERE id = $1 AND NOT is_deleted",
+    )
+    .bind(id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(entity_logicalname) = entity_logicalname else {
+        return Err(AppError::NotFound);
+    };
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let result = sqlx::query(
+        "UPDATE survivorship_rule SET is_deleted = TRUE, row_version = row_version + 1, \
+             updated_at = NOW() WHERE id = $1 AND NOT is_deleted",
+    )
+    .bind(id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound);
+    }
+    let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    audit_service(&state)
+        .write_in_tx(
+            &mut tx,
+            AuditEvent {
+                organization_ref: org_ref,
+                category: AuditCategory::Configuration,
+                entity_name: Some(entity_logicalname),
+                record_id: Some(id),
+                operation: AuditOperation::SoftDelete,
+                version_before: None,
+                version_after: None,
+                user_context: user_ctx,
+                changed_on: Utc::now(),
+                source: AuditSource::Api,
+                request_context: AuditRequestContext::default(),
+                correlation_id: None,
+                batch_id: None,
+                event_name: Some("survivorship_rule_deleted".to_owned()),
+                event_comment: None,
+                changed_fields: vec![],
+                snapshot_json: None,
+            },
+        )
+        .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+// ── Duplicate candidates (steward queue) ────────────────────────────────────
+
+const CANDIDATE_COLUMNS: &str = "id, entity_logicalname, record_a, record_b, match_rule_id, \
+     score::float8, status, auto_merge_eligible, approval_request_id, detected_at, \
+     resolved_at, resolved_by, resolution_note, row_version";
+
+#[derive(sqlx::FromRow, Serialize, ToSchema)]
+struct DuplicateCandidateView {
+    id: Uuid,
+    entity_logicalname: String,
+    record_a: Uuid,
+    record_b: Uuid,
+    match_rule_id: Uuid,
+    score: f64,
+    status: String,
+    auto_merge_eligible: bool,
+    approval_request_id: Option<Uuid>,
+    detected_at: DateTime<Utc>,
+    resolved_at: Option<DateTime<Utc>>,
+    resolved_by: Option<Uuid>,
+    resolution_note: Option<String>,
+    row_version: i64,
+}
+
+#[derive(Deserialize, IntoParams)]
+struct ListCandidatesQuery {
+    entity: Option<String>,
+    /// `"open"` (default view for the steward queue), `"merged"`, or
+    /// `"dismissed"`. Omit for every status.
+    status: Option<String>,
+    /// One-based: page 1 is the first page.
+    page: Option<i64>,
+    page_size: Option<i64>,
+}
+
+/// `GET /api/v1/admin/data/duplicates` — `system.admin` only. The steward
+/// queue's list view — filter `status=open` for candidates awaiting a
+/// decision (the default a UI should request).
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/data/duplicates",
+    tag = "admin",
+    params(ListCandidatesQuery),
+    responses(
+        (status = 200, description = "Success", body = PaginatedResponse<DuplicateCandidateView>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_candidates(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(q): Query<ListCandidatesQuery>,
+) -> Result<Json<PaginatedResponse<DuplicateCandidateView>>, AppError> {
+    if let Some(s) = &q.status
+        && !["open", "merged", "dismissed"].contains(&s.as_str())
+    {
+        return Err(AppError::Validation(
+            "status must be one of: open, merged, dismissed".into(),
+        ));
+    }
+    let PageWindow {
+        page,
+        page_size,
+        offset,
+    } = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
+
+    let items: Vec<DuplicateCandidateView> = sqlx::query_as(&format!(
+        "SELECT {CANDIDATE_COLUMNS} FROM duplicate_candidate \
+          WHERE ($1::text IS NULL OR entity_logicalname = $1) \
+            AND ($2::text IS NULL OR status = $2) \
+          ORDER BY detected_at DESC OFFSET $3 LIMIT $4"
+    ))
+    .bind(&q.entity)
+    .bind(&q.status)
+    .bind(offset)
+    .bind(page_size)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    let total: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM duplicate_candidate \
+          WHERE ($1::text IS NULL OR entity_logicalname = $1) \
+            AND ($2::text IS NULL OR status = $2)",
+    )
+    .bind(&q.entity)
+    .bind(&q.status)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    Ok(Json(PaginatedResponse::new(items, total, page, page_size)))
+}
+
+/// `GET /api/v1/admin/data/duplicates/{id}` — `system.admin` only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/data/duplicates/{id}",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "Success", body = DuplicateCandidateView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Candidate not found", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_candidate(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<DuplicateCandidateView>, AppError> {
+    let row: Option<DuplicateCandidateView> = sqlx::query_as(&format!(
+        "SELECT {CANDIDATE_COLUMNS} FROM duplicate_candidate WHERE id = $1"
+    ))
+    .bind(id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(row.ok_or(AppError::NotFound)?))
+}
+
+async fn load_open_candidate(
+    state: &EngineState,
+    id: Uuid,
+) -> Result<(String, Uuid, Uuid), AppError> {
+    let row: Option<(String, Uuid, Uuid, String)> = sqlx::query_as(
+        "SELECT entity_logicalname, record_a, record_b, status \
+           FROM duplicate_candidate WHERE id = $1",
+    )
+    .bind(id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let (entity, a, b, status) = row.ok_or(AppError::NotFound)?;
+    if status != "open" {
+        return Err(AppError::Conflict(
+            "this candidate has already been resolved (merged or dismissed)",
+        ));
+    }
+    Ok((entity, a, b))
+}
+
+#[derive(Deserialize, ToSchema)]
+struct MergeCandidateBody {
+    /// Which of the candidate's two records survives — must equal this
+    /// candidate's `record_a` or `record_b`. The other becomes the
+    /// duplicate and is soft-deleted, same as the ordinary
+    /// `/{entity}/{id}/merge` endpoint this delegates to.
+    canonical_id: Uuid,
+}
+
+/// `POST /api/v1/admin/data/duplicates/{id}/merge` — `system.admin` only.
+/// A steward's manual resolution of a candidate: runs the exact same merge
+/// (`entity_crud::do_merge_core`) the ordinary `/{entity}/{id}/merge`
+/// endpoint runs, attributed to the deciding admin, with a fully-privileged
+/// context (`entity_crud::admin_security_context`) — see that function's
+/// doc comment for why that's sound here specifically (the steward's own
+/// `Authorized<Admin>` review IS the human decision this action needed; no
+/// additional `attome_approval` gate — that's reserved for the *unattended*
+/// `mdm.auto_merge` path, see `duplicates_match::submit_auto_merge_request`).
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/data/duplicates/{id}/merge",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    request_body = MergeCandidateBody,
+    responses(
+        (status = 200, description = "Success", body = entity_crud::MergeResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Candidate not found", body = ErrorResponse),
+        (status = 409, description = "Candidate already resolved", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Entity, AuditOperation::Update), (AuditCategory::Entity, AuditOperation::SoftDelete)])))),
+)]
+async fn merge_candidate(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<MergeCandidateBody>,
+) -> Result<Json<entity_crud::MergeResponse>, AppError> {
+    let (entity, a, b) = load_open_candidate(&state, id).await?;
+    let duplicate_id = if body.canonical_id == a {
+        b
+    } else if body.canonical_id == b {
+        a
+    } else {
+        return Err(AppError::Validation(
+            "canonical_id must match one of this candidate's two records".into(),
+        ));
+    };
+
+    let admin_ctx = entity_crud::admin_security_context(ctx.user_id);
+    let outcome = entity_crud::do_merge_core(
+        &state,
+        &admin_ctx,
+        &entity,
+        body.canonical_id,
+        duplicate_id,
+        ctx.user_id,
+        Some(id),
+    )
+    .await?;
+    Ok(Json(entity_crud::MergeResponse::from_outcome(outcome)))
+}
+
+#[derive(Deserialize, ToSchema)]
+struct DismissCandidateBody {
+    row_version: i64,
+    #[serde(default)]
+    note: Option<String>,
+}
+
+/// `POST /api/v1/admin/data/duplicates/{id}/dismiss` — `system.admin` only.
+/// Marks the candidate "not actually a duplicate" — the matching job never
+/// re-flags the same pair again (migration `0218`'s unique index covers
+/// every status, not only `open`).
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/data/duplicates/{id}/dismiss",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    request_body = DismissCandidateBody,
+    responses(
+        (status = 200, description = "Success", body = DuplicateCandidateView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Candidate not found", body = ErrorResponse),
+        (status = 409, description = "row_version is stale, or candidate already resolved", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Entity, AuditOperation::Update)])))),
+)]
+async fn dismiss_candidate(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<DismissCandidateBody>,
+) -> Result<Json<DuplicateCandidateView>, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row: Option<DuplicateCandidateView> = sqlx::query_as(&format!(
+        "UPDATE duplicate_candidate \
+         SET status = 'dismissed', resolved_at = NOW(), resolved_by = $3, resolution_note = $4, \
+             row_version = row_version + 1 \
+         WHERE id = $1 AND row_version = $2 AND status = 'open' \
+         RETURNING {CANDIDATE_COLUMNS}"
+    ))
+    .bind(id)
+    .bind(body.row_version)
+    .bind(ctx.user_id)
+    .bind(&body.note)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+
+    match row {
+        Some(row) => {
+            let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+            audit_service(&state)
+                .write_in_tx(
+                    &mut tx,
+                    AuditEvent {
+                        organization_ref: org_ref,
+                        category: AuditCategory::Entity,
+                        entity_name: Some(row.entity_logicalname.clone()),
+                        record_id: Some(id),
+                        operation: AuditOperation::Update,
+                        version_before: None,
+                        version_after: None,
+                        user_context: user_ctx,
+                        changed_on: Utc::now(),
+                        source: AuditSource::Api,
+                        request_context: AuditRequestContext::default(),
+                        correlation_id: None,
+                        batch_id: None,
+                        event_name: Some("duplicate_candidate_dismissed".to_owned()),
+                        event_comment: Some(format!(
+                            "duplicate candidate {} vs {} dismissed",
+                            row.record_a, row.record_b
+                        )),
+                        changed_fields: vec![],
+                        snapshot_json: None,
+                    },
+                )
+                .await?;
+            attome_db::tx::commit(tx).await?;
+            Ok(Json(row))
+        }
+        None => {
+            let current: Option<(i64, String)> =
+                sqlx::query_as("SELECT row_version, status FROM duplicate_candidate WHERE id = $1")
+                    .bind(id)
+                    .fetch_optional(&state.base.db)
+                    .await
+                    .map_err(AppError::internal)?;
+            match current {
+                None => Err(AppError::NotFound),
+                Some((_, status)) if status != "open" => Err(AppError::Conflict(
+                    "this candidate has already been resolved (merged or dismissed)",
+                )),
+                Some(_) => Err(AppError::VersionConflict),
+            }
+        }
+    }
+}
+
+/// Surfaced by the record form's "possible duplicate" banner — a bounded
+/// view of open candidates touching one specific record, not a full admin
+/// listing. Any authenticated caller may call this (no `Admin` gate), but
+/// only once `require_record_access` confirms they can actually read
+/// `record_id` under their own record-level (RLS) scope — this echoes back
+/// candidate metadata (peer record id, score) for a record the caller may
+/// not otherwise have any admin visibility into, so read access to that
+/// specific record is the correct boundary, not mere authentication. It
+/// does NOT reveal the *other* record's data, only its id.
+#[derive(Deserialize, IntoParams)]
+struct RecordCandidatesQuery {
+    entity: String,
+    record_id: Uuid,
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/data/duplicates/for-record",
+    tag = "entity",
+    params(RecordCandidatesQuery),
+    responses(
+        (status = 200, description = "Success", body = Vec<DuplicateCandidateView>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "Record not found or not visible to the caller", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn candidates_for_record(
+    State(state): State<EngineState>,
+    ctx: attome_server::authz::Authorized<attome_server::authz::SelfService>,
+    Query(q): Query<RecordCandidatesQuery>,
+) -> Result<Json<Vec<DuplicateCandidateView>>, AppError> {
+    let (entity_id, entity_name, _, _) = entity_crud::resolve_entity(&state, &q.entity).await?;
+    entity_crud::require_record_access(
+        &state,
+        &ctx,
+        entity_id,
+        &entity_name,
+        q.record_id,
+        attome_security::RecordAction::Read,
+    )
+    .await?;
+    let items: Vec<DuplicateCandidateView> = sqlx::query_as(&format!(
+        "SELECT {CANDIDATE_COLUMNS} FROM duplicate_candidate \
+          WHERE entity_logicalname = $1 AND status = 'open' AND (record_a = $2 OR record_b = $2) \
+          ORDER BY score DESC LIMIT 10"
+    ))
+    .bind(&entity_name)
+    .bind(q.record_id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(items))
+}
+
+pub fn routes() -> Router<EngineState> {
+    Router::new()
+        .route(
+            "/api/v1/admin/data/match-rules",
+            get(list_match_rules).post(create_match_rule),
+        )
+        .route(
+            "/api/v1/admin/data/match-rules/{id}",
+            axum::routing::put(update_match_rule).delete(delete_match_rule),
+        )
+        .route(
+            "/api/v1/admin/data/survivorship-rules",
+            get(list_survivorship_rules).post(create_survivorship_rule),
+        )
+        .route(
+            "/api/v1/admin/data/survivorship-rules/{id}",
+            axum::routing::delete(delete_survivorship_rule),
+        )
+        .route("/api/v1/admin/data/duplicates", get(list_candidates))
+        .route("/api/v1/admin/data/duplicates/{id}", get(get_candidate))
+        .route(
+            "/api/v1/admin/data/duplicates/{id}/merge",
+            post(merge_candidate),
+        )
+        .route(
+            "/api/v1/admin/data/duplicates/{id}/dismiss",
+            post(dismiss_candidate),
+        )
+        .route(
+            "/api/v1/data/duplicates/for-record",
+            get(candidates_for_record),
+        )
+}
+
+/// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
+/// document.
+#[derive(utoipa::OpenApi)]
+#[openapi(paths(
+    list_match_rules,
+    create_match_rule,
+    update_match_rule,
+    delete_match_rule,
+    list_survivorship_rules,
+    create_survivorship_rule,
+    delete_survivorship_rule,
+    list_candidates,
+    get_candidate,
+    merge_candidate,
+    dismiss_candidate,
+    candidates_for_record,
+))]
+struct ApiDocFragment;
+
+pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
+    <ApiDocFragment as utoipa::OpenApi>::openapi()
+}

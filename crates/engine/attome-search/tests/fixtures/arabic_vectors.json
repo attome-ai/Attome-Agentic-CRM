@@ -1,0 +1,99 @@
+{
+  "_comment": [
+    "TODO-009's acceptance gate, written BEFORE normalize_ar existed — which is",
+    "the point. Arabic search without normalization looks like it works and",
+    "quietly misses: a user types محمد, the record says مُحَمَّد, and they get zero",
+    "results with no error and no signal that anything went wrong. F206 names",
+    "Arabic as the moat, so this table is what that claim is measured against.",
+    "",
+    "Each group is a set of strings that MUST all normalize to the same value.",
+    "`normalized` is the expected output, asserted absolutely — a group that only",
+    "asserted 'these are equal to each other' would pass if normalize_ar returned",
+    "the empty string for everything."
+  ],
+  "groups": [
+    {
+      "name": "tashkeel (harakat) are stripped",
+      "why": "Diacritics are optional in written Arabic. A name typed without them must match a record that has them, and vice versa — this is the single most common Arabic search miss.",
+      "normalized": "محمد",
+      "variants": ["محمد", "مُحَمَّد", "مُحمّد", "محمّد", "مُحَمَّدْ"]
+    },
+    {
+      "name": "tatweel (kashida) is removed",
+      "why": "U+0640 is a purely typographic stretch character used for justification. It carries no meaning and must never affect matching.",
+      "normalized": "محمد",
+      "variants": ["محمد", "محــمد", "مـحـمـد", "محمــــد"]
+    },
+    {
+      "name": "alef forms fold to bare alef",
+      "why": "أ إ آ ٱ are routinely typed as ا. Folding them is what makes احمد find أحمد.",
+      "normalized": "احمد",
+      "variants": ["احمد", "أحمد", "إحمد", "آحمد", "ٱحمد"]
+    },
+    {
+      "name": "alef maksura folds to ya",
+      "why": "ى and ي are interchanged constantly in practice, including by native typists.",
+      "normalized": "علي",
+      "variants": ["علي", "على"]
+    },
+    {
+      "name": "taa marbuta folds to haa",
+      "why": "ة is commonly typed ه, especially word-final in informal input.",
+      "normalized": "شركه",
+      "variants": ["شركة", "شركه"]
+    },
+    {
+      "name": "hamza carriers fold",
+      "why": "ؤ ئ ء are inconsistently typed. Folding to the bare carrier keeps مسؤول findable as مسءول or مسئول.",
+      "normalized": "مسءول",
+      "variants": ["مسؤول", "مسئول", "مسءول"]
+    },
+    {
+      "name": "Arabic-Indic digits fold to ASCII",
+      "why": "An invoice number typed ١٢٣ must find a record storing 123. Both Arabic-Indic (U+0660) and Eastern Arabic-Indic (U+06F0) ranges are in use across the GCC.",
+      "normalized": "invoice 123",
+      "variants": ["invoice 123", "invoice ١٢٣", "invoice ۱۲۳"]
+    },
+    {
+      "name": "mixed Arabic and English is preserved, each normalized in place",
+      "why": "Mixed-language records are the GCC norm, not an edge case (P-search Q7b). The Arabic half folds and the Latin half lowercases — search is case-insensitive on both, so a group expecting ACME to survive uppercase (as this one first did) contradicts the non-Arabic group below it.",
+      "normalized": "شركه acme للتجاره",
+      "variants": ["شركة ACME للتجارة", "شركه acme للتجاره", "شركــة ACME للتجارَة", "شَركة Acme للتجارة"]
+    },
+    {
+      "name": "whitespace is collapsed and trimmed",
+      "why": "Pasted text carries doubled spaces, tabs, and non-breaking spaces; none of them are a meaningful difference between two names.",
+      "normalized": "عبد الله",
+      "variants": ["عبد الله", "  عبد   الله  ", "عبد\tالله", "عبد الله"]
+    },
+    {
+      "name": "already-normalized text is unchanged (idempotence)",
+      "why": "normalize_ar runs at index time AND at query time. If it were not idempotent, a re-indexed row would drift away from the query form and matches would silently degrade over time.",
+      "normalized": "محمد احمد علي",
+      "variants": ["محمد احمد علي"]
+    },
+    {
+      "name": "non-Arabic text passes through unchanged apart from case and whitespace",
+      "why": "The same function runs over every record, most of which are English. It must not mangle them.",
+      "normalized": "acme trading llc",
+      "variants": ["ACME Trading LLC", "acme trading llc", "  ACME   Trading  LLC "]
+    },
+    {
+      "name": "empty and whitespace-only input is safe",
+      "why": "A record with a null or blank title reaches this function like any other. It must return empty, not error and not NULL.",
+      "normalized": "",
+      "variants": ["", "   ", "\t\n", "ــ"]
+    }
+  ],
+  "must_not_match": [
+    {
+      "why": "Normalization must not be so aggressive that distinct names collapse. These pairs are genuinely different words and must keep different normalized forms — the failure mode opposite to under-normalizing, and the one nobody tests for.",
+      "pairs": [
+        ["محمد", "احمد"],
+        ["كتب", "كتاب"],
+        ["علي", "عالي"],
+        ["شركه", "شريك"]
+      ]
+    }
+  ]
+}

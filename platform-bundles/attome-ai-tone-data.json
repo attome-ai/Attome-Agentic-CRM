@@ -1,0 +1,24 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "record_sets": [
+    {
+      "entity": "ai_tone",
+      "key_fields": ["name"],
+      "rows": [
+        { "name": "Professional", "description": "Businesslike, precise, and courteous" },
+        { "name": "Friendly", "description": "Warm and approachable, like a helpful colleague" },
+        { "name": "Formal", "description": "Structured and reserved, avoids contractions and slang" },
+        { "name": "Casual", "description": "Relaxed and conversational, contractions welcome" },
+        { "name": "Empathetic", "description": "Acknowledges feelings and context before answering" },
+        { "name": "Confident", "description": "Direct and assured, states conclusions plainly" },
+        { "name": "Technical", "description": "Precise, terminology-forward, assumes domain familiarity" },
+        { "name": "Neutral", "description": "Plain and unadorned, no stylistic lean either way" }
+      ]
+    }
+  ]
+}

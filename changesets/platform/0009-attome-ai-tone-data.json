@@ -1,0 +1,182 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:ccbd003c6e6075515c4193056d59160991f521bec44cf850a6f11b164b5aad24",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-tone-data.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "932809fa-2d4f-71d0-84c1-c6adc762b17d",
+  "layer": "platform",
+  "name": "attome-ai-tone-data",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Relaxed and conversational, contractions welcome",
+          "name": "Casual"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "ai_tone",
+        "key": {
+          "name": "Casual"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Direct and assured, states conclusions plainly",
+          "name": "Confident"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "ai_tone",
+        "key": {
+          "name": "Confident"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Acknowledges feelings and context before answering",
+          "name": "Empathetic"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "ai_tone",
+        "key": {
+          "name": "Empathetic"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Structured and reserved, avoids contractions and slang",
+          "name": "Formal"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "ai_tone",
+        "key": {
+          "name": "Formal"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Warm and approachable, like a helpful colleague",
+          "name": "Friendly"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "ai_tone",
+        "key": {
+          "name": "Friendly"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Plain and unadorned, no stylistic lean either way",
+          "name": "Neutral"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "ai_tone",
+        "key": {
+          "name": "Neutral"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Businesslike, precise, and courteous",
+          "name": "Professional"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "ai_tone",
+        "key": {
+          "name": "Professional"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Precise, terminology-forward, assumes domain familiarity",
+          "name": "Technical"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "ai_tone",
+        "key": {
+          "name": "Technical"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 9,
+  "title": "Platform definitions: attome-ai-tone-data"
+}

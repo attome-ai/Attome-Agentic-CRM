@@ -1,0 +1,46 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:9a0fbb4f5335361d7a3b2ec8b19231064320a7898e68c778249839c30ffd8c86",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-provider-data.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "61c32d42-280a-7b37-9c71-6ae871f0fb8c",
+  "layer": "platform",
+  "name": "attome-ai-provider-data",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "api_protocol": "openai-completions",
+          "description": "Placeholder scaffold, not connected to any real service. Replace provider_type/endpoint_url with your own AI provider's details, set status to operational_live, then create or edit Example Model to point at it -- or delete this record entirely.",
+          "name": "Example Provider",
+          "provider_id": "example-provider",
+          "provider_type": "custom",
+          "status": "closed"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "ai_provider",
+        "key": {
+          "name": "Example Provider"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 13,
+  "title": "Platform definitions: attome-ai-provider-data"
+}

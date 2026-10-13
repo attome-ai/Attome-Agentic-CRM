@@ -1,0 +1,2538 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:d42ccc4dd19d691d1c7b8db241b567dd1346d53b1dd0d8cdf2c6a7aa393adff5",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-grc.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "c7aa0051-7874-787f-8a28-23303b33eb1e",
+  "layer": "platform",
+  "name": "attome-grc",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Assessment",
+          "is_append_only": false,
+          "logicalname": "grc_assessment",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "grc_assessment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Assessment Item",
+          "is_append_only": false,
+          "logicalname": "grc_assessment_item"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "grc_assessment_item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Control",
+          "is_append_only": false,
+          "logicalname": "grc_control",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "grc_control"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Control Requirement",
+          "is_append_only": false,
+          "logicalname": "grc_control_requirement"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "grc_control_requirement"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Evidence",
+          "is_append_only": false,
+          "logicalname": "grc_evidence"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "grc_evidence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Finding",
+          "is_append_only": false,
+          "logicalname": "grc_finding",
+          "primary_name_attribute": "title"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "grc_finding"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Policy",
+          "is_append_only": false,
+          "logicalname": "grc_policy",
+          "primary_name_attribute": "title"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "grc_policy"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Policy Acknowledgement",
+          "is_append_only": true,
+          "logicalname": "grc_policy_ack"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "grc_policy_ack"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Regulation",
+          "is_append_only": false,
+          "logicalname": "grc_regulation",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "grc_regulation"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Requirement",
+          "is_append_only": false,
+          "logicalname": "grc_requirement",
+          "primary_name_attribute": "clause"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "grc_requirement"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Risk",
+          "is_append_only": false,
+          "logicalname": "grc_risk",
+          "primary_name_attribute": "title"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "grc_risk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Risk Dependency",
+          "is_append_only": false,
+          "logicalname": "grc_risk_dependency"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "grc_risk_dependency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "grc_assessment",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Period",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "period"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "grc_assessment",
+        "field": "period"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Scope",
+          "field_type": "text",
+          "logicalname": "scope"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "grc_assessment",
+        "field": "scope"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "planned",
+              "in_progress",
+              "completed",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "grc_assessment",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Evidence Refs",
+          "field_type": "text",
+          "logicalname": "evidence_refs"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "grc_assessment_item",
+        "field": "evidence_refs"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Notes",
+          "field_type": "text",
+          "logicalname": "notes"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "grc_assessment_item",
+        "field": "notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Result",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "result",
+          "options": {
+            "choices": [
+              "effective",
+              "ineffective",
+              "not_tested"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "grc_assessment_item",
+        "field": "result"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "control_type",
+          "options": {
+            "choices": [
+              "preventive",
+              "detective",
+              "corrective",
+              "directive"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "grc_control",
+        "field": "control_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Evidence Source",
+          "field_type": "text",
+          "logicalname": "evidence_source"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "grc_control",
+        "field": "evidence_source"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Frequency",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "frequency",
+          "options": {
+            "choices": [
+              "continuous",
+              "daily",
+              "weekly",
+              "monthly",
+              "quarterly",
+              "annual",
+              "ad_hoc"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "grc_control",
+        "field": "frequency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Implementation Kind",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "implementation_kind",
+          "options": {
+            "choices": [
+              "manual",
+              "technical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "grc_control",
+        "field": "implementation_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "grc_control",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "draft",
+              "active",
+              "retired"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "grc_control",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Notes",
+          "field_type": "text",
+          "logicalname": "notes"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "grc_control_requirement",
+        "field": "notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Collected At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "collected_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "grc_evidence",
+        "field": "collected_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Notes",
+          "field_type": "text",
+          "logicalname": "notes"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "grc_evidence",
+        "field": "notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Reference Kind",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "reference_kind",
+          "options": {
+            "choices": [
+              "file",
+              "record",
+              "audit_query"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "grc_evidence",
+        "field": "reference_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Reference Value",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "reference_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "grc_evidence",
+        "field": "reference_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Due Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "due_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "grc_finding",
+        "field": "due_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Remediation",
+          "field_type": "text",
+          "logicalname": "remediation"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "grc_finding",
+        "field": "remediation"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Severity",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "severity",
+          "options": {
+            "choices": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "grc_finding",
+        "field": "severity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "open",
+              "in_progress",
+              "remediated",
+              "accepted_risk",
+              "closed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "grc_finding",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Title",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "title"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "grc_finding",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Applies To",
+          "field_type": "text",
+          "logicalname": "applies_to"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "grc_policy",
+        "field": "applies_to"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Document Ref",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "document_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "grc_policy",
+        "field": "document_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Effective Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "effective_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "grc_policy",
+        "field": "effective_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Exceptions",
+          "field_type": "text",
+          "logicalname": "exceptions"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "grc_policy",
+        "field": "exceptions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Expiry Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "expiry_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "grc_policy",
+        "field": "expiry_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "draft",
+              "active",
+              "expired",
+              "retired"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "grc_policy",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Title",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "title"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "grc_policy",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Version",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "version"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "grc_policy",
+        "field": "version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Acknowledged At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "acked_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "grc_policy_ack",
+        "field": "acked_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Policy Version",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "policy_version"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "grc_policy_ack",
+        "field": "policy_version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Jurisdiction",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "jurisdiction"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "grc_regulation",
+        "field": "jurisdiction"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "grc_regulation",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Source URL",
+          "field_type": "text",
+          "logicalname": "source_url"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "grc_regulation",
+        "field": "source_url"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "draft",
+              "active",
+              "retired"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "grc_regulation",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Version",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "version"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "grc_regulation",
+        "field": "version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Clause",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "clause"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "grc_requirement",
+        "field": "clause"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Text",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "requirement_text"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "grc_requirement",
+        "field": "requirement_text"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Category",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "category",
+          "options": {
+            "choices": [
+              "strategic",
+              "operational",
+              "financial",
+              "compliance",
+              "security",
+              "reputational"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "grc_risk",
+        "field": "category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Impact",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "impact"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "grc_risk",
+        "field": "impact"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Inherent Score",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "inherent_score"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "grc_risk",
+        "field": "inherent_score"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Probability",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "probability"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "grc_risk",
+        "field": "probability"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Regarding Entity",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "regarding_entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "grc_risk",
+        "field": "regarding_entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Regarding Record Id",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "regarding_record_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "grc_risk",
+        "field": "regarding_record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Residual Score",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "residual_score"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "grc_risk",
+        "field": "residual_score"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Review Date",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "review_date"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "grc_risk",
+        "field": "review_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "identified",
+              "assessed",
+              "treated",
+              "closed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "grc_risk",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Title",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "title"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "grc_risk",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Treatment",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "treatment",
+          "options": {
+            "choices": [
+              "accept",
+              "mitigate",
+              "transfer",
+              "avoid"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "grc_risk",
+        "field": "treatment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "dependency_type",
+          "options": {
+            "choices": [
+              "causes",
+              "correlated_with",
+              "mitigated_by"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "grc_risk_dependency",
+        "field": "dependency_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Notes",
+          "field_type": "text",
+          "logicalname": "notes"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "grc_risk_dependency",
+        "field": "notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Assessor",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "assessor_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "grc_assessment",
+        "field": "assessor_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Assessment",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "assessment_id",
+          "lookup_entity": "grc_assessment"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "grc_assessment_item",
+        "field": "assessment_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Control",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "control_id",
+          "lookup_entity": "grc_control"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "grc_assessment_item",
+        "field": "control_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "grc_control",
+        "field": "owner_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Control",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "control_id",
+          "lookup_entity": "grc_control"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "grc_control_requirement",
+        "field": "control_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Requirement",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "requirement_id",
+          "lookup_entity": "grc_requirement"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "grc_control_requirement",
+        "field": "requirement_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Assessment Item",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "assessment_item_id",
+          "lookup_entity": "grc_assessment_item"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "grc_evidence",
+        "field": "assessment_item_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Collector",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "collector_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "grc_evidence",
+        "field": "collector_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Assessment Item",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "assessment_item_id",
+          "lookup_entity": "grc_assessment_item"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "grc_finding",
+        "field": "assessment_item_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "grc_finding",
+        "field": "owner_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "grc_policy",
+        "field": "owner_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Policy",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "policy_id",
+          "lookup_entity": "grc_policy"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "grc_policy_ack",
+        "field": "policy_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "User",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "user_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "grc_policy_ack",
+        "field": "user_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Regulation",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "regulation_id",
+          "lookup_entity": "grc_regulation"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "entity": "grc_requirement",
+        "field": "regulation_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "entity": "grc_risk",
+        "field": "owner_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Depends On Risk",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "depends_on_risk_id",
+          "lookup_entity": "grc_risk"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "entity": "grc_risk_dependency",
+        "field": "depends_on_risk_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Risk",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "risk_id",
+          "lookup_entity": "grc_risk"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "entity": "grc_risk_dependency",
+        "field": "risk_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Enterprise Risk",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "risk_ref",
+          "lookup_entity": "grc_risk"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "entity": "project_issue",
+        "field": "risk_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_assessment",
+          "entity_mappings": [],
+          "name": "Active Assessments",
+          "required_privilege": "grc_assessment.read",
+          "sql": "SELECT id FROM \"grc_assessment\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "entity": "grc_assessment",
+        "query": "Active Assessments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_assessment",
+          "entity_mappings": [],
+          "name": "Inactive Assessments",
+          "required_privilege": "grc_assessment.read",
+          "sql": "SELECT id FROM \"grc_assessment\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "entity": "grc_assessment",
+        "query": "Inactive Assessments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_assessment_item",
+          "entity_mappings": [],
+          "name": "Active Assessment Items",
+          "required_privilege": "grc_assessment_item.read",
+          "sql": "SELECT id FROM \"grc_assessment_item\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "entity": "grc_assessment_item",
+        "query": "Active Assessment Items"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_assessment_item",
+          "entity_mappings": [],
+          "name": "Inactive Assessment Items",
+          "required_privilege": "grc_assessment_item.read",
+          "sql": "SELECT id FROM \"grc_assessment_item\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "entity": "grc_assessment_item",
+        "query": "Inactive Assessment Items"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_control",
+          "entity_mappings": [],
+          "name": "Active Controls",
+          "required_privilege": "grc_control.read",
+          "sql": "SELECT id FROM \"grc_control\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "entity": "grc_control",
+        "query": "Active Controls"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_control",
+          "entity_mappings": [],
+          "name": "Inactive Controls",
+          "required_privilege": "grc_control.read",
+          "sql": "SELECT id FROM \"grc_control\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "entity": "grc_control",
+        "query": "Inactive Controls"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_control_requirement",
+          "entity_mappings": [],
+          "name": "Active Control Requirements",
+          "required_privilege": "grc_control_requirement.read",
+          "sql": "SELECT id FROM \"grc_control_requirement\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "entity": "grc_control_requirement",
+        "query": "Active Control Requirements"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_control_requirement",
+          "entity_mappings": [],
+          "name": "Inactive Control Requirements",
+          "required_privilege": "grc_control_requirement.read",
+          "sql": "SELECT id FROM \"grc_control_requirement\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "entity": "grc_control_requirement",
+        "query": "Inactive Control Requirements"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_evidence",
+          "entity_mappings": [],
+          "name": "Active Evidence",
+          "required_privilege": "grc_evidence.read",
+          "sql": "SELECT id FROM \"grc_evidence\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "entity": "grc_evidence",
+        "query": "Active Evidence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_evidence",
+          "entity_mappings": [],
+          "name": "Inactive Evidence",
+          "required_privilege": "grc_evidence.read",
+          "sql": "SELECT id FROM \"grc_evidence\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "entity": "grc_evidence",
+        "query": "Inactive Evidence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_finding",
+          "entity_mappings": [],
+          "name": "Active Findings",
+          "required_privilege": "grc_finding.read",
+          "sql": "SELECT id FROM \"grc_finding\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "entity": "grc_finding",
+        "query": "Active Findings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_finding",
+          "entity_mappings": [],
+          "name": "Inactive Findings",
+          "required_privilege": "grc_finding.read",
+          "sql": "SELECT id FROM \"grc_finding\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "entity": "grc_finding",
+        "query": "Inactive Findings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_policy",
+          "entity_mappings": [],
+          "name": "Active Policies",
+          "required_privilege": "grc_policy.read",
+          "sql": "SELECT id FROM \"grc_policy\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "entity": "grc_policy",
+        "query": "Active Policies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_policy",
+          "entity_mappings": [],
+          "name": "Inactive Policies",
+          "required_privilege": "grc_policy.read",
+          "sql": "SELECT id FROM \"grc_policy\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "entity": "grc_policy",
+        "query": "Inactive Policies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_policy_ack",
+          "entity_mappings": [],
+          "name": "Active Policy Acknowledgements",
+          "required_privilege": "grc_policy_ack.read",
+          "sql": "SELECT id FROM \"grc_policy_ack\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "entity": "grc_policy_ack",
+        "query": "Active Policy Acknowledgements"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_policy_ack",
+          "entity_mappings": [],
+          "name": "Inactive Policy Acknowledgements",
+          "required_privilege": "grc_policy_ack.read",
+          "sql": "SELECT id FROM \"grc_policy_ack\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "entity": "grc_policy_ack",
+        "query": "Inactive Policy Acknowledgements"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_regulation",
+          "entity_mappings": [],
+          "name": "Active Regulations",
+          "required_privilege": "grc_regulation.read",
+          "sql": "SELECT id FROM \"grc_regulation\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "entity": "grc_regulation",
+        "query": "Active Regulations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_regulation",
+          "entity_mappings": [],
+          "name": "Inactive Regulations",
+          "required_privilege": "grc_regulation.read",
+          "sql": "SELECT id FROM \"grc_regulation\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "entity": "grc_regulation",
+        "query": "Inactive Regulations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_requirement",
+          "entity_mappings": [],
+          "name": "Active Requirements",
+          "required_privilege": "grc_requirement.read",
+          "sql": "SELECT id FROM \"grc_requirement\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "entity": "grc_requirement",
+        "query": "Active Requirements"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_requirement",
+          "entity_mappings": [],
+          "name": "Inactive Requirements",
+          "required_privilege": "grc_requirement.read",
+          "sql": "SELECT id FROM \"grc_requirement\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "entity": "grc_requirement",
+        "query": "Inactive Requirements"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_risk",
+          "entity_mappings": [],
+          "name": "Active Risks",
+          "required_privilege": "grc_risk.read",
+          "sql": "SELECT id FROM \"grc_risk\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "entity": "grc_risk",
+        "query": "Active Risks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_risk",
+          "entity_mappings": [],
+          "name": "Inactive Risks",
+          "required_privilege": "grc_risk.read",
+          "sql": "SELECT id FROM \"grc_risk\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "entity": "grc_risk",
+        "query": "Inactive Risks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_risk_dependency",
+          "entity_mappings": [],
+          "name": "Active Risk Dependencies",
+          "required_privilege": "grc_risk_dependency.read",
+          "sql": "SELECT id FROM \"grc_risk_dependency\" WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "entity": "grc_risk_dependency",
+        "query": "Active Risk Dependencies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_risk_dependency",
+          "entity_mappings": [],
+          "name": "Inactive Risk Dependencies",
+          "required_privilege": "grc_risk_dependency.read",
+          "sql": "SELECT id FROM \"grc_risk_dependency\" WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "entity": "grc_risk_dependency",
+        "query": "Inactive Risk Dependencies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_assessment",
+          "is_default": true,
+          "name": "Active Assessments",
+          "query": {
+            "entity": "grc_assessment",
+            "name": "Active Assessments"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 108,
+      "target": {
+        "entity": "grc_assessment",
+        "view": "Active Assessments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_assessment",
+          "is_default": false,
+          "name": "Inactive Assessments",
+          "query": {
+            "entity": "grc_assessment",
+            "name": "Inactive Assessments"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 109,
+      "target": {
+        "entity": "grc_assessment",
+        "view": "Inactive Assessments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_assessment_item",
+          "is_default": true,
+          "name": "Active Assessment Items",
+          "query": {
+            "entity": "grc_assessment_item",
+            "name": "Active Assessment Items"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 110,
+      "target": {
+        "entity": "grc_assessment_item",
+        "view": "Active Assessment Items"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_assessment_item",
+          "is_default": false,
+          "name": "Inactive Assessment Items",
+          "query": {
+            "entity": "grc_assessment_item",
+            "name": "Inactive Assessment Items"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 111,
+      "target": {
+        "entity": "grc_assessment_item",
+        "view": "Inactive Assessment Items"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_control",
+          "is_default": true,
+          "name": "Active Controls",
+          "query": {
+            "entity": "grc_control",
+            "name": "Active Controls"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 112,
+      "target": {
+        "entity": "grc_control",
+        "view": "Active Controls"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_control",
+          "is_default": false,
+          "name": "Inactive Controls",
+          "query": {
+            "entity": "grc_control",
+            "name": "Inactive Controls"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 113,
+      "target": {
+        "entity": "grc_control",
+        "view": "Inactive Controls"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_control_requirement",
+          "is_default": true,
+          "name": "Active Control Requirements",
+          "query": {
+            "entity": "grc_control_requirement",
+            "name": "Active Control Requirements"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 114,
+      "target": {
+        "entity": "grc_control_requirement",
+        "view": "Active Control Requirements"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_control_requirement",
+          "is_default": false,
+          "name": "Inactive Control Requirements",
+          "query": {
+            "entity": "grc_control_requirement",
+            "name": "Inactive Control Requirements"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 115,
+      "target": {
+        "entity": "grc_control_requirement",
+        "view": "Inactive Control Requirements"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_evidence",
+          "is_default": true,
+          "name": "Active Evidence",
+          "query": {
+            "entity": "grc_evidence",
+            "name": "Active Evidence"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 116,
+      "target": {
+        "entity": "grc_evidence",
+        "view": "Active Evidence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_evidence",
+          "is_default": false,
+          "name": "Inactive Evidence",
+          "query": {
+            "entity": "grc_evidence",
+            "name": "Inactive Evidence"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 117,
+      "target": {
+        "entity": "grc_evidence",
+        "view": "Inactive Evidence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_finding",
+          "is_default": true,
+          "name": "Active Findings",
+          "query": {
+            "entity": "grc_finding",
+            "name": "Active Findings"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 118,
+      "target": {
+        "entity": "grc_finding",
+        "view": "Active Findings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_finding",
+          "is_default": false,
+          "name": "Inactive Findings",
+          "query": {
+            "entity": "grc_finding",
+            "name": "Inactive Findings"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 119,
+      "target": {
+        "entity": "grc_finding",
+        "view": "Inactive Findings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_policy",
+          "is_default": true,
+          "name": "Active Policies",
+          "query": {
+            "entity": "grc_policy",
+            "name": "Active Policies"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 120,
+      "target": {
+        "entity": "grc_policy",
+        "view": "Active Policies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_policy",
+          "is_default": false,
+          "name": "Inactive Policies",
+          "query": {
+            "entity": "grc_policy",
+            "name": "Inactive Policies"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 121,
+      "target": {
+        "entity": "grc_policy",
+        "view": "Inactive Policies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_policy_ack",
+          "is_default": true,
+          "name": "Active Policy Acknowledgements",
+          "query": {
+            "entity": "grc_policy_ack",
+            "name": "Active Policy Acknowledgements"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 122,
+      "target": {
+        "entity": "grc_policy_ack",
+        "view": "Active Policy Acknowledgements"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_policy_ack",
+          "is_default": false,
+          "name": "Inactive Policy Acknowledgements",
+          "query": {
+            "entity": "grc_policy_ack",
+            "name": "Inactive Policy Acknowledgements"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 123,
+      "target": {
+        "entity": "grc_policy_ack",
+        "view": "Inactive Policy Acknowledgements"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_regulation",
+          "is_default": true,
+          "name": "Active Regulations",
+          "query": {
+            "entity": "grc_regulation",
+            "name": "Active Regulations"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 124,
+      "target": {
+        "entity": "grc_regulation",
+        "view": "Active Regulations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_regulation",
+          "is_default": false,
+          "name": "Inactive Regulations",
+          "query": {
+            "entity": "grc_regulation",
+            "name": "Inactive Regulations"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 125,
+      "target": {
+        "entity": "grc_regulation",
+        "view": "Inactive Regulations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_requirement",
+          "is_default": true,
+          "name": "Active Requirements",
+          "query": {
+            "entity": "grc_requirement",
+            "name": "Active Requirements"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 126,
+      "target": {
+        "entity": "grc_requirement",
+        "view": "Active Requirements"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_requirement",
+          "is_default": false,
+          "name": "Inactive Requirements",
+          "query": {
+            "entity": "grc_requirement",
+            "name": "Inactive Requirements"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 127,
+      "target": {
+        "entity": "grc_requirement",
+        "view": "Inactive Requirements"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_risk",
+          "is_default": true,
+          "name": "Active Risks",
+          "query": {
+            "entity": "grc_risk",
+            "name": "Active Risks"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 128,
+      "target": {
+        "entity": "grc_risk",
+        "view": "Active Risks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_risk",
+          "is_default": false,
+          "name": "Inactive Risks",
+          "query": {
+            "entity": "grc_risk",
+            "name": "Inactive Risks"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 129,
+      "target": {
+        "entity": "grc_risk",
+        "view": "Inactive Risks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_risk_dependency",
+          "is_default": true,
+          "name": "Active Risk Dependencies",
+          "query": {
+            "entity": "grc_risk_dependency",
+            "name": "Active Risk Dependencies"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 130,
+      "target": {
+        "entity": "grc_risk_dependency",
+        "view": "Active Risk Dependencies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "grc_risk_dependency",
+          "is_default": false,
+          "name": "Inactive Risk Dependencies",
+          "query": {
+            "entity": "grc_risk_dependency",
+            "name": "Inactive Risk Dependencies"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 131,
+      "target": {
+        "entity": "grc_risk_dependency",
+        "view": "Inactive Risk Dependencies"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 42,
+  "title": "Platform definitions: attome-grc"
+}

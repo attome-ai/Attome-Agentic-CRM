@@ -1,0 +1,393 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:f3a2a5a4c9399055371d97fb2214c05617017ce9ebc809f5d1778854aa05dd85",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-api-communication.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "c6c18d32-9adc-79f4-b0ec-594e305f9739",
+  "layer": "platform",
+  "name": "attome-api-communication",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Communication",
+          "is_append_only": true,
+          "logicalname": "communication",
+          "primary_name_attribute": "subject"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "communication"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Body",
+          "field_type": "text",
+          "logicalname": "body"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "communication",
+        "field": "body"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Channel",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "channel",
+          "options": {
+            "choices": [
+              "email",
+              "internal",
+              "web_chat",
+              "portal",
+              "call",
+              "meeting",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "communication",
+        "field": "channel"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Direction",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "direction",
+          "options": {
+            "choices": [
+              "inbound",
+              "outbound"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "communication",
+        "field": "direction"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Entity Name",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "communication",
+        "field": "entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Message-Id",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "message_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "communication",
+        "field": "message_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Recipients",
+          "field_type": "text",
+          "logicalname": "recipient_user_ids"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "communication",
+        "field": "recipient_user_ids"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Record Id",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "record_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "communication",
+        "field": "record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "References",
+          "field_type": "text",
+          "logicalname": "references_header"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "communication",
+        "field": "references_header"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Sent At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "sent_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "communication",
+        "field": "sent_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "text",
+          "logicalname": "status"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "communication",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Subject",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "subject"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "communication",
+        "field": "subject"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "To",
+          "field_type": "text",
+          "logicalname": "to_addresses"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "communication",
+        "field": "to_addresses"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Author",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "author_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "communication",
+        "field": "author_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "In Reply To",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "in_reply_to",
+          "lookup_entity": "communication"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "communication",
+        "field": "in_reply_to"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Thread",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "thread_id",
+          "lookup_entity": "communication"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "communication",
+        "field": "thread_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "communication",
+          "entity_mappings": [],
+          "name": "Active Communications",
+          "required_privilege": "communication.read",
+          "sql": "SELECT id, entity_name, record_id, channel, direction, subject, body, status, sent_at, author_id, to_addresses, recipient_user_ids, thread_id, in_reply_to, created_at, modified_at FROM communication WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "communication",
+        "query": "Active Communications"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "communication",
+          "entity_mappings": [],
+          "name": "Communications (Related)",
+          "required_privilege": "communication.read",
+          "sql": "SELECT id, entity_name, record_id, channel, direction, subject, body, status, sent_at, author_id, to_addresses, recipient_user_ids, thread_id, in_reply_to, created_at, modified_at FROM communication WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "communication",
+        "query": "Communications (Related)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "communication",
+          "is_default": true,
+          "name": "Active Communications",
+          "query": {
+            "entity": "communication",
+            "name": "Active Communications"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "communication",
+        "view": "Active Communications"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "communication",
+          "is_default": false,
+          "name": "Communications (Related)",
+          "query": {
+            "entity": "communication",
+            "name": "Communications (Related)"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "communication",
+        "view": "Communications (Related)"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 28,
+  "title": "Platform definitions: attome-api-communication"
+}

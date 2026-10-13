@@ -757,7 +757,7 @@ pub enum EngineJob {
 }
 
 impl EngineJob {
-    /// Routes this job onto the batch queue (`job_type = "platform_job_batch"`)
+    /// Routes this job onto the batch queue (`job_type = "attome_job_batch"`)
     /// instead of the default fast one — true only for variants that loop
     /// over an open-ended, record-count-proportional amount of work.
     /// Centralized here (rather than trusted per call site) so every
@@ -1238,6 +1238,24 @@ pub struct DataBulkTransformPayload {
 /// rolling deploy). These tests pin the shape of every variant so a
 /// `#[derive]`-affecting change (a field rename, a newtype vs. struct variant
 /// swap) is caught here instead of in production `apalis.jobs`.
+impl attome_jobs::Job for EngineJob {
+    fn kind(&self) -> &'static str {
+        self.variant_name()
+    }
+
+    fn is_batch(&self) -> bool {
+        EngineJob::is_batch(self)
+    }
+
+    fn priority(&self) -> JobPriority {
+        EngineJob::priority(self)
+    }
+
+    fn max_attempts(&self) -> i32 {
+        EngineJob::max_attempts(self)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2095,23 +2113,5 @@ mod tests {
         };
         assert!(job.is_batch());
         assert_round_trips(job);
-    }
-}
-
-impl attome_jobs::Job for EngineJob {
-    fn kind(&self) -> &'static str {
-        self.variant_name()
-    }
-
-    fn is_batch(&self) -> bool {
-        EngineJob::is_batch(self)
-    }
-
-    fn priority(&self) -> JobPriority {
-        EngineJob::priority(self)
-    }
-
-    fn max_attempts(&self) -> i32 {
-        EngineJob::max_attempts(self)
     }
 }

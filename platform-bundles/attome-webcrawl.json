@@ -1,0 +1,112 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "knowledge_data_source",
+      "display_name": "Data Source",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "knowledge_data_item",
+      "display_name": "Data Item",
+      "primary_name_attribute": "title",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "title", "display_name": "Title", "field_type": "text", "is_required": true },
+        { "logicalname": "text", "display_name": "Text", "field_type": "text" },
+        { "logicalname": "data_source_ref", "display_name": "Data Source", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "knowledge_data_source" },
+        { "logicalname": "attachments", "display_name": "Attachments", "field_type": "file", "options": { "multi": true } },
+        { "logicalname": "lifecycle", "display_name": "Lifecycle", "field_type": "choice", "is_sortable": true, "is_filterable": true, "options": { "choices": ["draft", "published", "expired"], "multi": false } },
+        { "logicalname": "review_by", "display_name": "Review By", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "source_entity", "display_name": "Source Entity", "field_type": "text", "is_filterable": true },
+        { "logicalname": "source_record_id", "display_name": "Source Record", "field_type": "text" }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "knowledge_data_source",
+      "name": "Active Data Sources",
+      "sql": "SELECT id, name, description, row_version, created_at, modified_at FROM knowledge_data_source WHERE is_active IS NOT FALSE",
+      "required_privilege": "knowledge_data_source.read"
+    },
+    {
+      "entity": "knowledge_data_source",
+      "name": "Inactive Data Sources",
+      "sql": "SELECT id, name, description, row_version, created_at, modified_at FROM knowledge_data_source WHERE is_active = false",
+      "required_privilege": "knowledge_data_source.read"
+    },
+    {
+      "entity": "knowledge_data_item",
+      "name": "Active Data Items",
+      "sql": "SELECT id, title, text, data_source_ref, attachments, lifecycle, review_by, row_version, created_at, modified_at FROM knowledge_data_item WHERE is_active IS NOT FALSE",
+      "required_privilege": "knowledge_data_item.read"
+    },
+    {
+      "entity": "knowledge_data_item",
+      "name": "Inactive Data Items",
+      "sql": "SELECT id, title, text, data_source_ref, attachments, lifecycle, review_by, row_version, created_at, modified_at FROM knowledge_data_item WHERE is_active = false",
+      "required_privilege": "knowledge_data_item.read"
+    },
+    {
+      "entity": "knowledge_data_item",
+      "name": "Data Items (Related)",
+      "sql": "SELECT id, title, text, data_source_ref, attachments, lifecycle, review_by, row_version, created_at, modified_at FROM knowledge_data_item WHERE is_active IS NOT FALSE",
+      "required_privilege": "knowledge_data_item.read"
+    },
+    {
+      "entity": "knowledge_data_item",
+      "name": "Published Data Items",
+      "sql": "SELECT id, title, text, data_source_ref, attachments, lifecycle, review_by, row_version, created_at, modified_at FROM knowledge_data_item WHERE is_active IS NOT FALSE AND lifecycle = 'published'",
+      "required_privilege": "knowledge_data_item.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "knowledge_data_source",
+      "name": "Active Data Sources",
+      "query": { "entity": "knowledge_data_source", "name": "Active Data Sources" },
+      "is_default": true
+    },
+    {
+      "entity": "knowledge_data_source",
+      "name": "Inactive Data Sources",
+      "query": { "entity": "knowledge_data_source", "name": "Inactive Data Sources" },
+      "is_default": false
+    },
+    {
+      "entity": "knowledge_data_item",
+      "name": "Active Data Items",
+      "query": { "entity": "knowledge_data_item", "name": "Active Data Items" },
+      "is_default": true
+    },
+    {
+      "entity": "knowledge_data_item",
+      "name": "Inactive Data Items",
+      "query": { "entity": "knowledge_data_item", "name": "Inactive Data Items" },
+      "is_default": false
+    },
+    {
+      "entity": "knowledge_data_item",
+      "name": "Data Items (Related)",
+      "query": { "entity": "knowledge_data_item", "name": "Data Items (Related)" },
+      "is_default": false
+    },
+    {
+      "entity": "knowledge_data_item",
+      "name": "Published Data Items",
+      "query": { "entity": "knowledge_data_item", "name": "Published Data Items" },
+      "is_default": false
+    }
+  ]
+}

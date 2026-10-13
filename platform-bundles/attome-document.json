@@ -1,0 +1,52 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "attome_document",
+      "display_name": "Document",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true },
+        { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true },
+        { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true },
+        { "logicalname": "folder", "display_name": "Folder", "field_type": "text", "is_required": true },
+        { "logicalname": "file", "display_name": "File", "field_type": "file" },
+        { "logicalname": "source_field", "display_name": "Source Field", "field_type": "text" }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "attome_document",
+      "name": "Active Documents",
+      "sql": "SELECT id, name, entity_name, record_id, folder, file, source_field, row_version, created_at, modified_at FROM attome_document WHERE is_active IS NOT FALSE",
+      "required_privilege": "attome_document.read"
+    },
+    {
+      "entity": "attome_document",
+      "name": "Inactive Documents",
+      "sql": "SELECT id, name, entity_name, record_id, folder, file, source_field, row_version, created_at, modified_at FROM attome_document WHERE is_active = false",
+      "required_privilege": "attome_document.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "attome_document",
+      "name": "Active Documents",
+      "query": { "entity": "attome_document", "name": "Active Documents" },
+      "is_default": true
+    },
+    {
+      "entity": "attome_document",
+      "name": "Inactive Documents",
+      "query": { "entity": "attome_document", "name": "Inactive Documents" },
+      "is_default": false
+    }
+  ]
+}

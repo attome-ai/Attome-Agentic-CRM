@@ -1,0 +1,217 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:b60523c1118d1f52aaae6021637cde73447a22366b8e7168da2bdc8650902689",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-api-communication-event.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "45492fad-d484-71a8-80f9-60356ef358c6",
+  "layer": "platform",
+  "name": "attome-api-communication-event",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Communication Event",
+          "is_append_only": true,
+          "logicalname": "communication_event",
+          "primary_name_attribute": "event_type"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "communication_event"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Detail",
+          "field_type": "text",
+          "logicalname": "detail"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "communication_event",
+        "field": "detail"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Event",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "event_type",
+          "options": {
+            "choices": [
+              "queued",
+              "sent",
+              "delivered",
+              "bounced",
+              "opened",
+              "failed",
+              "suppressed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "communication_event",
+        "field": "event_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Occurred At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "occurred_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "communication_event",
+        "field": "occurred_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Provider Message Id",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "provider_message_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "communication_event",
+        "field": "provider_message_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Communication",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "communication_id",
+          "lookup_entity": "communication"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "communication_event",
+        "field": "communication_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "communication_event",
+          "entity_mappings": [],
+          "name": "Communication Events",
+          "required_privilege": "communication_event.read",
+          "sql": "SELECT id, communication_id, event_type, detail, occurred_at, provider_message_id, created_at FROM communication_event WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "communication_event",
+        "query": "Communication Events"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "communication_event",
+          "entity_mappings": [],
+          "name": "Communication Events (Related)",
+          "required_privilege": "communication_event.read",
+          "sql": "SELECT id, communication_id, event_type, detail, occurred_at, provider_message_id, created_at FROM communication_event WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "communication_event",
+        "query": "Communication Events (Related)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "communication_event",
+          "is_default": true,
+          "name": "Communication Events",
+          "query": {
+            "entity": "communication_event",
+            "name": "Communication Events"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "communication_event",
+        "view": "Communication Events"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "communication_event",
+          "is_default": false,
+          "name": "Communication Events (Related)",
+          "query": {
+            "entity": "communication_event",
+            "name": "Communication Events (Related)"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "communication_event",
+        "view": "Communication Events (Related)"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 29,
+  "title": "Platform definitions: attome-api-communication-event"
+}

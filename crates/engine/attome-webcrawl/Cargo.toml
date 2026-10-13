@@ -1,0 +1,37 @@
+[package]
+name         = "attome-webcrawl"
+description  = "Attome's web crawler, one knowledge source for search."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+attome-core.workspace     = true
+attome-db.workspace       = true
+attome-html.workspace     = true
+attome-metadata.workspace = true
+attome-server.workspace   = true
+attome-types.workspace    = true
+chrono.workspace          = true
+futures-util.workspace    = true
+reqwest                   = { workspace = true, features = ["stream"] }
+scraper.workspace         = true
+serde.workspace           = true
+serde_json.workspace      = true
+sqlx.workspace            = true
+thiserror.workspace       = true
+tokio.workspace           = true
+tracing.workspace         = true
+utoipa.workspace          = true
+uuid.workspace            = true
+
+[dev-dependencies]
+attome-testkit.workspace = true
+
+[lints]
+workspace = true

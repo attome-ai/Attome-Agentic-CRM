@@ -1,0 +1,83 @@
+[package]
+name         = "attome-api"
+description  = "Attome's HTTP API: the engine's route composition and the thin handlers in front of every engine."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+arc-swap.workspace            = true
+attome-ai.workspace           = true
+attome-approval.workspace     = true
+attome-audit.workspace        = true
+attome-auth.workspace         = true
+attome-cache.workspace        = true
+attome-compliance.workspace   = true
+attome-config.workspace       = true
+attome-content.workspace      = true
+attome-core.workspace         = true
+attome-dashboard.workspace    = true
+attome-db.workspace           = true
+attome-document.workspace     = true
+attome-email.workspace        = true
+attome-events.workspace       = true
+attome-field.workspace        = true
+attome-grc.workspace          = true
+attome-jobs.workspace         = true
+attome-metadata.workspace     = true
+attome-metric.workspace       = true
+attome-modules.workspace      = true
+attome-notification.workspace = true
+attome-profiler.workspace     = true
+attome-project.workspace      = true
+attome-records.workspace      = true
+attome-report.workspace       = true
+attome-rules.workspace        = true
+attome-s2s.workspace          = true
+attome-security.workspace     = true
+attome-server.workspace       = true
+attome-service.workspace      = true
+attome-state.workspace        = true
+attome-storage.workspace      = true
+attome-types.workspace        = true
+attome-webcrawl.workspace     = true
+axum.workspace                = true
+base64.workspace              = true
+bytes.workspace               = true
+chrono.workspace              = true
+chrono-tz.workspace           = true
+ed25519-dalek.workspace       = true
+fred.workspace                = true
+futures-util.workspace        = true
+hex.workspace                 = true
+infer.workspace               = true
+metrics.workspace             = true
+object_store.workspace        = true
+reqwest.workspace             = true
+serde.workspace               = true
+serde_json.workspace          = true
+sha2.workspace                = true
+sqlx.workspace                = true
+tokio.workspace               = true
+tower.workspace               = true
+tracing.workspace             = true
+utoipa.workspace              = true
+uuid.workspace                = true
+
+[dev-dependencies]
+attome-docgen.workspace      = true
+attome-integration.workspace = true
+attome-search.workspace      = true
+attome-testkit               = { workspace = true, features = ["app-config"] }
+attome-workflow.workspace    = true
+hmac.workspace               = true
+proptest.workspace           = true
+tracing-subscriber           = { version = "0.3", features = ["env-filter"] }
+
+[lints]
+workspace = true

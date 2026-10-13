@@ -1,0 +1,214 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:fd62fbff86e26eacfc2b71c22ffd4267c6abb90c35685611187be2e9231d4216",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-api-note.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "8b927473-0f95-7878-b6bc-11c82cf406ed",
+  "layer": "platform",
+  "name": "attome-api-note",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Note",
+          "is_append_only": false,
+          "logicalname": "note",
+          "primary_name_attribute": "title"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "note"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Attachments",
+          "field_type": "text",
+          "logicalname": "attachments"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "note",
+        "field": "attachments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Entity Name",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "entity_name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "note",
+        "field": "entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Files",
+          "field_type": "file",
+          "logicalname": "files",
+          "options": {
+            "multi": true
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "note",
+        "field": "files"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Customer Visible",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_customer_visible"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "note",
+        "field": "is_customer_visible"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Note Text",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "note_text"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "note",
+        "field": "note_text"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Record Id",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "record_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "note",
+        "field": "record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Replies",
+          "field_type": "text",
+          "logicalname": "replies"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "note",
+        "field": "replies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Title",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "title"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "note",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "note",
+          "entity_mappings": [],
+          "name": "Active Notes",
+          "required_privilege": "note.read",
+          "sql": "SELECT id, title, note_text, entity_name, record_id, attachments, replies, is_customer_visible, created_at, modified_at FROM note WHERE is_active IS NOT FALSE"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "note",
+        "query": "Active Notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "note",
+          "is_default": true,
+          "name": "Active Notes",
+          "query": {
+            "entity": "note",
+            "name": "Active Notes"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "note",
+        "view": "Active Notes"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 26,
+  "title": "Platform definitions: attome-api-note"
+}

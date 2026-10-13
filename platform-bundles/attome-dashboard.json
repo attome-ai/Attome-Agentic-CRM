@@ -1,0 +1,361 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "attome_dashboard",
+      "display_name": "Dashboard",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "name_ar", "display_name": "Name (Arabic)", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "description_ar", "display_name": "Description (Arabic)", "field_type": "text" },
+        { "logicalname": "dashboard_type", "display_name": "Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["personal","team","department","role","executive","operational","analytical","monitoring","compliance","customer","portal","embedded","public","tv","mobile","command_center"], "multi": false } },
+        { "logicalname": "owner_id", "display_name": "Owner", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "organization_id", "display_name": "Organization", "field_type": "lookup", "is_filterable": true, "lookup_entity": "organization" },
+        { "logicalname": "lifecycle_status", "display_name": "Lifecycle Status", "field_type": "choice", "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["draft","review","approved","published","archived"], "multi": false } },
+        { "logicalname": "visibility", "display_name": "Visibility (display hint)", "field_type": "choice", "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["private","team","organization","public"], "multi": false } },
+        { "logicalname": "thumbnail", "display_name": "Thumbnail", "field_type": "text" },
+        { "logicalname": "settings", "display_name": "Settings", "field_type": "text" },
+        { "logicalname": "is_template", "display_name": "Is Template", "field_type": "bool", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "template_category", "display_name": "Template Category", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "template_version", "display_name": "Template Version", "field_type": "text" },
+        { "logicalname": "published_version_id", "display_name": "Live Version", "field_type": "lookup", "lookup_entity": "dashboard_version" }
+      ]
+    },
+    {
+      "logicalname": "dashboard_version",
+      "display_name": "Dashboard Version",
+      "is_append_only": true,
+      "attributes": [
+        { "logicalname": "dashboard_id", "display_name": "Dashboard", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "attome_dashboard" },
+        { "logicalname": "version_number", "display_name": "Version Number", "field_type": "number", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "label", "display_name": "Label", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "snapshot_json", "display_name": "Snapshot", "field_type": "text", "is_required": true },
+        { "logicalname": "published_by", "display_name": "Published By", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "published_at", "display_name": "Published At", "field_type": "date", "is_sortable": true, "is_filterable": true }
+      ]
+    },
+    {
+      "logicalname": "dashboard_page",
+      "display_name": "Dashboard Page",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "dashboard_id", "display_name": "Dashboard", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "attome_dashboard" },
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "name_ar", "display_name": "Name (Arabic)", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "slug", "display_name": "Slug", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "sequence", "display_name": "Sequence", "field_type": "number", "is_sortable": true },
+        { "logicalname": "is_visible", "display_name": "Visible", "field_type": "bool", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "icon", "display_name": "Icon", "field_type": "text" },
+        { "logicalname": "background_kind", "display_name": "Background Kind", "field_type": "choice", "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["color","image","gradient"], "multi": false } },
+        { "logicalname": "background_value", "display_name": "Background Value", "field_type": "text" },
+        { "logicalname": "padding", "display_name": "Padding", "field_type": "text" },
+        { "logicalname": "settings", "display_name": "Settings", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "dashboard_section",
+      "display_name": "Dashboard Section",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "page_id", "display_name": "Page", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_page" },
+        { "logicalname": "parent_section_id", "display_name": "Parent Section", "field_type": "lookup", "is_filterable": true, "lookup_entity": "dashboard_section" },
+        { "logicalname": "section_type", "display_name": "Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["container","row","column","tabs","accordion","panel","card","split_pane"], "multi": false } },
+        { "logicalname": "layout_mode", "display_name": "Layout Mode", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["grid","freeform"], "multi": false } },
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "sequence", "display_name": "Sequence", "field_type": "number", "is_sortable": true },
+        { "logicalname": "grid_config", "display_name": "Grid Config", "field_type": "text" },
+        { "logicalname": "freeform_config", "display_name": "Freeform Config", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "dashboard_section_breakpoint",
+      "display_name": "Dashboard Section Breakpoint",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "section_id", "display_name": "Section", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_section" },
+        { "logicalname": "breakpoint", "display_name": "Breakpoint", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["desktop","laptop","tablet","mobile","ultrawide","tv"], "multi": false } },
+        { "logicalname": "position_config", "display_name": "Position", "field_type": "text" },
+        { "logicalname": "size_config", "display_name": "Size", "field_type": "text" },
+        { "logicalname": "is_visible", "display_name": "Visible", "field_type": "bool", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "column_count", "display_name": "Column Count", "field_type": "number", "is_sortable": true },
+        { "logicalname": "font_scale", "display_name": "Font Scale", "field_type": "number" },
+        { "logicalname": "sequence_override", "display_name": "Sequence Override", "field_type": "number", "is_sortable": true }
+      ]
+    },
+    {
+      "logicalname": "dashboard_widget",
+      "display_name": "Dashboard Widget",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "section_id", "display_name": "Section", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_section" },
+        { "logicalname": "widget_type", "display_name": "Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["__PLACEHOLDER_SEE_RESIDUAL_CODE__"], "multi": false } },
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "name_ar", "display_name": "Name (Arabic)", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "sequence", "display_name": "Sequence", "field_type": "number", "is_sortable": true },
+        { "logicalname": "grid_col", "display_name": "Grid Column", "field_type": "number" },
+        { "logicalname": "grid_row", "display_name": "Grid Row", "field_type": "number" },
+        { "logicalname": "grid_col_span", "display_name": "Grid Column Span", "field_type": "number" },
+        { "logicalname": "grid_row_span", "display_name": "Grid Row Span", "field_type": "number" },
+        { "logicalname": "freeform_x", "display_name": "Freeform X", "field_type": "number" },
+        { "logicalname": "freeform_y", "display_name": "Freeform Y", "field_type": "number" },
+        { "logicalname": "freeform_width", "display_name": "Freeform Width", "field_type": "number" },
+        { "logicalname": "freeform_height", "display_name": "Freeform Height", "field_type": "number" },
+        { "logicalname": "freeform_z_index", "display_name": "Freeform Z-Index", "field_type": "number" },
+        { "logicalname": "config", "display_name": "Config", "field_type": "text" },
+        { "logicalname": "responsive_overrides", "display_name": "Responsive Overrides", "field_type": "text" },
+        { "logicalname": "is_visible", "display_name": "Visible", "field_type": "bool", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "is_locked", "display_name": "Locked", "field_type": "bool", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "last_refresh_at", "display_name": "Last Refresh At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "last_error", "display_name": "Last Error", "field_type": "text" },
+        { "logicalname": "group_id", "display_name": "Group", "field_type": "text", "is_filterable": true },
+        { "logicalname": "query_id", "display_name": "Stored Query", "field_type": "text", "is_filterable": true },
+        { "logicalname": "view_id", "display_name": "View", "field_type": "text", "is_filterable": true },
+        { "logicalname": "query_params", "display_name": "Query Parameters", "field_type": "text" },
+        { "logicalname": "emits", "display_name": "Emits Variables", "field_type": "text" },
+        { "logicalname": "listens", "display_name": "Listens To Variables", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "dashboard_variable",
+      "display_name": "Dashboard Variable",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "dashboard_id", "display_name": "Dashboard", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "attome_dashboard" },
+        { "logicalname": "page_id", "display_name": "Page", "field_type": "lookup", "is_filterable": true, "lookup_entity": "dashboard_page" },
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "name_ar", "display_name": "Name (Arabic)", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "variable_type", "display_name": "Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["user_var","record_var","entity_var","date_var","url_var","env_var","tenant_var","param_var"], "multi": false } },
+        { "logicalname": "default_value", "display_name": "Default Value", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "dashboard_parameter",
+      "display_name": "Dashboard Parameter",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "dashboard_id", "display_name": "Dashboard", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "attome_dashboard" },
+        { "logicalname": "page_id", "display_name": "Page", "field_type": "lookup", "is_filterable": true, "lookup_entity": "dashboard_page" },
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "name_ar", "display_name": "Name (Arabic)", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "parameter_type", "display_name": "Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["date_range","choice","text","number","entity_lookup"], "multi": false } },
+        { "logicalname": "lookup_entity_logicalname", "display_name": "Lookup Entity", "field_type": "text" },
+        { "logicalname": "default_value", "display_name": "Default Value", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "dashboard_decision",
+      "display_name": "Decision",
+      "primary_name_attribute": "title",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "title", "display_name": "Title", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "driver", "display_name": "Driver", "field_type": "text", "is_required": true },
+        { "logicalname": "metric_ref", "display_name": "Driving Metric", "field_type": "lookup", "is_filterable": true, "lookup_entity": "dashboard_metric_definition" },
+        { "logicalname": "signal_ref", "display_name": "Driving Signal", "field_type": "text", "is_filterable": true },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": {"choices": ["proposed", "approved", "executed", "measured", "closed", "rejected"], "multi": false} },
+        { "logicalname": "owner_ref", "display_name": "Owner", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "confidence", "display_name": "Confidence", "field_type": "number", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "recommended_by", "display_name": "Recommended By", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": {"choices": ["human", "rule", "model"], "multi": false} },
+        { "logicalname": "rule_ref", "display_name": "Rule", "field_type": "text", "is_filterable": true },
+        { "logicalname": "model_id", "display_name": "Model", "field_type": "text", "is_filterable": true },
+        { "logicalname": "prompt_version", "display_name": "Prompt Version", "field_type": "text", "is_filterable": true },
+        { "logicalname": "approval_request_ref", "display_name": "Approval Request", "field_type": "text", "is_filterable": true },
+        { "logicalname": "action_invocation_ref", "display_name": "Action Invocation", "field_type": "text", "is_filterable": true },
+        { "logicalname": "regarding_entity", "display_name": "Regarding Entity", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "regarding_id", "display_name": "Regarding Record", "field_type": "text", "is_filterable": true },
+        { "logicalname": "measure_at", "display_name": "Measure At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "expected_metric_ref", "display_name": "Expected Metric", "field_type": "lookup", "is_filterable": true, "lookup_entity": "dashboard_metric_definition" },
+        { "logicalname": "expected_delta", "display_name": "Expected Delta", "field_type": "number" },
+        { "logicalname": "actual_delta", "display_name": "Actual Delta", "field_type": "number" },
+        { "logicalname": "effectiveness", "display_name": "Effectiveness", "field_type": "number" },
+        { "logicalname": "refusal_reason", "display_name": "Refusal Reason", "field_type": "text" },
+        { "logicalname": "chosen_option_ref", "display_name": "Chosen Option", "field_type": "lookup", "is_filterable": true, "lookup_entity": "dashboard_decision_option" }
+      ]
+    },
+    {
+      "logicalname": "dashboard_decision_option",
+      "display_name": "Decision Option",
+      "primary_name_attribute": "label",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "decision_ref", "display_name": "Decision", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_decision" },
+        { "logicalname": "label", "display_name": "Label", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "expected_delta", "display_name": "Expected Delta", "field_type": "number" },
+        { "logicalname": "cost", "display_name": "Cost", "field_type": "number" },
+        { "logicalname": "risk_note", "display_name": "Risk Note", "field_type": "text" },
+        { "logicalname": "action_id", "display_name": "Action", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "args", "display_name": "Arguments", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "dashboard_decision_dependency",
+      "display_name": "Decision Dependency",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "decision_ref", "display_name": "Decision", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_decision" },
+        { "logicalname": "depends_on_ref", "display_name": "Depends On", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_decision" },
+        { "logicalname": "dependency_type", "display_name": "Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": {"choices": ["blocks", "informs"], "multi": false} }
+      ]
+    },
+    {
+      "logicalname": "dashboard_scenario",
+      "display_name": "Scenario",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "base_kind", "display_name": "Base", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": {"choices": ["live", "scenario_ref"], "multi": false} },
+        { "logicalname": "base_scenario_ref", "display_name": "Base Scenario", "field_type": "lookup", "is_filterable": true, "lookup_entity": "dashboard_scenario" },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": {"choices": ["draft", "active", "archived"], "multi": false} },
+        { "logicalname": "owner_ref", "display_name": "Owner", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" }
+      ]
+    },
+    {
+      "logicalname": "dashboard_scenario_assumption",
+      "display_name": "Scenario Assumption",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "scenario_ref", "display_name": "Scenario", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_scenario" },
+        { "logicalname": "key", "display_name": "Key", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "kind", "display_name": "Kind", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": {"choices": ["value", "expression"], "multi": false} },
+        { "logicalname": "expression_or_value", "display_name": "Value / Expression", "field_type": "text", "is_required": true },
+        { "logicalname": "display_order", "display_name": "Order", "field_type": "number", "is_sortable": true }
+      ]
+    },
+    {
+      "logicalname": "dashboard_scenario_metric",
+      "display_name": "Scenario Metric",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "scenario_ref", "display_name": "Scenario", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_scenario" },
+        { "logicalname": "metric_ref", "display_name": "Metric", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_metric_definition" },
+        { "logicalname": "display_order", "display_name": "Order", "field_type": "number", "is_sortable": true }
+      ]
+    },
+    {
+      "logicalname": "dashboard_scenario_result",
+      "display_name": "Scenario Result",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "scenario_ref", "display_name": "Scenario", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_scenario" },
+        { "logicalname": "metric_ref", "display_name": "Metric", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "dashboard_metric_definition" },
+        { "logicalname": "baseline_value", "display_name": "Baseline Value", "field_type": "number" },
+        { "logicalname": "scenario_value", "display_name": "Scenario Value", "field_type": "number" },
+        { "logicalname": "delta", "display_name": "Delta", "field_type": "number" },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": {"choices": ["ok", "baseline_only", "not_computable", "pending", "error"], "multi": false} },
+        { "logicalname": "note", "display_name": "Note", "field_type": "text" },
+        { "logicalname": "evaluated_by", "display_name": "Evaluated By", "field_type": "lookup", "is_filterable": true, "lookup_entity": "user_account" }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "attome_dashboard", "name": "Active Dashboards", "sql": "SELECT id, name, dashboard_type, lifecycle_status, visibility, owner_id, is_template FROM attome_dashboard WHERE is_active = true", "required_privilege": "attome_dashboard.read" },
+    { "entity": "attome_dashboard", "name": "Inactive Dashboards", "sql": "SELECT id, name, dashboard_type, lifecycle_status, visibility, owner_id, is_template FROM attome_dashboard WHERE is_active = false", "required_privilege": "attome_dashboard.read" },
+    { "entity": "attome_dashboard", "name": "Template Gallery", "sql": "SELECT id, name, name_ar, description, dashboard_type, thumbnail, template_category, template_version, row_version, created_at, modified_at FROM attome_dashboard WHERE is_template = true AND (is_active IS NULL OR is_active = true)", "required_privilege": "attome_dashboard.read" },
+
+    { "entity": "dashboard_version", "name": "Active Dashboard Versions", "sql": "SELECT id, dashboard_id, version_number, label, published_by, published_at FROM dashboard_version WHERE is_active = true", "required_privilege": "dashboard_version.read" },
+    { "entity": "dashboard_version", "name": "Inactive Dashboard Versions", "sql": "SELECT id, dashboard_id, version_number, label, published_by, published_at FROM dashboard_version WHERE is_active = false", "required_privilege": "dashboard_version.read" },
+
+    { "entity": "dashboard_page", "name": "Active Dashboard Pages", "sql": "SELECT id, name, dashboard_id, sequence, is_visible FROM dashboard_page WHERE is_active = true", "required_privilege": "dashboard_page.read" },
+    { "entity": "dashboard_page", "name": "Inactive Dashboard Pages", "sql": "SELECT id, name, dashboard_id, sequence, is_visible FROM dashboard_page WHERE is_active = false", "required_privilege": "dashboard_page.read" },
+
+    { "entity": "dashboard_section", "name": "Active Dashboard Sections", "sql": "SELECT id, page_id, parent_section_id, section_type, layout_mode, sequence, grid_config, freeform_config, row_version FROM dashboard_section WHERE is_active = true", "required_privilege": "dashboard_section.read" },
+    { "entity": "dashboard_section", "name": "Inactive Dashboard Sections", "sql": "SELECT id, page_id, parent_section_id, section_type, layout_mode, sequence, grid_config, freeform_config, row_version FROM dashboard_section WHERE is_active = false", "required_privilege": "dashboard_section.read" },
+
+    { "entity": "dashboard_section_breakpoint", "name": "Active Dashboard Section Breakpoints", "sql": "SELECT id, section_id, breakpoint, is_visible, column_count, font_scale FROM dashboard_section_breakpoint WHERE is_active = true", "required_privilege": "dashboard_section_breakpoint.read" },
+    { "entity": "dashboard_section_breakpoint", "name": "Inactive Dashboard Section Breakpoints", "sql": "SELECT id, section_id, breakpoint, is_visible, column_count, font_scale FROM dashboard_section_breakpoint WHERE is_active = false", "required_privilege": "dashboard_section_breakpoint.read" },
+
+    { "entity": "dashboard_widget", "name": "Active Dashboard Widgets", "sql": "SELECT id, section_id, widget_type, name, query_id, query_params, sequence, is_visible, grid_col, grid_row, grid_col_span, grid_row_span, freeform_x, freeform_y, freeform_width, freeform_height, freeform_z_index, row_version FROM dashboard_widget WHERE is_active = true", "required_privilege": "dashboard_widget.read" },
+    { "entity": "dashboard_widget", "name": "Inactive Dashboard Widgets", "sql": "SELECT id, section_id, widget_type, name, query_id, query_params, sequence, is_visible, grid_col, grid_row, grid_col_span, grid_row_span, freeform_x, freeform_y, freeform_width, freeform_height, freeform_z_index, row_version FROM dashboard_widget WHERE is_active = false", "required_privilege": "dashboard_widget.read" },
+
+    { "entity": "dashboard_variable", "name": "Active Dashboard Variables", "sql": "SELECT id, dashboard_id, page_id, name, variable_type, default_value FROM dashboard_variable WHERE is_active = true", "required_privilege": "dashboard_variable.read" },
+    { "entity": "dashboard_variable", "name": "Inactive Dashboard Variables", "sql": "SELECT id, dashboard_id, page_id, name, variable_type, default_value FROM dashboard_variable WHERE is_active = false", "required_privilege": "dashboard_variable.read" },
+
+    { "entity": "dashboard_parameter", "name": "Active Dashboard Parameters", "sql": "SELECT id, dashboard_id, page_id, name, parameter_type, default_value FROM dashboard_parameter WHERE is_active = true", "required_privilege": "dashboard_parameter.read" },
+    { "entity": "dashboard_parameter", "name": "Inactive Dashboard Parameters", "sql": "SELECT id, dashboard_id, page_id, name, parameter_type, default_value FROM dashboard_parameter WHERE is_active = false", "required_privilege": "dashboard_parameter.read" },
+
+    { "entity": "user_account", "name": "General: Active Users Count", "sql": "SELECT COUNT(*)::bigint AS value FROM user_account WHERE (is_active IS NULL OR is_active = true)", "required_privilege": "user_account.read", "is_report": true },
+    { "entity": "team", "name": "General: Active Teams Count", "sql": "SELECT COUNT(*)::bigint AS value FROM team WHERE (is_deleted IS FALSE OR is_deleted IS NULL) AND (is_active IS NULL OR is_active = true)", "required_privilege": "team.read", "is_report": true },
+    { "entity": "organization", "name": "General: Active Organizations Count", "sql": "SELECT COUNT(*)::bigint AS value FROM organization WHERE (is_active IS NULL OR is_active = true)", "required_privilege": "organization.read", "is_report": true },
+    { "entity": "user_account", "name": "General: New Users This Month", "sql": "SELECT COUNT(*)::bigint AS value FROM user_account WHERE created_at >= date_trunc('month', CURRENT_DATE)", "required_privilege": "user_account.read", "is_report": true },
+    { "entity": "user_account", "name": "General: User Presence Status", "sql": "SELECT COALESCE(status, 'offline') AS status, COUNT(*)::bigint AS user_count FROM user_account WHERE (is_active IS NULL OR is_active = true) GROUP BY status", "required_privilege": "user_account.read", "is_report": true },
+    { "entity": "user_account", "name": "General: Recent User Logins", "sql": "SELECT id, user_name, email, status, last_login FROM user_account WHERE (is_active IS NULL OR is_active = true) LIMIT 10", "required_privilege": "user_account.read", "is_report": true },
+    { "entity": "team", "name": "General: System Teams Overview", "sql": "SELECT id, name, description, created_at FROM team WHERE (is_deleted IS FALSE OR is_deleted IS NULL) AND (is_active IS NULL OR is_active = true) LIMIT 10", "required_privilege": "team.read", "is_report": true },
+    { "entity": "dashboard_decision", "name": "Active Decisions", "sql": "SELECT id, title, status, recommended_by, owner_ref, metric_ref, confidence FROM dashboard_decision WHERE is_active = true", "required_privilege": "dashboard_decision.read" },
+    { "entity": "dashboard_decision", "name": "Inactive Decisions", "sql": "SELECT id, title, status, recommended_by, owner_ref, metric_ref, confidence FROM dashboard_decision WHERE is_active = false", "required_privilege": "dashboard_decision.read" },
+    { "entity": "dashboard_decision_option", "name": "Active Decision Options", "sql": "SELECT id, decision_ref, label, action_id, expected_delta FROM dashboard_decision_option WHERE is_active = true", "required_privilege": "dashboard_decision_option.read" },
+    { "entity": "dashboard_decision_option", "name": "Inactive Decision Options", "sql": "SELECT id, decision_ref, label, action_id, expected_delta FROM dashboard_decision_option WHERE is_active = false", "required_privilege": "dashboard_decision_option.read" },
+    { "entity": "dashboard_decision_dependency", "name": "Active Decision Dependencies", "sql": "SELECT id, decision_ref, depends_on_ref, dependency_type FROM dashboard_decision_dependency WHERE is_active = true", "required_privilege": "dashboard_decision_dependency.read" },
+    { "entity": "dashboard_decision_dependency", "name": "Inactive Decision Dependencies", "sql": "SELECT id, decision_ref, depends_on_ref, dependency_type FROM dashboard_decision_dependency WHERE is_active = false", "required_privilege": "dashboard_decision_dependency.read" },
+    { "entity": "dashboard_scenario", "name": "Active Scenarios", "sql": "SELECT id, name, base_kind, status, owner_ref FROM dashboard_scenario WHERE is_active = true", "required_privilege": "dashboard_scenario.read" },
+    { "entity": "dashboard_scenario", "name": "Inactive Scenarios", "sql": "SELECT id, name, base_kind, status, owner_ref FROM dashboard_scenario WHERE is_active = false", "required_privilege": "dashboard_scenario.read" },
+    { "entity": "dashboard_scenario_assumption", "name": "Active Scenario Assumptions", "sql": "SELECT id, scenario_ref, key, kind, expression_or_value, display_order FROM dashboard_scenario_assumption WHERE is_active = true", "required_privilege": "dashboard_scenario_assumption.read" },
+    { "entity": "dashboard_scenario_assumption", "name": "Inactive Scenario Assumptions", "sql": "SELECT id, scenario_ref, key, kind, expression_or_value, display_order FROM dashboard_scenario_assumption WHERE is_active = false", "required_privilege": "dashboard_scenario_assumption.read" },
+    { "entity": "dashboard_scenario_metric", "name": "Active Scenario Metrics", "sql": "SELECT id, scenario_ref, metric_ref, display_order FROM dashboard_scenario_metric WHERE is_active = true", "required_privilege": "dashboard_scenario_metric.read" },
+    { "entity": "dashboard_scenario_metric", "name": "Inactive Scenario Metrics", "sql": "SELECT id, scenario_ref, metric_ref, display_order FROM dashboard_scenario_metric WHERE is_active = false", "required_privilege": "dashboard_scenario_metric.read" },
+    { "entity": "dashboard_scenario_result", "name": "Active Scenario Results", "sql": "SELECT id, scenario_ref, metric_ref, baseline_value, scenario_value, delta, status FROM dashboard_scenario_result WHERE is_active = true", "required_privilege": "dashboard_scenario_result.read" },
+    { "entity": "dashboard_scenario_result", "name": "Inactive Scenario Results", "sql": "SELECT id, scenario_ref, metric_ref, baseline_value, scenario_value, delta, status FROM dashboard_scenario_result WHERE is_active = false", "required_privilege": "dashboard_scenario_result.read" }
+  ],
+  "views": [
+    { "entity": "attome_dashboard", "name": "Active Dashboards", "query": { "entity": "attome_dashboard", "name": "Active Dashboards" }, "is_default": true },
+    { "entity": "attome_dashboard", "name": "Inactive Dashboards", "query": { "entity": "attome_dashboard", "name": "Inactive Dashboards" }, "is_default": false },
+    { "entity": "attome_dashboard", "name": "Template Gallery", "query": { "entity": "attome_dashboard", "name": "Template Gallery" }, "is_default": false },
+
+    { "entity": "dashboard_version", "name": "Active Dashboard Versions", "query": { "entity": "dashboard_version", "name": "Active Dashboard Versions" }, "is_default": true },
+    { "entity": "dashboard_version", "name": "Inactive Dashboard Versions", "query": { "entity": "dashboard_version", "name": "Inactive Dashboard Versions" }, "is_default": false },
+
+    { "entity": "dashboard_page", "name": "Active Dashboard Pages", "query": { "entity": "dashboard_page", "name": "Active Dashboard Pages" }, "is_default": true },
+    { "entity": "dashboard_page", "name": "Inactive Dashboard Pages", "query": { "entity": "dashboard_page", "name": "Inactive Dashboard Pages" }, "is_default": false },
+
+    { "entity": "dashboard_section", "name": "Active Dashboard Sections", "query": { "entity": "dashboard_section", "name": "Active Dashboard Sections" }, "is_default": true },
+    { "entity": "dashboard_section", "name": "Inactive Dashboard Sections", "query": { "entity": "dashboard_section", "name": "Inactive Dashboard Sections" }, "is_default": false },
+
+    { "entity": "dashboard_section_breakpoint", "name": "Active Dashboard Section Breakpoints", "query": { "entity": "dashboard_section_breakpoint", "name": "Active Dashboard Section Breakpoints" }, "is_default": true },
+    { "entity": "dashboard_section_breakpoint", "name": "Inactive Dashboard Section Breakpoints", "query": { "entity": "dashboard_section_breakpoint", "name": "Inactive Dashboard Section Breakpoints" }, "is_default": false },
+
+    { "entity": "dashboard_widget", "name": "Active Dashboard Widgets", "query": { "entity": "dashboard_widget", "name": "Active Dashboard Widgets" }, "is_default": true },
+    { "entity": "dashboard_widget", "name": "Inactive Dashboard Widgets", "query": { "entity": "dashboard_widget", "name": "Inactive Dashboard Widgets" }, "is_default": false },
+
+    { "entity": "dashboard_variable", "name": "Active Dashboard Variables", "query": { "entity": "dashboard_variable", "name": "Active Dashboard Variables" }, "is_default": true },
+    { "entity": "dashboard_variable", "name": "Inactive Dashboard Variables", "query": { "entity": "dashboard_variable", "name": "Inactive Dashboard Variables" }, "is_default": false },
+
+    { "entity": "dashboard_parameter", "name": "Active Dashboard Parameters", "query": { "entity": "dashboard_parameter", "name": "Active Dashboard Parameters" }, "is_default": true },
+    { "entity": "dashboard_parameter", "name": "Inactive Dashboard Parameters", "query": { "entity": "dashboard_parameter", "name": "Inactive Dashboard Parameters" }, "is_default": false },
+    { "entity": "dashboard_decision", "name": "Active Decisions", "query": { "entity": "dashboard_decision", "name": "Active Decisions" }, "is_default": true },
+    { "entity": "dashboard_decision", "name": "Inactive Decisions", "query": { "entity": "dashboard_decision", "name": "Inactive Decisions" }, "is_default": false },
+    { "entity": "dashboard_decision_option", "name": "Active Decision Options", "query": { "entity": "dashboard_decision_option", "name": "Active Decision Options" }, "is_default": true },
+    { "entity": "dashboard_decision_option", "name": "Inactive Decision Options", "query": { "entity": "dashboard_decision_option", "name": "Inactive Decision Options" }, "is_default": false },
+    { "entity": "dashboard_decision_dependency", "name": "Active Decision Dependencies", "query": { "entity": "dashboard_decision_dependency", "name": "Active Decision Dependencies" }, "is_default": true },
+    { "entity": "dashboard_decision_dependency", "name": "Inactive Decision Dependencies", "query": { "entity": "dashboard_decision_dependency", "name": "Inactive Decision Dependencies" }, "is_default": false },
+    { "entity": "dashboard_scenario", "name": "Active Scenarios", "query": { "entity": "dashboard_scenario", "name": "Active Scenarios" }, "is_default": true },
+    { "entity": "dashboard_scenario", "name": "Inactive Scenarios", "query": { "entity": "dashboard_scenario", "name": "Inactive Scenarios" }, "is_default": false },
+    { "entity": "dashboard_scenario_assumption", "name": "Active Scenario Assumptions", "query": { "entity": "dashboard_scenario_assumption", "name": "Active Scenario Assumptions" }, "is_default": true },
+    { "entity": "dashboard_scenario_assumption", "name": "Inactive Scenario Assumptions", "query": { "entity": "dashboard_scenario_assumption", "name": "Inactive Scenario Assumptions" }, "is_default": false },
+    { "entity": "dashboard_scenario_metric", "name": "Active Scenario Metrics", "query": { "entity": "dashboard_scenario_metric", "name": "Active Scenario Metrics" }, "is_default": true },
+    { "entity": "dashboard_scenario_metric", "name": "Inactive Scenario Metrics", "query": { "entity": "dashboard_scenario_metric", "name": "Inactive Scenario Metrics" }, "is_default": false },
+    { "entity": "dashboard_scenario_result", "name": "Active Scenario Results", "query": { "entity": "dashboard_scenario_result", "name": "Active Scenario Results" }, "is_default": true },
+    { "entity": "dashboard_scenario_result", "name": "Inactive Scenario Results", "query": { "entity": "dashboard_scenario_result", "name": "Inactive Scenario Results" }, "is_default": false }
+  ]
+}

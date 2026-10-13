@@ -24,6 +24,30 @@ members = [
     "crates/engine/attome-audit",
     "crates/engine/attome-security",
     "crates/engine/attome-records",
+    "crates/engine/attome-ai",
+    "crates/engine/attome-s2s",
+    "crates/engine/attome-events",
+    "crates/engine/attome-integration",
+    "crates/engine/attome-notification",
+    "crates/engine/attome-workflow",
+    "crates/engine/attome-project",
+    "crates/engine/attome-service",
+    "crates/engine/attome-metric",
+    "crates/engine/attome-dashboard",
+    "crates/engine/attome-webcrawl",
+    "crates/engine/attome-content",
+    "crates/engine/attome-compliance",
+    "crates/engine/attome-grc",
+    "crates/engine/attome-search",
+    "crates/engine/attome-report",
+    "crates/engine/attome-docgen",
+    "crates/engine/attome-document",
+    "crates/engine/attome-api",
+    "crates/engine/attome-state",
+    "crates/engine/attome-process",
+    "crates/engine/attome-predict",
+    "crates/engine/attome-portal",
+    "crates/engine/attome-fleet",
     "crates/sdk/attome-sdk",
     "crates/apps/attome",
 ]
@@ -66,6 +90,30 @@ attome-field     = { path = "crates/engine/attome-field" }
 attome-audit     = { path = "crates/engine/attome-audit" }
 attome-security  = { path = "crates/engine/attome-security" }
 attome-records   = { path = "crates/engine/attome-records" }
+attome-ai        = { path = "crates/engine/attome-ai" }
+attome-s2s       = { path = "crates/engine/attome-s2s" }
+attome-events    = { path = "crates/engine/attome-events" }
+attome-integration = { path = "crates/engine/attome-integration" }
+attome-notification = { path = "crates/engine/attome-notification" }
+attome-workflow  = { path = "crates/engine/attome-workflow" }
+attome-project   = { path = "crates/engine/attome-project" }
+attome-service   = { path = "crates/engine/attome-service" }
+attome-metric    = { path = "crates/engine/attome-metric" }
+attome-dashboard = { path = "crates/engine/attome-dashboard" }
+attome-webcrawl  = { path = "crates/engine/attome-webcrawl" }
+attome-content   = { path = "crates/engine/attome-content" }
+attome-compliance = { path = "crates/engine/attome-compliance" }
+attome-grc       = { path = "crates/engine/attome-grc" }
+attome-search    = { path = "crates/engine/attome-search" }
+attome-report    = { path = "crates/engine/attome-report" }
+attome-docgen    = { path = "crates/engine/attome-docgen" }
+attome-document  = { path = "crates/engine/attome-document" }
+attome-api       = { path = "crates/engine/attome-api" }
+attome-state     = { path = "crates/engine/attome-state" }
+attome-process   = { path = "crates/engine/attome-process" }
+attome-predict   = { path = "crates/engine/attome-predict" }
+attome-portal    = { path = "crates/engine/attome-portal" }
+attome-fleet     = { path = "crates/engine/attome-fleet" }
 attome-sdk       = { path = "crates/sdk/attome-sdk" }
 
 # External crates
@@ -88,6 +136,7 @@ futures-util  = "0.3"
 hex           = "0.4"
 hmac          = "0.12"
 http          = "1"
+infer         = "0.22"
 jsonwebtoken  = "9"
 lettre        = { version = "0.11", default-features = false, features = ["tokio1-rustls-tls", "smtp-transport", "builder"] }
 metrics       = "0.24"
@@ -100,11 +149,14 @@ rand          = "0.8"
 regex         = "1"
 reqwest       = { version = "0.13", default-features = false, features = ["json", "form", "rustls"] }
 rsa           = "0.9"
+rust_xlsxwriter = "0.99"
 rustls        = { version = "0.23", default-features = false, features = ["std", "ring"] }
+scraper       = "0.27"
 serde         = { version = "1", features = ["derive"] }
 serde_ignored = "0.1"
 serde_json    = "1"
 sha2          = "0.10"
+smartcore     = { version = "0.6", default-features = false }
 sqlx          = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "migrate", "tls-rustls", "json"] }
 thiserror     = "2"
 tokio         = { version = "1", features = ["full"] }

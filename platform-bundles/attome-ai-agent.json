@@ -1,0 +1,115 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 463,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "ai_agent_policy",
+      "display_name": "Agent Policy",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        {
+          "logicalname": "risk_ceiling", "display_name": "Risk Ceiling", "field_type": "choice",
+          "is_required": true, "is_write_restricted": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["read", "reversible", "consequential"], "multi": false }
+        },
+        {
+          "logicalname": "allowed_action_ids", "display_name": "Allowed Actions", "field_type": "choice",
+          "is_write_restricted": true,
+          "options": {
+            "choices": [
+              "agent.kill", "agent.pause", "agent.playground_complete", "agent.resume", "approval.status",
+              "article.draft", "bot.handoff", "graph.traverse", "knowledge.answer", "memory.forget",
+              "memory.remember", "query.execute", "record.classify", "record.create", "record.delete",
+              "record.get", "record.restore", "record.summarize", "record.update", "record.update_field",
+              "route.classify", "search.knowledge", "search.records", "workflow.start"
+            ],
+            "multi": true
+          }
+        },
+        {
+          "logicalname": "knowledge_source_refs", "display_name": "Knowledge Sources", "field_type": "text",
+          "is_write_restricted": true,
+          "options": {
+            "pattern": "\\[\\s*(\"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\"\\s*(,\\s*\"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\"\\s*)*)?\\]",
+            "mask_description": "JSON array of knowledge data source ids"
+          }
+        },
+        {
+          "logicalname": "capability_pack_refs", "display_name": "Capability Packs", "field_type": "text",
+          "is_write_restricted": true,
+          "options": {
+            "pattern": "\\[\\s*(\"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\"\\s*(,\\s*\"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\"\\s*)*)?\\]",
+            "mask_description": "JSON array of capability pack ids"
+          }
+        },
+        { "logicalname": "max_invocations_per_session", "display_name": "Max Invocations per Session", "field_type": "number", "is_write_restricted": true, "options": { "min": 1 } },
+        { "logicalname": "max_writes_per_day", "display_name": "Max Writes per Day", "field_type": "number", "is_write_restricted": true, "options": { "min": 1 } },
+        { "logicalname": "max_tokens_per_session", "display_name": "Max Tokens per Session", "field_type": "number", "is_write_restricted": true, "options": { "min": 1, "max": 200000 } },
+        { "logicalname": "max_session_duration_minutes", "display_name": "Max Session Duration (minutes)", "field_type": "number", "is_write_restricted": true, "options": { "min": 1 } }
+      ]
+    },
+    {
+      "logicalname": "ai_agent",
+      "display_name": "Agent",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        {
+          "logicalname": "status", "display_name": "Status", "field_type": "choice",
+          "is_required": true, "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["draft", "testing", "active", "suspended", "archived"], "multi": false }
+        },
+        { "logicalname": "icon", "display_name": "Icon", "field_type": "icon" },
+        { "logicalname": "color", "display_name": "Color", "field_type": "color" },
+        { "logicalname": "primary_model_ref", "display_name": "Primary Model", "field_type": "lookup", "is_required": true, "is_filterable": true, "lookup_entity": "ai_model" },
+        { "logicalname": "fallback_model_ref", "display_name": "Fallback Model", "field_type": "lookup", "is_filterable": true, "lookup_entity": "ai_model" },
+        { "logicalname": "fallback_model_2_ref", "display_name": "Fallback Model 2", "field_type": "lookup", "is_filterable": true, "lookup_entity": "ai_model" },
+        { "logicalname": "policy_ref", "display_name": "Policy", "field_type": "lookup", "is_filterable": true, "is_write_restricted": true, "lookup_entity": "ai_agent_policy" },
+        { "logicalname": "system_instructions", "display_name": "System Instructions", "field_type": "text", "is_required": true },
+        {
+          "logicalname": "response_style", "display_name": "Response Style", "field_type": "choice",
+          "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["concise", "detailed", "conversational", "structured", "step_by_step", "executive", "technical"], "multi": false }
+        },
+        {
+          "logicalname": "default_language", "display_name": "Default Language", "field_type": "choice",
+          "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["english", "spanish", "french", "german", "portuguese", "arabic", "chinese", "japanese"], "multi": false }
+        },
+        { "logicalname": "temperature", "display_name": "Temperature", "field_type": "number" },
+        { "logicalname": "top_p", "display_name": "Top P", "field_type": "number" },
+        { "logicalname": "seed", "display_name": "Seed", "field_type": "number" },
+        {
+          "logicalname": "retrieval_mode", "display_name": "Knowledge Retrieval", "field_type": "choice",
+          "is_sortable": true, "is_filterable": true,
+          "options": { "choices": ["tool_invoked", "pre_retrieved"], "multi": false }
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    { "name": "ai_agent_personality", "entity_a": "ai_agent", "entity_b": "ai_personality", "role_a": "agents", "role_b": "personalities" },
+    { "name": "ai_agent_tone", "entity_a": "ai_agent", "entity_b": "ai_tone", "role_a": "agents", "role_b": "tones" }
+  ],
+  "queries": [
+    { "entity": "ai_agent_policy", "name": "Active Agent Policies", "sql": "SELECT id, name, description, risk_ceiling, max_invocations_per_session, max_writes_per_day, max_tokens_per_session, max_session_duration_minutes FROM \"ai_agent_policy\" WHERE is_active = true", "required_privilege": "ai_agent_policy.read" },
+    { "entity": "ai_agent_policy", "name": "Inactive Agent Policies", "sql": "SELECT id, name, description, risk_ceiling, max_invocations_per_session, max_writes_per_day, max_tokens_per_session, max_session_duration_minutes FROM \"ai_agent_policy\" WHERE is_active = false", "required_privilege": "ai_agent_policy.read" },
+    { "entity": "ai_agent", "name": "Active Agents", "sql": "SELECT id, name, description, status, icon, color, primary_model_ref, response_style, default_language FROM \"ai_agent\" WHERE is_active = true", "required_privilege": "ai_agent.read" },
+    { "entity": "ai_agent", "name": "Inactive Agents", "sql": "SELECT id, name, description, status, icon, color, primary_model_ref, response_style, default_language FROM \"ai_agent\" WHERE is_active = false", "required_privilege": "ai_agent.read" }
+  ],
+  "views": [
+    { "entity": "ai_agent_policy", "name": "Active Agent Policies", "query": { "entity": "ai_agent_policy", "name": "Active Agent Policies" }, "is_default": true },
+    { "entity": "ai_agent_policy", "name": "Inactive Agent Policies", "query": { "entity": "ai_agent_policy", "name": "Inactive Agent Policies" }, "is_default": false },
+    { "entity": "ai_agent", "name": "Active Agents", "query": { "entity": "ai_agent", "name": "Active Agents" }, "is_default": true },
+    { "entity": "ai_agent", "name": "Inactive Agents", "query": { "entity": "ai_agent", "name": "Inactive Agents" }, "is_default": false }
+  ]
+}

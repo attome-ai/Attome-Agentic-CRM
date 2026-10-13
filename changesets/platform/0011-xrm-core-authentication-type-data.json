@@ -1,0 +1,182 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:531fb6b863d9a25d04092cb1f0571567e2140207cdf112e34df8bdb02a51336e",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/xrm-core-authentication-type-data.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "15f7f2b6-8bc0-7b4b-85e9-e1759573d7d8",
+  "layer": "platform",
+  "name": "xrm-core-authentication-type-data",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Provider authenticates requests using an API key",
+          "name": "API Key"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "authentication_type",
+        "key": {
+          "name": "API Key"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Authentication through AWS IAM credentials/roles",
+          "name": "AWS IAM"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "authentication_type",
+        "key": {
+          "name": "AWS IAM"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Provider requires a bearer/access token",
+          "name": "Bearer Token"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "authentication_type",
+        "key": {
+          "name": "Bearer Token"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Provider uses another authentication mechanism",
+          "name": "Custom"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "authentication_type",
+        "key": {
+          "name": "Custom"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Cloud-managed identity authentication, e.g. Azure",
+          "name": "Managed Identity"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "authentication_type",
+        "key": {
+          "name": "Managed Identity"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Provider endpoint does not require authentication",
+          "name": "None"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "authentication_type",
+        "key": {
+          "name": "None"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Provider uses OAuth 2.0 access tokens",
+          "name": "OAuth 2.0"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "authentication_type",
+        "key": {
+          "name": "OAuth 2.0"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "description": "Authentication using a provider service account",
+          "name": "Service Account"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "authentication_type",
+        "key": {
+          "name": "Service Account"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 11,
+  "title": "Platform definitions: xrm-core-authentication-type-data"
+}

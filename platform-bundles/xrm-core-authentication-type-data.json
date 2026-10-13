@@ -1,0 +1,24 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "record_sets": [
+    {
+      "entity": "authentication_type",
+      "key_fields": ["name"],
+      "rows": [
+        { "name": "API Key", "description": "Provider authenticates requests using an API key" },
+        { "name": "OAuth 2.0", "description": "Provider uses OAuth 2.0 access tokens" },
+        { "name": "Bearer Token", "description": "Provider requires a bearer/access token" },
+        { "name": "AWS IAM", "description": "Authentication through AWS IAM credentials/roles" },
+        { "name": "Managed Identity", "description": "Cloud-managed identity authentication, e.g. Azure" },
+        { "name": "Service Account", "description": "Authentication using a provider service account" },
+        { "name": "None", "description": "Provider endpoint does not require authentication" },
+        { "name": "Custom", "description": "Provider uses another authentication mechanism" }
+      ]
+    }
+  ]
+}

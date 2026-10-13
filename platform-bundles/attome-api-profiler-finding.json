@@ -1,0 +1,37 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 453,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "profiler_finding",
+      "display_name": "Profiler Finding",
+      "primary_name_attribute": "title",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "title", "display_name": "Title", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "object_type", "display_name": "Object Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["entity", "query", "view", "rule", "workflow", "dashboard_widget", "action", "other"], "multi": false } },
+        { "logicalname": "object_ref", "display_name": "Object Ref", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "probe_name", "display_name": "Probe Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "sample_count", "display_name": "Sample Count", "field_type": "number", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "avg_ms", "display_name": "Avg (ms)", "field_type": "number", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "p95_ms", "display_name": "P95 (ms)", "field_type": "number", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "max_ms", "display_name": "Max (ms)", "field_type": "number", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "last_seen_at", "display_name": "Last Seen At", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "status", "display_name": "Status", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["open", "acknowledged", "resolved"], "multi": false } },
+        { "logicalname": "note", "display_name": "Note", "field_type": "text" }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "profiler_finding", "name": "Active Profiler Findings", "sql": "SELECT id, title, object_type, object_ref, probe_name, p95_ms, avg_ms, sample_count, last_seen_at, status FROM profiler_finding WHERE is_active = true", "required_privilege": "profiler_finding.read" },
+    { "entity": "profiler_finding", "name": "Inactive Profiler Findings", "sql": "SELECT id, title, object_type, object_ref, probe_name, p95_ms, avg_ms, sample_count, last_seen_at, status FROM profiler_finding WHERE is_active = false", "required_privilege": "profiler_finding.read" }
+  ],
+  "views": [
+    { "entity": "profiler_finding", "name": "Active Profiler Findings", "query": { "entity": "profiler_finding", "name": "Active Profiler Findings" }, "is_default": true },
+    { "entity": "profiler_finding", "name": "Inactive Profiler Findings", "query": { "entity": "profiler_finding", "name": "Inactive Profiler Findings" }, "is_default": false }
+  ]
+}

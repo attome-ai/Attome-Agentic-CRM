@@ -1,0 +1,4212 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:d3ca3971974c2dcd24f575e3e18b53eff1bb052605aa4511c26d0073b805f248",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-dashboard.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "d0ce8aab-9cb0-7308-b705-e5065edb5233",
+  "layer": "platform",
+  "name": "attome-dashboard",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "display_name": "Dashboard",
+          "is_append_only": false,
+          "logicalname": "attome_dashboard",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "attome_dashboard"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Decision",
+          "is_append_only": false,
+          "logicalname": "dashboard_decision",
+          "primary_name_attribute": "title"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "dashboard_decision"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Decision Dependency",
+          "is_append_only": false,
+          "logicalname": "dashboard_decision_dependency"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "dashboard_decision_dependency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Decision Option",
+          "is_append_only": false,
+          "logicalname": "dashboard_decision_option",
+          "primary_name_attribute": "label"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "dashboard_decision_option"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Dashboard Page",
+          "is_append_only": false,
+          "logicalname": "dashboard_page",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "dashboard_page"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Dashboard Parameter",
+          "is_append_only": false,
+          "logicalname": "dashboard_parameter",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "dashboard_parameter"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Scenario",
+          "is_append_only": false,
+          "logicalname": "dashboard_scenario",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "dashboard_scenario"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Scenario Assumption",
+          "is_append_only": false,
+          "logicalname": "dashboard_scenario_assumption"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "dashboard_scenario_assumption"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Scenario Metric",
+          "is_append_only": false,
+          "logicalname": "dashboard_scenario_metric"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "dashboard_scenario_metric"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Scenario Result",
+          "is_append_only": false,
+          "logicalname": "dashboard_scenario_result"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "dashboard_scenario_result"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Dashboard Section",
+          "is_append_only": false,
+          "logicalname": "dashboard_section"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "dashboard_section"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Dashboard Section Breakpoint",
+          "is_append_only": false,
+          "logicalname": "dashboard_section_breakpoint"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "dashboard_section_breakpoint"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Dashboard Variable",
+          "is_append_only": false,
+          "logicalname": "dashboard_variable",
+          "primary_name_attribute": "name"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "dashboard_variable"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Dashboard Version",
+          "is_append_only": true,
+          "logicalname": "dashboard_version"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "dashboard_version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Dashboard Widget",
+          "is_append_only": false,
+          "logicalname": "dashboard_widget"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "dashboard_widget"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "dashboard_type",
+          "options": {
+            "choices": [
+              "personal",
+              "team",
+              "department",
+              "role",
+              "executive",
+              "operational",
+              "analytical",
+              "monitoring",
+              "compliance",
+              "customer",
+              "portal",
+              "embedded",
+              "public",
+              "tv",
+              "mobile",
+              "command_center"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "dashboard_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description (Arabic)",
+          "field_type": "text",
+          "logicalname": "description_ar"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "description_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Is Template",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_template"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "is_template"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Lifecycle Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "lifecycle_status",
+          "options": {
+            "choices": [
+              "draft",
+              "review",
+              "approved",
+              "published",
+              "archived"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "lifecycle_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name (Arabic)",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "name_ar"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Settings",
+          "field_type": "text",
+          "logicalname": "settings"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "settings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Template Category",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "template_category"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "template_category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Template Version",
+          "field_type": "text",
+          "logicalname": "template_version"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "template_version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Thumbnail",
+          "field_type": "text",
+          "logicalname": "thumbnail"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "thumbnail"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Visibility (display hint)",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "visibility",
+          "options": {
+            "choices": [
+              "private",
+              "team",
+              "organization",
+              "public"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "visibility"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Action Invocation",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "action_invocation_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "action_invocation_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Actual Delta",
+          "field_type": "number",
+          "logicalname": "actual_delta"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "actual_delta"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Approval Request",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "approval_request_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "approval_request_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Confidence",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "confidence"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "confidence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Driver",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "driver"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "driver"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Effectiveness",
+          "field_type": "number",
+          "logicalname": "effectiveness"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "effectiveness"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Expected Delta",
+          "field_type": "number",
+          "logicalname": "expected_delta"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "expected_delta"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Measure At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "measure_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "measure_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Model",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "model_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "model_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Prompt Version",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "prompt_version"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "prompt_version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Recommended By",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "recommended_by",
+          "options": {
+            "choices": [
+              "human",
+              "rule",
+              "model"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "recommended_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Refusal Reason",
+          "field_type": "text",
+          "logicalname": "refusal_reason"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "refusal_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Regarding Entity",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "regarding_entity"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "regarding_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Regarding Record",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "regarding_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "regarding_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Rule",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "rule_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "rule_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Driving Signal",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "signal_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "signal_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "proposed",
+              "approved",
+              "executed",
+              "measured",
+              "closed",
+              "rejected"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Title",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "title"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "dependency_type",
+          "options": {
+            "choices": [
+              "blocks",
+              "informs"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "dashboard_decision_dependency",
+        "field": "dependency_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Action",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "action_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "dashboard_decision_option",
+        "field": "action_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Arguments",
+          "field_type": "text",
+          "logicalname": "args"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "dashboard_decision_option",
+        "field": "args"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Cost",
+          "field_type": "number",
+          "logicalname": "cost"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "dashboard_decision_option",
+        "field": "cost"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Expected Delta",
+          "field_type": "number",
+          "logicalname": "expected_delta"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "dashboard_decision_option",
+        "field": "expected_delta"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Label",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "label"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "dashboard_decision_option",
+        "field": "label"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Risk Note",
+          "field_type": "text",
+          "logicalname": "risk_note"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "dashboard_decision_option",
+        "field": "risk_note"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Background Kind",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "background_kind",
+          "options": {
+            "choices": [
+              "color",
+              "image",
+              "gradient"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "dashboard_page",
+        "field": "background_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Background Value",
+          "field_type": "text",
+          "logicalname": "background_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "dashboard_page",
+        "field": "background_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Icon",
+          "field_type": "text",
+          "logicalname": "icon"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "dashboard_page",
+        "field": "icon"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Visible",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_visible"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "dashboard_page",
+        "field": "is_visible"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "dashboard_page",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name (Arabic)",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "name_ar"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "dashboard_page",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Padding",
+          "field_type": "text",
+          "logicalname": "padding"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "dashboard_page",
+        "field": "padding"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Sequence",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "sequence"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "dashboard_page",
+        "field": "sequence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Settings",
+          "field_type": "text",
+          "logicalname": "settings"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "dashboard_page",
+        "field": "settings"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Slug",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "slug"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "dashboard_page",
+        "field": "slug"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Default Value",
+          "field_type": "text",
+          "logicalname": "default_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "dashboard_parameter",
+        "field": "default_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Lookup Entity",
+          "field_type": "text",
+          "logicalname": "lookup_entity_logicalname"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "dashboard_parameter",
+        "field": "lookup_entity_logicalname"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "dashboard_parameter",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name (Arabic)",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "name_ar"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "dashboard_parameter",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "parameter_type",
+          "options": {
+            "choices": [
+              "date_range",
+              "choice",
+              "text",
+              "number",
+              "entity_lookup"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "dashboard_parameter",
+        "field": "parameter_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Base",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "base_kind",
+          "options": {
+            "choices": [
+              "live",
+              "scenario_ref"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "dashboard_scenario",
+        "field": "base_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Description",
+          "field_type": "text",
+          "logicalname": "description"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "dashboard_scenario",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "dashboard_scenario",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "draft",
+              "active",
+              "archived"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "dashboard_scenario",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Order",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "display_order"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "dashboard_scenario_assumption",
+        "field": "display_order"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Value / Expression",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "expression_or_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "dashboard_scenario_assumption",
+        "field": "expression_or_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Key",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "key"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "dashboard_scenario_assumption",
+        "field": "key"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Kind",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "kind",
+          "options": {
+            "choices": [
+              "value",
+              "expression"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "dashboard_scenario_assumption",
+        "field": "kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Order",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "display_order"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "dashboard_scenario_metric",
+        "field": "display_order"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Baseline Value",
+          "field_type": "number",
+          "logicalname": "baseline_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "dashboard_scenario_result",
+        "field": "baseline_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Delta",
+          "field_type": "number",
+          "logicalname": "delta"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "dashboard_scenario_result",
+        "field": "delta"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Note",
+          "field_type": "text",
+          "logicalname": "note"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "entity": "dashboard_scenario_result",
+        "field": "note"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Scenario Value",
+          "field_type": "number",
+          "logicalname": "scenario_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "entity": "dashboard_scenario_result",
+        "field": "scenario_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "status",
+          "options": {
+            "choices": [
+              "ok",
+              "baseline_only",
+              "not_computable",
+              "pending",
+              "error"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "entity": "dashboard_scenario_result",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Freeform Config",
+          "field_type": "text",
+          "logicalname": "freeform_config"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "entity": "dashboard_section",
+        "field": "freeform_config"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Grid Config",
+          "field_type": "text",
+          "logicalname": "grid_config"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "entity": "dashboard_section",
+        "field": "grid_config"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Layout Mode",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "layout_mode",
+          "options": {
+            "choices": [
+              "grid",
+              "freeform"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "entity": "dashboard_section",
+        "field": "layout_mode"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "entity": "dashboard_section",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "section_type",
+          "options": {
+            "choices": [
+              "container",
+              "row",
+              "column",
+              "tabs",
+              "accordion",
+              "panel",
+              "card",
+              "split_pane"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "entity": "dashboard_section",
+        "field": "section_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Sequence",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "sequence"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "entity": "dashboard_section",
+        "field": "sequence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Breakpoint",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "breakpoint",
+          "options": {
+            "choices": [
+              "desktop",
+              "laptop",
+              "tablet",
+              "mobile",
+              "ultrawide",
+              "tv"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "entity": "dashboard_section_breakpoint",
+        "field": "breakpoint"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Column Count",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "column_count"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "entity": "dashboard_section_breakpoint",
+        "field": "column_count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Font Scale",
+          "field_type": "number",
+          "logicalname": "font_scale"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "entity": "dashboard_section_breakpoint",
+        "field": "font_scale"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Visible",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_visible"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "entity": "dashboard_section_breakpoint",
+        "field": "is_visible"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Position",
+          "field_type": "text",
+          "logicalname": "position_config"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "entity": "dashboard_section_breakpoint",
+        "field": "position_config"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Sequence Override",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "sequence_override"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "entity": "dashboard_section_breakpoint",
+        "field": "sequence_override"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Size",
+          "field_type": "text",
+          "logicalname": "size_config"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "entity": "dashboard_section_breakpoint",
+        "field": "size_config"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Default Value",
+          "field_type": "text",
+          "logicalname": "default_value"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "entity": "dashboard_variable",
+        "field": "default_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "entity": "dashboard_variable",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name (Arabic)",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "name_ar"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "entity": "dashboard_variable",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "variable_type",
+          "options": {
+            "choices": [
+              "user_var",
+              "record_var",
+              "entity_var",
+              "date_var",
+              "url_var",
+              "env_var",
+              "tenant_var",
+              "param_var"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "entity": "dashboard_variable",
+        "field": "variable_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Label",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "label"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "entity": "dashboard_version",
+        "field": "label"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Published At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "published_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "entity": "dashboard_version",
+        "field": "published_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Snapshot",
+          "field_type": "text",
+          "is_required": true,
+          "logicalname": "snapshot_json"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "entity": "dashboard_version",
+        "field": "snapshot_json"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Version Number",
+          "field_type": "number",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "version_number"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "entity": "dashboard_version",
+        "field": "version_number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Config",
+          "field_type": "text",
+          "logicalname": "config"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "config"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Emits Variables",
+          "field_type": "text",
+          "logicalname": "emits"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "emits"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Freeform Height",
+          "field_type": "number",
+          "logicalname": "freeform_height"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "freeform_height"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Freeform Width",
+          "field_type": "number",
+          "logicalname": "freeform_width"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "freeform_width"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Freeform X",
+          "field_type": "number",
+          "logicalname": "freeform_x"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "freeform_x"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Freeform Y",
+          "field_type": "number",
+          "logicalname": "freeform_y"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 108,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "freeform_y"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Freeform Z-Index",
+          "field_type": "number",
+          "logicalname": "freeform_z_index"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 109,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "freeform_z_index"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Grid Column",
+          "field_type": "number",
+          "logicalname": "grid_col"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 110,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "grid_col"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Grid Column Span",
+          "field_type": "number",
+          "logicalname": "grid_col_span"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 111,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "grid_col_span"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Grid Row",
+          "field_type": "number",
+          "logicalname": "grid_row"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 112,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "grid_row"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Grid Row Span",
+          "field_type": "number",
+          "logicalname": "grid_row_span"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 113,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "grid_row_span"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Group",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "group_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 114,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "group_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Locked",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_locked"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 115,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "is_locked"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Visible",
+          "field_type": "bool",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "is_visible"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 116,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "is_visible"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Last Error",
+          "field_type": "text",
+          "logicalname": "last_error"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 117,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "last_error"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Last Refresh At",
+          "field_type": "date",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "last_refresh_at"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 118,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "last_refresh_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Listens To Variables",
+          "field_type": "text",
+          "logicalname": "listens"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 119,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "listens"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "name"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 120,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Name (Arabic)",
+          "field_type": "text",
+          "is_filterable": true,
+          "is_sortable": true,
+          "logicalname": "name_ar"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 121,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Stored Query",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "query_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 122,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "query_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Query Parameters",
+          "field_type": "text",
+          "logicalname": "query_params"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 123,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "query_params"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Responsive Overrides",
+          "field_type": "text",
+          "logicalname": "responsive_overrides"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 124,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "responsive_overrides"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Sequence",
+          "field_type": "number",
+          "is_sortable": true,
+          "logicalname": "sequence"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 125,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "sequence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "View",
+          "field_type": "text",
+          "is_filterable": true,
+          "logicalname": "view_id"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 126,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "view_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_filterable": true,
+          "is_required": true,
+          "is_sortable": true,
+          "logicalname": "widget_type",
+          "options": {
+            "choices": [
+              "__PLACEHOLDER_SEE_RESIDUAL_CODE__"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 127,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "widget_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Organization",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "organization_id",
+          "lookup_entity": "organization"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 128,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "organization_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_id",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 129,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "owner_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Live Version",
+          "field_type": "lookup",
+          "logicalname": "published_version_id",
+          "lookup_entity": "dashboard_version"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 130,
+      "target": {
+        "entity": "attome_dashboard",
+        "field": "published_version_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Chosen Option",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "chosen_option_ref",
+          "lookup_entity": "dashboard_decision_option"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 131,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "chosen_option_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Expected Metric",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "expected_metric_ref",
+          "lookup_entity": "dashboard_metric_definition"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 132,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "expected_metric_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Driving Metric",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "metric_ref",
+          "lookup_entity": "dashboard_metric_definition"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 133,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "metric_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_ref",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 134,
+      "target": {
+        "entity": "dashboard_decision",
+        "field": "owner_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Decision",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "decision_ref",
+          "lookup_entity": "dashboard_decision"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 135,
+      "target": {
+        "entity": "dashboard_decision_dependency",
+        "field": "decision_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Depends On",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "depends_on_ref",
+          "lookup_entity": "dashboard_decision"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 136,
+      "target": {
+        "entity": "dashboard_decision_dependency",
+        "field": "depends_on_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Decision",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "decision_ref",
+          "lookup_entity": "dashboard_decision"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 137,
+      "target": {
+        "entity": "dashboard_decision_option",
+        "field": "decision_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Dashboard",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "dashboard_id",
+          "lookup_entity": "attome_dashboard"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 138,
+      "target": {
+        "entity": "dashboard_page",
+        "field": "dashboard_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Dashboard",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "dashboard_id",
+          "lookup_entity": "attome_dashboard"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 139,
+      "target": {
+        "entity": "dashboard_parameter",
+        "field": "dashboard_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Page",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "page_id",
+          "lookup_entity": "dashboard_page"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 140,
+      "target": {
+        "entity": "dashboard_parameter",
+        "field": "page_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Base Scenario",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "base_scenario_ref",
+          "lookup_entity": "dashboard_scenario"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 141,
+      "target": {
+        "entity": "dashboard_scenario",
+        "field": "base_scenario_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "owner_ref",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 142,
+      "target": {
+        "entity": "dashboard_scenario",
+        "field": "owner_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Scenario",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "scenario_ref",
+          "lookup_entity": "dashboard_scenario"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 143,
+      "target": {
+        "entity": "dashboard_scenario_assumption",
+        "field": "scenario_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Metric",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "metric_ref",
+          "lookup_entity": "dashboard_metric_definition"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 144,
+      "target": {
+        "entity": "dashboard_scenario_metric",
+        "field": "metric_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Scenario",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "scenario_ref",
+          "lookup_entity": "dashboard_scenario"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 145,
+      "target": {
+        "entity": "dashboard_scenario_metric",
+        "field": "scenario_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Evaluated By",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "evaluated_by",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 146,
+      "target": {
+        "entity": "dashboard_scenario_result",
+        "field": "evaluated_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Metric",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "metric_ref",
+          "lookup_entity": "dashboard_metric_definition"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 147,
+      "target": {
+        "entity": "dashboard_scenario_result",
+        "field": "metric_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Scenario",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "scenario_ref",
+          "lookup_entity": "dashboard_scenario"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 148,
+      "target": {
+        "entity": "dashboard_scenario_result",
+        "field": "scenario_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Page",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "page_id",
+          "lookup_entity": "dashboard_page"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 149,
+      "target": {
+        "entity": "dashboard_section",
+        "field": "page_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Parent Section",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "parent_section_id",
+          "lookup_entity": "dashboard_section"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 150,
+      "target": {
+        "entity": "dashboard_section",
+        "field": "parent_section_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Section",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "section_id",
+          "lookup_entity": "dashboard_section"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 151,
+      "target": {
+        "entity": "dashboard_section_breakpoint",
+        "field": "section_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Dashboard",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "dashboard_id",
+          "lookup_entity": "attome_dashboard"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 152,
+      "target": {
+        "entity": "dashboard_variable",
+        "field": "dashboard_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Page",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "page_id",
+          "lookup_entity": "dashboard_page"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 153,
+      "target": {
+        "entity": "dashboard_variable",
+        "field": "page_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Dashboard",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "dashboard_id",
+          "lookup_entity": "attome_dashboard"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 154,
+      "target": {
+        "entity": "dashboard_version",
+        "field": "dashboard_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Published By",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "logicalname": "published_by",
+          "lookup_entity": "user_account"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 155,
+      "target": {
+        "entity": "dashboard_version",
+        "field": "published_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Section",
+          "field_type": "lookup",
+          "is_filterable": true,
+          "is_required": true,
+          "logicalname": "section_id",
+          "lookup_entity": "dashboard_section"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 156,
+      "target": {
+        "entity": "dashboard_widget",
+        "field": "section_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "organization",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "General: Active Organizations Count",
+          "required_privilege": "organization.read",
+          "sql": "SELECT COUNT(*)::bigint AS value FROM organization WHERE (is_active IS NULL OR is_active = true)"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 157,
+      "target": {
+        "entity": "organization",
+        "query": "General: Active Organizations Count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "General: Active Users Count",
+          "required_privilege": "user_account.read",
+          "sql": "SELECT COUNT(*)::bigint AS value FROM user_account WHERE (is_active IS NULL OR is_active = true)"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 158,
+      "target": {
+        "entity": "user_account",
+        "query": "General: Active Users Count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "General: New Users This Month",
+          "required_privilege": "user_account.read",
+          "sql": "SELECT COUNT(*)::bigint AS value FROM user_account WHERE created_at >= date_trunc('month', CURRENT_DATE)"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 159,
+      "target": {
+        "entity": "user_account",
+        "query": "General: New Users This Month"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "General: Recent User Logins",
+          "required_privilege": "user_account.read",
+          "sql": "SELECT id, user_name, email, status, last_login FROM user_account WHERE (is_active IS NULL OR is_active = true) LIMIT 10"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 160,
+      "target": {
+        "entity": "user_account",
+        "query": "General: Recent User Logins"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "user_account",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "General: User Presence Status",
+          "required_privilege": "user_account.read",
+          "sql": "SELECT COALESCE(status, 'offline') AS status, COUNT(*)::bigint AS user_count FROM user_account WHERE (is_active IS NULL OR is_active = true) GROUP BY status"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 161,
+      "target": {
+        "entity": "user_account",
+        "query": "General: User Presence Status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "team",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "General: Active Teams Count",
+          "required_privilege": "team.read",
+          "sql": "SELECT COUNT(*)::bigint AS value FROM team WHERE (is_deleted IS FALSE OR is_deleted IS NULL) AND (is_active IS NULL OR is_active = true)"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 162,
+      "target": {
+        "entity": "team",
+        "query": "General: Active Teams Count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "team",
+          "entity_mappings": [],
+          "is_report": true,
+          "name": "General: System Teams Overview",
+          "required_privilege": "team.read",
+          "sql": "SELECT id, name, description, created_at FROM team WHERE (is_deleted IS FALSE OR is_deleted IS NULL) AND (is_active IS NULL OR is_active = true) LIMIT 10"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 163,
+      "target": {
+        "entity": "team",
+        "query": "General: System Teams Overview"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_dashboard",
+          "entity_mappings": [],
+          "name": "Active Dashboards",
+          "required_privilege": "attome_dashboard.read",
+          "sql": "SELECT id, name, dashboard_type, lifecycle_status, visibility, owner_id, is_template FROM attome_dashboard WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 164,
+      "target": {
+        "entity": "attome_dashboard",
+        "query": "Active Dashboards"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_dashboard",
+          "entity_mappings": [],
+          "name": "Inactive Dashboards",
+          "required_privilege": "attome_dashboard.read",
+          "sql": "SELECT id, name, dashboard_type, lifecycle_status, visibility, owner_id, is_template FROM attome_dashboard WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 165,
+      "target": {
+        "entity": "attome_dashboard",
+        "query": "Inactive Dashboards"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_dashboard",
+          "entity_mappings": [],
+          "name": "Template Gallery",
+          "required_privilege": "attome_dashboard.read",
+          "sql": "SELECT id, name, name_ar, description, dashboard_type, thumbnail, template_category, template_version, row_version, created_at, modified_at FROM attome_dashboard WHERE is_template = true AND (is_active IS NULL OR is_active = true)"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 166,
+      "target": {
+        "entity": "attome_dashboard",
+        "query": "Template Gallery"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_decision",
+          "entity_mappings": [],
+          "name": "Active Decisions",
+          "required_privilege": "dashboard_decision.read",
+          "sql": "SELECT id, title, status, recommended_by, owner_ref, metric_ref, confidence FROM dashboard_decision WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 167,
+      "target": {
+        "entity": "dashboard_decision",
+        "query": "Active Decisions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_decision",
+          "entity_mappings": [],
+          "name": "Inactive Decisions",
+          "required_privilege": "dashboard_decision.read",
+          "sql": "SELECT id, title, status, recommended_by, owner_ref, metric_ref, confidence FROM dashboard_decision WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 168,
+      "target": {
+        "entity": "dashboard_decision",
+        "query": "Inactive Decisions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_decision_dependency",
+          "entity_mappings": [],
+          "name": "Active Decision Dependencies",
+          "required_privilege": "dashboard_decision_dependency.read",
+          "sql": "SELECT id, decision_ref, depends_on_ref, dependency_type FROM dashboard_decision_dependency WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 169,
+      "target": {
+        "entity": "dashboard_decision_dependency",
+        "query": "Active Decision Dependencies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_decision_dependency",
+          "entity_mappings": [],
+          "name": "Inactive Decision Dependencies",
+          "required_privilege": "dashboard_decision_dependency.read",
+          "sql": "SELECT id, decision_ref, depends_on_ref, dependency_type FROM dashboard_decision_dependency WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 170,
+      "target": {
+        "entity": "dashboard_decision_dependency",
+        "query": "Inactive Decision Dependencies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_decision_option",
+          "entity_mappings": [],
+          "name": "Active Decision Options",
+          "required_privilege": "dashboard_decision_option.read",
+          "sql": "SELECT id, decision_ref, label, action_id, expected_delta FROM dashboard_decision_option WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 171,
+      "target": {
+        "entity": "dashboard_decision_option",
+        "query": "Active Decision Options"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_decision_option",
+          "entity_mappings": [],
+          "name": "Inactive Decision Options",
+          "required_privilege": "dashboard_decision_option.read",
+          "sql": "SELECT id, decision_ref, label, action_id, expected_delta FROM dashboard_decision_option WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 172,
+      "target": {
+        "entity": "dashboard_decision_option",
+        "query": "Inactive Decision Options"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_page",
+          "entity_mappings": [],
+          "name": "Active Dashboard Pages",
+          "required_privilege": "dashboard_page.read",
+          "sql": "SELECT id, name, dashboard_id, sequence, is_visible FROM dashboard_page WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 173,
+      "target": {
+        "entity": "dashboard_page",
+        "query": "Active Dashboard Pages"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_page",
+          "entity_mappings": [],
+          "name": "Inactive Dashboard Pages",
+          "required_privilege": "dashboard_page.read",
+          "sql": "SELECT id, name, dashboard_id, sequence, is_visible FROM dashboard_page WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 174,
+      "target": {
+        "entity": "dashboard_page",
+        "query": "Inactive Dashboard Pages"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_parameter",
+          "entity_mappings": [],
+          "name": "Active Dashboard Parameters",
+          "required_privilege": "dashboard_parameter.read",
+          "sql": "SELECT id, dashboard_id, page_id, name, parameter_type, default_value FROM dashboard_parameter WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 175,
+      "target": {
+        "entity": "dashboard_parameter",
+        "query": "Active Dashboard Parameters"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_parameter",
+          "entity_mappings": [],
+          "name": "Inactive Dashboard Parameters",
+          "required_privilege": "dashboard_parameter.read",
+          "sql": "SELECT id, dashboard_id, page_id, name, parameter_type, default_value FROM dashboard_parameter WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 176,
+      "target": {
+        "entity": "dashboard_parameter",
+        "query": "Inactive Dashboard Parameters"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario",
+          "entity_mappings": [],
+          "name": "Active Scenarios",
+          "required_privilege": "dashboard_scenario.read",
+          "sql": "SELECT id, name, base_kind, status, owner_ref FROM dashboard_scenario WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 177,
+      "target": {
+        "entity": "dashboard_scenario",
+        "query": "Active Scenarios"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario",
+          "entity_mappings": [],
+          "name": "Inactive Scenarios",
+          "required_privilege": "dashboard_scenario.read",
+          "sql": "SELECT id, name, base_kind, status, owner_ref FROM dashboard_scenario WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 178,
+      "target": {
+        "entity": "dashboard_scenario",
+        "query": "Inactive Scenarios"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario_assumption",
+          "entity_mappings": [],
+          "name": "Active Scenario Assumptions",
+          "required_privilege": "dashboard_scenario_assumption.read",
+          "sql": "SELECT id, scenario_ref, key, kind, expression_or_value, display_order FROM dashboard_scenario_assumption WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 179,
+      "target": {
+        "entity": "dashboard_scenario_assumption",
+        "query": "Active Scenario Assumptions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario_assumption",
+          "entity_mappings": [],
+          "name": "Inactive Scenario Assumptions",
+          "required_privilege": "dashboard_scenario_assumption.read",
+          "sql": "SELECT id, scenario_ref, key, kind, expression_or_value, display_order FROM dashboard_scenario_assumption WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 180,
+      "target": {
+        "entity": "dashboard_scenario_assumption",
+        "query": "Inactive Scenario Assumptions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario_metric",
+          "entity_mappings": [],
+          "name": "Active Scenario Metrics",
+          "required_privilege": "dashboard_scenario_metric.read",
+          "sql": "SELECT id, scenario_ref, metric_ref, display_order FROM dashboard_scenario_metric WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 181,
+      "target": {
+        "entity": "dashboard_scenario_metric",
+        "query": "Active Scenario Metrics"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario_metric",
+          "entity_mappings": [],
+          "name": "Inactive Scenario Metrics",
+          "required_privilege": "dashboard_scenario_metric.read",
+          "sql": "SELECT id, scenario_ref, metric_ref, display_order FROM dashboard_scenario_metric WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 182,
+      "target": {
+        "entity": "dashboard_scenario_metric",
+        "query": "Inactive Scenario Metrics"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario_result",
+          "entity_mappings": [],
+          "name": "Active Scenario Results",
+          "required_privilege": "dashboard_scenario_result.read",
+          "sql": "SELECT id, scenario_ref, metric_ref, baseline_value, scenario_value, delta, status FROM dashboard_scenario_result WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 183,
+      "target": {
+        "entity": "dashboard_scenario_result",
+        "query": "Active Scenario Results"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario_result",
+          "entity_mappings": [],
+          "name": "Inactive Scenario Results",
+          "required_privilege": "dashboard_scenario_result.read",
+          "sql": "SELECT id, scenario_ref, metric_ref, baseline_value, scenario_value, delta, status FROM dashboard_scenario_result WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 184,
+      "target": {
+        "entity": "dashboard_scenario_result",
+        "query": "Inactive Scenario Results"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_section",
+          "entity_mappings": [],
+          "name": "Active Dashboard Sections",
+          "required_privilege": "dashboard_section.read",
+          "sql": "SELECT id, page_id, parent_section_id, section_type, layout_mode, sequence, grid_config, freeform_config, row_version FROM dashboard_section WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 185,
+      "target": {
+        "entity": "dashboard_section",
+        "query": "Active Dashboard Sections"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_section",
+          "entity_mappings": [],
+          "name": "Inactive Dashboard Sections",
+          "required_privilege": "dashboard_section.read",
+          "sql": "SELECT id, page_id, parent_section_id, section_type, layout_mode, sequence, grid_config, freeform_config, row_version FROM dashboard_section WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 186,
+      "target": {
+        "entity": "dashboard_section",
+        "query": "Inactive Dashboard Sections"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_section_breakpoint",
+          "entity_mappings": [],
+          "name": "Active Dashboard Section Breakpoints",
+          "required_privilege": "dashboard_section_breakpoint.read",
+          "sql": "SELECT id, section_id, breakpoint, is_visible, column_count, font_scale FROM dashboard_section_breakpoint WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 187,
+      "target": {
+        "entity": "dashboard_section_breakpoint",
+        "query": "Active Dashboard Section Breakpoints"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_section_breakpoint",
+          "entity_mappings": [],
+          "name": "Inactive Dashboard Section Breakpoints",
+          "required_privilege": "dashboard_section_breakpoint.read",
+          "sql": "SELECT id, section_id, breakpoint, is_visible, column_count, font_scale FROM dashboard_section_breakpoint WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 188,
+      "target": {
+        "entity": "dashboard_section_breakpoint",
+        "query": "Inactive Dashboard Section Breakpoints"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_variable",
+          "entity_mappings": [],
+          "name": "Active Dashboard Variables",
+          "required_privilege": "dashboard_variable.read",
+          "sql": "SELECT id, dashboard_id, page_id, name, variable_type, default_value FROM dashboard_variable WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 189,
+      "target": {
+        "entity": "dashboard_variable",
+        "query": "Active Dashboard Variables"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_variable",
+          "entity_mappings": [],
+          "name": "Inactive Dashboard Variables",
+          "required_privilege": "dashboard_variable.read",
+          "sql": "SELECT id, dashboard_id, page_id, name, variable_type, default_value FROM dashboard_variable WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 190,
+      "target": {
+        "entity": "dashboard_variable",
+        "query": "Inactive Dashboard Variables"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_version",
+          "entity_mappings": [],
+          "name": "Active Dashboard Versions",
+          "required_privilege": "dashboard_version.read",
+          "sql": "SELECT id, dashboard_id, version_number, label, published_by, published_at FROM dashboard_version WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 191,
+      "target": {
+        "entity": "dashboard_version",
+        "query": "Active Dashboard Versions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_version",
+          "entity_mappings": [],
+          "name": "Inactive Dashboard Versions",
+          "required_privilege": "dashboard_version.read",
+          "sql": "SELECT id, dashboard_id, version_number, label, published_by, published_at FROM dashboard_version WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 192,
+      "target": {
+        "entity": "dashboard_version",
+        "query": "Inactive Dashboard Versions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_widget",
+          "entity_mappings": [],
+          "name": "Active Dashboard Widgets",
+          "required_privilege": "dashboard_widget.read",
+          "sql": "SELECT id, section_id, widget_type, name, query_id, query_params, sequence, is_visible, grid_col, grid_row, grid_col_span, grid_row_span, freeform_x, freeform_y, freeform_width, freeform_height, freeform_z_index, row_version FROM dashboard_widget WHERE is_active = true"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 193,
+      "target": {
+        "entity": "dashboard_widget",
+        "query": "Active Dashboard Widgets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_widget",
+          "entity_mappings": [],
+          "name": "Inactive Dashboard Widgets",
+          "required_privilege": "dashboard_widget.read",
+          "sql": "SELECT id, section_id, widget_type, name, query_id, query_params, sequence, is_visible, grid_col, grid_row, grid_col_span, grid_row_span, freeform_x, freeform_y, freeform_width, freeform_height, freeform_z_index, row_version FROM dashboard_widget WHERE is_active = false"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 194,
+      "target": {
+        "entity": "dashboard_widget",
+        "query": "Inactive Dashboard Widgets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_dashboard",
+          "is_default": true,
+          "name": "Active Dashboards",
+          "query": {
+            "entity": "attome_dashboard",
+            "name": "Active Dashboards"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 195,
+      "target": {
+        "entity": "attome_dashboard",
+        "view": "Active Dashboards"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_dashboard",
+          "is_default": false,
+          "name": "Inactive Dashboards",
+          "query": {
+            "entity": "attome_dashboard",
+            "name": "Inactive Dashboards"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 196,
+      "target": {
+        "entity": "attome_dashboard",
+        "view": "Inactive Dashboards"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attome_dashboard",
+          "is_default": false,
+          "name": "Template Gallery",
+          "query": {
+            "entity": "attome_dashboard",
+            "name": "Template Gallery"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 197,
+      "target": {
+        "entity": "attome_dashboard",
+        "view": "Template Gallery"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_decision",
+          "is_default": true,
+          "name": "Active Decisions",
+          "query": {
+            "entity": "dashboard_decision",
+            "name": "Active Decisions"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 198,
+      "target": {
+        "entity": "dashboard_decision",
+        "view": "Active Decisions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_decision",
+          "is_default": false,
+          "name": "Inactive Decisions",
+          "query": {
+            "entity": "dashboard_decision",
+            "name": "Inactive Decisions"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 199,
+      "target": {
+        "entity": "dashboard_decision",
+        "view": "Inactive Decisions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_decision_dependency",
+          "is_default": true,
+          "name": "Active Decision Dependencies",
+          "query": {
+            "entity": "dashboard_decision_dependency",
+            "name": "Active Decision Dependencies"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 200,
+      "target": {
+        "entity": "dashboard_decision_dependency",
+        "view": "Active Decision Dependencies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_decision_dependency",
+          "is_default": false,
+          "name": "Inactive Decision Dependencies",
+          "query": {
+            "entity": "dashboard_decision_dependency",
+            "name": "Inactive Decision Dependencies"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 201,
+      "target": {
+        "entity": "dashboard_decision_dependency",
+        "view": "Inactive Decision Dependencies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_decision_option",
+          "is_default": true,
+          "name": "Active Decision Options",
+          "query": {
+            "entity": "dashboard_decision_option",
+            "name": "Active Decision Options"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 202,
+      "target": {
+        "entity": "dashboard_decision_option",
+        "view": "Active Decision Options"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_decision_option",
+          "is_default": false,
+          "name": "Inactive Decision Options",
+          "query": {
+            "entity": "dashboard_decision_option",
+            "name": "Inactive Decision Options"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 203,
+      "target": {
+        "entity": "dashboard_decision_option",
+        "view": "Inactive Decision Options"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_page",
+          "is_default": true,
+          "name": "Active Dashboard Pages",
+          "query": {
+            "entity": "dashboard_page",
+            "name": "Active Dashboard Pages"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 204,
+      "target": {
+        "entity": "dashboard_page",
+        "view": "Active Dashboard Pages"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_page",
+          "is_default": false,
+          "name": "Inactive Dashboard Pages",
+          "query": {
+            "entity": "dashboard_page",
+            "name": "Inactive Dashboard Pages"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 205,
+      "target": {
+        "entity": "dashboard_page",
+        "view": "Inactive Dashboard Pages"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_parameter",
+          "is_default": true,
+          "name": "Active Dashboard Parameters",
+          "query": {
+            "entity": "dashboard_parameter",
+            "name": "Active Dashboard Parameters"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 206,
+      "target": {
+        "entity": "dashboard_parameter",
+        "view": "Active Dashboard Parameters"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_parameter",
+          "is_default": false,
+          "name": "Inactive Dashboard Parameters",
+          "query": {
+            "entity": "dashboard_parameter",
+            "name": "Inactive Dashboard Parameters"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 207,
+      "target": {
+        "entity": "dashboard_parameter",
+        "view": "Inactive Dashboard Parameters"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario",
+          "is_default": true,
+          "name": "Active Scenarios",
+          "query": {
+            "entity": "dashboard_scenario",
+            "name": "Active Scenarios"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 208,
+      "target": {
+        "entity": "dashboard_scenario",
+        "view": "Active Scenarios"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario",
+          "is_default": false,
+          "name": "Inactive Scenarios",
+          "query": {
+            "entity": "dashboard_scenario",
+            "name": "Inactive Scenarios"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 209,
+      "target": {
+        "entity": "dashboard_scenario",
+        "view": "Inactive Scenarios"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario_assumption",
+          "is_default": true,
+          "name": "Active Scenario Assumptions",
+          "query": {
+            "entity": "dashboard_scenario_assumption",
+            "name": "Active Scenario Assumptions"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 210,
+      "target": {
+        "entity": "dashboard_scenario_assumption",
+        "view": "Active Scenario Assumptions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario_assumption",
+          "is_default": false,
+          "name": "Inactive Scenario Assumptions",
+          "query": {
+            "entity": "dashboard_scenario_assumption",
+            "name": "Inactive Scenario Assumptions"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 211,
+      "target": {
+        "entity": "dashboard_scenario_assumption",
+        "view": "Inactive Scenario Assumptions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario_metric",
+          "is_default": true,
+          "name": "Active Scenario Metrics",
+          "query": {
+            "entity": "dashboard_scenario_metric",
+            "name": "Active Scenario Metrics"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 212,
+      "target": {
+        "entity": "dashboard_scenario_metric",
+        "view": "Active Scenario Metrics"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario_metric",
+          "is_default": false,
+          "name": "Inactive Scenario Metrics",
+          "query": {
+            "entity": "dashboard_scenario_metric",
+            "name": "Inactive Scenario Metrics"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 213,
+      "target": {
+        "entity": "dashboard_scenario_metric",
+        "view": "Inactive Scenario Metrics"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario_result",
+          "is_default": true,
+          "name": "Active Scenario Results",
+          "query": {
+            "entity": "dashboard_scenario_result",
+            "name": "Active Scenario Results"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 214,
+      "target": {
+        "entity": "dashboard_scenario_result",
+        "view": "Active Scenario Results"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_scenario_result",
+          "is_default": false,
+          "name": "Inactive Scenario Results",
+          "query": {
+            "entity": "dashboard_scenario_result",
+            "name": "Inactive Scenario Results"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 215,
+      "target": {
+        "entity": "dashboard_scenario_result",
+        "view": "Inactive Scenario Results"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_section",
+          "is_default": true,
+          "name": "Active Dashboard Sections",
+          "query": {
+            "entity": "dashboard_section",
+            "name": "Active Dashboard Sections"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 216,
+      "target": {
+        "entity": "dashboard_section",
+        "view": "Active Dashboard Sections"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_section",
+          "is_default": false,
+          "name": "Inactive Dashboard Sections",
+          "query": {
+            "entity": "dashboard_section",
+            "name": "Inactive Dashboard Sections"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 217,
+      "target": {
+        "entity": "dashboard_section",
+        "view": "Inactive Dashboard Sections"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_section_breakpoint",
+          "is_default": true,
+          "name": "Active Dashboard Section Breakpoints",
+          "query": {
+            "entity": "dashboard_section_breakpoint",
+            "name": "Active Dashboard Section Breakpoints"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 218,
+      "target": {
+        "entity": "dashboard_section_breakpoint",
+        "view": "Active Dashboard Section Breakpoints"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_section_breakpoint",
+          "is_default": false,
+          "name": "Inactive Dashboard Section Breakpoints",
+          "query": {
+            "entity": "dashboard_section_breakpoint",
+            "name": "Inactive Dashboard Section Breakpoints"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 219,
+      "target": {
+        "entity": "dashboard_section_breakpoint",
+        "view": "Inactive Dashboard Section Breakpoints"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_variable",
+          "is_default": true,
+          "name": "Active Dashboard Variables",
+          "query": {
+            "entity": "dashboard_variable",
+            "name": "Active Dashboard Variables"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 220,
+      "target": {
+        "entity": "dashboard_variable",
+        "view": "Active Dashboard Variables"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_variable",
+          "is_default": false,
+          "name": "Inactive Dashboard Variables",
+          "query": {
+            "entity": "dashboard_variable",
+            "name": "Inactive Dashboard Variables"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 221,
+      "target": {
+        "entity": "dashboard_variable",
+        "view": "Inactive Dashboard Variables"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_version",
+          "is_default": true,
+          "name": "Active Dashboard Versions",
+          "query": {
+            "entity": "dashboard_version",
+            "name": "Active Dashboard Versions"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 222,
+      "target": {
+        "entity": "dashboard_version",
+        "view": "Active Dashboard Versions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_version",
+          "is_default": false,
+          "name": "Inactive Dashboard Versions",
+          "query": {
+            "entity": "dashboard_version",
+            "name": "Inactive Dashboard Versions"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 223,
+      "target": {
+        "entity": "dashboard_version",
+        "view": "Inactive Dashboard Versions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_widget",
+          "is_default": true,
+          "name": "Active Dashboard Widgets",
+          "query": {
+            "entity": "dashboard_widget",
+            "name": "Active Dashboard Widgets"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 224,
+      "target": {
+        "entity": "dashboard_widget",
+        "view": "Active Dashboard Widgets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "dashboard_widget",
+          "is_default": false,
+          "name": "Inactive Dashboard Widgets",
+          "query": {
+            "entity": "dashboard_widget",
+            "name": "Inactive Dashboard Widgets"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 225,
+      "target": {
+        "entity": "dashboard_widget",
+        "view": "Inactive Dashboard Widgets"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=4.0.1"
+  },
+  "scope": "platform",
+  "seq": 44,
+  "title": "Platform definitions: attome-dashboard"
+}

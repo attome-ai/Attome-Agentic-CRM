@@ -1,0 +1,42 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "entities": [
+    {
+      "logicalname": "note",
+      "display_name": "Note",
+      "primary_name_attribute": "title",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "title", "display_name": "Title", "field_type": "text", "is_required": true },
+        { "logicalname": "note_text", "display_name": "Note Text", "field_type": "text", "is_required": true },
+        { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true },
+        { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true },
+        { "logicalname": "attachments", "display_name": "Attachments", "field_type": "text" },
+        { "logicalname": "files", "display_name": "Files", "field_type": "file", "options": { "multi": true } },
+        { "logicalname": "replies", "display_name": "Replies", "field_type": "text" },
+        { "logicalname": "is_customer_visible", "display_name": "Customer Visible", "field_type": "bool", "is_sortable": true, "is_filterable": true }
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "entity": "note",
+      "name": "Active Notes",
+      "sql": "SELECT id, title, note_text, entity_name, record_id, attachments, replies, is_customer_visible, created_at, modified_at FROM note WHERE is_active IS NOT FALSE",
+      "required_privilege": "note.read"
+    }
+  ],
+  "views": [
+    {
+      "entity": "note",
+      "name": "Active Notes",
+      "query": { "entity": "note", "name": "Active Notes" },
+      "is_default": true
+    }
+  ]
+}

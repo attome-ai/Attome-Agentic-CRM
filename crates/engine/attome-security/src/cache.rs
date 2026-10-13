@@ -130,6 +130,11 @@ impl std::fmt::Debug for SecurityCache {
 }
 
 impl SecurityCache {
+    /// The pool this cache resolves from.
+    pub(crate) fn db(&self) -> &DbPool {
+        &self.db
+    }
+
     pub fn new(db: DbPool, redis: RedisPool, redis_coordination: RedisPool) -> Self {
         Self {
             hot: create_hot_cache(10_000, TTL_SECS),

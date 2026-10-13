@@ -1,0 +1,339 @@
+//! Minimal supervisor dashboard surface (M33 Phase 1, D-460): a read-only
+//! list of live and recent `agent_session` rows, so an operator can
+//! see what `agent.pause`/`agent.resume`/`agent.kill`
+//! (`crate::actions::agent_supervise`) would act on. This module owns only
+//! the read; the three actions above are how a supervisor actually acts —
+//! same split `attome_workflow::instance_admin` draws between listing instances
+//! and the separate cancel endpoint.
+//!
+//! Gated on the same `ai_agent.supervise` privilege the three actions
+//! require — see `crate::actions::agent_supervise::AgentSupervise`'s doc
+//! comment for why reading and acting share one privilege here.
+
+use attome_core::EngineState;
+use attome_server::authz::{Authorized, Privilege};
+use attome_types::{
+    AppError, DEFAULT_PAGE_SIZE, ErrorResponse, PageBase, PageWindow, PaginatedResponse,
+};
+use axum::{
+    Json, Router,
+    extract::{Query, State},
+    routing::get,
+};
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, ToSchema};
+use uuid::Uuid;
+
+use crate::actions::agent_supervise::AgentSupervise;
+use crate::capability_pack::CapabilityPackRef;
+
+#[derive(sqlx::FromRow)]
+struct SessionRow {
+    id: Uuid,
+    owner_user_id: Uuid,
+    risk_ceiling: i16,
+    allowed_action_ids: Option<Vec<String>>,
+    capability_pack_refs: Option<serde_json::Value>,
+    surface: String,
+    agent_definition_ref: Option<Uuid>,
+    started_at: chrono::DateTime<chrono::Utc>,
+    ended_at: Option<chrono::DateTime<chrono::Utc>>,
+    paused_at: Option<chrono::DateTime<chrono::Utc>>,
+    revoked_at: Option<chrono::DateTime<chrono::Utc>>,
+    tainted: bool,
+    retrieval_mode: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SessionStatus {
+    Active,
+    Paused,
+    Revoked,
+    Ended,
+}
+
+fn status_of(row: &SessionRow) -> SessionStatus {
+    // Order matters: a session can accumulate more than one terminal-ish
+    // timestamp over its life (e.g. paused, then later revoked) — revoke is
+    // the most permanent state (TODO-039), so it wins over an earlier pause.
+    if row.revoked_at.is_some() {
+        SessionStatus::Revoked
+    } else if row.ended_at.is_some() {
+        SessionStatus::Ended
+    } else if row.paused_at.is_some() {
+        SessionStatus::Paused
+    } else {
+        SessionStatus::Active
+    }
+}
+
+/// The provenance column (0480) as wire types. Provenance only, so an
+/// unreadable value reads as "none recorded" rather than failing the whole
+/// dashboard read — it can never widen what a session may do.
+fn pack_refs_of(value: Option<serde_json::Value>) -> Option<Vec<CapabilityPackRef>> {
+    match value {
+        None | Some(serde_json::Value::Null) => None,
+        Some(value) => serde_json::from_value(value).ok(),
+    }
+}
+
+fn risk_ceiling_wire(v: i16) -> &'static str {
+    match v {
+        1 => "reversible",
+        2 => "consequential",
+        _ => "read",
+    }
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct SessionSummary {
+    pub id: Uuid,
+    pub owner_user_id: Uuid,
+    pub risk_ceiling: String,
+    /// The session's effective allow-list, exactly as snapshotted at start.
+    /// `None` means "whatever the ceiling permits"; `[]` means nothing — a
+    /// supervisor reading the dashboard must see the difference.
+    pub allowed_action_ids: Option<Vec<String>>,
+    /// D-556 §2 provenance: which capability packs (and which of their
+    /// versions) produced the grants above. Never consulted for
+    /// authorization; shown so an operator can say where a grant came from.
+    pub capability_pack_refs: Option<Vec<CapabilityPackRef>>,
+    pub surface: String,
+    pub agent_definition_ref: Option<Uuid>,
+    pub started_at: chrono::DateTime<chrono::Utc>,
+    pub status: SessionStatus,
+    pub tainted: bool,
+    /// D-561 §5: the knowledge retrieval mode this session **uses** —
+    /// `tool_invoked` | `pre_retrieved`, resolved from its agent definition
+    /// when it started and stored on the row. Nothing changes it afterwards.
+    pub retrieval_mode: String,
+    /// The mode the session's agent definition is configured with **now**, for
+    /// comparison only: it reaches the next session started from that
+    /// definition, never this one. `unrecognised` when the definition holds a
+    /// value a new session would refuse to start with; `None` when the session
+    /// has no definition or the definition row no longer exists.
+    pub agent_retrieval_mode: Option<String>,
+}
+
+#[derive(Deserialize, IntoParams)]
+struct SessionListQuery {
+    /// Filter to one status (`active` | `paused` | `revoked` | `ended`).
+    /// Unfiltered by default — a dashboard wants to see all of them.
+    status: Option<String>,
+    /// One-based: page 1 is the first page.
+    page: Option<i64>,
+    page_size: Option<i64>,
+}
+
+/// `GET /api/v1/admin/agents/sessions` — the supervisor dashboard's one read.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/agents/sessions",
+    tag = "action",
+    params(SessionListQuery),
+    responses(
+        (status = 200, description = "Success", body = PaginatedResponse<SessionSummary>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks ai_agent.supervise", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_sessions(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<AgentSupervise>>,
+    Query(q): Query<SessionListQuery>,
+) -> Result<Json<PaginatedResponse<SessionSummary>>, AppError> {
+    let window = PageWindow::resolve(q.page, q.page_size, PageBase::One, DEFAULT_PAGE_SIZE);
+
+    // Status is filtered in Rust, not SQL: it is derived from three
+    // timestamp columns (see `status_of`), and expressing that derivation
+    // twice (once here, once in a WHERE clause) is exactly the kind of
+    // "two copies that can drift" guidelines §0/§13 warn against for a
+    // low-cardinality admin table that is never going to need it for scale.
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_session")
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+
+    let rows: Vec<SessionRow> = sqlx::query_as(
+        "SELECT id, owner_user_id, risk_ceiling, allowed_action_ids, capability_pack_refs, \
+                surface, agent_definition_ref, started_at, ended_at, paused_at, revoked_at, tainted, \
+                retrieval_mode \
+         FROM agent_session \
+         ORDER BY started_at DESC LIMIT $1 OFFSET $2",
+    )
+    .bind(window.page_size)
+    .bind(window.offset)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    let definitions: Vec<Uuid> = rows.iter().filter_map(|r| r.agent_definition_ref).collect();
+    let configured = configured_retrieval_modes(&state.base.db, &definitions).await?;
+
+    let mut items: Vec<SessionSummary> = rows
+        .into_iter()
+        .map(|r| {
+            let status = status_of(&r);
+            let agent_retrieval_mode = r
+                .agent_definition_ref
+                .and_then(|id| configured.get(&id).cloned());
+            SessionSummary {
+                id: r.id,
+                owner_user_id: r.owner_user_id,
+                risk_ceiling: risk_ceiling_wire(r.risk_ceiling).to_owned(),
+                allowed_action_ids: r.allowed_action_ids,
+                capability_pack_refs: pack_refs_of(r.capability_pack_refs),
+                surface: r.surface,
+                agent_definition_ref: r.agent_definition_ref,
+                started_at: r.started_at,
+                status,
+                tainted: r.tainted,
+                retrieval_mode: r.retrieval_mode,
+                agent_retrieval_mode,
+            }
+        })
+        .collect();
+
+    if let Some(wanted) = q.status.as_deref() {
+        items.retain(|s| format!("{:?}", s.status).to_lowercase() == wanted.to_lowercase());
+    }
+
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        window.page,
+        window.page_size,
+    )))
+}
+
+/// The retrieval mode each listed agent definition is configured with now,
+/// read the way `agent::start_session` would resolve it for a new session.
+///
+/// `to_jsonb(a) -> 'retrieval_mode'` rather than the column by name, so a
+/// deployment whose agent entity predates the attribute reads as the default
+/// instead of failing the whole dashboard; `ai_agent` itself is
+/// runtime-provisioned, so its absence is an empty map too.
+async fn configured_retrieval_modes(
+    db: &sqlx::PgPool,
+    definitions: &[Uuid],
+) -> Result<std::collections::HashMap<Uuid, String>, AppError> {
+    if definitions.is_empty() {
+        return Ok(Default::default());
+    }
+    let provisioned: bool = sqlx::query_scalar("SELECT to_regclass('ai_agent') IS NOT NULL")
+        .fetch_one(db)
+        .await
+        .map_err(AppError::internal)?;
+    if !provisioned {
+        return Ok(Default::default());
+    }
+    let rows: Vec<(Uuid, Option<serde_json::Value>)> = sqlx::query_as(
+        "SELECT a.id, to_jsonb(a) -> 'retrieval_mode' FROM ai_agent a WHERE a.id = ANY($1)",
+    )
+    .bind(definitions)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .map(|(id, value)| (id, configured_mode_wire(value).to_owned()))
+        .collect())
+}
+
+/// One definition's stored value, resolved exactly as a new session would
+/// resolve it (`agent::definition_retrieval_mode`).
+fn configured_mode_wire(value: Option<serde_json::Value>) -> &'static str {
+    let data = serde_json::json!({ "retrieval_mode": value });
+    crate::agent::definition_retrieval_mode(&data).map_or("unrecognised", |m| m.as_str())
+}
+
+pub fn routes() -> Router<EngineState> {
+    Router::new().route("/api/v1/admin/agents/sessions", get(list_sessions))
+}
+
+#[derive(utoipa::OpenApi)]
+#[openapi(paths(list_sessions))]
+struct ApiDocFragment;
+
+pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
+    <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn row(ended: bool, paused: bool, revoked: bool) -> SessionRow {
+        let now = chrono::Utc::now();
+        SessionRow {
+            id: Uuid::now_v7(),
+            owner_user_id: Uuid::now_v7(),
+            risk_ceiling: 0,
+            allowed_action_ids: None,
+            capability_pack_refs: None,
+            surface: "test".into(),
+            agent_definition_ref: None,
+            started_at: now,
+            ended_at: ended.then_some(now),
+            paused_at: paused.then_some(now),
+            revoked_at: revoked.then_some(now),
+            tainted: false,
+            retrieval_mode: "tool_invoked".into(),
+        }
+    }
+
+    #[test]
+    fn status_reads_active_when_no_terminal_or_pause_timestamp_is_set() {
+        assert_eq!(status_of(&row(false, false, false)), SessionStatus::Active);
+    }
+
+    #[test]
+    fn status_reads_paused_only_when_nothing_more_permanent_is_set() {
+        assert_eq!(status_of(&row(false, true, false)), SessionStatus::Paused);
+    }
+
+    /// Revoke wins over a pause a session happened to also carry — kill is
+    /// the most permanent state (TODO-039).
+    #[test]
+    fn revoked_wins_over_paused() {
+        assert_eq!(status_of(&row(false, true, true)), SessionStatus::Revoked);
+    }
+
+    #[test]
+    fn status_reads_ended_when_set_and_not_revoked() {
+        assert_eq!(status_of(&row(true, false, false)), SessionStatus::Ended);
+    }
+
+    /// The configured mode reads the way a new session resolves it: absent,
+    /// null or blank is the default, and a value a start would refuse is said
+    /// to be unrecognised rather than shown as either mode.
+    #[test]
+    fn the_configured_mode_is_resolved_like_a_session_start() {
+        use serde_json::json;
+        assert_eq!(configured_mode_wire(None), "tool_invoked");
+        assert_eq!(configured_mode_wire(Some(json!(null))), "tool_invoked");
+        assert_eq!(configured_mode_wire(Some(json!(""))), "tool_invoked");
+        assert_eq!(
+            configured_mode_wire(Some(json!("pre_retrieved"))),
+            "pre_retrieved"
+        );
+        assert_eq!(
+            configured_mode_wire(Some(json!("tool_invoked"))),
+            "tool_invoked"
+        );
+        assert_eq!(configured_mode_wire(Some(json!("none"))), "unrecognised");
+        assert_eq!(configured_mode_wire(Some(json!(1))), "unrecognised");
+    }
+
+    #[test]
+    fn risk_ceiling_wire_matches_session_rs_encoding() {
+        assert_eq!(risk_ceiling_wire(0), "read");
+        assert_eq!(risk_ceiling_wire(1), "reversible");
+        assert_eq!(risk_ceiling_wire(2), "consequential");
+        // An unrecognised stored value narrows, same as `session::tier_from_i16`.
+        assert_eq!(risk_ceiling_wire(99), "read");
+    }
+}
