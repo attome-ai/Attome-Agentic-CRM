@@ -354,15 +354,17 @@ pub(crate) async fn do_bulk_transform(
 
     attome_jobs::enqueue_in_tx(
         &mut tx,
-        attome_core::jobs::EngineJob::DataBulkTransform(attome_jobs::DataBulkTransformPayload {
-            operation_id,
-            entity_logicalname: entity_name.to_owned(),
-            field_logicalname: field.to_owned(),
-            transform: transform.to_owned(),
-            value: value.map(str::to_owned),
-            record_ids: record_ids.to_vec(),
-            user_id,
-        }),
+        attome_core::jobs::EngineJob::DataBulkTransform(
+            attome_core::jobs::DataBulkTransformPayload {
+                operation_id,
+                entity_logicalname: entity_name.to_owned(),
+                field_logicalname: field.to_owned(),
+                transform: transform.to_owned(),
+                value: value.map(str::to_owned),
+                record_ids: record_ids.to_vec(),
+                user_id,
+            },
+        ),
     )
     .await
     .map_err(AppError::internal)?;
@@ -755,7 +757,7 @@ async fn apply_transform_one(
 /// an app node still has a warm security cache.
 pub async fn process(
     state: &EngineState,
-    payload: attome_jobs::DataBulkTransformPayload,
+    payload: attome_core::jobs::DataBulkTransformPayload,
 ) -> Result<(), AppError> {
     let operation_id = payload.operation_id;
     let (entity_id, entity_name, attrs, is_append_only) =

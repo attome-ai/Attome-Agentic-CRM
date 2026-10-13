@@ -422,7 +422,7 @@ async fn export_json(
     let export_id: Uuid = enqueued["id"].as_str().unwrap().parse().unwrap();
     attome_api::data_export::process(
         state,
-        attome_jobs::DataExportPayload {
+        attome_core::jobs::DataExportPayload {
             export_id,
             entity_logicalname: logicalname.to_owned(),
             format: "json".to_string(),

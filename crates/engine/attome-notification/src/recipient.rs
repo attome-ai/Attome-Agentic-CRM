@@ -6,8 +6,9 @@
 //! idempotent on `(dispatch_ref, user_ref, created_at)`; `created_at` is copied
 //! from the dispatch so retries remain a no-op on the partitioned table.
 
+use attome_core::jobs::EngineJob;
 use attome_db::{DbPool, Tx};
-use attome_jobs::{EngineJob, enqueue_in_tx};
+use attome_jobs::enqueue_in_tx;
 use attome_types::AppError;
 use chrono::{DateTime, Utc};
 use sqlx::FromRow;

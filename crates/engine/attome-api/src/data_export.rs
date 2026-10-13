@@ -456,7 +456,7 @@ async fn enqueue_export(
 
     attome_jobs::enqueue_in_tx(
         &mut tx,
-        attome_core::jobs::EngineJob::DataExport(attome_jobs::DataExportPayload {
+        attome_core::jobs::EngineJob::DataExport(attome_core::jobs::DataExportPayload {
             export_id,
             entity_logicalname: entity_name.clone(),
             format: body.format.clone(),
@@ -563,7 +563,7 @@ async fn mark_failed(state: &EngineState, export_id: Uuid, message: &str) -> Res
 /// visibility, not what it was when the request was made.
 pub async fn process(
     state: &EngineState,
-    payload: attome_jobs::DataExportPayload,
+    payload: attome_core::jobs::DataExportPayload,
 ) -> Result<(), AppError> {
     let export_id = payload.export_id;
 

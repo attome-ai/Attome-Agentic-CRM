@@ -1,6 +1,6 @@
 [package]
 name         = "attome"
-description  = "The Attome command-line tool: install, run, build and release Attome."
+description  = "Attome: the server (attome serve), its worker and tools, and the command-line tool that installs, runs and releases it."
 version.workspace      = true
 edition.workspace      = true
 rust-version.workspace = true
@@ -10,9 +10,99 @@ repository.workspace   = true
 homepage.workspace     = true
 publish.workspace      = true
 
+[lib]
+path = "src/lib.rs"
+
 [[bin]]
 name = "attome"
 path = "src/main.rs"
+
+[dependencies]
+apalis.workspace                = true
+arc-swap.workspace              = true
+attome-ai.workspace             = true
+attome-api.workspace            = true
+attome-audit.workspace          = true
+attome-auth.workspace           = true
+attome-cache.workspace          = true
+attome-compliance.workspace     = true
+attome-config.workspace         = true
+attome-content.workspace        = true
+attome-core.workspace           = true
+attome-dashboard.workspace      = true
+attome-db.workspace             = true
+attome-docgen.workspace         = true
+attome-document.workspace       = true
+attome-email.workspace          = true
+attome-events.workspace         = true
+attome-fleet                    = { workspace = true, optional = true }
+attome-grc.workspace            = true
+attome-integration.workspace    = true
+attome-jobs.workspace           = true
+attome-metadata.workspace       = true
+attome-metric.workspace         = true
+attome-modules.workspace        = true
+attome-notification.workspace   = true
+attome-portal.workspace         = true
+attome-predict.workspace        = true
+attome-process.workspace        = true
+attome-profiler.workspace       = true
+attome-project.workspace        = true
+attome-records.workspace        = true
+attome-release.workspace        = true
+attome-report.workspace         = true
+attome-s2s.workspace            = true
+attome-search.workspace         = true
+attome-security.workspace       = true
+attome-server.workspace         = true
+attome-service.workspace        = true
+attome-state.workspace          = true
+attome-storage.workspace        = true
+attome-types.workspace          = true
+attome-webcrawl.workspace       = true
+attome-workflow.workspace       = true
+axum.workspace                  = true
+chrono.workspace                = true
+fred.workspace                  = true
+futures-util.workspace          = true
+hex.workspace                   = true
+opentelemetry.workspace         = true
+opentelemetry-otlp.workspace    = true
+opentelemetry_sdk.workspace     = true
+rand.workspace                  = true
+rustls.workspace                = true
+serde.workspace                 = true
+serde_json.workspace            = true
+sha2.workspace                  = true
+sqlx.workspace                  = true
+tokio.workspace                 = true
+tower-http.workspace            = true
+tracing.workspace               = true
+tracing-opentelemetry.workspace = true
+tracing-subscriber.workspace    = true
+utoipa.workspace                = true
+uuid.workspace                  = true
+
+[features]
+# Tests against a live Keycloak; run by hand with `--features keycloak-tests`.
+keycloak-tests = []
+# The developer-only fleet console (V2-D472); refused in release builds.
+fleet-console = ["dep:attome-fleet"]
+
+[[test]]
+name = "keycloak_oidc"
+required-features = ["keycloak-tests"]
+
+[dev-dependencies]
+attome-approval.workspace = true
+attome-fleet.workspace    = true
+attome-testkit            = { workspace = true, features = ["app-config"] }
+base64.workspace          = true
+jsonwebtoken.workspace    = true
+reqwest                   = { workspace = true, features = ["cookies"] }
+rsa.workspace             = true
+totp-rs.workspace         = true
+tower.workspace           = true
 
 [lints]
 workspace = true

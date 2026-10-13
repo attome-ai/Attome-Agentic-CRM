@@ -1,0 +1,358 @@
+//! The background schedulers the job-worker tier runs (CLEANUP-REVIEW 5.17).
+//!
+//! One list, called from both places that act as the worker tier: `main.rs`
+//! when `jobs.run_worker_inline` is true, and `bin/worker.rs` (a split
+//! deployment's dedicated worker) unconditionally. `worker.rs` used to
+//! hand-copy `main.rs`'s list and had drifted: it never spawned the
+//! query-plan or field-security-profile revalidation sweeps.
+//!
+//! Deliberately NOT here — they stay in `main.rs`, run by every HTTP-serving
+//! node regardless of `jobs.run_worker_inline`: the audit ingest-backlog
+//! refresh, the capability probe, the approval-expiry sweep, and the
+//! metrics-port gauges. Those maintain per-node request-path state (or are
+//! observability for the HTTP process), not job-queue work.
+//!
+//! A duplicate scheduler tick across replicas/processes is already safe
+//! (BJB-4a, D-618: the `attome_jobs::schedule` ledger's row CAS lets one caller
+//! win each slot, and the dedup key blocks overlap behind it).
+use attome_config::AppConfig;
+use attome_server::AppState;
+
+/// Spawns every job-worker-tier background scheduler. Each is a
+/// process-lifetime `tokio::spawn` loop; nothing is awaited here.
+pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
+    let db = &base_state.db;
+    // Once/day — never varied per-deployment, not a config knob.
+    // Audit 10/10 plan item 2.6 (D-539 ruling 6): hourly until every
+    // organization's v1 cutover checkpoint exists, a no-op afterwards.
+    crate::jobs::spawn_audit_v1_cutover_checkpoint_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60 * 60),
+    );
+    crate::jobs::spawn_partition_maintenance_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+    // Shorter than partition maintenance's interval since upload
+    // sessions are short-lived; never varied per-deployment.
+    crate::jobs::spawn_upload_session_maintenance_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(900),
+    );
+    // P-job-queue-hardening (D-165): keeps apalis.jobs history (and the
+    // dead-letter admin list it backs) bounded. Once/day — this moves far
+    // slower than upload sessions or even partitions.
+    crate::jobs::spawn_apalis_job_history_prune_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+    // P-stored-query-containment addendum §11(c): keeps
+    // sql_query_version's cached cost_estimate from drifting
+    // unboundedly between publishes.
+    // Once/day — moves far slower than the schedulers this mirrors;
+    // never varied per-deployment, not a config knob.
+    crate::jobs::spawn_query_plan_revalidation_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+    // D-188: keeps field_security_profile_field's logicalname
+    // references from drifting silently stale between admin actions —
+    // same reactive-lint containment shape as query plan revalidation
+    // just above, applied to the other logicalname-reference consumer.
+    // Same once/day-by-convention cadence, never varied per-deployment.
+    crate::jobs::spawn_field_security_profile_revalidation_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+    // M34 (AI Governance, D-435): the nightly acceptance/edit/reject
+    // drift sweep over `ai_suggestion_outcome`. Once/day, same
+    // convention as the maintenance-class schedulers above.
+    // C4 (row A-40): reclaims chat confirm leases whose holder died and
+    // expires unconfirmed proposals. Once a minute: a crashed confirm's
+    // proposal is confirmable again within CONFIRM_LEASE plus a minute.
+    crate::jobs::spawn_ai_tool_call_sweep_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    crate::jobs::spawn_ai_quality_monitor_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+    // P-idempotency-hardening §4.4/§5 step 11: keeps the durable
+    // idempotency tier's completed records bounded, same cadence as the
+    // apalis job history prune.
+    crate::jobs::spawn_idempotency_record_prune_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+    // attome-auth plan BAU-13a/13b: dead refresh lineages and expired
+    // single-use tokens, daily.
+    crate::jobs::spawn_auth_token_prune_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+    // Solution 7 Phase 2 (D-788 rule 9): the 30-day recovery archive's
+    // hourly purge.
+    crate::jobs::spawn_recovery_archive_prune_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60 * 60),
+    );
+    // P-retention-archive-completion §3b/§3c: the daily proposal sweep
+    // for partition archive/drop and entity purge. Unconditional, like
+    // partition maintenance above — a no-op enqueue when no retention
+    // window is configured (today's default).
+    crate::jobs::spawn_retention_proposal_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(config.retention.propose_interval_secs),
+    );
+    // M35 (AI Memory, D-451): the daily memory retention sweep. Own
+    // scheduler, not folded into the retention-propose one above — see
+    // `EngineJob::PruneExpiredMemories`'s doc comment.
+    crate::jobs::spawn_memory_retention_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+    // P-workflow-engine §4.3/§5 step 7: sweeps schedule-type waits past
+    // their resume_at. A minute-scale interval, not once/day — unlike the
+    // maintenance sweeps above, a late sweep here is a late user-visible
+    // workflow resume, not background bookkeeping.
+    crate::jobs::spawn_workflow_sla_sweep_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    // P-workflow-engine §5 step 6 follow-up (D-267 addendum): drains
+    // the entity-change outbox and starts matching workflows. Shorter
+    // interval than the SLA sweep above — see that function's doc
+    // comment.
+    crate::jobs::spawn_workflow_entity_trigger_dispatch_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(10),
+    );
+    // M27 Phase 1 (KPI & Metrics, D-407): sweeps query-backed metric
+    // definitions for their current period. Hour-scale interval — see
+    // that function's doc comment for why.
+    crate::jobs::spawn_metric_snapshot_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60 * 60),
+    );
+
+    // M62 Phase 1 (D-403/D-409): drains active webhook subscriptions'
+    // outbox cursors and enqueues delivery jobs. Same cadence class as
+    // the entity-trigger dispatch just above — both drain the same
+    // outbox and neither wants to lag it by more than a few seconds.
+    crate::jobs::spawn_events_dispatch_scheduler(db.clone(), std::time::Duration::from_secs(10));
+
+    // M03 (Security & Identity) gap 1 / D-434: auto-completes an access
+    // review campaign past its due_date. Once/day, same cadence class as
+    // the query-plan/field-security-profile revalidation schedulers
+    // above.
+    crate::jobs::spawn_access_review_campaign_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+
+    // D-432 / M13: sweeps the entity-change outbox for match-rule
+    // scoring. 5-minute interval — see that function's doc comment.
+    crate::jobs::spawn_data_match_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(5 * 60),
+    );
+
+    // M61 Phase 1 (API Management, D-438): drains the per-route/per-key
+    // usage-counter buffer into api_usage. Once/day — see that
+    // function's doc comment.
+    crate::jobs::spawn_api_usage_rollup_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+
+    // M56 Content Management Phase 1 (D-436): publishes/unpublishes
+    // pages whose publish_at/unpublish_at has passed. Minute-scale
+    // interval, same cadence class as the workflow SLA sweep above — see
+    // that function's doc comment.
+    crate::jobs::spawn_content_scheduled_publish_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60),
+    );
+
+    // M25 Phase 1 (Report, D-440): sweeps report_schedule for
+    // occurrences past their next_run_at. Minute-scale interval, same
+    // cadence class as the workflow SLA sweep / content scheduled-publish
+    // sweep above — see that function's doc comment.
+    crate::jobs::spawn_report_schedule_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60),
+    );
+
+    // Audit plan 3.5 (D-541 rule 6): summary events for closed
+    // failed-login windows. Once a minute, inside the counters' 10-minute
+    // TTL.
+    crate::jobs::spawn_failed_login_sweep_scheduler(db.clone(), std::time::Duration::from_secs(60));
+
+    // M11 Search gap list: rebuilds the suggestion/autocomplete
+    // materialized table from registered entities + active saved
+    // searches. 15-minute interval — a typeahead cache, not something
+    // that needs the drain's 5-second staleness budget; each request
+    // path also re-checks visibility live regardless of how stale the
+    // cached candidate list is (see `attome_search::suggest`'s module doc).
+    crate::jobs::spawn_search_suggestion_refresh_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(15 * 60),
+    );
+
+    // M11 Search gap list: bounded saved-search alert-on-new-results
+    // sweep. Hourly — an alert is a convenience notification, not a
+    // real-time signal, and the bounded batch (see that function's doc
+    // comment) means a large backlog drains over several ticks rather
+    // than blocking one.
+    crate::jobs::spawn_search_saved_search_alert_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60 * 60),
+    );
+
+    // M37 Knowledge Management Phase 2 (D-452): folds page views, votes,
+    // and knowledge-chunk retrievals into content_page_stats.
+    // Once/day, same cadence class as the API usage rollup above.
+    crate::jobs::spawn_content_page_stats_rollup_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+
+    // M37 Knowledge Management Phase 2 (D-452): notifies a stale page's
+    // owner through M51. Once/day — see that function's doc comment.
+    crate::jobs::spawn_content_review_reminder_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+
+    // M14 Phase 1 (Data Quality): scores every entity's completeness
+    // (required-field null counts) and uniqueness (M13 open duplicate
+    // candidates) into quality_score/quality_issue.
+    // Once/day — see that function's doc comment.
+    crate::jobs::spawn_data_quality_score_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+
+    // M41 Phase 1 (Process Intelligence, D-462): incremental cursor-based
+    // extraction into process_event + DFG/variant/cycle-time
+    // recompute. Minute-scale interval, same cadence class as the
+    // workflow SLA sweep / content scheduled-publish sweep above.
+    crate::jobs::spawn_process_extraction_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60),
+    );
+
+    // M36 Phase 1 (Predictive Intelligence, D-473): rescores relevant
+    // live records against every active prediction model. Minute-scale
+    // interval, same cadence class as the process extraction sweep
+    // above.
+    crate::jobs::spawn_predict_scoring_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(60),
+    );
+    // M36 Phase 1: fills in the actual outcome once a prediction's
+    // horizon passes. 15-minute interval, same cadence class as the work
+    // queue escalation sweep below.
+    crate::jobs::spawn_predict_outcome_fill_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(15 * 60),
+    );
+
+    // M84 Phase 1 (Queue Management, D-464): capacity-overflow and
+    // idle-item escalation alerts. 15-minute interval, same cadence
+    // class as the search suggestion refresh above — see that
+    // function's doc comment.
+    crate::jobs::spawn_work_queue_escalation_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(15 * 60),
+    );
+
+    // M73 (SLA Management, D-422) — REVIEW-2026-09-02 finding #1: these
+    // four sweeps existed and were tested since D-422 with no caller
+    // outside their own tests, so no SLA breach/warning/escalation ever
+    // fired in a deployment. 5-minute interval — see that function's
+    // doc comment.
+    crate::jobs::spawn_ticket_sla_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(5 * 60),
+    );
+
+    // M72 (Resource Management) — see that function's doc comment.
+    // Once/day, same cadence class as the content review reminder
+    // sweep above.
+    crate::jobs::spawn_resource_utilization_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+
+    // M18 Data Catalog Phase 1 (D-466): self-converging backfill of
+    // metadata_reference for queries/workflows published before
+    // this release's live writers existed. 5-minute interval — see that
+    // function's doc comment.
+    crate::jobs::spawn_catalog_lineage_backfill_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(5 * 60),
+    );
+
+    // M18 Data Catalog Phase 1 (D-466): drains the dashboard-widget
+    // change-feed outbox into metadata_reference. Same 5-minute
+    // interval as the mdm match sweep it's modeled on.
+    crate::jobs::spawn_catalog_dashboard_lineage_sweep_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(5 * 60),
+    );
+
+    // M18 Data Catalog Phase 1 (D-466): nightly per-entity usage
+    // snapshot for the catalog's entity detail view. Once/day, same
+    // cadence class as the API usage rollup above.
+    crate::jobs::spawn_catalog_usage_rollup_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
+    // D-792 (FLEET-CONSOLE-DESIGN.md §6.3) — the fleet console's poll, only in
+    // a `fleet-console` build whose gate is open in this process (the same
+    // pure decision `boot::init` made and logged); never on a customer server.
+    #[cfg(feature = "fleet-console")]
+    {
+        if matches!(
+            attome_fleet::gate::open(config),
+            Ok(attome_fleet::Gate::Open)
+        ) {
+            crate::jobs::spawn_fleet_poll_scheduler(
+                db.clone(),
+                std::time::Duration::from_secs(config.fleet.poll_interval_secs),
+            );
+        }
+    }
+
+    // P-job-system-hardening (b): the touch-buffer flushers and the
+    // access-log stream consumer, same background-maintenance placement
+    // as the schedulers above. Unlike the ledger-gated schedulers above, no
+    // slot claim is needed here: `write_coalesce::drain`'s atomic
+    // HGETALL+DEL means a duplicate tick across replicas just finds an
+    // already-empty hash (not a duplicate write), and `XREADGROUP`
+    // against a shared consumer group is Redis Streams' own built-in
+    // horizontal-scaling mechanism — every replica running its own
+    // consumer is the intended scaling model, not a race to prevent.
+    // P-job-system-hardening (b): every current caller uses the same
+    // cadence class — split this only if a real deployment needs
+    // different cadences, not speculatively. Never varied per-deployment
+    // today, not a config knob.
+    let flush_interval = std::time::Duration::from_secs(30);
+    attome_server::apikey_touch::spawn_flush_scheduler(
+        db.clone(),
+        base_state.redis_coordination.clone(),
+        flush_interval,
+    );
+    attome_s2s::telemetry::spawn_touch_flush_scheduler(
+        db.clone(),
+        base_state.redis_coordination.clone(),
+        flush_interval,
+    );
+    if config.s2s.access_log_enabled {
+        // batch_size/reclaim_idle_ms: never varied per-deployment, not
+        // config knobs — see the flush_interval comment above.
+        attome_s2s::telemetry::spawn_access_log_consumer(
+            db.clone(),
+            base_state.redis_coordination.clone(),
+            flush_interval,
+            200,
+            60_000,
+        );
+    }
+}

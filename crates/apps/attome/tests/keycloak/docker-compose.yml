@@ -1,0 +1,36 @@
+# crates/server/tests/keycloak — throwaway test IdP for the OIDC
+# live-IdP integration suite (crates/server/tests/keycloak_oidc.rs, gated
+# behind the `keycloak-tests` Cargo feature — see that file's header). This is NOT a production topology recipe like the
+# root docker-compose.*.yml overlays (docker-compose.replica.yml etc.) — closer
+# in spirit to loadtest/'s test-only compose files: disposable, imports its
+# entire state from realm-export.json on every boot, never persists real
+# data, never attaches to the shared attome-network.
+#
+# Usage (local dev):
+#   docker compose -f crates/server/tests/keycloak/docker-compose.yml up -d
+#   # the test files themselves poll the realm's discovery endpoint and wait
+#   # for it to come up (see keycloak_oidc.rs) — no separate
+#   # health-wait step needed before running cargo test.
+#   docker compose -f crates/server/tests/keycloak/docker-compose.yml down -v
+#
+# Ports are non-default (8090, 9091) specifically so this never collides with
+# a real Keycloak/other-service deployment already running on the same host.
+# The management port was originally 9000, but this repo's own local dev stack
+# (attome-rustfs-dev, docker-compose.yml) also binds 9000-9001 for RustFS's S3
+# API — found live, 2026-07-24, running both at once for the D-108 verification
+# pass: remapped the host side to 9091 (container-internal port is still 9000,
+# untouched) so this test harness no longer collides with the ordinary dev
+# stack.
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.7
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin-throwaway-pw
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8090:8080"
+      - "9091:9000"
+    volumes:
+      - ./realm-export.json:/opt/keycloak/data/import/realm-export.json:ro

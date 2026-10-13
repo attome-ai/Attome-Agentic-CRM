@@ -424,7 +424,7 @@ async fn export_never_includes_a_field_the_caller_lacks_field_read_grant_for() {
     // way.
     attome_api::data_export::process(
         &state,
-        attome_jobs::DataExportPayload {
+        attome_core::jobs::DataExportPayload {
             export_id,
             entity_logicalname: logicalname.clone(),
             format: "json".to_string(),

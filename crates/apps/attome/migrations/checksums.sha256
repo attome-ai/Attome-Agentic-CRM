@@ -1,0 +1,13 @@
+# Immutable migration baseline. Once a release ships, an entry never changes
+# and is never removed; a fix is a new, higher-numbered migration. Every
+# migration here has an entry, appended in the change that adds it with
+# `sha256sum --text NNNN_name.sql >> checksums.sha256`. Boot refuses a
+# migration whose content no longer matches its entry.
+4204dd0a96f0251e9f29d77dd1498df199986fde2d8fc625f02f34a684a6ddeb  0001_job_queue.sql
+ee17e70ebd83ea46fd663d4f10adaa3ae565b07ded99c1d543f7397a4d0e563c  0002_email.sql
+bb300951feba0daf55e5f345745ca9070d8cbc8fa142e22fb78e69be7e6edd65  0003_auth.sql
+fa0b2ae4d118b73688f65bc5b6063f221c30806ed10760b4bb347a4c24f131b9  0004_server.sql
+12b99696e7ac8b7a38243883646414217f446c7d35b7c1a24e8279bd63cd1156  0005_approval.sql
+41201554654a2ae1d942bac47c29ad6d9159c56567958177ae424de2df937588  0006_engine.sql
+d82fe99c2c00e6574239db915e152375a0b773e5b146ce9cf35c446c539b0c0d  0007_audit.sql
+53ad1d77cc868bf7f624620c816a85cdf505eff3fcbf2c010c6236fb1cd715b2  0008_modules.sql

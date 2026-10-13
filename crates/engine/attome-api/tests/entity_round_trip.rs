@@ -2571,7 +2571,7 @@ fn large_cascade_deactivate_group_defers_to_async_job() {
         // The durable job must have been enqueued, atomically with the parent's
         // own deactivation. `CascadeDeactivateDependents` is a batch-queue
         // variant (`EngineJob::is_batch`, D-165), stored under
-        // "attome_job_batch" in `VersionedPlatformJob`'s envelope shape — same
+        // "attome_job_batch" in `JobEnvelope<EngineJob>`'s envelope shape — same
         // proven pattern as `bulk_enqueue_and_process_end_to_end`'s job-exists
         // check above.
         let job_exists: bool = sqlx::query_scalar(
@@ -5469,7 +5469,7 @@ fn bulk_create_processes_all_records_and_isolates_per_record_errors() {
 
         // BulkEntityOperation is a batch-queue variant (EngineJob::is_batch,
         // D-165) stored under the "attome_job_batch" job_type, and the queue
-        // stores jobs in VersionedPlatformJob's envelope shape
+        // stores jobs in JobEnvelope<EngineJob>'s envelope shape
         // (`{"version","variant","payload"}`), not the bare externally-tagged
         // `{"BulkEntityOperation": {...}}` shape a single-queue/unversioned job
         // would have used.
@@ -5851,7 +5851,7 @@ fn bulk_enqueue_transaction_rolls_back_both_rows_together() {
         attome_jobs::enqueue_in_tx(
             &mut tx,
             attome_core::jobs::EngineJob::BulkEntityOperation(
-                attome_jobs::BulkEntityOperationPayload {
+                attome_core::jobs::BulkEntityOperationPayload {
                     bulk_op_id,
                     entity_logicalname: "bulk_transaction_test".to_owned(),
                     operation: "create".to_owned(),

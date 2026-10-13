@@ -49,7 +49,7 @@ pub struct EmailMessage {
     /// account-lifecycle producers (registration, reset, invitation) that
     /// write a tracking row in the same transaction as the enqueue.
     /// `#[serde(default)]` so an already-queued job from before this field
-    /// existed still deserializes (as `None`) — no `VersionedPlatformJob`
+    /// existed still deserializes (as `None`) — no `JobEnvelope<EngineJob>`
     /// version bump needed. `None` for `xrm_notification::dispatch`'s own
     /// direct send path, which isn't tracked in that table (see
     /// `attome_email::delivery`'s module doc).
@@ -62,7 +62,7 @@ pub struct EmailMessage {
     /// account-lifecycle mail, while still riding the same configured SMTP
     /// relay/credentials in `config.email`. `#[serde(default)]` so an
     /// already-queued job from before this field existed still deserializes
-    /// (as `None`, i.e. the deployment default) — no `VersionedPlatformJob`
+    /// (as `None`, i.e. the deployment default) — no `JobEnvelope<EngineJob>`
     /// version bump needed, same reasoning as `delivery_id` above.
     #[serde(default)]
     pub from_override: Option<String>,

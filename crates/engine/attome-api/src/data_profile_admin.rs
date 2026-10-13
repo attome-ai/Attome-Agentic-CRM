@@ -113,7 +113,7 @@ async fn enqueue_profile(
 
     attome_jobs::enqueue_in_tx(
         &mut tx,
-        attome_core::jobs::EngineJob::DataProfile(attome_jobs::DataProfilePayload {
+        attome_core::jobs::EngineJob::DataProfile(attome_core::jobs::DataProfilePayload {
             profile_id,
             entity_logicalname: entity_name,
             user_id: claims.sub,
@@ -259,7 +259,7 @@ async fn mark_failed(state: &EngineState, profile_id: Uuid, message: &str) -> Re
 /// access control.
 pub async fn process(
     state: &EngineState,
-    payload: attome_jobs::DataProfilePayload,
+    payload: attome_core::jobs::DataProfilePayload,
 ) -> Result<(), AppError> {
     let profile_id = payload.profile_id;
     let (_, entity_name, attrs, _) =

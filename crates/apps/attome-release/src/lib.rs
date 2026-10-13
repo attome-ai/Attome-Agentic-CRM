@@ -14,14 +14,12 @@
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
-use crate::say;
-
 /// Files handed to one `rustfmt` call. Small enough for any command line.
 const FORMAT_BATCH: usize = 40;
 
 type Step = fn(&Path) -> Result<(), String>;
 
-pub(crate) fn check() -> ExitCode {
+pub fn check() -> ExitCode {
     let root = match workspace_root() {
         Ok(root) => root,
         Err(error) => {
@@ -131,6 +129,14 @@ fn rust_files(dir: &Path) -> Result<Vec<PathBuf>, String> {
     }
     files.sort();
     Ok(files)
+}
+
+/// Writes one line to standard output. A closed pipe is not an error worth
+/// failing a check over, so the write result is ignored.
+fn say(text: &str) {
+    use std::io::Write;
+    let mut out = std::io::stdout().lock();
+    let _ = writeln!(out, "{text}");
 }
 
 #[cfg(test)]

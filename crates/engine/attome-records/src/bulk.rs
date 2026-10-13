@@ -600,7 +600,7 @@ async fn enqueue(
     attome_jobs::enqueue_in_tx(
         &mut tx,
         attome_core::jobs::EngineJob::BulkEntityOperation(
-            attome_jobs::BulkEntityOperationPayload {
+            attome_core::jobs::BulkEntityOperationPayload {
                 bulk_op_id,
                 entity_logicalname: entity_name.clone(),
                 operation: body.operation.clone(),
@@ -2302,13 +2302,15 @@ async fn approve_staged_import(
     // record; see `enqueue`.
     attome_jobs::enqueue_in_tx(
         &mut tx,
-        attome_core::jobs::EngineJob::ApplyStagedImport(attome_jobs::ApplyStagedImportPayload {
-            import_id,
-            entity_logicalname: entity_name.clone(),
-            operation: row.operation.clone(),
-            records: Vec::new(),
-            user_id: claims.sub,
-        }),
+        attome_core::jobs::EngineJob::ApplyStagedImport(
+            attome_core::jobs::ApplyStagedImportPayload {
+                import_id,
+                entity_logicalname: entity_name.clone(),
+                operation: row.operation.clone(),
+                records: Vec::new(),
+                user_id: claims.sub,
+            },
+        ),
     )
     .await
     .map_err(AppError::internal)?;

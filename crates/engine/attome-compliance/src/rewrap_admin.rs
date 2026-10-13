@@ -10,7 +10,7 @@
 //! other's `row_version` writes.
 
 use attome_core::EngineState;
-use attome_jobs::{EngineJob, RewrapDomain};
+use attome_core::jobs::{EngineJob, RewrapDomain};
 use attome_server::authz::{Admin, Authorized};
 use attome_types::AppError;
 use attome_types::ErrorResponse;

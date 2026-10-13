@@ -11,10 +11,16 @@ homepage.workspace     = true
 publish.workspace      = true
 
 [dependencies]
+attome-config   = { workspace = true, optional = true }
 sqlx.workspace  = true
 tokio.workspace = true
 url.workspace   = true
 uuid.workspace  = true
+
+[features]
+# `point_config_at`, for tests that build an `AppConfig`; optional so the
+# crates below attome-config can use this crate without a cycle.
+app-config = ["dep:attome-config"]
 
 [lints]
 workspace = true

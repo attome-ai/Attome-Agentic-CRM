@@ -1,19 +1,27 @@
 //! `attome`: the Attome command-line tool.
 //!
-//! Today it carries the release gate (`attome release --check`). The other
-//! commands (`init`, `cluster`, `scale`, `build`, `pack`, `publish`) arrive
-//! with their roadmap tasks.
+//! It runs the server (`attome serve`) and the processes and tools around
+//! it, and the release gate (`attome release --check`). The install and
+//! cluster commands (`init`, `cluster`, `scale`, `build`, `pack`, `publish`)
+//! arrive with their roadmap tasks.
 
 use std::io::Write;
 use std::process::ExitCode;
-
-mod release;
 
 const USAGE: &str = "\
 attome: the Attome command-line tool
 
 Usage:
-  attome release --check   Run the release gate: format, clippy, tests
+  attome serve                  Run the server (flags: --print-openapi,
+                                --bootstrap-admin <email>)
+  attome worker                 Run the job worker only
+  attome migrate                Apply database migrations and exit
+  attome healthcheck            Exit 0 when the local server is healthy
+  attome preflight              Check configuration and dependencies
+  attome audit-chainer          Run the audit hash chainer
+  attome verify-audit-chain     Verify the audit hash chain
+  attome changeset-replay       Replay changesets against a database
+  attome release --check        Run the release gate: format, clippy, tests
   attome version           Print the version
   attome help              Print this help
 ";
@@ -30,10 +38,32 @@ fn main() -> ExitCode {
             say(&format!("attome {}", env!("CARGO_PKG_VERSION")));
             ExitCode::SUCCESS
         }
-        ["release", "--check"] => release::check(),
+        ["release", "--check"] => attome_release::check(),
+        ["serve", ..] => outcome(attome::serve::run()),
+        ["worker", ..] => outcome(attome::cmd::worker::run()),
+        ["migrate", ..] => outcome(attome::cmd::migrate::run()),
+        ["audit-chainer", ..] => outcome(attome::cmd::audit_chainer::run()),
+        ["healthcheck", ..] => attome::cmd::healthcheck::run(),
+        ["preflight", ..] => attome::cmd::preflight::run(),
+        ["changeset-replay", ..] => attome::cmd::changeset_replay::run(),
+        ["verify-audit-chain", ..] => {
+            attome::cmd::verify_audit_chain::run();
+            ExitCode::SUCCESS
+        }
         other => {
             eprintln!("attome: unknown command `{}`\n\n{USAGE}", other.join(" "));
             ExitCode::from(2)
+        }
+    }
+}
+
+/// Maps a command's result to an exit code, printing the error.
+fn outcome(result: Result<(), Box<dyn std::error::Error>>) -> ExitCode {
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("attome: {error}");
+            ExitCode::FAILURE
         }
     }
 }

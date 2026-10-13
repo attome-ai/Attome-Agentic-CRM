@@ -534,7 +534,7 @@ async fn dispatch_approved(
                 .and_then(Value::as_str)
                 .ok_or_else(|| AppError::internal("approval payload missing \"domain\""))?;
             let domain = domain_str
-                .parse::<attome_jobs::RewrapDomain>()
+                .parse::<attome_core::jobs::RewrapDomain>()
                 .map_err(AppError::internal)?;
             attome_compliance::rewrap_admin::do_trigger_rewrap(state, domain, approver_id).await?;
             serde_json::json!({ "domain": domain_str, "enqueued": true })

@@ -399,7 +399,7 @@ async fn a_failed_audit_write_rolls_back_the_data_export_completion() {
     .await
     .expect("seed a pending export row");
 
-    let payload = || attome_jobs::DataExportPayload {
+    let payload = || attome_core::jobs::DataExportPayload {
         export_id,
         entity_logicalname: logicalname.clone(),
         format: "json".to_string(),

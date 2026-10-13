@@ -49,6 +49,7 @@ members = [
     "crates/engine/attome-portal",
     "crates/engine/attome-fleet",
     "crates/sdk/attome-sdk",
+    "crates/apps/attome-release",
     "crates/apps/attome",
 ]
 
@@ -115,6 +116,7 @@ attome-predict   = { path = "crates/engine/attome-predict" }
 attome-portal    = { path = "crates/engine/attome-portal" }
 attome-fleet     = { path = "crates/engine/attome-fleet" }
 attome-sdk       = { path = "crates/sdk/attome-sdk" }
+attome-release   = { path = "crates/apps/attome-release" }
 
 # External crates
 aes-gcm       = { version = "0.10", features = ["aes"] }
@@ -144,6 +146,8 @@ metrics-exporter-prometheus = { version = "0.18", default-features = false }
 moka          = { version = "0.12", features = ["future"] }
 object_store  = { version = "0.14", features = ["aws"] }
 opentelemetry = "0.32"
+opentelemetry-otlp = { version = "0.32", default-features = false, features = ["http-proto", "reqwest-client", "reqwest-rustls", "trace"] }
+opentelemetry_sdk = "0.32"
 proptest      = "1"
 rand          = "0.8"
 regex         = "1"

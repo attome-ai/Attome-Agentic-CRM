@@ -369,6 +369,170 @@ fn short(id: Uuid) -> String {
     id.simple().to_string()[20..].to_owned()
 }
 
+/// An empty throwaway database of its own (no migrations), for a test that
+/// runs migrations or a full boot itself. Dropped, with `WITH (FORCE)`, when
+/// this value is dropped, so a test need not close its pools first.
+#[derive(Debug)]
+pub struct EmptyDatabase {
+    name: String,
+    url: String,
+    admin_url: String,
+}
+
+impl EmptyDatabase {
+    /// Connection URL for this database: the configured URL with only the
+    /// database name swapped.
+    pub fn url(&self) -> &str {
+        &self.url
+    }
+
+    /// The database's name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl Drop for EmptyDatabase {
+    fn drop(&mut self) {
+        let admin_url = self.admin_url.clone();
+        let name = self.name.clone();
+        let dropped = std::thread::spawn(move || -> Result<(), String> {
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .map_err(|error| format!("start a runtime: {error}"))?;
+            runtime.block_on(async {
+                let mut conn = PgConnection::connect(&admin_url)
+                    .await
+                    .map_err(|error| format!("connect: {error}"))?;
+                sqlx::query(&format!("DROP DATABASE IF EXISTS \"{name}\" WITH (FORCE)"))
+                    .execute(&mut conn)
+                    .await
+                    .map_err(|error| format!("DROP DATABASE: {error}"))?;
+                Ok(())
+            })
+        })
+        .join();
+        // Warn, never panic: a panicking Drop during an unwinding test would
+        // replace the real failure with a cleanup message.
+        if !matches!(dropped, Ok(Ok(()))) {
+            eprintln!(
+                "warning: failed to drop the throwaway database `{}`",
+                self.name
+            );
+        }
+    }
+}
+
+/// Creates an empty throwaway database, or `None` when no test database is
+/// configured (and panics when one is required, like [`test_db_url`]).
+/// `purpose` goes into the name, so a leftover is recognisable.
+pub async fn empty_database(purpose: &str) -> Option<EmptyDatabase> {
+    let Some(base) = server_url() else {
+        assert!(
+            !database_required(),
+            "attome-testkit: DATABASE_URL is not set, and {REQUIRE_DB_ENV} requires a test database"
+        );
+        return None;
+    };
+    let purpose: String = purpose
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '_'
+            }
+        })
+        .take(20)
+        .collect();
+    let name = format!("attome_e_{purpose}_{}", short(Uuid::now_v7()));
+    let mut url = url::Url::parse(&base)
+        .unwrap_or_else(|error| panic!("attome-testkit: DATABASE_URL is not a URL: {error}"));
+    url.set_path(&format!("/{name}"));
+    let mut conn = PgConnection::connect(&base)
+        .await
+        .unwrap_or_else(|error| panic!("attome-testkit: connect DATABASE_URL: {error}"));
+    sqlx::query(&format!("CREATE DATABASE \"{name}\""))
+        .execute(&mut conn)
+        .await
+        .unwrap_or_else(|error| panic!("attome-testkit: CREATE DATABASE {name}: {error}"));
+    let _ = conn.close().await;
+    Some(EmptyDatabase {
+        name,
+        url: url.to_string(),
+        admin_url: base,
+    })
+}
+
+/// The parts of a PostgreSQL URL a configuration's `database` section needs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DbUrlParts {
+    /// The login role.
+    pub user: String,
+    /// The decoded password; empty when the URL carries none.
+    pub password: String,
+    /// Host name, address, or socket directory.
+    pub host: String,
+    /// Port; 5432 when the URL names none.
+    pub port: u16,
+    /// The database the driver will connect to.
+    pub dbname: String,
+}
+
+impl DbUrlParts {
+    /// Parses `url`; the error never carries the password.
+    pub fn parse(url: &str) -> Result<Self, String> {
+        let parsed = url::Url::parse(url).map_err(|error| format!("not a URL: {error}"))?;
+        let dbname = parsed.path().trim_start_matches('/').to_owned();
+        if dbname.is_empty() {
+            return Err("the URL names no database".to_owned());
+        }
+        Ok(Self {
+            user: percent_decode(parsed.username()),
+            password: parsed.password().map(percent_decode).unwrap_or_default(),
+            host: parsed.host_str().unwrap_or("localhost").to_owned(),
+            port: parsed.port().unwrap_or(5432),
+            dbname: percent_decode(&dbname),
+        })
+    }
+}
+
+/// Percent-decodes one URL component (`+` stays literal).
+fn percent_decode(raw: &str) -> String {
+    let bytes = raw.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%'
+            && i + 2 < bytes.len()
+            && let Some(byte) = std::str::from_utf8(&bytes[i + 1..i + 3])
+                .ok()
+                .and_then(|hex| u8::from_str_radix(hex, 16).ok())
+        {
+            out.push(byte);
+            i += 3;
+            continue;
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// Points `config.database` at `url`: the pool builders read their endpoint
+/// and credentials from the configuration, never from `DATABASE_URL`. Panics
+/// on an unparseable URL (test setup); the message never carries the password.
+#[cfg(feature = "app-config")]
+pub fn point_config_at(config: &mut attome_config::AppConfig, url: &str) {
+    let parts = DbUrlParts::parse(url).unwrap_or_else(|msg| panic!("point_config_at: {msg}"));
+    config.database.host = parts.host;
+    config.database.port = parts.port;
+    config.database.user = parts.user;
+    config.database.password = (!parts.password.is_empty()).then_some(parts.password);
+    config.database.dbname = parts.dbname;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -380,6 +544,17 @@ mod tests {
         assert_ne!(a, b);
         assert!(a.starts_with("case-"));
         assert!(unique_email("user").ends_with("@example.invalid"));
+    }
+
+    #[test]
+    fn db_url_parts_decode_credentials_and_default_the_port() {
+        let parts = DbUrlParts::parse("postgres://app%40x:p%2Fw%3Ad@db.local/attome_t").unwrap();
+        assert_eq!(parts.user, "app@x");
+        assert_eq!(parts.password, "p/w:d");
+        assert_eq!(parts.host, "db.local");
+        assert_eq!(parts.port, 5432);
+        assert_eq!(parts.dbname, "attome_t");
+        assert!(DbUrlParts::parse("postgres://u:p@h:6000/").is_err());
     }
 
     #[test]

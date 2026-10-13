@@ -62,7 +62,7 @@ use attome_types::AppError;
 
 /// The seven scope kinds the plan defines (`document/module-master-plans/
 /// M35-ai-memory.md` §3), mirrored as a closed Rust enum the same way
-/// `attome_jobs::RewrapDomain` mirrors its own DB-`CHECK`ed text column —
+/// `attome_core::jobs::RewrapDomain` mirrors its own DB-`CHECK`ed text column —
 /// `as_str`/`FromStr` keep the two representations from drifting apart.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
