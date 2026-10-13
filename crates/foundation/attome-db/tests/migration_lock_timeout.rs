@@ -46,6 +46,12 @@
 //! cargo test -p attome-db --test migration_lock_timeout
 //! ```
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use sqlx::migrate::MigrateError;
 use sqlx::postgres::{PgConnectOptions, PgPool, PgPoolOptions};
 use sqlx::{Connection, PgConnection};

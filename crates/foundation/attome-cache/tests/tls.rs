@@ -16,6 +16,12 @@
 //! cargo test -p attome-cache --test tls
 //! ```
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use attome_config::AppConfig;
 
 fn env_or_panic(key: &str) -> String {

@@ -7,6 +7,12 @@
 //! call returns the same URL. Each crate's tests apply the migrations they
 //! need themselves.
 //!
+//! **Two databases, both empty of data.** [`test_db_url`] is bare: crates that
+//! test schema machinery (attome-db's migrator) apply their own fixtures to
+//! it. [`migrated_db_url`] is a second one with every migration in
+//! `crates/apps/attome/migrations` applied, for crates whose code reads and
+//! writes the platform's own tables (jobs, email, ...).
+//!
 //! **Skip locally, fail in CI.** With no `DATABASE_URL`, database tests print
 //! a `SKIP` line and return, so `cargo test` on a machine without Postgres is
 //! green but honest about it. With [`REQUIRE_DB_ENV`] set (as the Linux CI job
@@ -41,21 +47,42 @@ const FORBIDDEN_NAME_PARTS: [&str; 3] = ["dev", "prod", "live"];
 /// but missing or unusable; the outcome is decided once per process.
 pub fn test_db_url() -> Option<String> {
     static URL: OnceLock<Result<Option<String>, String>> = OnceLock::new();
-    match URL.get_or_init(provision) {
+    match URL.get_or_init(|| provision(false)) {
         Ok(url) => url.clone(),
         Err(error) => panic!("attome-testkit: {error}"),
     }
 }
 
-/// A pool on this process's throwaway database, or `None` (see [`test_db_url`]).
+/// This test process's migrated throwaway database URL: a second database,
+/// separate from [`test_db_url`]'s, with every migration in
+/// `crates/apps/attome/migrations` applied once. `None` when no test database
+/// is configured; panics like [`test_db_url`] when one is required.
+pub fn migrated_db_url() -> Option<String> {
+    static URL: OnceLock<Result<Option<String>, String>> = OnceLock::new();
+    match URL.get_or_init(|| provision(true)) {
+        Ok(url) => url.clone(),
+        Err(error) => panic!("attome-testkit: {error}"),
+    }
+}
+
+/// A pool on this process's bare throwaway database, or `None` (see
+/// [`test_db_url`]).
 pub async fn test_pool(max_connections: u32) -> Option<sqlx::PgPool> {
-    let url = test_db_url()?;
-    let pool = PgPoolOptions::new()
+    Some(connect(&test_db_url()?, max_connections).await)
+}
+
+/// A pool on this process's migrated throwaway database, or `None` (see
+/// [`migrated_db_url`]).
+pub async fn migrated_pool(max_connections: u32) -> Option<sqlx::PgPool> {
+    Some(connect(&migrated_db_url()?, max_connections).await)
+}
+
+async fn connect(url: &str, max_connections: u32) -> sqlx::PgPool {
+    PgPoolOptions::new()
         .max_connections(max_connections)
-        .connect(&url)
+        .connect(url)
         .await
-        .unwrap_or_else(|error| panic!("attome-testkit: connect to the test database: {error}"));
-    Some(pool)
+        .unwrap_or_else(|error| panic!("attome-testkit: connect to the test database: {error}"))
 }
 
 /// A one-connection pool: proves a code path never needs a second connection
@@ -73,11 +100,20 @@ fn database_required() -> bool {
     std::env::var_os(REQUIRE_DB_ENV).is_some()
 }
 
-fn provision() -> Result<Option<String>, String> {
-    let base = std::env::var("DATABASE_URL")
-        .ok()
-        .filter(|url| !url.trim().is_empty());
-    let Some(base) = base else {
+/// The server URL the test databases are created on: `DATABASE_URL` as the
+/// process started, captured before [`provision`] rewrites it.
+fn server_url() -> Option<String> {
+    static BASE: OnceLock<Option<String>> = OnceLock::new();
+    BASE.get_or_init(|| {
+        std::env::var("DATABASE_URL")
+            .ok()
+            .filter(|url| !url.trim().is_empty())
+    })
+    .clone()
+}
+
+fn provision(migrate: bool) -> Result<Option<String>, String> {
+    let Some(base) = server_url() else {
         if database_required() {
             return Err(format!(
                 "DATABASE_URL is not set, and {REQUIRE_DB_ENV} requires a test database"
@@ -100,16 +136,29 @@ fn provision() -> Result<Option<String>, String> {
     }
 
     let name = format!("attome_t_{}", Uuid::now_v7().simple());
-    // The database is created from a separate thread with its own runtime, so
-    // this works whether or not the caller is already inside a Tokio runtime.
-    let admin_url = base.clone();
-    let create_name = name.clone();
-    std::thread::spawn(move || create_database(&admin_url, &create_name))
-        .join()
-        .map_err(|_| "creating the test database panicked".to_owned())??;
-
     url.set_path(&format!("/{name}"));
     let test_url = url.to_string();
+    // The database is created (and migrated) from a separate thread with its
+    // own runtime, so this works whether or not the caller is already inside
+    // a Tokio runtime.
+    let admin_url = base.clone();
+    let create_name = name.clone();
+    let migrate_url = test_url.clone();
+    std::thread::spawn(move || {
+        create_database(
+            &admin_url,
+            &create_name,
+            migrate.then_some(migrate_url.as_str()),
+        )
+    })
+    .join()
+    .map_err(|_| "creating the test database panicked".to_owned())??;
+
+    if migrate {
+        // The bare database's URL is what `DATABASE_URL` points at; the
+        // migrated one is reached only through `migrated_db_url`.
+        return Ok(Some(test_url));
+    }
     // SAFETY: `set_var` is unsafe because another thread may read the
     // environment at the same moment. This runs once per process, inside the
     // `OnceLock` initialiser, before any test reads `DATABASE_URL` through
@@ -122,7 +171,11 @@ fn provision() -> Result<Option<String>, String> {
     Ok(Some(test_url))
 }
 
-fn create_database(admin_url: &str, name: &str) -> Result<(), String> {
+/// Every migration in `crates/apps/attome/migrations`, embedded at compile
+/// time.
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../../apps/attome/migrations");
+
+fn create_database(admin_url: &str, name: &str, migrate_url: Option<&str>) -> Result<(), String> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -138,6 +191,18 @@ fn create_database(admin_url: &str, name: &str) -> Result<(), String> {
         conn.close()
             .await
             .map_err(|error| format!("close: {error}"))?;
+        if let Some(url) = migrate_url {
+            let mut conn = PgConnection::connect(url)
+                .await
+                .map_err(|error| format!("connect {name}: {error}"))?;
+            MIGRATOR
+                .run(&mut conn)
+                .await
+                .map_err(|error| format!("migrate {name}: {error}"))?;
+            conn.close()
+                .await
+                .map_err(|error| format!("close: {error}"))?;
+        }
         Ok(())
     })
 }
@@ -156,6 +221,32 @@ macro_rules! db_pool_or_skip {
     };
     ($max_connections:expr) => {
         match $crate::test_pool($max_connections).await {
+            Some(db) => db,
+            None => {
+                eprintln!(
+                    "SKIP {}:{}: set DATABASE_URL to a throwaway Postgres server to run this; {}",
+                    module_path!(),
+                    line!(),
+                    $crate::skip_remedy(),
+                );
+                return;
+            }
+        }
+    };
+}
+
+/// [`db_pool_or_skip!`] for the migrated database ([`migrated_pool`]).
+///
+/// ```ignore
+/// let db = migrated_pool_or_skip!();
+/// ```
+#[macro_export]
+macro_rules! migrated_pool_or_skip {
+    () => {
+        $crate::migrated_pool_or_skip!($crate::DEFAULT_MAX_CONNECTIONS)
+    };
+    ($max_connections:expr) => {
+        match $crate::migrated_pool($max_connections).await {
             Some(db) => db,
             None => {
                 eprintln!(

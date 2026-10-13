@@ -22,6 +22,12 @@
 //! Verified live 2026-08-12: 3/3 against redis:7 (`TEST_REDIS_PORT=6380`,
 //! `save 3600 1 300 100 60 10000`).
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use attome_cache::persistence;
 use fred::prelude::*;
 use uuid::Uuid;

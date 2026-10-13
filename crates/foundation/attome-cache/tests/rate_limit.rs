@@ -13,6 +13,12 @@
 //! cargo test -p attome-cache --test rate_limit
 //! ```
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use attome_cache::rate_limit;
 use fred::interfaces::ClientLike;
 use fred::prelude::*;

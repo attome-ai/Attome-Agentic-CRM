@@ -20,6 +20,12 @@
 //! cargo test -p attome-db --test migrator_connection
 //! ```
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use std::str::FromStr;
 
 use attome_config::AppConfig;

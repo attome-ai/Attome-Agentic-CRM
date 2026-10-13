@@ -39,6 +39,12 @@
 //! cargo test -p attome-db --test migration_migrator_lock
 //! ```
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 

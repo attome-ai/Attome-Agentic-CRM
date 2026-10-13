@@ -1,0 +1,34 @@
+[package]
+name         = "attome-inference"
+description  = "Attome's model-inference transport only: HTTP calls to model servers, with no knowledge of records, prompts or security."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+attome-config.workspace = true
+attome-types.workspace  = true
+metrics.workspace       = true
+reqwest.workspace       = true
+serde.workspace         = true
+serde_json.workspace    = true
+thiserror.workspace     = true
+tokio.workspace         = true
+tracing.workspace       = true
+
+[features]
+# `attome_inference::testing::FakeModelServer`, the one scripted model server
+# every consumer's tests use.
+test-support = []
+
+[dev-dependencies]
+attome-inference = { path = ".", features = ["test-support"] }
+tokio.workspace  = true
+
+[lints]
+workspace = true

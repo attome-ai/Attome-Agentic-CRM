@@ -19,6 +19,12 @@
 //! cargo test -p attome-db --test readonly_identity
 //! ```
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use attome_testkit::db_pool_or_skip;
 
 #[tokio::test]

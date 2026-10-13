@@ -13,6 +13,12 @@
 //! cargo test -p attome-db --test acquire_timeout_hook
 //! ```
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 

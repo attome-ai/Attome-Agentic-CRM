@@ -23,6 +23,12 @@
 //! RESP2 array-wrapper handling, `pending_count`'s Dragonfly-specific NOGROUP
 //! error text, the `BLOCK 0` inversion, the bare-`Null` reply).
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use attome_cache::stream_buffer;
 use fred::prelude::*;
 use uuid::Uuid;

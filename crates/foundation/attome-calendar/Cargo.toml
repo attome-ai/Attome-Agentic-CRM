@@ -1,0 +1,22 @@
+[package]
+name         = "attome-calendar"
+description  = "Attome's business-time arithmetic: working days and hours, holidays, DST-safe date math over an IANA calendar. Pure, no I/O."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+chrono.workspace    = true
+chrono-tz.workspace = true
+serde.workspace     = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

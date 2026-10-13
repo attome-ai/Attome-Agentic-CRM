@@ -12,6 +12,12 @@
 //! cargo test -p attome-cache --test sticky_primary
 //! ```
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use attome_cache::sticky_primary::{PinCheck, check_pin, pin_key, pin_write_with_lsn};
 use fred::interfaces::{ClientLike, KeysInterface};
 use fred::prelude::*;

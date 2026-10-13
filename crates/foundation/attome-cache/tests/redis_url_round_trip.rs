@@ -7,6 +7,12 @@
 //! suite parses with fred itself, needs no Redis server, and therefore runs in
 //! the default `cargo test` tier.
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use attome_config::AppConfig;
 use fred::prelude::*;
 

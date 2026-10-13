@@ -1,0 +1,17 @@
+[package]
+name         = "attome-html"
+description  = "Attome's one HTML allow-list sanitizer, HTML escaping and the {{name}} placeholder merge. Pure Rust, no I/O."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+ammonia.workspace = true
+
+[lints]
+workspace = true

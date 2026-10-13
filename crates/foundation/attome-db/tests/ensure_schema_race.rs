@@ -14,6 +14,12 @@
 //! cargo test -p attome-db --test ensure_schema_race
 //! ```
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use attome_config::AppConfig;
 use attome_testkit::skip_if_no_db;
 use sqlx::postgres::PgPoolOptions;

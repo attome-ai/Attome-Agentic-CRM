@@ -21,6 +21,12 @@
 //! cargo test -p attome-cache --test token_window
 //! ```
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use std::time::Duration;
 
 use attome_cache::token_window::{self, Reservation, ReserveWindow, WindowState};

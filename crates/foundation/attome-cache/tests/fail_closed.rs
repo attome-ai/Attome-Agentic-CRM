@@ -25,6 +25,12 @@
 //! cargo test -p attome-cache --test fail_closed -- --ignored --test-threads=1
 //! ```
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use std::time::{Duration, Instant};
 
 use attome_cache::{

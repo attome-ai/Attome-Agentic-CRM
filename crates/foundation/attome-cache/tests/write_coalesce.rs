@@ -18,6 +18,12 @@
 //! true when written, and false since the local matrix replaced the retired CI
 //! lane; BCA-44/BCA-F8.)
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use attome_cache::write_coalesce;
 use fred::prelude::*;
 use uuid::Uuid;
