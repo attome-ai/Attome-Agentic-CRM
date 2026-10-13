@@ -1,8 +1,9 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/apps/attome",
+    "crates/foundation/attome-types",
     "crates/sdk/attome-sdk",
+    "crates/apps/attome",
 ]
 
 # Layers (docs/architecture.md): foundation -> engine -> sdk -> packs -> apps, never back.
@@ -19,7 +20,21 @@ homepage     = "https://attome.com"
 publish      = false
 
 [workspace.dependencies]
-attome-sdk = { path = "crates/sdk/attome-sdk" }
+# Internal crates
+attome-types = { path = "crates/foundation/attome-types" }
+attome-sdk   = { path = "crates/sdk/attome-sdk" }
+
+# External crates
+axum          = { version = "0.8", features = ["macros"] }
+chrono        = { version = "0.4", features = ["serde"] }
+opentelemetry = "0.32"
+serde         = { version = "1", features = ["derive"] }
+serde_json    = "1"
+thiserror     = "2"
+tokio         = { version = "1", features = ["full"] }
+tracing       = "0.1"
+utoipa        = { version = "5", features = ["macros", "uuid", "chrono"] }
+uuid          = { version = "1", features = ["v4", "v5", "v7", "serde"] }
 
 [workspace.lints.rust]
 unsafe_code       = "deny"
