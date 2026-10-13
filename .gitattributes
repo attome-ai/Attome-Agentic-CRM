@@ -1,0 +1,13 @@
+# One line ending everywhere. Windows and Linux check out the same bytes, so
+# checksums, shell scripts and SQL behave identically on both (V2-D471).
+* text=auto eol=lf
+
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.woff binary
+*.woff2 binary
+*.pdf  binary
+*.zip  binary

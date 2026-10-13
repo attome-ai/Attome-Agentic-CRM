@@ -1,0 +1,22 @@
+# Build output
+/target/
+node_modules/
+dist/
+.angular/
+
+# Local configuration and secrets never leave the machine
+.env
+.env.*
+*.local.toml
+*.local.json
+config.local.*
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

@@ -1,0 +1,37 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/apps/attome",
+    "crates/sdk/attome-sdk",
+]
+
+# Layers (docs/architecture.md): foundation -> engine -> sdk -> packs -> apps, never back.
+# A crate lives in the folder of its layer and is named `attome-<name>`.
+
+[workspace.package]
+version      = "0.1.0"
+edition      = "2024"
+rust-version = "1.97"
+authors      = ["Automatica Tech Solutions"]
+license      = "AGPL-3.0-only"
+repository   = "https://github.com/attome-ai/Attome-Agentic-CRM"
+homepage     = "https://attome.com"
+publish      = false
+
+[workspace.dependencies]
+attome-sdk = { path = "crates/sdk/attome-sdk" }
+
+[workspace.lints.rust]
+unsafe_code       = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+unwrap_used  = "deny"
+expect_used  = "warn"
+dbg_macro    = "deny"
+todo         = "deny"
+print_stdout = "warn"
+
+[profile.release]
+lto           = "thin"
+codegen-units = 1
