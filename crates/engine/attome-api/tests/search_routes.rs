@@ -188,8 +188,7 @@ async fn test_system() -> Option<(EngineSystem, attome_db::DbPool)> {
     // Fully licensed, so the route-level module gate is not what these tests
     // are measuring. `unlicensed_deployment_hides_the_whole_surface` below
     // flips it back off deliberately.
-    let mut license = ModuleSet::core_only();
-    license.bits() = [u64::MAX; 4];
+    let license = ModuleSet::from_bits([u64::MAX; 4]);
     state.modules.store(Arc::new(license));
 
     let system = EngineSystem::builder(state)

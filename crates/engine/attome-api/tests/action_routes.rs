@@ -214,8 +214,7 @@ async fn test_system_with(ai_on: bool) -> Option<(EngineSystem, attome_db::DbPoo
     // deployment's own licence into `state.modules`, so a licence stored
     // before it was overwritten with the degraded one and every AI route
     // answered 403 `feature_hidden`.
-    let mut license = ModuleSet::core_only();
-    license.bits() = [u64::MAX; 4];
+    let license = ModuleSet::from_bits([u64::MAX; 4]);
     system.state().modules.store(Arc::new(license));
     Some((system, db))
 }

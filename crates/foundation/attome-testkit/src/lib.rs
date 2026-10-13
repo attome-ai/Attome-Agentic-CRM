@@ -533,6 +533,29 @@ pub fn point_config_at(config: &mut attome_config::AppConfig, url: &str) {
     config.database.dbname = parts.dbname;
 }
 
+/// One multi-threaded runtime shared by every test in a binary that uses
+/// [`run_shared`]: pools built in one test stay usable in the next, which a
+/// per-test `#[tokio::test]` runtime would kill on exit.
+pub fn shared_runtime() -> &'static tokio::runtime::Runtime {
+    static RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
+    RUNTIME.get_or_init(|| {
+        tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .enable_all()
+            .thread_name("attome-shared-test-rt")
+            .build()
+            .unwrap_or_else(|error| {
+                panic!("attome-testkit: build the shared test runtime: {error}")
+            })
+    })
+}
+
+/// Runs one test body on [`shared_runtime`]: `#[test] fn t() {
+/// attome_testkit::run_shared(async { ... }) }` in place of `#[tokio::test]`.
+pub fn run_shared<F: std::future::Future<Output = ()>>(body: F) {
+    shared_runtime().block_on(body)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

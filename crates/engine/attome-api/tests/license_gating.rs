@@ -101,9 +101,9 @@ impl EngineModel for TestPaidModel {
 }
 
 fn active_license_with(module_id: ModuleId) -> ModuleSet {
-    let mut license = ModuleSet::core_only();
-    license.bits()[module_id.word] |= module_id.mask;
-    license
+    let mut bits = [0u64; 4];
+    bits[module_id.word] |= module_id.mask;
+    ModuleSet::from_bits(bits)
 }
 
 fn test_config() -> AppConfig {

@@ -1462,6 +1462,10 @@ mod tests {
     /// BCF-10 — `preflight` must fail on a typo'd key, while boot only warns
     /// (an N-1 binary has to boot on an N config during a rollback, BCF-D4).
     #[test]
+    #[allow(
+        unsafe_code,
+        reason = "the test sets and clears CONFIG_FILE/APP_ENV it alone reads"
+    )]
     fn preflight_fails_on_unknown_key() {
         let document = serde_json::json!({
             "app": { "port": 0, "frontend_host": "localhost", "frontend_port": 4200 },

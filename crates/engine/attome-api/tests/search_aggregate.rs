@@ -180,8 +180,7 @@ async fn test_system() -> Option<(EngineSystem, attome_db::DbPool)> {
     );
     let state = EngineState::new(base);
 
-    let mut license = ModuleSet::core_only();
-    license.bits() = [u64::MAX; 4];
+    let license = ModuleSet::from_bits([u64::MAX; 4]);
     state.modules.store(Arc::new(license));
 
     let system = EngineSystem::builder(state)
