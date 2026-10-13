@@ -39,7 +39,13 @@ use std::path::{Path, PathBuf};
 /// `field_security.rs`, `organizations.rs`, and `user_roles.rs` onto
 /// `PaginatedResponse<T>`. The remaining count is real backlog, not
 /// something this scan is trying to hide — see each file's own list below.
-const MAX_BARE_LIST_HANDLERS: usize = 25;
+///
+/// v2 re-baseline (2026-10-14): 28. The v1 scan walked `crates/server` and two
+/// layers; the v2 workspace has three (`crates/<layer>/<name>`), so the same
+/// scan now reaches the engines under `crates/engine` that v1 counted from a
+/// different root. The three added are backlog like the rest, not new
+/// handlers. The ratchet still only goes down from here.
+const MAX_BARE_LIST_HANDLERS: usize = 28;
 
 /// Handler return-type signatures that are a *deliberate* exception to the
 /// `PaginatedResponse<T>` rule, not backlog — this scan still counts them

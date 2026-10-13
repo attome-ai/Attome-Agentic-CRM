@@ -13,7 +13,7 @@
         {
           "name": "Example Model",
           "description": "Placeholder scaffold linked to Example Provider. Replace provider_model_id with a real model id once inference.generation is configured, then set approval_status to approved -- until then, no action can invoke it (model_registry::require_approved_model refuses any provider_model_id that isn't approved).",
-          "provider_ref": "40b62547-d004-5140-971f-d8df162701da",
+          "provider_ref": "dac5d5e2-258b-5b68-944c-51fe4c9f4801",
           "provider_model_id": "not-configured",
           "approval_status": "pending",
           "model_type": "chat"

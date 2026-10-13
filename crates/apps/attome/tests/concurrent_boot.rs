@@ -101,7 +101,10 @@ fn test_config(db: &DbUrlParts) -> AppConfig {
             "database": {{
                 "host": "{host}", "port": {port}, "dbname": "{dbname}",
                 "user": "{user}", "password": "{password}", "schema": "{schema}",
-                "connection_number": 5, "timeout": 5.0, "migrate_on_boot": false
+                "connection_number": 5, "timeout": 5.0, "migrate_on_boot": false,
+                "runtime": {{ "user": "attome_runtime", "password": "boot-test-runtime-pw" }},
+                "migrator": {{ "user": "attome_migrator", "password": "boot-test-migrator-pw" }},
+                "readonly": {{ "user": "attome_readonly", "password": "boot-test-readonly-pw" }}
             }},
             "cache": {{
                 "host": "{redis_host}", "port": {redis_port}, "password": "",

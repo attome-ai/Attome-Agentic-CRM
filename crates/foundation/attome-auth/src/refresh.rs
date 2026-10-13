@@ -1,12 +1,12 @@
 //! Refresh-token flow backing `POST /api/v1/auth/refresh` (Plan 1.6a;
 //! rotating families + reuse detection added by P-session-refresh-hardening,
-//! D-129). Bearer token shape mirrors `xrm_core_apikey`'s public/secret split:
+//! D-129). Bearer token shape mirrors `api_key`'s public/secret split:
 //! `"{public_id}.{secret}"` — `public_id` is an indexed O(1) lookup handle,
 //! `secret` is verified against `refresh_token.secret_hash` (never
 //! stored/compared in plaintext).
 //!
 //! **Secret hashing (D-317, D-500).** That hash is a peppered HMAC-SHA256, the
-//! scheme D-112/D-118 built for `xrm_core_apikey.secret_hash` — reused here,
+//! scheme D-112/D-118 built for `api_key.secret_hash` — reused here,
 //! not reimplemented, because a refresh secret has the identical shape: 48
 //! random alphanumeric characters from `generate_secret`, platform-generated
 //! and never human-chosen, so a memory-hard KDF defends against nothing. User

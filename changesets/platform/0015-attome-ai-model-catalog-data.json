@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:10a08ae70dda6ac90c7e05a952a97ffaecba29bb10ad324e96934348ddff8840",
+  "checksum": "sha256:9dc4dea1bed5029cf0f5d0f8bae0308ead7a75a884f3805b4d1768e95b95f481",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-model-catalog-data.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -20,7 +20,7 @@
           "model_type": "chat",
           "name": "Example Model",
           "provider_model_id": "not-configured",
-          "provider_ref": "40b62547-d004-5140-971f-d8df162701da"
+          "provider_ref": "dac5d5e2-258b-5b68-944c-51fe4c9f4801"
         }
       },
       "op": "upsert_record",

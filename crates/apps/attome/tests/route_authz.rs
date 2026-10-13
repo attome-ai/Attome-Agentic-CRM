@@ -136,7 +136,7 @@ const DYNAMIC_ACTION: &str = "Dynamic";
 /// If this ever reaches 0, delete the constant and both halves of
 /// `bare_record_scoped_routes_ratchet_downward` rather than leaving a floor
 /// nothing can trip.
-const MAX_BARE_RECORD_SCOPED: usize = 7;
+const MAX_BARE_RECORD_SCOPED: usize = 5;
 
 /// Routes carrying neither an `Authorized<P>` policy nor a `require_*` call,
 /// each with the reason it is safe. Verified by reading every handler.
@@ -151,6 +151,36 @@ const MAX_BARE_RECORD_SCOPED: usize = 7;
 /// route silently pre-authorizes whatever later claims that path.
 const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
+        "POST",
+        "/api/v1/consents/capture",
+        "Public consent-form submission: no session exists for a data subject. Bypass-listed and rate-limited (consent_capture); the purpose key and subject are validated inside the handler.",
+    ),
+    (
+        "POST",
+        "/{keyword}/api/v1/records/{entity}/{id}/files/{field}/upload-session",
+        "Web-portal data route: authenticated by the portal session through data_caller, which resolves the portal's role grants for the entity; staff policies do not apply.",
+    ),
+    (
+        "POST",
+        "/{keyword}/api/v1/records/{entity}/{id}/files/{field}/upload-session/{session_id}/finalize",
+        "Web-portal data route: authenticated by the portal session through data_caller, which resolves the portal's role grants for the entity; staff policies do not apply.",
+    ),
+    (
+        "GET",
+        "/{keyword}/api/v1/records/{entity}/{id}/files/{field}/upload-session/{session_id}",
+        "Web-portal data route: authenticated by the portal session through data_caller, which resolves the portal's role grants for the entity; staff policies do not apply.",
+    ),
+    (
+        "GET",
+        "/{keyword}/api/v1/records/{entity}",
+        "Web-portal data route: authenticated by the portal session through data_caller, which resolves the portal's role grants for the entity; staff policies do not apply.",
+    ),
+    (
+        "GET",
+        "/{keyword}/api/v1/records/{entity}/{id}/files/{field}",
+        "Web-portal data route: authenticated by the portal session through data_caller, which resolves the portal's role grants for the entity; staff policies do not apply.",
+    ),
+    (
         "GET",
         "/api/v1/openapi.json",
         "Static, generated API description with no customer data in it. Still behind authn - it is not on the bypass list.",
@@ -159,6 +189,11 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "GET",
         "/health/dependencies",
         "Deliberately unauthenticated readiness/diagnostic probe - see system_health.rs's module doc. Reports dependency up/down only.",
+    ),
+    (
+        "GET",
+        "/health/ready",
+        "Readiness probe: reports whether this node can serve safely (database, cache, registry pre-warm). Public by design so a load balancer can poll it; it returns no data.",
     ),
     (
         "GET",
@@ -174,11 +209,6 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "GET",
         "/metrics",
         "Prometheus scrape, bound to a SEPARATE listener (observability.metrics_port), never merged into the public application router.",
-    ),
-    (
-        "GET",
-        "/",
-        "Test-only fixture router inside middleware::trace_context, asserting traceparent propagation. Never mounted by the real server.",
     ),
     (
         "POST",
@@ -199,26 +229,6 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "GET",
         "/api/v1/auth/google/config",
         "Public federated-login configuration read by the sign-in page before any session exists. Bypass-listed.",
-    ),
-    (
-        "POST",
-        "/api/v1/auth/logout",
-        "Must remain callable with an absent or already-expired cookie. Still CSRF-enforced via CSRF_ENFORCED_BYPASS_PATHS, unlike the others here.",
-    ),
-    (
-        "POST",
-        "/api/v1/auth/refresh",
-        "Driven by the refresh cookie, not a session cookie; rotation and reuse detection in attome_auth::refresh are the control here.",
-    ),
-    (
-        "POST",
-        "/api/v1/auth/reset-request",
-        "The caller has by definition forgotten their password and holds no session. Bypass-listed.",
-    ),
-    (
-        "POST",
-        "/api/v1/auth/reset-confirm",
-        "The emailed single-use token IS the authentication; it is validated server-side inside the handler. Bypass-listed.",
     ),
     (
         "POST",
@@ -371,7 +381,7 @@ fn source_roots() -> Vec<PathBuf> {
     // CARGO_MANIFEST_DIR is crates/server; the workspace root is two up.
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .ancestors()
-        .nth(2)
+        .nth(3)
         .expect("workspace root is two levels above crates/server")
         .to_path_buf();
     vec![root.join("crates")]
@@ -511,6 +521,36 @@ fn blank_comments(src: &str) -> String {
     out.into_iter().collect()
 }
 
+/// `text` with every `#[cfg(test)] mod name { .. }` block removed. Unit tests
+/// build throwaway routers (`Router::new().route("/r", ..)`) that are not the
+/// mounted surface; production code before or after such a block stays.
+fn without_test_modules(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    let marker: Vec<char> = "#[cfg(test)]".chars().collect();
+    let mut out = String::with_capacity(text.len());
+    let mut i = 0;
+    while i < chars.len() {
+        if chars[i..].starts_with(&marker) {
+            let after = skip_ws(&chars, i + marker.len());
+            let is_mod = chars[after..].starts_with(&['m', 'o', 'd', ' ']);
+            if is_mod
+                && let Some(open) =
+                    (after..chars.len()).find(|&j| chars[j] == '{' || chars[j] == ';')
+            {
+                if chars[open] == '{'
+                    && let Some(close) = matching(&chars, open, '{', '}')
+                {
+                    i = close + 1;
+                    continue;
+                }
+            }
+        }
+        out.push(chars[i]);
+        i += 1;
+    }
+    out
+}
+
 fn walk(dir: &Path, out: &mut Vec<(String, String)>) {
     let entries = std::fs::read_dir(dir).unwrap_or_else(|e| panic!("read_dir {dir:?}: {e}"));
     for entry in entries {
@@ -527,6 +567,7 @@ fn walk(dir: &Path, out: &mut Vec<(String, String)>) {
         } else if path.extension().is_some_and(|e| e == "rs") {
             let text =
                 std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {path:?}: {e}"));
+            let text = without_test_modules(&text);
             out.push((path.display().to_string(), text));
         }
     }
@@ -873,7 +914,16 @@ fn called_functions(chars: &[char]) -> Vec<String> {
         if is_ident_char(chars[i]) && (i == 0 || !is_ident_char(chars[i - 1])) {
             let (name, after) = read_ident(chars, i);
             let open = skip_ws(chars, after);
-            if open < chars.len() && chars[open] == '(' && !name.contains(':') {
+            // A method call (`db.execute(..)`) is not a call to the free
+            // function of the same name: following it would credit every
+            // handler that touches a sqlx `execute` with whatever the
+            // `execute` handler checks.
+            let is_method = chars[..i]
+                .iter()
+                .rev()
+                .find(|c| !c.is_whitespace())
+                .is_some_and(|c| *c == '.');
+            if open < chars.len() && chars[open] == '(' && !name.contains(':') && !is_method {
                 out.push(name.clone());
             }
             i = after.max(i + 1);

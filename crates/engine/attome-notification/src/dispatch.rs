@@ -10,7 +10,7 @@
 //!
 //! M51 Phase 1's `email` channel is the one exception, and only for a
 //! **direct** dispatch (`recipient_user_ref` set): once the recipient's
-//! address and `notification_email_suppression` status are known,
+//! address and `email_suppression` status are known,
 //! `create_dispatch` enqueues `attome_core::jobs::EngineJob::SendEmail` in the same
 //! transaction as the dispatch insert (apalis-on-Postgres makes this safe —
 //! same shape as `attome-auth`'s account-lifecycle producers) rather than
@@ -99,7 +99,7 @@ impl std::fmt::Debug for DispatchRequest {
 }
 
 /// True iff `email` (normalized the same way `create_dispatch` normalizes an
-/// address before checking it) is on `notification_email_suppression`.
+/// address before checking it) is on `email_suppression`.
 ///
 /// Extracted from `create_dispatch`'s own inline check — REVIEW-2026-09-02
 /// finding #4: M52 compose (`attome_api::communication`) enqueued
@@ -968,7 +968,7 @@ async fn send_email(
             from_override: None,
             // Not one of the three account-lifecycle producers -- this
             // path keeps its own independent attempts/status tracking
-            // (notification_dispatch) rather than a notification_email_delivery
+            // (notification_dispatch) rather than a email_delivery
             // row. It still gets the suppression/classification hardening
             // for free via send() itself.
             delivery_id: None,

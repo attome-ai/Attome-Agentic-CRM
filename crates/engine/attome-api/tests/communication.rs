@@ -406,7 +406,7 @@ fn retried_compose_with_the_same_idempotency_key_does_not_double_send() {
 
 /// REVIEW-2026-09-02 finding #4: compose's email loop used to enqueue
 /// `SendEmail` for every address unconditionally, never consulting
-/// `notification_email_suppression` — a bounced or withdrawn address
+/// `email_suppression` — a bounced or withdrawn address
 /// could be emailed through compose even though a direct M51 dispatch
 /// (`attome_notification::dispatch::create_dispatch`) already refuses it. This
 /// proves the fix: composing to a suppressed address records exactly one
@@ -419,7 +419,7 @@ fn composing_to_a_suppressed_address_is_not_sent() {
         let db = system.state().base.db.clone();
         let suppressed_email = format!("suppressed-{}@example.test", Uuid::now_v7());
         sqlx::query(
-        "INSERT INTO notification_email_suppression (email, reason) VALUES ($1, 'admin_manual')",
+        "INSERT INTO email_suppression (email, reason) VALUES ($1, 'admin_manual')",
     )
     .bind(&suppressed_email)
     .execute(&db)

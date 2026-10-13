@@ -251,7 +251,7 @@ async fn dispatch_with_email_channel_enqueues_exactly_one_send_email_job() {
     // A tracking row must exist and be linked back to this dispatch (M51
     // Phase 1's traceability FK).
     let (status, dispatch_ref): (String, Option<Uuid>) = sqlx::query_as(
-        "SELECT status, dispatch_ref FROM notification_email_delivery \
+        "SELECT status, dispatch_ref FROM email_delivery \
          WHERE recipient = $1 ORDER BY created_at DESC LIMIT 1",
     )
     .bind(attome_types::text::normalize_email(&email))

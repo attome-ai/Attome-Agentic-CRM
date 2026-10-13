@@ -162,8 +162,7 @@ async fn test_app(config: AppConfig) -> Option<(axum::Router, AppState)> {
     );
     let state = EngineState::new(base);
 
-    let system = EngineSystem::builder(state)
-        .register(attome_security::model::SecurityModel)
+    let system = attome::boot::register_engines(EngineSystem::builder(state))
         .build()
         .await
         .expect("build EngineSystem");

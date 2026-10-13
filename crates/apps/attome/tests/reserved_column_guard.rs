@@ -97,15 +97,33 @@ use Classification::{ExcludesSystemCols, Projection, ServerConstructed};
 /// `ExcludesSystemCols`, and the test will hold you to it.
 const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
     (
+        "crates/engine/attome-api/src/data_profile_admin.rs",
+        "profile_field",
+        Projection,
+        "COUNT/COUNT DISTINCT over one column: a read-only profile.",
+    ),
+    (
+        "crates/engine/attome-api/src/quality_score.rs",
+        "score_completeness",
+        Projection,
+        "COUNT of NULLs in a required column: a read-only score.",
+    ),
+    (
+        "crates/engine/attome-api/src/quality_score.rs",
+        "score_entity",
+        Projection,
+        "COUNT of NULLs in a required column: a read-only score.",
+    ),
+    (
         "crates/engine/attome-core/src/crud.rs",
-        "insert",
+        "append_only_insert",
         ServerConstructed,
         "attome-audit's `audit_header` row, built from a json! template in \
          attome-audit/src/service.rs — the only caller. Never a request body.",
     ),
     (
         "crates/engine/attome-core/src/crud.rs",
-        "insert_many",
+        "append_only_insert_many",
         ServerConstructed,
         "attome-audit's `audit_detail` per-field rows: same json! template \
          and the same single caller as `insert` above.",
@@ -118,6 +136,12 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
          directly — the precedent this guard generalises: a full-row NULL \
          wipe reaching the system columns would destroy the provenance that \
          restore and on_target_delete still read.",
+    ),
+    (
+        "crates/engine/attome-core/src/sql_ident.rs",
+        "select_columns_where",
+        Projection,
+        "The filtered SELECT/RETURNING projection builder, a sibling of          select_columns_filtered: reads only.",
     ),
     (
         "crates/engine/attome-core/src/sql_ident.rs",
@@ -145,12 +169,15 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
     ),
     (
         "crates/engine/attome-records/src/entity_crud/upsert.rs",
-        "upsert_record",
-        ExcludesSystemCols,
-        "The ON CONFLICT DO UPDATE branch — SEC-1's third site, found by hand \
-         after the first two were fixed. The INSERT half delegates to \
-         build_insert_binds; the SET clause is built here and needs its own \
-         exclusion.",
+        "upsert_record_inner",
+        Projection,
+        "Quotes the `match` key's columns for the conflict predicate and the unique          index. The create and update branches write through create_one/update_one,          i.e. build_insert_binds/build_update_binds below, which carry the system-column          exclusion; no SET clause is built here.",
+    ),
+    (
+        "crates/engine/attome-records/src/access_plan.rs",
+        "projection",
+        Projection,
+        "SELECT list of the columns the caller may read, built from the access plan.",
     ),
     (
         "crates/engine/attome-records/src/entity_mutation.rs",

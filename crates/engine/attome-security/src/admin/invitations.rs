@@ -178,7 +178,7 @@ pub(super) async fn create_invitation(
     crate::accounts::refuse_reserved_service_email(email)?;
 
     // P-email-hardening: transactional so the invitation token, its
-    // notification_email_delivery tracking row, and the durable job enqueue all
+    // email_delivery tracking row, and the durable job enqueue all
     // commit atomically — a crash between any two of them can no longer
     // leave a token minted with no tracked/queued email, or a tracking row
     // referencing a token that was never actually created.

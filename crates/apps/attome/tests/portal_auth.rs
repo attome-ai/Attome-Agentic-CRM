@@ -1501,7 +1501,7 @@ async fn a_recovery_code_signs_in_once_and_regeneration_voids_the_old_set() {
         "the recovery login is audited under its own name"
     );
     let mails: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM notification_email_delivery WHERE recipient = $1 AND subject LIKE '%recovery code was used'",
+        "SELECT COUNT(*) FROM email_delivery WHERE recipient = $1 AND subject LIKE '%recovery code was used'",
     )
     .bind(&email)
     .fetch_one(&fx.base.db)
@@ -3158,7 +3158,7 @@ async fn d780_an_email_is_added_only_once_its_link_is_opened() {
     .await;
     assert_eq!(r["outcome"], "sent", "{r}");
     let notices: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM notification_email_delivery \
+        "SELECT COUNT(*) FROM email_delivery \
          WHERE recipient = $1 AND subject LIKE '%someone tried to add this email'",
     )
     .bind(&email)

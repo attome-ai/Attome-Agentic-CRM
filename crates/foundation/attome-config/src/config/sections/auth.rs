@@ -63,7 +63,7 @@ pub struct AuthSection {
     /// locks itself out with no way to receive a verification link.
     #[serde(default)]
     pub require_verified_email: bool,
-    /// P-account-lifecycle — default `xrm_core_apikey.expires_at` for newly
+    /// P-account-lifecycle — default `api_key.expires_at` for newly
     /// created keys, in days. `None` (the default) means new keys still get
     /// no expiry unless the caller passes one explicitly — existing
     /// deployments are unaffected until an operator opts in.
@@ -100,7 +100,7 @@ pub struct AuthSection {
     #[serde(default = "default_mfa_challenge_max_attempts")]
     pub mfa_challenge_max_attempts: u32,
     /// P-api-key-hashing (D-112, revised by D-118) — HMAC-SHA256 pepper ring
-    /// for `xrm_core_apikey.secret_hash`, superseding per-request Argon2 for
+    /// for `api_key.secret_hash`, superseding per-request Argon2 for
     /// api-key secrets only (user passwords stay Argon2, `password.rs`,
     /// untouched). The *current* pepper — every newly issued key and every
     /// rehash-on-use conversion writes with this one. Unconditionally
@@ -114,7 +114,7 @@ pub struct AuthSection {
     #[serde(default)]
     pub apikey_hash_pepper: String,
     /// Id of `apikey_hash_pepper` above, stored inline in
-    /// `xrm_core_apikey.secret_hash` as `hmac256:v{id}$<hex>`. **The very first
+    /// `api_key.secret_hash` as `hmac256:v{id}$<hex>`. **The very first
     /// pepper a deployment ever sets must use id 0** — id 0 doubles as the
     /// fallback for the original, pre-rotation D-112 rollout's unversioned
     /// `hmac256$<hex>` rows (see `attome_auth::apikey_hash`'s module doc), so a
@@ -137,7 +137,7 @@ pub struct AuthSection {
     /// neither this list nor `apikey_hash_pepper_id` fails closed (same
     /// "wrong secret" outcome as any other verify failure) rather than
     /// erroring — do not remove an id from this list while any
-    /// `xrm_core_apikey` row might still reference it.
+    /// `api_key` row might still reference it.
     #[serde(default)]
     pub apikey_hash_previous_peppers: Vec<ApiKeyPepper>,
     /// P-registration-gating — one of `"public"`/`"invite"`/`"disabled"` (see

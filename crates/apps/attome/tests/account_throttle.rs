@@ -303,7 +303,7 @@ async fn body_bytes(res: axum::response::Response) -> Vec<u8> {
 }
 
 async fn queued_emails_to(state: &AppState, email: &str) -> i64 {
-    sqlx::query_scalar("SELECT COUNT(*) FROM notification_email_delivery WHERE recipient = $1")
+    sqlx::query_scalar("SELECT COUNT(*) FROM email_delivery WHERE recipient = $1")
         .bind(email)
         .fetch_one(&state.db)
         .await

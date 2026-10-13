@@ -509,7 +509,7 @@ pub async fn write_communication(
         for to in to_addresses {
             // REVIEW-2026-09-02 finding #4: this loop used to enqueue
             // `SendEmail` for every address unconditionally, never
-            // consulting `notification_email_suppression` — a bounced
+            // consulting `email_suppression` — a bounced
             // or withdrawn address could be emailed through compose even
             // though a direct M51 dispatch already refuses it
             // (`attome_notification::dispatch::create_dispatch`). Same

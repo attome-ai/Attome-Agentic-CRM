@@ -63,7 +63,7 @@ pub async fn issue(
 }
 
 /// Transactional form of [`issue`] (P-email-hardening) — callers that send an
-/// email must enqueue its durable job (and record its `xrm_notification_email_delivery`
+/// email must enqueue its durable job (and record its `email_delivery`
 /// tracking row) in this same transaction, same reasoning as
 /// `reset::request_in_tx`.
 pub async fn issue_in_tx(

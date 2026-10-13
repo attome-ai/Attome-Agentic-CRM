@@ -13,7 +13,7 @@
 //! (`attome-server/src/middleware/auth.rs`) on the cookie-session branch. The
 //! synthetic per-request `SessionClaims` the API-key branch builds is not
 //! epoch-checked — `resolve_api_key` already re-derives liveness from
-//! `xrm_core_apikey.is_active`/`user_account.is_active` fresh on every call,
+//! `api_key.is_active`/`user_account.is_active` fresh on every call,
 //! so there is no cached "is this token still good" state for an epoch to
 //! correct there.
 //!

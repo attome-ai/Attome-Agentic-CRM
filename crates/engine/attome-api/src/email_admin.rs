@@ -5,7 +5,7 @@
 //! entity), gated on `system.admin` the same way
 //! `s2s_admin`/`license_admin`/`rewrap_admin`/`jobs_admin` are.
 //!
-//! Never returns a delivery's rendered body — `notification_email_delivery` doesn't
+//! Never returns a delivery's rendered body — `email_delivery` doesn't
 //! store one at all (see migration `0062`'s header comment: verification/
 //! reset/invitation mail carries a live, single-use token URL). "Resend"
 //! therefore re-mints a fresh token per `kind` via that feature's own
@@ -340,7 +340,7 @@ async fn resend_delivery(
             MandatoryCategory::Credential,
             AuditOperation::Create,
             ctx.user_id,
-            "notification_email_delivery",
+            "email_delivery",
             Some(new_delivery_id),
         )
         .named("email.resend"),
@@ -457,7 +457,7 @@ async fn add_suppression(
                 MandatoryCategory::Configuration,
                 AuditOperation::Create,
                 ctx.user_id,
-                "notification_email_suppression",
+                "email_suppression",
                 None,
             )
             .named("email.suppression.add"),
@@ -498,7 +498,7 @@ async fn remove_suppression(
                 MandatoryCategory::Configuration,
                 AuditOperation::SoftDelete,
                 ctx.user_id,
-                "notification_email_suppression",
+                "email_suppression",
                 Some(id),
             )
             .named("email.suppression.remove"),

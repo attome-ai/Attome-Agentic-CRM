@@ -918,118 +918,7 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     attome_profiler::record("boot.seeds_pre_build", t_seeds_pre_build.elapsed());
 
     let t_system_build = std::time::Instant::now();
-    let system = EngineSystem::builder(state)
-        .register(attome_security::model::SecurityModel)
-        .register(attome_notification::NotificationModel)
-        .register(attome_workflow::WorkflowModel)
-        // Route-mounting/license-gating only (D-010) — attome-project's seed
-        // itself runs from inside `.build()` (`attome-api/src/system.rs`),
-        // not from a pre-build call here like the `attome-workflow` platform
-        // bundle above, because it needs `user_account` to already be
-        // registered — see `attome_project::seed`'s module doc.
-        .register(attome_project::ProjectModel)
-        // Same ordering note as attome-project just above: attome-service's seed
-        // also runs from inside `.build()`, after attome-project's own seed
-        // (its `linked_project_id` lookup needs `attome_project` registered).
-        .register(attome_service::ServiceModel)
-        // D-576 — web portals. Its bundle is applied inside `.build()`
-        // (`attome-api/src/system.rs`), after attome-security's seed.
-        .register(attome_portal::PortalModel)
-        // M20 Phase 1 (D-427) — same ordering note as attome-project/attome-service
-        // above: attome-grc's seed also runs from inside `.build()`, after
-        // attome-project's own (its additive `risk_ref` lookup onto
-        // `project_issue` needs that entity already registered).
-        .register(attome_grc::GrcModel)
-        // Same ordering note as attome-project/attome-service above: attome-dashboard's
-        // seed also runs from inside `.build()`.
-        .register(attome_dashboard::DashboardModel)
-        // D-480 (M26 R-14) — M27 (KPI & Metrics) split out of attome-dashboard
-        // into its own crate. Route-mounting/license-gating only (D-383):
-        // its two owned entities (`dashboard_metric_definition`/
-        // `dashboard_metric_target`) are provisioned by `attome_dashboard::seed::seed`
-        // (which calls `attome_metric::metric::seed` — see that file's own
-        // comment), already covered by the `attome-dashboard` registration
-        // immediately above, same shape as `ComplianceModel` below.
-        .register(attome_metric::MetricModel)
-        // Route-mounting/license-gating only (D-383) — attome-compliance's own
-        // seeds (`consent_seed`, `legal_matter_seed`) also run from inside
-        // `.build()`, same shape as attome-project/attome-service/attome-grc/
-        // attome-dashboard above; see `attome_compliance::model`'s own doc comment
-        // for why this model exists at all (closing a generic-CRUD licence
-        // hole on three provisioned entities, not mounting any routes).
-        .register(attome_compliance::model::ComplianceModel)
-        .register(attome_ai::ActionModel)
-        // M28 Phase 1 — `/decisions/{id}/execute`. A separate `EngineModel` from
-        // `attome_ai::ActionModel` (own routes, no owned entities) because
-        // it needs `MODULE_DASHBOARD`, not `MODULE_AI` — see
-        // `attome_ai::decision`'s module doc for why it lives in this crate
-        // at all instead of alongside `DashboardModel`.
-        .register(attome_ai::DecisionExecutionModel)
-        // M97 Phase 1 (D-461) — `/admin/outcomes` + `/admin/outcomes/summary`,
-        // the "proposals and their fates" read. A separate `EngineModel` from
-        // `ActionModel`, same reason `DecisionExecutionModel` is: it needs
-        // `MODULE_CORE`, not `MODULE_AI` — see `attome_ai::outcome`'s own
-        // module doc for why this surface must not be locked behind AI.
-        .register(attome_ai::OutcomeModel)
-        // M55 Document Management (D-486) — route-mounting/license-gating
-        // only. Mounts `documents_tree::routes()` and declares the
-        // `attome_document` entity; the generic `file`-field path stays in
-        // `attome-api`'s `core_routes()`, ungated, because it serves every
-        // entity with a `file` attribute (see `attome_document`'s crate doc).
-        // `attome_document` itself is provisioned by the platform bundle
-        // `attome-document.json` applied in `system.rs`, so there is no seed to
-        // call before `.build()`.
-        .register(attome_document::DocumentModel)
-        .register(attome_search::SearchModel)
-        .register(attome_report::ReportModel)
-        // M57 Phase 1 (Document Generation, D-463) — route-mounting/
-        // license-gating only; the `attome-docgen` platform bundle (above, pre-
-        // `.build()`) already registered `docgen_template`, same shape
-        // as `attome_workflow::WorkflowModel`/`attome_report::ReportModel`.
-        .register(attome_docgen::DocgenModel)
-        // M07 Phase 1 (D-405/D-406) — route-mounting/license-gating only,
-        // same shape as attome-project/attome-service/attome-dashboard above:
-        // `state_model`/`state_transition` are migration-
-        // owned infrastructure tables (0155_state_lifecycle.sql), not
-        // runtime-provisioned entities, so there is no seed to call before
-        // `.build()`.
-        .register(attome_state::StateModel)
-        // M59 Phase 1 — mounts the admin credential/test-connection routes
-        // and the inbound webhook route, both license-gated on
-        // MODULE_INTEGRATION (shared with attome-events/M62's admin surface,
-        // D-403's precedent for that bit covering more than one engine).
-        .register(attome_integration::IntegrationModel)
-        // M41 Phase 1 (Process Intelligence, D-462) — route-mounting/
-        // license-gating only, same shape as `attome_state::StateModel` above:
-        // `process_case_def`/`process_event`/
-        // `process_dfg_snapshot` are migration-owned infrastructure
-        // tables (0296/0297/0298), not runtime-provisioned entities, so
-        // there is no seed to call before `.build()`.
-        .register(attome_process::ProcessModel)
-        // M36 Phase 0+1 (Predictive Intelligence, D-473) — route-mounting/
-        // license-gating only, same shape as `attome_state::StateModel`/
-        // `attome_process::ProcessModel` above: `prediction_model`/
-        // `prediction` are migration-owned infrastructure tables
-        // (0420/0421), not runtime-provisioned entities, so there is no
-        // seed to call before `.build()`.
-        .register(attome_predict::PredictModel)
-        // Dashboard 10/10 Phase 6 — the Approvals `MyWorkProvider`, listed by
-        // `GET /api/v1/my-work/*`. Project/Decisions providers the plan also
-        // names are follow-up work, not yet implemented.
-        .register_my_work_provider(attome_api::my_work_approvals::ApprovalsMyWorkProvider)
-        // Dashboard 10/10 Phase 6 — the Service work `MyWorkProvider`.
-        .register_my_work_provider(attome_api::my_work_service::ServiceMyWorkProvider)
-        // Dashboard 10/10 Phase 6 — the Workflow `MyWorkProvider`
-        // (approval-wait case only; see its own module doc).
-        .register_my_work_provider(attome_api::my_work_workflow::WorkflowMyWorkProvider)
-        // Dashboard 10/10 Phase 6 — the Project work and Decisions
-        // providers (the plan's remaining two provider rows).
-        .register_my_work_provider(attome_api::my_work_project::ProjectMyWorkProvider)
-        .register_my_work_provider(attome_api::my_work_decisions::DecisionsMyWorkProvider)
-        // C5 (chatbot plan) — the one start path `attome-ai`'s `workflow.start`
-        // reaches through `attome_core::WorkflowStarter`, since attome-ai
-        // cannot depend on attome-workflow (the reverse edge exists).
-        .register_workflow_starter(attome_workflow::instance_admin::PublishedWorkflowStarter)
+    let system = register_engines(EngineSystem::builder(state))
         .build()
         .await?;
     attome_profiler::record("boot.system_build", t_system_build.elapsed());
@@ -1848,4 +1737,125 @@ mod tests {
         .expect("the drain task must still hold its sender");
         handle.await.expect("the drain task must not panic");
     }
+}
+
+/// Registers every engine model, `MyWork` provider and workflow starter the
+/// server mounts, in the order boot needs. One function so the integration
+/// tests that drive the composed router build exactly the engines `attome
+/// serve` does, instead of a hand-copied subset that leaves routes unmounted.
+pub fn register_engines(
+    builder: attome_api::EngineSystemBuilder,
+) -> attome_api::EngineSystemBuilder {
+    builder
+        .register(attome_security::model::SecurityModel)
+        .register(attome_notification::NotificationModel)
+        .register(attome_workflow::WorkflowModel)
+        // Route-mounting/license-gating only (D-010) — attome-project's seed
+        // itself runs from inside `.build()` (`attome-api/src/system.rs`),
+        // not from a pre-build call here like the `attome-workflow` platform
+        // bundle above, because it needs `user_account` to already be
+        // registered — see `attome_project::seed`'s module doc.
+        .register(attome_project::ProjectModel)
+        // Same ordering note as attome-project just above: attome-service's seed
+        // also runs from inside `.build()`, after attome-project's own seed
+        // (its `linked_project_id` lookup needs `attome_project` registered).
+        .register(attome_service::ServiceModel)
+        // D-576 — web portals. Its bundle is applied inside `.build()`
+        // (`attome-api/src/system.rs`), after attome-security's seed.
+        .register(attome_portal::PortalModel)
+        // M20 Phase 1 (D-427) — same ordering note as attome-project/attome-service
+        // above: attome-grc's seed also runs from inside `.build()`, after
+        // attome-project's own (its additive `risk_ref` lookup onto
+        // `project_issue` needs that entity already registered).
+        .register(attome_grc::GrcModel)
+        // Same ordering note as attome-project/attome-service above: attome-dashboard's
+        // seed also runs from inside `.build()`.
+        .register(attome_dashboard::DashboardModel)
+        // D-480 (M26 R-14) — M27 (KPI & Metrics) split out of attome-dashboard
+        // into its own crate. Route-mounting/license-gating only (D-383):
+        // its two owned entities (`dashboard_metric_definition`/
+        // `dashboard_metric_target`) are provisioned by `attome_dashboard::seed::seed`
+        // (which calls `attome_metric::metric::seed` — see that file's own
+        // comment), already covered by the `attome-dashboard` registration
+        // immediately above, same shape as `ComplianceModel` below.
+        .register(attome_metric::MetricModel)
+        // Route-mounting/license-gating only (D-383) — attome-compliance's own
+        // seeds (`consent_seed`, `legal_matter_seed`) also run from inside
+        // `.build()`, same shape as attome-project/attome-service/attome-grc/
+        // attome-dashboard above; see `attome_compliance::model`'s own doc comment
+        // for why this model exists at all (closing a generic-CRUD licence
+        // hole on three provisioned entities, not mounting any routes).
+        .register(attome_compliance::model::ComplianceModel)
+        .register(attome_ai::ActionModel)
+        // M28 Phase 1 — `/decisions/{id}/execute`. A separate `EngineModel` from
+        // `attome_ai::ActionModel` (own routes, no owned entities) because
+        // it needs `MODULE_DASHBOARD`, not `MODULE_AI` — see
+        // `attome_ai::decision`'s module doc for why it lives in this crate
+        // at all instead of alongside `DashboardModel`.
+        .register(attome_ai::DecisionExecutionModel)
+        // M97 Phase 1 (D-461) — `/admin/outcomes` + `/admin/outcomes/summary`,
+        // the "proposals and their fates" read. A separate `EngineModel` from
+        // `ActionModel`, same reason `DecisionExecutionModel` is: it needs
+        // `MODULE_CORE`, not `MODULE_AI` — see `attome_ai::outcome`'s own
+        // module doc for why this surface must not be locked behind AI.
+        .register(attome_ai::OutcomeModel)
+        // M55 Document Management (D-486) — route-mounting/license-gating
+        // only. Mounts `documents_tree::routes()` and declares the
+        // `attome_document` entity; the generic `file`-field path stays in
+        // `attome-api`'s `core_routes()`, ungated, because it serves every
+        // entity with a `file` attribute (see `attome_document`'s crate doc).
+        // `attome_document` itself is provisioned by the platform bundle
+        // `attome-document.json` applied in `system.rs`, so there is no seed to
+        // call before `.build()`.
+        .register(attome_document::DocumentModel)
+        .register(attome_search::SearchModel)
+        .register(attome_report::ReportModel)
+        // M57 Phase 1 (Document Generation, D-463) — route-mounting/
+        // license-gating only; the `attome-docgen` platform bundle (above, pre-
+        // `.build()`) already registered `docgen_template`, same shape
+        // as `attome_workflow::WorkflowModel`/`attome_report::ReportModel`.
+        .register(attome_docgen::DocgenModel)
+        // M07 Phase 1 (D-405/D-406) — route-mounting/license-gating only,
+        // same shape as attome-project/attome-service/attome-dashboard above:
+        // `state_model`/`state_transition` are migration-
+        // owned infrastructure tables (0155_state_lifecycle.sql), not
+        // runtime-provisioned entities, so there is no seed to call before
+        // `.build()`.
+        .register(attome_state::StateModel)
+        // M59 Phase 1 — mounts the admin credential/test-connection routes
+        // and the inbound webhook route, both license-gated on
+        // MODULE_INTEGRATION (shared with attome-events/M62's admin surface,
+        // D-403's precedent for that bit covering more than one engine).
+        .register(attome_integration::IntegrationModel)
+        // M41 Phase 1 (Process Intelligence, D-462) — route-mounting/
+        // license-gating only, same shape as `attome_state::StateModel` above:
+        // `process_case_def`/`process_event`/
+        // `process_dfg_snapshot` are migration-owned infrastructure
+        // tables (0296/0297/0298), not runtime-provisioned entities, so
+        // there is no seed to call before `.build()`.
+        .register(attome_process::ProcessModel)
+        // M36 Phase 0+1 (Predictive Intelligence, D-473) — route-mounting/
+        // license-gating only, same shape as `attome_state::StateModel`/
+        // `attome_process::ProcessModel` above: `prediction_model`/
+        // `prediction` are migration-owned infrastructure tables
+        // (0420/0421), not runtime-provisioned entities, so there is no
+        // seed to call before `.build()`.
+        .register(attome_predict::PredictModel)
+        // Dashboard 10/10 Phase 6 — the Approvals `MyWorkProvider`, listed by
+        // `GET /api/v1/my-work/*`. Project/Decisions providers the plan also
+        // names are follow-up work, not yet implemented.
+        .register_my_work_provider(attome_api::my_work_approvals::ApprovalsMyWorkProvider)
+        // Dashboard 10/10 Phase 6 — the Service work `MyWorkProvider`.
+        .register_my_work_provider(attome_api::my_work_service::ServiceMyWorkProvider)
+        // Dashboard 10/10 Phase 6 — the Workflow `MyWorkProvider`
+        // (approval-wait case only; see its own module doc).
+        .register_my_work_provider(attome_api::my_work_workflow::WorkflowMyWorkProvider)
+        // Dashboard 10/10 Phase 6 — the Project work and Decisions
+        // providers (the plan's remaining two provider rows).
+        .register_my_work_provider(attome_api::my_work_project::ProjectMyWorkProvider)
+        .register_my_work_provider(attome_api::my_work_decisions::DecisionsMyWorkProvider)
+        // C5 (chatbot plan) — the one start path `attome-ai`'s `workflow.start`
+        // reaches through `attome_core::WorkflowStarter`, since attome-ai
+        // cannot depend on attome-workflow (the reverse edge exists).
+        .register_workflow_starter(attome_workflow::instance_admin::PublishedWorkflowStarter)
 }

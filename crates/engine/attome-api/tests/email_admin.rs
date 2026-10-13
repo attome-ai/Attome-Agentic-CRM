@@ -380,7 +380,7 @@ fn list_and_get_delivery_round_trip_and_filter_by_recipient() {
         let body = body_json(resp).await;
         assert_eq!(body["kind"], "invitation");
         assert_eq!(body["status"], "queued");
-        // Never a body/token field -- notification_email_delivery doesn't store one.
+        // Never a body/token field -- email_delivery doesn't store one.
         assert!(body.get("text_body").is_none());
         assert!(body.get("html_body").is_none());
     })
@@ -532,7 +532,7 @@ fn resend_of_a_still_queued_delivery_is_a_409() {
         assert_eq!(body["error"], "conflict", "{body}");
 
         let rows: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM notification_email_delivery WHERE recipient = $1",
+            "SELECT COUNT(*) FROM email_delivery WHERE recipient = $1",
         )
         .bind(attome_types::text::normalize_email(&email))
         .fetch_one(&db)

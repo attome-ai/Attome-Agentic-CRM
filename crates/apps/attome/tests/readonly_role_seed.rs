@@ -90,7 +90,10 @@ fn test_config(readonly_password: Option<&str>) -> AppConfig {
         readonly_block = readonly_block,
     );
 
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 /// `None` when there is no throwaway database configured — unwrap with
@@ -108,7 +111,7 @@ async fn seed_grants_login_and_applies_the_configured_password() {
     let password = format!("readonly-seed-test-{}", uuid::Uuid::now_v7());
     let config = test_config(Some(&password));
 
-    let db = attome_db::create_pool(&config)
+    let db = attome_db::create_pool(&attome_testkit::bootstrap_identity(&config))
         .await
         .expect("connect DATABASE_URL");
     readonly_role_seed::seed(&db, &config)
@@ -197,7 +200,7 @@ fn connect_options_for_role(role: &str, password: &str) -> sqlx::postgres::PgCon
 async fn seed_no_ops_when_readonly_is_not_configured() {
     skip_if_no_db!(require_database_url());
     let config = test_config(None);
-    let db = attome_db::create_pool(&config)
+    let db = attome_db::create_pool(&attome_testkit::bootstrap_identity(&config))
         .await
         .expect("connect DATABASE_URL");
 
@@ -227,7 +230,7 @@ async fn attome_readonly_cannot_read_credential_or_security_tables() {
     let password = format!("readonly-containment-test-{}", uuid::Uuid::now_v7());
     let config = test_config(Some(&password));
 
-    let db = attome_db::create_pool(&config)
+    let db = attome_db::create_pool(&attome_testkit::bootstrap_identity(&config))
         .await
         .expect("connect DATABASE_URL");
     readonly_role_seed::seed(&db, &config)
@@ -297,7 +300,7 @@ async fn attome_readonly_cannot_execute_schema_local_functions() {
     let password = format!("readonly-fn-containment-test-{}", uuid::Uuid::now_v7());
     let config = test_config(Some(&password));
 
-    let db = attome_db::create_pool(&config)
+    let db = attome_db::create_pool(&attome_testkit::bootstrap_identity(&config))
         .await
         .expect("connect DATABASE_URL");
     readonly_role_seed::seed(&db, &config)
@@ -342,7 +345,7 @@ async fn attome_readonly_can_read_the_search_index() {
     let password = format!("readonly-search-index-test-{}", uuid::Uuid::now_v7());
     let config = test_config(Some(&password));
 
-    let db = attome_db::create_pool(&config)
+    let db = attome_db::create_pool(&attome_testkit::bootstrap_identity(&config))
         .await
         .expect("connect DATABASE_URL");
     readonly_role_seed::seed(&db, &config)

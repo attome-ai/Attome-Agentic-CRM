@@ -25,7 +25,7 @@
 //! SELECT
 //!   substring(secret_hash from '^hmac256:v(\d+)\$')::int AS pepper_id,
 //!   count(*) AS live_keys
-//! FROM xrm_core_apikey
+//! FROM api_key
 //! WHERE is_active = true AND (expires_at IS NULL OR expires_at > now())
 //! GROUP BY 1
 //! ORDER BY 1;

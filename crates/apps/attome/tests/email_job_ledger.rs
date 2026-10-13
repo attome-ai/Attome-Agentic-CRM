@@ -1,5 +1,5 @@
 //! BEM-9 (attome-email plan, Phase P3) — the `SendEmail` job arm against the
-//! delivery ledger: every relay outcome leaves `notification_email_delivery`
+//! delivery ledger: every relay outcome leaves `email_delivery`
 //! in the state §4.2's disposition table names, and only a transient outcome
 //! asks apalis for a retry. Drives `attome::jobs::run_send_email_job` directly
 //! (no apalis worker) against a scripted SMTP peer, the same raw-listener

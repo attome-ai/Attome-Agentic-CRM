@@ -63,35 +63,11 @@ const DEPLOYMENT_SCHEMA: &str = "attome_dev";
 /// state that one migration leaves for a later one to consume*, which silently
 /// stops working when a reconnect lands between them.
 ///
-/// That makes the choice of cut a real design decision rather than a detail,
-/// and it is why this runs **two** cuts:
-///
-/// - **`TARGETED_CUT` = 26.** `0026_audit_partitioning.sql` is the **only**
-///   migration in this repo that uses a session-scoped construct: it creates
-///   `pg_temp.partition_existing_table(...)` and calls it (6 `pg_temp`
-///   references in that one file). Cutting immediately after `0026` puts a
-///   reconnect at the one boundary where cross-migration session state exists
-///   — or would, if a future migration ever came to depend on that function
-///   surviving. Any cut later than 26 places all of it inside stage 1, where
-///   the boundary cannot test it. `0038_timestamptz_backfill.sql` is the only
-///   other file carrying session-scoped settings, and this cut puts it in
-///   stage 2.
-/// - **The median by migration count**, as an unbiased control. Deliberately
-///   *not* the numeric midpoint of the version range: `0109`–`0117` is a
-///   sanctioned-but-empty gap (D-379), so version-space and work-space
-///   midpoints differ. Computed at runtime, so it needs no maintenance as
-///   migrations accumulate.
-///
-/// **A green result proves path-independence at these two boundaries, not in
-/// general.** Testing every cut is `O(n)` full replays over 130+ migrations —
-/// hours, for a linear gain against a defect that, where it exists at all,
-/// is overwhelmingly likely to show at the boundary that carries the state.
-const TARGETED_CUT: i64 = 26;
-
-fn median_cut(versions: &[i64]) -> i64 {
-    versions[versions.len() / 2]
-}
-
+/// That makes the choice of cut a real design decision rather than a detail.
+/// v1 carried 130+ migrations, so it replayed two cuts. v2's baseline is ten
+/// migrations, so this replays a cut after **every** migration but the last:
+/// every boundary where a session-scoped construct could leave state for a
+/// later migration is then covered, with no maintained list of special files.
 #[tokio::test]
 async fn schema_does_not_depend_on_the_migration_path() {
     let single = attome_testkit::skip_if_no_db!(
@@ -104,11 +80,6 @@ async fn schema_does_not_depend_on_the_migration_path() {
         "the compiled migrator must carry the real migration set; got {}",
         versions.len()
     );
-    assert!(
-        versions.contains(&TARGETED_CUT),
-        "TARGETED_CUT {TARGETED_CUT} must name a real migration — if 0026 was ever renumbered, \
-         re-derive it from whichever migration now owns the pg_temp function"
-    );
 
     // The reference: one pass, exactly what every environment in this repo does.
     let single_pool = migration_pool(single.url()).await;
@@ -117,7 +88,7 @@ async fn schema_does_not_depend_on_the_migration_path() {
     let reference = schema_snapshot(&single_pool).await;
     let reference_versions = applied_versions(&single_pool).await;
 
-    for cut in [TARGETED_CUT, median_cut(&versions)] {
+    for &cut in &versions[..versions.len() - 1] {
         // What an upgrading customer deployment does: land on an older
         // release, reconnect, then take the rest later.
         let staged = attome_testkit::skip_if_no_db!(

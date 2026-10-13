@@ -551,6 +551,19 @@ pub fn point_config_at(config: &mut attome_config::AppConfig, url: &str) {
     config.database.dbname = parts.dbname;
 }
 
+/// `config` with its dedicated role credentials removed, so a pool built from
+/// it connects as the bootstrap identity in `database.user`. The role-seed
+/// tests need that: they create the `attome_runtime`/`attome_migrator` logins
+/// themselves, so connecting as those roles first would fail.
+#[cfg(feature = "app-config")]
+pub fn bootstrap_identity(config: &attome_config::AppConfig) -> attome_config::AppConfig {
+    let mut bootstrap = config.clone();
+    bootstrap.database.runtime = None;
+    bootstrap.database.migrator = None;
+    bootstrap.database.readonly = None;
+    bootstrap
+}
+
 /// `config` pointed at this process's throwaway database: the migrated one
 /// when `migrated` is true, the bare one otherwise. Left unchanged when no
 /// test database is configured, so the caller's skip path still works. A

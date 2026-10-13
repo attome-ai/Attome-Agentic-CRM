@@ -98,7 +98,10 @@ fn test_config(migrator_password: Option<&str>, runtime_password: Option<&str>) 
         runtime_block = runtime_block,
     );
 
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 /// `None` when there is no throwaway database configured — unwrap with
@@ -126,7 +129,7 @@ async fn seed_migrator_grants_login_and_can_run_ddl() {
     let password = format!("migrator-seed-test-{}", uuid::Uuid::now_v7());
     let config = test_config(Some(&password), None);
 
-    let db = attome_db::create_pool(&config)
+    let db = attome_db::create_pool(&attome_testkit::bootstrap_identity(&config))
         .await
         .expect("connect DATABASE_URL");
     db_role_seed::seed_migrator(&db, &config)
@@ -163,7 +166,7 @@ async fn seed_runtime_grants_login_can_dml_but_not_ddl() {
     let password = format!("runtime-seed-test-{}", uuid::Uuid::now_v7());
     let config = test_config(None, Some(&password));
 
-    let db = attome_db::create_pool(&config)
+    let db = attome_db::create_pool(&attome_testkit::bootstrap_identity(&config))
         .await
         .expect("connect DATABASE_URL");
     db_role_seed::seed_runtime(&db, &config)
@@ -208,7 +211,7 @@ async fn seed_runtime_cannot_mutate_append_only_audit_and_license_tables() {
     let password = format!("runtime-seed-test-{}", uuid::Uuid::now_v7());
     let config = test_config(None, Some(&password));
 
-    let db = attome_db::create_pool(&config)
+    let db = attome_db::create_pool(&attome_testkit::bootstrap_identity(&config))
         .await
         .expect("connect DATABASE_URL");
     db_role_seed::seed_runtime(&db, &config)
@@ -310,7 +313,7 @@ async fn seed_is_idempotent_and_rotation_supersedes_the_previous_password() {
 async fn seed_no_ops_when_migrator_and_runtime_are_not_configured() {
     skip_if_no_db!(require_database_url());
     let config = test_config(None, None);
-    let db = attome_db::create_pool(&config)
+    let db = attome_db::create_pool(&attome_testkit::bootstrap_identity(&config))
         .await
         .expect("connect DATABASE_URL");
 
