@@ -2,6 +2,7 @@
 resolver = "3"
 members = [
     "crates/foundation/attome-types",
+    "crates/foundation/attome-config",
     "crates/sdk/attome-sdk",
     "crates/apps/attome",
 ]
@@ -21,18 +22,22 @@ publish      = false
 
 [workspace.dependencies]
 # Internal crates
-attome-types = { path = "crates/foundation/attome-types" }
+attome-types  = { path = "crates/foundation/attome-types" }
+attome-config = { path = "crates/foundation/attome-config" }
 attome-sdk   = { path = "crates/sdk/attome-sdk" }
 
 # External crates
 axum          = { version = "0.8", features = ["macros"] }
 chrono        = { version = "0.4", features = ["serde"] }
+dotenvy       = "0.15"
 opentelemetry = "0.32"
 serde         = { version = "1", features = ["derive"] }
+serde_ignored = "0.1"
 serde_json    = "1"
 thiserror     = "2"
 tokio         = { version = "1", features = ["full"] }
 tracing       = "0.1"
+url           = "2"
 utoipa        = { version = "5", features = ["macros", "uuid", "chrono"] }
 uuid          = { version = "1", features = ["v4", "v5", "v7", "serde"] }
 

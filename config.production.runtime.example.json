@@ -1,0 +1,251 @@
+{
+  "_readme": "P-bootstrap-credential-scoping (D-204) — the `server`/`worker` counterpart to config.production.example.json. Identical to that file in every field EXCEPT database.password (see database._comment_password below): this variant never carries the schema-bootstrap/CREATE-ROLE-capable credential, because a long-lived server/worker container has no legitimate need to hold it once database.migrate_on_boot=false and database.migrator/.runtime are configured (D-148) — the dedicated one-shot `migrate` binary is the only process that uses config.production.example.json's full credential and DB_PASSWORD. Render THIS file (not config.production.example.json) as server/worker's config.json — docker-compose.yml's `x-config-volume-runtime` anchor mounts it as config.runtime.json. Copy to config.runtime.json, replace every \"__TODO__: ...\" placeholder with a real deployment value (identical values to whatever config.json's migrate-shaped render uses for the same fields — host, TLS paths, CORS origins, etc.), and set the referenced ${VAR}s in .env.runtime before boot. Same live-verification caveat as config.production.example.json: not booted against a live Postgres/Redis/S3 stack in the session that authored it — see document/DECISIONS.md's D-204 entry for what remains to be confirmed against real infrastructure. Config-surface reduction (item 23): pure internal tuning that no deployment ever varied was removed from the schema entirely and now lives as Rust constants — see config.example.json's _readme and document/DECISIONS.md for the full list.",
+  "_events_comment": "Omitted: production keeps the ships-dark defaults (webhooks_enabled false). Enabling webhooks needs events.webhook_signing_key — see config.example.json's events block.",
+  "_integration_comment": "Omitted: production keeps the ships-dark default (enabled false). Enabling it needs integration.credential_encryption_key — see config.example.json.",
+  "_inference_comment": "Omitted: no AI provider is configured by default. Add inference.provider_credential_key (64 hex, its own KeyRing, D-069) before saving any provider API key — see config.example.json.",
+  "_capability_comment": "Omitted: the D-344 route-level capability probes run with their built-in defaults; see config.example.json to tune them.",
+  "_change_feed_comment": "Omitted: the entity-change outbox keeps its default retention floor; see config.example.json.",
+  "_webchat_comment": "Omitted: the public web-chat assistant ships disabled (D-558); enabling it needs agent_definition_id and both caps — see config.example.json.",
+  "_fleet_comment": "Omitted on purpose: the developer fleet console (D-792) is refused on the production profile at boot; it exists only in a development build with the fleet-console feature.",
+  "_retention_comment": "Omitted: every retention window unset (keep forever), dry_run on, legal_hold off. Set windows deliberately per the deployment's retention policy — see config.example.json.",
+  "_webcrawl_comment": "Omitted: web crawling ships dark (D-365); see config.example.json.",
+  "_portal_comment": "Omitted: no external portal providers and captcha provider none (D-588). Production warns at boot when a portal runs without a CAPTCHA provider (BCF-17); see config.example.json.",
+  "_docgen_comment": "Omitted: document generation is off until docgen's render sidecar address is set (D-463); see config.example.json.",
+  "app": {
+    "port": 8080,
+    "server_host": "0.0.0.0",
+    "frontend_host": "__TODO__: real public hostname, e.g. app.customer.com",
+    "frontend_port": 443,
+    "_public_frontend_url_comment": "Required for a real deployment behind TLS — config.example.json's null fallback is dev-only (plain http).",
+    "public_frontend_url": "__TODO__: https://app.customer.com",
+    "max_body_size_bytes": 10485760,
+    "request_timeout_secs": 30,
+    "_shutdown_drain_delay_secs_comment": "BSV-S1 (BSV-D11) — readiness reads 503 this long before the listener stops, so the load balancer drains the node first. Keep the load balancer's probe interval x fall count below it, and the container stop_grace_period above it plus the shutdown deadline (docker-compose.yml sets 50 s).",
+    "shutdown_drain_delay_secs": 10,
+    "_deployment_profile_comment": "The opt-in this whole file exists to satisfy — see config.example.json's fuller comment. AppConfig::validate() refuses to boot unless every field below actually meets validate_production_profile's requirement; there is no per-field override.",
+    "deployment_profile": "production"
+  },
+  "database": {
+    "host": "__TODO__: production Postgres host (private network, not localhost)",
+    "port": 5555,
+    "dbname": "attomedb",
+    "_comment_user": "Inert in this file's shape (kept only because database.user is a required field, not Option) — server/worker never reach database_url()/direct_database_url() once migrator/runtime below are configured and migrate_on_boot is false, so this value is never actually used to open a connection. Left as \"postgres\" for documentation parity with config.production.example.json, not because anything reads it.",
+    "user": "postgres",
+    "_comment_password": "P-bootstrap-credential-scoping (D-204): deliberately `null`, NOT a DB_PASSWORD placeholder — this is the one field that differs from config.production.example.json. `server`/`worker` have no legitimate code path to the bootstrap identity once migrate_on_boot=false and migrator/runtime below are configured (validate() only requires this field when migrate_on_boot=true); rendering it null keeps DB_PASSWORD itself out of this container's .env and out of the AppConfig this process holds in memory for its whole lifetime, instead of merely leaving it unused. Do not reference the DB_PASSWORD env var here — that would put the bootstrap credential back in server/worker's environment, exactly what this file exists to avoid.",
+    "password": null,
+    "schema": "attome_prod",
+    "connection_number": 10,
+    "timeout": 5.0,
+    "_comment_readonly": "REQUIRED outside APP_ENV=debug regardless of deployment_profile (D-038) — create the role via migrations/0010_readonly_query_role.sql first.",
+    "readonly": {
+      "user": "attome_readonly",
+      "password": "${DB_READONLY_PASSWORD}",
+      "host": null,
+      "port": null
+    },
+    "_comment_migrator": "REQUIRED outside APP_ENV=debug regardless of deployment_profile (D-148) — create via migrations/0042_migrator_runtime_roles.sql; the `migrate` binary (config.production.example.json) applies the password at boot, this process only connects as this identity.",
+    "migrator": { "user": "attome_migrator", "password": "${DB_MIGRATOR_PASSWORD}" },
+    "_comment_runtime": "REQUIRED outside APP_ENV=debug regardless of deployment_profile (D-148) — same migration as migrator above; the `migrate` binary applies the password at boot, this process only connects as this identity.",
+    "runtime": { "user": "attome_runtime", "password": "${DB_RUNTIME_PASSWORD}" },
+    "direct_url": null,
+    "sticky_primary_ttl_secs": 5,
+    "_comment_ssl": "validate_production_profile requires exactly 'verify-full' plus a root cert — 'prefer'/'require'/'verify-ca' are all rejected once deployment_profile='production', not just discouraged.",
+    "ssl_mode": "verify-full",
+    "ssl_root_cert": "__TODO__: /etc/attome/tls/pg-ca.pem — CA cert for the Postgres endpoint above, deployment-provided (D-002)",
+    "disable_statement_cache": false,
+    "_comment_replica_max_lag_secs": "null (this template's default) means NO max-lag circuit breaker: AppState::route_if_lag_ok never trips, so a replica that falls behind and never catches up still serves stale reads once a pin's TTL (sticky_primary_ttl_secs above) elapses — P-read-your-writes-lsn §8's documented residual gap. Because database.readonly IS set in this template, boot.rs emits a startup warning about exactly this, every boot. That is deliberately a warning and not a boot failure: this shape was read_pool's only behaviour before the policy shipped, so failing closed would break every deployment that predates it. If you run a real replica, set this — e.g. matching your ReplicaLagHigh alert threshold — and keep it in step with config.production.example.json, since server and worker must agree on the routing policy.",
+    "replica_max_lag_secs": null,
+    "_comment_migrate_on_boot": "validate_production_profile requires false — schema bootstrap/migrations/role-password-seeding must run as the dedicated one-shot `migrate` binary (crates/server/src/bin/migrate.rs, using config.production.example.json's config.json, NOT this file) ahead of the deploy. Wired into docker-compose.yml as the \"migrate\" service; `server`/`worker` declare `depends_on: migrate: condition: service_completed_successfully` so they refuse to start if it hasn't succeeded. __TODO__/VERIFY: no Docker daemon reachable in this environment to live-verify the compose ordering (fresh-DB boot and an N-1 -> N upgrade) — same bar as this file's other live-verify TODOs.",
+    "migrate_on_boot": false
+  },
+  "cache": {
+    "host": "__TODO__: production Redis/Dragonfly host (private network, not localhost)",
+    "port": 6379,
+    "password": "${CACHE_PASSWORD}",
+    "db": 0,
+    "connection_pool_size": 32,
+    "timeout": 2000,
+    "metadata_registry_enabled": true,
+    "roles": {
+      "coordination": null
+    },
+    "_comment_tls": "validate_production_profile requires true (and true on cache.roles.coordination.tls_enabled too, if that role is set below) — false connects in plaintext.",
+    "tls_enabled": true,
+    "tls_ca_path": "__TODO__: /etc/attome/tls/redis-ca.pem, if the endpoint uses a private CA",
+    "sentinel": null
+  },
+  "storage": {
+    "s3_endpoint": "__TODO__: production S3-compatible endpoint, e.g. https://s3.customer-region.example.com",
+    "s3_public_endpoint": "",
+    "s3_region": "us-east-1",
+    "s3_access_key": "${S3_ACCESS_KEY}",
+    "s3_secret_key": "${S3_SECRET_KEY}",
+    "s3_bucket": "attomebase",
+    "_comment_verify_ssl": "validate_production_profile requires true — false accepts any certificate (or none), defeating TLS.",
+    "s3_verify_ssl": true,
+    "max_upload_size_bytes": 26214400,
+    "_comment_clamd": "Empty fails the async scan job closed (rejects, never promotes) rather than skipping malware scanning — set this to a real clamd endpoint for a production deployment instead of relying on fail-closed rejection of every upload.",
+    "clamd_address": "__TODO__: host:port of a clamd daemon"
+  },
+  "deployment": {
+    "_comment": "Optional; both null (the default) means no promoted-configuration pull is configured. See config.production.example.json's deployment block for the full explanation — identical here.",
+    "data_region": null,
+    "bundle_ref": null,
+    "bundle_signing_public_key": null
+  },
+  "auth": {
+    "jwt_secret": "${JWT_SECRET}",
+    "jwt_issuer": "attome",
+    "jwt_audience": "",
+    "apikey_hash_pepper": "${APIKEY_HASH_PEPPER}",
+    "apikey_hash_pepper_id": 0,
+    "apikey_hash_previous_peppers": [],
+    "_kdf_comment": "BAU-15a (attome-auth plan) — the password KDF. Every key is optional; the values shown are the defaults, chosen by the release-build benchmark in document_v2/docs/base/auth/kdf-benchmark-2026-09-14.md. hard_cap: max concurrent KDF operations whatever the host, 1..=64 (default 6). memory_budget_bytes: memory all concurrent KDF operations may share, from one operation's footprint (argon2_m_cost KiB + 1 MiB) up to 64 GiB (default 268435456 = 256 MiB). acquire_timeout_ms: how long a request waits for a KDF permit before a 503, 100..=30000 (default 2000). argon2_m_cost: Argon2id memory in KiB for new hashes, 19456 (OWASP floor)..=1048576 (default 19456). argon2_t_cost: Argon2id passes for new hashes, 2..=10 (default 2). password_min_length: minimum password length in characters, 12 (security contract I2)..=64 (default 12). Raising argon2_m_cost/argon2_t_cost upgrades each account's stored hash at its next successful password login (BAU-15b); raise them only with a new measurement. Boot fails on any value outside its range.",
+    "kdf": {
+      "hard_cap": 6,
+      "memory_budget_bytes": 268435456,
+      "acquire_timeout_ms": 2000,
+      "argon2_m_cost": 19456,
+      "argon2_t_cost": 2,
+      "password_min_length": 12
+    },
+    "access_token_expiry_mins": 15,
+    "refresh_token_expiry_days": 30,
+    "refresh_absolute_lifetime_days": 30,
+    "secure_cookies": true,
+    "oauth_google_client_id": "${OAUTH_GOOGLE_CLIENT_ID}",
+    "oauth_google_client_secret": "${OAUTH_GOOGLE_CLIENT_SECRET}",
+    "_comment_require_verified_email": "validate_production_profile only requires true when registration_mode='public' below (open self-registration with no email-ownership check otherwise lets anyone claim any email address). This template keeps registration_mode='disabled' (D-128's own secure default — an admin provisions users), so require_verified_email can stay false; flip both together if this deployment genuinely wants open sign-up, and set email.enabled=true first or every account locks itself out.",
+    "require_verified_email": false,
+    "_comment_apikey_default_expiry_days": "validate_production_profile requires this to be set (non-null) — null mints API keys with no expiry unless every caller remembers to pass one explicitly. 90 is a starting guess, not a measured value — tune per deployment's actual key-rotation policy.",
+    "apikey_default_expiry_days": 90,
+    "mfa_challenge_max_attempts": 5,
+    "registration_mode": "disabled"
+  },
+  "rate_limit": {
+    "anonymous_rpm": 60,
+    "authenticated_rpm": 600,
+    "_ipv6_bucket_prefix_comment": "BSV-B6 (BSV-F16) — both per-IP rate limiters bucket an IPv6 client by this prefix length, because one host usually controls a whole /64 and could otherwise rotate addresses to dodge the limit. IPv4 is always per address. 32..=128; 128 restores per-address buckets.",
+    "ipv6_bucket_prefix": 64,
+    "categories": {
+      "credential": { "anonymous_rpm": 10, "authenticated_rpm": 30 },
+      "mfa": { "anonymous_rpm": 10, "authenticated_rpm": 20 },
+      "password_reset": { "anonymous_rpm": 5, "authenticated_rpm": 5 },
+      "api": { "anonymous_rpm": 60, "authenticated_rpm": 600 },
+      "export": { "anonymous_rpm": 5, "authenticated_rpm": 30 },
+      "expensive_query": { "anonymous_rpm": 10, "authenticated_rpm": 600 },
+      "presign": { "anonymous_rpm": 5, "authenticated_rpm": 20 }
+    }
+  },
+  "observability": {
+    "metrics_port": 9464,
+    "trace_sampling_rate": 0.1,
+    "_comment_enable_distributed_tracing": "false is this template's default, but understand what staying false costs before accepting it: this flag is the ONLY thing that correlates a background job's logs back to the HTTP request that enqueued it. attome_jobs stamps every job envelope with a W3C traceparent taken from current_traceparent(), and that is always None while this is false, because a SpanContext with no tracing-opentelemetry layer behind it is never valid (attome-types/src/w3c_trace.rs). There is no request-id fallback in the envelope. Turning it on is a real operability gain, but it is NOT a one-line change: otlp_endpoint below becomes REQUIRED, and attome-config's validate() fails the boot without it ('required when observability.enable_distributed_tracing = true'). Enable both together or neither — flipping this alone gives you a deployment that will not start. Keep this file's value in step with config.production.example.json: the worker and server processes must agree, or a job's spans land in one trace and its producer's in none.",
+    "enable_distributed_tracing": false,
+    "_otlp_endpoint_comment": "P-observability-completion — required only when enable_distributed_tracing is true; a per-deployment OTLP collector (Tempo/Jaeger/OTel Collector), never a hosted/shared endpoint.",
+    "otlp_endpoint": null,
+    "profiler_enabled": false,
+    "worker_health_port": 9091
+  },
+  "email": {
+    "_comment_enabled": "true (this file's own default, found stale here as 'false' before this fix — P-staging-smoke, D-217): a production deployment sends password-reset/verification/invitation email for real, so the three __TODO__s below (smtp_host/smtp_user/smtp_from_address) must be filled in with a real SMTP relay's details. Setting this false instead makes those flows return 503 feature_unavailable rather than silently failing against a host that was never meant to be live — a real, supported choice for a deployment that genuinely has no email relay, just not this template's own default.",
+    "enabled": true,
+    "smtp_host": "__TODO__: production SMTP host",
+    "smtp_port": 587,
+    "smtp_user": "__TODO__",
+    "smtp_password": "${SMTP_PASSWORD}",
+    "smtp_from_address": "__TODO__: noreply@customer.com",
+    "smtp_from_name": "Attome",
+    "smtp_use_tls": true,
+    "tls_mode": "implicit"
+  },
+  "google_ai": {
+    "_comment": "Only api_key is a real per-deployment credential — base_url/default_model/timeout_seconds were removed (config-surface reduction item 23), no code reads them yet.",
+    "api_key": "${GOOGLE_AI_API_KEY}"
+  },
+  "s2s": {
+    "enabled": false,
+    "key_encryption_key": "${S2S_KEY_ENCRYPTION_KEY}",
+    "failure_alert_threshold": 100,
+    "access_log_enabled": true,
+    "seeded_clients": []
+  },
+  "security": {
+    "_trusted_proxy_cidrs_comment": "Set to nginx's private IP/CIDR — this deployment sits behind the TLS-edge nginx per D-099. Never add public/client networks.",
+    "trusted_proxy_cidrs": ["__TODO__: nginx's private IP/CIDR, e.g. 10.0.0.0/24"],
+    "csrf_enforce": true,
+    "_csp_enforce_comment": "validate_production_profile refuses false: the Content-Security-Policy is always enforced in production, never report-only.",
+    "csp_enforce": true,
+    "strict_privileged_authz": true,
+    "strict_revocation": true,
+    "_comment_hsts": "Strict-Transport-Security max-age in seconds. validate_production_profile requires at least 15552000 (180 days); 0 would omit the header. Kept in lockstep with deploy/frontend/nginx.conf's add_header.",
+    "hsts_max_age_secs": 31536000,
+    "_comment_hsts_include_subdomains": "Set true once EVERY subdomain of this deployment's origin is confirmed TLS-only. A browser caches this for the full max-age, so enabling it over a still-plain-http sibling subdomain makes that subdomain unreachable for up to a year with no server-side undo.",
+    "hsts_include_subdomains": false
+  },
+  "cors": {
+    "_comment": "Not boot-enforced by validate_production_profile (only app.public_frontend_url's own doc calls this out) — but an http origin here defeats every TLS control set elsewhere in this file. Set to the real https frontend origin(s).",
+    "allowed_origins": ["__TODO__: https://app.customer.com"]
+  },
+  "audit": {
+    "_comment_signing_enabled": "validate_production_profile requires true — hash-chaining alone (config.example.json's default) is tamper-evident but not non-repudiable; signing_enabled adds the Ed25519 signature this profile requires.",
+    "signing_enabled": true,
+    "signing_key_id": "audit-key-1",
+    "signing_private_key": "${AUDIT_SIGNING_PRIVATE_KEY}",
+    "_comment_ingest_capture": "Leave false when chainer_enabled is true — the cutover path captures into xrm_audit_ingest unconditionally, so this flag is redundant there. It exists for the stage-1 shadow mode only (sync headers PLUS ingest rows), which audit_chainer now refuses to run against because it would double-write a second header row per event.",
+    "ingest_capture_enabled": false,
+    "_comment_cutover": "validate_production_profile requires true (D-316). The alternative — the pre-P1.13 synchronous append — serializes EVERY mutation in the deployment on one per-organization advisory lock (D-002: one organization, one chain) and fails ordinary concurrent saves with 409 Conflict once its 200 x 5ms retry budget runs out, with each retry sleeping inside an open transaction holding a pooled connection (engineering review 2026-08-10, F-001/F-010). OPERATIONAL PRECONDITION: the `audit_chainer` process must be deployed alongside `server` — docker-compose.yml's `audit_chainer` service does this. Without it, events are still durably captured in xrm_audit_ingest (nothing is lost) but no xrm_audit_header row is ever produced; watch the audit_chainer_lag_seconds gauge / AuditChainerLagHigh alert, and note that ingest_backlog_threshold will eventually 503 mutating requests rather than let the backlog grow unbounded. To roll back to the sync path: set this false, then run audit_chainer once more to drain what was captured while it was on.",
+    "chainer_enabled": true,
+    "_comment_erasure": "validate_production_profile requires audit encryption ON with a real key (D-540 ruling 1, audit plan item 2.7): erasure_enabled true (or omitted, which means on wherever a key is set) and erasure_key_encryption_key holding at least one dedicated 64-hex-char key (openssl rand -hex 32; never reuse s2s.key_encryption_key or auth.mfa_encryption_key, and never config.example.json's public development key, which boot refuses). Hash v2 (D-539) digests audit values as stored; encryption makes that ciphertext, so destroying a record's key erases its values without breaking verification. UPGRADE OBLIGATION: an existing production deployment must provision AUDIT_ERASURE_KEY_ENCRYPTION_KEY BEFORE upgrading to a release carrying D-540, or boot refuses. Rows written before the upgrade stay plaintext; nothing re-encrypts history, and the v1 cutover checkpoint covers it as stored.",
+    "erasure_enabled": true,
+    "erasure_key_encryption_key": "${AUDIT_ERASURE_KEY_ENCRYPTION_KEY}",
+    "_comment_anchoring": "Same as config.production.example.json: external anchoring off until a dedicated WORM anchor_store is provisioned (D-352); validate_production_profile refuses external_anchoring_enabled=true with no anchor_store.",
+    "external_anchoring_enabled": false,
+    "anchor_store": null
+  },
+  "notification": {
+    "_email_from_comment": "email_from omitted: null falls back to email.smtp_from_address. Set it only for a distinct notification sender.",
+    "recipient_retention_days": 0
+  },
+  "jobs": {
+    "worker_concurrency": 10,
+    "batch_worker_concurrency": 3,
+    "history_retention_days": 30,
+    "dead_letter_retention_days": 90,
+    "_comment_run_worker_inline": "validate_production_profile requires false — the job worker must run as its own scaled `worker` binary/process (crates/server/src/bin/worker.rs), not inline in the HTTP-serving process. Deploy it via docker-compose.yml's `worker` service, which is gated behind the \"worker-split\" Compose profile — release.yml's release notes now run `docker compose --profile worker-split up -d` (not a plain `up -d`, which would silently start `server` with jobs.run_worker_inline=false and no worker at all). __TODO__/VERIFY: no Docker daemon reachable in this environment to live-boot the profile and confirm `worker` actually starts and drains a job — same bar as this file's other live-verify TODOs.",
+    "run_worker_inline": false
+  },
+  "query": {
+    "validate_on_execute": false,
+    "cursor_default": true
+  },
+  "oidc": {
+    "providers": {}
+  },
+  "idempotency": {
+    "_comment_mandatory_operations": "D-207: crates/server/src/boot.rs's validate_operation_registries requires every entry of xrm_server::bulk::MANDATORY_TIER_OPERATIONS to be listed here once app.deployment_profile='production' — not a __TODO__, this is a fixed, non-secret list an operator does not need to edit. If a future engine registers a new mandatory-tier route, it must be added to both MANDATORY_TIER_OPERATIONS and this array, or production boot will fail closed naming exactly what's missing.",
+    "mandatory_operations": [
+      "POST /api/v1/{entity}/bulk",
+      "POST /api/v1/{entity}/staged-import/{id}/approve"
+    ],
+    "durable_retention_hours": 24
+  },
+  "approval": {
+    "_comment_required_actions": "P-four-eyes-approval follow-up: crates/server/src/boot.rs's validate_operation_registries requires every entry of xrm_server::PRODUCTION_MANDATORY_ACTIONS to be listed here once app.deployment_profile='production' — not a __TODO__, this is a fixed, non-secret list an operator does not need to edit. Other action_types in xrm_server::KNOWN_ACTION_TYPES (security.rewrap, security.role_grant, query.publish, schema.attribute_change, schema.entity_delete) may be added here too per a deployment's own dual-control/compliance posture, but are not required by this floor — only actions whose execution is irreversible are. D-268 added dsr.fulfill_erasure to the mandatory floor (same underlying D-107 destroy_key call as security.erasure) — an existing production deployment upgrading past D-268 must add it here or boot fails closed. The same obligation applies to schema.entity_hard_delete: DELETE /admin/entities/{id}?hard=true issues a real DROP TABLE and deletes the metadata rows outright, which no follow-up action reverses — its soft sibling schema.entity_delete stays opt-in because flipping is_active back undoes it. P-environment-promotion adds metadata.bundle_apply (the only sanctioned way configuration metadata reaches a production deployment, so a second person is required by default) and metadata.break_glass (temporarily suspends the production authoring gate — the action that switches the control off sits behind the same dual control as the writes it unlocks); a production deployment upgrading past that plan must add both here or boot fails closed. Solution 7 (D-785) adds metadata.changeset_apply on the same grounds as metadata.bundle_apply (applying changesets is the other sanctioned way metadata reaches production); a deployment upgrading past it must add it here or boot fails closed.",
+    "required_actions": [
+      "security.erasure",
+      "retention.approve_action",
+      "dsr.fulfill_erasure",
+      "schema.entity_hard_delete",
+      "metadata.bundle_apply",
+      "metadata.break_glass",
+      "metadata.changeset_apply"
+    ],
+    "ttl_hours": 72
+  },
+  "metadata": {
+    "_release_report_comment": "release_report omitted: the release report notifies system.admin holders by default; set metadata.release_report.notify_roles to name other roles (see config.example.json).",
+    "_comment": "Solution 7 (D-785) — changeset recording; mode null = the profile default (auto on production). See config.example.json.",
+    "changesets": { "mode": null, "auto_layer": "project" }
+  }
+}

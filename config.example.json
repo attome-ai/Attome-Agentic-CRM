@@ -1,0 +1,315 @@
+{
+  "_readme": "Copy to config.debug.json (used when APP_ENV=debug) or config.json (default). Both are gitignored — never commit real secrets. ${VAR} placeholders are expanded from the environment/.env at load (see crates/base/attome-config/src/config/loader.rs). Values below match the standard dev stack: Postgres 18 @5555, DragonflyDB @6379, RustFS @9000. There are exactly two supported deployment profiles: THIS file/config.debug.json ('development') and config.production.example.json ('production', see AppConfig::validate_production_profile) — both are plain config-file-sourced secrets now; D-549 removed HashiCorp Vault (D-331's 'Vault-mandatory production' ruling) entirely, so rotating any secret is a config edit plus a restart on either profile. Config-surface reduction (item 23): pure internal tuning that no deployment ever varied (poll intervals, batch sizes, token TTLs, the upload-pipeline's quarantine prefix/content-type allowlist, dead HTTP-server knobs this axum-based stack never read) was removed from this schema entirely and now lives as Rust constants next to whatever consumes it — see document/DECISIONS.md's entry for the full list.",
+  "app": {
+    "port": 7865,
+    "server_host": "0.0.0.0",
+    "frontend_host": "localhost",
+    "frontend_port": 4199,
+    "_public_frontend_url_comment": "P-account-lifecycle — set this to the real public URL (https://...) for any deployment behind TLS; null falls back to http://{frontend_host}:{frontend_port}, dev-only.",
+    "public_frontend_url": null,
+    "max_body_size_bytes": 10485760,
+    "request_timeout_secs": 30,
+    "_shutdown_drain_delay_secs_comment": "BSV-S1/D-499 — on SIGTERM the process flips readiness to 503 first (so the load balancer stops sending new requests) and only then stops the listener, after this delay. 0 keeps the pre-drain behaviour; the whole shutdown deadline is extended by this value, so the budget is unchanged.",
+    "shutdown_drain_delay_secs": 10,
+    "_deployment_profile_comment": "P-production-safety-profile — 'development' (default, this template) leaves every other flag in this file at whatever value it has below; validate() checks each one individually but never refuses an unsafe *combination*. Set 'production' only once every check validate_production_profile() runs has actually been satisfied — it is a hard boot error otherwise, with no per-flag override: database.ssl_mode must be 'verify-full' (+ ssl_root_cert), cache.tls_enabled must be true (and cache.roles.coordination.tls_enabled too, if that role is set), storage.s3_verify_ssl must be true, auth.apikey_default_expiry_days must be set, auth.require_verified_email must be true whenever auth.registration_mode is 'public', audit.signing_enabled must be true, database.migrate_on_boot must be false (run the `migrate` binary as its own deploy step instead), and jobs.run_worker_inline must be false (run the `worker` binary as its own process instead). See config.production.example.json for a fully-compliant starting point.",
+    "deployment_profile": "development"
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5555,
+    "dbname": "attomedb",
+    "user": "attome",
+    "_comment_password": "P-bootstrap-credential-scoping (D-204) — this dev template's `migrate_on_boot: true` default (below) means THIS process needs it, so `${DB_PASSWORD}` here is correct for local dev. A production deployment that splits migrate/server/worker into separate processes (migrate_on_boot=false) should render server/worker's config.json WITHOUT this field at all (null) — see config.production.example.json vs config.production.runtime.example.json.",
+    "password": "${DB_PASSWORD}",
+    "schema": "attome_dev",
+    "connection_number": 10,
+    "timeout": 5.0,
+    "_comment_pools": "Optional per-pool sizes (attome-db hardening Phase 2.3): add \"pools\": {\"runtime\": {\"max_connections\": N}} (keys: runtime, readonly, readonly_primary, migrator) to size one pool; any pool left out uses connection_number above. Each value must be 1..=1000. The direct (schema bootstrap) pool is fixed at 2.",
+    "readonly": {
+      "_comment": "SELECT-only role for /api/v1/query/execute (P1.1e) — create it via migrations/0010_readonly_query_role.sql before setting this. REQUIRED outside debug (D-038): omitting this block is a boot error; only APP_ENV=debug falls back to the primary pool with a WARN.",
+      "user": "attome_readonly",
+      "password": "${DB_READONLY_PASSWORD}",
+      "_comment_host_port": "D-155 — optional override so this pool can point at a genuinely different endpoint than database.host/.port above (e.g. deploy/ha/haproxy.cfg's postgres_replicas listener on port 5433, or a pgbouncer attome_ro alias). null (default, omit both or leave null) falls back to database.host/.port — today's behavior for any deployment that hasn't adopted the Patroni tier.",
+      "host": null,
+      "port": null
+    },
+    "_comment_migrator": "P-db-privilege-separation / D-117, fail-closed follow-up D-148 — DDL-capable role for entity/attribute schema provisioning (xrm-entity::provision) and boot-time entity seeding, created NOLOGIN by migrations/0042_migrator_runtime_roles.sql; server::db_role_seed::seed_migrator applies the password below at boot. REQUIRED outside debug (D-148 supersedes D-117's original opt-in framing, same posture as readonly below/D-038): omitting this block is now a boot error; only APP_ENV=debug falls back to the primary bootstrap identity with a WARN. Not yet verified against a live Postgres instance (see 0042's header comment).",
+    "migrator": null,
+    "_comment_migrator_example": "{ \"user\": \"attome_migrator\", \"password\": \"${DB_MIGRATOR_PASSWORD}\" }",
+    "_comment_runtime": "P-db-privilege-separation / D-117, fail-closed follow-up D-148 — DML-only role for ordinary request-time record CRUD (attome_db::create_pool), created NOLOGIN by the same migration; server::db_role_seed::seed_runtime applies the password below at boot. REQUIRED outside debug, same posture as migrator above — omitting this block is now a boot error; only APP_ENV=debug falls back with a WARN. Only meaningful once `migrator` above is also set: `user`/`password` remain the schema-bootstrap identity forever (see AppConfig::direct_database_url's doc comment), so a deployment needs a working migrator identity before it can safely narrow `user`'s own runtime role to DML-only application traffic elsewhere.",
+    "runtime": null,
+    "_comment_runtime_example": "{ \"user\": \"attome_runtime\", \"password\": \"${DB_RUNTIME_PASSWORD}\" }",
+    "_comment_direct_url": "P1.12 — only needed once host/port above point at a pgbouncer (see pgbouncer/ + docker-compose.replica.yml). Schema bootstrap + migrations always use this URL directly, bypassing pgbouncer, since sqlx::migrate!'s session-level advisory lock is unsafe under transaction pooling. Omit entirely for a deployment with no pgbouncer — falls back to the primary host/port above. Deliberately never affected by migrator/runtime above (D-117) — see AppConfig::direct_database_url.",
+    "direct_url": null,
+    "_comment_sticky_primary": "P1.12 — seconds a per-user Redis pin (attome-db:rw-pin:{user_id}) keeps reads on the primary after that user's last write, so a replica's replication lag can't show a user a stale view of their own write. Irrelevant unless database.readonly (above) is also set. Widen if a deployment's replica routinely lags past this.",
+    "sticky_primary_ttl_secs": 5,
+    "_comment_ssl": "P-datastore-tls — 'prefer' (default) is byte-for-byte today's behavior. Set 'verify-full' + ssl_root_cert for any deployment whose Postgres link crosses a host boundary (see docker-compose.replica.yml's precondition notes). validate() fails fast if verify-ca/verify-full is set with no ssl_root_cert.",
+    "ssl_mode": "prefer",
+    "ssl_root_cert": null,
+    "_comment_disable_statement_cache": "P1.12/D-106 — set true only when host/port above point at a transaction-pooling pgbouncer that lacks protocol-level prepared-statement support (pgbouncer < 1.21). D-171: this platform's own reference recipe (pgbouncer/Dockerfile) no longer needs this — it runs a maintained >=1.21 image — but the flag stays as a general escape hatch for any deployment fronted by an older pooler. Without it, sqlx's default prepared-statement cache can hit 'prepared statement already exists'/'does not exist' once such a pooler hands a logical connection a different real backend between transactions. false (default) is today's behavior, unchanged for any direct-to-Postgres deployment.",
+    "disable_statement_cache": false,
+    "_comment_replica_max_lag_secs": "P-ha-failover-hardening item (e), D-125, consumed by P-read-your-writes-lsn — AppState::route_if_lag_ok's circuit breaker: when the always-on watermark poller's cached lag_seconds exceeds this, every routed read falls back to the primary regardless of any user's pin, and pin_write_with_lsn's effective TTL widens to max(sticky_primary_ttl_secs, this value). null (default) means no max-lag policy — no circuit breaker, TTL formula reduces to sticky_primary_ttl_secs alone.",
+    "replica_max_lag_secs": null,
+    "_comment_migrate_on_boot": "P-db-privilege-separation follow-up (D-148) — true (default) keeps schema bootstrap + migrations + role-password seeding running inline on every `server` boot, today's behavior unchanged. Set false only once a deployment's release pipeline runs the dedicated `migrate` binary (crates/server/src/bin/migrate.rs) as its own one-shot step before starting/rolling `server` — see that binary's module doc. Do not set false without wiring that step first. `server` does still verify schema currency either way: boot.rs derives `expected_schema_version` from the compiled `MIGRATOR` unconditionally (independent of this flag) and `/health/ready` fails closed — 503 `not_ready`, `\"schema\": false` — until the connected database's applied migrations reach at least that version, or if the migration row is dirty. That is a readiness gate, not a boot error: with this false and no `migrate` step wired, `server` starts but never joins rotation.",
+    "migrate_on_boot": true
+  },
+  "cache": {
+    "host": "localhost",
+    "port": 6379,
+    "password": "",
+    "db": 0,
+    "connection_pool_size": 32,
+    "timeout": 2000,
+    "metadata_registry_enabled": true,
+    "_comment_roles": "P1.15 — omit 'roles' (or leave 'coordination' unset, as here) to keep every role on the base block above — today's single-instance behavior, unaffected. Set roles.coordination to isolate the S2S nonce/rate-limit + general HTTP rate-limit + idempotency keys onto their own Redis/Dragonfly instance once load demands it. P-redis-security-ha: once you DO set this, point it at the HIGHER of the two HA tiers available to this deployment (managed Redis-compatible service, or Redis+Sentinel self-host) even if the base cache block above stays on a lighter tier — this role fails closed on an outage (D-027) where the base block only degrades. See /scale-out-ops's \"Coordination role gets the higher tier\" posture addendum and docker-compose.redis-ha.yml's redis-coordination service.",
+    "roles": {
+      "coordination": null
+    },
+    "_comment_tls": "P-datastore-tls — false (default) is byte-for-byte today's behavior (redis:// scheme). Set true + tls_ca_path for any deployment whose Redis/Dragonfly link crosses a host boundary (see docker-compose.redis-ha.yml's precondition notes) — server-auth TLS only, never pass --tls_ca_cert_file server-side unless you actually want mutual TLS (out of scope, D-006).",
+    "tls_enabled": false,
+    "tls_ca_path": null,
+    "_comment_sentinel": "P-redis-sentinel-config — null (default) is byte-for-byte today's centralized-connection behavior. Set to close the self-host HA tier's Sentinel app-wiring gap (scale-out-ops skill): host/port above then name the FIRST known sentinel node (not the Redis server itself), and this block names the rest. Example: { \"service_name\": \"mymaster\", \"nodes\": [{\"host\": \"sentinel2.internal\", \"port\": 26379}, {\"host\": \"sentinel3.internal\", \"port\": 26379}], \"sentinel_username\": null, \"sentinel_password\": null }. sentinel_username/sentinel_password authenticate to the sentinel nodes themselves (separate from the password field above, which still authenticates to the resolved master) — leave both null when sentinel requires no auth of its own, the common case. This applies equally under cache.roles.coordination for a role-specific sentinel endpoint.",
+    "sentinel": null
+  },
+  "storage": {
+    "s3_endpoint": "http://127.0.0.1:9000",
+    "s3_public_endpoint": "",
+    "s3_region": "us-east-1",
+    "s3_access_key": "${S3_ACCESS_KEY}",
+    "s3_secret_key": "${S3_SECRET_KEY}",
+    "s3_bucket": "attomebase",
+    "s3_verify_ssl": false,
+    "_upload_pipeline_comment": "P-file-upload-pipeline — both keys below are optional; a deployment that omits this block entirely gets these same defaults. The content-type allowlist and quarantine-key prefix are fixed (xrm_document::files::{ALLOWED_CONTENT_TYPES,QUARANTINE_PREFIX}, config-surface reduction item 23) — no deployment ever varied either one. An empty clamd_address means no scanner configured, which fails the async scan job closed (rejects, never promotes) rather than skipping malware scanning silently — this is deliberate (D-144), so a real deployment must still explicitly stand up clamd and set this field itself; see config.production.example.json, which keeps the empty default. This dev-facing template instead points at the docker-compose.yml `clamav` profile's sidecar (`docker compose --profile dev --profile clamav up -d`) so a fresh local clone gets working file-upload scanning out of the box — if that container isn't running, the scan job fails closed exactly as before, and the 24-hour sweep now rejects a session whose scan never completes rather than leaving it in 'scanning' indefinitely.",
+    "max_upload_size_bytes": 26214400,
+    "clamd_address": "localhost:3310"
+  },
+  "deployment": {
+    "_comment": "P-data-protection-governance §4 (data_region) / P-environment-promotion §5 step 23 (bundle_ref, bundle_signing_public_key). Every field here is optional and null (omitted) is 'not configured' — this whole block can be left out of a deployment's config entirely, today's behavior. bundle_ref is a file path or https:// URL to a signed attome-bundle/v1 artifact ({\"bundle\": <canonical bundle JSON>, \"signature\": \"<base64 Ed25519 over the canonical bundle bytes>\"}), fetched and verified at boot (first boot only — a deployment that already has a succeeded bundle-apply plan never re-pulls automatically) and on POST /api/v1/admin/metadata/sync; this is the F273 vertical-seed loader generalized. bundle_signing_public_key is the base64 Ed25519 public key that artifact's signature must verify against — set BOTH or NEITHER (AppConfig::validate is a boot error on one without the other); an unverified bundle is never applied.",
+    "data_region": null,
+    "bundle_ref": null,
+    "bundle_signing_public_key": null
+  },
+  "auth": {
+    "_jwt_secret_comment": "P-key-rotation-and-jwt (a)/(c) — a bare string (as below) is wrapped into a single-key ring. To rotate without a fleet-wide forced logout, switch to the full shape instead: {\"keys\": {\"v1\": \"<old secret>\", \"v2\": \"<new secret>\"}, \"active_key_id\": \"v2\"} — new tokens are signed+kid-tagged under v2; a v1-signed token already in a browser still verifies as long as v1 stays in `keys`. Drop v1 once every outstanding token has expired past `access_token_expiry_mins`.",
+    "jwt_secret": "${JWT_SECRET}",
+    "jwt_issuer": "attome",
+    "_jwt_audience_comment": "P-key-rotation-and-jwt (c) — empty (the default) means \"same as jwt_issuer\". Set only if this deployment wants a distinct aud claim.",
+    "jwt_audience": "",
+    "_apikey_hash_pepper_comment": "P-api-key-hashing (D-112, revised by D-118/D-119, extended by D-120) — HMAC-SHA256 pepper ring for core_apikey.secret_hash, superseding per-request Argon2 for api-key secrets only. apikey_hash_pepper is unconditionally required (validate() fails boot without it, D-038) — generate with: openssl rand -hex 32. apikey_hash_pepper_id defaults to 0 if omitted — the FIRST pepper a deployment ever sets must be id 0 (see attome-auth::apikey_hash module doc). apikey_hash_write_versioned defaults to true (BAU-12d): new keys are written in the versioned hmac256:v{id}$ format. Set it false only while a rolling upgrade still has nodes on a release that cannot read that format (mixed-version rollout hazard, D-118/D-119). Rotate by adding the outgoing pepper to apikey_hash_previous_peppers (as {id, secret}) before changing apikey_hash_pepper/apikey_hash_pepper_id to a new id — existing keys verify-and-converge on next use, nothing is bricked. D-120: every configured pepper id (current + previous) is boot-checked against core_apikey_pepper_registry — reusing an id with a different secret is now a BOOT ERROR, not just a documented rule to remember. Removing an id from apikey_hash_previous_peppers while a live API key still references it is also a BOOT ERROR (BAU-12d): boot counts live keys per pepper id and names the missing one.",
+    "apikey_hash_pepper": "${APIKEY_HASH_PEPPER}",
+    "apikey_hash_pepper_id": 0,
+    "apikey_hash_previous_peppers": [],
+    "_kdf_comment": "BAU-15a (attome-auth plan) — the password KDF. Every key is optional; the values shown are the defaults, chosen by the release-build benchmark in document_v2/docs/base/auth/kdf-benchmark-2026-09-14.md. hard_cap: max concurrent KDF operations whatever the host, 1..=64 (default 6). memory_budget_bytes: memory all concurrent KDF operations may share, from one operation's footprint (argon2_m_cost KiB + 1 MiB) up to 64 GiB (default 268435456 = 256 MiB). acquire_timeout_ms: how long a request waits for a KDF permit before a 503, 100..=30000 (default 2000). argon2_m_cost: Argon2id memory in KiB for new hashes, 19456 (OWASP floor)..=1048576 (default 19456). argon2_t_cost: Argon2id passes for new hashes, 2..=10 (default 2). password_min_length: minimum password length in characters, 12 (security contract I2)..=64 (default 12). Raising argon2_m_cost/argon2_t_cost upgrades each account's stored hash at its next successful password login (BAU-15b); raise them only with a new measurement. Boot fails on any value outside its range.",
+    "kdf": {
+      "hard_cap": 6,
+      "memory_budget_bytes": 268435456,
+      "acquire_timeout_ms": 2000,
+      "argon2_m_cost": 19456,
+      "argon2_t_cost": 2,
+      "password_min_length": 12
+    },
+    "access_token_expiry_mins": 15,
+    "refresh_token_expiry_days": 30,
+    "_refresh_absolute_lifetime_days_comment": "D-504 — a refresh family ends this many days after the sign-in that started it, however often it rotates. refresh_token_expiry_days above is the separate idle window for a single token. Default 30; validate() requires 1 to 365.",
+    "refresh_absolute_lifetime_days": 30,
+    "_secure_cookies_comment": "Plan 1.6a — HttpOnly+SameSite=Strict apply unconditionally; Secure defaults true. Only config.debug.json sets this false, for plain-http local dev.",
+    "secure_cookies": true,
+    "oauth_google_client_id": "${OAUTH_GOOGLE_CLIENT_ID}",
+    "oauth_google_client_secret": "${OAUTH_GOOGLE_CLIENT_SECRET}",
+    "_require_verified_email_comment": "P-account-lifecycle — must stay false unless email.enabled is also true (validate() fails fast otherwise).",
+    "require_verified_email": false,
+    "apikey_default_expiry_days": null,
+    "_mfa_challenge_max_attempts_comment": "P-mfa-challenge-hardening — per-challenge attempt ceiling enforced atomically against the mfa:pending:{jti} Redis marker; reaching it kills the pending token outright. Independent of rate_limit.categories.mfa's general per-IP/user budget. Default 5.",
+    "mfa_challenge_max_attempts": 5,
+    "_registration_mode_comment": "P-registration-gating (D-128) — one of public/invite/disabled. Default (and this example) is disabled: a single-tenant deployment provisions its users, it doesn't accept anonymous sign-ups. Bootstrap the first admin with `server --bootstrap-admin <email>` instead of flipping this to public. Set to public only for a deployment that genuinely wants open self-registration; set to invite once Phase 2's admin-minted invitation endpoints are in use.",
+    "registration_mode": "disabled"
+  },
+  "rate_limit": {
+    "anonymous_rpm": 60,
+    "authenticated_rpm": 600,
+    "_ipv6_bucket_prefix_comment": "BSV-B6 (BSV-F16) — both per-IP rate limiters bucket an IPv6 client by this prefix length, because one host usually controls a whole /64 and could otherwise rotate addresses to dodge the limit. IPv4 is always per address. 32..=128; 128 restores per-address buckets.",
+    "ipv6_bucket_prefix": 64,
+    "_categories_comment": "P-rate-limit-atomicity (D-145) — one independent {anonymous_rpm, authenticated_rpm} budget per category, keyed by (method, route-template) via attome-server/middleware/rate_limit.rs's RATE_LIMIT_CATEGORIES table. A category not listed here falls back to the top-level anonymous_rpm/authenticated_rpm above. Unmeasured starting guesses, same caveat as pre_auth_rpm elsewhere in this file — tune per deployment.",
+    "categories": {
+      "credential": { "anonymous_rpm": 10, "authenticated_rpm": 30 },
+      "mfa": { "anonymous_rpm": 10, "authenticated_rpm": 20 },
+      "password_reset": { "anonymous_rpm": 5, "authenticated_rpm": 5 },
+      "api": { "anonymous_rpm": 60, "authenticated_rpm": 600 },
+      "export": { "anonymous_rpm": 5, "authenticated_rpm": 30 },
+      "expensive_query": { "anonymous_rpm": 10, "authenticated_rpm": 600 },
+      "presign": { "anonymous_rpm": 5, "authenticated_rpm": 20 }
+    }
+  },
+  "observability": {
+    "_metrics_port_comment": "P-observability-bcdr Track A — 0 disables the /metrics listener entirely (no port bound, no HTTP-metrics layer applied); any other value binds a second, internal-only listener there. Never proxy this through nginx.",
+    "metrics_port": 9464,
+    "trace_sampling_rate": 1.0,
+    "enable_distributed_tracing": false,
+    "_otlp_endpoint_comment": "P-observability-completion — required only when enable_distributed_tracing is true; a per-deployment OTLP collector (Tempo/Jaeger/OTel Collector), never a hosted/shared endpoint.",
+    "otlp_endpoint": null,
+    "_profiler_enabled_comment": "attome-profiler — Angular 'Profiler' admin dashboard (live call count/avg/min/max per measure!() probe, Redis-aggregated cluster-wide). false (default) is byte-identical to before this feature: no middleware layer applied, no Redis writes. Costs exactly one EVAL per request when on (one Lua script admits the probe names, bumps every stat hash, slides each TTL and pushes the capped trace ring); keys are attome-profiler:* with a 7 d stats / 24 h trace sliding TTL and at most 2,000 distinct probe names cluster-wide. Read at GET /api/v1/admin/profiler/{stats,trace}, reset with the audited DELETE /api/v1/admin/profiler/stats (system.admin).",
+    "profiler_enabled": false,
+    "_worker_health_port_comment": "P-worker-process-split follow-up — read only by the standalone `worker` binary (crates/server/src/bin/worker.rs), never by `server`/main.rs. Unlike metrics_port, this is on by default (0 disables it) since a split-worker deployment needs a real DB/Redis readiness probe out of the box, not just process liveness (pgrep).",
+    "worker_health_port": 9091
+  },
+  "email": {
+    "enabled": false,
+    "smtp_host": "localhost",
+    "smtp_port": 1025,
+    "smtp_user": "",
+    "smtp_password": "${SMTP_PASSWORD}",
+    "smtp_from_address": "noreply@attome.local",
+    "smtp_from_name": "Attome Dev",
+    "_smtp_tls_mode_comment": "BEM-5 - tls_mode is the current spelling: implicit (SMTPS, the default), starttls (upgrade on 587), or none (development only - the loader refuses none outside APP_ENV=debug, and refuses plaintext credentials to a non-loopback host in any mode). smtp_use_tls is deprecated but still parsed when tls_mode is absent: true selects implicit, false selects none.",
+    "smtp_use_tls": false,
+    "tls_mode": "implicit"
+  },
+  "google_ai": {
+    "_comment": "Scaffolded ahead of a not-yet-wired Gemini integration — only api_key is a real per-deployment credential. base_url/default_model/timeout_seconds were removed (config-surface reduction item 23): no code reads them yet, so they'd be dead schema until an engine crate actually calls the API.",
+    "api_key": "${GOOGLE_AI_API_KEY}"
+  },
+  "s2s": {
+    "enabled": false,
+    "_key_encryption_key_comment": "P-key-rotation-and-jwt (a) — a bare string still works (wrapped into a single-key ring); see auth.jwt_secret's comment above for the full ring shape a rotation uses.",
+    "key_encryption_key": "${S2S_KEY_ENCRYPTION_KEY}",
+    "failure_alert_threshold": 100,
+    "access_log_enabled": true,
+    "_seeded_clients_comment": "D-771 — S2S clients reconciled at every boot so a machine caller keeps one credential across database resets. Each entry: {client_id, name, service_user_email (an existing user, never created), public_id ('s2s_...'), secret (a ${VAR} holding 64 hex chars, openssl rand -hex 32), slot ('primary'), permissions: [{entity, read, create, update, delete, export, bulk}]}. A blank or unset secret leaves the entry inert. Changing the secret in .env rotates the key on the next boot; an operator's disable or revoke is never undone.",
+    "seeded_clients": []
+  },
+  "events": {
+    "_comment": "M62 Phase 1 — Event Bus subscriptions/webhook delivery. Ships dark: webhook-kind subscriptions are rejected at creation while webhooks_enabled is false.",
+    "webhooks_enabled": false,
+    "_webhook_signing_key_comment": "Deliberately a separate KeyRing from s2s.key_encryption_key (D-069 trust-domain separation) — a bare string still works, same ring shape as auth.jwt_secret.",
+    "webhook_signing_key": "${EVENTS_WEBHOOK_SIGNING_KEY}",
+    "dispatch_batch_size": 200
+  },
+  "integration": {
+    "_comment": "M59 Phase 1 — Integration & Connectors. Ships dark: creating an xrm_integration_system row is refused while enabled is false.",
+    "enabled": false,
+    "_credential_encryption_key_comment": "Deliberately a separate KeyRing from s2s.key_encryption_key/events.webhook_signing_key (D-069 trust-domain separation) — a bare string still works, same ring shape as auth.jwt_secret.",
+    "credential_encryption_key": "${INTEGRATION_CREDENTIAL_ENCRYPTION_KEY}",
+    "request_timeout_secs": 15
+  },
+  "inference": {
+    "_embedding_prefix_comment": "BIN-D6 — optional embedding_query_prefix / embedding_document_prefix (strings, default unset). Unset, the prefix is chosen from the embedding model's name (e.g. Qwen3-Embedding gets its instruction prefix); set either one — even to \"\" — and it wins over that heuristic for queries or documents respectively.",
+    "_provider_credential_key_comment": "Encrypts AI provider API keys at rest (xrm_ai_provider_credential). Its own KeyRing (D-069). 64 hex chars (openssl rand -hex 32). Leave unset only if no provider needs an API key; saving a key is refused without it.",
+    "provider_credential_key": "${AI_PROVIDER_CREDENTIAL_KEY}"
+  },
+  "security": {
+    "_trusted_proxy_cidrs_comment": "Only immediate TCP peers in this explicit allow-list may supply X-Forwarded-For. Leave empty for direct deployments. Behind nginx/load-balancers, set only their private IP/CIDR(s); never add public/client networks.",
+    "trusted_proxy_cidrs": [],
+    "_csrf_enforce_comment": "P-cookie-csrf-hardening. Kill switch for the Origin/Fetch-Metadata CSRF middleware — default true. Set false only to diagnose a proxy stripping Origin/Sec-Fetch-* headers (log-only, never a silent bypass); never leave off in a real deployment.",
+    "csrf_enforce": true,
+    "_strict_privileged_authz_comment": "P-authz-revocation-epoch (D-116). Always-on synchronous epoch re-check ahead of the privileged/admin-gated route bundles — default true. Set false only as an emergency rollback for those bundles; remove the override once burned in.",
+    "strict_privileged_authz": true,
+    "_strict_revocation_comment": "P-record-level-security item (b), same mechanism as strict_privileged_authz above. Every SecurityContext resolve pays a fail-closed epoch re-check, so revocations take effect on the next request. Keep true for enterprise deployments; only a local development configuration should explicitly set false.",
+    "strict_revocation": true,
+    "_csp_enforce_comment": "P-frontend-hardening §4(d)/step 7. Default true sends a real, enforcing Content-Security-Policy (kept in lockstep with deploy/frontend/nginx.conf's policy — see attome_server::middleware::security_headers). Set false (Content-Security-Policy-Report-Only) as the FIRST rollout step in any real deployment and watch for violations during a burn-in period before flipping this to true — unlike csrf_enforce, there was no prior CSP for this to be safely additive against.",
+    "csp_enforce": true,
+    "_hsts_comment": "Strict-Transport-Security max-age in seconds; 0 omits the header. Default one year, and safe in local dev — RFC 6797 §8.1 has browsers ignore HSTS received over plain http. validate_production_profile requires at least 15552000 (180 days). Kept in lockstep with deploy/frontend/nginx.conf's own add_header — see attome_server::middleware::security_headers.",
+    "hsts_max_age_secs": 31536000,
+    "_hsts_include_subdomains_comment": "Opt-in, unlike the other security toggles here: a browser caches this for the full max-age, so enabling it while any sibling subdomain is still plain http makes that subdomain unreachable for up to a year with no server-side undo. Turn on once every subdomain of this origin is confirmed TLS-only.",
+    "hsts_include_subdomains": false
+  },
+  "cors": {
+    "_comment": "Explicit CORS allow-list (Plan 1.3a). Omit/leave empty to fall back to http://{app.frontend_host}:{app.frontend_port} — dev-only, always http. Any deployment behind TLS MUST set this explicitly.",
+    "allowed_origins": ["http://localhost:4199"]
+  },
+  "audit": {
+    "_comment": "P1.5b — signs every audit chain event with a dedicated Ed25519 keypair, separate from the xrm-license verification key. Leave signing_enabled false to skip (hash-chaining alone still applies).",
+    "signing_enabled": false,
+    "signing_key_id": "audit-key-1",
+    "signing_private_key": "${AUDIT_SIGNING_PRIVATE_KEY}",
+    "_comment_ingest": "P1.13 stage 1 — also durably captures every audit event into core_audit_ingest, alongside (not instead of) the synchronous chain append. Additive only until the async chainer (a later P1.13 stage) exists to drain it.",
+    "ingest_capture_enabled": false,
+    "_comment_cutover": "P1.13 stage 4 — the cutover. The CODE default is now true (D-316) and validate_production_profile requires true; this dev template deliberately opts back out. false: the synchronous path writes xrm_audit_header/detail/snapshot inline, inside the mutation's own transaction, holding a per-organization advisory lock — fine for a single-writer dev box, and it means `cargo run` alone produces a complete audit chain with no second process to start. true: write() only captures into xrm_audit_ingest and the audit_chainer process becomes solely responsible for header rows, which is why it must actually be running (`cargo run --manifest-path crates/server/Cargo.toml --bin audit_chainer`). Anything with more than one concurrent writer wants true — see the field's doc comment in attome-config for the F-001/F-010 evidence. The chainer's own poll cadence/batch size (500ms / 500 events) are fixed constants next to its poll loop (crates/server/src/bin/audit_chainer.rs) — config-surface reduction item 23, never varied per-deployment.",
+    "chainer_enabled": false,
+    "_comment_erasure": "D-107 crypto-shredding, made the default posture by D-540. erasure_enabled is optional: omitted means ON wherever erasure_key_encryption_key is non-empty (D-540 G2-2 a); an explicit false keeps it off (allowed outside production only); an explicit true without a key is a boot error. When on, every audit write encrypts field values and snapshots under a per-record data-encryption key before storage, and destroying that key erases them without breaking chain verification. The key below is the PUBLIC DEVELOPMENT KEY (xrm attome_config DEVELOPMENT_ERASURE_KEY): it exists so development runs the same encrypted audit path as production, it protects nothing, and app.deployment_profile = \"production\" refuses it. Production requires encryption on with a dedicated key (64 hex chars, openssl rand -hex 32 — never reuse s2s.key_encryption_key or auth.mfa_encryption_key); see config.production.example.json. P-key-rotation-and-jwt (a): a bare string still works (single-key ring); see auth.jwt_secret's comment above for the full ring shape.",
+    "erasure_key_encryption_key": "dec0de00dec0de00dec0de00dec0de00dec0de00dec0de00dec0de00dec0de00",
+    "_comment_anchoring": "P-audit-chain-hardening item (b) — NOT YET LOAD-BEARING (code written but unverified against a live deployment, see document_v2/docs/detailed-plans/P-audit-chain-hardening.md). false (default): every sealed batch's Merkle root stays only in core_audit_chain_batch. true: xrm_audit::anchor also writes each batch's root to the deployment's own configured object store (attome_storage/RustFS), best-effort — an anchoring failure never blocks the chainer's own commit.",
+    "external_anchoring_enabled": false,
+    "_comment_anchor_store": "D-352 (TODO-004 / finding H-1) — the dedicated WORM bucket and APPEND-ONLY credential anchors are written with. null (default, this dev template) falls back to the general storage bucket above using this application's own credential, which necessarily holds DeleteObject (quarantine cleanup, record erasure) — so anchors are deletable by whoever holds it, including whoever compromised this deployment. That fallback is fine for local dev and is a WARN at startup; validate_production_profile REFUSES to boot a production deployment with external_anchoring_enabled=true and no anchor_store. object_lock_mode ('compliance'|'governance'|'none') and object_lock_retention_days DECLARE what you provisioned on the bucket out-of-band — nothing in the application verifies them, because no S3 API this codebase speaks reports a bucket's Object Lock configuration. Prove them with scripts/audit/anchor-immutability-drill.sh. s3_bucket must differ from storage.s3_bucket (rejected in every profile) and s3_access_key must differ from storage.s3_access_key (rejected in production). Provisioning walkthrough: deploy/audit-anchor/README.md.",
+    "anchor_store": null,
+    "_comment_ingest_backlog": "P-audit-chain-hardening item (e) — ingest circuit breaker. Once core_audit_ingest's undrained backlog (summed across organizations) crosses ingest_backlog_threshold, new mutating requests get a 503 until it drains back down; reads are unaffected. 100000 matches the originating review's own suggested number, not a measured one. The re-check poll interval (30s, clamped to a 5s floor) is a fixed constant next to its spawn call (crates/server/src/main.rs) — config-surface reduction item 23, never varied per-deployment.",
+    "ingest_backlog_threshold": 100000
+  },
+  "capability": {
+    "_comment": "D-344 (amends D-167) — route-level durability gating. NOT a readiness gate: /health/ready still watches only DB/Redis/registry/schema, so a down relay or object store never evicts a healthy node from load-balancer rotation. What this adds is a 503 capability_unavailable on the handful of routes that cannot durably complete without a specific dependency (upload-session create/finalize -> object storage; bulk/staged-import enqueue and approve -> the batch job worker; email resend -> the relay AND the fast worker). Current state is reported under `capabilities` on GET /health/dependencies, and as the capability_state gauge / capability_rejections_total counter.",
+    "_comment_defaults": "Unlike most flags in this file, enforcement_enabled defaults TRUE — the finding this closes is that the platform accepts work it cannot complete, and shipping it dark would not close it. Blast radius is bounded by construction: only the routes that name a capability, only after failure_threshold CONSECUTIVE failed probes, cleared by a single success, and a never-probed capability always admits. For a cautious rollout set enforcement_enabled=false with probe_enabled=true — the states are still tracked and reported, nothing is refused. probe_enabled=false disables the whole mechanism (every capability stays `unknown`, i.e. pre-D-344 behavior). worker_stale_after_secs matches the ApalisWorkerStale alert rule's own 90s so the gate and the alert cannot disagree about what 'the worker is down' means.",
+    "probe_enabled": true,
+    "enforcement_enabled": true,
+    "probe_interval_secs": 30,
+    "failure_threshold": 2,
+    "worker_stale_after_secs": 90
+  },
+  "notification": {
+    "_comment": "Recipient inbox retention is opt-in. Zero keeps all recipient partitions; set recipient_retention_days only after confirming the product/compliance retention window. email_from (M51 Phase 1) overrides only the 'From' header the notification engine's email channel uses -- SMTP transport/credentials always come from the email section below; null means 'use email.smtp_from_name/smtp_from_address, same as account-lifecycle mail'.",
+    "recipient_retention_days": 0,
+    "email_from": null
+  },
+  "jobs": {
+    "_comment": "P1.4 / P-job-queue-hardening (D-147) — apalis Postgres-backed job queues. worker_concurrency (fast queue) / batch_worker_concurrency (bulk/import/rewrap queue) are max in-flight PlatformJobs; tune against database.connection_number, not up independently. history_retention_days controls how long Done apalis.jobs rows are kept before the periodic prune job deletes them; dead_letter_retention_days (default 90) does the same for dead-lettered (Killed) rows, so an untriaged failure outlives ordinary history. run_worker_inline=true (default) runs both job workers inside this same `server` process, unchanged from before this flag existed. Set false only once the `worker` binary (crates/server/src/bin/worker.rs) is deployed as its own scaled process/container — server then skips building the Monitor and the partition/upload-session maintenance schedulers entirely, so they run exactly once (in `worker`), not twice.",
+    "worker_concurrency": 10,
+    "batch_worker_concurrency": 3,
+    "history_retention_days": 30,
+    "dead_letter_retention_days": 90,
+    "run_worker_inline": true
+  },
+  "query": {
+    "_comment": "P-stored-query-containment (D-126). validate_on_execute=false (default): query/execute trusts the EXPLAIN cost cached in core_sql_query_version at publish time instead of re-running EXPLAIN on every request; set true only to temporarily restore the old per-execute EXPLAIN as a rollback lever. cursor_default=true (default): a query/execute request with neither after_id nor include_total:true runs in keyset/cursor mode from the start of the set instead of OFFSET; set false for one release to roll back to the pre-containment OFFSET-by-default behavior. The background revalidation cadence (once/day) that refreshes core_sql_query_version's cached cost estimate is a fixed constant next to its scheduler spawn (crates/server/src/main.rs) — config-surface reduction item 23, never varied per-deployment.",
+    "validate_on_execute": false,
+    "cursor_default": true
+  },
+  "change_feed": {
+    "_comment": "M01 §7 C-04 — xrm_core_entity_change_event (D-358's entity-change outbox) shipped with no pruning caller at all, so it grew unboundedly. retention_days is a floor, not a target: PlatformJob::PruneChangeFeed's handler (xrm_foundation::change_feed::prune) additionally never deletes a row the slowest registered consumer cursor (xrm_core_change_consumer_cursor) has not passed, however old it is, so raising this only ever makes pruning MORE conservative. The scheduler runs once/day by convention, same cadence as the other prune-style maintenance jobs; the first run on an upgraded deployment can find years of unpruned history — see deploy/UPGRADE-change-feed-prune.md.",
+    "retention_days": 30
+  },
+  "webchat": {
+    "_comment": "D-558 / chatbot plan C9 — the public web-chat assistant. Off by default: disabled, the widget keeps its fixed acknowledgment and deterministic handoff. Enabling it refuses to boot unless agent_definition_id and both caps are set (positive). The definition's policy must name an explicit knowledge_source_refs list (checked when a session starts; empty means no knowledge, never all). Caps are tokens, enforced by budget_guard and clamped to the platform defaults: session_token_cap per anonymous visitor session (200000/hour), daily_token_cap per visitor (500000/day), and deployment_daily_token_cap for every anonymous visitor together (500000/day) — the backstop a new session cannot reset. The knowledge tools also need inference.ai.fields on (MODULE_AI maps to that surface).",
+    "enabled": false,
+    "agent_definition_id": null,
+    "session_token_cap": null,
+    "daily_token_cap": null,
+    "deployment_daily_token_cap": null
+  },
+  "oidc": {
+    "_comment": "P2.8 (D-065) — config-driven OIDC providers, not a DB-admin-CRUD table: provider metadata + client_secret live here (${VAR}-expanded, never committed), only the per-user link (core_user_identity) is DB state. Empty providers = feature off. Each key becomes a URL path segment: /api/v1/auth/oidc/{key}/login|callback — ASCII alphanumeric/-/_ only.",
+    "providers": {}
+  },
+  "retention": {
+    "_comment": "P-retention-archive-completion — partition archive/drop, entity purge and legal hold. Development default: every window unset (keep forever), dry_run on, legal_hold off (BCF-12 adds this block so the dev template carries every section)."
+  },
+  "idempotency": {
+    "_comment": "P-idempotency-hardening §4.4/§4.5 — the durable-tier mandatory-operation policy. Empty by default (opt-in); under app.deployment_profile = \"production\" server::boot::validate_operation_registries additionally requires every xrm_server::bulk::MANDATORY_TIER_OPERATIONS entry to be listed here."
+  },
+  "approval": {
+    "_comment": "D-195 / P-four-eyes-approval — which attome_approval action_type strings require dual-control approval instead of executing inline. Empty by default (opt-in, same ships-dark posture as idempotency)."
+  },
+  "webcrawl": {
+    "_comment": "D-365 — Web Crawling for Knowledge Base. Ships dark: enabled=false until an operator opts in. See the section struct for the page/depth/timeout bounds."
+  },
+  "portal": {
+    "_comment": "D-588 — external-audience web portals: the OIDC providers they may offer and the signup CAPTCHA. Ships dark (no providers, captcha provider none)."
+  },
+  "docgen": {
+    "_comment": "M57 Phase 1 (D-463) — document generation. The isolated render sidecar's address plus explicit timeout/size caps; unset means the feature is off."
+  },
+  "metadata": {
+    "_comment": "Solution 7 Phase 1 (D-785, document_v2/docs/general/SOLUTION-7-PHASE-1-DESIGN.md §4.7) — metadata admin writes are recorded as changesets. changesets.mode: \"required\" refuses a metadata write with no open changeset (409 changeset_required; open one with POST /api/v1/admin/changesets, pick it with the X-Attome-Changeset header), \"auto\" records each request's writes as one closed automatic changeset. This example is a development config, so it sets \"required\" explicitly: required is the development authoring mode (every metadata change lands in a changeset that is closed and committed to git). Unset (null) means \"auto\" on every profile, which is what the production templates and hand-written test configs rely on. auto_layer is the layer automatic changesets are recorded in; this release accepts only \"project\". The platform's own definitions always apply at boot from changesets/platform/*.json through the applied ledger (Phase 1.5, 2026-10-02).",
+    "changesets": {
+      "mode": "required",
+      "auto_layer": "project"
+    },
+    "release_report": {
+      "_comment": "Solution 7 Phase 2 (document_v2/docs/general/SOLUTION-7-PHASE-2-DESIGN.md §10.5) — who the post-apply release-report notification goes to. notify_roles: null (the default) notifies the active holders of the admin privilege; a list of role names (xrm_core_role.name) notifies those roles' active holders instead (at most 100 recipients either way), falling back to the admin holders when none of the named roles has an active holder. A set list must be non-empty, at most 20 names, without blanks or duplicates (a boot error otherwise).",
+      "notify_roles": null
+    }
+  },
+  "fleet": {
+    "_comment": "D-792 (document_v2/docs/general/FLEET-CONSOLE-DESIGN.md §2) — the fleet console, developer machine only. Opened only by a debug `server` built with `--features fleet-console`, APP_ENV=debug, ATTOME_FLEET_CONSOLE=1 and app.deployment_profile = \"development\"; then credential_encryption_key is required: add \"credential_encryption_key\": \"${ATTOME_FLEET_KEY}\" (64 hex, `openssl rand -hex 32`, kept only in your .env). Any non-default value here is a boot error on the production profile. notify_user_refs: who gets the console's notifications (empty = every system.admin).",
+    "poll_interval_secs": 900,
+    "changesets_dir": "changesets",
+    "request_timeout_secs": 10
+  }
+}
