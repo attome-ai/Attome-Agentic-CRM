@@ -1,7 +1,9 @@
 name: release-check
 
 # The one release gate (`attome release --check`: format, clippy with warnings
-# as errors, tests) on Windows and Linux, on every push and pull request.
+# as errors, tests) on Linux and Windows, on every push and pull request.
+# Linux runs the database-backed tests against a PostgreSQL service; Windows
+# has no database service, so those tests print SKIP there.
 
 on:
   push:
@@ -15,25 +17,47 @@ concurrency:
   group: release-check-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CARGO_TERM_COLOR: always
+  RUST_MIN_STACK: "33554432"
+
 jobs:
-  check:
-    name: release check (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+  linux:
+    name: release check (linux, with postgres)
+    runs-on: ubuntu-latest
     timeout-minutes: 60
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     env:
-      CARGO_TERM_COLOR: always
-      RUST_MIN_STACK: "33554432"
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+      ATTOME_TEST_REQUIRE_DB: "1"
     steps:
       - uses: actions/checkout@v5
-
       # Installs the toolchain pinned in rust-toolchain.toml (with clippy and
       # rustfmt), caches the cargo registry and target directory, and turns
       # compiler and clippy messages into annotations on the run.
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: attome release --check
+        run: cargo run -p attome -- release --check
 
+  windows:
+    name: release check (windows)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
       - name: attome release --check
         run: cargo run -p attome -- release --check
