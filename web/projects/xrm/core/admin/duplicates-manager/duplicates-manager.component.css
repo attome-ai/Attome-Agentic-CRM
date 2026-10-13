@@ -1,0 +1,55 @@
+/* D-432 / M13 — layout for the merge/dismiss inline forms and the
+   auto-merge/conflict badges. `.badge`/`.error-msg`/`.table-wrap` etc. come
+   from ../../../../../styles/admin-page.css; this file only adds the layout
+   and the row backgrounds this component's own rows need. */
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.merge-row td,
+.dismiss-row td,
+.conflict-row td {
+  background: var(--color-surface-alt, rgba(255, 255, 255, 0.03));
+  padding: 10px 12px;
+}
+
+.merge-form,
+.dismiss-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.merge-form p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.merge-form label,
+.dismiss-form label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.dismiss-form label {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.dismiss-form input {
+  min-width: 320px;
+}
+
+.merge-form-actions {
+  display: flex;
+  gap: 8px;
+}

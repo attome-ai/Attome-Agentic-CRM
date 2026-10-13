@@ -1,0 +1,40 @@
+.xdv-section {
+  margin-bottom: 16px;
+  container-type: inline-size;
+}
+
+.xdv-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--xdv-columns, 12), minmax(0, 1fr));
+  grid-auto-rows: var(--xdv-row-height, 100px);
+  gap: var(--xdv-gap, 12px);
+}
+
+.xdv-grid-item {
+  grid-column: var(--xdv-col) / span var(--xdv-col-span);
+  grid-row: var(--xdv-row) / span var(--xdv-row-span);
+  min-width: 0;
+}
+
+/* Dashboard 10/10 Phase 4.2: collapse by the section's own width. */
+@container (max-width: 899px) {
+  .xdv-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row;
+  }
+
+  .xdv-grid-item {
+    grid-column: auto / span var(--xdv-md-span);
+    grid-row: auto / span var(--xdv-row-span);
+  }
+}
+
+@container (max-width: 599px) {
+  .xdv-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .xdv-grid-item {
+    grid-column: 1 / -1;
+  }
+}

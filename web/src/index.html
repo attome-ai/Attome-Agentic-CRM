@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Attome</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Fonts (Cairo/DM Sans/Inter/Playfair Display) and the line-awesome icon
+       font are self-hosted via @fontsource/* + line-awesome (package.json)
+       through angular.json's "styles" array — no runtime dependency on
+       fonts.googleapis.com/fonts.gstatic.com or maxst.icons8.com. This
+       closes P-frontend-hardening finding (b): an air-gapped deployment no
+       longer tries to reach either host, and CSP (crates/foundation/attome-server's
+       security_headers middleware) doesn't need to allowlist them.
+       Verified 2026-08-12 (TODO-029), and the answer was no. Each
+       @fontsource package's `index.css` declares **weight 400 only** — the
+       per-weight files exist in the package but index.css does not import
+       them. The app's own CSS asks for 500 (41x), 600 (59x), 700 (40x),
+       800 (9x), 900 (2x) and 300 (1x), so every one of those was being
+       synthesized by the browser as faux bold rather than rendered from the
+       real cut. angular.json's "styles" array now loads 500/600/700
+       explicitly for Inter, DM Sans and Cairo, plus 700 for Playfair
+       Display, which covers 140 of the 152 non-400 declarations.
+
+       Left synthesized on purpose: 800, 900 (11 declarations) and 300 (1).
+       Each extra weight is another set of subset woff2 files, and eleven
+       declarations do not justify the transfer — they fall back to the
+       nearest real cut, which is what was already happening.
+
+       Arabic subset: confirmed present, not assumed. `cairo/index.css`'s
+       first @font-face carries `unicode-range: U+0600-06FF,...` and
+       `files/cairo-arabic-{200..}-normal.woff2` ship in the package, so the
+       `[dir="rtl"]` path in styles.css has real Arabic glyphs at each loaded
+       weight rather than falling through to a system font. -->
+</head>
+<body>
+  <app-root></app-root>
+</body>
+</html>

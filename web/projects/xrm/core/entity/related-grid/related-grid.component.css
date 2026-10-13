@@ -1,0 +1,24 @@
+.relationship-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; background: rgb(0 0 0 / .62); }
+.relationship-dialog { width: min(860px, 100%); max-height: min(720px, calc(100vh - 32px)); display: flex; flex-direction: column; gap: 16px; padding: 24px; border: 1px solid var(--color-border); border-radius: 14px; color: var(--color-text-primary, #e5eefc); background: var(--color-surface, #111827); box-shadow: 0 24px 64px rgb(0 0 0 / .5); }
+header, footer { display: flex; align-items: center; gap: 12px; }
+header h3 { flex: 1; margin: 0; font-size: 20px; }
+footer { justify-content: flex-end; }
+.close-button { width: 32px; height: 32px; border: 0; border-radius: 7px; color: inherit; background: none; font-size: 24px; cursor: pointer; }
+.close-button:hover { background: rgb(148 163 184 / .1); }
+.relationship-search { display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: 9px; background: var(--color-bg, #0f172a); }
+.relationship-search i { color: var(--color-text-secondary, #94a3b8); }
+.relationship-search input { width: 100%; padding: 11px 0; border: 0; outline: 0; color: inherit; background: transparent; font: inherit; }
+.relationship-list { min-height: 240px; max-height: 430px; overflow: auto; border: 1px solid var(--color-border); border-radius: 10px; background: var(--color-bg, #0f172a); }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+th { padding: 11px 14px; border-bottom: 1px solid var(--color-border); color: var(--color-text-secondary, #94a3b8); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-align: left; text-transform: uppercase; }
+td { padding: 12px 14px; border-bottom: 1px solid rgb(148 163 184 / .12); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+tbody tr { cursor: pointer; transition: background .12s ease; }
+tbody tr:hover { background: rgb(148 163 184 / .08); }
+tbody tr.selected { background: rgb(139 92 246 / .14); }
+.check-column { width: 46px; padding-inline: 14px 4px; }
+.relationship-message { margin: 0; padding: 24px; color: var(--color-text-secondary, #94a3b8); }
+.relationship-error { margin: 0; color: var(--color-danger, #ef4444); }
+.dialog-button { min-width: 88px; padding: 9px 16px; border: 1px solid var(--color-border); border-radius: 8px; color: inherit; background: transparent; font: inherit; font-weight: 600; cursor: pointer; }
+.dialog-button:hover:not(:disabled) { background: rgb(148 163 184 / .08); }
+.dialog-button-primary { border-color: var(--color-accent, #8b5cf6); color: white; background: var(--color-accent, #8b5cf6); }
+.dialog-button:disabled { cursor: not-allowed; opacity: .45; }

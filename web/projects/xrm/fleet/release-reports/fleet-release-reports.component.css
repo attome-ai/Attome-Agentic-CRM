@@ -1,0 +1,18 @@
+:host { display: block; }
+
+.filter-bar { align-items: flex-end; }
+
+.fleet-values {
+  display: grid; grid-template-columns: auto 1fr; gap: 2px 10px;
+  margin: 6px 0; font-size: 12px;
+}
+.fleet-values > div { display: contents; }
+.fleet-values dt { color: var(--color-text-secondary); }
+.fleet-values dd { margin: 0; }
+
+.fleet-item-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.fleet-record-version { max-width: 220px; margin-bottom: 4px; }
+.fleet-hint { margin: 0 0 6px; font-size: 11px; }
+
+tr.fleet-selected td { background: color-mix(in srgb, var(--color-accent) 8%, transparent); }

@@ -1,0 +1,335 @@
+<xrm-governance-nav />
+
+<div class="page-header">
+  <div>
+    <h2>{{ 'governance.stateModels.title' | translate }}</h2>
+    <p class="subtitle">{{ 'governance.stateModels.subtitle' | translate }}</p>
+  </div>
+  <div class="gov-actions">
+    <button type="button" class="btn-ghost" (click)="loadModels()" [disabled]="loading()">
+      <i class="las la-sync" aria-hidden="true"></i> {{ 'governance.common.refresh' | translate }}
+    </button>
+    <button type="button" class="btn-primary" (click)="startCreate()">
+      <i class="las la-plus" aria-hidden="true"></i> {{ 'governance.stateModels.new' | translate }}
+    </button>
+  </div>
+</div>
+
+<!-- ── Messages ───────────────────────────────────────────────────────── -->
+@if (conflict()) {
+  <div class="warn-msg sm-conflict" role="alert">
+    <i class="las la-exclamation-triangle" aria-hidden="true"></i>
+    <span>{{ 'governance.stateModels.conflict' | translate }}</span>
+    <button type="button" class="btn-sm" (click)="reload()">
+      <i class="las la-redo" aria-hidden="true"></i> {{ 'governance.stateModels.reload' | translate }}
+    </button>
+  </div>
+}
+@if (actionError()) {
+  <p class="error-msg" role="alert">{{ actionError() }}</p>
+}
+<p class="gov-notice" role="status" aria-live="polite">
+  @if (notice(); as n) { {{ n | translate }} }
+</p>
+
+<!-- ── List ───────────────────────────────────────────────────────────── -->
+<section class="card" aria-labelledby="sm-list-title">
+  <h3 id="sm-list-title">
+    {{ 'governance.stateModels.listTitle' | translate }}
+    <span class="count">{{ models().length }}</span>
+  </h3>
+  @if (loading()) {
+    <p class="state-msg">{{ 'governance.common.loading' | translate }}</p>
+  } @else if (error()) {
+    <p class="error-msg" role="alert">{{ error() }}</p>
+  } @else if (models().length === 0) {
+    <div class="empty-state"><p>{{ 'governance.stateModels.empty' | translate }}</p></div>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'governance.common.entity' | translate }}</th>
+            <th scope="col">{{ 'governance.stateModels.name' | translate }}</th>
+            <th scope="col">{{ 'governance.stateModels.stateField' | translate }}</th>
+            <th scope="col">{{ 'governance.stateModels.initialState' | translate }}</th>
+            <th scope="col">{{ 'governance.stateModels.active' | translate }}</th>
+            <th scope="col"><span class="gov-visually-hidden">{{ 'governance.common.edit' | translate }}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of models(); track m.id) {
+            <tr [class.sm-row--selected]="detail()?.id === m.id">
+              <td class="cell-mono">{{ m.entity_logicalname }}</td>
+              <td>{{ m.name }} <xrm-owner-layer-badge [layer]="m.owner_layer" /></td>
+              <td class="cell-mono">{{ m.state_field }}</td>
+              <td class="cell-mono">{{ m.initial_state }}</td>
+              <td>{{ (m.is_active ? 'governance.common.yes' : 'governance.common.no') | translate }}</td>
+              <td class="actions">
+                <button type="button" class="btn-sm" (click)="open(m.id)">
+                  <i class="las la-pen" aria-hidden="true"></i> {{ 'governance.common.edit' | translate }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<!-- ── Create ─────────────────────────────────────────────────────────── -->
+@if (mode() === 'create') {
+  <section class="create-panel" aria-labelledby="sm-create-title">
+    <h3 id="sm-create-title">{{ 'governance.stateModels.createTitle' | translate }}</h3>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="sm-c-entity">{{ 'governance.common.entity' | translate }}</label>
+        <select id="sm-c-entity" [ngModel]="draft().entity_logicalname" (ngModelChange)="chooseEntity($event)">
+          <option value="" disabled>{{ 'governance.stateModels.pickEntity' | translate }}</option>
+          @for (e of sortedEntities(); track e.id) {
+            <option [value]="e.logicalname">{{ e.name }} ({{ e.logicalname }})</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="sm-c-name">{{ 'governance.stateModels.name' | translate }}</label>
+        <input id="sm-c-name" type="text" [ngModel]="draft().name" (ngModelChange)="setDraft('name', $event)" />
+      </div>
+    </div>
+    <div class="form-row-3">
+      <div class="field">
+        <label for="sm-c-field">{{ 'governance.stateModels.stateField' | translate }}</label>
+        <select id="sm-c-field" [ngModel]="draft().state_field" (ngModelChange)="chooseStateField($event)"
+                [disabled]="!draft().entity_logicalname || fieldsLoading()">
+          <option value="" disabled>{{ 'governance.stateModels.pickField' | translate }}</option>
+          @for (f of choiceFields(); track f.id) {
+            <option [value]="f.logicalname">{{ f.name }} ({{ f.logicalname }})</option>
+          }
+        </select>
+        @if (draft().entity_logicalname && !fieldsLoading() && choiceFields().length === 0) {
+          <span class="hint">{{ 'governance.stateModels.noChoiceFields' | translate }}</span>
+        }
+      </div>
+      <div class="field">
+        <label for="sm-c-initial">{{ 'governance.stateModels.initialState' | translate }}</label>
+        <select id="sm-c-initial" [ngModel]="draft().initial_state" (ngModelChange)="setDraft('initial_state', $event)"
+                [disabled]="stateOptions().length === 0">
+          @for (s of stateOptions(); track s) {
+            <option [value]="s">{{ s }}</option>
+          }
+        </select>
+      </div>
+      <div class="field field-cb">
+        <label class="checkbox-row">
+          <input type="checkbox" [ngModel]="draft().is_active" (ngModelChange)="setDraft('is_active', $event)" />
+          {{ 'governance.stateModels.active' | translate }}
+        </label>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn-primary" (click)="create()" [disabled]="!canCreate()">
+        <i class="las la-check" aria-hidden="true"></i> {{ 'governance.stateModels.create' | translate }}
+      </button>
+      <button type="button" class="btn-ghost" (click)="cancel()">{{ 'governance.common.cancel' | translate }}</button>
+    </div>
+  </section>
+}
+
+<!-- ── Edit ───────────────────────────────────────────────────────────── -->
+@if (mode() === 'edit') {
+  @if (detailLoading() && !detail()) {
+    <p class="state-msg">{{ 'governance.common.loading' | translate }}</p>
+  } @else if (detail(); as d) {
+    <section class="card" aria-labelledby="sm-edit-title">
+      <div class="section-header">
+        <h3 id="sm-edit-title">
+          {{ 'governance.stateModels.editTitle' | translate: { name: d.name } }}
+          <span class="hint cell-mono">{{ d.entity_logicalname }}</span>
+        </h3>
+        <button type="button" class="btn-text" (click)="cancel()">
+          <i class="las la-times" aria-hidden="true"></i> {{ 'governance.common.close' | translate }}
+        </button>
+      </div>
+
+      <div class="sm-editor">
+        <div class="sm-editor__form">
+          <div class="form-row-2">
+            <div class="field">
+              <label for="sm-e-name">{{ 'governance.stateModels.name' | translate }}</label>
+              <input id="sm-e-name" type="text" [ngModel]="draft().name" (ngModelChange)="setDraft('name', $event)" />
+            </div>
+            <div class="field">
+              <label for="sm-e-field">{{ 'governance.stateModels.stateField' | translate }}</label>
+              <select id="sm-e-field" [ngModel]="draft().state_field" (ngModelChange)="chooseStateField($event)"
+                      [disabled]="fieldsLoading()">
+                @if (!choiceFields().length) {
+                  <option [value]="draft().state_field">{{ draft().state_field }}</option>
+                }
+                @for (f of choiceFields(); track f.id) {
+                  <option [value]="f.logicalname">{{ f.name }} ({{ f.logicalname }})</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="field">
+              <label for="sm-e-initial">{{ 'governance.stateModels.initialState' | translate }}</label>
+              <select id="sm-e-initial" [ngModel]="draft().initial_state" (ngModelChange)="setDraft('initial_state', $event)">
+                @if (!stateOptions().includes(draft().initial_state)) {
+                  <option [value]="draft().initial_state">{{ draft().initial_state }}</option>
+                }
+                @for (s of stateOptions(); track s) {
+                  <option [value]="s">{{ s }}</option>
+                }
+              </select>
+            </div>
+            <div class="field field-cb">
+              <label class="checkbox-row">
+                <input type="checkbox" [ngModel]="draft().is_active" (ngModelChange)="setDraft('is_active', $event)" />
+                {{ 'governance.stateModels.active' | translate }}
+              </label>
+            </div>
+          </div>
+          <p class="hint">{{ 'governance.stateModels.rowVersion' | translate: { version: d.row_version } }}</p>
+          <div class="btn-row">
+            <button type="button" class="btn-primary" (click)="saveModel()" [disabled]="busy()">
+              <i class="las la-check" aria-hidden="true"></i> {{ 'governance.common.save' | translate }}
+            </button>
+            <button type="button" class="btn-danger-outline" (click)="deleteModel()" [disabled]="busy()">
+              <i class="las la-trash" aria-hidden="true"></i> {{ 'governance.stateModels.deleteModel' | translate }}
+            </button>
+          </div>
+        </div>
+
+        <figure class="sm-editor__diagram">
+          <attome-state-diagram [states]="stateOptions()" [transitions]="d.transitions" [initial]="d.initial_state" />
+          <figcaption class="hint">{{ 'governance.stateModels.diagramCaption' | translate }}</figcaption>
+        </figure>
+      </div>
+
+      <h4>
+        {{ 'governance.stateModels.transitions' | translate }}
+        <span class="count">{{ d.transitions.length }}</span>
+      </h4>
+      <p class="hint">{{ 'governance.stateModels.transitionsHint' | translate }}</p>
+      <div class="table-wrap">
+        <table class="sm-transitions">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'governance.stateModels.from' | translate }}</th>
+              <th scope="col">{{ 'governance.stateModels.to' | translate }}</th>
+              <th scope="col">{{ 'governance.stateModels.transitionName' | translate }}</th>
+              <th scope="col">{{ 'governance.stateModels.privilege' | translate }}</th>
+              <th scope="col">{{ 'governance.stateModels.guard' | translate }}</th>
+              <th scope="col">{{ 'governance.stateModels.entryActions' | translate }}</th>
+              <th scope="col">{{ 'governance.stateModels.exitActions' | translate }}</th>
+              <th scope="col">{{ 'governance.stateModels.order' | translate }}</th>
+              <th scope="col"><span class="gov-visually-hidden">{{ 'governance.common.actions' | translate }}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (t of d.transitions; track t.id) {
+              @if (transitionDrafts()[t.id]; as td) {
+                <tr>
+                  <td>
+                    <select [attr.aria-label]="'governance.stateModels.from' | translate" data-testid="sm-transition-from"
+                            [ngModel]="td.from_state" (ngModelChange)="setTransitionDraft(t.id, 'from_state', $event)">
+                      @for (s of optionsFor(td.from_state); track s) { <option [value]="s">{{ s }}</option> }
+                    </select>
+                  </td>
+                  <td>
+                    <select [attr.aria-label]="'governance.stateModels.to' | translate" data-testid="sm-transition-to"
+                            [ngModel]="td.to_state" (ngModelChange)="setTransitionDraft(t.id, 'to_state', $event)">
+                      @for (s of optionsFor(td.to_state); track s) { <option [value]="s">{{ s }}</option> }
+                    </select>
+                  </td>
+                  <td>
+                    <input type="text" [attr.aria-label]="'governance.stateModels.transitionName' | translate"
+                           [ngModel]="td.name" (ngModelChange)="setTransitionDraft(t.id, 'name', $event)" />
+                  </td>
+                  <td>
+                    <input type="text" class="mono-input" [attr.aria-label]="'governance.stateModels.privilege' | translate"
+                           [ngModel]="td.required_privilege" (ngModelChange)="setTransitionDraft(t.id, 'required_privilege', $event)" />
+                  </td>
+                  <td>
+                    <input type="text" class="mono-input" [attr.aria-label]="'governance.stateModels.guard' | translate"
+                           [ngModel]="td.guard_expression" (ngModelChange)="setTransitionDraft(t.id, 'guard_expression', $event)" />
+                  </td>
+                  <td>
+                    <input type="text" class="mono-input" [attr.aria-label]="'governance.stateModels.entryActions' | translate"
+                           [ngModel]="td.entry_actions" (ngModelChange)="setTransitionDraft(t.id, 'entry_actions', $event)" />
+                  </td>
+                  <td>
+                    <input type="text" class="mono-input" [attr.aria-label]="'governance.stateModels.exitActions' | translate"
+                           [ngModel]="td.exit_actions" (ngModelChange)="setTransitionDraft(t.id, 'exit_actions', $event)" />
+                  </td>
+                  <td>
+                    <input type="number" class="sm-order" [attr.aria-label]="'governance.stateModels.order' | translate"
+                           [ngModel]="td.display_order" (ngModelChange)="setTransitionDraft(t.id, 'display_order', $event)" />
+                  </td>
+                  <td class="actions">
+                    <button type="button" class="btn-sm" (click)="saveTransition(t)"
+                            data-testid="sm-transition-save" [disabled]="!canSaveTransition(t)">
+                      <i class="las la-check" aria-hidden="true"></i> {{ 'governance.common.save' | translate }}
+                    </button>
+                    <button type="button" class="btn-sm-danger" (click)="deleteTransition(t)" [disabled]="busy()"
+                            [attr.aria-label]="'governance.stateModels.deleteTransitionAria' | translate: { from: t.from_state, to: t.to_state }">
+                      <i class="las la-trash" aria-hidden="true"></i>
+                    </button>
+                  </td>
+                </tr>
+              }
+            }
+            <tr class="sm-new-row">
+              <td>
+                <select [attr.aria-label]="'governance.stateModels.from' | translate"
+                        [ngModel]="newTransition().from_state" (ngModelChange)="setNewTransition('from_state', $event)">
+                  <option value="" disabled>{{ 'governance.stateModels.from' | translate }}</option>
+                  @for (s of stateOptions(); track s) { <option [value]="s">{{ s }}</option> }
+                </select>
+              </td>
+              <td>
+                <select [attr.aria-label]="'governance.stateModels.to' | translate"
+                        [ngModel]="newTransition().to_state" (ngModelChange)="setNewTransition('to_state', $event)">
+                  <option value="" disabled>{{ 'governance.stateModels.to' | translate }}</option>
+                  @for (s of stateOptions(); track s) { <option [value]="s">{{ s }}</option> }
+                </select>
+              </td>
+              <td>
+                <input type="text" [attr.aria-label]="'governance.stateModels.transitionName' | translate"
+                       [placeholder]="'governance.stateModels.transitionName' | translate"
+                       [ngModel]="newTransition().name" (ngModelChange)="setNewTransition('name', $event)" />
+              </td>
+              <td>
+                <input type="text" class="mono-input" [attr.aria-label]="'governance.stateModels.privilege' | translate"
+                       [ngModel]="newTransition().required_privilege" (ngModelChange)="setNewTransition('required_privilege', $event)" />
+              </td>
+              <td>
+                <input type="text" class="mono-input" [attr.aria-label]="'governance.stateModels.guard' | translate"
+                       [ngModel]="newTransition().guard_expression" (ngModelChange)="setNewTransition('guard_expression', $event)" />
+              </td>
+              <td>
+                <input type="text" class="mono-input" [attr.aria-label]="'governance.stateModels.entryActions' | translate"
+                       [ngModel]="newTransition().entry_actions" (ngModelChange)="setNewTransition('entry_actions', $event)" />
+              </td>
+              <td>
+                <input type="text" class="mono-input" [attr.aria-label]="'governance.stateModels.exitActions' | translate"
+                       [ngModel]="newTransition().exit_actions" (ngModelChange)="setNewTransition('exit_actions', $event)" />
+              </td>
+              <td>
+                <input type="number" class="sm-order" [attr.aria-label]="'governance.stateModels.order' | translate"
+                       [ngModel]="newTransition().display_order" (ngModelChange)="setNewTransition('display_order', $event)" />
+              </td>
+              <td class="actions">
+                <button type="button" class="btn-sm-accent" (click)="addTransition()" [disabled]="!canAddTransition()">
+                  <i class="las la-plus" aria-hidden="true"></i> {{ 'governance.stateModels.addTransition' | translate }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+}

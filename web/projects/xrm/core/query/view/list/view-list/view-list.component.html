@@ -1,0 +1,15 @@
+<div class="ql-header"><div><h1 class="ql-title">Views</h1><p class="ql-subtitle">{{ views().length }} entity list definitions</p></div>
+  <a routerLink="/xrm/admin/views/new" class="ql-create-btn"><i class="las la-plus"></i> New View</a></div>
+@if (loading()) { <div class="ql-state-wrap"><p>Loading views…</p></div> }
+@else if (error()) { <div class="ql-state-wrap ql-error-state"><p>{{ error() }}</p></div> }
+@else { <div class="ql-list">
+  @for (view of views(); track view.id) {
+    <div class="ql-card"><div class="ql-icon-bubble"><i class="las la-table"></i></div>
+      <div class="ql-card-body"><a class="ql-card-name" [routerLink]="['/xrm/admin/views', view.id]">{{ view.name }}</a>
+        <span class="ql-entity-badge">{{ view.entity_name }}</span>
+        <xrm-owner-layer-badge [layer]="view.owner_layer" />
+        <p class="ql-sql-preview">SQL: {{ view.query_name }} · {{ view.table_definition.length }} columns{{ view.is_default ? ' · Default' : '' }}</p></div>
+      <div class="ql-actions"><a class="ql-btn ql-btn-edit" [routerLink]="['/xrm/admin/views', view.id]">Edit</a>
+        <button class="ql-btn ql-btn-delete" (click)="remove(view)">Delete</button></div></div>
+  } @empty { <div class="ql-state-wrap"><p>No views yet.</p></div> }
+</div> }

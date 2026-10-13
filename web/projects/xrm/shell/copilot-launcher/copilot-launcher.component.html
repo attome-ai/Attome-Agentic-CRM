@@ -1,0 +1,10 @@
+<button #trigger type="button" class="icon-btn" [class.active]="open()" (click)="toggle()"
+        [attr.aria-expanded]="open()"
+        [attr.aria-label]="'aiChat.launcher.open' | translate"
+        [title]="'aiChat.launcher.open' | translate">
+  <i class="las la-robot" aria-hidden="true"></i>
+</button>
+@if (loadError(); as key) {
+  <span class="launcher-error" role="alert">{{ key | translate }}</span>
+}
+<ng-container #panelHost />

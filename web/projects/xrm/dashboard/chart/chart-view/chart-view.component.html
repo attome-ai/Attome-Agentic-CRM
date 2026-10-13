@@ -1,0 +1,17 @@
+<div class="cv-container">
+  @if (!configured()) {
+  <div class="cv-status">{{ 'entityViews.chart.notConfigured' | translate }}</div>
+  } @else if (loading()) {
+  <div class="cv-status" role="status">{{ 'entityViews.chart.loading' | translate }}</div>
+  } @else if (error()) {
+  <div class="cv-status cv-status--error">{{ error() }}</div>
+  } @else if (chart(); as data) {
+  @if (truncatedTotal(); as total) {
+  <p class="cv-note">{{ 'entityViews.chart.truncated' | translate: { shown: rows().length, total: total } }}</p>
+  }
+  <div class="cv-chart">
+    <attome-dashboard-chart [kind]="data.kind" [title]="view().name" [categories]="data.categories"
+      [series]="data.series" [threshold]="data.threshold" />
+  </div>
+  }
+</div>

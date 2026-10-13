@@ -1,0 +1,76 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="ai-agent">
+  <ng-template xrmTab="general">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Identity</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['name', 'description', 'status', 'icon', 'color']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Model Configuration</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['primary_model_ref', 'fallback_model_ref', 'fallback_model_2_ref']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Behavior</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['system_instructions', 'response_style', 'default_language']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Settings Parameter</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['temperature', 'top_p', 'seed']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+    @if (fieldsIn(['retrieval_mode']).length > 0) {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-book-open"></i></div>
+          <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'aiAgentForm.knowledgeSection' | translate }}</h2></div>
+        </div>
+        <div class="xf-section-body">
+          <div class="xf-grid-2">
+            @for (field of fieldsIn(['retrieval_mode']); track field.id) {
+              <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+            }
+          </div>
+          <p class="xf-helper">{{ 'aiAgentForm.retrievalModeHelp' | translate }}</p>
+          <p class="xf-helper ai-agent-form__snapshot" role="note">
+            <i class="las la-info-circle" aria-hidden="true"></i>
+            {{ 'aiAgentForm.retrievalModeSnapshot' | translate }}
+          </p>
+        </div>
+      </section>
+    }
+  </ng-template>
+</xrm-base-form>

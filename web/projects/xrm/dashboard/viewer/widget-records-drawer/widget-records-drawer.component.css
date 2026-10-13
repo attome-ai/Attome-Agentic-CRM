@@ -1,0 +1,104 @@
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.xwr-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.xwr-panel {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow: auto;
+  background: var(--color-bg, #ffffff);
+  color: var(--color-text-primary, inherit);
+  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.25);
+  outline: none;
+}
+
+.xwr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.xwr-title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.xwr-subtitle,
+.xwr-meta {
+  margin: 2px 0 0;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.xwr-close {
+  border: 0;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.xwr-total {
+  margin: 0;
+  font-weight: 600;
+}
+
+.xwr-filters {
+  margin: 6px 0 0;
+  padding-inline-start: 18px;
+  font-size: 12px;
+}
+
+.xwr-origin {
+  margin-inline-start: 6px;
+  opacity: 0.6;
+}
+
+.xwr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.xwr-table-wrap {
+  overflow: auto;
+}
+
+.xwr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.xwr-table th,
+.xwr-table td {
+  text-align: start;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  white-space: nowrap;
+}
+
+.xwr-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--color-primary, #6366f1);
+  cursor: pointer;
+  text-decoration: underline;
+  font: inherit;
+}

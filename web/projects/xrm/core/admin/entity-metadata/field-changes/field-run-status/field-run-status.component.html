@@ -1,0 +1,32 @@
+<section class="frs" aria-labelledby="frs-title" data-testid="field-run-status">
+  <h5 id="frs-title" class="frs-title">
+    <i class="las la-history" aria-hidden="true"></i> {{ 'fieldChange.run.title' | translate }}
+  </h5>
+  @if (outcome(); as o) {
+    <p role="status" data-testid="abandoned">{{ 'fieldChange.run.abandoned' | translate }}</p>
+    <ul class="frs-list">
+      @if (o.shadow_dropped) {
+        <li>{{ 'fieldChange.run.shadowDropped' | translate }}</li>
+      }
+      @if (o.conversion_completed) {
+        <li>{{ 'fieldChange.run.conversionCompleted' | translate }}</li>
+      } @else {
+        <li>{{ 'fieldChange.run.archiveRemoved' | translate: { count: o.archive_rows_removed } }}</li>
+      }
+      @for (l of o.labels; track $index) {
+        <li>{{ l }}</li>
+      }
+    </ul>
+  } @else {
+    <p>{{ 'fieldChange.run.running' | translate }}</p>
+    <p class="frs-muted frs-mono" dir="ltr">{{ 'fieldChange.run.runId' | translate: { id: runId() } }}</p>
+    <p class="frs-muted">{{ 'fieldChange.run.noStatus' | translate }}</p>
+    <button type="button" class="btn-danger-outline btn-sm" data-testid="abandon"
+            [disabled]="busy()" (click)="abandon()">
+      {{ (busy() ? 'fieldChange.dialog.working' : 'fieldChange.run.abandon') | translate }}
+    </button>
+  }
+  @if (error()) {
+    <p class="error-msg" role="alert" data-testid="run-error">{{ error() }}</p>
+  }
+</section>

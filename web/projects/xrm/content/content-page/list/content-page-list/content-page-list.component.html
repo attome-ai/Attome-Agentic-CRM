@@ -1,0 +1,70 @@
+<div class="page-header">
+  <div>
+    <h2>Content Management</h2>
+    <p class="subtitle">Custom pages, published under their own URL.</p>
+  </div>
+  <div class="btn-row">
+    <a routerLink="/xrm/admin/content/spaces" class="btn-ghost"><i class="las la-layer-group"></i> Spaces</a>
+    <a routerLink="/xrm/admin/content/templates" class="btn-ghost"><i class="las la-clone"></i> Templates</a>
+    <button type="button" class="btn-primary" (click)="creating.set(true)" [disabled]="!selectedSpaceId()">
+      <i class="las la-plus"></i> New Page
+    </button>
+  </div>
+</div>
+
+@if (spacesError()) { <p class="error-msg">{{ spacesError() }}</p> }
+
+@if (spaces().length === 0 && !spacesLoading()) {
+  <div class="cpl-tree-card">
+    <p class="cpt-empty">No content spaces yet. <a routerLink="/xrm/admin/content/spaces">Create one</a> to start adding pages.</p>
+  </div>
+} @else {
+  <div class="field cpl-space-field">
+    <label for="cpl-space">Space</label>
+    <select id="cpl-space" [ngModel]="selectedSpaceId()" (ngModelChange)="onSpaceChange($event)">
+      @for (space of spaces(); track space.id) {
+        <option [value]="space.id">{{ space.name }}</option>
+      }
+    </select>
+  </div>
+
+  @if (creating()) {
+    <div class="create-panel">
+      <h3>New page</h3>
+      <div class="form-row-2">
+        <div class="field">
+          <label for="cpl-title">Title</label>
+          <input id="cpl-title" type="text" [ngModel]="newTitle" (ngModelChange)="onTitleChange($event)" />
+        </div>
+        <div class="field">
+          <label for="cpl-path">URL path</label>
+          <input id="cpl-path" type="text" [ngModel]="newUrlPath" (ngModelChange)="onUrlPathChange($event)" placeholder="/guide/templates" />
+        </div>
+      </div>
+      @if (spaceTemplates().length > 0) {
+        <div class="field">
+          <label for="cpl-template">Template (optional)</label>
+          <select id="cpl-template" [ngModel]="newTemplateId" (ngModelChange)="newTemplateId = $event">
+            <option [ngValue]="null">Blank page</option>
+            @for (t of spaceTemplates(); track t.id) {
+              <option [ngValue]="t.id">{{ t.name }}</option>
+            }
+          </select>
+        </div>
+      }
+      @if (formError()) { <p class="error-msg">{{ formError() }}</p> }
+      <div class="btn-row">
+        <button type="button" class="btn-primary" (click)="create()" [disabled]="creatingBusy()">
+          {{ creatingBusy() ? 'Creating…' : 'Create' }}
+        </button>
+        <button type="button" class="btn-ghost" (click)="creating.set(false)">Cancel</button>
+      </div>
+    </div>
+  }
+
+  @if (selectedSpaceId(); as spaceId) {
+    <div class="cpl-tree-card">
+      <attome-content-page-tree #tree [spaceId]="spaceId" (pageSelected)="open($event)" />
+    </div>
+  }
+}

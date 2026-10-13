@@ -1,0 +1,76 @@
+@if (visible()) {
+  <section class="ba" [attr.aria-label]="'aiAnalytics.title' | translate" [attr.aria-busy]="loading()">
+    <header class="ba__header">
+      <h2 class="ba__title">
+        <i class="las la-chart-bar" aria-hidden="true"></i>
+        {{ 'aiAnalytics.title' | translate }}
+      </h2>
+      <div class="ba__windows" role="group" [attr.aria-label]="'aiAnalytics.window' | translate">
+        @for (d of windows; track d) {
+          <button type="button" class="btn" [attr.aria-pressed]="days() === d" (click)="select(d)">
+            {{ 'aiAnalytics.lastDays' | translate: { days: d } }}
+          </button>
+        }
+      </div>
+    </header>
+
+    @if (report(); as r) {
+      <dl class="ba__grid">
+        <div class="ba__stat">
+          <dt>{{ 'aiAnalytics.turns' | translate }}</dt>
+          <dd>{{ r.turns.started | localNumber }}</dd>
+        </div>
+        <div class="ba__stat">
+          <dt>{{ 'aiAnalytics.completionRate' | translate }}</dt>
+          <dd>{{ percent(r.turns.completion_rate) }}</dd>
+        </div>
+        <div class="ba__stat">
+          <dt>{{ 'aiAnalytics.awaiting' | translate }}</dt>
+          <dd>{{ r.turns.awaiting | localNumber }}</dd>
+        </div>
+        <div class="ba__stat">
+          <dt>{{ 'aiAnalytics.cancelled' | translate }}</dt>
+          <dd>{{ r.turns.cancelled | localNumber }}</dd>
+        </div>
+        <div class="ba__stat">
+          <dt>{{ 'aiAnalytics.failed' | translate }}</dt>
+          <dd>{{ r.turns.failed | localNumber }}</dd>
+        </div>
+        <div class="ba__stat">
+          <dt>{{ 'aiAnalytics.toolCalls' | translate }}</dt>
+          <dd>{{ r.tool_calls.total.proposed | localNumber }}</dd>
+        </div>
+        <div class="ba__stat">
+          <dt>{{ 'aiAnalytics.deflectionRate' | translate }}</dt>
+          <dd>{{ percent(r.deflection.deflection_rate) }}</dd>
+        </div>
+        <div class="ba__stat">
+          <dt>{{ 'aiAnalytics.handoffs' | translate }}</dt>
+          <dd>{{ r.handoffs.total | localNumber }}</dd>
+        </div>
+        <div class="ba__stat">
+          <dt>{{ 'aiAnalytics.thumbsUp' | translate }}</dt>
+          <dd>{{ percent(r.feedback.up_rate) }}</dd>
+        </div>
+        <div class="ba__stat">
+          <dt>{{ 'aiAnalytics.rated' | translate }}</dt>
+          <dd>{{ percent(r.feedback.coverage) }}</dd>
+        </div>
+      </dl>
+
+      @if (handoffReasons().length) {
+        <h3 class="ba__subtitle">{{ 'aiAnalytics.handoffReasons' | translate }}</h3>
+        <ul class="ba__reasons">
+          @for (entry of handoffReasons(); track entry[0]) {
+            <li>{{ ('aiAnalytics.reasons.' + entry[0]) | translate }}: <span>{{ entry[1] | localNumber }}</span></li>
+          }
+        </ul>
+      }
+      <p class="ba__hint">{{ 'aiAnalytics.hint' | translate }}</p>
+    }
+
+    @if (error(); as message) {
+      <p class="ba__error" role="alert">{{ message }}</p>
+    }
+  </section>
+}

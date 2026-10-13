@@ -1,0 +1,92 @@
+/* D-421 — the policy editor's step-builder form. `.badge`/table/button
+   classes come from ../../../../../styles/admin-page.css; this file only
+   adds the overlay layout and step-row grid. */
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.badge-warn {
+  background: #78350f;
+  color: #fdba74;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 2px 0 10px;
+}
+
+.policy-form-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px;
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.policy-form {
+  background: var(--color-surface, #14161a);
+  border: 1px solid var(--color-border, #2a2d33);
+  border-radius: 8px;
+  padding: 20px 24px;
+  width: 100%;
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.policy-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.policy-form .checkbox-label {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.step-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border, #2a2d33);
+}
+
+.step-index {
+  min-width: 18px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.threshold-input {
+  width: 60px;
+}
+
+.sla-input {
+  width: 120px;
+}
+
+.approvers-input {
+  flex: 1 1 220px;
+  min-width: 220px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}

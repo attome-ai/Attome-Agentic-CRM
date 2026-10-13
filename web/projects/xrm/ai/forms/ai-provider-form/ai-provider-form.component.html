@@ -1,0 +1,147 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="ai-provider">
+  <ng-template xrmTab="details">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Details</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['provider_id', 'name', 'endpoint_url', 'allow_external_endpoint', 'api_protocol', 'provider_type', 'description', 'status', 'health_check', 'last_health_check', 'data_residency', 'capabilities', 'training_data_usage']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- API key. Not a schema field: a secret on an entity column would be
+         selectable by any stored query, so it is written through its own
+         write-only endpoint and never read back. -->
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-key"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">{{ 'aiProviderForm.apiKey' | translate }}</h2>
+          <p class="xf-section-desc">{{ 'aiProviderForm.apiKeyHelp' | translate }}</p>
+        </div>
+      </div>
+      <div class="xf-section-body">
+        @if (keyError()) {
+          <div class="xf-error-banner" role="alert">
+            <i class="las la-exclamation-circle"></i> {{ keyError() }}
+          </div>
+        }
+        <div class="xf-field xf-field-full">
+          <label for="ai-provider-api-key">{{ 'aiProviderForm.apiKey' | translate }}</label>
+          <input id="ai-provider-api-key" type="password" class="xf-input"
+                 autocomplete="off" spellcheck="false"
+                 [placeholder]="(keyConfigured() ? 'aiProviderForm.apiKeyReplace' : 'aiProviderForm.apiKeyPlaceholder') | translate"
+                 [value]="apiKey()"
+                 (input)="apiKey.set($any($event.target).value)" />
+          <p class="xf-helper" aria-live="polite">
+            @if (keyLast4()) {
+              <i class="las la-check-circle"></i>
+              {{ 'aiProviderForm.apiKeySavedEnding' | translate:{ last4: keyLast4()! } }}
+            } @else if (keyConfigured()) {
+              <i class="las la-check-circle"></i> {{ 'aiProviderForm.apiKeyConfigured' | translate }}
+            } @else {
+              {{ 'aiProviderForm.apiKeyNotConfigured' | translate }}
+            }
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Models. A shortlist fetched from the provider, not an import:
+         catalog rows are authored on the AI Model entity and start
+         pending approval. -->
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-cubes"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">{{ 'aiProviderForm.models' | translate }}</h2>
+          <p class="xf-section-desc">{{ 'aiProviderForm.modelsHelp' | translate }}</p>
+        </div>
+      </div>
+      <div class="xf-section-body">
+        @if (!isEdit()) {
+          <p class="xf-helper">{{ 'aiProviderForm.saveFirst' | translate }}</p>
+        } @else {
+          @if (modelsError()) {
+            <div class="xf-error-banner" role="alert">
+              <i class="las la-exclamation-circle"></i> {{ modelsError() }}
+            </div>
+          }
+          <button type="button" class="xf-btn xf-btn-secondary"
+                  [disabled]="fetchingModels()" (click)="fetchModels()">
+            @if (fetchingModels()) {
+              <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+              {{ 'aiProviderForm.fetchingModels' | translate }}
+            } @else {
+              <i class="las la-sync"></i> {{ 'aiProviderForm.fetchModels' | translate }}
+            }
+          </button>
+
+          @if (models(); as list) {
+            @if (list.length) {
+              <div class="ai-provider-models-toolbar">
+                <label class="ai-provider-check">
+                  <input type="checkbox"
+                         [checked]="allSelected()" [indeterminate]="someSelected()"
+                         (change)="toggleAll($any($event.target).checked)" />
+                  {{ 'aiProviderForm.selectAll' | translate }}
+                </label>
+                <span class="xf-helper" aria-live="polite">
+                  {{ 'aiProviderForm.selectedCount' | translate:{ count: selectedCount() } }}
+                </span>
+              </div>
+              <ul class="ai-provider-models">
+                @for (model of list; track model.id) {
+                  <li>
+                    <label class="ai-provider-check">
+                      <input type="checkbox"
+                             [checked]="isAdded(model.id) || selected().has(model.id)"
+                             [disabled]="isAdded(model.id) || addingModels()"
+                             (change)="toggleModel(model.id, $any($event.target).checked)" />
+                      <code>{{ model.id }}</code>
+                      @if (model.display_name) { <span>{{ model.display_name }}</span> }
+                      @if (isAdded(model.id)) {
+                        <span class="ai-provider-added">{{ 'aiProviderForm.modelAdded' | translate }}</span>
+                      }
+                    </label>
+                  </li>
+                }
+              </ul>
+              @if (addModelsError()) {
+                <div class="xf-error-banner" role="alert">
+                  <i class="las la-exclamation-circle"></i> {{ addModelsError() }}
+                </div>
+              }
+              @if (addModelsResult(); as result) {
+                @if (result.added) {
+                  <p class="xf-helper" aria-live="polite">
+                    <i class="las la-check-circle"></i>
+                    {{ 'aiProviderForm.modelsAdded' | translate:{ count: result.added } }}
+                  </p>
+                }
+              }
+              <button type="button" class="xf-btn xf-btn-primary"
+                      [disabled]="!canAddModels()" (click)="addSelectedModels()">
+                @if (addingModels()) {
+                  <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+                  {{ 'aiProviderForm.addingModels' | translate }}
+                } @else {
+                  <i class="las la-plus"></i>
+                  {{ 'aiProviderForm.addSelectedModels' | translate:{ count: selectedCount() } }}
+                }
+              </button>
+              <p class="xf-helper">{{ 'aiProviderForm.modelsNext' | translate }}</p>
+            } @else {
+              <p class="xf-helper" aria-live="polite">{{ 'aiProviderForm.modelsEmpty' | translate }}</p>
+            }
+          }
+        }
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

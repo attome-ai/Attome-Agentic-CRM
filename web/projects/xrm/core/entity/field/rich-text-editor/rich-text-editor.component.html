@@ -1,0 +1,62 @@
+<div class="rte">
+  <!-- mousedown is prevented so a toolbar click never takes the selection
+       out of the editing surface; the click runs the command. -->
+  <div class="rte-toolbar" role="toolbar" [attr.aria-label]="'fieldInput.richTextToolbar' | translate">
+    <button type="button" class="rte-btn" data-cmd="bold"
+            [attr.aria-label]="'fieldInput.richTextBold' | translate" [title]="'fieldInput.richTextBold' | translate"
+            (mousedown)="$event.preventDefault()" (click)="wrap('strong')">
+      <i class="las la-bold" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="rte-btn" data-cmd="italic"
+            [attr.aria-label]="'fieldInput.richTextItalic' | translate" [title]="'fieldInput.richTextItalic' | translate"
+            (mousedown)="$event.preventDefault()" (click)="wrap('em')">
+      <i class="las la-italic" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="rte-btn" data-cmd="underline"
+            [attr.aria-label]="'fieldInput.richTextUnderline' | translate" [title]="'fieldInput.richTextUnderline' | translate"
+            (mousedown)="$event.preventDefault()" (click)="wrap('u')">
+      <i class="las la-underline" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="rte-btn" data-cmd="ul"
+            [attr.aria-label]="'fieldInput.richTextBulletList' | translate" [title]="'fieldInput.richTextBulletList' | translate"
+            (mousedown)="$event.preventDefault()" (click)="list('ul')">
+      <i class="las la-list-ul" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="rte-btn" data-cmd="ol"
+            [attr.aria-label]="'fieldInput.richTextNumberedList' | translate" [title]="'fieldInput.richTextNumberedList' | translate"
+            (mousedown)="$event.preventDefault()" (click)="list('ol')">
+      <i class="las la-list-ol" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="rte-btn" data-cmd="link"
+            [attr.aria-label]="'fieldInput.richTextLink' | translate" [title]="'fieldInput.richTextLink' | translate"
+            (mousedown)="$event.preventDefault()" (click)="openLink()">
+      <i class="las la-link" aria-hidden="true"></i>
+    </button>
+    <button type="button" class="rte-btn" data-cmd="clear"
+            [attr.aria-label]="'fieldInput.richTextClear' | translate" [title]="'fieldInput.richTextClear' | translate"
+            (mousedown)="$event.preventDefault()" (click)="clearFormatting()">
+      <i class="las la-remove-format" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  @if (linkOpen()) {
+    <div class="rte-link">
+      <label class="rte-link-label" [for]="fieldName() + '-link'">{{ 'fieldInput.richTextLinkPrompt' | translate }}</label>
+      <input [id]="fieldName() + '-link'" type="url" class="xf-input rte-link-input"
+             [value]="linkUrl()" [attr.aria-invalid]="linkInvalid()"
+             (input)="linkUrl.set($any($event.target).value)"
+             (keydown.enter)="$event.preventDefault(); applyLink()"
+             (keydown.escape)="cancelLink()" />
+      <button type="button" class="btn-icon" (click)="applyLink()">{{ 'relatedGrid.add' | translate }}</button>
+      <button type="button" class="btn-icon" (click)="cancelLink()">{{ 'relatedGrid.cancel' | translate }}</button>
+    </div>
+  }
+
+  <!-- The surface is filled from the control through DomSanitizer
+       (rich-text-editor.component.ts::render), never by an [innerHTML]
+       binding that would reset the caret on every keystroke. -->
+  <div #surface class="rte-surface xf-input" contenteditable="true"
+       role="textbox" aria-multiline="true" tabindex="0"
+       [id]="fieldName()" [attr.aria-label]="label()"
+       (input)="sync()" (blur)="onBlur()"></div>
+</div>

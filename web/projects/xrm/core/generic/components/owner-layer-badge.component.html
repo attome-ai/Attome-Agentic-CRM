@@ -1,0 +1,20 @@
+@if (owner(); as o) {
+  <span class="xrm-owner-layer" [class]="'xrm-owner-layer xrm-owner-layer--' + o" [class.is-locked]="locked()"
+        [attr.title]="locked()
+          ? ('changesets.lockedNote' | translate: { owner: (ownerKey() | translate), editing: (editingKey() | translate) })
+          : ('changesets.ownedBy' | translate: { owner: (ownerKey() | translate) })">
+    <i [class]="locked() ? 'las la-lock' : 'las la-layer-group'" aria-hidden="true"></i>
+    <span class="visually-hidden">{{ 'changesets.ownerLayer' | translate }}: </span>{{ ownerKey() | translate }}
+  </span>
+  @if (locked()) {
+    @if (variant() === 'full') {
+      <span class="xrm-owner-layer-note" role="note">
+        {{ 'changesets.lockedNote' | translate: { owner: (ownerKey() | translate), editing: (editingKey() | translate) } }}
+      </span>
+    } @else {
+      <span class="visually-hidden">
+        {{ 'changesets.lockedNote' | translate: { owner: (ownerKey() | translate), editing: (editingKey() | translate) } }}
+      </span>
+    }
+  }
+}

@@ -1,0 +1,56 @@
+<div class="rc-panel">
+  <div class="rc-panel-header">
+    <i class="la la-users-cog"></i>
+    <div>
+      <h3>Resource Capacity</h3>
+      <p class="rc-panel-subtitle">Allocation vs. capacity, {{ buckets().length }} weeks starting {{ buckets()[0]?.label }}</p>
+    </div>
+    <div class="rc-filters">
+      <input class="rc-input" type="text" placeholder="Team ID" [ngModel]="teamFilter()" (ngModelChange)="teamFilter.set($event)" />
+      <input class="rc-input" type="text" placeholder="Skill" [ngModel]="skillFilter()" (ngModelChange)="skillFilter.set($event)" />
+      <button class="rc-btn" type="button" (click)="reload()">Refresh</button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <p class="rc-state-msg">Loading capacity…</p>
+  } @else if (error()) {
+    <p class="rc-state-msg rc-state-error">{{ error() }}</p>
+  } @else if (!hasData()) {
+    <p class="rc-state-msg">No resources match the current filters for this period.</p>
+  } @else {
+    <div class="rc-legend">
+      <span class="rc-legend-item"><i class="rc-swatch rc-cell-under"></i>Under 50%</span>
+      <span class="rc-legend-item"><i class="rc-swatch rc-cell-healthy"></i>Healthy 50–84%</span>
+      <span class="rc-legend-item"><i class="rc-swatch rc-cell-warning"></i>High 85–99%</span>
+      <span class="rc-legend-item"><i class="rc-swatch rc-cell-critical"></i>Over 100%+</span>
+      <span class="rc-legend-item"><i class="rc-swatch rc-cell-empty"></i>No data</span>
+    </div>
+
+    <div class="rc-grid-scroll">
+      <table class="rc-grid">
+        <thead>
+          <tr>
+            <th class="rc-grid-resource-head">Resource</th>
+            @for (b of buckets(); track b.from) {
+              <th class="rc-grid-week-head">{{ b.label }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.resourceId) {
+            <tr>
+              <td class="rc-grid-resource">{{ row.resourceName }}</td>
+              @for (cell of row.cells; track $index) {
+                <td class="rc-grid-cell" [class]="statusClass(cell)" [title]="statusLabel(cell) + ' — ' + cellText(cell)">
+                  <span class="rc-cell-value">{{ cellText(cell) }}</span>
+                  <span class="rc-cell-label">{{ statusLabel(cell) }}</span>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

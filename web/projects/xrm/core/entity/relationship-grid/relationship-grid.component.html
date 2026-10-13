@@ -1,0 +1,81 @@
+<section class="rg-panel">
+  <header class="rg-header">
+    <h3 class="rg-title">{{ label() }}</h3>
+    <span class="rg-count">{{ total() }}</span>
+    <button type="button" class="rg-add-button" (click)="openPicker()">
+      <i class="las la-plus"></i>
+      {{ 'relatedGrid.addRelationship' | translate }}
+    </button>
+  </header>
+
+  @if (error()) {
+    <p class="rg-error">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="rg-message">{{ 'relatedGrid.loading' | translate }}</p>
+  } @else if (items().length === 0) {
+    <p class="rg-message">{{ 'relatedGrid.noRecords' | translate }}</p>
+  } @else {
+    <table class="rg-table">
+      <tbody>
+        @for (record of items(); track record.id) {
+          <tr>
+            <td class="rg-cell-label" (click)="openRecord(record)" role="link" tabindex="0">
+              {{ displayValue(record) }}
+            </td>
+            <td class="rg-cell-actions">
+              <button type="button" class="rg-remove-button" (click)="unlink(record)"
+                      [attr.aria-label]="'relatedGrid.remove' | translate">
+                <i class="las la-times"></i>
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>
+
+@if (pickerOpen()) {
+  <div class="relationship-backdrop" role="presentation" (click)="closePicker()">
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
+    <section class="relationship-dialog" role="dialog" aria-modal="true"
+      [attr.aria-label]="label()" (click)="$event.stopPropagation()">
+      <header>
+        <h3>{{ 'relatedGrid.addRelationship' | translate }}</h3>
+        <button type="button" class="close-button" [attr.aria-label]="'relatedGrid.close' | translate" (click)="closePicker()">×</button>
+      </header>
+      <label class="relationship-search">
+        <i class="las la-search"></i>
+        <input type="search" #pickerSearchInput [placeholder]="'relatedGrid.searchRecords' | translate"
+          [ngModel]="pickerSearch()" (ngModelChange)="searchPicker($event)" />
+      </label>
+      @if (pickerError()) {
+        <p class="rg-error">{{ pickerError() }}</p>
+      }
+      <div class="relationship-list">
+        @if (pickerLoading()) {
+          <p class="relationship-message">{{ 'relatedGrid.loading' | translate }}</p>
+        } @else if (pickerItems().length === 0) {
+          <p class="relationship-message">{{ 'relatedGrid.noRecords' | translate }}</p>
+        } @else {
+          <table>
+            <thead><tr>
+              @for (column of pickerColumns(); track column.name) { <th>{{ column.display_name }}</th> }
+            </tr></thead>
+            <tbody>
+              @for (item of pickerItems(); track item.id) {
+                <tr (click)="link(item.id)">
+                  @for (column of pickerColumns(); track column.name) {
+                    <td>{{ pickerCell(item.data, column) }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </section>
+  </div>
+}

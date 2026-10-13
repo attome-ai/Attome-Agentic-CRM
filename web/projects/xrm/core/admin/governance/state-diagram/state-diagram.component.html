@@ -1,0 +1,27 @@
+@if (allStates().length === 0) {
+  <p class="sd-empty">{{ 'governance.stateModels.diagramEmpty' | translate }}</p>
+} @else {
+  <svg class="sd" [attr.viewBox]="'0 0 ' + size + ' ' + size" role="img"
+       [attr.aria-label]="'governance.stateModels.diagramAria' | translate: { states: allStates().length, transitions: edges().length }">
+    <defs>
+      <marker [attr.id]="markerId" viewBox="0 0 10 10" refX="9" refY="5"
+              markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path class="sd-arrow" d="M0,0 L10,5 L0,10 z" />
+      </marker>
+    </defs>
+    @for (e of edges(); track e.key) {
+      <path class="sd-edge" [attr.d]="e.d" [attr.marker-end]="'url(#' + markerId + ')'">
+        <title>{{ e.name }}</title>
+      </path>
+    }
+    @for (n of nodes(); track n.state) {
+      <g class="sd-node" [class.sd-node--initial]="n.initial">
+        @if (n.initial) {
+          <circle class="sd-node__ring" [attr.cx]="n.x" [attr.cy]="n.y" [attr.r]="nodeR + 4" />
+        }
+        <circle class="sd-node__dot" [attr.cx]="n.x" [attr.cy]="n.y" [attr.r]="nodeR" />
+        <text class="sd-node__label" [attr.x]="n.lx" [attr.y]="n.ly" [attr.text-anchor]="n.anchor">{{ n.state }}</text>
+      </g>
+    }
+  </svg>
+}

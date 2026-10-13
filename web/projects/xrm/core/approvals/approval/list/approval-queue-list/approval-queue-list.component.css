@@ -1,0 +1,45 @@
+/* D-421 — plan/step badges and the inline delegate form. `.badge` itself
+   comes from ../../../../../styles/admin-page.css; this file only adds the
+   layout and the one variant that page doesn't already define. */
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.badge-warn {
+  background: #78350f;
+  color: #fdba74;
+  margin-left: 6px;
+}
+
+.delegate-row td {
+  background: var(--color-surface-alt, rgba(255, 255, 255, 0.03));
+  padding: 10px 12px;
+}
+
+.delegate-form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.delegate-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.delegate-form input {
+  min-width: 320px;
+}
+
+.decision-comment {
+  width: 180px;
+  max-width: 100%;
+  margin-inline-end: 6px;
+}

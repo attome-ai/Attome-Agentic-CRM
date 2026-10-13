@@ -1,0 +1,136 @@
+/* capability-picker — the action catalogue grouped by risk tier, shared by the
+   agent-policy form and the capability-pack form. Tokens come from the host
+   theme (same custom properties the rest of the app styles against). */
+
+.cp__loading,
+.cp__empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 14px 2px;
+  font-size: 13px;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.cp__spin { animation: cp-spin .9s linear infinite; font-size: 15px; }
+
+@keyframes cp-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cp__spin { animation: none; }
+}
+
+.cp__dimmed-note,
+.cp__group-note,
+.cp__above,
+.cp__legend {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+/* The preserved-while-off warning reads as a caution, not as another caption. */
+.cp__dimmed-note {
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  border: 1px dashed var(--color-border, #24324d);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-border, #24324d) 14%, transparent);
+}
+
+.cp__group { margin-bottom: 16px; }
+.cp__group--dimmed { opacity: .55; }
+
+.cp__group-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--color-text-primary, #e5eefc);
+}
+
+.cp__count {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--color-text-secondary, #94a3b8);
+  background: color-mix(in srgb, var(--color-text-secondary, #94a3b8) 14%, transparent);
+}
+
+.cp__group-note { margin: 0 0 6px; }
+
+.cp__rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.cp__row {
+  padding: 9px 13px;
+  border-bottom: 1px solid var(--color-border, #24324d);
+  background: var(--color-bg, #0f172a);
+}
+
+.cp__row:last-child { border-bottom: none; }
+
+.cp__row:hover { background: color-mix(in srgb, var(--color-text-primary, #e5eefc) 4%, transparent); }
+
+.cp__row--on { background: color-mix(in srgb, var(--color-accent, #14b8a6) 7%, transparent); }
+
+/* Above the ceiling: greyed and labelled, never removed from the list. */
+.cp__row--above .cp__text { opacity: .55; }
+
+.cp__label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.cp__check {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--color-accent, #14b8a6);
+  cursor: pointer;
+}
+
+.cp__check:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-accent, #14b8a6) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.cp__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.cp__id {
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+  font-size: 12.5px;
+  color: var(--color-text-primary, #e5eefc);
+}
+
+.cp__desc { font-size: 12px; line-height: 1.5; color: var(--color-text-secondary, #94a3b8); }
+
+.cp__above {
+  margin: 5px 0 0 26px;
+  font-size: 11.5px;
+  color: #fbbf24;
+}
+
+.cp__legend {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border, #24324d);
+  opacity: .85;
+}

@@ -1,0 +1,90 @@
+<div class="xat">
+  @if (label()) {
+    <p class="xat-label">
+      {{ label() }}@if (required()) {<span class="xat-req">*</span>}
+    </p>
+  }
+
+  @if (!entityName() || !recordId()) {
+    <p class="xat-gate">{{ gateHint() }}</p>
+  } @else {
+    @switch (state()) {
+      <!-- ── Bytes moving: the row becomes the progress bar ──────────── -->
+      @case ('uploading') {
+        <div class="xat-row xat-row-busy"
+             role="progressbar" aria-valuemin="0" aria-valuemax="100"
+             [attr.aria-valuenow]="progress()"
+             [attr.aria-label]="'Uploading ' + uploadingName()">
+          <div class="xat-fill" [style.width.%]="progress()"></div>
+          <i class="las la-upload xat-icon"></i>
+          <span class="xat-text">Uploading {{ uploadingName() }}…</span>
+          <span class="xat-pct">{{ progress() }}%</span>
+        </div>
+      }
+
+      <!-- ── Server-side scan: no percentage to report, so pulse ─────── -->
+      @case ('processing') {
+        <div class="xat-row xat-row-busy" aria-live="polite">
+          <div class="xat-fill xat-fill-pulse"></div>
+          <i class="las la-shield-alt xat-icon"></i>
+          <span class="xat-text">Scanning {{ uploadingName() }} for malware…</span>
+        </div>
+      }
+
+      @default {
+        @if (hasValue()) {
+          <!-- ── Attached ───────────────────────────────────────────── -->
+          <div class="xat-row xat-row-filled">
+            <i class="las la-file-alt xat-icon"></i>
+            <span class="xat-text xat-name" [title]="displayName()">{{ displayName() }}</span>
+            @if (canDownload()) {
+              <button type="button" class="xat-action" (click)="download()"
+                      [disabled]="downloading()">
+                {{ downloading() ? 'Preparing…' : 'Download' }}
+              </button>
+            } @else {
+              <span class="xat-note">Save to keep</span>
+            }
+            <button type="button" class="xat-remove" [title]="'fieldInput.removeAttachment' | translate"
+                    [attr.aria-label]="'fieldInput.removeAttachment' | translate" (click)="clear()">
+              <i class="las la-times"></i>
+            </button>
+          </div>
+        } @else {
+          <!-- ── Empty drop zone ────────────────────────────────────── -->
+          <div class="xat-row xat-drop"
+               role="button" tabindex="0"
+               [attr.aria-label]="placeholder()"
+               [class.xat-drop-active]="dragging()"
+               (dragover)="onDragOver($event)"
+               (dragleave)="onDragLeave($event)"
+               (drop)="onDrop($event)"
+               (click)="fileInput.click()"
+               (keydown.enter)="fileInput.click()"
+               (keydown.space)="fileInput.click(); $event.preventDefault()">
+            <i class="las la-file xat-icon"></i>
+            <span class="xat-text">{{ placeholder() }}</span>
+            <span class="xat-browse">{{ browseLabel() }}</span>
+          </div>
+        }
+
+        <xrm-file-versions [entityName]="entityName()!" [recordId]="recordId()!"
+                           [fieldName]="fieldName()"
+                           (restored)="onVersionRestored($event)" />
+
+        <input #fileInput type="file" class="xat-native"
+               [accept]="accept()"
+               (change)="onFileSelected($any($event.target).files); fileInput.value = ''" />
+
+        @if (message()) {
+          <p class="xat-status"
+             [class.xat-status-error]="state() === 'rejected' || state() === 'error'">
+            {{ message() }}
+          </p>
+        } @else if (hint()) {
+          <p class="xat-status">{{ hint() }}</p>
+        }
+      }
+    }
+  }
+</div>

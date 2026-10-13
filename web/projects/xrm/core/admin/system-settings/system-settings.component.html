@@ -1,0 +1,176 @@
+<section class="settings-page">
+  <header class="settings-header">
+    <div class="title-icon"><i class="las la-cog"></i></div>
+    <div>
+      <h1>System Settings</h1>
+      <p>Configure how the XRM workspace looks and behaves.</p>
+    </div>
+  </header>
+
+  <section class="setting-section">
+    <div class="section-heading">
+      <div>
+        <h2>Sidebar style</h2>
+        <p>Choose how the main navigation is displayed on this device.</p>
+      </div>
+      <span class="saved"><i class="las la-check-circle"></i> Saved automatically</span>
+    </div>
+
+    <div class="style-options" role="radiogroup" aria-label="Sidebar style">
+      <button type="button" class="style-card"
+              [class.selected]="preferences.style() === 'classic'"
+              role="radio" [attr.aria-checked]="preferences.style() === 'classic'"
+              (click)="selectStyle('classic')">
+        <span class="preview classic-preview" aria-hidden="true">
+          <span class="preview-sidebar">
+            <span class="preview-brand"></span>
+            <span class="preview-line long"></span>
+            <span class="preview-line"></span>
+            <span class="preview-line long"></span>
+            <span class="preview-line"></span>
+          </span>
+          <span class="preview-content"></span>
+        </span>
+        <span class="option-copy">
+          <strong>Classic sidebar</strong>
+          <small>Full navigation that can collapse into icons.</small>
+        </span>
+        <i class="selection-icon las"
+           [class.la-check-circle]="preferences.style() === 'classic'"
+           [class.la-circle]="preferences.style() !== 'classic'"></i>
+      </button>
+
+      <button type="button" class="style-card"
+              [class.selected]="preferences.style() === 'rail'"
+              role="radio" [attr.aria-checked]="preferences.style() === 'rail'"
+              (click)="selectStyle('rail')">
+        <span class="preview rail-preview" aria-hidden="true">
+          <span class="preview-rail">
+            <i class="las la-home"></i><i class="las la-shield-alt"></i>
+            <i class="las la-database"></i><i class="las la-cog"></i>
+          </span>
+          <span class="preview-panel">
+            <span class="preview-line long"></span>
+            <span class="preview-line"></span>
+            <span class="preview-line long"></span>
+          </span>
+          <span class="preview-content"></span>
+        </span>
+        <span class="option-copy">
+          <strong>Navigation rail</strong>
+          <small>Compact icons with a section panel that opens on selection.</small>
+        </span>
+        <i class="selection-icon las"
+           [class.la-check-circle]="preferences.style() === 'rail'"
+           [class.la-circle]="preferences.style() !== 'rail'"></i>
+      </button>
+    </div>
+  </section>
+
+  @if (mySettings().length > 0) {
+    <section class="setting-section">
+      <div class="section-heading">
+        <div>
+          <h2>Your preferences</h2>
+          <p>Your own overrides. Left blank, each falls back to your organization's or the deployment's default.</p>
+        </div>
+      </div>
+
+      <div class="settings-list">
+        @for (row of mySettings(); track row.view.key) {
+          <div class="setting-row">
+            <div class="setting-copy">
+              <strong>{{ row.view.key }}</strong>
+              <small>{{ row.view.description }}</small>
+              <span class="source-badge" [class.is-override]="row.view.source === 'user'">
+                {{ row.view.source === 'user' ? 'Your override' : 'Inherited (' + row.view.source + ')' }}
+              </span>
+            </div>
+            <div class="setting-control">
+              @switch (row.kind) {
+                @case ('boolean') {
+                  <input type="checkbox" [(ngModel)]="row.draft" (change)="saveMine(row)" />
+                }
+                @case ('number') {
+                  <input type="number" [(ngModel)]="row.draft"
+                         [attr.min]="row.view.schema['minimum'] ?? null"
+                         [attr.max]="row.view.schema['maximum'] ?? null"
+                         (change)="saveMine(row)" />
+                }
+                @case ('select') {
+                  <select [(ngModel)]="row.draft" (change)="saveMine(row)">
+                    @for (opt of row.options; track opt) {
+                      <option [value]="opt">{{ opt }}</option>
+                    }
+                  </select>
+                }
+                @default {
+                  <input type="text" [(ngModel)]="row.draft" (change)="saveMine(row)" />
+                }
+              }
+              <span class="row-status" [class.error]="row.status() === 'error'">
+                @switch (row.status()) {
+                  @case ('saving') { <i class="las la-spinner la-spin"></i> }
+                  @case ('saved') { <i class="las la-check-circle"></i> }
+                  @case ('error') { <i class="las la-exclamation-circle"></i> {{ row.error() }} }
+                }
+              </span>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  @if (hasDeploymentSettings()) {
+    <section class="setting-section">
+      <div class="section-heading">
+        <div>
+          <h2>Deployment defaults</h2>
+          <p>The default for every user and organization in this deployment, unless they set their own override.</p>
+        </div>
+      </div>
+
+      <div class="settings-list">
+        @for (row of deploymentSettings(); track row.view.key) {
+          <div class="setting-row">
+            <div class="setting-copy">
+              <strong>{{ row.view.key }}</strong>
+              <small>{{ row.view.description }}</small>
+            </div>
+            <div class="setting-control">
+              @switch (row.kind) {
+                @case ('boolean') {
+                  <input type="checkbox" [(ngModel)]="row.draft" (change)="saveDeploymentDefault(row)" />
+                }
+                @case ('number') {
+                  <input type="number" [(ngModel)]="row.draft"
+                         [attr.min]="row.view.schema['minimum'] ?? null"
+                         [attr.max]="row.view.schema['maximum'] ?? null"
+                         (change)="saveDeploymentDefault(row)" />
+                }
+                @case ('select') {
+                  <select [(ngModel)]="row.draft" (change)="saveDeploymentDefault(row)">
+                    @for (opt of row.options; track opt) {
+                      <option [value]="opt">{{ opt }}</option>
+                    }
+                  </select>
+                }
+                @default {
+                  <input type="text" [(ngModel)]="row.draft" (change)="saveDeploymentDefault(row)" />
+                }
+              }
+              <span class="row-status" [class.error]="row.status() === 'error'">
+                @switch (row.status()) {
+                  @case ('saving') { <i class="las la-spinner la-spin"></i> }
+                  @case ('saved') { <i class="las la-check-circle"></i> }
+                  @case ('error') { <i class="las la-exclamation-circle"></i> {{ row.error() }} }
+                }
+              </span>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+</section>

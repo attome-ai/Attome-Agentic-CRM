@@ -1,0 +1,125 @@
+@if (has('documents')) {
+  <div [id]="panelId('documents')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('documents')" [hidden]="activeTab() !== 'documents'"
+       data-testid="documents-tab">
+    @if (recordId(); as docRecordId) {
+      <!-- Created only while the tab is shown: the browser's file list is a CDK
+           virtual-scroll viewport, which measures its height once. Measured
+           inside a hidden tab it is 0 and the list stays empty. -->
+      @if (activeTab() === 'documents') {
+        <attome-document-folder-browser
+          [entityName]="entityName()" [recordId]="docRecordId" folder="uploads" />
+      }
+    } @else {
+      <p class="xf-hint">{{ 'xrmForm.saveBeforeDocuments' | translate }}</p>
+    }
+  </div>
+}
+
+@if (has('communications')) {
+  <div [id]="panelId('communications')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('communications')" [hidden]="activeTab() !== 'communications'"
+       data-testid="communications-tab">
+    <xrm-communications-panel [entityName]="entityName()" [recordId]="recordId()" />
+  </div>
+}
+
+@if (has('notes')) {
+  <div [id]="panelId('notes')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('notes')" [hidden]="activeTab() !== 'notes'"
+       data-testid="notes-grid">
+    @if (recordId(); as notesRecordId) {
+      <xrm-notes-panel [entityName]="entityName()" [recordId]="notesRecordId" />
+    } @else {
+      <p class="xf-hint">{{ 'xrmForm.saveBeforeNotes' | translate }}</p>
+    }
+  </div>
+}
+
+@if (has('activities')) {
+  <div [id]="panelId('activities')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('activities')" [hidden]="activeTab() !== 'activities'"
+       data-testid="activities-tab">
+    @if (recordId(); as activityRecordId) {
+      <!-- Deferred: the panel loads in its own chunk the first time the tab
+           opens, keeping the core/entity chunk inside its budget. -->
+      @defer (when activeTab() === 'activities') {
+        <xrm-activities-panel [entityName]="entityName()" [recordId]="activityRecordId" />
+      }
+    } @else {
+      <p class="xf-hint">{{ 'xrmForm.saveBeforeActivities' | translate }}</p>
+    }
+  </div>
+}
+
+@if (has('tags')) {
+  <div [id]="panelId('tags')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('tags')" [hidden]="activeTab() !== 'tags'"
+       data-testid="tags-tab">
+    @if (recordId(); as tagRecordId) {
+      <xrm-tags-panel [entityName]="entityName()" [recordId]="tagRecordId" />
+    } @else {
+      <p class="xf-hint">{{ 'xrmForm.saveBeforeTags' | translate }}</p>
+    }
+  </div>
+}
+
+@if (has('consent')) {
+  <div [id]="panelId('consent')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('consent')" [hidden]="activeTab() !== 'consent'"
+       data-testid="consent-panel-tab">
+    @if (recordId(); as consentRecordId) {
+      <xrm-consent-panel [entityName]="entityName()" [recordId]="consentRecordId" />
+    } @else {
+      <p class="xf-hint">{{ 'xrmForm.saveBeforeConsent' | translate }}</p>
+    }
+  </div>
+}
+
+@if (has('relationships')) {
+  <div [id]="panelId('relationships')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('relationships')" [hidden]="activeTab() !== 'relationships'"
+       data-testid="relationships-panel">
+    @if (recordId(); as relRecordId) {
+      <xrm-relationship-explorer [entityName]="entityName()" [recordId]="relRecordId" />
+    } @else {
+      <p class="xf-hint">{{ 'xrmForm.saveBeforeRelationships' | translate }}</p>
+    }
+  </div>
+}
+
+@if (has('timeline')) {
+  <div [id]="panelId('timeline')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('timeline')" [hidden]="activeTab() !== 'timeline'"
+       data-testid="timeline-tab">
+    @if (recordId()) {
+      @if (activeTab() === 'timeline') {
+        @if (activity(); as m) {
+          <ng-container *ngComponentOutlet="m.RecordTimelinePanelComponent; inputs: activityInputs()" />
+        } @else if (activityLoadFailed()) {
+          <p class="xf-hint" role="alert">{{ 'recordTimeline.error' | translate }}</p>
+        }
+      }
+    } @else {
+      <p class="xf-hint">{{ 'xrmForm.saveBeforeTimeline' | translate }}</p>
+    }
+  </div>
+}
+
+@if (has('history')) {
+  <div [id]="panelId('history')" class="xf-tab-panel" role="tabpanel"
+       [attr.aria-labelledby]="tabId('history')" [hidden]="activeTab() !== 'history'"
+       data-testid="history-tab">
+    @if (recordId()) {
+      @if (activeTab() === 'history') {
+        @if (activity(); as m) {
+          <ng-container *ngComponentOutlet="m.RecordHistoryPanelComponent; inputs: activityInputs()" />
+        } @else if (activityLoadFailed()) {
+          <p class="xf-hint" role="alert">{{ 'recordHistory.error' | translate }}</p>
+        }
+      }
+    } @else {
+      <p class="xf-hint">{{ 'xrmForm.saveBeforeHistory' | translate }}</p>
+    }
+  </div>
+}

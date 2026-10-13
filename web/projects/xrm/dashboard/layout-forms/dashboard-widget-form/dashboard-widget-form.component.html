@@ -1,0 +1,17 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="dashboard-widget">
+  <ng-template xrmTab="details">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Details</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['section_id', 'widget_type', 'name', 'name_ar', 'sequence', 'grid_col', 'grid_row', 'grid_col_span', 'grid_row_span', 'freeform_x', 'freeform_y', 'freeform_width', 'freeform_height', 'freeform_z_index', 'config', 'responsive_overrides', 'is_visible', 'is_locked', 'last_refresh_at', 'last_error', 'group_id', 'query_id', 'view_id', 'query_params', 'emits', 'listens']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

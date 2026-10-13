@@ -1,0 +1,232 @@
+<div class="fcd-backdrop" aria-hidden="true"></div>
+<div class="fcd-dialog" role="dialog" aria-modal="true" aria-labelledby="fcd-title" data-testid="field-change-dialog">
+  <header class="fcd-head">
+    <h3 id="fcd-title">{{ titleKey() | translate: { field: field().name } }}</h3>
+    <button type="button" class="fcd-close" (click)="close()" [attr.aria-label]="'fieldChange.dialog.close' | translate">
+      <i class="las la-times" aria-hidden="true"></i>
+    </button>
+  </header>
+
+  <div class="fcd-body">
+    @switch (mode()) {
+      @case ('rename') {
+        <div class="field">
+          <span class="field-caption">{{ 'fieldChange.rename.current' | translate }}</span>
+          <p class="mono-input fcd-readonly" dir="ltr">{{ field().logicalname }}</p>
+        </div>
+        <div class="field">
+          <label class="field-caption" for="fcd-new-name">{{ 'fieldChange.rename.newName' | translate }}</label>
+          <input id="fcd-new-name" type="text" class="mono-input" dir="ltr" autocomplete="off" data-autofocus
+                 maxlength="63" aria-describedby="fcd-new-name-hint fcd-new-name-issue"
+                 [attr.aria-invalid]="renameIssue() ? 'true' : null"
+                 [ngModel]="newName()" (ngModelChange)="newName.set($event)" />
+          <p id="fcd-new-name-hint" class="hint">{{ 'fieldChange.rename.hint' | translate }}</p>
+          <p id="fcd-new-name-issue" class="fcd-issue">
+            @if (renameIssue(); as issue) { {{ issue | translate }} }
+          </p>
+        </div>
+        <p class="warn-msg" role="note">
+          <i class="las la-exclamation-triangle" aria-hidden="true"></i>
+          {{ 'fieldChange.rename.warning' | translate }}
+        </p>
+        <div class="btn-row">
+          <button type="button" class="btn-ghost" data-testid="check"
+                  [disabled]="renameIssue() !== null || busy() !== null" (click)="checkRename()">
+            {{ (busy() === 'check' ? 'fieldChange.dialog.checking' : 'fieldChange.dialog.check') | translate }}
+          </button>
+          <button type="button" class="btn-primary" data-testid="apply"
+                  [disabled]="renameIssue() !== null || busy() !== null" (click)="applyRename()">
+            {{ (busy() === 'apply' ? 'fieldChange.dialog.working' : 'fieldChange.rename.submit') | translate }}
+          </button>
+        </div>
+      }
+
+      @case ('delete') {
+        <p class="warn-msg" role="note">
+          <i class="las la-exclamation-triangle" aria-hidden="true"></i>
+          {{ 'fieldChange.delete.warning' | translate }}
+        </p>
+        <label class="checkbox-row fcd-confirm">
+          <input type="checkbox" data-testid="confirm-delete"
+                 [disabled]="!deleteReady()"
+                 [ngModel]="deleteConfirmed()" (ngModelChange)="deleteConfirmed.set($event)" />
+          {{ 'fieldChange.delete.confirm' | translate }}
+        </label>
+        <div class="btn-row">
+          <button type="button" class="btn-ghost" data-testid="check"
+                  [disabled]="busy() !== null" (click)="checkDelete()">
+            {{ (busy() === 'check' ? 'fieldChange.dialog.checking' : 'fieldChange.dialog.check') | translate }}
+          </button>
+          <button type="button" class="btn-danger-outline" data-testid="apply"
+                  [disabled]="!deleteReady() || !deleteConfirmed() || busy() !== null" (click)="applyDelete()">
+            {{ (busy() === 'apply' ? 'fieldChange.dialog.working' : 'fieldChange.delete.submit') | translate }}
+          </button>
+        </div>
+      }
+
+      @case ('changeType') {
+        <div class="field">
+          <span class="field-caption">{{ 'fieldChange.changeType.from' | translate }}</span>
+          <p class="fcd-readonly">{{ typeKey(field().field_type) | translate }}</p>
+        </div>
+        @if (targets().length === 0) {
+          <p class="hint" data-testid="no-targets">{{ 'fieldChange.changeType.none' | translate }}</p>
+        } @else {
+          <div class="field">
+            <label class="field-caption" for="fcd-to">{{ 'fieldChange.changeType.to' | translate }}</label>
+            <select id="fcd-to" data-autofocus [ngModel]="targetType()" (ngModelChange)="targetType.set($event)">
+              <option value="" disabled>{{ 'fieldChange.changeType.choose' | translate }}</option>
+              @for (t of targets(); track t) {
+                <option [value]="t">{{ typeKey(t) | translate }}</option>
+              }
+            </select>
+          </div>
+          @if (needsFormat()) {
+            <div class="field">
+              <label class="field-caption" for="fcd-format">{{ 'fieldChange.changeType.format' | translate }}</label>
+              <select id="fcd-format" dir="ltr" [ngModel]="dateFormat()" (ngModelChange)="dateFormat.set($event)">
+                @for (fmt of dateFormats; track fmt) {
+                  <option [value]="fmt">{{ fmt }}</option>
+                }
+              </select>
+            </div>
+          }
+          @if (needsBoolValues()) {
+            <div class="form-row-2">
+              <div class="field">
+                <label class="field-caption" for="fcd-true">{{ 'fieldChange.changeType.trueValues' | translate }}</label>
+                <input id="fcd-true" type="text" [ngModel]="trueValues()" (ngModelChange)="trueValues.set($event)" />
+              </div>
+              <div class="field">
+                <label class="field-caption" for="fcd-false">{{ 'fieldChange.changeType.falseValues' | translate }}</label>
+                <input id="fcd-false" type="text" [ngModel]="falseValues()" (ngModelChange)="falseValues.set($event)" />
+              </div>
+            </div>
+          }
+          @if (needsMap()) {
+            <div class="field">
+              <label class="field-caption" for="fcd-map">{{ 'fieldChange.changeType.map' | translate }}</label>
+              <textarea id="fcd-map" rows="5" dir="auto" aria-describedby="fcd-conv-issue"
+                        [ngModel]="mapText()" (ngModelChange)="mapText.set($event)"></textarea>
+            </div>
+          }
+          <p id="fcd-conv-issue" class="fcd-issue">
+            @if (conversionIssue(); as issue) { {{ issue | translate }} }
+          </p>
+          <p class="warn-msg" role="note">
+            <i class="las la-exclamation-triangle" aria-hidden="true"></i>
+            {{ 'fieldChange.changeType.warning' | translate }}
+          </p>
+          <div class="btn-row">
+            <button type="button" class="btn-ghost" data-testid="check"
+                    [disabled]="conversionIssue() !== null || busy() !== null" (click)="checkChangeType()">
+              {{ (busy() === 'check' ? 'fieldChange.dialog.checking' : 'fieldChange.dialog.check') | translate }}
+            </button>
+            <button type="button" class="btn-primary" data-testid="apply"
+                    [disabled]="conversionIssue() !== null || busy() !== null" (click)="applyChangeType()">
+              {{ (busy() === 'apply' ? 'fieldChange.dialog.working' : 'fieldChange.changeType.submit') | translate }}
+            </button>
+          </div>
+        }
+      }
+
+      @case ('choices') {
+        <section class="fcd-section" aria-labelledby="fcd-current">
+          <h4 id="fcd-current">{{ 'fieldChange.choices.current' | translate }}</h4>
+          @if (choices().length === 0) {
+            <p class="hint">{{ 'fieldChange.choices.noChoices' | translate }}</p>
+          } @else {
+            <ul class="fcd-choices" data-testid="choices">
+              @for (c of choices(); track c) {
+                <li class="mono-input" dir="ltr">{{ c }}</li>
+              }
+            </ul>
+          }
+        </section>
+
+        <section class="fcd-section" aria-labelledby="fcd-add">
+          <h4 id="fcd-add">{{ 'fieldChange.choices.addTitle' | translate }}</h4>
+          <div class="form-row-3">
+            <div class="field">
+              <label class="field-caption" for="fcd-choice-value">{{ 'fieldChange.choices.value' | translate }}</label>
+              <input id="fcd-choice-value" type="text" dir="ltr" maxlength="100" data-autofocus
+                     [ngModel]="newChoiceValue()" (ngModelChange)="newChoiceValue.set($event)" />
+            </div>
+            <div class="field">
+              <label class="field-caption" for="fcd-choice-label">{{ 'fieldChange.choices.label' | translate }}</label>
+              <input id="fcd-choice-label" type="text" maxlength="200"
+                     [ngModel]="newChoiceLabel()" (ngModelChange)="newChoiceLabel.set($event)" />
+            </div>
+            <div class="field">
+              <label class="field-caption" for="fcd-choice-after">{{ 'fieldChange.choices.after' | translate }}</label>
+              <select id="fcd-choice-after" [ngModel]="newChoiceAfter()" (ngModelChange)="newChoiceAfter.set($event)">
+                <option value="">{{ 'fieldChange.choices.atEnd' | translate }}</option>
+                @for (c of choices(); track c) {
+                  <option [value]="c">{{ c }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn-primary" data-testid="add-choice"
+                    [disabled]="addChoiceIssue() !== null || busy() !== null" (click)="addChoice()">
+              {{ (busy() === 'apply' ? 'fieldChange.dialog.working' : 'fieldChange.choices.add') | translate }}
+            </button>
+          </div>
+        </section>
+
+        @if (choices().length > 0) {
+          <section class="fcd-section" aria-labelledby="fcd-remove">
+            <h4 id="fcd-remove">{{ 'fieldChange.choices.removeTitle' | translate }}</h4>
+            <div class="field">
+              <label class="field-caption" for="fcd-remove-value">{{ 'fieldChange.choices.removeValue' | translate }}</label>
+              <select id="fcd-remove-value" dir="ltr" [ngModel]="removeValue()" (ngModelChange)="removeValue.set($event)">
+                @for (c of choices(); track c) {
+                  <option [value]="c">{{ c }}</option>
+                }
+              </select>
+            </div>
+            <p class="hint">{{ 'fieldChange.choices.removeHint' | translate }}</p>
+            <div class="btn-row">
+              <button type="button" class="btn-ghost" data-testid="check"
+                      [disabled]="!removeValue() || busy() !== null" (click)="checkRemoveChoice()">
+                {{ (busy() === 'check' ? 'fieldChange.dialog.checking' : 'fieldChange.dialog.check') | translate }}
+              </button>
+              <button type="button" class="btn-danger-outline" data-testid="remove-choice"
+                      [disabled]="!removeValue() || busy() !== null" (click)="removeChoice()">
+                {{ 'fieldChange.choices.remove' | translate }}
+              </button>
+            </div>
+          </section>
+        }
+      }
+    }
+
+    @if (busy() === 'check' && mode() === 'delete' && !result()) {
+      <p class="state-msg" role="status">{{ 'fieldChange.dialog.checking' | translate }}</p>
+    }
+    @if (approvalId(); as id) {
+      <p class="fcd-approval" role="status" data-testid="approval">
+        {{ 'fieldChange.result.approval' | translate }}
+        <span class="fcd-mono" dir="ltr">{{ 'fieldChange.result.approvalId' | translate: { id: id } }}</span>
+      </p>
+    }
+    @if (error()) {
+      <p class="error-msg" role="alert" data-testid="dialog-error">{{ error() }}</p>
+    }
+    @if (result(); as r) {
+      <attome-field-change-result [result]="r" />
+    }
+    @if (runId(); as run) {
+      <attome-field-run-status [entityId]="entityId()" [fieldId]="field().id" [runId]="run"
+                            (abandoned)="onRunAbandoned()" />
+    }
+  </div>
+
+  <footer class="fcd-foot">
+    <button type="button" class="btn-ghost" data-testid="close"
+            [attr.data-autofocus]="mode() === 'delete' ? '' : null" (click)="close()">
+      {{ 'fieldChange.dialog.close' | translate }}
+    </button>
+  </footer>
+</div>

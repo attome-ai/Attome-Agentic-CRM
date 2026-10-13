@@ -1,0 +1,131 @@
+.act-panel { display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Add form: one card, same look as the other record panels ───────── */
+.act-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 10px;
+  background: var(--color-surface, transparent);
+}
+
+/* Task / Phone call as a segmented toggle instead of bare radio buttons. */
+.act-type {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 8px;
+}
+.act-type-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #94a3b8);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.act-type-option input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+}
+.act-type-option:has(input:checked) {
+  background: color-mix(in srgb, var(--color-accent, #5D5CDE) 20%, transparent);
+  color: var(--color-text-primary, #e5eefc);
+}
+.act-type-option:has(input:focus-visible) {
+  outline: 2px solid var(--color-accent, #5D5CDE);
+  outline-offset: 1px;
+}
+
+.act-input {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 8px;
+  background: var(--color-bg-alt, transparent);
+  color: var(--color-text-primary, inherit);
+  font: inherit;
+  font-size: 13px;
+}
+.act-subject { flex: 1 1 220px; min-width: 0; }
+
+.act-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-secondary, #94a3b8);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.act-btn:disabled { opacity: .4; cursor: not-allowed; }
+.act-btn:focus-visible { outline: 2px solid var(--color-accent, #5D5CDE); outline-offset: 2px; }
+.act-btn-primary {
+  color: #fff;
+  border-color: var(--color-accent, #5D5CDE);
+  background: var(--color-accent, #5D5CDE);
+}
+
+/* ── List: framed like the Communications table ────────────────────── */
+.act-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.act-row {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border, #24324d);
+  font-size: 13px;
+  animation: act-row-in .18s ease-out both;
+}
+.act-row:last-child { border-bottom: 0; }
+.act-kind, .act-status, .act-due { color: var(--color-text-secondary, #94a3b8); font-size: 12px; }
+.act-subject-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.act-closed .act-subject-text { text-decoration: line-through; color: var(--color-text-secondary, #94a3b8); }
+.act-overdue { box-shadow: inset 3px 0 0 #f87171; }
+.act-overdue .act-due { color: #f87171; }
+.act-badge { display: inline-flex; align-items: center; gap: 4px; margin-inline-start: 6px; font-weight: 600; }
+
+.act-hint { margin: 0; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
+/* The empty message sits inside the list frame, centred. */
+.act-list > .act-hint { padding: 28px 14px; text-align: center; }
+.act-error { margin: 0; color: #f87171; font-size: 13px; }
+
+@keyframes act-row-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (max-width: 640px) {
+  .act-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .act-kind, .act-status { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .act-row { animation: none; }
+}

@@ -1,0 +1,9 @@
+:host { display: block; min-height: 100vh; background: #ffffff; color: #0f172a; }
+.cpv-page { max-width: 860px; margin: 0 auto; padding: 48px 24px; display: flex; flex-direction: column; gap: 0; }
+.cpv-status { max-width: 860px; margin: 0 auto; padding: 96px 24px; text-align: center; color: #64748b; }
+.cpv-status h1 { color: #0f172a; }
+
+.cpv-vote { display: flex; align-items: center; gap: 12px; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; }
+.cpv-vote-prompt { color: #64748b; font-size: 0.9rem; }
+.cpv-vote-btn { padding: 4px 14px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; cursor: pointer; font-size: 0.9rem; }
+.cpv-vote-btn:hover { background: #f1f5f9; }

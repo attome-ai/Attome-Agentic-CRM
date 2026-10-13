@@ -1,0 +1,17 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="service-sla-calculation">
+  <ng-template xrmTab="details">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'xrmForm.tabs.details' | translate }}</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['ticket_ref', 'sla_policy_ref', 'calculation_type', 'outcome', 'unresolved_reason', 'detail', 'calendar_ref', 'calendar_content_hash', 'calendar_tzdb_version', 'start_at', 'end_at', 'target_business_seconds', 'business_seconds', 'result_due_at']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

@@ -1,0 +1,30 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="kds">
+  <ng-template xrmTab="general">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">Details</h2>
+        </div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of sortedFields(); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+  </ng-template>
+  <ng-template xrmTab="knowledge">
+    @if (id(); as sourceId) {
+      <xrm-related-grid
+        entityName="knowledge_data_item"
+        [filters]="[{ field: 'data_source_ref', value: sourceId }]"
+        [pageSize]="10"
+      />
+    } @else {
+      <p class="xf-hint">Save the record before viewing knowledge items.</p>
+    }
+  </ng-template>
+</xrm-base-form>

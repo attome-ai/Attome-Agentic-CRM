@@ -1,0 +1,115 @@
+<section class="af-panel" [attr.aria-label]="'advancedFind.title' | translate">
+  <header class="af-header">
+    <h3>{{ 'advancedFind.title' | translate }}</h3>
+    <p class="af-hint">{{ 'advancedFind.hint' | translate: { max: maxConditions } }}</p>
+    <button type="button" class="af-close" [attr.aria-label]="'entityList.close' | translate"
+      (click)="closed.emit()">×</button>
+  </header>
+
+  @if (loading()) {
+  <p class="af-status">{{ 'entityList.loadingRecords' | translate }}</p>
+  } @else if (error(); as message) {
+  <p class="af-status af-error" role="alert">{{ message }}</p>
+  } @else if (!fields().length) {
+  <p class="af-status">{{ 'advancedFind.noFields' | translate }}</p>
+  } @else {
+  <form class="af-rows" [formGroup]="lookupForm" (ngSubmit)="apply()">
+    @for (condition of conditions(); track condition.key; let first = $first) {
+    <div class="af-row" data-testid="advanced-find-row">
+      <span class="af-joiner">{{ (first ? 'advancedFind.where' : 'advancedFind.and') | translate }}</span>
+
+      <select class="af-field" [attr.aria-label]="'advancedFind.field' | translate"
+        [value]="condition.field" (change)="setField(condition.key, $any($event.target).value)">
+        @for (f of fields(); track f.name) {
+        <option [value]="f.name" [selected]="f.name === condition.field">{{ f.display_name || f.name }}</option>
+        }
+      </select>
+
+      @if (kind(condition) === 'boolean') {
+      <select class="af-value" [attr.aria-label]="'advancedFind.value' | translate"
+        (change)="setBoolean(condition.key, $any($event.target).value)">
+        <option value="" [selected]="valueOf(condition) === ''">{{ 'advancedFind.choose' | translate }}</option>
+        <option value="true" [selected]="valueOf(condition) === 'true'">{{ 'entityList.yes' | translate }}</option>
+        <option value="false" [selected]="valueOf(condition) === 'false'">{{ 'entityList.no' | translate }}</option>
+      </select>
+      } @else {
+      <select class="af-op" [attr.aria-label]="'advancedFind.operator' | translate"
+        (change)="setOperator(condition.key, $any($event.target).value)">
+        @for (op of operators(condition); track op) {
+        <option [value]="op" [selected]="op === condition.draft.operator">{{ operatorLabel(op) | translate }}</option>
+        }
+      </select>
+
+      @if (needsValue(condition)) {
+      @switch (kind(condition)) {
+      @case ('optionset') {
+      <select class="af-value" [attr.aria-label]="'advancedFind.value' | translate"
+        (change)="setValue(condition.key, $any($event.target).value)">
+        <option value="" [selected]="valueOf(condition) === ''">{{ 'advancedFind.choose' | translate }}</option>
+        @for (option of choices(condition); track option.value) {
+        <option [value]="option.value" [selected]="option.value === valueOf(condition)">{{ option.label }}</option>
+        }
+      </select>
+      }
+      @case ('lookup') {
+      @if (lookupField(condition); as lf) {
+      <div class="af-value af-lookup">
+        <attome-field-input [field]="lf" [entityName]="entityName()" />
+      </div>
+      }
+      }
+      @case ('number') {
+      <input class="af-value" type="number" [attr.aria-label]="(isRange(condition) ? 'entityList.filterRangeFrom' : 'advancedFind.value') | translate"
+        [value]="valueOf(condition)" (input)="setValue(condition.key, $any($event.target).value)" />
+      @if (isRange(condition)) {
+      <input class="af-value" type="number" [attr.aria-label]="'entityList.filterRangeTo' | translate"
+        [value]="valueToOf(condition)" (input)="setValueTo(condition.key, $any($event.target).value)" />
+      }
+      }
+      @case ('date') {
+      <input class="af-value" type="date" [attr.aria-label]="(isRange(condition) ? 'entityList.filterRangeFrom' : 'advancedFind.value') | translate"
+        [value]="valueOf(condition)" (input)="setValue(condition.key, $any($event.target).value)" />
+      @if (isRange(condition)) {
+      <input class="af-value" type="date" [attr.aria-label]="'entityList.filterRangeTo' | translate"
+        [value]="valueToOf(condition)" (input)="setValueTo(condition.key, $any($event.target).value)" />
+      }
+      }
+      @default {
+      <input class="af-value" type="text" [attr.aria-label]="'advancedFind.value' | translate"
+        [value]="valueOf(condition)" (input)="setValue(condition.key, $any($event.target).value)" />
+      }
+      }
+      }
+      }
+
+      <button type="button" class="af-remove" [attr.aria-label]="'advancedFind.remove' | translate"
+        (click)="removeCondition(condition.key)"><i class="las la-times" aria-hidden="true"></i></button>
+    </div>
+    }
+
+    @for (filter of kept(); track $index) {
+    <div class="af-row af-kept">
+      <span class="af-joiner">{{ 'advancedFind.and' | translate }}</span>
+      <code class="af-kept-text">{{ filter.field }} {{ filter.op }} {{ filter.value ?? '' }}</code>
+      <span class="af-hint">{{ 'advancedFind.kept' | translate }}</span>
+      <button type="button" class="af-remove" [attr.aria-label]="'advancedFind.remove' | translate"
+        (click)="removeKept($index)"><i class="las la-times" aria-hidden="true"></i></button>
+    </div>
+    }
+  </form>
+
+  <footer class="af-footer">
+    <button type="button" class="btn btn-text" [disabled]="!canAdd()" (click)="addCondition()">
+      <i class="las la-plus" aria-hidden="true"></i> {{ 'advancedFind.addCondition' | translate }}
+    </button>
+    <span class="af-spacer"></span>
+    <button type="button" class="btn btn-text" (click)="clear()">{{ 'entityList.clear' | translate }}</button>
+    @if (canSave()) {
+    <button type="button" class="btn btn-secondary" (click)="save()">
+      <i class="las la-star" aria-hidden="true"></i> {{ 'advancedFind.saveAsView' | translate }}
+    </button>
+    }
+    <button type="button" class="btn btn-primary" (click)="apply()">{{ 'entityList.apply' | translate }}</button>
+  </footer>
+  }
+</section>

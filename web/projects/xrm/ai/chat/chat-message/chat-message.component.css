@@ -1,0 +1,106 @@
+:host { display: block; }
+
+.msg {
+  max-width: 88%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.msg--user {
+  margin-inline-start: auto;
+  background: color-mix(in srgb, var(--color-accent, #5d5cde) 14%, transparent);
+}
+
+.msg--assistant {
+  margin-inline-end: auto;
+  background: var(--color-bg-alt, #ffffff);
+  border: 1px solid var(--color-border, #d1d5db);
+}
+
+.msg--tool {
+  margin-inline-end: auto;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.msg__text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msg__raw {
+  margin: 6px 0 0;
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msg__notice {
+  margin: 8px 0 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  background: color-mix(in srgb, #d97706 14%, transparent);
+}
+
+.msg__grounding {
+  margin: 8px 0 4px;
+  font-size: 0.8rem;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.msg__grounding--ungrounded { color: #b45309; }
+.msg__grounding--sourced { color: var(--color-text-secondary, #6b7280); }
+
+.msg__citations {
+  margin: 0;
+  padding-inline-start: 20px;
+  font-size: 0.82rem;
+}
+
+.msg__citation { margin: 2px 0; }
+.msg__heading,
+.msg__flag {
+  margin-inline-start: 6px;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.msg__meta {
+  margin: 8px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary, #6b7280);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* C11 B4 — a stopped turn is the user's own doing, not a warning. */
+.msg__notice--quiet {
+  background: color-mix(in srgb, var(--color-text-secondary, #6b7280) 12%, transparent);
+}
+
+/* C10-B thumbs. The pressed vote is the one recorded. */
+.msg__feedback {
+  display: flex;
+  gap: 4px;
+  margin-block-start: 6px;
+}
+
+.msg__feedback .icon-btn[aria-pressed='true'] {
+  color: var(--color-accent, #5d5cde);
+}

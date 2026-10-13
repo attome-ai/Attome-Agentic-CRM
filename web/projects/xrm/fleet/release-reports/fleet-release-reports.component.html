@@ -1,0 +1,270 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'fleet.reports.title' | translate }}</h2>
+    <p class="subtitle">{{ 'fleet.reports.subtitle' | translate }}</p>
+  </div>
+  <div class="fleet-header-actions">
+    <button type="button" class="btn-ghost" (click)="loadOpen()" [disabled]="openLoading()">
+      <i class="las la-sync" aria-hidden="true"></i> {{ 'fleet.common.refresh' | translate }}
+    </button>
+  </div>
+</div>
+
+<p class="fleet-note">{{ 'fleet.reports.valuesNote' | translate }}</p>
+
+@if (notice()) {
+  <p class="fleet-status" role="status">{{ notice() }}</p>
+}
+
+<!-- One item: what it is, where, and the values when the customer sent them. -->
+<ng-template #itemCell let-item>
+  <div>
+    <strong>{{ text('itemKind', item.kind) }}</strong>
+    <span class="fleet-pill">{{ text('itemStatus', item.status) }}</span>
+  </div>
+  <div class="fleet-code">{{ itemPath(item) }}</div>
+  @if (item.record_id) {
+    <div class="fleet-muted">{{ 'fleet.reports.record' | translate }} <span class="fleet-code">{{ item.record_id }}</span></div>
+  }
+  @if (item.values) {
+    <dl class="fleet-values">
+      <div><dt>{{ 'fleet.reports.theirs' | translate }}</dt><dd class="fleet-code">{{ value(item.values.theirs) }}</dd></div>
+      <div><dt>{{ 'fleet.reports.ours' | translate }}</dt><dd class="fleet-code">{{ value(item.values.ours) }}</dd></div>
+      @if (item.values.key !== undefined && item.values.key !== null) {
+        <div><dt>{{ 'fleet.reports.key' | translate }}</dt><dd class="fleet-code">{{ value(item.values.key) }}</dd></div>
+      }
+    </dl>
+  } @else if (item.values_hidden) {
+    <p class="fleet-muted">{{ 'fleet.reports.valuesHidden' | translate }}</p>
+  }
+  <div class="fleet-muted">{{ item.created_at | localDate: dateFmt }}</div>
+</ng-template>
+
+<!-- The three decisions, sent to the customer that owns the item. -->
+<ng-template #itemActions let-item let-dep="dep" let-ctx="ctx">
+  @if (needsRecordVersion(item)) {
+    <label class="field fleet-record-version">
+      <span class="field-caption">{{ 'fleet.reports.recordVersion' | translate }}</span>
+      <input inputmode="numeric" class="mono-input"
+             [attr.aria-describedby]="'fleet-rv-hint-' + ctx + '-' + item.id"
+             [value]="recordVersionOf(item.id)" (input)="setRecordVersion(item.id, $any($event.target).value)" />
+    </label>
+    <p class="hint fleet-hint" [id]="'fleet-rv-hint-' + ctx + '-' + item.id">{{ 'fleet.reports.recordVersionHint' | translate }}</p>
+  }
+  <div class="fleet-item-actions">
+    @if (canAccept(item)) {
+      <button type="button" class="btn-sm" (click)="decide(dep, item, 'accept')" [disabled]="busyItem() !== null">
+        <i class="las la-check" aria-hidden="true"></i> {{ 'fleet.reports.accept' | translate }}
+      </button>
+    }
+    @if (canUseMine(item)) {
+      <button type="button" class="btn-sm btn-sm-accent" (click)="decide(dep, item, 'use-mine')"
+              [disabled]="busyItem() !== null || !useMineReady(item)">
+        <i class="las la-redo" aria-hidden="true"></i> {{ 'fleet.reports.useMine' | translate }}
+      </button>
+    }
+    @if (canDismiss(item)) {
+      <button type="button" class="btn-sm" (click)="decide(dep, item, 'dismiss')" [disabled]="busyItem() !== null">
+        <i class="las la-times" aria-hidden="true"></i> {{ 'fleet.reports.dismiss' | translate }}
+      </button>
+    }
+  </div>
+  @if (itemError(item.id); as e) {
+    <p class="error-msg" role="alert">{{ e }}</p>
+  }
+</ng-template>
+
+<section class="card" aria-labelledby="fleet-open-title">
+  <h3 id="fleet-open-title">
+    {{ 'fleet.reports.openTitle' | translate }}
+    <span class="count">{{ openTotal() | localNumber }}</span>
+  </h3>
+  <p class="fleet-muted">{{ 'fleet.reports.openHint' | translate }}</p>
+  @if (openLoading()) {
+    <p class="state-msg" role="status">{{ 'fleet.common.loading' | translate }}</p>
+  } @else if (openError()) {
+    <p class="error-msg" role="alert">{{ openError() }}</p>
+  } @else if (openItems().length === 0) {
+    <div class="empty-state"><p>{{ 'fleet.reports.openEmpty' | translate }}</p></div>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'fleet.columns.customer' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.item' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (o of openItems(); track o.item.id) {
+            <tr>
+              <td>
+                <a class="cell-link" [routerLink]="['/xrm/fleet/deployments', o.deployment_id]">{{ o.deployment_label }}</a>
+                <div class="fleet-muted">{{ o.project_code }}</div>
+              </td>
+              <td><ng-container [ngTemplateOutlet]="itemCell" [ngTemplateOutletContext]="{ $implicit: o.item }" /></td>
+              <td><ng-container [ngTemplateOutlet]="itemActions" [ngTemplateOutletContext]="{ $implicit: o.item, dep: o.deployment_id, ctx: 'open' }" /></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (openPages() > 1) {
+      <nav class="fleet-pager" [attr.aria-label]="'fleet.pager.label' | translate">
+        <button type="button" class="btn-ghost" (click)="openPrevious()" [disabled]="openPage() <= 1">{{ 'fleet.pager.previous' | translate }}</button>
+        <span>{{ 'fleet.pager.pageOf' | translate: { page: openPage(), pages: openPages() } }}</span>
+        <button type="button" class="btn-ghost" (click)="openNext()" [disabled]="openPage() >= openPages()">{{ 'fleet.pager.next' | translate }}</button>
+      </nav>
+    }
+  }
+</section>
+
+<section class="card" aria-labelledby="fleet-customer-title">
+  <h3 id="fleet-customer-title">{{ 'fleet.reports.customerTitle' | translate }}</h3>
+  @if (deploymentsError()) {
+    <p class="error-msg" role="alert">{{ deploymentsError() }}</p>
+  }
+  <form class="filter-bar" (ngSubmit)="applyReportFilter()" [attr.aria-label]="'fleet.reports.customerFilters' | translate">
+    <div class="field">
+      <label for="fleet-rr-deployment">{{ 'fleet.columns.customer' | translate }}</label>
+      <select id="fleet-rr-deployment" name="deployment" [ngModel]="selectedDeployment()" (ngModelChange)="chooseDeployment($event)">
+        <option value="">{{ 'fleet.reports.chooseCustomer' | translate }}</option>
+        @for (d of readable(); track d.id) {
+          <option [value]="d.id">{{ d.label }} ({{ d.project_code }})</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="fleet-rr-status">{{ 'fleet.columns.status' | translate }}</label>
+      <select id="fleet-rr-status" name="report_status" [ngModel]="reportStatus()" (ngModelChange)="reportStatus.set($event)">
+        <option value="">{{ 'fleet.common.all' | translate }}</option>
+        @for (s of reportStatuses; track s) {
+          <option [value]="s">{{ text('reportStatus', s) }}</option>
+        }
+      </select>
+    </div>
+    <button type="submit" class="btn-ghost" [disabled]="!selectedDeployment() || reportsLoading()">
+      <i class="las la-filter" aria-hidden="true"></i> {{ 'fleet.common.apply' | translate }}
+    </button>
+  </form>
+
+  @if (selectedDeployment()) {
+    @if (reportsLoading()) {
+      <p class="state-msg" role="status">{{ 'fleet.common.loading' | translate }}</p>
+    } @else if (reportsError()) {
+      <p class="error-msg" role="alert">{{ reportsError() }}</p>
+    } @else if (reports().length === 0) {
+      <div class="empty-state"><p>{{ 'fleet.reports.noReports' | translate }}</p></div>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <caption class="fleet-visually-hidden">{{ 'fleet.reports.reportsOf' | translate: { name: selectedLabel() } }}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'fleet.columns.created' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.release' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.status' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.items' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.actions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of reports(); track r.id) {
+              <tr [class.fleet-selected]="selectedReport()?.id === r.id">
+                <td class="cell-muted">{{ r.created_at | localDate: dateFmt }}</td>
+                <td class="fleet-code">{{ r.release }}</td>
+                <td>{{ text('reportStatus', r.status) }}</td>
+                <td>{{ 'fleet.reports.itemsCount' | translate: { open: r.items_open, total: r.items_total } }}</td>
+                <td class="actions">
+                  <button type="button" class="btn-sm" (click)="openReport(r)"
+                          [attr.aria-pressed]="selectedReport()?.id === r.id">
+                    {{ 'fleet.reports.showItems' | translate }}
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (reportsPages() > 1) {
+        <nav class="fleet-pager" [attr.aria-label]="'fleet.pager.label' | translate">
+          <button type="button" class="btn-ghost" (click)="reportsPrevious()" [disabled]="reportsPage() <= 1">{{ 'fleet.pager.previous' | translate }}</button>
+          <span>{{ 'fleet.pager.pageOf' | translate: { page: reportsPage(), pages: reportsPages() } }}</span>
+          <button type="button" class="btn-ghost" (click)="reportsNext()" [disabled]="reportsPage() >= reportsPages()">{{ 'fleet.pager.next' | translate }}</button>
+        </nav>
+      }
+    }
+  } @else {
+    <p class="fleet-muted">{{ 'fleet.reports.pickCustomer' | translate }}</p>
+  }
+</section>
+
+@if (selectedReport(); as report) {
+  <section class="card" aria-labelledby="fleet-items-title">
+    <div class="section-header">
+      <h3 id="fleet-items-title">
+        {{ 'fleet.reports.itemsTitle' | translate: { name: selectedLabel() } }}
+        <span class="count">{{ itemsTotal() | localNumber }}</span>
+      </h3>
+      <button type="button" class="btn-text" (click)="closeReport()">{{ 'fleet.common.close' | translate }}</button>
+    </div>
+    <p class="fleet-muted fleet-code">{{ report.release }}</p>
+    <form class="filter-bar" (ngSubmit)="applyItemFilter()" [attr.aria-label]="'fleet.reports.itemFilters' | translate">
+      <div class="field">
+        <label for="fleet-items-status">{{ 'fleet.columns.status' | translate }}</label>
+        <select id="fleet-items-status" name="item_status" [ngModel]="itemStatus()" (ngModelChange)="itemStatus.set($event)">
+          <option value="">{{ 'fleet.common.all' | translate }}</option>
+          @for (s of itemStatuses; track s) {
+            <option [value]="s">{{ text('itemStatus', s) }}</option>
+          }
+        </select>
+      </div>
+      <div class="field">
+        <label for="fleet-items-kind">{{ 'fleet.reports.kind' | translate }}</label>
+        <select id="fleet-items-kind" name="item_kind" [ngModel]="itemKind()" (ngModelChange)="itemKind.set($event)">
+          <option value="">{{ 'fleet.common.all' | translate }}</option>
+          @for (k of itemKinds; track k) {
+            <option [value]="k">{{ text('itemKind', k) }}</option>
+          }
+        </select>
+      </div>
+      <button type="submit" class="btn-ghost" [disabled]="itemsLoading()">
+        <i class="las la-filter" aria-hidden="true"></i> {{ 'fleet.common.apply' | translate }}
+      </button>
+    </form>
+    @if (itemsLoading()) {
+      <p class="state-msg" role="status">{{ 'fleet.common.loading' | translate }}</p>
+    } @else if (itemsError()) {
+      <p class="error-msg" role="alert">{{ itemsError() }}</p>
+    } @else if (items().length === 0) {
+      <div class="empty-state"><p>{{ 'fleet.reports.noItems' | translate }}</p></div>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'fleet.columns.item' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.actions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (it of items(); track it.id) {
+              <tr>
+                <td><ng-container [ngTemplateOutlet]="itemCell" [ngTemplateOutletContext]="{ $implicit: it }" /></td>
+                <td><ng-container [ngTemplateOutlet]="itemActions" [ngTemplateOutletContext]="{ $implicit: it, dep: selectedDeployment(), ctx: 'report' }" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (itemsPages() > 1) {
+        <nav class="fleet-pager" [attr.aria-label]="'fleet.pager.label' | translate">
+          <button type="button" class="btn-ghost" (click)="itemsPrevious()" [disabled]="itemsPage() <= 1">{{ 'fleet.pager.previous' | translate }}</button>
+          <span>{{ 'fleet.pager.pageOf' | translate: { page: itemsPage(), pages: itemsPages() } }}</span>
+          <button type="button" class="btn-ghost" (click)="itemsNext()" [disabled]="itemsPage() >= itemsPages()">{{ 'fleet.pager.next' | translate }}</button>
+        </nav>
+      }
+    }
+  </section>
+}

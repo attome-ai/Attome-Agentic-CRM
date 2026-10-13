@@ -1,0 +1,51 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'notificationPrefs.title' | translate }}</h2>
+    <p class="subtitle">{{ 'notificationPrefs.subtitle' | translate }}</p>
+  </div>
+</div>
+
+<p class="np-notice" role="status" data-testid="notification-prefs-notice">{{ notice() }}</p>
+
+@if (error(); as message) {
+  <p class="error-msg" role="alert" data-testid="notification-prefs-error">{{ message }}</p>
+}
+
+@if (loading()) {
+  <p class="state-msg">{{ 'notificationPrefs.loading' | translate }}</p>
+} @else if (rows().length === 0) {
+  <p class="state-msg" data-testid="notification-prefs-empty">{{ 'notificationPrefs.empty' | translate }}</p>
+} @else {
+  <div class="table-wrap">
+    <table data-testid="notification-prefs-table">
+      <caption class="np-caption">{{ 'notificationPrefs.caption' | translate }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">{{ 'notificationPrefs.category.header' | translate }}</th>
+          @for (channel of channels; track channel) {
+            <th scope="col" class="np-channel">{{ 'notificationPrefs.channel.' + channel | translate }}</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.key) {
+          <tr data-testid="notification-prefs-row">
+            <th scope="row" class="np-category">{{ row.label }}</th>
+            @for (channel of channels; track channel) {
+              <td class="np-channel">
+                <input
+                  type="checkbox"
+                  [checked]="row.channels[channel]"
+                  [disabled]="busyKey() !== null"
+                  [attr.aria-label]="'notificationPrefs.toggleLabel' | translate: { category: row.label, channel: ('notificationPrefs.channel.' + channel | translate) }"
+                  [attr.data-testid]="'notification-prefs-toggle-' + row.key + '-' + channel"
+                  (change)="toggle(row, channel)" />
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <p class="np-footnote">{{ 'notificationPrefs.securityNote' | translate }}</p>
+}

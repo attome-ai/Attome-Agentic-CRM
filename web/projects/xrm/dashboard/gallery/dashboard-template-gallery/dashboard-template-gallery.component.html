@@ -1,0 +1,38 @@
+<div class="gallery-header">
+  <h2>{{ 'dashboard.gallery.title' | translate }}</h2>
+  <p class="subtitle">{{ 'dashboard.gallery.subtitle' | translate }}</p>
+</div>
+
+@if (loading()) {
+  <p class="hint">{{ 'dashboard.gallery.loading' | translate }}</p>
+} @else if (error()) {
+  <p class="error">{{ error() }}</p>
+} @else if (templates().length === 0) {
+  <p class="hint">{{ 'dashboard.gallery.empty' | translate }}</p>
+} @else {
+  <div class="grid">
+    @for (template of templates(); track template.id) {
+      <div class="card">
+        <div class="thumbnail-placeholder" aria-hidden="true">
+          <i class="las la-columns"></i>
+        </div>
+        <div class="card-body">
+          <h3>{{ template.data['name'] }}</h3>
+          @if (template.data['description']) {
+            <p class="description">{{ template.data['description'] }}</p>
+          }
+          @if (template.data['template_category']) {
+            <span class="category-badge">{{ template.data['template_category'] }}</span>
+          }
+        </div>
+        <button
+          type="button"
+          class="use-btn"
+          [disabled]="cloning() === template.id"
+          (click)="useAsTemplate(template.id)">
+          {{ (cloning() === template.id ? 'dashboard.gallery.creating' : 'dashboard.gallery.useAsTemplate') | translate }}
+        </button>
+      </div>
+    }
+  </div>
+}

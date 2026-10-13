@@ -1,0 +1,64 @@
+@if (!loaded()) {
+  <p class="cp__loading" role="status">
+    <i class="las la-circle-notch cp__spin" aria-hidden="true"></i>
+    Loading the action catalogue…
+  </p>
+} @else if (total() === 0) {
+  <!-- The expected answer on a deployment that has not licensed AI, has the
+       kill switch off, or where the caller holds no action privileges. It is
+       not an error, and the picker must not invent rows to fill the space. -->
+  <p class="cp__empty">
+    No actions are available to grant on this deployment.
+  </p>
+} @else {
+  @if (dimmed()) {
+    <p class="cp__dimmed-note">
+      De-emphasised: the restriction toggle is off, so this selection is <strong>not</strong> written
+      to the policy — it is kept only so turning the toggle back on does not lose it.
+    </p>
+  }
+
+  @for (group of groups(); track group.risk) {
+    <div class="cp__group" [class.cp__group--dimmed]="dimmed()" role="group"
+         [attr.aria-labelledby]="idPrefix() + '-grp-' + group.risk">
+      <h4 class="cp__group-title" [id]="idPrefix() + '-grp-' + group.risk">
+        {{ group.risk }}
+        <span class="cp__count">{{ group.rows.length }}</span>
+      </h4>
+      @if (group.fourEyes) {
+        <p class="cp__group-note">
+          Consequential actions never auto-execute for an agent — every one of them is four-eyes
+          approved, whoever granted the id.
+        </p>
+      }
+      <ul class="cp__rows">
+        @for (action of group.rows; track action.id) {
+          @let above = isAboveCeiling(action.risk);
+          <li class="cp__row" [class.cp__row--above]="above" [class.cp__row--on]="isSelected(action.id)">
+            <label class="cp__label">
+              <input type="checkbox" class="cp__check"
+                     [checked]="isSelected(action.id)"
+                     [attr.aria-describedby]="above ? idPrefix() + '-above-' + action.id : null"
+                     (change)="toggleFrom(action.id, $event)" />
+              <span class="cp__text">
+                <code class="cp__id">{{ action.id }}</code>
+                <span class="cp__desc">{{ action.description }}</span>
+              </span>
+            </label>
+            @if (above) {
+              <p class="cp__above" [id]="idPrefix() + '-above-' + action.id">
+                Above this policy's ceiling — a session started under it can see the id but the gate
+                refuses the call.
+              </p>
+            }
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <p class="cp__legend">
+    Granting an id contributes the allow-list term and nothing else: the licence, the caller's own
+    privileges, the session's risk ceiling and the gate all still apply to every invocation.
+  </p>
+}

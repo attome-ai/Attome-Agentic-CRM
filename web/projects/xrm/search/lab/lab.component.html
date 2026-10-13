@@ -1,0 +1,195 @@
+<div class="lab">
+  <header class="lab__head">
+    <h2>{{ 'searchLab.title' | translate }}</h2>
+    <p class="lab__lede">
+      {{ 'searchLab.ledeBefore' | translate }} <code>GET /api/v1/search</code>
+      {{ 'searchLab.ledeAfter' | translate }}
+      <strong>{{ 'searchLab.ledeEditable' | translate }}</strong>:
+      {{ 'searchLab.ledeCanned' | translate }}
+    </p>
+  </header>
+
+  <div class="lab__bar">
+    <input
+      type="search"
+      dir="auto"
+      [placeholder]="'searchLab.adHocPlaceholder' | translate"
+      [ngModel]="query()"
+      (ngModelChange)="query.set($event)"
+      (keydown.enter)="run('ad-hoc', 'ad-hoc', query(), audience())" />
+    <label class="muted">
+      {{ 'searchLab.audience' | translate }}
+      <select [ngModel]="audience()" (ngModelChange)="audience.set($event)">
+        <option value="human">{{ 'searchLab.human' | translate }}</option>
+        <option value="agent">{{ 'searchLab.agent' | translate }}</option>
+      </select>
+    </label>
+    <label class="muted">
+      {{ 'searchLab.pageSize' | translate }}
+      <input type="number" min="1" max="50" style="width: 72px"
+             [ngModel]="pageSize()" (ngModelChange)="pageSize.set(+$event || 10)" />
+    </label>
+    <button type="button" class="primary" (click)="run('ad-hoc', 'ad-hoc', query(), audience())" [disabled]="busy()">
+      {{ 'searchLab.run' | translate }}
+    </button>
+    <button type="button" (click)="runAll()" [disabled]="busy()">
+      {{ 'searchLab.runEveryFeature' | translate }}
+    </button>
+    <button type="button" (click)="resetAll()">{{ 'searchLab.resetQueries' | translate }}</button>
+    <button type="button" (click)="probes.set([])" [disabled]="probes().length === 0">
+      {{ 'searchLab.clearResults' | translate }}
+    </button>
+    @if (busy()) { <span class="muted">{{ 'searchLab.running' | translate }}</span> }
+  </div>
+
+  <section class="lab__section" style="margin-top: 0">
+    <h3>{{ 'searchLab.features' | translate }}</h3>
+    <p class="lab__note">
+      {{ 'searchLab.verdictBefore' | translate }} <strong>{{ 'searchLab.verdict' | translate }}</strong>
+      {{ 'searchLab.verdictNote' | translate }}
+    </p>
+
+    <div class="lab__grid">
+      @for (c of cards(); track c.key) {
+        <div class="card">
+          <div class="card__top">
+            <h4 class="card__title">{{ c.label }}</h4>
+            @if (c.currentAudience === 'agent') { <span class="chip chip--agent">{{ 'searchLab.agent' | translate }}</span> }
+          </div>
+          <p class="card__expect">{{ c.expect }}</p>
+
+          <input
+            class="card__input"
+            type="text"
+            dir="auto"
+            [class.edited]="c.current !== c.query"
+            [attr.aria-label]="'searchLab.queryLabel' | translate: { label: c.label }"
+            [ngModel]="c.current"
+            (ngModelChange)="setQuery(c.key, $event)"
+            (keydown.enter)="run(c.key, c.label, c.current, c.currentAudience)" />
+
+          <div class="card__actions">
+            <button type="button" (click)="run(c.key, c.label, c.current, c.currentAudience)" [disabled]="busy()">
+              {{ 'searchLab.run' | translate }}
+            </button>
+            <select
+              [attr.aria-label]="'searchLab.audienceLabel' | translate: { label: c.label }"
+              [ngModel]="c.currentAudience"
+              (ngModelChange)="setAudience(c.key, $event)">
+              <option value="human">{{ 'searchLab.human' | translate }}</option>
+              <option value="agent">{{ 'searchLab.agent' | translate }}</option>
+            </select>
+            <span class="chip chip--mono" [title]="'searchLab.expectedRoute' | translate">
+              → {{ preview(c).route }}
+            </span>
+            @if (c.current !== c.query) {
+              <button type="button" class="link" (click)="reset(c.key)">{{ 'searchLab.reset' | translate }}</button>
+            }
+          </div>
+
+          @if (latest().get(c.key); as p) {
+            <div class="card__result">
+              <span class="chip" [class.chip--pass]="p.verdict === 'pass'" [class.chip--fail]="p.verdict === 'fail'">
+                {{ (p.verdict === 'pass' ? 'searchLab.pass' : 'searchLab.fail') | translate }}
+              </span>
+              <span class="chip chip--mono">{{ p.route }}</span>
+              <span class="num">{{ p.ms }} {{ 'searchLab.ms' | translate }}</span>
+              <span [class.warn]="p.hits.length === 0">{{ 'searchLab.hitCount' | translate: { count: p.hits.length } }}</span>
+              @if (p.reason) { <span class="bad">{{ p.reason }}</span> }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </section>
+
+  @if (probes().length > 0) {
+    <section class="lab__section">
+      <h3>{{ 'searchLab.results' | translate }}</h3>
+
+      @if (nothingIndexed()) {
+        <div class="banner">
+          {{ 'searchLab.nothingIndexed' | translate }}
+          <code>search_index</code>.
+        </div>
+      }
+
+      <p class="lab__note">
+        <strong>{{ summary() }}</strong> {{ 'searchLab.timingNote' | translate }}
+        <code>attome_search_duration_seconds</code>{{ 'searchLab.timingNoteAfter' | translate }}
+      </p>
+
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ 'searchLab.colVerdict' | translate }}</th>
+              <th>{{ 'searchLab.colFeature' | translate }}</th>
+              <th>{{ 'searchLab.colQuery' | translate }}</th>
+              <th class="num">{{ 'searchLab.colMs' | translate }}</th>
+              <th class="num">{{ 'searchLab.colHits' | translate }}</th>
+              <th>{{ 'searchLab.colTotal' | translate }}</th>
+              <th>{{ 'searchLab.colRoute' | translate }}</th>
+              <th>{{ 'searchLab.colNotes' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of probes(); track p.id) {
+              <tr>
+                <td>
+                  <span class="chip" [class.chip--pass]="p.verdict === 'pass'" [class.chip--fail]="p.verdict === 'fail'">
+                    {{ (p.verdict === 'pass' ? 'searchLab.pass' : 'searchLab.fail') | translate }}
+                  </span>
+                </td>
+                <td>
+                  {{ p.feature }}
+                  @if (p.audience === 'agent') { <div class="muted">{{ 'searchLab.agent' | translate }}</div> }
+                </td>
+                <td class="mono" dir="auto">{{ p.query }}</td>
+                <td class="num" [class.warn]="p.ms > 300">{{ p.ms }}</td>
+                <td class="num" [class.warn]="p.hits.length === 0">{{ p.hits.length }}</td>
+                <td>{{ p.total }}</td>
+                <td class="mono">
+                  {{ p.route }}
+                  @if (p.route !== p.expectedRoute) {
+                    <div class="bad">{{ 'searchLab.expected' | translate }} {{ p.expectedRoute }}</div>
+                  }
+                  <div class="muted">{{ p.rule }}</div>
+                </td>
+                <td>
+                  @if (p.reason) { <div class="bad">{{ p.reason }}</div> }
+                  @if (p.status === 'error') { <div class="muted">{{ p.error }}</div> }
+                  @if (p.routeHint) { <div>{{ 'searchLab.toolHint' | translate }} <code>{{ p.routeHint }}</code></div> }
+                  @if (p.relaxed) { <div class="warn">{{ 'searchLab.relaxed' | translate }}</div> }
+                  @if (p.degraded.length > 0) { <div class="warn">{{ 'searchLab.degraded' | translate }} {{ p.degraded.join(', ') }}</div> }
+                  @if (p.hits.length === 0 && p.status !== 'error') {
+                    <div class="muted">
+                      {{ 'searchLab.noResults' | translate }}
+                    </div>
+                  }
+                  @if (p.hits.length > 0) {
+                    <details>
+                      <summary>{{ 'searchLab.hitCount' | translate: { count: p.hits.length } }}</summary>
+                      @for (h of p.hits; track h.record_id) {
+                        <div class="hit">
+                          <strong dir="auto">{{ h.title || ('searchLab.untitled' | translate) }}</strong>
+                          <span class="muted">
+                            — {{ h.entity_logicalname }}
+                            · {{ 'searchLab.score' | translate }} {{ h.score.toFixed(4) }}
+                            · {{ quality(h) }}
+                            · {{ 'searchLab.legs' | translate }} [{{ h.matched_legs.join(', ') }}]
+                          </span>
+                        </div>
+                      }
+                      <div class="muted">{{ 'searchLab.groups' | translate }} {{ groupLabel(p.hits) }}</div>
+                    </details>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>

@@ -1,0 +1,59 @@
+:host { display: block; }
+
+.rte { display: flex; flex-direction: column; gap: 6px; }
+
+.rte-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.rte-btn {
+  inline-size: 32px;
+  block-size: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--xf-border, #d4d4d8);
+  border-radius: 6px;
+  background: var(--xf-surface, #fff);
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.rte-btn:hover { background: var(--xf-hover, #f4f4f5); }
+
+.rte-btn:focus-visible {
+  outline: 2px solid var(--xf-accent, #6366f1);
+  outline-offset: 1px;
+}
+
+.rte-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.rte-link-label { font-size: 0.85em; }
+.rte-link-input { flex: 1 1 200px; }
+
+.rte-surface {
+  min-block-size: 120px;
+  max-block-size: 420px;
+  overflow-y: auto;
+  text-align: start;
+  white-space: normal;
+}
+
+.rte-surface:focus-visible {
+  outline: 2px solid var(--xf-accent, #6366f1);
+  outline-offset: 1px;
+}
+
+.rte-surface :is(ul, ol) { padding-inline-start: 1.5em; margin-block: 0.25em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rte-btn { transition: none; }
+}

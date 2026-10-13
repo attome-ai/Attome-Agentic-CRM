@@ -1,0 +1,157 @@
+<div class="xdv-widget">
+  <div class="xdv-widget-title">
+    <span>{{ widget().data['name'] || widget().data['widget_type'] }}</span>
+    @if (canExplain()) {
+      <button type="button" class="xdv-widget-inspect"
+              [attr.aria-label]="('dashboard.explain.inspect' | translate) + ': ' + (widget().data['name'] || widget().data['widget_type'])"
+              [title]="'dashboard.explain.inspect' | translate" (click)="explainOpen.set(true)">
+        <i class="las la-info-circle"></i>
+      </button>
+    }
+  </div>
+
+  @if (loading() && !data()) {
+    <div class="xdv-widget-status" role="status">
+      <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+    </div>
+  } @else if (error()) {
+    <div class="xdv-widget-status xdv-widget-error" role="alert">
+      <i class="las la-exclamation-triangle"></i> {{ error() }}
+    </div>
+  } @else if (data(); as d) {
+    @switch (renderKind()) {
+      @case ('unsupported') {
+        <div class="xdv-widget-status xdv-widget-empty">{{ 'dashboard.viewer.unsupportedWidget' | translate }}</div>
+      }
+      @case ('divider') {
+        <hr class="xdv-widget-divider" />
+      }
+      @case ('text') {
+        <div class="xdv-widget-text">{{ textContent() }}</div>
+      }
+      @case ('declarative') {
+        @if (declarativeConfig(); as cfg) {
+          <xrm-declarative-widget-renderer [config]="cfg" [rows]="rows()" [loading]="loading()" [error]="error()" />
+        } @else {
+          <div class="xdv-widget-status xdv-widget-error">
+            <i class="las la-exclamation-triangle"></i> {{ 'dashboard.viewer.invalidWidgetConfig' | translate }}
+          </div>
+        }
+      }
+      @case ('kpi_scorecard') {
+        <ul class="xdv-kpi-list">
+          @for (m of kpiMetrics(); track m.metric_id) {
+            <li class="xdv-kpi-item">
+              <span class="xdv-kpi-name">{{ m.name || m.key }}</span>
+              @if (kpiStatusKey(m); as statusKey) {
+                <span class="xdv-cell-muted">{{ statusKey | translate }}</span>
+              } @else {
+                <span class="xdv-kpi-value">{{ formatValue(m.current?.actual) }} {{ m.unit || '' }}</span>
+              }
+            </li>
+          }
+        </ul>
+        <p class="xdv-widget-footnote">{{ 'dashboard.viewer.kpiServiceScoped' | translate }}</p>
+      }
+      @case ('kpi_trendline') {
+        @for (m of kpiMetrics(); track m.metric_id) {
+          @if (kpiStatusKey(m); as statusKey) {
+            <div class="xdv-widget-status xdv-widget-empty">{{ statusKey | translate }}</div>
+          } @else {
+            <div class="xdv-kpi-value">{{ formatValue(m.current?.actual) }} {{ m.unit || '' }}</div>
+            @if (kpiTrends().get(m.metric_id); as trend) {
+              <attome-dashboard-chart kind="line" [title]="m.name || m.key || ''" [categories]="trend.categories" [series]="trend.series" />
+            }
+          }
+        }
+        <p class="xdv-widget-footnote">{{ 'dashboard.viewer.kpiServiceScoped' | translate }}</p>
+      }
+      @case ('scalar') {
+        @if (canDrill()) {
+          <button type="button" class="xdv-widget-scalar xdv-crossfilter" (click)="onScalarClick()">{{ formatValue(scalar()) }}</button>
+        } @else {
+          <div class="xdv-widget-scalar">{{ formatValue(scalar()) }}</div>
+        }
+      }
+      @case ('table') {
+        @if (rows().length === 0) {
+          <div class="xdv-widget-status xdv-widget-empty">{{ 'dashboard.viewer.noRowsReturned' | translate }}</div>
+        } @else {
+          <div class="xdv-widget-table-wrap">
+            <table class="xdv-widget-table">
+              <thead>
+                <tr>
+                  @for (c of columns(); track c.name) { <th>{{ c.display_name }}</th> }
+                </tr>
+              </thead>
+              <tbody>
+                @for (r of rows(); track $index) {
+                  <tr>
+                    @for (c of columns(); track c.name) {
+                      <td>
+                        @if (c.resolvedRouteTemplate) {
+                          @if (cellLink(c, r); as link) {
+                            <a class="xdv-cell-link" [routerLink]="link">{{ r[c.name] }}</a>
+                          } @else {
+                            {{ r[c.name] }}
+                          }
+                        } @else {
+                          {{ r[c.name] }}
+                        }
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+      @default {
+        @if (chartKind(); as kind) {
+          @if (chartCategories().length === 0) {
+            <div class="xdv-widget-status xdv-widget-empty">{{ 'dashboard.viewer.noRowsReturned' | translate }}</div>
+          } @else {
+            <attome-dashboard-chart [kind]="kind" [title]="widgetName()" [categories]="chartCategories()"
+                                 [series]="chartSeries()" [threshold]="threshold()" [interactive]="interactive()"
+                                 (selected)="onBucketClick($event)" />
+          }
+        } @else {
+          <div class="xdv-widget-status xdv-widget-empty">{{ 'dashboard.viewer.unsupportedWidget' | translate }}</div>
+        }
+      }
+    }
+    <p class="xdv-widget-footnote">
+      @if (truncated()) { <span>{{ 'dashboard.viewer.truncated' | translate }}</span> }
+      @if (d.data_class !== 'none') { <span>{{ 'dashboard.viewer.asOf' | translate: { time: asOf() } }}</span> }
+    </p>
+  } @else {
+    <div class="xdv-widget-status xdv-widget-empty">{{ 'dashboard.viewer.noDataSource' | translate }}</div>
+  }
+</div>
+
+@if (drill(); as target) {
+  <xrm-widget-records-drawer
+    [dashboardId]="dashboardId()!"
+    [widgetId]="widget().id"
+    [widgetName]="widgetName()"
+    [bucketLabel]="target.label"
+    [bucketKey]="target.bucket"
+    [seriesKey]="target.series"
+    [parameters]="parameters()"
+    [crossFilters]="crossFilters()"
+    [preview]="preview()"
+    [canCrossFilter]="canCrossFilter()"
+    (closed)="drill.set(null)"
+    (crossFilter)="crossFilterFromDrill()" />
+}
+@if (explainOpen()) {
+  <xrm-widget-explain-panel
+    [dashboardId]="dashboardId()!"
+    [widgetId]="widget().id"
+    [widgetName]="widgetName()"
+    [parameters]="parameters()"
+    [crossFilters]="crossFilters()"
+    [preview]="preview()"
+    (closed)="explainOpen.set(false)" />
+}

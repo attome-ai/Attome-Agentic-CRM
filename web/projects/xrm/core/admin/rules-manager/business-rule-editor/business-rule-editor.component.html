@@ -1,0 +1,414 @@
+@let d = draft();
+@let current = rule();
+<section class="bre" [attr.aria-label]="(isNew() ? 'businessRules.editor.newTitle' : 'businessRules.editor.editTitle') | translate">
+  <header class="bre-head">
+    <div>
+      <h2>{{ (isNew() ? 'businessRules.editor.newTitle' : 'businessRules.editor.editTitle') | translate }}</h2>
+      <div class="bre-badges">
+        @if (isLegacy()) {
+          <span class="bre-badge bre-badge-legacy">{{ 'businessRules.badge.legacy' | translate: { kind: current?.kind ?? '' } }}</span>
+        }
+        @if (current && !current.is_active) {
+          <span class="bre-badge bre-badge-off">{{ 'businessRules.badge.inactive' | translate }}</span>
+        }
+        @if (current?.version) {
+          <span class="bre-badge">{{ 'businessRules.badge.version' | translate: { version: current?.version } }}</span>
+        }
+      </div>
+    </div>
+    <button type="button" class="bre-btn bre-ghost" (click)="close()">{{ 'businessRules.action.close' | translate }}</button>
+  </header>
+
+  @if (current?.disabled_reason; as reason) {
+    <p class="bre-banner bre-banner-warn" role="status">
+      <i class="las la-exclamation-triangle" aria-hidden="true"></i>
+      {{ 'businessRules.editor.turnedOff' | translate: { reason: reason } }}
+    </p>
+  }
+  @if (current?.applies_to_nobody) {
+    <p class="bre-banner bre-banner-warn" role="status">
+      <i class="las la-user-lock" aria-hidden="true"></i>
+      {{ 'businessRules.editor.appliesToNobody' | translate }}
+    </p>
+  }
+  @if (current?.load_error; as loadError) {
+    <p class="bre-banner bre-banner-error" role="alert">
+      <i class="las la-exclamation-circle" aria-hidden="true"></i>
+      {{ 'businessRules.editor.loadError' | translate: { reason: loadError } }}
+    </p>
+  }
+  @if (conflict()) {
+    <div class="bre-banner bre-banner-error" role="alert" data-testid="rule-conflict">
+      <i class="las la-exclamation-triangle" aria-hidden="true"></i>
+      <span>{{ 'businessRules.editor.conflict' | translate }}</span>
+      <button type="button" class="bre-btn bre-ghost" (click)="reload()">{{ 'businessRules.action.reload' | translate }}</button>
+    </div>
+  }
+  @if (error()) {
+    <p class="bre-banner bre-banner-error" role="alert">
+      <i class="las la-exclamation-circle" aria-hidden="true"></i> {{ error() }}
+    </p>
+  }
+  @if (notice()) {
+    <p class="bre-banner bre-banner-ok" role="status">
+      <i class="las la-check" aria-hidden="true"></i> {{ notice() | translate: { version: current?.version ?? 0 } }}
+    </p>
+  }
+
+  @if (legacy(); as l) {
+    <!-- A kept legacy kind (Topic 15 #6): the expression form. -->
+    <div class="bre-grid">
+      <label>{{ 'businessRules.editor.entity' | translate }}
+        <input type="text" [value]="d.entity" disabled />
+      </label>
+      <label>{{ 'businessRules.editor.name' | translate }}
+        <input type="text" [value]="d.name" disabled />
+      </label>
+      <label>{{ 'businessRules.legacy.targetField' | translate }}
+        <input type="text" [value]="l.target_field" (input)="patchLegacy({ target_field: $any($event.target).value })" />
+      </label>
+      <label>{{ 'businessRules.legacy.severity' | translate }}
+        <select (change)="patchLegacy({ severity: $any($event.target).value })">
+          <option value="error" [selected]="l.severity === 'error'">{{ 'businessRules.severity.error' | translate }}</option>
+          <option value="warning" [selected]="l.severity === 'warning'">{{ 'businessRules.severity.warning' | translate }}</option>
+        </select>
+      </label>
+      <label class="bre-wide">{{ 'businessRules.legacy.expression' | translate }}
+        <textarea rows="3" dir="ltr" class="bre-mono" [value]="l.expression"
+                  (input)="patchLegacy({ expression: $any($event.target).value })"></textarea>
+      </label>
+      <label class="bre-wide">{{ 'businessRules.legacy.message' | translate }}
+        <input type="text" [value]="l.message" (input)="patchLegacy({ message: $any($event.target).value })" />
+      </label>
+      <label>{{ 'businessRules.editor.displayOrder' | translate }}
+        <input type="number" [value]="l.display_order" (input)="patchLegacy({ display_order: +$any($event.target).value || 0 })" />
+      </label>
+      <label class="bre-switch">
+        <input type="checkbox" [checked]="l.is_active" (change)="patchLegacy({ is_active: $any($event.target).checked })" />
+        {{ 'businessRules.editor.active' | translate }}
+      </label>
+    </div>
+  } @else {
+    <!-- ── Identity ─────────────────────────────────────────────────── -->
+    <div class="bre-grid">
+      <label>{{ 'businessRules.editor.entity' | translate }}
+        <select [disabled]="!isNew()" (change)="setEntity($any($event.target).value)">
+          <option value="" [selected]="d.entity === ''">{{ 'businessRules.editor.pickEntity' | translate }}</option>
+          @for (e of entities(); track e.id) {
+            <option [value]="e.logicalname" [selected]="e.logicalname === d.entity">{{ e.name }} ({{ e.logicalname }})</option>
+          }
+        </select>
+      </label>
+      <label>{{ 'businessRules.editor.name' | translate }}
+        <input type="text" maxlength="128" dir="ltr" [value]="d.name" [disabled]="!isNew()"
+               (input)="patch({ name: $any($event.target).value })" />
+      </label>
+      <label>{{ 'businessRules.editor.displayName' | translate }}
+        <input type="text" maxlength="200" [value]="d.display_name"
+               (input)="patch({ display_name: $any($event.target).value })" />
+      </label>
+      <label>{{ 'businessRules.editor.displayOrder' | translate }}
+        <input type="number" [value]="d.display_order"
+               (input)="patch({ display_order: +$any($event.target).value || 0 })" />
+      </label>
+      <label class="bre-wide">{{ 'businessRules.editor.description' | translate }}
+        <textarea rows="2" [value]="d.description" (input)="patch({ description: $any($event.target).value })"></textarea>
+      </label>
+      <label class="bre-switch">
+        <input type="checkbox" [checked]="d.is_active" (change)="patch({ is_active: $any($event.target).checked })" />
+        {{ 'businessRules.editor.active' | translate }}
+      </label>
+    </div>
+    @if (attributesError()) {
+      <p class="bre-banner bre-banner-error" role="alert">{{ 'businessRules.editor.attributesFailed' | translate }}</p>
+    }
+
+    <!-- ── Applies to ───────────────────────────────────────────────── -->
+    <fieldset class="bre-section">
+      <legend>{{ 'businessRules.audience.title' | translate }}</legend>
+      <div class="bre-radios">
+        <label class="bre-radio">
+          <input type="radio" name="bre-applies-to" value="all" [checked]="d.applies_to === 'all'"
+                 (change)="patch({ applies_to: 'all' })" />
+          {{ 'businessRules.audience.all' | translate }}
+        </label>
+        <label class="bre-radio">
+          <input type="radio" name="bre-applies-to" value="roles" [checked]="d.applies_to === 'roles'"
+                 (change)="patch({ applies_to: 'roles' })" />
+          {{ 'businessRules.audience.roles' | translate }}
+        </label>
+      </div>
+      @if (d.applies_to === 'roles') {
+        <div class="bre-roles">
+          <div class="bre-role-group" role="group" [attr.aria-label]="'businessRules.audience.staffRoles' | translate">
+            <h4>{{ 'businessRules.audience.staffRoles' | translate }}</h4>
+            @for (r of staffRoles(); track r.id) {
+              <label class="bre-check">
+                <input type="checkbox" [checked]="hasRole(r.id, false)" (change)="toggleRole(r.id, false)" />
+                {{ r.name }}
+              </label>
+            } @empty {
+              <p class="bre-hint">{{ 'businessRules.audience.noStaffRoles' | translate }}</p>
+            }
+          </div>
+          @for (g of portalGroups(); track g.portal) {
+            <div class="bre-role-group" role="group"
+                 [attr.aria-label]="'businessRules.audience.portalRoles' | translate: { portal: g.portal }">
+              <h4>{{ 'businessRules.audience.portalRoles' | translate: { portal: g.portal } }}</h4>
+              @for (r of g.roles; track r.id) {
+                <label class="bre-check">
+                  <input type="checkbox" [checked]="hasRole(r.id, true)" (change)="toggleRole(r.id, true)" />
+                  {{ r.name }}
+                </label>
+              }
+            </div>
+          }
+        </div>
+      }
+    </fieldset>
+
+    <!-- ── Condition ────────────────────────────────────────────────── -->
+    <div class="bre-section">
+      <xrm-condition-group [group]="d.condition" [fields]="conditionFields()" [issuePaths]="issuePaths()"
+                           (groupChange)="setCondition($event)" />
+    </div>
+
+    <!-- ── Policies ─────────────────────────────────────────────────── -->
+    <fieldset class="bre-section">
+      <legend>{{ 'businessRules.policy.title' | translate }}</legend>
+      <p class="bre-hint">{{ 'businessRules.policy.hint' | translate }}</p>
+      <ol class="bre-policies">
+        @for (p of d.policies; track $index; let i = $index; let first = $first; let last = $last) {
+          <li class="bre-policy" [class.bre-has-issue]="policyHasIssue(i)">
+            <div class="bre-policy-row">
+              <select [attr.aria-label]="'businessRules.policy.type' | translate"
+                      (change)="setPolicyType(i, $any($event.target).value)">
+                @for (t of policyTypes; track t) {
+                  <option [value]="t" [selected]="t === p.type">{{ ('businessRules.policy.types.' + t) | translate }}</option>
+                }
+              </select>
+
+              <select [attr.aria-label]="'businessRules.policy.field' | translate"
+                      (change)="updatePolicy(i, { field: $any($event.target).value || undefined })">
+                @if (p.type === 'error') {
+                  <option value="" [selected]="!p.field">{{ 'businessRules.policy.noField' | translate }}</option>
+                }
+                @for (f of policyFields(); track f.name) {
+                  @if (p.type !== 'set_value' || !f.formula) {
+                    <option [value]="f.name" [selected]="f.name === p.field">{{ f.label }}</option>
+                  }
+                }
+              </select>
+
+              <div class="bre-policy-move">
+                <button type="button" class="bre-icon" [disabled]="first" (click)="movePolicy(i, -1)"
+                        [attr.aria-label]="'businessRules.policy.moveUp' | translate">
+                  <i class="las la-arrow-up" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="bre-icon" [disabled]="last" (click)="movePolicy(i, 1)"
+                        [attr.aria-label]="'businessRules.policy.moveDown' | translate">
+                  <i class="las la-arrow-down" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="bre-icon bre-danger-icon" (click)="removePolicy(i)"
+                        [attr.aria-label]="'businessRules.policy.remove' | translate">
+                  <i class="las la-trash-alt" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+
+            @if (p.type === 'error') {
+              <div class="bre-policy-row">
+                <input type="text" maxlength="500" class="bre-grow" [value]="p.message ?? ''"
+                       [attr.aria-label]="'businessRules.policy.message' | translate"
+                       [placeholder]="'businessRules.policy.message' | translate"
+                       (input)="updatePolicy(i, { message: $any($event.target).value })" />
+                <select [attr.aria-label]="'businessRules.policy.severity' | translate"
+                        (change)="updatePolicy(i, { severity: $any($event.target).value })">
+                  <option value="error" [selected]="(p.severity ?? 'error') === 'error'">{{ 'businessRules.severity.error' | translate }}</option>
+                  <option value="warning" [selected]="p.severity === 'warning'">{{ 'businessRules.severity.warning' | translate }}</option>
+                </select>
+              </div>
+            }
+            @if (p.type === 'set_value') {
+              <div class="bre-policy-row">
+                <select [attr.aria-label]="'businessRules.policy.source' | translate"
+                        (change)="setValueSource(i, $any($event.target).value)">
+                  <option value="literal" [selected]="p.expression === undefined">{{ 'businessRules.policy.literal' | translate }}</option>
+                  <option value="expression" [selected]="p.expression !== undefined">{{ 'businessRules.policy.expression' | translate }}</option>
+                </select>
+                @if (p.expression !== undefined) {
+                  <textarea rows="2" dir="ltr" class="bre-grow bre-mono" [value]="p.expression"
+                            [attr.aria-label]="'businessRules.policy.expression' | translate"
+                            (change)="updatePolicy(i, { expression: $any($event.target).value })"></textarea>
+                } @else {
+                  <input type="text" class="bre-grow" [value]="policyValueText(p)"
+                         [attr.aria-label]="'businessRules.policy.value' | translate"
+                         [placeholder]="'businessRules.policy.value' | translate"
+                         (change)="setPolicyValue(i, $any($event.target).value)" />
+                }
+                <select [attr.aria-label]="'businessRules.policy.mode' | translate"
+                        (change)="updatePolicy(i, { mode: $any($event.target).value })">
+                  <option value="always" [selected]="(p.mode ?? 'always') === 'always'">{{ 'businessRules.policy.modeAlways' | translate }}</option>
+                  <option value="default" [selected]="p.mode === 'default'">{{ 'businessRules.policy.modeDefault' | translate }}</option>
+                </select>
+              </div>
+            }
+          </li>
+        } @empty {
+          <li class="bre-hint">{{ 'businessRules.policy.empty' | translate }}</li>
+        }
+      </ol>
+      <div class="bre-add-row">
+        @for (t of policyTypes; track t) {
+          <button type="button" class="bre-btn bre-ghost bre-small" (click)="addPolicy(t)" [disabled]="!d.entity">
+            <i class="las la-plus" aria-hidden="true"></i> {{ ('businessRules.policy.add.' + t) | translate }}
+          </button>
+        }
+      </div>
+    </fieldset>
+
+    <!-- ── Issues and warnings (section 6.4: warnings never block) ──── -->
+    @if (localIssues().length) {
+      <ul class="bre-issues" role="alert" data-testid="rule-local-issues">
+        @for (key of localIssues(); track key) {
+          <li><i class="las la-exclamation-circle" aria-hidden="true"></i> {{ key | translate }}</li>
+        }
+      </ul>
+    }
+    @if (issues().length) {
+      <ul class="bre-issues" role="alert" data-testid="rule-issues">
+        @for (issue of issues(); track $index) {
+          <li>
+            <code dir="ltr">{{ issue.path }}</code>
+            @if (issue.message) { — {{ issue.message }} }
+          </li>
+        }
+      </ul>
+    }
+    @if (validated() === true && !issues().length) {
+      <p class="bre-banner bre-banner-ok" role="status">{{ 'businessRules.notice.valid' | translate }}</p>
+    }
+    @if (warnings().length) {
+      <ul class="bre-warnings" role="status" data-testid="rule-warnings">
+        @for (w of warnings(); track $index) {
+          <li><i class="las la-exclamation-triangle" aria-hidden="true"></i> {{ warningText(w) }}</li>
+        }
+      </ul>
+    }
+  }
+
+  <!-- ── Actions ──────────────────────────────────────────────────────── -->
+  <div class="bre-actions">
+    <button type="button" class="bre-btn bre-primary" [disabled]="!canSave()" (click)="save()">
+      {{ (saving() ? 'businessRules.action.saving' : 'businessRules.action.save') | translate }}
+    </button>
+    @if (!isLegacy()) {
+      <button type="button" class="bre-btn bre-ghost" [disabled]="validating() || !d.entity || !d.name.trim()" (click)="validate()">
+        {{ (validating() ? 'businessRules.action.validating' : 'businessRules.action.validate') | translate }}
+      </button>
+    }
+    @if (!isNew()) {
+      <button type="button" class="bre-btn bre-ghost" [disabled]="publishing()" (click)="publish()">
+        {{ (publishing() ? 'businessRules.action.publishing' : 'businessRules.action.publish') | translate }}
+      </button>
+      <button type="button" class="bre-btn bre-danger" [disabled]="retiring()" (click)="retire()">
+        {{ 'businessRules.action.retire' | translate }}
+      </button>
+    }
+    <button type="button" class="bre-btn bre-ghost" (click)="close()">{{ 'businessRules.action.cancel' | translate }}</button>
+  </div>
+
+  <!-- ── Test (the saved rule, no save, no side effects) ──────────────── -->
+  @if (!isNew()) {
+    <section class="bre-test" [attr.aria-label]="'businessRules.test.title' | translate">
+      <h3>{{ 'businessRules.test.title' | translate }}</h3>
+      <p class="bre-hint">{{ 'businessRules.test.hint' | translate }}</p>
+      <div class="bre-grid">
+        <label>{{ 'businessRules.test.audience' | translate }}
+          <select (change)="testMode.set($any($event.target).value)">
+            @for (m of ['unscoped', 'staff', 'portal', 'integration', 'system']; track m) {
+              <option [value]="m" [selected]="m === testMode()">{{ ('businessRules.test.mode.' + m) | translate }}</option>
+            }
+          </select>
+        </label>
+        @if (testMode() === 'portal') {
+          <label>{{ 'businessRules.test.portalRole' | translate }}
+            <select (change)="testPortalRoleId.set($any($event.target).value)">
+              <option value="" [selected]="!testPortalRoleId()">{{ 'businessRules.test.pickRole' | translate }}</option>
+              @for (r of portalRoles(); track r.id) {
+                <option [value]="r.id" [selected]="r.id === testPortalRoleId()">{{ r.portal }} — {{ r.name }}</option>
+              }
+            </select>
+          </label>
+        }
+      </div>
+      @if (testMode() === 'staff' || testMode() === 'integration') {
+        <div class="bre-role-group" role="group" [attr.aria-label]="'businessRules.test.staffRoles' | translate">
+          @for (r of staffRoles(); track r.id) {
+            <label class="bre-check">
+              <input type="checkbox" [checked]="testRoleIds().includes(r.id)" (change)="toggleTestRole(r.id)" />
+              {{ r.name }}
+            </label>
+          }
+        </div>
+      }
+      <label class="bre-block">{{ 'businessRules.test.record' | translate }}
+        <textarea rows="4" dir="ltr" class="bre-mono" [value]="testRecord()"
+                  (input)="testRecord.set($any($event.target).value)"></textarea>
+      </label>
+      <button type="button" class="bre-btn bre-ghost" [disabled]="testing()" (click)="runTest()">
+        <i class="las la-play" aria-hidden="true"></i>
+        {{ (testing() ? 'businessRules.test.running' : 'businessRules.test.run') | translate }}
+      </button>
+      @if (testError()) {
+        <p class="bre-banner bre-banner-error" role="alert">{{ testError() }}</p>
+      }
+      @if (testResult(); as r) {
+        <div class="bre-test-result" role="status" data-testid="rule-test-result">
+          <p>
+            <strong>{{ 'businessRules.test.applies' | translate }}</strong>
+            {{ (r.applies ? 'businessRules.condition.yes' : 'businessRules.condition.no') | translate }}
+            · <strong>{{ 'businessRules.test.condition' | translate }}</strong>
+            {{ ('businessRules.test.outcome.' + r.condition) | translate }}
+          </p>
+          @if (r.policies_fired.length) {
+            <p><strong>{{ 'businessRules.test.fired' | translate }}</strong></p>
+            <ul>
+              @for (o of r.policies_fired; track o) { <li>{{ firedPolicyText(o) }}</li> }
+            </ul>
+          }
+          @if (r.locks.length) {
+            <ul>
+              @for (l of r.locks; track l.field) {
+                <li><i class="las la-lock" aria-hidden="true"></i> {{ fieldLabel(l.field) }} — {{ ('businessRules.policy.types.' + l.effect) | translate }}</li>
+              }
+            </ul>
+          }
+          @if (r.errors.length) {
+            <ul>
+              @for (e of r.errors; track $index) {
+                <li>
+                  <i class="las la-exclamation-circle" aria-hidden="true"></i>
+                  @if (e.field) { {{ fieldLabel(e.field) }}: }
+                  {{ e.message }} ({{ ('businessRules.severity.' + e.severity) | translate }})
+                </li>
+              }
+            </ul>
+          }
+          @for (entry of r.set_values | keyvalue; track entry.key) {
+            <p class="bre-mono" dir="ltr">{{ entry.key }} = {{ testValueText(entry.value) }}</p>
+          }
+          @if (r.error) { <p class="bre-banner bre-banner-error">{{ r.error }}</p> }
+          @if (r.trace.length) {
+            <details>
+              <summary>{{ 'businessRules.test.trace' | translate: { count: r.trace.length } }}</summary>
+              @for (t of r.trace; track $index) {
+                <div class="bre-trace" dir="ltr"><code>{{ t.expr }}</code> = {{ t.value }}</div>
+              }
+            </details>
+          }
+        </div>
+      }
+    </section>
+  }
+</section>

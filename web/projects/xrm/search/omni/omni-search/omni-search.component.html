@@ -1,0 +1,75 @@
+<div class="omni">
+  <input
+    #box
+    type="search"
+    class="omni__input"
+    role="combobox"
+    autocomplete="off"
+    [attr.aria-expanded]="open()"
+    aria-autocomplete="list"
+    aria-controls="omni-listbox"
+    [attr.aria-activedescendant]="activeId()"
+    [attr.aria-label]="label()"
+    [placeholder]="placeholder()"
+    [value]="query()"
+    (input)="onInput($any($event.target).value)"
+    (keydown)="onKeydown($event)" />
+
+  @if (open()) {
+    <div class="omni__panel">
+      @if (relaxed()) {
+        <p class="omni__notice omni__notice--relaxed">
+          {{ 'omniSearch.relaxed' | translate }}
+        </p>
+      }
+      @if (degraded().length > 0) {
+        <p class="omni__notice omni__notice--degraded">
+          {{ 'omniSearch.degraded' | translate }}
+        </p>
+      }
+
+      <div id="omni-listbox" role="listbox" [attr.aria-label]="label()">
+        @for (group of groups(); track group.entity) {
+          <!-- Presentational grouping only: group order follows the best
+               hit's rank, never the entity name. -->
+          <div class="omni__group-label" aria-hidden="true">{{ group.entity }}</div>
+          @for (hit of group.hits; track hit.record_id) {
+            <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events --
+                 An option in the ARIA combobox pattern deliberately does NOT
+                 handle its own keyboard events: focus never leaves the input,
+                 and the input's own keydown drives selection through
+                 aria-activedescendant. Adding a keydown here would attach a
+                 handler to an element that can never receive one, and moving
+                 focus onto the option to make it fire would break the pattern
+                 the screen-reader contract rests on. tabindex="-1" keeps the
+                 option programmatically focusable without putting every result
+                 row into the tab order. -->
+            <div
+              class="omni__option"
+              role="option"
+              tabindex="-1"
+              [id]="'omni-opt-' + rankOf(hit)"
+              [attr.aria-selected]="rankOf(hit) === active()"
+              (click)="select(hit)"
+              (mouseenter)="active.set(rankOf(hit))">
+              <span class="omni__option-title">{{ hit.title || ('omniSearch.untitled' | translate) }}</span>
+              @if (hit.subtitle) {
+                <span class="omni__option-subtitle">{{ hit.subtitle }}</span>
+              }
+            </div>
+          }
+        }
+      </div>
+
+      <p class="omni__footer" aria-live="polite">
+        @if (searching()) {
+          {{ 'omniSearch.searching' | translate }}
+        } @else if (flat().length === 0) {
+          {{ 'omniSearch.noMatches' | translate }}
+        } @else {
+          {{ totalLabel() }}
+        }
+      </p>
+    </div>
+  }
+</div>

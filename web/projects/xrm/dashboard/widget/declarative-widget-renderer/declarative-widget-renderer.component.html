@@ -1,0 +1,39 @@
+@if (loading()) {
+  <p class="dw-state" role="status"><i class="las la-circle-notch" aria-hidden="true"></i></p>
+} @else if (error(); as err) {
+  <p class="dw-state dw-state--error" role="alert">{{ err }}</p>
+} @else if (rows().length === 0) {
+  <p class="dw-state">{{ emptyMessage() }}</p>
+} @else {
+  <table class="dw-table">
+    <thead>
+      <tr>
+        @for (column of config().columns; track column.field) {
+          <th scope="col">{{ columnLabel(column) }}</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track $index) {
+        <tr>
+          @for (column of config().columns; track column.field) {
+            <td>
+              <span
+                class="dw-cell"
+                [class.dw-cell--badge]="column.format?.kind === 'badge'"
+                [style.color]="cellColor(row, column)"
+                [style.backgroundColor]="cellBackground(cellColor(row, column))"
+              >
+                @if (linkKind(column) === 'external' && externalHref(row, column); as href) {
+                  <a [href]="href" target="_blank" rel="noopener noreferrer">{{ cellDisplay(row, column) }}</a>
+                } @else {
+                  {{ cellDisplay(row, column) }}
+                }
+              </span>
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+}

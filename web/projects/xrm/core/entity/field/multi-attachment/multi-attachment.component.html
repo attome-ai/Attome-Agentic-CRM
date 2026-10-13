@@ -1,0 +1,92 @@
+<div class="xma">
+  @if (label()) {
+    <p class="xma-label">
+      {{ label() }}@if (required()) {<span class="xma-req">*</span>}
+    </p>
+  }
+
+  @if (!entityName() || !recordId()) {
+    <p class="xma-gate">{{ gateHint() }}</p>
+  } @else {
+    @if (keys().length) {
+      <ul class="xma-list">
+        @for (key of keys(); track key) {
+          <li class="xma-row xma-row-filled">
+            <i class="las la-file-alt xma-icon"></i>
+            <span class="xma-text xma-name" [title]="keyDisplayName(key)">{{ keyDisplayName(key) }}</span>
+            @if (canDownload(key)) {
+              <button type="button" class="xma-action" (click)="download(key)"
+                      [disabled]="downloadingKey() === key">
+                {{ downloadingKey() === key ? 'Preparing…' : 'Download' }}
+              </button>
+            } @else {
+              <span class="xma-note">Save to keep</span>
+            }
+            <button type="button" class="xma-remove" [title]="'fieldInput.removeAttachment' | translate"
+                    [attr.aria-label]="'fieldInput.removeAttachment' | translate" (click)="remove(key)" [disabled]="busy()">
+              <i class="las la-times"></i>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+
+    @switch (state()) {
+      @case ('uploading') {
+        <div class="xma-row xma-row-busy"
+             role="progressbar" aria-valuemin="0" aria-valuemax="100"
+             [attr.aria-valuenow]="progress()"
+             [attr.aria-label]="'Uploading ' + uploadingName()">
+          <div class="xma-fill" [style.width.%]="progress()"></div>
+          <i class="las la-upload xma-icon"></i>
+          <span class="xma-text">
+            Uploading {{ uploadingName() }}…@if (queueRemaining() > 0) { ({{ queueRemaining() }} more queued) }
+          </span>
+          <span class="xma-pct">{{ progress() }}%</span>
+        </div>
+      }
+      @case ('processing') {
+        <div class="xma-row xma-row-busy" aria-live="polite">
+          <div class="xma-fill xma-fill-pulse"></div>
+          <i class="las la-shield-alt xma-icon"></i>
+          <span class="xma-text">
+            Scanning {{ uploadingName() }} for malware…@if (queueRemaining() > 0) { ({{ queueRemaining() }} more queued) }
+          </span>
+        </div>
+      }
+    }
+
+    @if (atCapacity()) {
+      <p class="xma-status">Maximum of {{ maxFiles() }} attachments reached.</p>
+    } @else {
+      <div class="xma-row xma-drop"
+           role="button" tabindex="0"
+           [attr.aria-label]="placeholder()"
+           [class.xma-drop-active]="dragging()"
+           [class.xma-row-disabled]="busy()"
+           (dragover)="onDragOver($event)"
+           (dragleave)="onDragLeave($event)"
+           (drop)="onDrop($event)"
+           (click)="!busy() && fileInput.click()"
+           (keydown.enter)="!busy() && fileInput.click()"
+           (keydown.space)="!busy() && fileInput.click(); $event.preventDefault()">
+        <i class="las la-file xma-icon"></i>
+        <span class="xma-text">{{ placeholder() }}</span>
+        <span class="xma-browse">{{ browseLabel() }}</span>
+      </div>
+
+      <input #fileInput type="file" multiple class="xma-native"
+             [disabled]="busy()"
+             [accept]="accept()"
+             (change)="onFilesSelected($any($event.target).files); fileInput.value = ''" />
+    }
+
+    @if (message()) {
+      <p class="xma-status" [class.xma-status-error]="state() === 'rejected' || state() === 'error'">
+        {{ message() }}
+      </p>
+    } @else if (hint()) {
+      <p class="xma-status">{{ hint() }}</p>
+    }
+  }
+</div>

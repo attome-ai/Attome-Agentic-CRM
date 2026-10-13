@@ -1,0 +1,43 @@
+/* M36 Phase 0+1 (D-473) — the record form's prediction banner. Neutral/info
+   toned by default (a "no breach" prediction is reassuring, not a warning);
+   `.pred-banner-breach` switches to the same warn-toned surface
+   `.dup-banner`/`.badge-warn` establish, for a predicted breach. */
+
+.pred-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  background: #164e63;
+  color: #67e8f9;
+}
+
+.pred-banner-breach {
+  background: #78350f;
+  color: #fdba74;
+}
+
+.pred-banner > .las {
+  margin-top: 2px;
+}
+
+.pred-banner-body {
+  flex: 1;
+}
+
+.pred-banner-body p {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.pred-banner-body ul {
+  margin: 0;
+  padding-left: 18px;
+  font-weight: 400;
+}
+
+.pred-banner .btn-sm {
+  color: inherit;
+}

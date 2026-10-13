@@ -1,0 +1,54 @@
+<div class="page-header">
+  <div>
+    <h2>Workflow Instances</h2>
+    <p class="subtitle">{{ instances().length }} instances</p>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <div class="prefix-tabs">
+    <button [class.active]="statusFilter() === ''" (click)="setStatus('')">All</button>
+    @for (s of statuses; track s) {
+      <button [class.active]="statusFilter() === s" (click)="setStatus(s)">{{ s }}</button>
+    }
+  </div>
+</div>
+
+@if (loading()) {
+  <p class="state-msg">Loading instances…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (instances().length === 0) {
+  <div class="empty-state"><p>No instances match.</p></div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Instance</th>
+          <th>Status</th>
+          <th>Correlated Record</th>
+          <th>Started</th>
+          <th>Completed</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (i of instances(); track i.id) {
+          <tr>
+            <td class="mono-input">{{ i.id }}</td>
+            <td><span class="badge">{{ i.status }}</span></td>
+            <td class="cell-muted mono-input">{{ i.correlation_entity_id ?? '—' }}</td>
+            <td class="cell-muted">{{ i.started_at | date:'medium' }}</td>
+            <td class="cell-muted">{{ i.completed_at ? (i.completed_at | date:'medium') : '—' }}</td>
+            <td class="actions">
+              <a [routerLink]="['/xrm/admin/workflow/instances', i.id]" class="btn-sm">
+                <i class="las la-eye"></i> View
+              </a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

@@ -1,0 +1,109 @@
+:host { display: block; }
+
+.view-kind-slot { display: contents; }
+
+.view-kind-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.15rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  background: var(--color-bg);
+}
+
+.view-kind-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.1rem;
+  block-size: 2rem;
+  border: none;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.view-kind-option:hover { color: var(--color-text-primary); }
+
+.view-kind-option.active {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-accent);
+}
+
+.view-kind-option:focus-visible,
+.view-page-new:focus-visible,
+.view-page-select select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.view-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.view-page-toolbar,
+.view-page-toolbar-start {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.view-page-toolbar { justify-content: space-between; }
+
+.view-page-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.view-page-name i { color: var(--color-accent); }
+
+.view-page-select select {
+  min-block-size: 2.35rem;
+  padding-block: 0.45rem;
+  padding-inline: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.7rem;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.view-page-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-block-size: 2.35rem;
+  padding-block: 0.55rem;
+  padding-inline: 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  background: var(--color-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.view-page-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  color: var(--color-text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-kind-option { transition: none; }
+  .view-page-loading .la-spin { animation: none; }
+}

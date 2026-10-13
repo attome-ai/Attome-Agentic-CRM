@@ -1,0 +1,89 @@
+<div class="xrm-layout">
+
+  <xrm-shell-sidebar
+    [items]="filteredSidebarItems()"
+    [loading]="sidebarLoading()"
+    [error]="sidebarError()" />
+
+  <div class="xrm-body">
+
+    <!-- Header matching attome-root layout -->
+    <header class="xrm-header">
+      <div class="xrm-nav">
+
+        <!-- Left: record search (U13 — brand is in the sidebar) -->
+        <div class="header-left">
+          <xrm-omni-search class="header-search"
+            [placeholder]="'shell.searchRecords' | translate"
+            [label]="'shell.searchRecordsLabel' | translate"
+            (selected)="openSearchHit($event)" />
+        </div>
+
+        <!-- Right: search · notifications · profile -->
+        <div class="header-right">
+
+          <!-- Quick search trigger -->
+          <button class="qs-trigger" (click)="toggleQuickSearch()"
+                  [title]="'shell.quickSearch' | translate">
+            <i class="las la-search"></i>
+            <span>{{ 'shell.search' | translate }}</span>
+            <kbd>⇧⇧</kbd>
+          </button>
+
+          <!-- Solution 7 (D-785): dev-only, admin-only open-changeset picker -->
+          <xrm-changeset-indicator />
+          <xrm-app-switcher (appChanged)="onAppChanged($event)" />
+          <xrm-copilot-launcher />
+          <attome-notification-bell />
+          <xrm-profile-menu />
+
+        </div>
+      </div>
+    </header>
+
+    <main class="xrm-main">
+      <router-outlet />
+    </main>
+  </div>
+
+  <!-- ── Quick search overlay ─────────────────────────────────── -->
+  @if (quickSearchOpen()) {
+    <div class="qs-overlay" tabindex="-1"
+         (click)="closeQuickSearch()" (keydown)="onQuickSearchBackdropKeydown($event)">
+      <div class="qs-container" tabindex="-1"
+           (click)="$event.stopPropagation()" (keydown)="onQuickSearchKeydown($event)">
+        <div class="qs-input-wrap">
+          <i class="las la-search qs-icon"></i>
+          <input class="qs-input" type="text" [placeholder]="'shell.searchEntities' | translate"
+                 [ngModel]="qsQuery()"
+                 (ngModelChange)="qsQuery.set($event); qsActive.set(0)" />
+          <button type="button" class="qs-esc" (click)="closeQuickSearch()">ESC</button>
+        </div>
+        <ul class="qs-results" role="listbox">
+          @for (item of qsResults(); track item.id; let i = $index) {
+            <li class="qs-item" role="option" tabindex="0" [class.qs-active]="qsActive() === i"
+                [attr.aria-selected]="qsActive() === i"
+                (mouseenter)="qsActive.set(i)"
+                (focus)="qsActive.set(i)"
+                (click)="navigateTo(item)"
+                (keydown.space)="navigateTo(item); $event.preventDefault(); $event.stopPropagation()">
+              <i [class]="item.icon + ' qs-item-icon'"></i>
+              <div class="qs-item-body">
+                <span class="qs-item-name">{{ item.name }}</span>
+                <span class="qs-item-logical">{{ item.sub }}</span>
+              </div>
+              <i class="las la-arrow-right qs-arrow"></i>
+            </li>
+          }
+          @if (qsQuery().trim() && qsResults().length === 0) {
+            <li class="qs-empty">No entities found</li>
+          }
+          @if (!qsQuery().trim()) {
+            <li class="qs-empty">Type to search entities…</li>
+          }
+        </ul>
+      </div>
+    </div>
+  }
+
+</div>

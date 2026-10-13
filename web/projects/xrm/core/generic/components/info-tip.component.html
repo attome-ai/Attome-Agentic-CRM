@@ -1,0 +1,12 @@
+<button type="button" class="xf-info-tip-trigger"
+        [attr.aria-label]="label() ? 'More info: ' + label() : 'More info'"
+        [attr.aria-describedby]="tipId"
+        (mouseenter)="show()" (mouseleave)="hide()"
+        (focus)="show()" (blur)="hide()">
+  <i class="las la-info-circle" aria-hidden="true"></i>
+</button>
+<span [id]="tipId" role="tooltip" class="xf-info-tip-panel"
+      [class.xf-info-tip-panel-visible]="open()"
+      [class.xf-info-tip-panel-end]="align() === 'end'">
+  {{ text() }}
+</span>

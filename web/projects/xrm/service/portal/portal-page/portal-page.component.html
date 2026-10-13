@@ -1,0 +1,51 @@
+<div class="portal-page">
+  <header class="portal-header">
+    <h1>Service Portal</h1>
+    <p>Browse what we offer, or check the status of a request you already submitted.</p>
+  </header>
+
+  <section class="portal-section">
+    <h2>Check a request's status</h2>
+    <div class="portal-status-bar">
+      <input
+        type="text" placeholder="Paste your tracking token"
+        [ngModel]="tokenInput()" (ngModelChange)="tokenInput.set($event)"
+        (keydown.enter)="checkStatus()"
+      />
+      <button (click)="checkStatus()" [disabled]="statusLoading() || !tokenInput().trim()">
+        {{ statusLoading() ? 'Checking…' : 'Check status' }}
+      </button>
+    </div>
+
+    @if (status(); as s) {
+      <div class="portal-status-result">
+        <p><strong>{{ s.title }}</strong></p>
+        <p>Status: <span class="portal-badge">{{ s.status }}</span></p>
+        @if (s.resolved_entity_name) { <p>Resolved as: {{ s.resolved_entity_name }}</p> }
+      </div>
+    } @else if (hasSearched()) {
+      <p class="portal-not-found">No request found for that token.</p>
+    }
+  </section>
+
+  <section class="portal-section">
+    <h2>Available services</h2>
+    @if (offeringsLoading()) {
+      <p class="portal-muted">Loading…</p>
+    } @else if (offeringsError()) {
+      <p class="portal-error">{{ offeringsError() }}</p>
+    } @else if (offerings().length === 0) {
+      <p class="portal-muted">Nothing published here yet.</p>
+    } @else {
+      <div class="portal-offering-grid">
+        @for (offering of offerings(); track offering.id) {
+          <article class="portal-offering-card">
+            <h3>{{ offering.name }}</h3>
+            @if (offering.category) { <span class="portal-badge">{{ offering.category }}</span> }
+            @if (offering.description) { <p>{{ offering.description }}</p> }
+          </article>
+        }
+      </div>
+    }
+  </section>
+</div>

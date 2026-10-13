@@ -1,0 +1,38 @@
+:host { display: block; min-height: 100vh; background: #ffffff; color: #0f172a; }
+
+.portal-page { max-width: 860px; margin: 0 auto; padding: 48px 24px; }
+
+.portal-header h1 { margin: 0 0 6px; font-size: 28px; }
+.portal-header p { margin: 0; color: #64748b; }
+
+.portal-section { margin-top: 40px; }
+.portal-section h2 { font-size: 18px; margin: 0 0 14px; }
+
+.portal-status-bar { display: flex; gap: 10px; }
+.portal-status-bar input {
+  flex: 1; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px;
+}
+.portal-status-bar button {
+  padding: 10px 18px; border: none; border-radius: 6px; background: #2563eb; color: #fff;
+  font-weight: 600; cursor: pointer;
+}
+.portal-status-bar button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.portal-status-result {
+  margin-top: 14px; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc;
+}
+.portal-status-result p { margin: 4px 0; }
+.portal-not-found { margin-top: 14px; color: #64748b; }
+
+.portal-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 12px;
+  background: #e2e8f0; color: #334155;
+}
+
+.portal-muted { color: #64748b; }
+.portal-error { color: #dc2626; }
+
+.portal-offering-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.portal-offering-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; }
+.portal-offering-card h3 { margin: 0 0 6px; font-size: 15px; }
+.portal-offering-card p { margin: 8px 0 0; color: #475569; font-size: 13px; }

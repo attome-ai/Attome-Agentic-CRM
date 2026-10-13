@@ -1,0 +1,58 @@
+<section class="card" role="group" [attr.aria-labelledby]="'confirm-title-' + toolCall().tool_call_id">
+  <h3 class="card__title" [id]="'confirm-title-' + toolCall().tool_call_id">
+    <i class="las la-shield-alt" aria-hidden="true"></i>
+    {{ 'aiChat.confirm.title' | translate }}
+  </h3>
+  <p class="card__action"><code>{{ toolCall().action_id }}</code></p>
+  @if (summary().entity) {
+    <p class="card__target">
+      {{ summary().entity }}
+      @if (summary().recordId) {
+        · <code>{{ summary().recordId }}</code>
+      }
+    </p>
+  }
+
+  @if (summary().rows.length) {
+    <table class="card__diff">
+      <caption class="visually-hidden">{{ 'aiChat.confirm.changes' | translate }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">{{ 'aiChat.confirm.field' | translate }}</th>
+          @if (showsCurrent()) {
+            <th scope="col">{{ 'aiChat.confirm.current' | translate }}</th>
+          }
+          <th scope="col">{{ 'aiChat.confirm.proposed' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of summary().rows; track row.field) {
+          <tr [class.card__row--changed]="row.changed">
+            <th scope="row">{{ row.field }}</th>
+            @if (showsCurrent()) {
+              <td dir="auto">{{ row.current ?? '—' }}</td>
+            }
+            <td dir="auto">{{ row.proposed }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+  @if (currentUnavailable()) {
+    <p class="card__hint">{{ 'aiChat.confirm.currentUnavailable' | translate }}</p>
+  }
+  <p class="card__hint">{{ 'aiChat.confirm.hashOnly' | translate }}</p>
+
+  @if (error()) {
+    <p class="card__error" role="alert">{{ error() }}</p>
+  }
+
+  <div class="card__actions">
+    <button type="button" class="btn btn--primary" (click)="confirm()" [disabled]="busy()">
+      {{ 'aiChat.confirm.confirm' | translate }}
+    </button>
+    <button type="button" class="btn" (click)="reject()" [disabled]="busy()">
+      {{ 'aiChat.confirm.reject' | translate }}
+    </button>
+  </div>
+</section>

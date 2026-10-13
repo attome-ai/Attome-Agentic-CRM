@@ -1,0 +1,17 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="profiler-finding">
+  <ng-template xrmTab="details">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Details</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['title', 'object_type', 'object_ref', 'probe_name', 'sample_count', 'avg_ms', 'p95_ms', 'max_ms', 'last_seen_at', 'status', 'note']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

@@ -1,0 +1,47 @@
+/* Shared by the two header dropdowns — notification-bell and profile-menu (D-315).
+ *
+ * These rules were `.hdr-wrap` / `.hdr-panel` / `.panel-*` in shell.component.ts
+ * when both panels lived there. They are a real shared surface, not duplication:
+ * the two panels are meant to look identical apart from their contents, and
+ * before this file that was maintained by having them in one 498-line style
+ * block. Each component pulls this in via `styleUrls` and adds only its own
+ * rules, so neither carries the other's CSS.
+ *
+ * `:host` here is the wrapper the panel positions against — it replaces the
+ * `.hdr-wrap` div that used to sit around each button/panel pair.
+ */
+:host { position: relative; }
+
+.hdr-panel {
+  position: absolute; right: 0; left: auto; top: calc(100% + 10px);
+  max-width: calc(100vw - 24px);
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px var(--color-card-shadow);
+  opacity: 0; visibility: hidden;
+  transform: translateY(-8px);
+  transition: opacity 0.18s, transform 0.18s, visibility 0.18s;
+  z-index: 200;
+  overflow: hidden;
+}
+.hdr-panel.open {
+  opacity: 1; visibility: visible; transform: translateY(0);
+}
+
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+  padding: 13px 14px 11px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-border) 20%, var(--color-bg-alt));
+}
+.panel-title { font-size: 13px; font-weight: 700; color: var(--color-text-primary); }
+
+.panel-action {
+  background: none; border: none; padding: 0;
+  cursor: pointer; font-size: 11px; font-weight: 600;
+  color: var(--color-text-secondary);
+  transition: color .15s;
+}
+.panel-action:hover { color: var(--color-accent); }

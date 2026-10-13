@@ -1,0 +1,56 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="ai-capability-pack">
+  <div xrmOperations>
+    <!-- Header copy, stated once and plainly: what a pack is, and the four
+         things it can never do. -->
+    <div class="pack-notice" role="note">
+      <i class="las la-layer-group" aria-hidden="true"></i>
+      <div>
+        <strong>A capability pack is configuration that only ever GRANTS.</strong>
+        <p>
+          It cannot raise a session's risk ceiling, add a privilege, bypass the gate, or make an
+          unlicensed module available. Referencing this pack from an agent policy adds its action
+          ids to that policy's allow-list — and every other check still runs on every invocation.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <ng-template xrmTab="general">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt" aria-hidden="true"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Identity</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['name', 'description']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-shield-alt" aria-hidden="true"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">Action IDs granted by this pack</h2>
+          <p class="xf-section-desc">
+            Ticked ids are stored as a JSON array on this record. A tick grants nothing by itself:
+            the id reaches a session only when a policy that references this pack starts one.
+          </p>
+        </div>
+      </div>
+      <div class="xf-section-body">
+        @if (hasCtrl('action_ids')) {
+          <xrm-capability-picker
+            [actions]="actions()"
+            [loaded]="catalogueLoaded()"
+            [selected]="selectedIds()"
+            idPrefix="pack-actions"
+            (selectionChange)="onSelectionChange($event)" />
+        }
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

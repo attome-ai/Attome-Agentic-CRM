@@ -1,0 +1,281 @@
+<div class="page-header">
+  <div>
+    <h2>Profiler</h2>
+    <p class="subtitle">
+      Where the server spends its time — loading, requests and jobs, ranked
+      @if (lastUpdated()) { — updated {{ lastUpdated() | date:'HH:mm:ss' }} }
+    </p>
+  </div>
+  <button class="btn-ghost" (click)="refresh()" [disabled]="loading()">
+    <i class="las la-sync"></i> Refresh now
+  </button>
+</div>
+
+@if (loading() && groups().length === 0) {
+  <p class="state-msg">Loading profiler stats…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (groups().length === 0) {
+  <div class="empty-state">
+    <p>No probes recorded yet. Nothing has called <code>measure!()</code> since this node
+      (or Redis) last restarted, or <code>observability.profiler_enabled</code> is off.</p>
+  </div>
+} @else {
+  <div class="summary-cards">
+    <div class="summary-card">
+      <span class="summary-label">Loading (server boot)</span>
+      <span class="summary-value">{{ formatTotal(summary().loading_ms) }}</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-label">Requests</span>
+      <span class="summary-value">{{ formatTotal(summary().request_ms) }}</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-label">Jobs</span>
+      <span class="summary-value">{{ formatTotal(summary().job_ms) }}</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-label">Total measured</span>
+      <span class="summary-value">{{ formatTotal(summary().total_ms) }}</span>
+    </div>
+  </div>
+
+  @if (bootPhases().length > 0) {
+    <div class="detail-panel">
+      <h4>Loading breakdown — {{ formatTotal(bootTotalMs()) }} total boot</h4>
+      <p class="subtitle">
+        The <code>boot</code> flush from <code>boot.rs</code>, phase by phase, slowest first.
+      </p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Phase</th><th>Calls</th><th>Time</th><th>Share of boot</th></tr>
+          </thead>
+          <tbody>
+            @for (p of bootPhases(); track p.name) {
+              <tr>
+                <td class="cell-mono">{{ p.name }}</td>
+                <td>{{ p.count }}</td>
+                <td>{{ formatTotal(p.total_ms) }}</td>
+                <td class="share-cell">
+                  <div class="share-bar"><div class="share-fill" [style.width.%]="p.pct"></div></div>
+                  <span class="cell-muted">{{ p.pct | number:'1.1-1' }}%</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <div class="detail-panel">
+    <h4>Slowest probes by total time</h4>
+    <p class="subtitle">The largest total since start — this is what consumes the most time.</p>
+    @if (slowest().length === 0) {
+      <p class="state-msg">No probe holds measurable time yet.</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>
+                <button type="button" class="th-sort" [class.active]="isSlowSortedBy('name')" (click)="toggleSlowSort('name')">
+                  Probe <i [class]="slowSortIcon('name')"></i>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="th-sort" [class.active]="isSlowSortedBy('category')" (click)="toggleSlowSort('category')">
+                  Layer <i [class]="slowSortIcon('category')"></i>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="th-sort" [class.active]="isSlowSortedBy('count')" (click)="toggleSlowSort('count')">
+                  Calls <i [class]="slowSortIcon('count')"></i>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="th-sort" [class.active]="isSlowSortedBy('avg_ms')" (click)="toggleSlowSort('avg_ms')">
+                  Avg <i [class]="slowSortIcon('avg_ms')"></i>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="th-sort" [class.active]="isSlowSortedBy('min_ms')" (click)="toggleSlowSort('min_ms')">
+                  Min <i [class]="slowSortIcon('min_ms')"></i>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="th-sort" [class.active]="isSlowSortedBy('max_ms')" (click)="toggleSlowSort('max_ms')">
+                  Max <i [class]="slowSortIcon('max_ms')"></i>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="th-sort" [class.active]="isSlowSortedBy('total_ms')" (click)="toggleSlowSort('total_ms')">
+                  Total <i [class]="slowSortIcon('total_ms')"></i>
+                </button>
+              </th>
+              <th>
+                <button type="button" class="th-sort" [class.active]="isSlowSortedBy('share')" (click)="toggleSlowSort('share')">
+                  Share <i [class]="slowSortIcon('share')"></i>
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of slowest(); track r.name; let i = $index) {
+              <tr>
+                <td class="cell-muted">{{ i + 1 }}</td>
+                <td class="cell-mono">{{ r.name }}</td>
+                <td><span class="chip chip-{{ r.category }}">{{ r.category }}</span></td>
+                <td>{{ r.count }}</td>
+                <td>{{ r.avg_ms | number:'1.1-2' }} ms</td>
+                <td class="cell-muted">{{ r.min_ms | number:'1.1-2' }} ms</td>
+                <td class="cell-muted">{{ r.max_ms | number:'1.1-2' }} ms</td>
+                <td>{{ formatTotal(r.total_ms) }}</td>
+                <td class="share-cell">
+                  <div class="share-bar"><div class="share-fill" [style.width.%]="r.share"></div></div>
+                  <span class="cell-muted">{{ r.share | number:'1.1-1' }}%</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>
+            <button type="button" class="th-sort" [class.active]="isMainSortedBy('name')" (click)="toggleMainSort('name')">
+              Probe <i [class]="mainSortIcon('name')"></i>
+            </button>
+          </th>
+          <th>
+            <button type="button" class="th-sort" [class.active]="isMainSortedBy('count')" (click)="toggleMainSort('count')">
+              Calls <i [class]="mainSortIcon('count')"></i>
+            </button>
+          </th>
+          <th>
+            <button type="button" class="th-sort" [class.active]="isMainSortedBy('avg_ms')" (click)="toggleMainSort('avg_ms')">
+              Avg <i [class]="mainSortIcon('avg_ms')"></i>
+            </button>
+          </th>
+          <th>
+            <button type="button" class="th-sort" [class.active]="isMainSortedBy('min_ms')" (click)="toggleMainSort('min_ms')">
+              Min <i [class]="mainSortIcon('min_ms')"></i>
+            </button>
+          </th>
+          <th>
+            <button type="button" class="th-sort" [class.active]="isMainSortedBy('max_ms')" (click)="toggleMainSort('max_ms')">
+              Max <i [class]="mainSortIcon('max_ms')"></i>
+            </button>
+          </th>
+          <th>
+            <button type="button" class="th-sort" [class.active]="isMainSortedBy('total_ms')" (click)="toggleMainSort('total_ms')">
+              Total (since start) <i [class]="mainSortIcon('total_ms')"></i>
+            </button>
+          </th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (g of sortedGroups(); track g.api.name) {
+          <tr>
+            <td>
+              @if (g.parts.length > 0) {
+                <button class="expand-toggle" (click)="toggleExpand(g.api.name)">
+                  <i class="las" [class.la-angle-right]="!isExpanded(g.api.name)"
+                                 [class.la-angle-down]="isExpanded(g.api.name)"></i>
+                </button>
+              }
+            </td>
+            <td class="cell-mono">{{ g.api.name }}</td>
+            <td>{{ g.api.count }}</td>
+            <td>{{ g.api.avg_ms | number:'1.1-2' }} ms</td>
+            <td class="cell-muted">{{ g.api.min_ms | number:'1.1-2' }} ms</td>
+            <td class="cell-muted">{{ g.api.max_ms | number:'1.1-2' }} ms</td>
+            <td class="cell-muted">{{ formatTotal(g.api.total_ms) }}</td>
+            <td class="actions">
+              <button class="btn-sm" (click)="showWaterfall(g.api.name)">
+                <i class="las la-stream"></i> Trace
+              </button>
+            </td>
+          </tr>
+          @if (isExpanded(g.api.name)) {
+            <tr>
+              <td></td>
+              <td colspan="7">
+                <table class="nested-table">
+                  <thead>
+                    <tr>
+                      <th>Sub-part</th><th>Calls</th><th>Avg</th><th>Min</th><th>Max</th><th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (p of g.parts; track p.name) {
+                      <tr>
+                        <td class="cell-mono">{{ p.name }}</td>
+                        <td>{{ p.count }}</td>
+                        <td>{{ p.avg_ms | number:'1.1-2' }} ms</td>
+                        <td class="cell-muted">{{ p.min_ms | number:'1.1-2' }} ms</td>
+                        <td class="cell-muted">{{ p.max_ms | number:'1.1-2' }} ms</td>
+                        <td class="cell-muted">{{ formatTotal(p.total_ms) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (waterfallFor()) {
+  <div class="detail-panel waterfall-panel">
+    <h4>
+      Recent calls — {{ waterfallFor() }}
+      <button class="btn-ghost btn-sm-close" (click)="closeWaterfall()">Close</button>
+    </h4>
+    @if (waterfallLoading()) {
+      <p class="state-msg">Loading recent traces…</p>
+    } @else if (waterfallSamples().length === 0) {
+      <p class="state-msg">No recent trace samples for this probe yet.</p>
+    } @else {
+      @for (sample of waterfallSamples(); track sample.ts) {
+        <div class="trace-sample">
+          <div class="trace-sample-header">
+            <span>{{ sample.ts | date:'medium' }}</span>
+            <span class="cell-muted">{{ sample.total_ms | number:'1.1-2' }} ms total</span>
+          </div>
+          @if (sample.parts.length === 0) {
+            <p class="cell-muted">No sub-parts recorded for this call.</p>
+          } @else {
+            <div class="waterfall-bar">
+              @for (part of sample.parts; track part.name) {
+                <div class="waterfall-segment"
+                     [style.width.%]="segmentWidth(part, sample)"
+                     [title]="part.name + ': ' + (part.ms | number:'1.1-2') + ' ms'">
+                </div>
+              }
+            </div>
+            <div class="waterfall-legend">
+              @for (part of sample.parts; track part.name) {
+                <span class="waterfall-legend-item">
+                  <i class="cell-mono">{{ part.name }}</i> — {{ part.ms | number:'1.1-2' }} ms
+                </span>
+              }
+            </div>
+          }
+        </div>
+      }
+    }
+  </div>
+}

@@ -1,0 +1,132 @@
+@if (loading()) { <div class="xf-loading"><i class="las la-circle-notch qe-spinning"></i><p>Loading view…</p></div> }
+@else if (loadError()) { <div class="xf-error-banner"><i class="las la-exclamation-circle"></i><span>{{ loadError() }}</span></div> }
+@else {
+  <div class="xf-page">
+    <header class="xf-header"><div><div class="xf-breadcrumb"><a routerLink="/xrm/admin/views" class="xf-breadcrumb-link">Views</a><span class="xf-breadcrumb-sep">›</span><span>{{ isNew ? 'New record' : 'Edit record' }}</span></div>
+      <h1 class="xf-title">{{ isNew ? 'New View' : 'Edit View' }}</h1>@if (!isNew) { <xrm-owner-layer-badge [layer]="ownerLayer()" variant="full" /> }<p class="xf-subtitle">{{ isNew ? 'Create an entity list view' : id() }}</p></div>
+      <div class="xf-actions"><button class="xf-btn xf-btn-secondary" type="button" (click)="cancel()">Back</button><button class="xf-btn xf-btn-primary" type="button" (click)="save()" [disabled]="saving()"><i class="las la-check"></i>{{ saving() ? 'Saving…' : (isNew ? 'Create' : 'Update') }}</button></div></header>
+    <div class="xf-body">
+      @if (saveError()) { <div class="xf-error-banner"><i class="las la-exclamation-circle"></i><span>{{ saveError() }}</span></div> }
+
+  <section class="xf-section"><div class="xf-section-header"><div class="xf-section-icon"><i class="las la-table"></i></div><div class="xf-section-meta"><h2 class="xf-section-title">View Information</h2><p class="xf-section-desc">Name the View, associate it with an entity, and choose whether lists use it by default.</p></div></div>
+    <div class="xf-section-body"><div class="xf-grid-2"><div class="xf-field"><label for="ve-name">{{ 'queryAdmin.viewName' | translate }}</label><input id="ve-name" class="xf-input" [(ngModel)]="name" [placeholder]="'queryAdmin.viewNamePlaceholder' | translate"><p class="xf-helper">{{ 'queryAdmin.viewNameHelp' | translate }}</p></div>
+      <div class="xf-field"><label for="ve-entity">Entity</label><div class="xf-select-wrap"><select id="ve-entity" class="xf-input" [(ngModel)]="entityId"><option value="">Select entity</option>
+        @for (entity of entities(); track entity.id) { <option [value]="entity.id">{{ entity.name }} ({{ entity.logicalname }})</option> }</select></div><p class="xf-helper">The entity whose list this View presents.</p></div></div>
+    <div class="xf-field"><label for="ve-icon">{{ 'queryAdmin.icon' | translate }}</label><input id="ve-icon" class="xf-input" [(ngModel)]="icon" [placeholder]="'queryAdmin.iconPlaceholder' | translate"><p class="xf-helper"><i [class]="icon() || 'las la-table'"></i> {{ 'queryAdmin.iconHelp' | translate }}</p></div>
+    <label class="xf-switch"><input class="xf-switch-input" type="checkbox" [(ngModel)]="isDefault"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">Default list view</span><span class="xf-switch-desc">Use this View whenever the entity list opens without an explicit View ID.</span></span></label></div>
+  </section>
+
+  <section class="xf-section"><div class="xf-section-header"><div class="xf-section-icon"><i class="las la-columns" aria-hidden="true"></i></div><div class="xf-section-meta"><h2 class="xf-section-title">{{ 'queryAdmin.viewKind.title' | translate }}</h2><p class="xf-section-desc">{{ 'queryAdmin.viewKind.desc' | translate }}</p></div></div>
+    <div class="xf-section-body">
+      <div class="xf-field"><label for="ve-kind">{{ 'queryAdmin.viewKind.kind' | translate }}</label><div class="xf-select-wrap"><select id="ve-kind" class="xf-input" [(ngModel)]="kind">
+        @for (option of kindOptions; track option) { <option [value]="option">{{ 'queryAdmin.viewKind.' + option | translate }}</option> }</select></div></div>
+      <datalist id="ve-column-names">@for (columnName of columnNames(); track columnName) { <option [value]="columnName"></option> }</datalist>
+      @switch (kind()) {
+        @case ('kanban') {
+        <div class="xf-grid-2"><div class="xf-field"><label for="ve-state-field">{{ 'queryAdmin.viewKind.stateField' | translate }}</label><input id="ve-state-field" class="xf-input" list="ve-column-names" required [ngModel]="kindDraft().stateField" (ngModelChange)="setKindDraft('stateField', $event)"><p class="xf-helper">{{ 'queryAdmin.viewKind.stateFieldHelp' | translate }}</p></div>
+          <div class="xf-field"><label for="ve-wip">{{ 'queryAdmin.viewKind.wipLimits' | translate }}</label><input id="ve-wip" class="xf-input" [ngModel]="kindDraft().wipLimits" (ngModelChange)="setKindDraft('wipLimits', $event)" [placeholder]="'queryAdmin.viewKind.wipPlaceholder' | translate"><p class="xf-helper">{{ 'queryAdmin.viewKind.wipLimitsHelp' | translate }}</p></div></div>
+        }
+        @case ('calendar') {
+        <ng-container *ngTemplateOutlet="dateFields" />
+        }
+        @case ('timeline') {
+        <ng-container *ngTemplateOutlet="dateFields" />
+        }
+        @case ('chart') {
+        @let chart = kindDraft().chart;
+        <p class="xf-helper">{{ 'queryAdmin.viewKind.chartHelp' | translate }}</p>
+        <div class="xf-grid-3">
+          <div class="xf-field"><label for="ve-chart-type">{{ 'queryAdmin.viewKind.chartSettings.type' | translate }}</label><div class="xf-select-wrap"><select id="ve-chart-type" class="xf-input" [ngModel]="chart.chartType" (ngModelChange)="setChart('chartType', $event)">
+            @for (type of chartTypes; track type) { <option [value]="type">{{ 'queryAdmin.viewKind.chartType.' + type | translate }}</option> }</select></div></div>
+          <div class="xf-field"><label for="ve-chart-x">{{ 'queryAdmin.viewKind.chartSettings.xField' | translate }}</label><input id="ve-chart-x" class="xf-input" list="ve-column-names" [ngModel]="chart.xField" (ngModelChange)="setChart('xField', $event)"></div>
+          <div class="xf-field"><label for="ve-chart-bucket">{{ 'queryAdmin.viewKind.chartSettings.xBucket' | translate }}</label><div class="xf-select-wrap"><select id="ve-chart-bucket" class="xf-input" [ngModel]="chart.xBucket" (ngModelChange)="setChart('xBucket', $event)">
+            <option value="">{{ 'queryAdmin.viewKind.chartSettings.none' | translate }}</option>
+            @for (bucket of chartDateBuckets; track bucket) { <option [value]="bucket">{{ 'queryAdmin.viewKind.chartBucket.' + bucket | translate }}</option> }</select></div></div>
+        </div>
+        <div class="xf-grid-3">
+          <div class="xf-field"><label for="ve-chart-group">{{ 'queryAdmin.viewKind.chartSettings.groupBy' | translate }}</label><input id="ve-chart-group" class="xf-input" list="ve-column-names" [ngModel]="chart.groupByField" (ngModelChange)="setChart('groupByField', $event)"></div>
+          <div class="xf-field"><label for="ve-chart-sort">{{ 'queryAdmin.viewKind.chartSettings.sort' | translate }}</label><div class="xf-select-wrap"><select id="ve-chart-sort" class="xf-input" [ngModel]="chart.sort" (ngModelChange)="setChart('sort', $event)">
+            <option value="">{{ 'queryAdmin.viewKind.chartSettings.none' | translate }}</option>
+            @for (sort of chartSorts; track sort) { <option [value]="sort">{{ 'queryAdmin.viewKind.chartSort.' + sort | translate }}</option> }</select></div></div>
+          <div class="xf-field"><label for="ve-chart-limit">{{ 'queryAdmin.viewKind.chartSettings.limit' | translate }}</label><input id="ve-chart-limit" class="xf-input" inputmode="numeric" [ngModel]="chart.limit" (ngModelChange)="setChart('limit', $event)"><p class="xf-helper">{{ 'queryAdmin.viewKind.chartSettings.limitHelp' | translate }}</p></div>
+        </div>
+        <div class="xf-grid-3">
+          <div class="xf-field"><label for="ve-chart-ma">{{ 'queryAdmin.viewKind.chartSettings.movingAverage' | translate }}</label><input id="ve-chart-ma" class="xf-input" inputmode="numeric" [ngModel]="chart.movingAverage" (ngModelChange)="setChart('movingAverage', $event)"><p class="xf-helper">{{ 'queryAdmin.viewKind.chartSettings.movingAverageHelp' | translate }}</p></div>
+          <div class="xf-field"><label for="ve-chart-threshold">{{ 'queryAdmin.viewKind.chartSettings.threshold' | translate }}</label><input id="ve-chart-threshold" class="xf-input" inputmode="decimal" [ngModel]="chart.thresholdValue" (ngModelChange)="setChart('thresholdValue', $event)"></div>
+          <div class="xf-field"><label for="ve-chart-threshold-label">{{ 'queryAdmin.viewKind.chartSettings.thresholdLabel' | translate }}</label><input id="ve-chart-threshold-label" class="xf-input" [ngModel]="chart.thresholdLabel" (ngModelChange)="setChart('thresholdLabel', $event)"></div>
+        </div>
+        <div class="xf-grid-3">
+          <label class="xf-switch"><input class="xf-switch-input" type="checkbox" [ngModel]="chart.otherBucket" (ngModelChange)="setChart('otherBucket', $event)"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">{{ 'queryAdmin.viewKind.chartSettings.otherBucket' | translate }}</span></span></label>
+          <label class="xf-switch"><input class="xf-switch-input" type="checkbox" [ngModel]="chart.cumulative" (ngModelChange)="setChart('cumulative', $event)"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">{{ 'queryAdmin.viewKind.chartSettings.cumulative' | translate }}</span></span></label>
+          <label class="xf-switch"><input class="xf-switch-input" type="checkbox" [ngModel]="chart.percentOfTotal" (ngModelChange)="setChart('percentOfTotal', $event)"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">{{ 'queryAdmin.viewKind.chartSettings.percentOfTotal' | translate }}</span></span></label>
+          <label class="xf-switch"><input class="xf-switch-input" type="checkbox" [ngModel]="chart.stacked" (ngModelChange)="setChart('stacked', $event)"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">{{ 'queryAdmin.viewKind.chartSettings.stacked' | translate }}</span></span></label>
+          <label class="xf-switch"><input class="xf-switch-input" type="checkbox" [ngModel]="chart.showLegend" (ngModelChange)="setChart('showLegend', $event)"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">{{ 'queryAdmin.viewKind.chartSettings.showLegend' | translate }}</span></span></label>
+        </div>
+        <h3 class="ve-chart-series-title">{{ 'queryAdmin.viewKind.chartSettings.series' | translate }}</h3>
+        <p class="xf-helper">{{ 'queryAdmin.viewKind.chartSettings.seriesHelp' | translate }}</p>
+        @for (series of chart.series; track $index; let i = $index) {
+        <div class="qe-col-card">
+          <div class="qe-col-header"><span class="qe-col-num">{{ 'queryAdmin.viewKind.chartSettings.seriesN' | translate: { n: i + 1 } }}</span>
+            <button type="button" class="xf-btn xf-btn-secondary" (click)="removeSeries(i)"><i class="las la-trash" aria-hidden="true"></i>{{ 'queryAdmin.viewKind.chartSettings.removeSeries' | translate }}</button></div>
+          <div class="xf-grid-3">
+            <div class="xf-field"><label [attr.for]="'ve-series-field-' + i">{{ 'queryAdmin.viewKind.chartSettings.seriesField' | translate }}</label><input [attr.id]="'ve-series-field-' + i" class="xf-input" list="ve-column-names" required [ngModel]="series.field" (ngModelChange)="setSeries(i, 'field', $event)"></div>
+            <div class="xf-field"><label [attr.for]="'ve-series-agg-' + i">{{ 'queryAdmin.viewKind.chartSettings.aggregation' | translate }}</label><div class="xf-select-wrap"><select [attr.id]="'ve-series-agg-' + i" class="xf-input" [ngModel]="series.aggregation" (ngModelChange)="setSeries(i, 'aggregation', $event)">
+              @for (fn of chartAggregations; track fn) { <option [value]="fn">{{ 'queryAdmin.viewKind.chartAggregation.' + fn | translate }}</option> }</select></div></div>
+            <div class="xf-field"><label [attr.for]="'ve-series-color-' + i">{{ 'queryAdmin.viewKind.chartSettings.color' | translate }}</label><input [attr.id]="'ve-series-color-' + i" class="xf-input" placeholder="#22c55e" [ngModel]="series.color" (ngModelChange)="setSeries(i, 'color', $event)"></div>
+          </div>
+          <div class="xf-grid-2">
+            <div class="xf-field"><label [attr.for]="'ve-series-label-' + i">{{ 'queryAdmin.viewKind.chartSettings.label' | translate }}</label><input [attr.id]="'ve-series-label-' + i" class="xf-input" required [ngModel]="series.label" (ngModelChange)="setSeries(i, 'label', $event)"></div>
+            <div class="xf-field"><label [attr.for]="'ve-series-label-ar-' + i">{{ 'queryAdmin.viewKind.chartSettings.labelAr' | translate }}</label><input [attr.id]="'ve-series-label-ar-' + i" class="xf-input" dir="rtl" [ngModel]="series.labelAr" (ngModelChange)="setSeries(i, 'labelAr', $event)"></div>
+          </div>
+        </div>
+        }
+        <button type="button" class="xf-btn xf-btn-secondary" [disabled]="!canAddSeries()" (click)="addSeries()"><i class="las la-plus" aria-hidden="true"></i>{{ 'queryAdmin.viewKind.chartSettings.addSeries' | translate }}</button>
+        }
+      }
+      <ng-template #dateFields>
+        <div class="xf-grid-3"><div class="xf-field"><label for="ve-start-field">{{ 'queryAdmin.viewKind.startField' | translate }}</label><input id="ve-start-field" class="xf-input" list="ve-column-names" required [ngModel]="kindDraft().startField" (ngModelChange)="setKindDraft('startField', $event)"></div>
+          <div class="xf-field"><label for="ve-end-field">{{ 'queryAdmin.viewKind.endField' | translate }}</label><input id="ve-end-field" class="xf-input" list="ve-column-names" required [ngModel]="kindDraft().endField" (ngModelChange)="setKindDraft('endField', $event)"></div>
+          <div class="xf-field"><label for="ve-color-field">{{ 'queryAdmin.viewKind.colorField' | translate }}</label><input id="ve-color-field" class="xf-input" list="ve-column-names" [ngModel]="kindDraft().colorField" (ngModelChange)="setKindDraft('colorField', $event)"></div></div>
+        <p class="xf-helper">{{ 'queryAdmin.viewKind.datesHelp' | translate }}</p>
+      </ng-template>
+    </div>
+  </section>
+
+  <section class="xf-section"><div class="xf-section-header"><div class="xf-section-icon"><i class="las la-code"></i></div><div class="xf-section-meta"><h2 class="xf-section-title">SQL Query</h2><p class="xf-section-desc">This View references a SQL Query record. Saving here creates or updates that record.</p></div></div><div class="xf-section-body">
+    <div class="xf-grid-2 qe-query-mode-row">
+      <label class="xf-switch"><input class="xf-switch-input" type="radio" name="queryMode" [checked]="!createNewQuery()" (change)="useExistingQuery()"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">Use existing SQL Query</span><span class="xf-switch-desc">Load and update a query already stored in the system.</span></span></label>
+      <label class="xf-switch"><input class="xf-switch-input" type="radio" name="queryMode" [checked]="createNewQuery()" (change)="useNewQuery()"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">Create new SQL Query</span><span class="xf-switch-desc">Create a new query record and associate it with this View.</span></span></label>
+    </div>
+    @if (!createNewQuery()) {
+      <div class="xf-field"><label for="ve-existing-query">Existing SQL Query</label><div class="xf-select-wrap"><select id="ve-existing-query" class="xf-input" [(ngModel)]="queryId" (ngModelChange)="loadSelectedQuery()">
+        <option value="">Select query</option>@for (query of queries(); track query.id) { <option [value]="query.id">{{ query.name }}</option> }</select></div></div>
+    }
+    <div class="xf-field"><label for="ve-qname">{{ 'queryAdmin.queryName' | translate }}</label><input id="ve-qname" class="xf-input" [(ngModel)]="queryName" [placeholder]="'queryAdmin.viewQueryNamePlaceholder' | translate"></div>
+    <div class="xf-field"><label for="ve-sql">{{ 'queryAdmin.sqlStatement' | translate }}</label><textarea id="ve-sql" class="xf-input" [(ngModel)]="sqlQuery" rows="12" spellcheck="false" [placeholder]="'queryAdmin.viewSqlPlaceholder' | translate"></textarea></div>
+    <div class="xf-grid-2"><div class="xf-field"><label for="ve-priv">{{ 'queryAdmin.requiredPrivilege' | translate }}</label>
+      <input id="ve-priv" class="xf-input" [(ngModel)]="requiredPrivilege" [placeholder]="'queryAdmin.privilegePlaceholder' | translate"><p class="xf-helper">{{ 'queryAdmin.privilegeHelp' | translate }}</p></div>
+      <div class="xf-field"><span class="xf-field-caption">Query Type</span><label class="xf-switch xf-switch-field"><input class="xf-switch-input" type="checkbox" [(ngModel)]="isReport"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">Report query</span></span></label><p class="xf-helper">Raise the execution timeout ceiling to 5 seconds.</p></div></div>
+  </div></section>
+
+  <section class="xf-section"><div class="xf-section-header"><div class="xf-section-icon"><i class="las la-columns"></i></div><div class="xf-section-meta"><h2 class="xf-section-title">Column Definition ({{ columns().length }})</h2><p class="xf-section-desc">Presentation, sorting, search and links belong to this View.</p></div>
+    <button class="xf-btn xf-btn-secondary" (click)="updateColumns()" [disabled]="describing() || !sqlQuery().trim()">{{ describing() ? 'Updating…' : 'Update from SQL' }}</button></div><div class="xf-section-body">
+    @if (describeError()) { <p class="error-msg">{{ describeError() }}</p> }
+    @for (column of columns(); track column.key; let index = $index) {
+      <div class="qe-col-card"><div class="qe-col-header"><span class="qe-col-num">Column {{ index + 1 }}</span></div>
+        <div class="xf-grid-2"><div class="xf-field"><label [attr.for]="'ve-col-sys-' + index">System Name</label><input [attr.id]="'ve-col-sys-' + index" class="xf-input" [ngModel]="column.name" readonly><p class="xf-helper">Must match the SQL output alias.</p></div>
+          <div class="xf-field"><label [attr.for]="'ve-col-disp-' + index">Display Name</label><input [attr.id]="'ve-col-disp-' + index" class="xf-input" [(ngModel)]="column.display_name"><p class="xf-helper">Label shown in the list header.</p></div></div>
+        <div class="xf-grid-2"><div class="xf-field"><label [attr.for]="'ve-col-type-' + index">Data Type</label><div class="xf-select-wrap"><select [attr.id]="'ve-col-type-' + index" class="xf-input" [(ngModel)]="column.data_type">
+          <option value="string">Text</option><option value="number">Number</option><option value="date">Date / Time</option><option value="boolean">True / False</option><option value="uuid">ID (UUID)</option></select></div></div>
+          <div class="xf-field"><span class="xf-field-caption">Visibility</span><label class="xf-switch xf-switch-field"><input class="xf-switch-input" type="checkbox" [(ngModel)]="column.is_visible"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">Visible</span></span></label><p class="xf-helper">Show this column in list results.</p></div></div>
+        <details class="qe-col-advanced"><summary><i class="las la-cog"></i> Sorting, Search &amp; Links</summary><div class="qe-col-advanced-body">
+          <div class="xf-grid-3"><label class="xf-switch"><input class="xf-switch-input" type="checkbox" [(ngModel)]="column.is_sortable"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">Sortable</span></span></label>
+            <label class="xf-switch"><input class="xf-switch-input" type="checkbox" [(ngModel)]="column.is_searchable"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">Searchable</span></span></label>
+            <label class="xf-switch"><input class="xf-switch-input" type="checkbox" [(ngModel)]="column.is_clickable"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">Clickable</span></span></label></div>
+          @if (column.is_clickable) { <div class="xf-field"><label [attr.for]="'ve-col-route-' + index">Link Route</label><input [attr.id]="'ve-col-route-' + index" class="xf-input" [(ngModel)]="column.route_template" [placeholder]="'/xrm/contact/form?id={{id}}'"><p class="xf-helper">Use returned column placeholders such as {{ '{{id}}' }}.</p></div> }
+        </div></details>
+      </div>
+    } @empty { <div class="qe-empty-cols"><p>Load or enter SQL, then update columns from its SELECT output.</p></div> }
+  </div></section>
+    </div>
+  </div>
+}

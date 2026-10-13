@@ -1,0 +1,92 @@
+<div class="page-header">
+  <div>
+    <h2>Legal Holds</h2>
+    <p class="subtitle">
+      A per-record or whole-entity freeze that blocks purge, crypto-shredding erasure,
+      and DSR erasure fulfillment against matching records until released.
+    </p>
+  </div>
+  <button class="btn-primary" (click)="toggleCreate()">
+    <i class="las la-plus"></i> Place Hold
+  </button>
+</div>
+
+@if (showCreate()) {
+  <div class="create-panel">
+    <h3>Place Legal Hold</h3>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="lh-new-entity">Entity logicalname</label>
+        <input id="lh-new-entity" [(ngModel)]="newEntity" placeholder="e.g. contact" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="lh-new-record">
+          Record ID <span class="hint">(blank = whole-entity hold)</span>
+        </label>
+        <input id="lh-new-record" [(ngModel)]="newRecordId" placeholder="uuid, optional" autocomplete="off" class="mono-input">
+      </div>
+    </div>
+    <div class="form-row-1">
+      <div class="field">
+        <label for="lh-new-matter">Matter reference</label>
+        <input id="lh-new-matter" [(ngModel)]="newMatterReference" placeholder="e.g. LIT-2026-0042" autocomplete="off">
+      </div>
+    </div>
+    @if (createError()) { <p class="error-msg">{{ createError() }}</p> }
+    <div class="btn-row">
+      <button class="btn-primary" (click)="create()" [disabled]="creating()">
+        {{ creating() ? 'Placing…' : 'Place Hold' }}
+      </button>
+      <button class="btn-ghost" (click)="toggleCreate()">Cancel</button>
+    </div>
+  </div>
+}
+
+<div class="filter-bar">
+  <input class="search" [(ngModel)]="entityFilter" (change)="load()" placeholder="Filter by entity logicalname…" autocomplete="off">
+  <div class="prefix-tabs">
+    <button [class.active]="statusFilter() === 'active'" (click)="setStatus('active')">Active</button>
+    <button [class.active]="statusFilter() === 'released'" (click)="setStatus('released')">Released</button>
+  </div>
+</div>
+
+@if (loading()) {
+  <p class="state-msg">Loading legal holds…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (holds().length === 0) {
+  <div class="empty-state"><p>No {{ statusFilter() }} legal holds.</p></div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Entity</th>
+          <th>Record</th>
+          <th>Matter</th>
+          <th>Placed</th>
+          <th>Released</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (h of holds(); track h.id) {
+          <tr>
+            <td>{{ h.entity_logicalname }}</td>
+            <td class="cell-mono">{{ h.record_id ?? 'whole entity' }}</td>
+            <td>{{ h.matter_reference }}</td>
+            <td class="cell-muted">{{ h.placed_at | date:'medium' }}</td>
+            <td class="cell-muted">{{ h.released_at ? (h.released_at | date:'medium') : '—' }}</td>
+            <td class="actions">
+              @if (!h.released_at) {
+                <button class="btn-sm btn-sm-danger" (click)="release(h)" [disabled]="busyId() === h.id">
+                  {{ busyId() === h.id ? 'Releasing…' : 'Release' }}
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

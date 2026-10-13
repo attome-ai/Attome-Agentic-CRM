@@ -1,0 +1,29 @@
+@if (loading()) {
+  <div class="cpv-status"><p>Loading…</p></div>
+} @else if (page(); as p) {
+  <article class="cpv-page">
+    @for (block of p.blocks; track $index) {
+      <attome-content-block-view [block]="block" [isPublic]="true" />
+    }
+    <footer class="cpv-vote">
+      @switch (voteState()) {
+        @case ('idle') {
+          <span class="cpv-vote-prompt">Was this page useful?</span>
+          <button type="button" class="cpv-vote-btn" (click)="vote(true)">Yes</button>
+          <button type="button" class="cpv-vote-btn" (click)="vote(false)">No</button>
+        }
+        @case ('sent') {
+          <span class="cpv-vote-prompt">Thanks for the feedback.</span>
+        }
+        @case ('error') {
+          <span class="cpv-vote-prompt">Couldn't record that — please try again shortly.</span>
+        }
+      }
+    </footer>
+  </article>
+} @else {
+  <div class="cpv-status">
+    <h1>Page not found</h1>
+    <p>There's nothing published at this address.</p>
+  </div>
+}

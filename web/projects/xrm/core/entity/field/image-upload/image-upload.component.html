@@ -1,0 +1,81 @@
+@if (!entityName() || !recordId()) {
+  <div class="xiu xiu-gated">
+    <span class="xiu-ring"><i class="las la-user-lock xiu-icon"></i></span>
+    <p class="xiu-hint">Save the record first</p>
+  </div>
+} @else {
+  <div class="xiu" [class.xiu-filled]="previewUrl()">
+    <div class="xiu-drop"
+         role="button" tabindex="0"
+         [attr.aria-label]="previewUrl() ? 'Change ' + label() : 'Upload ' + label()"
+         [attr.aria-busy]="busy()"
+         [title]="tooltip()"
+         [class.xiu-drop-active]="dragging()"
+         [class.xiu-drop-disabled]="busy()"
+         (dragover)="onDragOver($event)"
+         (dragleave)="onDragLeave($event)"
+         (drop)="onDrop($event)"
+         (click)="fileInput.click()"
+         (keydown.enter)="fileInput.click()"
+         (keydown.space)="fileInput.click(); $event.preventDefault()">
+
+      <!-- A chosen image fills the card; the copy below sits on a scrim
+           over it, revealed on hover unless something must be said now. -->
+      @if (previewUrl()) {
+        <img class="xiu-photo" [src]="previewUrl()" [alt]="label()" />
+      }
+
+      <!-- Square, a circle inside it, the glyph inside that. No copy in
+           the resting state — the instructions live in the tooltip; text
+           only appears when there is something to report. -->
+      <!-- Same condition, two jobs: it is exactly the states that put words
+           on the card, which is also exactly what must stay visible over a
+           photo without hovering. -->
+      <div class="xiu-overlay"
+           [class.xiu-overlay-pinned]="pinned()"
+           [class.xiu-overlay-msg]="pinned()">
+        <span class="xiu-ring">
+          @if (busy()) {
+            <i class="las la-circle-notch xiu-icon xiu-spin"></i>
+          } @else if (previewUrl()) {
+            <i class="las la-camera xiu-icon"></i>
+          } @else {
+            <i class="las la-cloud-upload-alt xiu-icon"></i>
+          }
+        </span>
+
+        @switch (state()) {
+          @case ('uploading') {
+            <p class="xiu-hint">{{ progress() }}%</p>
+            <div class="xiu-progress">
+              <div class="xiu-progress-bar" [style.width.%]="progress()"></div>
+            </div>
+          }
+          @case ('processing') { <p class="xiu-hint">Scanning…</p> }
+          @case ('rejected')   { <p class="xiu-hint xiu-hint-error">{{ message() }}</p> }
+          @case ('error')      { <p class="xiu-hint xiu-hint-error">{{ message() }}</p> }
+          @default {
+            @if (pendingSave()) {
+              <p class="xiu-hint xiu-hint-ok">Save to keep</p>
+            }
+          }
+        }
+      </div>
+    </div>
+
+    <!-- A sibling of the drop zone, not a child: nested inside it, this
+         button's click would bubble up and reopen the file dialog. -->
+    @if (hasValue() && !busy()) {
+      <button type="button" class="xiu-remove"
+              [attr.aria-label]="'fieldInput.removeNamed' | translate: { label: label() }" [title]="'fieldInput.removeImage' | translate"
+              (click)="clear()">
+        <i class="las la-times"></i>
+      </button>
+    }
+
+    <input #fileInput type="file" class="xiu-native"
+           [accept]="acceptAttr"
+           [disabled]="busy()"
+           (change)="onFileSelected($any($event.target).files); fileInput.value = ''" />
+  </div>
+}

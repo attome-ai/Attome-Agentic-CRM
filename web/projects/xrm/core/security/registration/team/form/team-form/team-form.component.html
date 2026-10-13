@@ -1,0 +1,39 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="team">
+  <ng-template xrmTab="general">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">Details</h2>
+        </div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of sortedFields(); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+  </ng-template>
+  <ng-template xrmTab="users">
+    @if (id(); as teamId) {
+      <xrm-related-grid
+        entityName="user_account_mm_team"
+        [filters]="[{ field: 'team_ref', value: teamId }]"
+        [pageSize]="10"
+        relationshipType="many_to_many"
+        [picker]="{ targetEntityName: 'user_account', targetField: 'user_ref', displayField: 'email', title: 'Add users' }"
+      />
+    } @else {
+      <p class="xf-hint">Save the record before viewing team members.</p>
+    }
+  </ng-template>
+  <ng-template xrmTab="roles">
+    @if (id(); as teamId) {
+      <xrm-team-roles-panel [teamId]="teamId" />
+    } @else {
+      <p class="xf-hint">Save the record before assigning roles.</p>
+    }
+  </ng-template>
+</xrm-base-form>

@@ -1,0 +1,124 @@
+<nav class="rd-breadcrumb">
+  <a routerLink="/xrm/admin/release-reports" class="cell-link">
+    <i class="las la-arrow-left rd-back-icon" aria-hidden="true"></i> {{ 'releaseReport.back' | translate }}
+  </a>
+</nav>
+
+<div class="page-header">
+  <div>
+    <h2>{{ 'releaseReport.detail.title' | translate }}</h2>
+    <p class="subtitle">{{ 'releaseReport.noDeadline' | translate }}</p>
+  </div>
+</div>
+
+@if (reportLoading()) {
+  <p class="state-msg" role="status">{{ 'releaseReport.loading' | translate }}</p>
+} @else if (reportError()) {
+  <p class="error-msg" role="alert" data-testid="report-error">{{ reportError() }}</p>
+} @else if (report(); as r) {
+  <section class="card rd-head" aria-labelledby="rd-release" data-testid="report-head">
+    <h3 id="rd-release" class="rd-release">{{ r.release }}</h3>
+    <dl class="rd-facts">
+      <div>
+        <dt>{{ 'releaseReport.columns.status' | translate }}</dt>
+        <dd><span class="badge">{{ statusKey(r.status) | translate }}</span></dd>
+      </div>
+      <div>
+        <dt>{{ 'releaseReport.columns.source' | translate }}</dt>
+        <dd>{{ sourceKey(r.source) | translate }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'releaseReport.detail.created' | translate }}</dt>
+        <dd>{{ r.created_at | localDate: dateFmt }}</dd>
+      </div>
+      @if (r.ready_at) {
+        <div>
+          <dt>{{ 'releaseReport.detail.ready' | translate }}</dt>
+          <dd>{{ r.ready_at | localDate: dateFmt }}</dd>
+        </div>
+      }
+      <div>
+        <dt>{{ 'releaseReport.openItemsLabel' | translate }}</dt>
+        <dd>
+          <strong>{{ 'releaseReport.itemsCount' | translate: { open: r.items_open, total: r.items_total } }}</strong>
+        </dd>
+      </div>
+      @if (r.backup_ref) {
+        <div>
+          <dt>{{ 'releaseReport.detail.backup' | translate }}</dt>
+          <dd class="rd-mono">{{ r.backup_ref }}</dd>
+        </div>
+      }
+      @if (r.backup_retain_until) {
+        <div>
+          <dt>{{ 'releaseReport.detail.backupUntil' | translate }}</dt>
+          <dd>{{ r.backup_retain_until | localDate: dateFmt }}</dd>
+        </div>
+      }
+    </dl>
+    @if (r.status === 'building') {
+      <p class="rr-muted" role="status">{{ 'releaseReport.detail.notReady' | translate }}</p>
+    }
+  </section>
+}
+
+<form class="rr-filters" (ngSubmit)="apply()" [attr.aria-label]="'releaseReport.filters.label' | translate">
+  <label for="rd-kind">{{ 'releaseReport.filters.kind' | translate }}</label>
+  <select id="rd-kind" name="kind" [ngModel]="kind()" (ngModelChange)="kind.set($event)">
+    <option value="">{{ 'releaseReport.filters.all' | translate }}</option>
+    @for (k of kinds; track k) {
+      <option [value]="k">{{ kindKey(k) | translate }}</option>
+    }
+  </select>
+  <label for="rd-status">{{ 'releaseReport.filters.itemStatus' | translate }}</label>
+  <select id="rd-status" name="itemStatus" [ngModel]="itemStatus()" (ngModelChange)="itemStatus.set($event)">
+    <option value="">{{ 'releaseReport.filters.all' | translate }}</option>
+    @for (s of itemStatuses; track s) {
+      <option [value]="s">{{ itemStatusKey(s) | translate }}</option>
+    }
+  </select>
+  <label for="rd-entity">{{ 'releaseReport.filters.entity' | translate }}</label>
+  <input id="rd-entity" name="entity" type="text" dir="ltr"
+         [placeholder]="'releaseReport.filters.entityPlaceholder' | translate"
+         [ngModel]="entity()" (ngModelChange)="entity.set($event)" />
+  <button type="submit" class="btn-ghost" [disabled]="itemsLoading()">
+    <i class="las la-filter" aria-hidden="true"></i> {{ 'releaseReport.filters.apply' | translate }}
+  </button>
+  <button type="button" class="btn-text" (click)="reset()" [disabled]="itemsLoading()">
+    {{ 'releaseReport.filters.reset' | translate }}
+  </button>
+</form>
+
+<section class="card" aria-labelledby="rd-items-title">
+  <h3 id="rd-items-title">
+    {{ 'releaseReport.detail.itemsTitle' | translate }}
+    <span class="count">{{ total() | localNumber }}</span>
+  </h3>
+  <p class="rr-muted" role="status" data-testid="notice">{{ notice() }}</p>
+  @if (itemsLoading()) {
+    <p class="state-msg" role="status">{{ 'releaseReport.loading' | translate }}</p>
+  } @else if (itemsError()) {
+    <p class="error-msg" role="alert">{{ itemsError() }}</p>
+  } @else if (items().length === 0) {
+    <div class="empty-state"><p>{{ 'releaseReport.detail.noItems' | translate }}</p></div>
+  } @else {
+    <ul class="rd-items">
+      @for (it of items(); track it.id) {
+        <li>
+          <attome-report-item [item]="it" (changed)="onChanged($event)" (stale)="onStale()" />
+        </li>
+      }
+    </ul>
+    @if (pages() > 1) {
+      <nav class="rr-pager" [attr.aria-label]="'releaseReport.pager.label' | translate">
+        <button type="button" class="btn-ghost" (click)="previous()" [disabled]="!hasPrevious()">
+          {{ 'releaseReport.pager.previous' | translate }}
+        </button>
+        <span>{{ 'releaseReport.pager.pageOf' | translate: { page: page(), pages: pages() } }}</span>
+        <button type="button" class="btn-ghost" (click)="next()" [disabled]="!hasNext()">
+          {{ 'releaseReport.pager.next' | translate }}
+        </button>
+      </nav>
+    }
+  }
+</section>

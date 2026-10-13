@@ -1,0 +1,22 @@
+.cr-panel { border: 1px solid var(--color-border, #24324d); border-radius: 12px; background: var(--color-surface, #111c33); overflow: hidden; margin-bottom: 16px; }
+.cr-panel-header { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--color-border, #24324d); }
+.cr-panel-header i { color: var(--color-accent, #8b5cf6); font-size: 15px; }
+.cr-panel-header h3 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-secondary, #94a3b8); }
+
+.cr-state-msg { margin: 0; padding: 16px 20px; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
+.cr-state-error { color: var(--color-danger, #ef4444); }
+.cr-note { margin: 0; padding: 10px 20px; font-size: 12px; color: var(--color-text-secondary, #94a3b8); border-bottom: 1px solid var(--color-border, #24324d); }
+
+.cr-table-wrap { overflow-x: auto; }
+.cr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cr-table th { text-align: left; padding: 10px 20px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--color-text-secondary, #94a3b8); border-bottom: 1px solid var(--color-border, #24324d); }
+.cr-table td { padding: 10px 20px; color: var(--color-text-primary, #e5eefc); border-bottom: 1px solid var(--color-border, #24324d); }
+.cr-table tr:last-child td { border-bottom: 0; }
+
+.cr-actions { display: flex; gap: 8px; }
+.cr-btn { padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid var(--color-border, #24324d); background: none; cursor: pointer; }
+.cr-btn:disabled { opacity: .5; cursor: not-allowed; }
+.cr-btn-approve { border-color: var(--color-success, #22c55e); color: var(--color-success, #22c55e); }
+.cr-btn-approve:hover:not(:disabled) { background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); }
+.cr-btn-reject { border-color: var(--color-danger, #ef4444); color: var(--color-danger, #ef4444); }
+.cr-btn-reject:hover:not(:disabled) { background: color-mix(in srgb, var(--color-danger, #ef4444) 12%, transparent); }

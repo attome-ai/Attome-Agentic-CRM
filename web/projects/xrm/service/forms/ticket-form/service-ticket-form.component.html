@@ -1,0 +1,27 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="service-ticket">
+  <!-- U14 — the ticket's SLA status; renders nothing for a ticket with no SLA. -->
+  <xrm-sla-badge xrmHeaderMeta [ticket]="ticketData()" />
+
+  <ng-container ngProjectAs="[xrmOperations]">
+    @if (id(); as ticketId) {
+      <!-- U14 — reloads the record after an action; locked while there are unsaved edits. -->
+      <xrm-ticket-sla-actions [ticketId]="ticketId" [locked]="dirty()" (changed)="reload()" />
+    }
+  </ng-container>
+
+  <ng-template xrmTab="details">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Details</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['ticket_number', 'title', 'description', 'requester_id', 'channel', 'category', 'ticket_type', 'priority', 'status', 'assignee_id', 'queue_id', 'parent_ticket_id', 'linked_project_id', 'resolution_code', 'csat_score', 'sla_policy_id', 'resolution_due_at', 'sla_breached', 'sla_warned', 'escalation_level', 'escalated_at', 'resolved_at', 'severity', 'impact', 'root_cause', 'contributing_factors', 'detected_at', 'mitigated_at', 'major', 'work_queue_ref', 'claimed_at']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

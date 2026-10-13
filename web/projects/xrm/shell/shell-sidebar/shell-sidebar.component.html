@@ -1,0 +1,179 @@
+<aside class="sidebar" [attr.dir]="lang.current() === 'ar' ? 'rtl' : 'ltr'"
+       [class.collapsed]="isSidebarCompact()" [class.rail]="isRailStyle()">
+
+  <div class="sidebar-header">
+    @if (isRailStyle()) {
+      <span class="rail-brand" [title]="'shell.brand' | translate">AX</span>
+    } @else if (!isCollapsed()) {
+      <div class="brand">
+        <span class="brand-mark">AX</span>
+        <span class="brand-name">{{ 'shell.brand' | translate }}</span>
+      </div>
+      <button class="toggle-btn" type="button"
+              (click)="isCollapsed.set(true)"
+              [title]="'shell.collapseSidebar' | translate" [attr.aria-label]="'shell.collapseSidebar' | translate">
+        <i class="las la-bars" aria-hidden="true"></i>
+      </button>
+    } @else {
+      <button class="toggle-btn expand-btn" type="button"
+              (click)="isCollapsed.set(false)"
+              [title]="'shell.expandSidebar' | translate" [attr.aria-label]="'shell.expandSidebar' | translate">
+        <i class="las la-angle-right" aria-hidden="true"></i>
+      </button>
+    }
+  </div>
+
+  <nav class="menu-list" [class.collapsed]="isSidebarCompact()">
+
+    @if (!isSidebarCompact()) {
+      <div class="search-wrap">
+        <i class="las la-search search-icon"></i>
+        <input class="entity-search" type="text" [placeholder]="'shell.filterPlaceholder' | translate"
+               [ngModel]="entitySearch()"
+               (ngModelChange)="entitySearch.set($event)" />
+      </div>
+    }
+
+    @if (loading()) {
+      @if (!isSidebarCompact()) { <p class="state-msg">Loading…</p> }
+    } @else if (error()) {
+      @if (!isSidebarCompact()) { <p class="state-msg err-msg">Failed to load</p> }
+    } @else {
+
+      @if (entitySearch().trim() && !isSidebarCompact()) {
+        @for (item of filteredFlat(); track item.route) {
+          @if (item.is_disabled) {
+            <span class="menu-link disabled" [title]="item.name + ' (coming soon)'">
+              <i [class]="item.icon + ' item-icon'"></i>
+              <span class="item-text">{{ displayName(item.name) }}</span>
+            </span>
+          } @else {
+            <a class="menu-link"
+               [routerLink]="routeLink(item.route)"
+               routerLinkActive="active"
+               (click)="expandSidebar()">
+              <i [class]="item.icon + ' item-icon'"></i>
+              <span class="item-text">{{ displayName(item.name) }}</span>
+            </a>
+          }
+        }
+        @if (filteredFlat().length === 0) {
+          <p class="state-msg">No match</p>
+        }
+
+      } @else {
+        @for (item of items(); track item.id) {
+
+          @if (item.child.length > 0) {
+            <button class="menu-link group-btn"
+                    [class.parent-active]="isItemActive(item)"
+                    [class.rail-selected]="railGroupId() === item.id"
+                    [title]="isSidebarCompact() ? item.name : null"
+                    (click)="openSidebarGroup(item.id)">
+              <i [class]="item.icon + ' item-icon'"></i>
+              @if (!isSidebarCompact()) {
+                <span class="item-text">{{ displayName(item.name) }}</span>
+                <span class="badge">{{ item.child.length }}</span>
+                <i class="las la-angle-down chevron"
+                   [class.expanded]="isExpanded(item.id)"></i>
+              }
+            </button>
+
+            @if (isExpanded(item.id) && !isSidebarCompact()) {
+              @for (child of item.child; track child.id) {
+                @if (child.route) {
+                  @if (child.is_disabled) {
+                    <span class="menu-link child-link disabled" [title]="child.name + ' (coming soon)'">
+                      <i class="las la-circle child-dot"></i>
+                      <span class="item-text">{{ displayName(child.name) }}</span>
+                    </span>
+                  } @else {
+                    <a class="menu-link child-link"
+                       [routerLink]="routeLink(child.route)"
+                       routerLinkActive="active"
+                       (click)="expandSidebar()">
+                      <i class="las la-circle child-dot"></i>
+                      <span class="item-text">{{ displayName(child.name) }}</span>
+                    </a>
+                  }
+                }
+              }
+            }
+
+          } @else if (item.route) {
+            @if (item.is_disabled) {
+              <span class="menu-link disabled" [title]="item.name + ' (coming soon)'">
+                <i [class]="item.icon + ' item-icon'"></i>
+                @if (!isSidebarCompact()) {
+                  <span class="item-text">{{ displayName(item.name) }}</span>
+                }
+              </span>
+            } @else {
+              <a class="menu-link"
+                 [routerLink]="routeLink(item.route)"
+                 routerLinkActive="active"
+                 [title]="isSidebarCompact() ? item.name : null"
+                 (click)="expandSidebar()">
+                <i [class]="item.icon + ' item-icon'"></i>
+                @if (!isSidebarCompact()) {
+                  <span class="item-text">{{ displayName(item.name) }}</span>
+                }
+              </a>
+            }
+          }
+
+        }
+      }
+    }
+  </nav>
+
+  <div class="sidebar-footer" [class.collapsed-footer]="isSidebarCompact()">
+    @if (!isSidebarCompact()) {
+      <div class="user-chip">
+        <span class="avatar">{{ initial() }}</span>
+        <span class="user-email">{{ shortId() }}</span>
+      </div>
+    } @else {
+      <span class="avatar" [title]="shortId()">{{ initial() }}</span>
+    }
+  </div>
+</aside>
+
+@if (isRailStyle() && railGroup(); as group) {
+  <aside class="rail-panel">
+    <div class="rail-panel-header">
+      <div>
+        <span class="rail-panel-eyebrow">Navigation</span>
+        <h2>{{ displayName(group.name) }}</h2>
+      </div>
+      <button type="button" class="rail-panel-close" (click)="closeRailPanel()"
+              [title]="'shell.closeSection' | translate" [attr.aria-label]="'shell.closeSection' | translate">
+        <i class="las la-times"></i>
+      </button>
+    </div>
+    <div class="rail-panel-search">
+      <i class="las la-search"></i>
+      <input type="text" placeholder="Search in {{ group.name }}"
+             [ngModel]="railSearch()" (ngModelChange)="railSearch.set($event)">
+    </div>
+    <nav class="rail-panel-links" [attr.aria-label]="group.name">
+      @for (child of filteredRailChildren(); track child.id) {
+        @if (child.route) {
+          @if (child.is_disabled) {
+            <span class="disabled" [title]="child.name + ' (coming soon)'">
+              <i [class]="child.icon || 'las la-circle'"></i>
+              <span>{{ displayName(child.name) }}</span>
+            </span>
+          } @else {
+            <a [routerLink]="routeLink(child.route)" routerLinkActive="active">
+              <i [class]="child.icon || 'las la-circle'"></i>
+              <span>{{ displayName(child.name) }}</span>
+            </a>
+          }
+        }
+      } @empty {
+        <p class="rail-panel-empty">No matching items</p>
+      }
+    </nav>
+  </aside>
+}

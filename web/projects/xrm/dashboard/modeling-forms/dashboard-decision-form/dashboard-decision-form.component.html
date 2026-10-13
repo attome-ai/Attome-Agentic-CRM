@@ -1,0 +1,17 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="dashboard-decision">
+  <ng-template xrmTab="details">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Details</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['title', 'driver', 'metric_ref', 'signal_ref', 'status', 'owner_ref', 'confidence', 'recommended_by', 'rule_ref', 'model_id', 'prompt_version', 'approval_request_ref', 'action_invocation_ref', 'regarding_entity', 'regarding_id', 'measure_at', 'expected_metric_ref', 'expected_delta', 'actual_delta', 'effectiveness', 'refusal_reason', 'chosen_option_ref']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

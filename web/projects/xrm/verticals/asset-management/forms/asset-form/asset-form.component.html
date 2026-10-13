@@ -1,0 +1,17 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="asset">
+  <ng-template xrmTab="details">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'xrmForm.tabs.details' | translate }}</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['asset_tag', 'custodian_ref', 'depreciation_method', 'disposed_on', 'lifecycle_status', 'location_ref', 'name', 'parent_asset_ref', 'purchase_cost', 'purchased_on', 'salvage_value', 'warranty_expires_on']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

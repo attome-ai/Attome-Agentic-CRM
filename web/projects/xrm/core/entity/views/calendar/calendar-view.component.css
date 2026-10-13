@@ -1,0 +1,116 @@
+:host {
+  display: flex;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+}
+
+.cal-container {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 1rem 1.5rem;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.cal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.cal-month-label {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.cal-status {
+  padding: 1rem;
+  color: var(--color-text-secondary);
+}
+
+.cal-status--error {
+  color: var(--color-danger, #c0392b);
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 1px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  background: var(--color-border);
+  border-radius: 0.6rem;
+}
+
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  background: var(--color-bg-alt);
+  min-height: 5.5rem;
+  overflow: hidden;
+}
+
+.cal-day--out {
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+}
+
+.cal-day--today .cal-day-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.cal-day-number {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.cal-day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.cal-event {
+  border: none;
+  border-radius: 0.3rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.72rem;
+  text-align: start;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff;
+}
+
+.xrm-cal-c0 { background: #4c6ef5; }
+.xrm-cal-c1 { background: #12b886; }
+.xrm-cal-c2 { background: #f59f00; }
+.xrm-cal-c3 { background: #e64980; }
+.xrm-cal-c4 { background: #7048e8; }
+.xrm-cal-c5 { background: #15aabf; }

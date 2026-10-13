@@ -1,0 +1,94 @@
+<section class="fcr" [class.fcr--blocked]="blocked()" aria-live="polite" data-testid="field-change-result">
+  <p class="fcr-headline">
+    @if (blocked()) {
+      <i class="las la-ban" aria-hidden="true"></i>
+    } @else {
+      <i class="las la-info-circle" aria-hidden="true"></i>
+    }
+    <strong>{{ headline() | translate }}</strong>
+  </p>
+  @if (blocked()) {
+    <p class="fcr-blocked" role="alert" data-testid="blocked-text">{{ blockedText() }}</p>
+  }
+
+  <ul class="fcr-counts">
+    @if (isDelete() && result().dry_run && result().values_to_archive !== null) {
+      <li data-testid="values-to-archive">{{ 'fieldChange.result.valuesToArchive' | translate: { count: result().values_to_archive } }}</li>
+    }
+    @if (isDelete() && !result().dry_run && result().applied) {
+      <li>{{ 'fieldChange.result.archived' | translate: { count: result().archived } }}</li>
+    }
+    @if (isRetype() && result().not_convertible !== null) {
+      <li data-testid="not-convertible">{{ 'fieldChange.result.notConvertible' | translate: { count: result().not_convertible } }}</li>
+    }
+    @if (notConvertibleUnknown()) {
+      <li>{{ 'fieldChange.result.notConvertibleUnknown' | translate }}</li>
+    }
+    @if (isRetype() && !result().dry_run && result().applied && !result().run_id) {
+      <li>{{ 'fieldChange.result.nulled' | translate: { count: result().nulled } }}</li>
+    }
+    @if (result().records_with_value !== null) {
+      <li data-testid="records-with-value">{{ 'fieldChange.result.recordsWithValue' | translate: { count: result().records_with_value } }}</li>
+    }
+  </ul>
+
+  @if (result().sample_record_ids.length > 0) {
+    <div class="fcr-block">
+      <h5>{{ 'fieldChange.result.sample' | translate }}</h5>
+      <ul class="fcr-ids">
+        @for (id of result().sample_record_ids; track id) {
+          <li class="fcr-mono" dir="ltr">{{ id }}</li>
+        }
+      </ul>
+    </div>
+  }
+
+  @if (result().blockers.length > 0) {
+    <div class="fcr-block">
+      <h5>{{ 'fieldChange.result.blockers' | translate }}</h5>
+      <ul data-testid="blockers">
+        @for (b of result().blockers; track $index) {
+          <li><strong>{{ b.name }}</strong> <span class="fcr-muted">({{ b.object_kind }})</span> — {{ b.reason }}</li>
+        }
+      </ul>
+    </div>
+  }
+
+  <div class="fcr-block">
+    <h5>{{ 'fieldChange.result.references' | translate }}</h5>
+    @if (result().references.length === 0) {
+      <p class="fcr-muted">{{ 'fieldChange.result.noReferences' | translate }}</p>
+    } @else {
+      <ul data-testid="references">
+        @for (r of result().references; track $index) {
+          <li>
+            {{ r.name }} <span class="fcr-muted">({{ r.object_kind }})</span>
+            <span class="fcr-owner">{{ ownerKey(r.owner) | translate }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  @if (result().report.length > 0) {
+    <div class="fcr-block">
+      <h5>{{ 'fieldChange.result.report' | translate }}</h5>
+      <ul>
+        @for (d of result().report; track $index) {
+          <li>{{ reportKindKey(d.kind) | translate }}</li>
+        }
+      </ul>
+    </div>
+  }
+
+  @if (result().labels.length > 0) {
+    <div class="fcr-block">
+      <h5>{{ 'fieldChange.result.notes' | translate }}</h5>
+      <ul>
+        @for (l of result().labels; track $index) {
+          <li>{{ l }}</li>
+        }
+      </ul>
+    </div>
+  }
+</section>

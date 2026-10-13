@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../out-tsc/spec",
+    // Every base entry point maps to its source, so base's own specs never
+    // read a stale dist/base copy, and the secondary entry points' package-name
+    // imports of `@attome/base` share one module graph with the specs (D-760).
+    "paths": {
+      "@attome/base":         ["projects/base/src/public-api.ts"],
+      "@attome/base/i18n-ar": ["projects/base/i18n-ar/public-api.ts"],
+      "@attome/base/account": ["projects/base/account/public-api.ts"],
+      "@attome/base/dialog":  ["projects/base/dialog/public-api.ts"],
+      "@attome/base/step-up": ["projects/base/step-up/public-api.ts"]
+    },
+    // Node types: catalog-coverage.spec.ts walks the workspace with node:fs to
+    // derive required keys from consumers. Same setting projects/xrm already
+    // uses for wire-types-from-codegen.lockstep.spec.ts.
+    "types": ["node"]
+  },
+  "include": [
+    "src/**/*.spec.ts",
+    "account/**/*.spec.ts",
+    "dialog/**/*.spec.ts",
+    "step-up/**/*.spec.ts",
+    "src/**/*.d.ts"
+  ]
+}

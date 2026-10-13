@@ -1,0 +1,64 @@
+<attome-metadata-list
+  [entityName]="entityName()" [fixedFilters]="relationshipFilter()"
+  [initialViewId]="effectiveViewId()" [pageSize]="pageSize()" [compact]="true"
+  [syncUrl]="false" [showViewSelection]="false" [allowCreate]="allowCreate()"
+  [showRelationshipActions]="relationshipType() !== 'records'"
+  (newClick)="createRelatedRecord()" (editClick)="openRelatedRecord($event)"
+  (addRelationshipClick)="openPicker()" (removeRelationshipClick)="removeRelationships($event)" />
+
+@if (pickerOpen()) {
+  <!-- Dismiss-on-backdrop-click has a keyboard equivalent: the
+       host-level (document:keydown.escape) listener closes the same
+       picker. role="presentation" is an intentional signal that this
+       div is not itself perceivable/interactive content. -->
+  <div class="relationship-backdrop" role="presentation" (click)="closePicker()">
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
+    <section class="relationship-dialog" role="dialog" aria-modal="true"
+      [attr.aria-label]="picker()?.title || ('relatedGrid.addRelationship' | translate)" (click)="$event.stopPropagation()">
+      <header>
+        <h3>{{ picker()?.title || ('relatedGrid.addRelationship' | translate) }}</h3>
+        <button type="button" class="close-button" [attr.aria-label]="'relatedGrid.close' | translate" (click)="closePicker()">×</button>
+      </header>
+      <label class="relationship-search">
+        <i class="las la-search"></i>
+        <input type="search" #pickerSearchInput [placeholder]="'relatedGrid.searchRecords' | translate"
+          [ngModel]="pickerSearch()" (ngModelChange)="searchPicker($event)" />
+      </label>
+      <div class="relationship-list">
+        @if (pickerLoading()) {
+          <p class="relationship-message">{{ 'relatedGrid.loading' | translate }}</p>
+        } @else if (pickerItems().length === 0) {
+          <p class="relationship-message">{{ 'relatedGrid.noRecords' | translate }}</p>
+        } @else {
+          <table>
+            <thead><tr>
+              <th class="check-column"></th>
+              @for (column of pickerColumns(); track column.name) { <th>{{ column.display_name }}</th> }
+            </tr></thead>
+            <tbody>
+              @for (item of pickerItems(); track item.id) {
+                <tr [class.selected]="pickerSelection().has(item.id)" (click)="togglePickerItem(item.id)">
+                  <td class="check-column">
+                    <input type="checkbox" [checked]="pickerSelection().has(item.id)"
+                      (click)="$event.stopPropagation()" (change)="togglePickerItem(item.id)" />
+                  </td>
+                  @for (column of pickerColumns(); track column.name) {
+                    <td [title]="pickerCell(item.data, column)">{{ pickerCell(item.data, column) }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+      @if (pickerError()) { <p class="relationship-error">{{ pickerError() }}</p> }
+      <footer>
+        <button type="button" class="dialog-button" (click)="closePicker()">{{ 'relatedGrid.cancel' | translate }}</button>
+        <button type="button" class="dialog-button dialog-button-primary"
+          [disabled]="pickerSaving() || pickerSelection().size === 0" (click)="addRelationships()">
+          {{ (pickerSaving() ? 'relatedGrid.adding' : 'relatedGrid.add') | translate }}
+        </button>
+      </footer>
+    </section>
+  </div>
+}

@@ -1,0 +1,198 @@
+/* Shared styles for the Web Crawling pages, layered on top of
+   ../admin/admin-page.css so both fit the platform's existing admin theme. */
+
+/* ── "New Web Crawl Task" composer ─────────────────────────────────────────
+   The one thing this page asks for is a URL, so its header is a single panel
+   that carries the URL, the depth and the submit on one row — not the stacked
+   `.create-panel` form the other admin pages use for multi-field creates.
+   Each control sits under its own caption, so the panel is two rows tall:
+   captions, then a row of equal-height controls ending in the submit.
+
+   It is deliberately flat — the same `--color-bg-alt` surface, `--color-border`
+   hairline and squared-off radius as `.card`/`.create-panel` in
+   admin-page.css, with no glow, gradient wash or drop shadow. Every colour is
+   a theme token, so the panel holds up across all seven palettes and in light
+   mode rather than only in the dark "Default Purple". */
+.crawl-header { margin-bottom: 18px; }
+.crawl-header h2 { font-size: 28px; letter-spacing: -0.01em; }
+.crawl-header .subtitle { margin-top: 6px; }
+
+.crawl-bar {
+  display: flex; align-items: stretch; gap: 20px;
+  padding: 18px 20px; margin-bottom: 20px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  transition: border-color 0.15s;
+}
+.crawl-bar-error { margin: -12px 0 20px 4px; }
+
+.crawl-bar .field { gap: 10px; justify-content: space-between; }
+
+/* Caption row: icon (depth only) + label + the "what is this" hint. */
+.crawl-label { display: flex; align-items: center; gap: 7px; min-height: 20px; }
+.crawl-bar .crawl-label label {
+  font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+  color: var(--color-text-primary); white-space: nowrap;
+}
+.crawl-label-icon { font-size: 1.1rem; color: var(--color-accent); }
+.crawl-info {
+  font-size: 0.9rem; cursor: help;
+  color: var(--color-text-secondary);
+}
+
+/* One shared shell for the URL box and the depth box, so both controls end up
+   the same height and the button lines up with them. Same tokens as
+   admin-page.css `.field input`, just taller. */
+.crawl-control {
+  display: flex; align-items: center; gap: 10px;
+  height: 44px; padding: 0 12px; border-radius: 8px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.crawl-control:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
+}
+.crawl-control > .la-link { flex: none; font-size: 1.15rem; color: var(--color-accent); }
+
+/* One box, not a box inside a box: `.crawl-control` owns the border and the
+   background, so the input inside gives up its own (admin-page.css
+   `.field input`) and stretches. */
+.crawl-bar .field-url { flex: 1; min-width: 0; }
+.crawl-bar .field-url input {
+  width: 100%; padding: 0; font-size: 14px;
+  border: none; background: transparent;
+}
+.crawl-bar .field-url input:focus { outline: none; border: none; box-shadow: none; }
+
+.crawl-bar-divider {
+  flex: none; width: 1px; align-self: stretch; background: var(--color-border);
+}
+
+.crawl-bar .field-depth { flex: none; width: 150px; }
+.crawl-control-select { position: relative; padding: 0; }
+.crawl-bar .field-depth select {
+  width: 100%; height: 100%; padding: 0 36px 0 12px;
+  font-size: 14px; font-weight: 500;
+  border: none; border-radius: inherit; background: transparent;
+  /* Native chevrons differ per platform and none of them match the caption
+     weight, so the arrow is our own icon, positioned below. */
+  appearance: none;
+}
+.crawl-bar .field-depth select:focus { outline: none; box-shadow: none; }
+.crawl-control-select > .la-angle-down {
+  position: absolute; inset-inline-end: 12px; top: 50%; transform: translateY(-50%);
+  pointer-events: none; font-size: 1rem; color: var(--color-text-secondary);
+}
+
+/* The same flat filled-accent button as `.btn-primary` everywhere else in the
+   admin — only the height is raised, so it lines up with the two controls
+   beside it. `var(--color-accent)` on its own is the light lavender the dark
+   palettes reserve for links and text; pulled toward the page it still reads
+   as one filled button and keeps the white label legible on it. */
+.crawl-bar .crawl-start {
+  flex: none; align-self: flex-end;
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 44px; padding: 0 18px; border-radius: 8px;
+  font-size: 13px; font-weight: 600;
+  background: color-mix(in srgb, var(--color-accent) 82%, var(--color-bg));
+}
+.crawl-bar .crawl-start:hover:not(:disabled) { background: var(--color-accent); opacity: 1; }
+.crawl-bar .crawl-start .la-play-circle,
+.crawl-bar .crawl-start .la-arrow-right { font-size: 1.05rem; }
+
+@media (max-width: 920px) {
+  .crawl-bar { flex-wrap: wrap; gap: 16px; }
+  .crawl-bar .field-url { flex-basis: 100%; }
+  .crawl-bar-divider { display: none; }
+  .crawl-bar .crawl-start { margin-inline-start: auto; }
+}
+@media (max-width: 560px) {
+  .crawl-bar { border-radius: 16px; padding: 16px; }
+  .crawl-bar .field-depth { flex: 1; width: auto; }
+  .crawl-bar .crawl-start { flex-basis: 100%; justify-content: center; }
+}
+
+/* Empty state — an icon-led first-run panel, since on this page it is what a
+   new deployment sees before anything has been crawled. */
+.crawl-empty { padding: 56px 24px; }
+.crawl-empty-icon {
+  width: 64px; height: 64px; margin: 0 auto 18px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; font-size: 1.6rem;
+  background: color-mix(in srgb, var(--color-text-primary) 7%, transparent);
+  color: var(--color-text-secondary);
+}
+.crawl-empty h3 {
+  margin: 0 0 8px; font-size: 16px; font-weight: 700;
+  color: var(--color-text-primary);
+}
+.crawl-empty p { max-width: 340px; margin: 0 auto; line-height: 1.5; }
+
+/* Component-scoped (Angular view encapsulation) — pushes the Recrawl/Delete
+   pair to the table's right edge instead of leaving them stranded with a
+   gap to the right, inside whatever width the browser gives the last
+   (short-content) column. */
+.actions,
+.actions-header { text-align: right; }
+
+.status-pending   { background: #422006; color: #fcd34d; }
+.status-crawling  { background: #1e3a5f; color: #93c5fd; }
+.status-completed,
+.status-crawled   { background: #14532d; color: #86efac; }
+.status-failed    { background: #7f1d1d; color: #fda4af; }
+
+.page-tree-cell { display: flex; align-items: center; gap: 6px; }
+.page-tree-icon { color: var(--color-text-secondary); font-size: 0.95rem; }
+
+/* ── Live crawl progress ───────────────────────────────────────────────────
+   The crawl job writes each page row as it fetches it (DbPageSink), so a
+   poll of the pages endpoint is a genuine progress feed, not an estimate —
+   these styles are what make that visible while the target is still
+   `pending`/`crawling`. */
+.crawl-status {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  margin: 0 0 12px; padding: 10px 12px;
+  border: 1px solid var(--color-border); border-radius: 6px;
+}
+.crawl-status.is-running { border-color: #1e3a5f; }
+.crawl-counts { font-size: 0.9rem; }
+.crawl-counts strong { font-variant-numeric: tabular-nums; }
+.crawl-live-note { font-size: 0.85rem; color: var(--color-text-secondary); }
+
+/* Indeterminate on purpose: the crawler discovers its own frontier, so the
+   total page count is unknown until the walk ends. */
+.crawl-progress {
+  flex-basis: 100%; height: 3px; border-radius: 2px; overflow: hidden;
+  background: var(--color-border);
+}
+.crawl-progress span {
+  display: block; width: 35%; height: 100%; background: #93c5fd;
+  animation: webcrawl-sweep 1.4s ease-in-out infinite;
+}
+@keyframes webcrawl-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
+/* `.la-spin` itself comes from the Line Awesome subset (its utility rules are
+   kept verbatim by line-awesome-subset.mjs) — only the inline-block, which the
+   rotation needs on an <i> inside a flex badge, is ours. */
+.la-spin { display: inline-block; }
+
+/* Fires only when the row element is inserted — with `track p.id` the rows
+   already on screen are reused across a poll, so this animates exactly the
+   pages the crawler just discovered. */
+.page-row { animation: webcrawl-row-in 300ms ease-out; }
+@keyframes webcrawl-row-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crawl-progress span,
+  .la-spin,
+  .page-row { animation: none; }
+}

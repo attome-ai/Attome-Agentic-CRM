@@ -1,0 +1,192 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'fleet.publish.title' | translate }}</h2>
+    <p class="subtitle">{{ 'fleet.publish.subtitle' | translate }}</p>
+  </div>
+</div>
+
+<p class="fleet-note">{{ 'fleet.publish.howItWorks' | translate }}</p>
+
+@if (!reviewing()) {
+  <section class="card" aria-labelledby="fleet-pub-title-label">
+    <h3 id="fleet-pub-title-label">{{ 'fleet.publish.step1' | translate }}</h3>
+    <div class="field">
+      <label for="fleet-pub-title">{{ 'fleet.publish.rolloutTitle' | translate }}</label>
+      <input id="fleet-pub-title" name="title" [attr.maxlength]="maxTitle"
+             [value]="title()" (input)="setTitle($any($event.target).value)" />
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="fleet-pub-changesets">
+    <div class="section-header">
+      <h3 id="fleet-pub-changesets">
+        {{ 'fleet.publish.step2' | translate }}
+        <span class="count">{{ selectedChangesets().length }}</span>
+      </h3>
+      <div class="fleet-header-actions">
+        <button type="button" class="btn-text" (click)="chooseAllChangesets()" [disabled]="changesets().length === 0">
+          {{ 'fleet.publish.chooseAll' | translate }}
+        </button>
+        <button type="button" class="btn-text" (click)="clearChangesets()" [disabled]="selectedChangesets().length === 0">
+          {{ 'fleet.publish.clear' | translate }}
+        </button>
+      </div>
+    </div>
+    @if (changesetsLoading()) {
+      <p class="state-msg" role="status">{{ 'fleet.common.loading' | translate }}</p>
+    } @else if (changesetsError()) {
+      <p class="error-msg" role="alert">{{ changesetsError() }}</p>
+    } @else if (changesets().length === 0) {
+      <div class="empty-state"><p>{{ 'fleet.publish.noChangesets' | translate }}</p></div>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'fleet.columns.changeset' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.layer' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.scope' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.seq' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.checksum' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of changesets(); track c.id) {
+              <tr>
+                <td>
+                  <label class="checkbox-row">
+                    <input type="checkbox"
+                           [checked]="chosenChangesets().has(c.id)" [disabled]="!c.checksum_ok"
+                           (change)="toggleChangeset(c.id, $any($event.target).checked)" />
+                    {{ c.title }}
+                  </label>
+                  <div class="fleet-muted fleet-code">{{ c.path }}</div>
+                </td>
+                <td>{{ c.layer }}</td>
+                <td>{{ c.scope }}</td>
+                <td>{{ c.seq }}</td>
+                <td>
+                  @if (c.checksum_ok) {
+                    <span class="fleet-pill fleet-pill--ok">{{ 'fleet.publish.checksumOk' | translate }}</span>
+                  } @else {
+                    <span class="fleet-pill fleet-pill--bad">{{ 'fleet.publish.checksumBad' | translate }}</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <section class="card" aria-labelledby="fleet-pub-targets">
+    <h3 id="fleet-pub-targets">
+      {{ 'fleet.publish.step3' | translate }}
+      <span class="count">{{ selectedDeployments().length }}</span>
+    </h3>
+    @if (deploymentsLoading()) {
+      <p class="state-msg" role="status">{{ 'fleet.common.loading' | translate }}</p>
+    } @else if (deploymentsError()) {
+      <p class="error-msg" role="alert">{{ deploymentsError() }}</p>
+    } @else if (deployments().length === 0) {
+      <div class="empty-state"><p>{{ 'fleet.deployments.empty' | translate }}</p></div>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'fleet.columns.customer' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.environment' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.ring' | translate }}</th>
+              <th scope="col">{{ 'fleet.fields.maintenanceWindow' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (d of deployments(); track d.id) {
+              <tr>
+                <td>
+                  <label class="checkbox-row">
+                    <input type="checkbox"
+                           [checked]="chosenDeployments().has(d.id)" [disabled]="!selectable(d)"
+                           (change)="toggleDeployment(d.id, $any($event.target).checked)" />
+                    {{ d.label }}
+                  </label>
+                  <div class="fleet-muted">
+                    {{ d.project_code }}
+                    @if (!d.has_credential) { · {{ 'fleet.deployments.noCredential' | translate }} }
+                  </div>
+                </td>
+                <td>{{ text('environment', d.environment) }}</td>
+                <td>{{ text('ring', d.ring) }}</td>
+                <td>{{ d.maintenance_window || ('fleet.common.none' | translate) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <div class="btn-row">
+    <button #reviewButton type="button" class="btn-primary" (click)="review()" [disabled]="validationKey() !== null"
+            [attr.aria-describedby]="validationKey() ? 'fleet-pub-why' : null">
+      {{ 'fleet.publish.review' | translate }}
+    </button>
+    @if (validationKey(); as key) {
+      <span id="fleet-pub-why" class="fleet-muted">{{ key | translate }}</span>
+    }
+  </div>
+} @else {
+  <section class="card" aria-labelledby="fleet-pub-review">
+    <h3 #reviewHeading id="fleet-pub-review" tabindex="-1">{{ 'fleet.publish.reviewTitle' | translate: { title: title().trim() } }}</h3>
+
+    <h4>{{ 'fleet.publish.orderTitle' | translate }}</h4>
+    <ol class="fleet-list">
+      @for (c of selectedChangesets(); track c.id) {
+        <li><span class="fleet-code">{{ c.layer }}/{{ c.scope }} #{{ c.seq }}</span> {{ c.title }}</li>
+      }
+    </ol>
+
+    <h4>{{ 'fleet.publish.wavesTitle' | translate }}</h4>
+    <ol class="fleet-list">
+      @for (w of waves(); track w.ring) {
+        <li>
+          <strong>{{ text('ring', w.ring) }}</strong>:
+          @for (d of w.deployments; track d.id; let last = $last) {
+            {{ d.label }} ({{ text('environment', d.environment) }})@if (!last) {, }
+          }
+        </li>
+      }
+    </ol>
+    <p class="fleet-muted">{{ 'fleet.publish.wavesHint' | translate }}</p>
+
+    @if (prodTargets().length > 0) {
+      <p class="fleet-note fleet-note--warn">{{ 'fleet.publish.prodBackup' | translate: { count: prodTargets().length } }}</p>
+    }
+    @if (windows().length > 0) {
+      <div class="fleet-note">
+        <p class="fleet-inline-title">{{ 'fleet.publish.windowsTitle' | translate }}</p>
+        <ul class="fleet-list">
+          @for (d of windows(); track d.id) {
+            <li>{{ d.label }}: {{ d.maintenance_window }}</li>
+          }
+        </ul>
+      </div>
+    }
+    <p class="fleet-note">{{ 'fleet.publish.approvalNote' | translate }}</p>
+
+    @if (startError()) {
+      <p class="error-msg" role="alert">{{ startError() }}</p>
+    }
+    <div class="btn-row">
+      <button type="button" class="btn-primary" (click)="start()" [disabled]="starting()">
+        <i class="las la-check" aria-hidden="true"></i>
+        {{ (starting() ? 'fleet.publish.starting' : 'fleet.publish.start') | translate }}
+      </button>
+      <button type="button" class="btn-ghost" (click)="back()" [disabled]="starting()">
+        <i class="las la-arrow-left fleet-flip" aria-hidden="true"></i> {{ 'fleet.publish.back' | translate }}
+      </button>
+    </div>
+  </section>
+}

@@ -1,0 +1,175 @@
+@let f = form();
+@if (f.loading()) {
+  <div class="xf-loading" role="status">
+    <i class="las la-circle-notch xf-spin" aria-hidden="true"></i>
+    {{ 'xrmForm.loadingRecord' | translate }}
+  </div>
+} @else if (f.schema(); as schema) {
+  <!-- novalidate: validation is the form group's; the browser's own popups must not block submit. -->
+  <form class="xf-page" novalidate (submit)="submit($event)">
+
+    <!-- ── Header ───────────────────────────────────────────────────── -->
+    <div class="xf-header">
+      <div>
+        @if (customTitle()) {
+          <ng-content select="[xrmHeaderTitle]" />
+        } @else {
+          <div class="xf-breadcrumb">
+            <span class="xf-breadcrumb-link" role="link" tabindex="0"
+                  (click)="f.cancel()" (keydown.enter)="f.cancel()"
+                  (keydown.space)="f.cancel(); $event.preventDefault()"
+              >{{ schema.name }}</span>
+            <span class="xf-breadcrumb-sep">›</span>
+            <span>{{ (f.isEdit() ? 'xrmForm.editRecord' : 'xrmForm.newRecord') | translate }}</span>
+          </div>
+          <h1 class="xf-title">{{ (f.isEdit() ? 'xrmForm.edit' : 'xrmForm.new') | translate }} {{ schema.name }}</h1>
+        }
+        <ng-content select="[xrmHeaderMeta]" />
+      </div>
+      <div class="xf-actions">
+        <ng-content select="[xrmHeaderActions]" />
+        <!-- U4 (D-602) — a reminder about this record, for the signed-in user. -->
+        @if (f.isEdit() && f.id(); as recordId) {
+          <xrm-remind-me [entity]="f.name()" [recordId]="recordId" />
+          <!-- U7 Phase A — admin-only Assign / Share (renders nothing otherwise);
+               a read-only form cannot be reassigned. -->
+          @if (!readOnly()) {
+            <xrm-record-access-actions variant="form" [entity]="f.name()" [recordIds]="accessRecordIds()"
+              (changed)="onAccessChanged()" />
+          }
+        }
+        <button type="button" class="xf-btn xf-btn-secondary" (click)="f.cancel()">
+          {{ 'xrmForm.back' | translate }}
+        </button>
+        <!-- Three states: in flight (spinner), just saved (green tick,
+             holds until the next edit), and idle. Disabled whenever there
+             is nothing to save (EngineFormBase.canSave) or the form says so.
+             A read-only form has no Save at all. -->
+        @if (!readOnly()) {
+          <button type="submit" class="xf-btn xf-btn-primary"
+                  data-testid="entity-edit-submit"
+                  [class.xf-btn-saved]="f.justSaved()" [disabled]="!f.canSave() || saveDisabled()">
+            @if (f.saving()) {
+              <i class="las la-circle-notch xf-spin" aria-hidden="true"></i>
+              {{ 'xrmForm.saving' | translate }}
+            } @else if (f.justSaved()) {
+              <i class="las la-check-circle" aria-hidden="true"></i>
+              {{ 'xrmForm.saved' | translate }}
+            } @else {
+              <i class="las la-check" aria-hidden="true"></i>
+              {{ (saveLabel() ?? (f.isEdit() ? 'xrmForm.update' : 'xrmForm.create')) | translate }}
+            }
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- ── Body ─────────────────────────────────────────────────────── -->
+    <div class="xf-body">
+
+      <!-- D-432 / M13 — renders nothing until the record has open duplicate
+           candidates; id() is null in create mode ("nothing to look up yet"). -->
+      <xrm-duplicate-banner [entity]="f.name()" [recordId]="f.id()" />
+
+      <!-- M36 (D-473) — renders nothing until the record has a live prediction. -->
+      <xrm-prediction-banner [entity]="f.name()" [recordId]="f.id()" />
+
+      <!-- One banner at a time: conflict, then error, then validation. -->
+      @if (f.conflict()) {
+        <div class="xf-error-banner xf-conflict-banner" role="alert"
+             data-testid="version-conflict-alert">
+          <i class="las la-exclamation-triangle" aria-hidden="true"></i>
+          <span class="xf-conflict-text">
+            {{ 'xrmForm.conflict' | translate }}
+          </span>
+          <button
+            type="button"
+            class="xf-btn xf-btn-secondary xf-conflict-reload"
+            data-testid="version-conflict-reload"
+            [disabled]="f.reloading()"
+            (click)="f.reload()"
+          >
+            {{ (f.reloading() ? 'xrmForm.reloading' : 'xrmForm.reload') | translate }}
+          </button>
+        </div>
+      } @else if (f.error()) {
+        <div class="xf-error-banner" role="alert">
+          <i class="las la-exclamation-circle" aria-hidden="true"></i>
+          {{ f.error() }}
+        </div>
+      } @else if (f.validationError()) {
+        <div class="xf-error-banner" role="alert" data-testid="entity-validation-alert">
+          <i class="las la-exclamation-circle" aria-hidden="true"></i>
+          {{ 'xrmForm.validationRequired' | translate }}
+        </div>
+      }
+
+      <!-- D-791 rule 6: warning-severity rule messages the last save returned.
+           The save went through; these never block. -->
+      @if (f.saveWarnings().length) {
+        <div class="xf-warning-banner" role="status" data-testid="rule-warnings">
+          <i class="las la-exclamation-triangle" aria-hidden="true"></i>
+          <div>
+            <p class="xf-warning-title">{{ 'fieldPolicy.savedWithWarnings' | translate }}</p>
+            <ul class="xf-warning-list">
+              @for (w of f.saveWarnings(); track $index) {
+                <li>
+                  @if (w.field) { <strong>{{ f.label(w.field) }}:</strong> }
+                  {{ w.message }}
+                  <span class="xf-warning-rule">{{ 'fieldPolicy.byRule' | translate: { rule: w.rule_name } }}</span>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      }
+
+      <ng-content select="[xrmOperations]" />
+
+      <div class="xf-tabs" role="tablist" [attr.aria-label]="'xrmForm.sections' | translate: { name: schema.name }">
+        @for (tab of f.tabs(); track tab.id) {
+          <button type="button" class="xf-tab" role="tab"
+                  [id]="tabId(tab.id)"
+                  [attr.aria-selected]="f.activeTab() === tab.id"
+                  [attr.aria-controls]="panelId(tab.id)"
+                  [tabIndex]="f.activeTab() === tab.id ? 0 : -1"
+                  [class.xf-tab-active]="f.activeTab() === tab.id"
+                  (click)="f.selectTab(tab.id)" (keydown)="f.onTabKeydown($event)">
+            <i [class]="tab.icon" aria-hidden="true"></i>
+            {{ tab.label }}
+            <!-- The first tab holds the editable fields, so it carries the
+                 unsaved-changes marker. -->
+            @if ($first && f.dirty()) {
+              <span class="xf-tab-dot" aria-hidden="true" data-testid="unsaved-dot"></span>
+              <span class="xf-sr-only">{{ 'xrmForm.unsavedChanges' | translate }}</span>
+            }
+          </button>
+        }
+      </div>
+
+      <!-- The platform record tabs (documents, notes, tags, timeline, …) the
+           form's defineTabs() declared. -->
+      @if (recordTabs()) {
+        <xrm-record-tab-panels
+          [entityName]="f.name()" [recordId]="f.id()" [tabs]="f.tabs()" [activeTab]="f.activeTab()"
+          [idPrefix]="idPrefix()" />
+      }
+
+      <!-- The form's own tabs (<ng-template xrmTab="…">), stamped only now
+           that the schema has loaded. -->
+      @for (t of tabPanels(); track t.xrmTab()) {
+        <div [id]="panelId(t.xrmTab())" class="xf-tab-panel" role="tabpanel"
+             [attr.aria-labelledby]="tabId(t.xrmTab())" [hidden]="f.activeTab() !== t.xrmTab()"
+             [attr.data-testid]="t.xrmTab() + '-panel'">
+          <ng-container [ngTemplateOutlet]="t.template" />
+        </div>
+      }
+
+    </div>
+  </form>
+} @else {
+  <div class="xf-error-banner" role="alert">
+    <i class="las la-exclamation-circle" aria-hidden="true"></i>
+    {{ 'xrmForm.schemaFailed' | translate: { name: f.name() } }}
+  </div>
+}

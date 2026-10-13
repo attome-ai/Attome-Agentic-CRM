@@ -1,0 +1,258 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="user" [customTitle]="true"
+               [saveDisabled]="!accountActive()"
+               [saveLabel]="isEdit() ? 'userForm.saveChanges' : 'userForm.createUser'">
+  <!-- Identity header: breadcrumb and the user's own name. Account state is
+       on the Settings tab (and Details shows a notice when deactivated). -->
+  <div xrmHeaderTitle class="xf-identity">
+    <div class="xf-identity-text">
+      <nav class="xf-breadcrumb" [attr.aria-label]="'userForm.breadcrumb' | translate">
+        <span class="xf-breadcrumb-link" role="link" tabindex="0"
+              (click)="cancel()" (keydown.enter)="cancel()"
+              (keydown.space)="cancel(); $event.preventDefault()">{{ 'xrmForm.entities.user' | translate }}</span>
+        <span class="xf-breadcrumb-sep" aria-hidden="true">›</span>
+        <span aria-current="page">{{ (isEdit() ? 'xrmForm.editRecord' : 'xrmForm.newRecord') | translate }}</span>
+      </nav>
+      <h1 class="xf-title" data-testid="header-title">
+        {{ isEdit() ? (displayName() ?? ('userForm.editUser' | translate)) : ('userForm.newUser' | translate) }}
+      </h1>
+    </div>
+  </div>
+
+  <!-- ══ Details ═══════════════════════════════════════════════════ -->
+  <ng-template xrmTab="details">
+
+    @if (!accountActive()) {
+      <div class="xf-notice" role="status" data-testid="deactivated-notice">
+        <i class="las la-lock" aria-hidden="true"></i>
+        <span>{{ 'userForm.deactivatedLocked' | translate }}</span>
+      </div>
+    }
+    <!-- A deactivated row is invisible to the generic update, so its
+         fields are locked rather than left to fail on save. -->
+    <fieldset class="xf-fieldset" [disabled]="!accountActive()">
+
+    <!-- Profile: the photo beside the two identity fields it budgets for
+         (.xf-grid-photo). The columns are the live schema's; the table
+         has no first/last-name columns. -->
+    @if (hasCtrl('user_name') || hasCtrl('profile_image') || hasCtrl('status')) {
+      <section class="xf-section" aria-labelledby="xf-profile-title">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-id-card" aria-hidden="true"></i></div>
+          <div class="xf-section-meta">
+            <h2 class="xf-section-title" id="xf-profile-title">{{ 'userForm.profile' | translate }}</h2>
+          </div>
+        </div>
+        <div class="xf-section-body" [class.xf-grid-photo]="hasCtrl('profile_image')">
+          <!-- 'profile_image' is a file-typed attribute registered at
+               runtime; the picker fills the control with the object key
+               the upload pipeline minted, written on save like any field. -->
+          @if (hasCtrl('profile_image')) {
+            <div class="xf-field xf-field-stretch">
+              <div class="xf-label-row">
+                <label for="profile_image">{{ 'userForm.profilePicture' | translate }}</label>
+                @if (required('profile_image')) { <span class="xf-required">{{ 'userForm.required' | translate }}</span> }
+              </div>
+              <xrm-image-upload
+                fieldName="profile_image"
+                [entityName]="entityLogicalName"
+                [recordId]="id()"
+                [label]="'userForm.profilePicture' | translate" />
+            </div>
+          }
+          <div class="xf-photo-fields">
+            @if (hasCtrl('user_name')) {
+              <div class="xf-field">
+                <div class="xf-label-row">
+                  <label for="user_name">{{ 'userForm.username' | translate }}</label>
+                  @if (required('user_name')) { <span class="xf-required">{{ 'userForm.required' | translate }}</span> }
+                </div>
+                <input id="user_name" type="text" formControlName="user_name"
+                       class="xf-input" [placeholder]="'userForm.usernamePlaceholder' | translate" autocomplete="off"
+                       [attr.aria-invalid]="invalid('user_name') || null"
+                       aria-describedby="user_name-help" />
+                @if (invalid('user_name', 'required')) {
+                  <p class="xf-helper xf-field-error" id="user_name-help">{{ 'userForm.errors.required' | translate }}</p>
+                } @else {
+                  <p class="xf-helper" id="user_name-help">{{ 'userForm.usernameHelp' | translate }}</p>
+                }
+              </div>
+            }
+            @if (hasCtrl('status')) {
+              <div class="xf-field">
+                <div class="xf-label-row">
+                  <label for="status">{{ 'userForm.presence' | translate }}</label>
+                  @if (required('status')) { <span class="xf-required">{{ 'userForm.required' | translate }}</span> }
+                </div>
+                <div class="xf-select-wrap">
+                  <!-- [ngValue] on every option, not [value]: the unset
+                       choice must submit null. An empty string would
+                       reach attome_field::validate as a real value and be
+                       rejected as out-of-list. Mixing the two binding
+                       forms in one select breaks the value accessor. -->
+                  <select id="status" formControlName="status" class="xf-input" aria-describedby="status-help">
+                    <option [ngValue]="null">{{ 'userForm.notSet' | translate }}</option>
+                    @for (c of choices('status'); track c) {
+                      <option [ngValue]="c">{{ statusLabel(c) }}</option>
+                    }
+                  </select>
+                </div>
+                <p class="xf-helper" id="status-help">{{ 'userForm.presenceHelp' | translate }}</p>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- Contact & time. Timezone is the one per-user preference the
+         product applies (ProfileMenuComponent -> UserPreferencesService ->
+         LocalDatePipe); theme/language/currency/max_page_size/locale are
+         stored but nothing reads them, so they are not offered. -->
+    @if (hasCtrl('email') || hasCtrl('phone') || hasCtrl('timezone')) {
+      <section class="xf-section" aria-labelledby="xf-contact-title">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-envelope" aria-hidden="true"></i></div>
+          <div class="xf-section-meta">
+            <h2 class="xf-section-title" id="xf-contact-title">{{ 'userForm.contact' | translate }}</h2>
+          </div>
+        </div>
+        <div class="xf-section-body">
+          <div class="xf-grid-2">
+            @if (hasCtrl('email')) {
+              <div class="xf-field">
+                <div class="xf-label-row">
+                  <label for="email">{{ 'userForm.email' | translate }}</label>
+                  @if (required('email')) { <span class="xf-required">{{ 'userForm.required' | translate }}</span> }
+                </div>
+                <input id="email" type="email" formControlName="email" dir="ltr"
+                       class="xf-input" [placeholder]="'userForm.emailPlaceholder' | translate"
+                       autocomplete="email" inputmode="email"
+                       [attr.aria-invalid]="invalid('email') || null"
+                       aria-describedby="email-help" />
+                @if (invalid('email', 'email')) {
+                  <p class="xf-helper xf-field-error" id="email-help" data-testid="email-error">{{ 'userForm.errors.email' | translate }}</p>
+                } @else if (invalid('email', 'required')) {
+                  <p class="xf-helper xf-field-error" id="email-help">{{ 'userForm.errors.required' | translate }}</p>
+                } @else {
+                  <p class="xf-helper" id="email-help">{{ 'userForm.emailHelp' | translate }}</p>
+                }
+              </div>
+            }
+            @if (hasCtrl('phone')) {
+              <div class="xf-field">
+                <div class="xf-label-row">
+                  <label for="phone">{{ 'userForm.phone' | translate }}</label>
+                  @if (required('phone')) { <span class="xf-required">{{ 'userForm.required' | translate }}</span> }
+                </div>
+                <input id="phone" type="tel" formControlName="phone" dir="ltr"
+                       class="xf-input" placeholder="+971 50 000 0000"
+                       autocomplete="tel" inputmode="tel" aria-describedby="phone-help" />
+                <p class="xf-helper" id="phone-help">{{ 'userForm.phoneHelp' | translate }}</p>
+              </div>
+            }
+            @if (hasCtrl('timezone')) {
+              <div class="xf-field">
+                <div class="xf-label-row">
+                  <label for="timezone">{{ 'userForm.timezone' | translate }}</label>
+                </div>
+                <input id="timezone" type="text" formControlName="timezone" class="xf-input"
+                       list="user-timezones" dir="ltr" autocomplete="off"
+                       [placeholder]="'userForm.timezonePlaceholder' | translate"
+                       [attr.aria-invalid]="invalid('timezone') || null"
+                       aria-describedby="timezone-help" />
+                <datalist id="user-timezones">
+                  @for (z of timeZones; track z) { <option [value]="z"></option> }
+                </datalist>
+                @if (invalid('timezone', 'timezone')) {
+                  <p class="xf-helper xf-field-error" id="timezone-help" data-testid="timezone-error">{{ 'userForm.errors.timezone' | translate }}</p>
+                } @else {
+                  <p class="xf-helper" id="timezone-help">{{ 'userForm.timezoneHelp' | translate }}</p>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    @if (id(); as uid) {
+      <section class="xf-section" aria-labelledby="xf-tags-title">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-tags" aria-hidden="true"></i></div>
+          <div class="xf-section-meta">
+            <h2 class="xf-section-title" id="xf-tags-title">{{ 'xrmForm.tabs.tags' | translate }}</h2>
+          </div>
+        </div>
+        <div class="xf-section-body">
+          <xrm-tags-panel [entityName]="entityLogicalName" [recordId]="uid" />
+        </div>
+      </section>
+    }
+    </fieldset>
+  </ng-template>
+
+  <!-- ══ Access ════════════════════════════════════════════════════ -->
+  <ng-template xrmTab="access">
+    @if (id(); as uid) {
+      <xrm-user-security-panel part="access" [userId]="uid" [lastLogin]="lastLogin()"
+                               (activeChange)="accountActive.set($event)" />
+
+      <section class="xf-section" aria-labelledby="xf-teams-title">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-user-friends" aria-hidden="true"></i></div>
+          <div class="xf-section-meta">
+            <h2 class="xf-section-title" id="xf-teams-title">{{ 'userForm.teams' | translate }}</h2>
+            <p class="xf-section-desc">{{ 'userForm.teamsHelp' | translate }}</p>
+          </div>
+        </div>
+        <div class="xf-section-body">
+          <xrm-related-grid
+            entityName="user_account_mm_team"
+            [filters]="[{ field: 'user_ref', value: uid }]"
+            [pageSize]="10"
+            relationshipType="many_to_many"
+            [picker]="{ targetEntityName: 'team', targetField: 'team_ref', displayField: 'name', title: ('userForm.addTeams' | translate) }"
+          />
+        </div>
+      </section>
+
+      <section class="xf-section" aria-labelledby="xf-privileges-title">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-key" aria-hidden="true"></i></div>
+          <div class="xf-section-meta">
+            <h2 class="xf-section-title" id="xf-privileges-title">{{ 'userForm.directPrivileges' | translate }}</h2>
+            <p class="xf-section-desc">{{ 'userForm.directPrivilegesHelp' | translate }}</p>
+          </div>
+        </div>
+        <div class="xf-section-body">
+          <xrm-related-grid
+            entityName="user_account_mm_privilege"
+            [filters]="[{ field: 'user_ref', value: uid }]"
+            [pageSize]="10"
+            relationshipType="many_to_many"
+            [picker]="{ targetEntityName: 'privilege', targetField: 'privilege_ref', displayField: 'key', title: ('userForm.grantPrivilege' | translate) }"
+          />
+        </div>
+      </section>
+    } @else {
+      <div class="xf-empty-state" data-testid="create-signin-note">
+        <i class="las la-sign-in-alt" aria-hidden="true"></i>
+        <p class="xf-empty-lead">{{ 'userForm.createSignInNote' | translate }}</p>
+        <p class="xf-helper">{{ 'userForm.saveBeforeAccess' | translate }}</p>
+      </div>
+    }
+  </ng-template>
+
+  <!-- ══ Settings: activate / deactivate the account ════════════════ -->
+  <ng-template xrmTab="settings">
+    @if (id(); as uid) {
+      <xrm-user-security-panel part="status" [userId]="uid" [lastLogin]="lastLogin()"
+                               (activeChange)="accountActive.set($event)" />
+    } @else {
+      <div class="xf-empty-state" data-testid="create-settings-note">
+        <i class="las la-cog" aria-hidden="true"></i>
+        <p class="xf-helper">{{ 'userForm.saveBeforeAccess' | translate }}</p>
+      </div>
+    }
+  </ng-template>
+</xrm-base-form>

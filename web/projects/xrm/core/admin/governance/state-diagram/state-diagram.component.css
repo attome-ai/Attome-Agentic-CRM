@@ -1,0 +1,51 @@
+:host {
+  display: block;
+}
+
+.sd {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: 360px;
+  block-size: auto;
+  overflow: visible;
+  /* Coordinates are geometric, not reading-order: keep the drawing the
+     same under dir="rtl"; only the text inside it is data. */
+  direction: ltr;
+}
+
+.sd-edge {
+  fill: none;
+  stroke: var(--color-text-secondary);
+  stroke-width: 1.5;
+}
+
+.sd-arrow {
+  fill: var(--color-text-secondary);
+}
+
+.sd-node__dot {
+  fill: var(--color-bg-alt);
+  stroke: var(--color-accent);
+  stroke-width: 2;
+}
+
+.sd-node--initial .sd-node__dot {
+  fill: var(--color-accent);
+}
+
+.sd-node__ring {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 1;
+}
+
+.sd-node__label {
+  fill: var(--color-text-primary);
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+}
+
+.sd-empty {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}

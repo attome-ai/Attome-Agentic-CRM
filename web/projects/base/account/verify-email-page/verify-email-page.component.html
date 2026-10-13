@@ -1,0 +1,39 @@
+<div class="account-page">
+  <div class="bg-shape shape-1"></div>
+  <div class="bg-shape shape-2"></div>
+
+  <div class="login-card">
+
+    <div class="card-header">
+      <a [routerLink]="backRoute()" class="back-link">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="back-arrow" aria-hidden="true" focusable="false">
+          <path d="M7.828 11H20v2H7.828l5.364 5.364-1.414 1.414L4 12l7.778-7.778 1.414 1.414z"/>
+        </svg>
+        {{ 'verifyEmail.back' | translate }}
+      </a>
+    </div>
+
+    <div class="card-content">
+      @if (loading()) {
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <span>{{ 'verifyEmail.verifying' | translate }}</span>
+        </div>
+      } @else if (done()) {
+        <h1 #pageHeading tabindex="-1" class="page-title">{{ 'verifyEmail.doneTitle' | translate }}</h1>
+        <p class="page-subtitle">{{ 'verifyEmail.doneBody' | translate }}</p>
+        <a [routerLink]="loginRoute()" class="submit-btn" style="text-decoration:none; display:block; box-sizing:border-box;">
+          {{ 'verifyEmail.signInLink' | translate }}
+        </a>
+      } @else {
+        <div #pageHeading tabindex="-1" class="error-banner" role="alert">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+          </svg>
+          <span>{{ error() }}</span>
+        </div>
+      }
+    </div>
+
+  </div>
+</div>

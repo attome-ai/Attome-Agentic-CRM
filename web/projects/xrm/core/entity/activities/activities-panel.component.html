@@ -1,0 +1,75 @@
+<section class="act-panel" data-testid="activities-panel">
+  <form class="act-add" (ngSubmit)="add()" data-testid="activities-add-form">
+    <div class="act-type" role="radiogroup" [attr.aria-label]="'activitiesPanel.type' | translate">
+      <label class="act-type-option">
+        <input type="radio" name="activityType" value="task" [(ngModel)]="newType" data-testid="activities-type-task" />
+        {{ 'activitiesPanel.task' | translate }}
+      </label>
+      <label class="act-type-option">
+        <input type="radio" name="activityType" value="phone_call" [(ngModel)]="newType"
+               data-testid="activities-type-call" />
+        {{ 'activitiesPanel.phoneCall' | translate }}
+      </label>
+    </div>
+    <input class="act-input act-subject" name="subject" [(ngModel)]="newSubject" required
+           [attr.aria-label]="'activitiesPanel.subject' | translate"
+           [placeholder]="'activitiesPanel.subject' | translate" data-testid="activities-subject" />
+    <input class="act-input" type="datetime-local" name="dueAt" [(ngModel)]="newDueAt"
+           [attr.aria-label]="'activitiesPanel.dueAt' | translate" data-testid="activities-due" />
+    @if (newType === 'phone_call') {
+      <select class="act-input" name="direction" [(ngModel)]="newDirection"
+              [attr.aria-label]="'activitiesPanel.direction' | translate" data-testid="activities-direction">
+        <option value="outbound">{{ 'activitiesPanel.outbound' | translate }}</option>
+        <option value="inbound">{{ 'activitiesPanel.inbound' | translate }}</option>
+      </select>
+    }
+    <button type="submit" class="act-btn act-btn-primary" [disabled]="saving() || !newSubject.trim()"
+            data-testid="activities-add">
+      <i class="las la-plus" aria-hidden="true"></i>
+      {{ (saving() ? 'activitiesPanel.adding' : 'activitiesPanel.add') | translate }}
+    </button>
+  </form>
+
+  @if (errorMessage(); as msg) {
+    <p class="act-error" role="alert">{{ msg }}</p>
+  }
+
+  @if (loading()) {
+    <p class="act-hint">{{ 'activitiesPanel.loading' | translate }}</p>
+  } @else {
+    <ul class="act-list" data-testid="activities-list">
+      @for (row of sorted(); track row.id) {
+        <li class="act-row" [class.act-overdue]="overdue(row)" [class.act-closed]="row.status !== 'open'"
+            data-testid="activities-row">
+          <span class="act-kind">
+            {{ (row.activity_type === 'phone_call' ? 'activitiesPanel.phoneCall' : 'activitiesPanel.task') | translate }}
+          </span>
+          <span class="act-subject-text">{{ row.subject }}</span>
+          <span class="act-due">
+            @if (row.due_at) {
+              {{ row.due_at | date: 'medium' }}
+            }
+            @if (overdue(row)) {
+              <span class="act-badge" data-testid="activities-overdue">
+                <i class="las la-exclamation-circle" aria-hidden="true"></i>
+                {{ 'activitiesPanel.overdue' | translate }}
+              </span>
+            }
+          </span>
+          <span class="act-status">{{ ('activitiesPanel.status.' + row.status) | translate }}</span>
+          <span class="act-actions">
+            @if (row.status === 'open') {
+              <button type="button" class="act-btn" [disabled]="busyId() !== null" (click)="complete(row)"
+                      data-testid="activities-complete">
+                <i class="las la-check" aria-hidden="true"></i>
+                {{ 'activitiesPanel.complete' | translate }}
+              </button>
+            }
+          </span>
+        </li>
+      } @empty {
+        <li class="act-hint">{{ 'activitiesPanel.empty' | translate }}</li>
+      }
+    </ul>
+  }
+</section>

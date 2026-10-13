@@ -1,0 +1,546 @@
+    <div class="xnp-root">
+      <!-- ── Left Pane: Notes History ─────────────────────────────────── -->
+      <aside class="xnp-sidebar" [attr.aria-label]="'notes.history' | translate">
+        <div class="xnp-sidebar-header">
+          <h3 class="xnp-sidebar-title">{{ 'notes.history' | translate }}</h3>
+          <button
+            type="button"
+            class="xnp-add-btn"
+            [class.xnp-add-btn-active]="viewMode() === 'create'"
+            (click)="startCreateNote()"
+            [title]="'notes.createNote' | translate"
+            [attr.aria-label]="'notes.createNote' | translate">
+            <i class="las la-plus"></i>
+          </button>
+        </div>
+
+        <div class="xnp-history-list">
+          @if (loading()) {
+            <div class="xnp-empty">
+              <i class="las la-circle-notch xnp-spin"></i>
+              <span>{{ 'notes.loading' | translate }}</span>
+            </div>
+          } @else if (notes().length === 0) {
+            <div class="xnp-empty">
+              <i class="las la-sticky-note"></i>
+              <span>{{ 'notes.empty' | translate }}</span>
+              <button type="button" class="xnp-btn-inline" (click)="startCreateNote()">
+                {{ 'notes.createFirst' | translate }}
+              </button>
+            </div>
+          } @else {
+            @for (item of notes(); track item.id) {
+              <div
+                class="xnp-history-item"
+                [class.xnp-active]="(viewMode() === 'detail' || viewMode() === 'edit') && selectedNoteId() === item.id"
+                role="button"
+                tabindex="0"
+                (click)="selectNote(item.id)"
+                (keydown.enter)="selectNote(item.id)"
+                (keydown.space)="selectNote(item.id); $event.preventDefault()">
+                
+                <div class="xnp-item-header">
+                  <span class="xnp-item-author" [title]="item.author_name || 'User'">
+                    {{ item.author_name || 'User' }}
+                  </span>
+
+                  <div class="xnp-item-header-right">
+                    @if (item.attachments && item.attachments.length > 0) {
+                      <span class="xnp-item-badge" [title]="'notes.attachments' | translate">
+                        <i class="las la-paperclip"></i>
+                        <span>{{ item.attachments.length }}</span>
+                      </span>
+                    }
+                    @if (item.replies && item.replies.length > 0) {
+                      <span class="xnp-item-badge xnp-badge-replies" [title]="'notes.replies' | translate">
+                        <i class="las la-comments"></i>
+                        <span>{{ item.replies.length }}</span>
+                      </span>
+                    }
+                    <span class="xnp-item-time">{{ formatShortTime(item.created_at) }}</span>
+                  </div>
+                </div>
+
+                @if (item.title) {
+                  <h4 class="xnp-item-title" [title]="item.title">{{ item.title }}</h4>
+                }
+                <p class="xnp-item-snippet">
+                  {{ item.note_text ? (item.note_text.length > 70 ? (item.note_text.slice(0, 70) + '…') : item.note_text) : '(No text)' }}
+                </p>
+              </div>
+            }
+          }
+        </div>
+      </aside>
+
+      <!-- ── Right Main Area ───────────────────────────────────────────── -->
+      <main class="xnp-main">
+        <!-- ── Screen 1: Create or Edit Note Form ──────────────────────── -->
+        @if (viewMode() === 'create' || viewMode() === 'edit') {
+          <div class="xnp-create-pane">
+            <header class="xnp-pane-header">
+              <div class="xnp-pane-title-group">
+                <h2 class="xnp-pane-title">{{ (viewMode() === 'edit' ? 'notes.editNoteTitle' : 'notes.createNoteTitle') | translate }}</h2>
+                <p class="xnp-pane-subtitle">
+                  {{ (viewMode() === 'edit' ? 'notes.editSubtitle' : 'notes.createSubtitle') | translate }}
+                </p>
+              </div>
+              @if (notes().length > 0) {
+                <button type="button" class="xnp-btn-ghost" (click)="cancelForm()">
+                  <i class="las la-times"></i> {{ 'notes.cancel' | translate }}
+                </button>
+              }
+            </header>
+
+            <div class="xnp-form-body">
+              <!-- Title field -->
+              <div class="xnp-form-group">
+                <label class="xnp-form-label" for="note-title">
+                  {{ 'notes.noteTitle' | translate }} <span class="xnp-req">*</span>
+                </label>
+                <input
+                  id="note-title"
+                  #titleInput
+                  type="text"
+                  class="xnp-form-input"
+                  [(ngModel)]="formNoteTitle" [ngModelOptions]="{ standalone: true }"
+                  [placeholder]="'notes.titlePlaceholder' | translate"
+                  (keydown.enter)="focusContentArea()"
+                  (keydown.escape)="cancelForm(); $event.stopPropagation()" />
+              </div>
+
+              <!-- Note Content field -->
+              <div class="xnp-form-group xnp-grow">
+                <label class="xnp-form-label" for="note-body">
+                  {{ 'notes.noteContent' | translate }} <span class="xnp-req">*</span>
+                </label>
+                <textarea
+                  id="note-body"
+                  #contentInput
+                  class="xnp-form-textarea"
+                  [(ngModel)]="formNoteText" [ngModelOptions]="{ standalone: true }"
+                  [placeholder]="'notes.textPlaceholder' | translate"
+                  (keydown.escape)="cancelForm(); $event.stopPropagation()"
+                  rows="6"></textarea>
+              </div>
+
+              <!-- Attachments Section -->
+              <div class="xnp-form-group">
+                <label class="xnp-form-label" for="note-create-attachments">
+                  {{ 'notes.attachments' | translate }}
+                  <span class="xnp-label-hint">{{ 'notes.attachmentsHint' | translate }}</span>
+                </label>
+
+                <!-- Hidden file input -->
+                <input
+                  id="note-create-attachments"
+                  #createFileInput
+                  type="file"
+                  multiple
+                  class="xnp-hidden-input"
+                  (change)="onFilesSelected($event)" />
+
+                <!-- Dropzone / Picker Button -->
+                <div
+                  class="xnp-dropzone"
+                  role="button"
+                  tabindex="0"
+                  (click)="triggerCreateFileInput()"
+                  (keydown.enter)="triggerCreateFileInput()">
+                  <div class="xnp-dropzone-icon">
+                    <i class="las la-cloud-upload-alt"></i>
+                  </div>
+                  <div class="xnp-dropzone-text">
+                    <strong>Click to upload</strong> or drag and drop files here
+                    <span class="xnp-dropzone-sub">Images, PDF, Documents, Archives</span>
+                  </div>
+                </div>
+
+                <!-- Existing & Selected Attachments List -->
+                @if (existingAttachments().length > 0 || pendingFiles().length > 0) {
+                  <div class="xnp-selected-attachments">
+                    <!-- Existing attachments (in edit mode) -->
+                    @for (att of existingAttachments(); track att.name; let idx = $index) {
+                      <div class="xnp-att-pill">
+                        <i [class]="getAttachmentIcon(att.name)"></i>
+                        <span class="xnp-att-pill-name" [title]="att.name">{{ att.name }}</span>
+                        @if (att.size_formatted || att.size_bytes) {
+                          <span class="xnp-att-pill-size">{{ att.size_formatted || formatBytes(att.size_bytes) }}</span>
+                        }
+                        <button
+                          type="button"
+                          class="xnp-att-pill-remove"
+                          (click)="removeExistingAttachment(idx); $event.stopPropagation()"
+                          [attr.aria-label]="'notes.removeAttachment' | translate">
+                          <i class="las la-times"></i>
+                        </button>
+                      </div>
+                    }
+
+                    <!-- New pending file uploads -->
+                    @for (file of pendingFiles(); track file.name; let idx = $index) {
+                      <div class="xnp-att-pill xnp-pill-new">
+                        <i [class]="getAttachmentIcon(file.name)"></i>
+                        <span class="xnp-att-pill-name" [title]="file.name">{{ file.name }}</span>
+                        <span class="xnp-att-pill-size">{{ formatBytes(file.size) }}</span>
+                        <button
+                          type="button"
+                          class="xnp-att-pill-remove"
+                          (click)="removePendingFile(idx); $event.stopPropagation()"
+                          [attr.aria-label]="'notes.removeAttachment' | translate">
+                          <i class="las la-times"></i>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+
+              @if (uploadingFile(); as fileName) {
+                <div class="xnp-upload-status" role="status">
+                  <i class="las la-circle-notch xnp-spin"></i>
+                  <span>{{ 'notes.uploading' | translate }} {{ fileName }}…</span>
+                </div>
+              }
+              @if (errorMessage()) {
+                <div class="xnp-error-alert">
+                  <i class="las la-exclamation-circle"></i>
+                  <span>{{ errorMessage() }}</span>
+                </div>
+              }
+            </div>
+
+            <!-- Form Actions -->
+            <footer class="xnp-form-footer">
+              @if (notes().length > 0) {
+                <button type="button" class="xnp-btn-secondary" (click)="cancelForm()">
+                  {{ 'notes.cancel' | translate }}
+                </button>
+              }
+              <button
+                type="button"
+                class="xnp-btn-primary"
+                [disabled]="saving() || !formNoteTitle.trim() || !formNoteText.trim()"
+                (click)="saveFormNote()">
+                @if (saving()) {
+                  <i class="las la-circle-notch xnp-spin"></i>
+                  <span>{{ (viewMode() === 'edit' ? 'notes.savingChanges' : 'notes.savingNote') | translate }}</span>
+                } @else {
+                  <i class="las la-check"></i>
+                  <span>{{ (viewMode() === 'edit' ? 'notes.updateNote' : 'notes.saveNote') | translate }}</span>
+                }
+              </button>
+            </footer>
+          </div>
+        }
+
+        <!-- ── Screen 2: Note Details & Chat-like Timeline ─────────────── -->
+        @else if (selectedNote(); as activeNote) {
+          <div class="xnp-detail-pane">
+            <!-- Header -->
+            <header class="xnp-detail-header">
+              <div class="xnp-detail-title-box">
+                <h2 class="xnp-detail-title">{{ activeNote.title || 'Note Details' }}</h2>
+                <div class="xnp-detail-meta">
+                  <span>Author: <strong>{{ activeNote.author_name || 'User' }}</strong></span>
+                  <span class="xnp-dot">•</span>
+                  <span>{{ formatDetailedDate(activeNote.created_at) }}</span>
+                </div>
+              </div>
+
+              <div class="xnp-detail-actions">
+                <!-- Edit Note button -->
+                <button
+                  type="button"
+                  class="xnp-btn-edit-note"
+                  (click)="startEditNote(activeNote)"
+                  [title]="'notes.editNoteDetails' | translate">
+                  <i class="las la-pen"></i> {{ 'notes.editNoteButton' | translate }}
+                </button>
+
+                <!-- Options menu -->
+                <div class="xnp-menu-wrapper">
+                  <button
+                    type="button"
+                    class="xnp-menu-btn"
+                    (click)="toggleMenu('note-header-' + activeNote.id, $event)"
+                    [title]="'notes.options' | translate"
+                    [attr.aria-label]="'notes.options' | translate">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                      <circle cx="12" cy="5" r="2"/>
+                      <circle cx="12" cy="12" r="2"/>
+                      <circle cx="12" cy="19" r="2"/>
+                    </svg>
+                  </button>
+                  @if (openMenuId() === 'note-header-' + activeNote.id) {
+                    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+                    <div class="xnp-menu-dropdown" (click)="$event.stopPropagation()">
+                      <button type="button" class="xnp-menu-item" (click)="startEditNote(activeNote)">
+                        <i class="las la-edit"></i>
+                        {{ 'notes.editNote' | translate }}
+                      </button>
+                      <button type="button" class="xnp-menu-item" (click)="copyNoteText(activeNote.note_text)">
+                        <i class="las la-copy"></i>
+                        {{ 'notes.copyText' | translate }}
+                      </button>
+                      <button type="button" class="xnp-menu-item xnp-menu-delete" (click)="deleteNote(activeNote.id)">
+                        <i class="las la-trash-alt"></i>
+                        {{ 'notes.deleteNote' | translate }}
+                      </button>
+                    </div>
+                  }
+                </div>
+              </div>
+            </header>
+
+            <!-- Timeline Thread -->
+            <div class="xnp-timeline-container" #timelineContainer>
+              <div class="xnp-timeline-track">
+                <!-- ── First / Main Note Node ── -->
+                <div class="xnp-timeline-node">
+                  <!-- Center Avatar Circle on Vertical Line -->
+                  <div class="xnp-avatar" [attr.aria-label]="activeNote.author_name || 'User'">
+                    {{ activeNote.author_initials || 'U' }}
+                  </div>
+
+                  <!-- Right Note Card -->
+                  <div class="xnp-card">
+                    <div class="xnp-card-header">
+                      <div class="xnp-card-author-line">
+                        <strong class="xnp-author-name">{{ activeNote.author_name || 'User' }}</strong>
+                        <span class="xnp-author-action">{{ activeNote.author_action || 'left a note' }}</span>
+                      </div>
+
+                      <div class="xnp-card-header-right">
+                        <time class="xnp-card-time">{{ formatDetailedDate(activeNote.created_at) }}</time>
+
+                        <div class="xnp-menu-wrapper">
+                          <button
+                            type="button"
+                            class="xnp-menu-btn"
+                            (click)="toggleMenu('card-main-' + activeNote.id, $event)"
+                            [title]="'notes.options' | translate"
+                            [attr.aria-label]="'notes.options' | translate">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                              <circle cx="12" cy="5" r="2"/>
+                              <circle cx="12" cy="12" r="2"/>
+                              <circle cx="12" cy="19" r="2"/>
+                            </svg>
+                          </button>
+                          @if (openMenuId() === 'card-main-' + activeNote.id) {
+                            <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+                    <div class="xnp-menu-dropdown" (click)="$event.stopPropagation()">
+                              <button type="button" class="xnp-menu-item" (click)="startEditNote(activeNote)">
+                                <i class="las la-edit"></i>
+                                {{ 'notes.editNote' | translate }}
+                              </button>
+                              <button type="button" class="xnp-menu-item" (click)="copyNoteText(activeNote.note_text)">
+                                <i class="las la-copy"></i>
+                                {{ 'notes.copyText' | translate }}
+                              </button>
+                              <button type="button" class="xnp-menu-item xnp-menu-delete" (click)="deleteNote(activeNote.id)">
+                                <i class="las la-trash-alt"></i>
+                                {{ 'notes.deleteNote' | translate }}
+                              </button>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="xnp-card-body">
+                      {{ activeNote.note_text }}
+                    </div>
+
+                    <!-- Attachments -->
+                    @if (activeNote.attachments && activeNote.attachments.length > 0) {
+                      <div class="xnp-attachments-grid">
+                        @for (att of activeNote.attachments; track att.name) {
+                          <div class="xnp-attachment-tile" role="button" tabindex="0" (click)="openAttachment(activeNote.id, att)">
+                            <div class="xnp-att-icon-box">
+                              <i [class]="getAttachmentIcon(att.name)"></i>
+                            </div>
+                            <div class="xnp-att-info">
+                              <span class="xnp-att-name" [title]="att.name">{{ att.name }}</span>
+                              <span class="xnp-att-size">{{ att.size_formatted || formatBytes(att.size_bytes) }}</span>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+
+                <!-- ── Thread Replies / Updates ── -->
+                @for (reply of activeNote.replies || []; track reply.id) {
+                  <div class="xnp-timeline-node">
+                    <!-- Reply Avatar on Vertical Line -->
+                    <div class="xnp-avatar" [attr.aria-label]="reply.author_name">
+                      {{ reply.author_initials }}
+                    </div>
+
+                    <!-- Reply Card -->
+                    <div class="xnp-card">
+                      <div class="xnp-card-header">
+                        <div class="xnp-card-author-line">
+                          <strong class="xnp-author-name">{{ reply.author_name }}</strong>
+                          <span class="xnp-author-action">replied</span>
+                        </div>
+
+                        <div class="xnp-card-header-right">
+                          <time class="xnp-card-time">{{ formatDetailedDate(reply.created_at) }}</time>
+
+                          <!-- Three dots menu for reply -->
+                          <div class="xnp-menu-wrapper">
+                            <button
+                              type="button"
+                              class="xnp-menu-btn"
+                              (click)="toggleMenu('reply-' + reply.id, $event)"
+                              [title]="'notes.replyOptions' | translate"
+                              [attr.aria-label]="'notes.replyOptions' | translate">
+                              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                                <circle cx="12" cy="5" r="2"/>
+                                <circle cx="12" cy="12" r="2"/>
+                                <circle cx="12" cy="19" r="2"/>
+                              </svg>
+                            </button>
+                            @if (openMenuId() === 'reply-' + reply.id) {
+                              <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+                    <div class="xnp-menu-dropdown" (click)="$event.stopPropagation()">
+                                <button type="button" class="xnp-menu-item" (click)="startEditReply(reply)">
+                                  <i class="las la-pen"></i>
+                                  {{ 'notes.editReply' | translate }}
+                                </button>
+                                <button type="button" class="xnp-menu-item" (click)="copyNoteText(reply.note_text)">
+                                  <i class="las la-copy"></i>
+                                  {{ 'notes.copyText' | translate }}
+                                </button>
+                                <button type="button" class="xnp-menu-item xnp-menu-delete" (click)="deleteReply(activeNote, reply.id)">
+                                  <i class="las la-trash-alt"></i>
+                                  {{ 'notes.deleteReply' | translate }}
+                                </button>
+                              </div>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Reply text or inline editor -->
+                      @if (editingReplyId() === reply.id) {
+                        <div class="xnp-inline-reply-edit">
+                          <textarea
+                            class="xnp-form-textarea xnp-edit-textarea"
+                            [(ngModel)]="editingReplyText" [ngModelOptions]="{ standalone: true }"
+                            (keydown.escape)="cancelEditReply(); $event.stopPropagation()"
+                            rows="3"></textarea>
+                          <div class="xnp-inline-edit-actions">
+                            <button type="button" class="xnp-btn-secondary xnp-btn-xs" (click)="cancelEditReply()">
+                              {{ 'notes.cancel' | translate }}
+                            </button>
+                            <button
+                              type="button"
+                              class="xnp-btn-primary xnp-btn-xs"
+                              [disabled]="!editingReplyText.trim()"
+                              (click)="saveEditReply(activeNote, reply.id)">
+                              {{ 'notes.save' | translate }}
+                            </button>
+                          </div>
+                        </div>
+                      } @else {
+                        <div class="xnp-card-body">
+                          {{ reply.note_text }}
+                        </div>
+                      }
+
+                      @if (reply.attachments && reply.attachments.length > 0) {
+                        <div class="xnp-attachments-grid">
+                          @for (att of reply.attachments; track att.name) {
+                            <div class="xnp-attachment-tile" role="button" tabindex="0" (click)="openAttachment(activeNote.id, att)">
+                              <div class="xnp-att-icon-box">
+                                <i [class]="getAttachmentIcon(att.name)"></i>
+                              </div>
+                              <div class="xnp-att-info">
+                                <span class="xnp-att-name" [title]="att.name">{{ att.name }}</span>
+                                <span class="xnp-att-size">{{ att.size_formatted || formatBytes(att.size_bytes) }}</span>
+                              </div>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Bottom Reply Composer -->
+            <footer class="xnp-composer-wrap">
+              @if (errorMessage()) {
+                <div class="xnp-error-alert" role="alert">
+                  <i class="las la-exclamation-circle"></i>
+                  <span>{{ errorMessage() }}</span>
+                </div>
+              }
+              @if (uploadingFile(); as fileName) {
+                <div class="xnp-upload-status" role="status">
+                  <i class="las la-circle-notch xnp-spin"></i>
+                  <span>{{ 'notes.uploading' | translate }} {{ fileName }}…</span>
+                </div>
+              }
+              @if (replyPendingFiles().length > 0) {
+                <div class="xnp-pending-attachments">
+                  @for (file of replyPendingFiles(); track file.name; let idx = $index) {
+                    <div class="xnp-pending-chip">
+                      <i [class]="getAttachmentIcon(file.name)"></i>
+                      <span class="xnp-chip-name">{{ file.name }}</span>
+                      <span class="xnp-chip-size">({{ formatBytes(file.size) }})</span>
+                      <button type="button" class="xnp-chip-remove" (click)="removeReplyFile(idx)" [attr.aria-label]="'notes.removeAttachment' | translate">
+                        <i class="las la-times"></i>
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+
+              <div class="xnp-composer">
+                <input
+                  #replyFileInput
+                  type="file"
+                  multiple
+                  class="xnp-hidden-input"
+                  (change)="onReplyFilesSelected($event)" />
+
+                <button
+                  type="button"
+                  class="xnp-attach-btn"
+                  (click)="triggerReplyFileInput()"
+                  [title]="'notes.attachFiles' | translate"
+                  [attr.aria-label]="'notes.attachFiles' | translate">
+                  <i class="las la-paperclip"></i>
+                </button>
+
+                <textarea
+                  #replyTextarea
+                  class="xnp-input"
+                  rows="1"
+                  [(ngModel)]="replyText" [ngModelOptions]="{ standalone: true }"
+                  [placeholder]="'notes.replyPlaceholder' | translate"
+                  (keydown)="onReplyKeydown($event)"></textarea>
+
+                <button
+                  type="button"
+                  class="xnp-send-btn"
+                  [disabled]="sendingReply() || (!replyText.trim() && replyPendingFiles().length === 0)"
+                  (click)="sendReply()">
+                  @if (sendingReply()) {
+                    <i class="las la-circle-notch xnp-spin"></i>
+                  } @else {
+                    <span>{{ 'notes.send' | translate }}</span>
+                  }
+                </button>
+              </div>
+            </footer>
+          </div>
+        }
+      </main>
+    </div>

@@ -1,0 +1,137 @@
+<div class="page-header">
+  <div>
+    <h2>Approval Queue</h2>
+    <p class="subtitle">
+      Pending four-eyes / dual-control requests — an action listed here has not
+      run yet. A different administrator than the one who submitted it must
+      approve it before it executes. A request with a "Step N/M" badge is
+      governed by an approval policy (n-of-m/sequential steps, delegation,
+      SLA timeouts) — see Approval Policies to manage those.
+    </p>
+  </div>
+  <div class="header-actions">
+    <a class="btn-ghost" routerLink="/approvals/policies">
+      <i class="las la-sitemap"></i> Approval Policies
+    </a>
+    <button class="btn-ghost" (click)="load()" [disabled]="loading()">
+      <i class="las la-sync"></i> Refresh
+    </button>
+  </div>
+</div>
+
+@if (loading()) {
+  <p class="state-msg">Loading pending approvals…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (items().length === 0) {
+  <div class="empty-state"><p>No pending approval requests.</p></div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Action</th>
+          <th>Step</th>
+          <th>Requested by</th>
+          <th>Requested at</th>
+          <th>Expires at</th>
+          <th>Payload</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of items(); track r.id) {
+          <tr>
+            <td class="mono-input">{{ r.action_type }}</td>
+            <td class="cell-muted">
+              @if (stepLabel(r); as label) {
+                <span class="badge" [title]="'on_timeout: ' + r.plan!.steps[r.step].on_timeout">
+                  {{ label }} ({{ r.plan!.steps[r.step].mode }})
+                </span>
+                @if (r.escalated_at) {
+                  <span class="badge badge-warn" title="This step already escalated once">escalated</span>
+                }
+              } @else {
+                <span class="cell-muted">—</span>
+              }
+            </td>
+            <td class="cell-muted">{{ r.requested_by }}</td>
+            <td class="cell-muted">{{ r.requested_at | date:'medium' }}</td>
+            <td class="cell-muted">{{ r.expires_at | date:'medium' }}</td>
+            <td class="cell-muted"><code>{{ payloadPreview(r) }}</code></td>
+            <td class="actions">
+              @if (r.requested_by === selfId()) {
+                <button
+                  class="btn-sm"
+                  (click)="cancel(r)"
+                  [disabled]="busyId() === r.id"
+                >
+                  <i class="las la-ban"></i>
+                  {{ busyId() === r.id ? 'Cancelling…' : 'Cancel' }}
+                </button>
+              } @else {
+                <input
+                  class="decision-comment"
+                  type="text"
+                  [attr.maxlength]="commentMax"
+                  aria-label="Decision comment (optional)"
+                  placeholder="Comment (optional)"
+                  [value]="comments()[r.id] ?? ''"
+                  (input)="setComment(r.id, $any($event.target).value)"
+                  [disabled]="busyId() === r.id"
+                />
+                <button
+                  class="btn-sm"
+                  (click)="approve(r)"
+                  [disabled]="busyId() === r.id"
+                >
+                  <i class="las la-check"></i>
+                  {{ busyId() === r.id ? 'Approving…' : 'Approve' }}
+                </button>
+                <button
+                  class="btn-sm btn-ghost"
+                  (click)="reject(r)"
+                  [disabled]="busyId() === r.id"
+                >
+                  <i class="las la-times"></i>
+                  {{ busyId() === r.id ? 'Rejecting…' : 'Reject' }}
+                </button>
+                @if (r.plan) {
+                  <button
+                    class="btn-sm btn-ghost"
+                    (click)="toggleDelegate(r)"
+                    [disabled]="busyId() === r.id"
+                  >
+                    <i class="las la-share"></i> Delegate
+                  </button>
+                }
+              }
+            </td>
+          </tr>
+          @if (delegatingId() === r.id) {
+            <tr class="delegate-row">
+              <td colspan="7">
+                <div class="delegate-form">
+                  <label>
+                    Delegate my standing on this step to (user id)
+                    <input
+                      class="mono-input"
+                      type="text"
+                      [(ngModel)]="delegateTarget"
+                      name="delegateTarget"
+                      placeholder="00000000-0000-0000-0000-000000000000"
+                    />
+                  </label>
+                  <button class="btn-sm" (click)="submitDelegate(r)" [disabled]="busyId() === r.id">
+                    {{ busyId() === r.id ? 'Delegating…' : 'Confirm delegation' }}
+                  </button>
+                  <button class="btn-sm btn-ghost" (click)="toggleDelegate(r)">Cancel</button>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+}

@@ -1,0 +1,17 @@
+.dw-table { width: 100%; border-collapse: collapse; }
+th, td { padding: .625rem .75rem; text-align: start; border-bottom: 1px solid var(--color-border, #24324d); }
+th { font-weight: 600; color: var(--color-text-secondary, #94a3b8); }
+.dw-state { color: var(--color-text-secondary, #94a3b8); }
+.dw-state--error { color: var(--color-danger, #f87171); }
+
+.dw-cell { display: inline-flex; align-items: center; border-radius: .25rem; padding: 0 .25rem; }
+.dw-cell--badge {
+  padding: .125rem .5rem;
+  border-radius: 999px;
+  background: var(--color-surface-muted, rgba(148, 163, 184, 0.16));
+  font-size: .8125rem;
+  font-weight: 600;
+}
+
+.dw-cell a { color: var(--color-accent, #60a5fa); text-decoration: none; }
+.dw-cell a:hover { text-decoration: underline; }

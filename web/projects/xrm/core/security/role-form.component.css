@@ -1,0 +1,34 @@
+/* Tag+class (not bare class) so this reliably outranks admin-page.css's
+   same-specificity .btn-primary regardless of styles/styleUrls
+   concatenation order — Angular doesn't document which comes first. */
+button.btn-primary, button.btn-ghost, button.btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.35rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.7rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+button.btn-sm { min-height: 1.9rem; padding: 0.4rem 0.7rem; font-size: 0.8rem; }
+
+/* .xf-page has no max-width (it fills .xrm-main, D-page-wrapper), and
+   .form-row-1's fields stretch to their container's full width — inside
+   the raw tab-panel that meant a single "Name" input spanning the whole
+   viewport, with the Save button below it looking orphaned rather than
+   attached to the field group it belongs to. Bounding the General card's
+   width fixes both at once. */
+.role-general-card { max-width: 560px; }
+
+.pg-pending-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}

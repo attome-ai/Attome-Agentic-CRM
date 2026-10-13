@@ -1,0 +1,158 @@
+<div class="page-header">
+  <div>
+    <h2>Bundle Lifecycle</h2>
+    <p class="subtitle">Installed metadata bundles, pending plans, and drift against the last applied bundle.</p>
+  </div>
+</div>
+
+<!-- ── Drift ─────────────────────────────────────────────────────────── -->
+<div class="card">
+  <h3 class="card-title-lg">Drift</h3>
+  @if (driftLoading()) {
+    <p class="state-msg">Checking drift…</p>
+  } @else if (driftError()) {
+    <p class="error-msg">{{ driftError() }}</p>
+  } @else if (!drift()?.applied) {
+    <p class="state-msg">Nothing has been applied to this deployment yet.</p>
+  } @else {
+    <p>
+      Last applied: <span class="cell-mono">{{ drift()!.applied!.bundle_hash.slice(0, 12) }}…</span>
+      @if (drift()!.applied!.finished_at) {
+        on {{ drift()!.applied!.finished_at | date:'medium' }}
+      }
+    </p>
+    @if (drift()!.drift; as d) {
+      @if (d.clean) {
+        <p class="badge">clean — live metadata matches the last applied bundle</p>
+      } @else {
+        <p class="error-msg">
+          {{ d.summary.creates }} create, {{ d.summary.updates }} update,
+          {{ d.summary.retires }} retire, {{ d.summary.blocked }} blocked
+          — live metadata has drifted from the last applied bundle.
+        </p>
+      }
+    }
+  }
+</div>
+
+<!-- ── Installed bundles ─────────────────────────────────────────────── -->
+<div class="card">
+  <h3 class="card-title-lg">Installed Bundles</h3>
+  @if (loading()) {
+    <p class="state-msg">Loading…</p>
+  } @else if (error()) {
+    <p class="error-msg">{{ error() }}</p>
+  } @else if (installed().length === 0) {
+    <div class="empty-state">
+      <p>No named bundle has been successfully applied yet.</p>
+      <p class="hint">A whole-deployment export/apply with no `name`/`version` set does not appear here — see the applied-bundle history via <code>bundle-tool history</code>.</p>
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Bundle</th>
+            <th>Version</th>
+            <th>Applied</th>
+            <th>Versions on record</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (b of installed(); track b.name) {
+            <tr>
+              <td>{{ b.name }}</td>
+              <td><span class="badge">{{ b.latest.bundle_version }}</span></td>
+              <td class="cell-muted">{{ b.latest.finished_at ? (b.latest.finished_at | date:'medium') : '—' }}</td>
+              <td class="cell-muted">{{ b.history.length }}</td>
+              <td class="actions">
+                <button class="btn-sm" (click)="openRollback(b)" [disabled]="b.history.length < 2">
+                  <i class="las la-undo"></i> Rollback
+                </button>
+              </td>
+            </tr>
+            @if (rollbackTarget() === b.name) {
+              <tr>
+                <td colspan="5">
+                  <div class="inline-form-panel">
+                    <div class="form-row-2">
+                      <div class="field">
+                        <label [attr.for]="'rollback-version-' + b.name">Roll back to version</label>
+                        <select [attr.id]="'rollback-version-' + b.name" [(ngModel)]="rollbackVersion">
+                          @for (h of b.history; track h.id) {
+                            @if (h !== b.latest) {
+                              <option [value]="h.bundle_version">
+                                {{ h.bundle_version }} — applied {{ h.finished_at ? (h.finished_at | date:'medium') : 'unknown' }}
+                              </option>
+                            }
+                          }
+                        </select>
+                      </div>
+                      <div class="checkbox-row">
+                        <label>
+                          <input type="checkbox" [(ngModel)]="allowRetire">
+                          Allow retire (retire objects added since the target version)
+                        </label>
+                      </div>
+                    </div>
+                    @if (rollbackError()) { <p class="error-msg">{{ rollbackError() }}</p> }
+                    @if (rollbackResult(); as r) {
+                      <p class="hint">
+                        Rollback plan {{ r.plan_id }}: {{ r.status }}
+                        @if (r.approval_pending) { — a second admin must approve it before it runs. }
+                      </p>
+                    }
+                    <div class="btn-row-inline">
+                      <button class="btn-primary" (click)="submitRollback()" [disabled]="rollingBack()">
+                        {{ rollingBack() ? 'Submitting…' : 'Submit Rollback' }}
+                      </button>
+                      <button class="btn-ghost" (click)="closeRollback()">Close</button>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
+
+<!-- ── Pending plans ─────────────────────────────────────────────────── -->
+<div class="card">
+  <h3 class="card-title-lg">Pending Plans ({{ pendingCount() }})</h3>
+  @if (pending().length === 0) {
+    <p class="state-msg">Nothing planned or queued.</p>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Plan</th>
+            <th>Bundle</th>
+            <th>Status</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of pending(); track p.id) {
+            <tr>
+              <td class="cell-mono">{{ p.id.slice(0, 8) }}…</td>
+              <td>
+                @if (p.bundle_name) {
+                  {{ p.bundle_name }} <span class="cell-muted">{{ p.bundle_version }}</span>
+                } @else {
+                  <span class="cell-muted">(anonymous whole-deployment plan)</span>
+                }
+              </td>
+              <td><span class="badge">{{ p.status }}</span></td>
+              <td class="cell-muted">{{ p.created_at | date:'medium' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

@@ -1,0 +1,71 @@
+<div class="cpt">
+  <div class="cpt-search">
+    <i class="las la-search"></i>
+    <input type="text" placeholder="Search pages…"
+           [ngModel]="searchInput()" (ngModelChange)="onSearchChange($event)" />
+  </div>
+
+  @if (error()) { <p class="cpt-error">{{ error() }}</p> }
+
+  @if (searchQuery()) {
+    <!-- Search runs across the whole tree, flat — parent/child position
+         doesn't matter when you already know the title you're after. -->
+    <ul class="cpt-tree" role="tree">
+      @for (page of searchResults(); track page.id) {
+        <li class="cpt-row" role="treeitem" tabindex="0"
+            [attr.aria-selected]="page.id === selectedId()"
+            [class.cpt-row-active]="page.id === selectedId()"
+            (click)="select(page)" (keydown.enter)="select(page)">
+          <i class="las la-file-alt cpt-row-icon"></i>
+          <span class="cpt-row-label">{{ page.title }}</span>
+          <span class="cpt-status" [class]="'cpt-status-' + page.status">{{ page.status }}</span>
+        </li>
+      } @empty {
+        <li class="cpt-empty">No pages match "{{ searchQuery() }}".</li>
+      }
+    </ul>
+  } @else {
+    <ul class="cpt-tree" role="tree">
+      @for (page of childrenOf(null); track page.id) {
+        <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: page }" />
+      }
+      @if (loadedRoot() && childrenOf(null).length === 0) {
+        <li class="cpt-empty">No pages yet.</li>
+      }
+    </ul>
+  }
+
+  <ng-template #nodeTpl let-page>
+    <li class="cpt-item">
+      <div class="cpt-row" role="treeitem" tabindex="0"
+           [attr.aria-expanded]="isExpanded(page.id)" [attr.aria-selected]="page.id === selectedId()"
+           [class.cpt-row-active]="page.id === selectedId()"
+           (click)="select(page)" (keydown.enter)="select(page)"
+           (contextmenu)="openMenu($event, page)">
+        <button type="button" class="cpt-caret-btn"
+                [attr.aria-label]="isExpanded(page.id) ? 'Collapse ' + page.title : 'Expand ' + page.title"
+                (click)="toggleExpand(page.id); $event.stopPropagation()">
+          <i class="las cpt-caret" [class.la-caret-right]="!isExpanded(page.id)" [class.la-caret-down]="isExpanded(page.id)"></i>
+        </button>
+        <i class="las la-file-alt cpt-row-icon"></i>
+        <span class="cpt-row-label" [title]="page.url_path">{{ page.title }}</span>
+        <span class="cpt-status" [class]="'cpt-status-' + page.status">{{ page.status }}</span>
+      </div>
+      @if (isExpanded(page.id)) {
+        <ul class="cpt-tree-children" role="group">
+          @for (child of childrenOf(page.id); track child.id) {
+            <ng-container *ngTemplateOutlet="nodeTpl; context: { $implicit: child }" />
+          }
+        </ul>
+      }
+    </li>
+  </ng-template>
+
+  @if (menu(); as m) {
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+    <div class="cpt-menu" [style.left.px]="m.x" [style.top.px]="m.y" (click)="$event.stopPropagation()">
+      <button type="button" (click)="startMove(m.page)"><i class="las la-arrows-alt"></i> Move…</button>
+      <button type="button" class="cpt-danger" (click)="remove(m.page)"><i class="las la-trash"></i> Delete</button>
+    </div>
+  }
+</div>

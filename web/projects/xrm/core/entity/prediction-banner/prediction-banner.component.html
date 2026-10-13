@@ -1,0 +1,30 @@
+@if (!dismissed() && latest(); as p) {
+  <div class="pred-banner" [class.pred-banner-breach]="p.label === 'breach'">
+    <i class="las la-brain"></i>
+    <div class="pred-banner-body">
+      <p>
+        @if (p.label === 'breach') {
+          Predicted to breach its SLA ({{ scorePercent() }} likelihood).
+        } @else {
+          Predicted on track ({{ scorePercent() }} breach likelihood).
+        }
+        @if (p.resolved) {
+          <span class="cell-muted">(outcome recorded)</span>
+        }
+      </p>
+      @if (topContributions().length > 0) {
+        <ul>
+          @for (c of topContributions(); track c.key) {
+            <li>
+              {{ c.key }}
+              <span class="cell-muted">({{ c.contribution > 0 ? '+' : '' }}{{ c.contribution.toFixed(2) }})</span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+    <button class="btn-sm btn-ghost" type="button" (click)="dismissed.set(true)">
+      <i class="las la-times"></i>
+    </button>
+  </div>
+}

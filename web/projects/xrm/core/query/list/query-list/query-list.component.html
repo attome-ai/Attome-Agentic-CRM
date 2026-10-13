@@ -1,0 +1,91 @@
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<div class="ql-header">
+  <div>
+    <h1 class="ql-title">SQL Queries</h1>
+    <p class="ql-subtitle">{{ queries().length }} saved queries</p>
+  </div>
+  <a routerLink="/xrm/admin/queries/new" class="ql-create-btn">
+    <i class="las la-plus"></i>
+    {{ 'queryAdmin.newQuery' | translate }}
+  </a>
+</div>
+
+<!-- ── Search ──────────────────────────────────────────────────────────── -->
+<div class="ql-search-wrap">
+  <i class="las la-search ql-search-icon"></i>
+  <input class="ql-search" [(ngModel)]="search"
+         [placeholder]="'queryAdmin.searchQueries' | translate" autocomplete="off">
+</div>
+
+<!-- ── List ────────────────────────────────────────────────────────────── -->
+@if (loading()) {
+  <div class="ql-state-wrap">
+    <i class="las la-circle-notch ql-state-icon ql-spinning"></i>
+    <p>Loading queries…</p>
+  </div>
+
+} @else if (error()) {
+  <div class="ql-state-wrap ql-error-state">
+    <i class="las la-exclamation-circle ql-state-icon"></i>
+    <p>{{ error() }}</p>
+  </div>
+
+} @else if (filtered().length === 0 && queries().length === 0) {
+  <div class="ql-state-wrap">
+    <i class="las la-database ql-state-icon"></i>
+    <p>No queries yet. Create your first SQL query to get started.</p>
+    <a routerLink="/xrm/admin/queries/new" class="ql-create-btn" style="margin-top:4px">
+      <i class="las la-plus"></i> Create First Query
+    </a>
+  </div>
+
+} @else if (filtered().length === 0) {
+  <div class="ql-state-wrap">
+    <i class="las la-search ql-state-icon"></i>
+    <p>No queries match your search.</p>
+    <button class="btn-ghost" (click)="search = ''">Clear search</button>
+  </div>
+
+} @else {
+  <div class="ql-list">
+    @for (q of filtered(); track q.id) {
+      <div class="ql-card">
+
+        <!-- Icon bubble -->
+        <div class="ql-icon-bubble">
+          <i class="las la-code"></i>
+        </div>
+
+        <!-- Name + preview -->
+        <div class="ql-card-body">
+          <a [routerLink]="['/xrm/admin/queries', q.id]" class="ql-card-name">
+            {{ q.name }}
+          </a>
+          <xrm-owner-layer-badge [layer]="q.owner_layer" />
+          @if (q.entity_logical_name) {
+            <span class="ql-entity-badge">
+              <i class="las la-link"></i>
+              {{ q.entity_logical_name }}
+            </span>
+          }
+          @if (q.sql_preview) {
+            <p class="ql-sql-preview">{{ q.sql_preview }}</p>
+          }
+        </div>
+
+        <!-- Actions -->
+        <div class="ql-actions">
+          <a [routerLink]="['/xrm/admin/queries', q.id]" class="ql-btn ql-btn-edit">
+            <i class="las la-pen"></i>
+            {{ 'queryAdmin.edit' | translate }}
+          </a>
+          <button class="ql-btn ql-btn-delete" (click)="deleteQuery(q)">
+            <i class="las la-trash-alt"></i>
+            {{ 'queryAdmin.delete' | translate }}
+          </button>
+        </div>
+
+      </div>
+    }
+  </div>
+}

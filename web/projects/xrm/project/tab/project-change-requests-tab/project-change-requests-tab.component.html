@@ -1,0 +1,50 @@
+<section class="cr-panel">
+  <header class="cr-panel-header">
+    <i class="las la-gavel"></i>
+    <h3>Pending Decisions</h3>
+  </header>
+
+  @if (loading()) {
+    <p class="cr-state-msg">Loading pending change requests…</p>
+  } @else if (error()) {
+    <p class="cr-state-msg cr-state-error">{{ error() }}</p>
+  } @else if (pending().length === 0) {
+    <p class="cr-state-msg">No change requests awaiting a decision.</p>
+  } @else {
+    @if (decisionNote()) { <p class="cr-note">{{ decisionNote() }}</p> }
+    <div class="cr-table-wrap">
+      <table class="cr-table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Budget Impact</th>
+            <th>Schedule Impact</th>
+            <th>Customer Facing</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of pending(); track r.id) {
+            <tr>
+              <td>{{ title(r) }}</td>
+              <td>{{ impactBudget(r) ?? '—' }}</td>
+              <td>{{ impactScheduleDays(r) ?? '—' }}{{ impactScheduleDays(r) !== null ? 'd' : '' }}</td>
+              <td>{{ isCustomerFacing(r) ? 'Yes' : 'No' }}</td>
+              <td class="cr-actions">
+                <button type="button" class="cr-btn cr-btn-approve" [disabled]="decidingId() === r.id" (click)="approve(r)">
+                  Approve
+                </button>
+                <button type="button" class="cr-btn cr-btn-reject" [disabled]="decidingId() === r.id" (click)="reject(r)">
+                  Reject
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<xrm-related-grid [entityName]="ENTITY" [allowCreate]="true"
+  [filters]="[{ field: 'project_id', value: projectId() }]" />

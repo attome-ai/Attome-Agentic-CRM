@@ -1,0 +1,42 @@
+/* D-432 / M13 — the record form's "possible duplicate" banner. Uses the
+   same warn-toned surface `.badge-warn` (approval-queue-list.component.css)
+   establishes for this palette, restyled as a full banner rather than a
+   pill. */
+
+.dup-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  background: #78350f;
+  color: #fdba74;
+}
+
+.dup-banner > .las {
+  margin-top: 2px;
+}
+
+.dup-banner-body {
+  flex: 1;
+}
+
+.dup-banner-body p {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.dup-banner-body ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.dup-banner-body a {
+  color: #fdba74;
+  text-decoration: underline;
+}
+
+.dup-banner .btn-sm {
+  color: inherit;
+}

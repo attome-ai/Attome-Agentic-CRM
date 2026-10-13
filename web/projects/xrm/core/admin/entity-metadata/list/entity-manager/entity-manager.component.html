@@ -1,0 +1,136 @@
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
+<div class="em-header">
+  <div>
+    <h1 class="em-title">Item Manager</h1>
+    <p class="em-subtitle">You have {{ entities().length }} items</p>
+  </div>
+  <!-- U8/U19 — the governance screens (`@attome/xrm/core/admin/governance`)
+       have no sidebar row of their own; this is their way in from the
+       metadata admin. -->
+  <nav class="em-governance" [attr.aria-label]="'governance.nav.label' | translate">
+    <a routerLink="/xrm/admin/data/catalog">{{ 'governance.nav.catalog' | translate }}</a>
+    <a routerLink="/xrm/admin/data/quality">{{ 'governance.nav.quality' | translate }}</a>
+    <a routerLink="/xrm/admin/state-models">{{ 'governance.nav.stateModels' | translate }}</a>
+    <a routerLink="/xrm/admin/changes">{{ 'governance.nav.changes' | translate }}</a>
+  </nav>
+</div>
+
+<!-- ── Search + Filters ─────────────────────────────────────────────────── -->
+<div class="em-controls">
+  <div class="em-search-wrap">
+    <i class="las la-search em-search-icon"></i>
+    <input class="em-search" [(ngModel)]="search"
+           placeholder="Search for an item…" autocomplete="off">
+  </div>
+
+  <div class="em-filters">
+    <button class="em-filter-btn" [class.active]="activePrefix() === ''"
+            (click)="activePrefix.set('')">
+      Show All
+    </button>
+    @for (p of prefixes(); track p) {
+      <button class="em-filter-btn" [class.active]="activePrefix() === p"
+              (click)="activePrefix.set(p)">
+        <i [class]="prefixIcon(p)"></i>
+        {{ prefixLabel(p) }}
+      </button>
+    }
+  </div>
+</div>
+
+<!-- ── List ─────────────────────────────────────────────────────────────── -->
+@if (loading()) {
+  <div class="em-state-wrap">
+    <i class="las la-circle-notch em-state-icon em-spinning"></i>
+    <p>Loading your items…</p>
+  </div>
+} @else if (error()) {
+  <div class="em-state-wrap em-error-state">
+    <i class="las la-exclamation-circle em-state-icon"></i>
+    <p>{{ error() }}</p>
+  </div>
+} @else if (filtered().length === 0) {
+  <div class="em-state-wrap">
+    <i class="las la-search em-state-icon"></i>
+    <p>No items match your search.</p>
+    <button class="btn-ghost" (click)="clearSearch()">Clear search</button>
+  </div>
+} @else {
+  <div class="em-list">
+    @for (e of filtered(); track e.id) {
+      <div class="em-card">
+        <div class="em-icon-bubble">
+          <i [class]="entityIcon(e)"></i>
+        </div>
+
+        <a [routerLink]="['/xrm/admin/entity']" [queryParams]="{ id: e.id }"
+           class="em-card-name">{{ e.name }}</a>
+        <xrm-owner-layer-badge [layer]="e.owner_layer" />
+
+        <div class="em-actions">
+          <a [routerLink]="['/xrm/admin/entity']" [queryParams]="{ id: e.id }"
+             class="em-btn em-btn-edit">
+            <i class="las la-eye"></i>
+            View
+          </a>
+          @if (devTools()?.available) {
+            <button class="em-btn" (click)="openScaffold(e, 'form')"
+                    title="Dev-only: generate a form component (ts/html/css) for this item">
+              <i class="las la-edit"></i>
+              Add Form
+            </button>
+            <button class="em-btn" (click)="openScaffold(e, 'list')"
+                    title="Dev-only: generate a list component (ts/html/css) for this item">
+              <i class="las la-table"></i>
+              Add List
+            </button>
+          }
+        </div>
+
+        <!-- ── Scaffold panel (dev-only) ─────────────────────────────── -->
+        @if (scaffoldTarget()?.entity?.id === e.id) {
+          <div class="em-scaffold-panel">
+            <h4>
+              <i class="las la-magic"></i>
+              Generate {{ scaffoldTarget()!.kind === 'form' ? 'form' : 'list' }} component
+              for <code>{{ e.logicalname }}</code>
+            </h4>
+            <div class="field">
+              <label [for]="'scaffold-path-' + e.id">
+                Destination folder
+                <span class="hint">
+                  absolute path, must be inside {{ devTools()!.angular_root }}
+                </span>
+              </label>
+              <input [id]="'scaffold-path-' + e.id" [(ngModel)]="scaffoldPath"
+                     autocomplete="off" class="mono-input" spellcheck="false">
+            </div>
+            <p class="hint">
+              Writes three files (<code>.ts</code>, <code>.html</code>, <code>.css</code>).
+              Auto-registered in <code>provide-xrm-forms.ts</code> only under
+              <code>{{ devTools()!.suggested_dir }}</code>. Review, rebuild, and commit them.
+            </p>
+            @if (scaffoldError()) { <p class="error-msg">{{ scaffoldError() }}</p> }
+            @if (scaffoldDone(); as done) {
+              <div class="em-scaffold-done">
+                <p><i class="las la-check-circle"></i> Created:</p>
+                <ul>@for (f of done.files; track f) { <li><code>{{ f }}</code></li> }</ul>
+                <p>
+                  {{ done.registry_updated
+                      ? 'Registered in provide-xrm-forms.ts — rebuild to pick it up.'
+                      : 'Not auto-registered: ' + (done.registry_note ?? 'unknown reason') }}
+                </p>
+              </div>
+            }
+            <div class="btn-row">
+              <button class="btn-primary" (click)="runScaffold()" [disabled]="scaffolding()">
+                {{ scaffolding() ? 'Generating…' : 'Generate' }}
+              </button>
+              <button class="btn-ghost" (click)="closeScaffold()">Close</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+}

@@ -1,0 +1,27 @@
+@if (loading()) { <div class="xf-loading"><i class="las la-circle-notch qe-spinning"></i><p>Loading query…</p></div> }
+@else if (loadError()) { <div class="xf-error-banner"><i class="las la-exclamation-circle"></i><span>{{ loadError() }}</span></div> }
+@else {
+  <div class="xf-page">
+    <header class="xf-header"><div><div class="xf-breadcrumb"><a routerLink="/xrm/admin/queries" class="xf-breadcrumb-link">SQL Queries</a><span class="xf-breadcrumb-sep">›</span><span>{{ isNew ? 'New record' : 'Edit record' }}</span></div>
+      <h1 class="xf-title">{{ isNew ? 'New SQL Query' : 'Edit SQL Query' }}</h1>@if (!isNew) { <xrm-owner-layer-badge [layer]="ownerLayer()" variant="full" /> }<p class="xf-subtitle">{{ isNew ? 'Create a raw executable query' : id() }}</p></div>
+      <div class="xf-actions"><button class="xf-btn xf-btn-secondary" type="button" (click)="cancel()">Back</button><button class="xf-btn xf-btn-primary" type="button" (click)="save()" [disabled]="saving()"><i class="las la-check"></i>{{ saving() ? 'Saving…' : (isNew ? 'Create' : 'Update') }}</button></div></header>
+    <div class="xf-body">
+      @if (saveError()) { <div class="xf-error-banner"><i class="las la-exclamation-circle"></i><span>{{ saveError() }}</span></div> }
+      <section class="xf-section"><div class="xf-section-header"><div class="xf-section-icon"><i class="las la-code"></i></div><div class="xf-section-meta"><h2 class="xf-section-title">SQL Query</h2><p class="xf-section-desc">Raw executable SQL. Entity association and column presentation are configured on a View.</p></div></div>
+        <div class="xf-section-body"><div class="xf-grid-2"><div class="xf-field xf-field-full"><label for="qe-name">{{ 'queryAdmin.queryName' | translate }}</label><input id="qe-name" class="xf-input" [(ngModel)]="editName" [placeholder]="'queryAdmin.queryNamePlaceholder' | translate"><p class="xf-helper">{{ 'queryAdmin.queryNameHelp' | translate }}</p></div>
+          <div class="xf-field xf-field-full"><label for="qe-sql">{{ 'queryAdmin.sqlStatement' | translate }}</label><textarea id="qe-sql" class="xf-input" [(ngModel)]="editSql" rows="12" spellcheck="false" [placeholder]="'queryAdmin.sqlPlaceholder' | translate"></textarea><p class="xf-helper">{{ 'queryAdmin.sqlHelp' | translate }}</p></div>
+          <div class="xf-field"><label for="qe-priv">{{ 'queryAdmin.requiredPrivilege' | translate }}</label><input id="qe-priv" class="xf-input" [(ngModel)]="editRequiredPrivilege" [placeholder]="'queryAdmin.privilegePlaceholder' | translate"><p class="xf-helper">{{ 'queryAdmin.privilegeHelp' | translate }}</p></div>
+          <div class="xf-field"><span class="xf-field-caption">Query Type</span><label class="xf-switch xf-switch-field"><input class="xf-switch-input" type="checkbox" [(ngModel)]="editIsReport"><span class="xf-switch-pill"></span><span class="xf-switch-content"><span class="xf-switch-label">Report query</span></span></label><p class="xf-helper">Raise the execution timeout ceiling to 5 seconds.</p></div>
+        </div></div>
+      </section>
+  @if (!isNew) { <section class="xf-section"><div class="xf-section-header"><div class="xf-section-icon"><i class="las la-play-circle"></i></div><div class="xf-section-meta"><h2 class="xf-section-title">Test Query</h2><p class="xf-section-desc">Run the saved raw SQL and preview its first rows.</p></div><button class="xf-btn xf-btn-secondary" (click)="runTest()" [disabled]="testing()">{{ testing() ? 'Running…' : 'Run Test' }}</button></div><div class="xf-section-body">
+    @if (testError()) { <p class="error-msg">{{ testError() }}</p> }
+    @if (testResult()) { <div class="qe-test-table-wrap"><table class="qe-test-table"><thead><tr>
+      @for (column of testResult()!.data.columns; track column.name) { <th>{{ column.name }}</th> }
+    </tr></thead><tbody>@for (row of testResult()!.data.records; track $index) { <tr>
+      @for (column of testResult()!.data.columns; track column.name) { <td>{{ row[column.name] ?? '—' }}</td> }
+    </tr> }</tbody></table></div> }
+  </div></section> }
+    </div>
+  </div>
+}

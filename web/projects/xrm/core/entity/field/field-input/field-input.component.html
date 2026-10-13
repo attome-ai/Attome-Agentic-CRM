@@ -1,0 +1,283 @@
+<!-- D-789 section 5: a business rule may hide this field (nothing renders)
+     or lock it (read-only value plus a lock naming the rule). -->
+@if (!policyHidden()) {
+<div class="xf-field" [class.xf-field-locked]="policyDisabled()">
+  <div class="xf-label-row">
+    <label [for]="field().name">{{ field().display_name || field().name }}</label>
+    @if (field().is_required) { <span class="xf-required">Required</span> }
+    @if (policyDisabled()) {
+      <span class="xf-lock-note" [id]="lockNoteId()">
+        <i class="las la-lock" aria-hidden="true"></i>
+        {{ 'fieldPolicy.lockedBy' | translate: { rule: lock()?.ruleName ?? '' } }}
+      </span>
+    }
+  </div>
+
+  @if (policyDisabled()) {
+    <output [id]="field().name" class="xf-input xf-locked-value"
+            [attr.aria-describedby]="lockNoteId()">{{ lockedDisplay() }}</output>
+  } @else {
+  @switch (field().field_type) {
+
+    @case ('text') {
+      <input [id]="field().name" [type]="textType()" class="xf-input"
+             [class.is-invalid]="showRequiredError()"
+             [attr.aria-invalid]="showRequiredError()"
+             [formControlName]="field().name"
+             [placeholder]="textPlaceholder()" />
+      @if (showRequiredError()) {
+        <p class="field-error" role="alert">{{ field().display_name || field().name }} is required.</p>
+      }
+    }
+
+    @case ('number') {
+      <input [id]="field().name" type="number" class="xf-input"
+             [formControlName]="field().name" />
+    }
+
+    @case ('currency') {
+      <!-- D-490: the control (field().name) always holds a plain USD
+           amount; this input shows/edits it converted to the viewer's
+           preferred currency, entirely client-side. -->
+      <div class="currency-field">
+        <span class="currency-icon" aria-hidden="true">{{ currencyIcon() }}</span>
+        <input [id]="field().name" type="number" step="0.01" class="xf-input"
+               [class.is-invalid]="showRequiredError()"
+               [attr.aria-invalid]="showRequiredError()"
+               [value]="currencyDisplayValue()"
+               (input)="onCurrencyAmountInput($any($event.target).value)" />
+        <select class="currency-code-select" [value]="preferredCurrency()"
+                (change)="onCurrencyCodeChange($any($event.target).value)"
+                [attr.aria-label]="'Display currency'">
+          @for (code of currencyCodes(); track code) {
+            <option [value]="code">{{ code }}</option>
+          }
+        </select>
+      </div>
+      @if (showRequiredError()) {
+        <p class="field-error" role="alert">{{ field().display_name || field().name }} is required.</p>
+      }
+    }
+
+    @case ('date') {
+      <input [id]="field().name" type="date" class="xf-input"
+             [formControlName]="field().name" />
+    }
+
+    @case ('bool') {
+      <label class="bool-label">
+        <input type="checkbox" [formControlName]="field().name" />
+        <span>Yes</span>
+      </label>
+    }
+
+    @case ('choice') {
+      @if (isMulti()) {
+        <div class="multi-choice">
+          @for (c of choices(); track c) {
+            <label class="check-item">
+              <input type="checkbox" [checked]="isSelected(c)"
+                     (change)="toggleChoice(c)" />
+              {{ choiceLabel(c) }}
+            </label>
+          }
+        </div>
+      } @else {
+        <div class="xf-select-wrap">
+          <select [id]="field().name" class="xf-input" [formControlName]="field().name">
+            <option value="">-- select --</option>
+            @for (c of choices(); track c) {
+              <option [value]="c">{{ choiceLabel(c) }}</option>
+            }
+          </select>
+        </div>
+      }
+    }
+
+    @case ('lookup') {
+      <div class="lookup-wrap">
+        @if (lookupLabel()) {
+          <div class="lookup-selected">
+            <span class="lookup-label">{{ lookupLabel() }}</span>
+            <button type="button" class="btn-icon" [title]="'fieldInput.change' | translate"
+                    (click)="openLookup()">✎</button>
+            <button type="button" class="btn-icon btn-clear" [title]="'fieldInput.clear' | translate"
+                    (click)="clearLookup()">×</button>
+          </div>
+        } @else {
+          <button type="button" class="btn-lookup" (click)="openLookup()">
+            Select {{ field().name }}…
+          </button>
+        }
+
+        @if (lookupOpen()) {
+          <div class="lookup-popup" #popup>
+            <div class="lookup-search-row">
+              <input #searchInput type="text" [placeholder]="'fieldInput.searchPlaceholder' | translate"
+                     [value]="lookupSearch()"
+                     (input)="onSearchInput($any($event.target).value)" />
+              <button type="button" class="btn-icon" (click)="closeLookup()">×</button>
+            </div>
+
+            @if (lookupLoading()) {
+              <p class="lookup-msg">{{ 'fieldInput.loading' | translate }}</p>
+            } @else if (lookupItems().length === 0) {
+              <p class="lookup-msg">{{ 'fieldInput.noResults' | translate }}</p>
+            } @else {
+              <ul class="lookup-results" role="listbox">
+                @for (item of lookupItems(); track item.id) {
+                  <li role="option" tabindex="0" [attr.aria-selected]="item.id === ctrl.value"
+                      (click)="selectLookup(item)" (keydown)="onLookupKeydown($event, item)"
+                      [class.is-selected]="item.id === ctrl.value">
+                    {{ item.label }}
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        }
+        @if (showRequiredError()) {
+          <p class="field-error" role="alert">{{ field().display_name || field().name }} is required.</p>
+        }
+      </div>
+    }
+
+    @case ('icon') {
+      <div class="icon-field">
+        <input [id]="field().name" type="text" class="xf-input"
+               [class.is-invalid]="showRequiredError()"
+               [attr.aria-invalid]="showRequiredError()"
+               [formControlName]="field().name"
+               placeholder="la-robot" />
+        @if (ctrl.value) {
+          <i class="las {{ ctrl.value }} icon-preview" aria-hidden="true"></i>
+        }
+      </div>
+      @if (showRequiredError()) {
+        <p class="field-error" role="alert">{{ field().display_name || field().name }} is required.</p>
+      }
+    }
+
+    @case ('color') {
+      <div class="color-field">
+        <input [id]="field().name" type="color" class="color-swatch-input"
+               [formControlName]="field().name" />
+        <input type="text" class="xf-input" [value]="ctrl.value"
+               (input)="ctrl.setValue($any($event.target).value)"
+               placeholder="#8b5cf6" />
+      </div>
+      @if (showRequiredError()) {
+        <p class="field-error" role="alert">{{ field().display_name || field().name }} is required.</p>
+      }
+    }
+
+    @case ('file') {
+      @if (isFileMulti()) {
+        <xrm-multi-attachment [fieldName]="field().name"
+                              [entityName]="entityName()"
+                              [recordId]="recordId()"
+                              [required]="field().is_required" />
+      } @else {
+      <div class="file-field">
+        @if (!recordId() || !entityName()) {
+          <p class="file-hint">Save the record before attaching a file.</p>
+        } @else {
+          @if (hasFileValue() && fileState() === 'idle') {
+            <div class="file-current">
+              <span class="file-name">{{ fileDisplayName() }}</span>
+              @if (canDownload()) {
+                <button type="button" class="btn-icon" (click)="downloadFile()" [disabled]="downloading()">
+                  {{ downloading() ? 'Preparing…' : 'Download' }}
+                </button>
+              } @else {
+                <span class="file-pending-note">Save the record to keep this file</span>
+              }
+              <button type="button" class="btn-icon btn-clear" [title]="'fieldInput.remove' | translate" (click)="clearFile()">×</button>
+            </div>
+          }
+
+          <input [id]="field().name" type="file"
+                 [disabled]="fileState() === 'uploading' || fileState() === 'processing'"
+                 (change)="onFileSelected($any($event.target).files)" />
+
+          <xrm-file-versions [entityName]="entityName()!" [recordId]="recordId()!"
+                             [fieldName]="field().name"
+                             (restored)="onFileVersionRestored($event)" />
+
+          @switch (fileState()) {
+            @case ('uploading') {
+              <div class="file-progress">
+                <div class="file-progress-bar" [style.width.%]="fileProgress()"></div>
+              </div>
+              <p class="file-status">Uploading… {{ fileProgress() }}%</p>
+            }
+            @case ('processing') {
+              <p class="file-status">Scanning for malware…</p>
+            }
+            @case ('rejected') {
+              <p class="file-status file-status-error">{{ fileMessage() }}</p>
+            }
+            @case ('error') {
+              <p class="file-status file-status-error">{{ fileMessage() }}</p>
+            }
+          }
+        }
+      </div>
+      }
+    }
+
+    @case ('formula') {
+      <!-- U9 (D-604): computed by the server on every write — shown, never
+           edited, never sent (the control is disabled). -->
+      <div class="formula-field">
+        <output [id]="field().name" class="xf-input formula-value"
+                [attr.aria-describedby]="field().name + '-formula-hint'">{{ formulaDisplay() }}</output>
+        <p class="file-hint" [id]="field().name + '-formula-hint'">
+          {{ 'fieldInput.formulaHint' | translate: { expression: formulaExpression() } }}
+        </p>
+      </div>
+    }
+
+    @case ('rich_text') {
+      <!-- U9 (D-605): sanitized server-side on every write; the editor
+           renders the stored value through Angular's sanitizer. -->
+      <xrm-rich-text-editor [fieldName]="field().name"
+                            [label]="field().display_name || field().name" />
+      @if (showRequiredError()) {
+        <p class="field-error" role="alert">{{ field().display_name || field().name }} is required.</p>
+      }
+    }
+
+    @case ('image') {
+      <!-- U9: a file field limited to images (the server refuses any other
+           content type); the shared image picker shows the thumbnail. -->
+      <xrm-image-upload [fieldName]="field().name"
+                        [entityName]="entityName()" [recordId]="recordId()"
+                        [label]="field().display_name || field().name" />
+    }
+
+    @default {
+      <input [id]="field().name" type="text"
+             [formControlName]="field().name" />
+    }
+  }
+  }
+
+  @if (requiredLocked()) {
+    <p class="field-error" role="alert">
+      <i class="las la-lock" aria-hidden="true"></i>
+      {{ 'fieldPolicy.requiredLocked' | translate: { field: field().display_name || field().name, rule: lock()?.ruleName ?? '' } }}
+    </p>
+  }
+  @if (serverError(); as message) {
+    <p class="field-error" role="alert" data-testid="field-server-error">{{ message }}</p>
+  }
+  @for (m of ruleMessages(); track $index) {
+    <p class="xf-rule-message" [class.xf-rule-message-warning]="m.severity === 'warning'" role="status">
+      <i class="las" [class.la-exclamation-circle]="m.severity === 'error'"
+         [class.la-exclamation-triangle]="m.severity === 'warning'" aria-hidden="true"></i>
+      {{ m.message }}
+    </p>
+  }
+</div>
+}

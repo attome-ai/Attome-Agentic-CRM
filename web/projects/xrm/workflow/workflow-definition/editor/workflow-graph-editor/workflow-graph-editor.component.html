@@ -1,0 +1,260 @@
+@if (loading()) {
+  <p class="state-msg">Loading graph…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (version()) {
+
+  <div class="breadcrumb">
+    <a [routerLink]="workflowFormRoute"
+       [queryParams]="{ id: definitionId() }">&larr; Workflow</a>
+    &rsaquo; v{{ version()!.version_number }} graph
+  </div>
+
+  <div class="toolbar">
+    <div class="status-row">
+      <span class="badge">{{ version()!.status }}</span>
+      @if (dirty()) { <span class="warn-msg">unsaved changes</span> }
+    </div>
+    <div class="btn-row-inline">
+      @if (readonly()) {
+        <span class="hint">Published/deprecated versions are read-only — create a new draft to edit.</span>
+      } @else {
+        <button class="btn-ghost" (click)="addNodeAt('trigger')" [disabled]="saving()">Add Trigger</button>
+        <button class="btn-primary" (click)="save()" [disabled]="saving() || !dirty()">
+          {{ saving() ? 'Saving…' : 'Save Draft' }}
+        </button>
+        <button class="btn-primary" (click)="publish()" [disabled]="publishing() || dirty()">
+          {{ publishing() ? 'Publishing…' : 'Publish' }}
+        </button>
+        <button class="btn-ghost" (click)="simulate()" [disabled]="simulating() || dirty()"
+                title="Dry-run the saved graph — no record is written, no notification/webhook/approval is real">
+          {{ simulating() ? 'Testing…' : 'Test' }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (saveError()) { <div class="validation-errors">{{ saveError() }}</div> }
+  @if (simulateError()) { <div class="validation-errors">{{ simulateError() }}</div> }
+
+  @if (simulateResult(); as result) {
+    <div class="simulate-panel">
+      <div class="simulate-panel-header">
+        <h4>Test run: <span class="badge">{{ result.status }}</span></h4>
+        <button type="button" class="btn-ghost" (click)="closeSimulateResult()">Close</button>
+      </div>
+      <p class="hint">Dry run only — no record was written, no webhook was sent, no notification was queued, and no approval was filed.</p>
+      <table class="simulate-trace">
+        <thead>
+          <tr>
+            <th>Node</th><th>Type</th><th>Status</th><th>Port</th><th>Would have</th><th>Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of result.trace; track t.node_id) {
+            <tr [class.trace-failed]="t.status === 'failed'">
+              <td>{{ t.node_id }}</td>
+              <td>{{ specOf(t.node_type)?.label ?? t.node_type }}</td>
+              <td>{{ t.status }}</td>
+              <td>{{ t.taken_port ?? '—' }}</td>
+              <td>{{ t.would_have ?? '—' }}</td>
+              <td class="error-msg">{{ t.error ?? '' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <div class="editor-shell">
+    <div class="canvas-wrap" #canvasWrap (wheel)="onCanvasWheel($event)">
+      <div class="canvas" #canvas [class.wiring]="pendingEdge() !== null"
+           [class.panning]="panning()"
+           [style.transform]="'translate(' + panX() + 'px, ' + panY() + 'px)'"
+           (dblclick)="openCanvasMenu($event)" (mousedown)="onCanvasMouseDown($event)">
+        <svg class="edge-layer">
+          @for (e of graph().edges; track edgeKey(e); let i = $index) {
+            <path class="edge-line" [attr.d]="edgePath(e)"
+                  style="pointer-events: stroke; cursor: pointer;"
+                  (click)="!readonly() && removeEdge(i)">
+            </path>
+          }
+          @if (pendingEdge(); as p) {
+            <path class="edge-line pending" [attr.d]="pendingPath(p)"></path>
+          }
+        </svg>
+
+        @for (n of graph().nodes; track n.id; let i = $index) {
+          <div class="node" [class.selected]="selectedNodeId() === n.id"
+               [style.left.px]="n.ports.x" [style.top.px]="n.ports.y"
+               (mousedown)="startDrag($event, n)" (click)="select(n.id)"
+               role="button" tabindex="0" (keydown.enter)="select(n.id)" (keydown.space)="$event.preventDefault(); select(n.id)">
+            <span class="node-number">#{{ i + 1 }}</span>
+            <div class="node-header">
+              <span class="node-title">{{ specOf(n.type)?.label ?? n.type }}</span>
+              <span class="node-type-tag">{{ n.type }}</span>
+            </div>
+            <div class="port-row">
+              <div class="port-col">
+                @for (p of specOf(n.type)?.inputs ?? []; track p.name) {
+                  <div class="port">
+                    <span class="port-dot" [class.required]="p.required"
+                          [class.wired]="isWired(n.id, p.name, true)"
+                          [class.drop-target]="isDropTarget(n.id, p.name, true)"
+                          [class.wire-anchor]="isWireAnchor(n.id, p.name, true)"
+                          (mousedown)="onPortMouseDown($event, n.id, p.name, true)"
+                          (mouseup)="onPortMouseUp($event, n.id, p.name, true)"
+                          role="button" tabindex="0" [attr.aria-label]="'input port ' + p.name"
+                          (keydown.enter)="onPortActivate(n.id, p.name, true)" (keydown.space)="$event.preventDefault(); onPortActivate(n.id, p.name, true)"></span>
+                    {{ p.name }}
+                  </div>
+                }
+              </div>
+              <div class="port-col">
+                @for (p of specOf(n.type)?.outputs ?? []; track p.name) {
+                  <div class="port output">
+                    {{ p.name }}
+                    <span class="port-dot"
+                          [class.wired]="isWired(n.id, p.name, false)"
+                          [class.drop-target]="isDropTarget(n.id, p.name, false)"
+                          [class.wire-anchor]="isWireAnchor(n.id, p.name, false)"
+                          (mousedown)="onPortMouseDown($event, n.id, p.name, false)"
+                          (mouseup)="onPortMouseUp($event, n.id, p.name, false)"
+                          role="button" tabindex="0" [attr.aria-label]="'output port ' + p.name"
+                          (keydown.enter)="onPortActivate(n.id, p.name, false)" (keydown.space)="$event.preventDefault(); onPortActivate(n.id, p.name, false)"></span>
+                    @if (selectedNodeId() === n.id && !readonly()) {
+                      <button type="button" class="port-add"
+                              [title]="'Add a node connected to ' + p.name"
+                              [attr.aria-label]="'add a node connected to output ' + p.name"
+                              (mousedown)="$event.stopPropagation()"
+                              (click)="openOutputMenu($event, n.id, p.name)">+</button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (typeMenu(); as m) {
+          <div class="type-menu" [style.left.px]="m.x" [style.top.px]="m.y"
+               (mousedown)="$event.stopPropagation()" (dblclick)="$event.stopPropagation()">
+            <input #menuSearch type="text" class="type-menu-search"
+                   [placeholder]="(m.source ? 'workflowGraph.connectTo' : 'workflowGraph.addNode') | translate"
+                   [attr.aria-label]="'workflowGraph.filterNodeTypes' | translate"
+                   [ngModel]="menuFilter()" [ngModelOptions]="{ standalone: true }"
+                   (ngModelChange)="menuFilter.set($event)" />
+            @for (t of menuOptions(); track t.type) {
+              <button type="button" class="type-menu-item" (click)="chooseType(t.type)">{{ t.label }}</button>
+            }
+            @if (menuOptions().length === 0) {
+              <p class="type-menu-empty">
+                {{ (m.source ? 'workflowGraph.noTypeForOutput' : 'workflowGraph.noMatchingType') | translate }}
+              </p>
+            }
+          </div>
+        }
+
+        @if (graph().nodes.length === 0 && !readonly()) {
+          <p class="canvas-empty">{{ 'workflowGraph.canvasEmpty' | translate }}</p>
+        }
+      </div>
+    </div>
+
+    <div class="inspector">
+      @if (selectedNode(); as n) {
+        <h4><span class="node-number inline">#{{ nodeNumber(n.id) }}</span> {{ specOf(n.type)?.label ?? n.type }}</h4>
+        <!-- The id is off the node itself now, but publish errors name it,
+             so the inspector keeps it where it can be read and copied. -->
+        <p class="hint node-ref">{{ n.id }}</p>
+
+        @for (f of visibleConfigFields(); track f.key) {
+          <div class="cfg-field">
+            <label [for]="'cfg-' + f.key">
+              {{ f.label }}
+              @if (f.required) { <span class="cfg-required">required</span> }
+            </label>
+
+            @switch (f.kind) {
+              @case ('select') {
+                <select [id]="'cfg-' + f.key" [disabled]="readonly()"
+                        [ngModel]="stringValue(f)" [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="setConfig(f.key, $event)">
+                  @for (o of f.options ?? []; track o.value) {
+                    <option [value]="o.value">{{ o.label }}</option>
+                  }
+                </select>
+              }
+              @case ('bool') {
+                <input type="checkbox" [id]="'cfg-' + f.key" [disabled]="readonly()"
+                       [ngModel]="boolValue(f)" [ngModelOptions]="{ standalone: true }"
+                       (ngModelChange)="setConfig(f.key, $event === true ? true : undefined)" />
+              }
+              @case ('number') {
+                <input type="number" [id]="'cfg-' + f.key" [disabled]="readonly()"
+                       [placeholder]="placeholderFor(f)"
+                       [ngModel]="numberValue(f)" [ngModelOptions]="{ standalone: true }"
+                       (ngModelChange)="setConfig(f.key, $event === null || $event === '' ? undefined : $event)" />
+              }
+              @case ('textarea') {
+                <textarea [id]="'cfg-' + f.key" class="cfg-textarea" [disabled]="readonly()"
+                          [ngModel]="stringValue(f)" [ngModelOptions]="{ standalone: true }"
+                          (ngModelChange)="setConfig(f.key, $event === '' ? undefined : $event)"></textarea>
+              }
+              @case ('json') {
+                <textarea [id]="'cfg-' + f.key" class="cfg-textarea cfg-json" [disabled]="readonly()"
+                          [ngModel]="jsonBuffer(f.key)" [ngModelOptions]="{ standalone: true }"
+                          (ngModelChange)="setJsonBuffer(f.key, $event)"
+                          (blur)="applyJsonField(f.key)"></textarea>
+                @if (jsonError()[f.key]; as msg) { <p class="error-msg">{{ msg }}</p> }
+              }
+              @default {
+                <!-- text / entity / workflow: entity and workflow add a
+                     datalist of real logical names; both stay free-text so
+                     a name the picker could not load is still typeable. -->
+                <input type="text" [id]="'cfg-' + f.key" [disabled]="readonly()"
+                       [attr.list]="datalistFor(f)" [placeholder]="placeholderFor(f)"
+                       [ngModel]="stringValue(f)" [ngModelOptions]="{ standalone: true }"
+                       (ngModelChange)="setConfig(f.key, $event === '' ? undefined : $event)" />
+              }
+            }
+
+            @if (f.hint) { <p class="cfg-hint">{{ f.hint }}</p> }
+            @if (isMissingRequired(f)) {
+              <p class="error-msg">Required — the node fails at run time without it.</p>
+            }
+          </div>
+        }
+
+        @if (visibleConfigFields().length === 0) {
+          <p class="cfg-hint">This node type takes no configuration.</p>
+        }
+
+        @if (extraConfigKeys().length > 0) {
+          <p class="cfg-hint cfg-extra">
+            {{ 'workflowGraph.alsoSet' | translate }}
+            {{ extraConfigKeys().join(', ') }}. {{ 'workflowGraph.keptAsIs' | translate }}
+          </p>
+        }
+
+      } @else {
+        <p class="inspector-empty">
+          {{ 'workflowGraph.inspectorEmptyAddBefore' | translate }}
+          <strong>+</strong>
+          {{ 'workflowGraph.inspectorEmptyAddAfter' | translate }}
+        </p>
+        <p class="inspector-empty">
+          {{ 'workflowGraph.inspectorEmptyWire' | translate }}
+        </p>
+        <p class="inspector-empty">{{ 'workflowGraph.inspectorEmptyPan' | translate }}</p>
+      }
+    </div>
+  </div>
+
+  <datalist id="wf-entity-names">
+    @for (e of entityNames(); track e) { <option [value]="e"></option> }
+  </datalist>
+  <datalist id="wf-workflow-names">
+    @for (w of workflowNames(); track w) { <option [value]="w"></option> }
+  </datalist>
+}

@@ -1,0 +1,60 @@
+<div class="rx-panel">
+  <div class="rx-controls">
+    <label class="rx-control">
+      Direction
+      <select [(ngModel)]="direction" (ngModelChange)="explore()">
+        <option value="both">Both</option>
+        <option value="outbound">Outbound</option>
+        <option value="inbound">Inbound</option>
+      </select>
+    </label>
+    <label class="rx-control">
+      Depth
+      <select [(ngModel)]="maxDepth" (ngModelChange)="explore()">
+        <option [value]="1">1</option>
+        <option [value]="2">2</option>
+        <option [value]="3">3</option>
+        <option [value]="4">4</option>
+      </select>
+    </label>
+    <button type="button" class="rx-refresh" [disabled]="loading()" (click)="explore()">
+      <i class="las la-sync" [class.rx-spin]="loading()"></i>
+      Refresh
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="rx-loading">
+      <i class="las la-circle-notch rx-spin"></i>
+      Exploring relationships…
+    </div>
+  } @else if (errorMessage()) {
+    <div class="rx-error">
+      <i class="las la-exclamation-circle"></i>
+      {{ errorMessage() }}
+    </div>
+  } @else if (edges().length === 0) {
+    <p class="rx-hint">No connected records found within the current depth and direction.</p>
+  } @else {
+    @if (truncated()) {
+      <div class="rx-truncated" role="status">
+        <i class="las la-exclamation-triangle"></i>
+        This graph was truncated by a bound (depth, fan-out, or the overall node cap) — narrow the direction or depth to see a more complete picture.
+      </div>
+    }
+    <p class="rx-summary">{{ nodeCount() }} connected record(s), {{ edges().length }} relationship(s)</p>
+    <ul class="rx-edge-list">
+      @for (edge of edges(); track edge.key) {
+        <li class="rx-edge-item">
+          <span class="rx-edge-badge">{{ edgeSourceLabel(edge.edge_type) }}</span>
+          <span class="rx-edge-field">{{ edgeFieldLabel(edge.edge_type) }}</span>
+          <i class="las la-long-arrow-alt-right rx-edge-arrow" aria-hidden="true"></i>
+          <button type="button" class="rx-edge-target" (click)="openNode(otherNode(edge))">
+            {{ otherNode(edge).entity }}
+            <span class="rx-edge-target-id">{{ otherNode(edge).id }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</div>

@@ -1,0 +1,48 @@
+<button class="icon-btn" (click)="toggle()"
+        [class.active]="isOpen()" [title]="'shell.notifications' | translate">
+  <i class="las la-bell"></i>
+  @if (unreadCount() > 0) {
+    <span class="icon-badge">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
+    <span class="icon-pulse"></span>
+  }
+</button>
+
+<div class="hdr-panel notif-panel" [class.open]="isOpen()">
+  <div class="panel-header">
+    <span class="panel-title">{{ 'shell.notifications' | translate }}</span>
+    @if (notifications().length > 0) {
+      <button class="panel-action" (click)="clearAll()">{{ 'shell.clearAll' | translate }}</button>
+    }
+  </div>
+  <div class="notif-list">
+    @if (notifications().length === 0) {
+      <div class="panel-empty">
+        <i class="las la-bell-slash panel-empty-icon"></i>
+        <p>{{ 'shell.caughtUp' | translate }}</p>
+        <small>{{ 'shell.noNotifications' | translate }}</small>
+      </div>
+    } @else {
+      @for (n of notifications(); track n.id) {
+        <div class="notif-item" [class.unread]="!n.isRead" role="button" tabindex="0"
+             (click)="onNotifClick(n)" (keydown)="onNotifKeydown($event, n)">
+          <div class="notif-icon-bubble"
+               [style.color]="notifIconColor(n.type)"
+               [style.background]="notifIconBg(n.type)">
+            <i [class]="notifIcon(n.type)"></i>
+          </div>
+          <div class="notif-content">
+            <strong class="notif-title">{{ n.title }}</strong>
+            <p class="notif-msg">{{ n.message }}</p>
+            <time class="notif-time">{{ formatTime(n.timestamp) }}</time>
+          </div>
+          @if (!n.isRead) {
+            <button class="notif-mark-btn" [title]="'shell.markAsRead' | translate"
+                    (click)="markRead(n.id, $event)">
+              <i class="las la-check"></i>
+            </button>
+          }
+        </div>
+      }
+    }
+  </div>
+</div>

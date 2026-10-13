@@ -1,0 +1,462 @@
+<div class="xf-page">
+  <div class="xf-header">
+    <div>
+      <div class="xf-breadcrumb">
+        <span class="xf-breadcrumb-link" role="link" tabindex="0"
+              (click)="back()" (keydown.enter)="back()"
+              (keydown.space)="back(); $event.preventDefault()">{{ 'xrmForm.entities.role' | translate }}</span>
+        <span class="xf-breadcrumb-sep">›</span>
+        <span>{{ (isEdit() ? 'roleForm.editRole' : 'roleForm.newRole') | translate }}</span>
+      </div>
+      <h1 class="xf-title">{{ isEdit() ? (role()?.name || ('roleForm.editRole' | translate)) : ('roleForm.newRole' | translate) }}</h1>
+      @if (isEdit()) { <xrm-owner-layer-badge [layer]="role()?.owner_layer" variant="full" /> }
+    </div>
+    <div class="xf-actions">
+      <button type="button" class="xf-btn xf-btn-secondary" (click)="back()">{{ 'xrmForm.back' | translate }}</button>
+      <button type="button" class="xf-btn xf-btn-primary" (click)="saveGeneral()" [disabled]="savingGeneral()">
+        {{ (savingGeneral() ? 'xrmForm.saving' : (isEdit() ? 'xrmForm.save' : 'roleForm.createRole')) | translate }}
+      </button>
+    </div>
+  </div>
+
+  <div class="xf-body">
+    @if (loadError()) {
+      <div class="xf-error-banner"><i class="las la-exclamation-circle"></i> {{ loadError() }}</div>
+    }
+
+    <div class="xf-tabs" role="tablist" [attr.aria-label]="'xrmForm.sections' | translate: { name: ('xrmForm.entity.role' | translate) }">
+      @for (tab of tabs; track tab.id) {
+        <button type="button" class="xf-tab" role="tab"
+                [id]="'role-tab-' + tab.id"
+                [attr.aria-selected]="activeTab() === tab.id"
+                [attr.aria-controls]="'role-panel-' + tab.id"
+                [tabIndex]="activeTab() === tab.id ? 0 : -1"
+                [class.xf-tab-active]="activeTab() === tab.id"
+                [disabled]="!isEdit() && tab.id !== 'general'"
+                (click)="selectTab(tab.id)" (keydown)="onTabKeydown($event)">
+          <i [class]="tab.icon" aria-hidden="true"></i>
+          {{ tab.label }}
+        </button>
+      }
+    </div>
+
+    <!-- ── General ──────────────────────────────────────────────────── -->
+    <div id="role-panel-general" class="xf-tab-panel" role="tabpanel"
+         aria-labelledby="role-tab-general" [hidden]="activeTab() !== 'general'">
+      <div class="card role-general-card">
+        <div class="form-row-1">
+          <div class="field">
+            <label for="role-name">Name</label>
+            <input id="role-name" [(ngModel)]="editName" [placeholder]="'roleForm.namePlaceholder' | translate" autocomplete="off">
+          </div>
+        </div>
+        <div class="form-row-1">
+          <div class="field">
+            <label for="role-description">Description <span class="hint">(optional)</span></label>
+            <input id="role-description" [(ngModel)]="editDescription" autocomplete="off">
+          </div>
+        </div>
+        <div class="form-row-1">
+          <label class="checkbox-row">
+            <input type="checkbox" [(ngModel)]="editPositionHierarchy" [disabled]="!isEdit()"
+                   (change)="savePositionHierarchy()">
+            {{ 'roleForm.positionHierarchy' | translate }}
+          </label>
+          @if (!isEdit()) {
+            <p class="xf-helper">Save the role first to configure position hierarchy.</p>
+          }
+        </div>
+        @if (generalError()) { <p class="error-msg">{{ generalError() }}</p> }
+      </div>
+    </div>
+
+    <!-- ── Privilege Grants ─────────────────────────────────────────── -->
+    <div id="role-panel-grants" class="xf-tab-panel" role="tabpanel"
+         aria-labelledby="role-tab-grants" [hidden]="activeTab() !== 'grants'">
+      <div class="card pg-header-card">
+        <div class="pg-header-row">
+          <div>
+            <h2 class="card-title-lg">Privileges by Entity</h2>
+            <p class="state-msg" style="padding:0">No assumption that an entity only has Read / Create / Update / Delete.</p>
+          </div>
+          <div class="btn-row" style="margin-top:0">
+            <button type="button" class="btn-sm" (click)="expandAll()">Expand all</button>
+            <button type="button" class="btn-sm" (click)="collapseAll()">Collapse all</button>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <input type="search" class="search" [placeholder]="'roleForm.searchPlaceholder' | translate"
+                 [(ngModel)]="entitySearch">
+          <select class="pg-category-select" [(ngModel)]="verbFilter">
+            <option value="">All privileges</option>
+            @for (v of allVerbs(); track v) { <option [value]="v">{{ verbLabel(v) }}</option> }
+          </select>
+          <select class="pg-category-select" [(ngModel)]="entityFilter">
+            <option value="">All entities</option>
+            @for (e of entities(); track e.logicalname) { <option [value]="e.logicalname">{{ e.name }}</option> }
+          </select>
+        </div>
+        <div class="pg-legend">
+          <span class="pg-legend-item"><span class="pg-dot pg-dot-granted"></span> Granted</span>
+          <span class="pg-legend-item"><span class="pg-dot pg-dot-conditional"></span> Conditional</span>
+        </div>
+      </div>
+
+      @if (hasPendingGrantChanges()) {
+        <div class="card pg-pending-bar">
+          <span class="cell-muted">
+            {{ pendingGrantChangeCount() }} unsaved change{{ pendingGrantChangeCount() === 1 ? '' : 's' }}
+          </span>
+          <div class="btn-row" style="margin-top:0">
+            @if (grantsSaveError()) { <span class="error-msg">{{ grantsSaveError() }}</span> }
+            <button type="button" class="btn-ghost" (click)="discardGrantChanges()" [disabled]="savingGrants()">
+              {{ 'roleForm.discard' | translate }}
+            </button>
+            <button type="button" class="btn-primary" (click)="saveGrantChanges()" [disabled]="savingGrants()">
+              {{ (savingGrants() ? 'xrmForm.saving' : 'roleForm.saveChanges') | translate }}
+            </button>
+          </div>
+        </div>
+      }
+
+      @if (grantsLoading()) {
+        <p class="state-msg">Loading privilege grants…</p>
+      } @else {
+        @if (systemPrivileges().length > 0) {
+          <div class="pg-entity-card">
+            <div class="pg-entity-header" role="button" tabindex="0"
+                 (click)="toggleExpanded('__system__')" (keydown.enter)="toggleExpanded('__system__')">
+              <i class="las la-chevron-down pg-chevron" [class.pg-chevron-collapsed]="!isExpanded('__system__')"></i>
+              <span class="pg-entity-avatar pg-entity-avatar-system">S</span>
+              <div class="pg-entity-title">
+                <strong>System</strong>
+                <span class="cell-muted">Privileges not tied to a specific entity</span>
+              </div>
+              <span class="cell-muted">{{ systemGrantedCount() }} / {{ systemPrivileges().length }} granted</span>
+            </div>
+            @if (isExpanded('__system__')) {
+              <div class="table-wrap">
+                <table class="pg-matrix">
+                  <thead>
+                    <tr><th>Privilege</th><th>Grant</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (row of systemPrivileges(); track row.privilege.id) {
+                      <tr>
+                        <td>
+                          <label class="checkbox-row">
+                            <input type="checkbox" [checked]="isGranted(row)"
+                                   [disabled]="savingGrants()"
+                                   (change)="toggleGrant(row)">
+                            {{ row.label }}
+                          </label>
+                          <span class="cell-mono cell-muted">{{ row.privilege.key }}</span>
+                        </td>
+                        <td>
+                          <span class="pg-status" [class.pg-status-granted]="grantStatus(row) === 'granted'"
+                                [class.pg-status-none]="grantStatus(row) === 'none'">
+                            {{ grantStatus(row) === 'granted' ? 'Direct grant' : 'Not granted' }}
+                          </span>
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            }
+          </div>
+        }
+
+        @for (group of filteredGroups(); track group.entity.id) {
+          <div class="pg-entity-card">
+            <div class="pg-entity-header" role="button" tabindex="0"
+                 (click)="toggleExpanded(group.entity.id)" (keydown.enter)="toggleExpanded(group.entity.id)">
+              <i class="las la-chevron-down pg-chevron" [class.pg-chevron-collapsed]="!isExpanded(group.entity.id)"></i>
+              <span class="pg-entity-avatar">{{ group.entity.name.charAt(0) }}</span>
+              <div class="pg-entity-title">
+                <strong>{{ group.entity.name }}</strong>
+                <span class="cell-muted">{{ group.entity.category || 'Uncategorized' }} · {{ group.entity.logicalname }}</span>
+              </div>
+              <span class="cell-muted">{{ group.grantedCount }} / {{ group.rows.length }} granted</span>
+            </div>
+            @if (isExpanded(group.entity.id)) {
+              <div class="table-wrap">
+                <table class="pg-matrix">
+                  <thead>
+                    <tr><th>Privilege</th><th>Scope</th><th>Condition</th><th>Grant</th></tr>
+                  </thead>
+                  <tbody>
+                    @for (row of group.rows; track row.privilege.id) {
+                      <tr>
+                        <td>
+                          <label class="checkbox-row">
+                            <input type="checkbox" [checked]="isGranted(row)"
+                                   [disabled]="savingGrants()"
+                                   (change)="toggleGrant(row)">
+                            {{ verbLabel(row.verb) }} {{ group.entity.name }}
+                          </label>
+                          <span class="cell-mono cell-muted">{{ row.privilege.key }}</span>
+                        </td>
+                        <td>
+                          @if (row.scopeColumn; as col) {
+                            <select [ngModel]="scopeLabel(group, col)" [disabled]="savingGrants()"
+                                    (ngModelChange)="updateScope(group, col, $event)">
+                              @for (l of accessLevels; track l.value) {
+                                <option [ngValue]="l.value">{{ l.label | translate }}</option>
+                              }
+                            </select>
+                          } @else {
+                            <span class="cell-muted">—</span>
+                          }
+                        </td>
+                        <td>
+                          @if (row.scopeColumn && row.grant; as g) {
+                            <button type="button" class="btn-sm pg-condition-btn"
+                                    [class.pg-condition-btn-active]="grantStatus(row) === 'conditional'"
+                                    (click)="toggleConditions(row.grant)">
+                              @if (conditionState(row.grant.id); as st) {
+                                {{ st.items.length }} condition{{ st.items.length === 1 ? '' : 's' }}
+                              } @else if (row.grant.condition_count > 0) {
+                                {{ row.grant.condition_count }} condition{{ row.grant.condition_count === 1 ? '' : 's' }}
+                              } @else {
+                                + Condition
+                              }
+                            </button>
+                          } @else {
+                            <span class="cell-muted">—</span>
+                          }
+                        </td>
+                        <td>
+                          <span class="pg-status"
+                                [class.pg-status-granted]="grantStatus(row) === 'granted'"
+                                [class.pg-status-conditional]="grantStatus(row) === 'conditional'"
+                                [class.pg-status-none]="grantStatus(row) === 'none'">
+                            {{ grantStatus(row) === 'conditional' ? 'Conditional'
+                               : grantStatus(row) === 'granted' ? 'Direct grant' : 'Not granted' }}
+                          </span>
+                        </td>
+                      </tr>
+                      @if (row.grant; as g) {
+                        @if (conditionState(g.id); as st) {
+                          @if (expandedGrantId() === g.id) {
+                            <tr>
+                              <td colspan="4">
+                                <div class="pg-conditions-panel">
+                                  <div class="pg-conditions-header">
+                                    <strong>{{ verbLabel(row.verb) }} {{ group.entity.name }} · Grant Conditions</strong>
+                                    <span class="cell-muted">{{ st.items.length }} / 3</span>
+                                  </div>
+                                  @if (st.loading) {
+                                    <p class="state-msg">Loading…</p>
+                                  } @else {
+                                    @for (c of st.items; track c.id) {
+                                      <div class="pg-condition-row">
+                                        <span class="cell-mono">{{ c.field_logicalname }}</span>
+                                        <span>{{ operatorLabel(c.operator) }}</span>
+                                        <span class="cell-mono">{{ formatValue(c.value) }}</span>
+                                        <button type="button" class="btn-sm btn-sm-danger"
+                                                (click)="deleteCondition(g, c)">
+                                          <i class="las la-times"></i>
+                                        </button>
+                                      </div>
+                                    }
+                                    @if (st.items.length < 3) {
+                                      <div class="pg-condition-row pg-condition-new">
+                                        <input [placeholder]="'roleForm.conditionFieldPlaceholder' | translate" [(ngModel)]="st.newField" class="cell-mono">
+                                        <select [(ngModel)]="st.newOperator">
+                                          @for (op of operators; track op.value) {
+                                            <option [ngValue]="op.value">{{ op.label | translate }}</option>
+                                          }
+                                        </select>
+                                        <input [placeholder]="'roleForm.conditionValuePlaceholder' | translate"
+                                               [(ngModel)]="st.newValue" class="cell-mono">
+                                        <button type="button" class="btn-sm" (click)="addCondition(g, st)">
+                                          <i class="las la-plus"></i> Add
+                                        </button>
+                                      </div>
+                                    }
+                                    @if (st.error) { <p class="error-msg">{{ st.error }}</p> }
+                                  }
+                                </div>
+                              </td>
+                            </tr>
+                          }
+                        }
+                      }
+                    }
+                  </tbody>
+                </table>
+                <div class="pg-entity-footer">
+                  <span class="cell-muted">{{ group.rows.length }} privileges · {{ group.grantedCount }} granted</span>
+                  <button type="button" class="btn-text" (click)="selectAllInEntity(group)">Select all in {{ group.entity.name }}</button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+
+    <!-- ── Record Access ────────────────────────────────────────────── -->
+    <div id="role-panel-access" class="xf-tab-panel" role="tabpanel"
+         aria-labelledby="role-tab-access" [hidden]="activeTab() !== 'access'">
+      <p class="xf-helper">
+        {{ 'roleForm.accessHelp' | translate }}
+      </p>
+      <div class="btn-row">
+        <button class="btn-primary" (click)="toggleAccessCreate()">
+          <i class="las la-plus"></i> Set Access Level
+        </button>
+      </div>
+      @if (showAccessCreate()) {
+        <div class="create-panel">
+          <div class="form-row-1">
+            <div class="field">
+              <label for="ra-entity">Entity</label>
+              <select id="ra-entity" [(ngModel)]="newAccessEntity">
+                <option value="" disabled>Select an entity…</option>
+                @for (e of entities(); track e.logicalname) {
+                  <option [value]="e.logicalname">{{ e.name }} ({{ e.logicalname }})</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="form-row-3">
+            <div class="field">
+              <label for="ra-read">Read depth</label>
+              <select id="ra-read" [(ngModel)]="newAccessRead">
+                @for (l of accessLevels; track l.value) { <option [ngValue]="l.value">{{ l.label | translate }}</option> }
+              </select>
+            </div>
+            <div class="field">
+              <label for="ra-write">Write depth</label>
+              <select id="ra-write" [(ngModel)]="newAccessWrite">
+                @for (l of accessLevels; track l.value) { <option [ngValue]="l.value">{{ l.label | translate }}</option> }
+              </select>
+            </div>
+            <div class="field">
+              <label for="ra-delete">Delete depth</label>
+              <select id="ra-delete" [(ngModel)]="newAccessDelete">
+                @for (l of accessLevels; track l.value) { <option [ngValue]="l.value">{{ l.label | translate }}</option> }
+              </select>
+            </div>
+          </div>
+          <div class="form-row-3">
+            <label class="checkbox-row">
+              <input type="checkbox" [(ngModel)]="newAccessReadOwnerVisible"> Owner-visible (read)
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" [(ngModel)]="newAccessWriteOwnerVisible"> Owner-visible (write)
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" [(ngModel)]="newAccessDeleteOwnerVisible"> Owner-visible (delete)
+            </label>
+          </div>
+          <p class="state-msg">
+            {{ 'roleForm.ownerVisibleHelp' | translate }}
+          </p>
+          @if (accessError()) { <p class="error-msg">{{ accessError() }}</p> }
+          <div class="btn-row">
+            <button class="btn-primary" (click)="createAccess()" [disabled]="savingAccess()">
+              {{ savingAccess() ? 'Saving…' : 'Save' }}
+            </button>
+            <button class="btn-ghost" (click)="toggleAccessCreate()">Cancel</button>
+          </div>
+        </div>
+      }
+      @if (accessGrants().length > 0) {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Entity</th><th>Read</th><th>Write</th><th>Delete</th>
+                <th>Owner-visible</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (g of accessGrants(); track g.id) {
+                <tr>
+                  <td class="cell-mono">{{ g.entity }}</td>
+                  <td>{{ levelLabel(g.read_access_level) }}</td>
+                  <td>{{ levelLabel(g.write_access_level) }}</td>
+                  <td>{{ levelLabel(g.delete_access_level) }}</td>
+                  <td class="cell-mono">
+                    {{ g.read_owner_visible ? 'R' : '' }}{{ g.write_owner_visible ? 'W' : '' }}{{ g.delete_owner_visible ? 'D' : '' }}
+                    @if (!g.read_owner_visible && !g.write_owner_visible && !g.delete_owner_visible) {
+                      <span class="cell-muted">—</span>
+                    }
+                  </td>
+                  <td class="actions">
+                    <button class="btn-sm btn-sm-danger" (click)="removeAccess(g)">
+                      <i class="las la-times"></i> Reset to Global
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    <!-- ── Assignments ──────────────────────────────────────────────── -->
+    <div id="role-panel-assignments" class="xf-tab-panel" role="tabpanel"
+         aria-labelledby="role-tab-assignments" [hidden]="activeTab() !== 'assignments'">
+      <div class="form-row-2">
+        <div class="field">
+          <label for="assign-email">Assign by email</label>
+          <input id="assign-email" [(ngModel)]="assignEmail" [placeholder]="'roleForm.assignEmailPlaceholder' | translate" autocomplete="off">
+        </div>
+        <div class="field" style="align-self:flex-end">
+          <button class="btn-primary" (click)="assignUser()" [disabled]="assigning()">
+            {{ assigning() ? 'Assigning…' : 'Assign' }}
+          </button>
+        </div>
+      </div>
+      @if (assignError()) { <p class="error-msg">{{ assignError() }}</p> }
+
+      @if (assignmentsLoading()) {
+        <p class="state-msg">Loading assignments…</p>
+      } @else if (roleUsers().length === 0) {
+        <div class="empty-state"><p>No users hold this role yet.</p></div>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Email</th><th>Granted</th><th></th></tr></thead>
+            <tbody>
+              @for (u of roleUsers(); track u.id) {
+                <tr>
+                  <td>{{ u.user_name || '—' }}</td>
+                  <td class="cell-muted">{{ u.email || '—' }}</td>
+                  <td class="cell-muted">{{ u.granted_on ? (u.granted_on | date:'medium') : '—' }}</td>
+                  <td class="actions">
+                    <button class="btn-sm btn-sm-danger" (click)="removeAssignment(u)">
+                      <i class="las la-user-times"></i> Remove
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    <!-- ── Notes ────────────────────────────────────────────────────── -->
+    <div id="role-panel-notes" class="xf-tab-panel" role="tabpanel"
+         aria-labelledby="role-tab-notes" [hidden]="activeTab() !== 'notes'">
+      <!-- Deliberately NOT <xrm-notes-panel>: that component lives in
+           '@attome/xrm/core/entity', tightly coupled to EntityService/
+           FileUploadService (imports them directly, not split out) —
+           importing it here would pull that whole ~150kB+ barrel into
+           this entry point's lazy chunk, which 'forms' already pays for
+           but 'security' doesn't, and check:chunks' D-314 budget (260kB
+           per lazy chunk) catches exactly this pattern. Decoupling
+           NotesPanelComponent from EntityService into its own light
+           sub-entry-point is the real fix; out of scope here. -->
+      <p class="state-msg">
+        {{ 'roleForm.notesPlaceholder' | translate }}
+      </p>
+    </div>
+  </div>
+</div>

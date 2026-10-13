@@ -1,0 +1,84 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'myApprovals.title' | translate }}</h2>
+    <p class="subtitle">{{ 'myApprovals.subtitle' | translate }}</p>
+  </div>
+  <button type="button" class="btn-ghost" (click)="load()" [disabled]="loading()" data-testid="my-approvals-refresh">
+    <i class="las la-sync" aria-hidden="true"></i> {{ 'myApprovals.refresh' | translate }}
+  </button>
+</div>
+
+<p class="ma-notice" role="status" data-testid="my-approvals-notice">{{ notice() }}</p>
+
+@if (loading()) {
+  <p class="state-msg">{{ 'myApprovals.loading' | translate }}</p>
+} @else if (loadError(); as message) {
+  <p class="error-msg" role="alert" data-testid="my-approvals-load-error">{{ message }}</p>
+} @else if (items().length === 0) {
+  <div class="ma-empty" data-testid="my-approvals-empty">
+    <i class="las la-user-check" aria-hidden="true"></i>
+    <p>{{ 'myApprovals.empty' | translate }}</p>
+  </div>
+} @else {
+  <ul class="ma-list" [attr.aria-label]="'myApprovals.title' | translate">
+    @for (item of items(); track item.record_id) {
+      <li class="ma-item" data-testid="my-approvals-item">
+        <div class="ma-main">
+          <span class="ma-title">{{ item.title }}</span>
+          <span class="ma-meta">
+            <span class="badge">{{ item.state }}</span>
+            @if (item.priority) {
+              <span>{{ 'myApprovals.priority' | translate: { priority: item.priority } }}</span>
+            }
+            @if (item.due_date) {
+              <span>{{ 'myApprovals.due' | translate: { date: (item.due_date | localDate: { dateStyle: 'medium', timeStyle: 'short' }) } }}</span>
+            }
+          </span>
+          @if (itemErrors()[item.record_id]; as message) {
+            <p class="error-msg" role="alert" data-testid="my-approvals-item-error">{{ message }}</p>
+          }
+          @if (canDecide(item) && (actionFor(item, 'approve') || actionFor(item, 'reject'))) {
+            <label class="ma-comment">
+              <span class="ma-comment-label">{{ 'myApprovals.comment' | translate }}</span>
+              <textarea rows="2" data-testid="my-approvals-comment"
+                        [attr.maxlength]="commentMax"
+                        [attr.aria-label]="'myApprovals.commentFor' | translate: { title: item.title }"
+                        [attr.aria-describedby]="'ma-comment-hint-' + item.record_id"
+                        [disabled]="busyId() !== null"
+                        [value]="comments()[item.record_id] ?? ''"
+                        (input)="setComment(item.record_id, $any($event.target).value)"></textarea>
+              <span class="ma-comment-hint" [id]="'ma-comment-hint-' + item.record_id">
+                {{ 'myApprovals.commentHint' | translate: { max: commentMax } }}
+              </span>
+            </label>
+          }
+        </div>
+        <div class="ma-actions">
+          @if (canDecide(item) && actionFor(item, 'approve')) {
+            <button type="button" class="btn-sm btn-sm-accent" data-testid="my-approvals-approve"
+                    [disabled]="busyId() !== null" (click)="decide(item, 'approve')"
+                    [attr.aria-label]="'myApprovals.approveItem' | translate: { title: item.title }">
+              <i class="las la-check" aria-hidden="true"></i> {{ 'myApprovals.approve' | translate }}
+            </button>
+          }
+          @if (canDecide(item) && actionFor(item, 'reject')) {
+            <button type="button" class="btn-sm btn-sm-danger" data-testid="my-approvals-reject"
+                    [disabled]="busyId() !== null" (click)="decide(item, 'reject')"
+                    [attr.aria-label]="'myApprovals.rejectItem' | translate: { title: item.title }">
+              <i class="las la-times" aria-hidden="true"></i> {{ 'myApprovals.reject' | translate }}
+            </button>
+          }
+          @if (busyId() === item.record_id) {
+            <i class="las la-circle-notch ma-spin" aria-hidden="true"></i>
+          }
+        </div>
+      </li>
+    }
+  </ul>
+  @if (nextCursor()) {
+    <button type="button" class="btn-ghost ma-more" (click)="loadMore()" [disabled]="loadingMore()"
+            data-testid="my-approvals-more">
+      {{ (loadingMore() ? 'myApprovals.loadingMore' : 'myApprovals.loadMore') | translate }}
+    </button>
+  }
+}

@@ -1,0 +1,80 @@
+:host {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity .15s, background .15s, border-color .15s;
+}
+.rm-btn:disabled { opacity: .4; cursor: not-allowed; }
+.rm-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent, #14b8a6) 40%, transparent);
+}
+.rm-btn i { font-size: 15px; }
+
+.rm-btn-primary { background: var(--color-accent, #14b8a6); color: #fff; }
+.rm-btn-primary:hover:not(:disabled) { opacity: .88; }
+
+.rm-btn-secondary {
+  background: transparent;
+  color: var(--color-text-secondary, #94a3b8);
+  border: 1px solid var(--color-border, #24324d);
+}
+.rm-btn-secondary:hover:not(:disabled) {
+  color: var(--color-text-primary, #e5eefc);
+  background: var(--color-bg-alt, #111c33);
+}
+
+.rm-notice { font-size: 12px; color: var(--color-text-secondary); }
+.rm-notice:empty { display: none; }
+
+.rm-panel {
+  position: absolute;
+  inset-block-start: calc(100% + 8px);
+  inset-inline-end: 0;
+  z-index: 20;
+  width: min(320px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--color-bg-alt, #111c33);
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+}
+
+.rm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.rm-field input,
+.rm-field textarea {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  color: var(--color-text-primary);
+  background: var(--color-bg, transparent);
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 6px;
+}
+
+.rm-error { margin: 0; font-size: 12px; color: var(--color-danger, #ef4444); }
+
+.rm-actions { display: flex; justify-content: flex-end; gap: 8px; }

@@ -1,0 +1,90 @@
+<ng-template #kindSwitcher>
+  @if (availableKinds().length > 1) {
+  <div class="view-kind-switcher" role="radiogroup" [attr.aria-label]="'entityViews.switcher.label' | translate">
+    @for (kind of availableKinds(); track kind) {
+    <button type="button" class="view-kind-option" role="radio"
+      [class.active]="kind === activeKind()"
+      [attr.aria-checked]="kind === activeKind()"
+      [attr.aria-label]="'entityViews.switcher.' + kind | translate"
+      [attr.title]="'entityViews.switcher.' + kind | translate"
+      (click)="selectKind(kind)">
+      <i [class]="kindIcon(kind)" aria-hidden="true"></i>
+    </button>
+    }
+  </div>
+  }
+</ng-template>
+
+@if (views() === null) {
+  @if (showViewsLoading()) {
+<div class="view-page-loading" role="status">
+  <i class="las la-circle-notch la-spin" aria-hidden="true"></i>
+  <span>{{ 'entityViews.switcher.loading' | translate }}</span>
+</div>
+  }
+} @else {
+  @switch (activeKind()) {
+    @case ('list') {
+    <attome-metadata-list
+      [entityName]="name()"
+      [allowCreate]="true"
+      [viewKindFilter]="listPickerKinds"
+      (newClick)="onCreate()"
+      (editClick)="onEdit($event)"
+    >
+      <div xrmListToolbarStart class="view-kind-slot">
+        <ng-container [ngTemplateOutlet]="kindSwitcher" />
+      </div>
+    </attome-metadata-list>
+    }
+    @default {
+    <div class="view-page">
+      <div class="view-page-toolbar">
+        <div class="view-page-toolbar-start">
+          <ng-container [ngTemplateOutlet]="kindSwitcher" />
+          @if (kindViews().length > 1) {
+          <label class="view-page-select">
+            <span class="sr-only">{{ 'entityViews.switcher.view' | translate }}</span>
+            <select [value]="selectedView()?.id ?? ''" (change)="selectView($any($event.target).value)">
+              @for (view of kindViews(); track view.id) {
+              <option [value]="view.id" [selected]="view.id === selectedView()?.id">{{ view.name }}</option>
+              }
+            </select>
+          </label>
+          } @else if (selectedView(); as view) {
+          <span class="view-page-name"><i [class]="view.icon || kindIcon(activeKind())" aria-hidden="true"></i>{{ view.name }}</span>
+          }
+        </div>
+        <button type="button" class="view-page-new" (click)="onCreate()">
+          <i class="las la-plus" aria-hidden="true"></i> {{ 'entityViews.switcher.new' | translate }}
+        </button>
+      </div>
+      @switch (activeKind()) {
+        @case ('kanban') {
+        <xrm-kanban-board [entityName]="name()" [viewId]="selectedView()?.id ?? null" (cardClick)="onEditId($event)" />
+        }
+        @case ('calendar') {
+        <xrm-calendar-view [entityName]="name()" [viewId]="selectedView()?.id ?? null" (recordClick)="onEditId($event)" />
+        }
+        @case ('timeline') {
+        <xrm-timeline-view [entityName]="name()" [viewId]="selectedView()?.id ?? null" (recordClick)="onEditId($event)" />
+        }
+        @case ('chart') {
+          @if (chartViewComponent(); as chartView) {
+            @if (selectedView(); as view) {
+            <ng-container *ngComponentOutlet="chartView; inputs: { view: view }" />
+            }
+          } @else if (chartLoadFailed()) {
+          <div class="view-page-loading" role="alert">{{ 'entityViews.chart.loadFailed' | translate }}</div>
+          } @else {
+          <div class="view-page-loading" role="status">
+            <i class="las la-circle-notch la-spin" aria-hidden="true"></i>
+            <span>{{ 'entityViews.chart.loading' | translate }}</span>
+          </div>
+          }
+        }
+      }
+    </div>
+    }
+  }
+}

@@ -1,0 +1,47 @@
+.xd-row-selected td {
+  background: var(--color-surface-selected, rgba(59, 130, 246, 0.08));
+}
+
+.xd-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.xd-add-row .xf-input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.xd-add-row .xf-select-wrap {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.xf-btn.xd-danger {
+  color: var(--color-danger, #ef4444);
+  border-color: var(--color-danger, #ef4444);
+}
+
+/* Sits inline in the (22px, bold) .xf-title text — the badge's own line-height
+   leaves it sunk below the title's baseline without this. */
+.xd-title-badge {
+  margin-inline-start: 10px;
+  vertical-align: middle;
+}
+
+.xd-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 6px;
+}
+
+.xd-tag-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}

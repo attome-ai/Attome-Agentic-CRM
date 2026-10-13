@@ -1,0 +1,108 @@
+<section class="page">
+  <header>
+    <div>
+      <h1>Sidebar Manager</h1>
+      <p>Arrange navigation and control visibility with privilege assignments.</p>
+    </div>
+    <button class="primary" (click)="startCreate()"><i class="las la-plus"></i> New item</button>
+  </header>
+
+  @if (message()) { <div class="notice">{{ message() }}</div> }
+  @if (error()) { <div class="notice error">{{ error() }}</div> }
+
+  <div class="workspace">
+    <div class="list-panel">
+      <div class="toolbar">
+        <input [(ngModel)]="search" placeholder="Filter sidebar items…" autocomplete="off">
+        <span>{{ filtered().length }} items</span>
+      </div>
+      @if (loading()) {
+        <div class="empty">Loading sidebar…</div>
+      } @else {
+        @for (item of filtered(); track item.id) {
+          <button class="item" [class.selected]="selectedId() === item.id"
+                  [class.inactive]="!item.is_active" (click)="select(item)">
+            <span class="item-icon" [style.color]="item.color || '#94a3b8'">
+              <i [class]="item.icon || 'las la-circle'"></i>
+            </span>
+            <span class="item-copy">
+              <strong>{{ item.name }}</strong>
+              <small>{{ parentName(item) }} · order {{ item.display_order }}</small>
+            </span>
+            <xrm-owner-layer-badge [layer]="item.owner_layer" />
+            @if (!item.is_active) { <span class="tag off">Inactive</span> }
+            @if (item.is_active && item.is_disabled) { <span class="tag disabled">Disabled</span> }
+            @if (item.module_key) {
+              <span class="tag module">{{ item.module_key }}</span>
+            }
+            @if (item.privilege_ids.length) {
+              <span class="tag"><i class="las la-lock"></i> {{ item.privilege_ids.length }}</span>
+            } @else {
+              <span class="tag public">Public</span>
+            }
+          </button>
+        } @empty {
+          <div class="empty">No sidebar items match.</div>
+        }
+      }
+    </div>
+
+    <div class="editor">
+      @if (editing()) {
+        <h2>{{ creating() ? 'New sidebar item' : 'Edit sidebar item' }}</h2>
+        <div class="grid">
+          <label>Name<input [(ngModel)]="draft.name" maxlength="120"></label>
+          <label>Parent
+            <select [(ngModel)]="draft.parent_ref">
+              <option [ngValue]="null">Top level</option>
+              @for (candidate of parentOptions(); track candidate.id) {
+                <option [ngValue]="candidate.id">{{ candidate.name }}</option>
+              }
+            </select>
+          </label>
+          <label class="wide">Route<input [(ngModel)]="draft.route" placeholder="/xrm/…"></label>
+          <label>Icon class<input [(ngModel)]="draft.icon" placeholder="las la-cog"></label>
+          <label>Color<input [(ngModel)]="draft.color" placeholder="#8b5cf6"></label>
+          <label>Display order<input type="number" [(ngModel)]="draft.display_order"></label>
+          <label class="switch"><input type="checkbox" [(ngModel)]="draft.is_active"> Active</label>
+          <label class="switch"><input type="checkbox" [(ngModel)]="draft.is_disabled"> Disabled (visible, greyed out)</label>
+          <label>Model (license module)
+            <select [(ngModel)]="draft.module_key">
+              <option [ngValue]="null">No model</option>
+              @for (module of modules(); track module.name) {
+                <option [ngValue]="module.name">{{ module.name }}{{ module.enabled ? '' : ' (disabled)' }}</option>
+              }
+            </select>
+          </label>
+        </div>
+        <p class="hint">With a model set, this item (and its whole subtree) is hidden for everyone — including admins — whenever that module is disabled from Module Management, on top of the privilege check below. "Disabled" is different from "Active": an inactive item disappears entirely, while a disabled-but-active item still renders in the sidebar, just greyed out and unclickable — for a page that exists but isn't ready yet.</p>
+
+        <div class="permissions">
+          <h3>Visibility privileges</h3>
+          <p>With no selection, every authenticated user can see this item. With selections, holding any one is enough.</p>
+          <div class="privileges">
+            @for (privilege of privileges(); track privilege.id) {
+              <label class="privilege">
+                <input type="checkbox" [checked]="hasPrivilege(privilege.id)"
+                       (change)="togglePrivilege(privilege.id)">
+                <span><strong>{{ privilege.name }}</strong><small>{{ privilege.key }}</small></span>
+              </label>
+            }
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="primary" [disabled]="saving() || !draft.name.trim()" (click)="save()">
+            {{ saving() ? 'Saving…' : 'Save changes' }}
+          </button>
+          @if (!creating() && draft.is_active) {
+            <button class="danger" [disabled]="saving()" (click)="deactivate()">Deactivate item</button>
+          }
+          <button class="ghost" (click)="cancel()">Cancel</button>
+        </div>
+      } @else {
+        <div class="empty editor-empty"><i class="las la-stream"></i><p>Select an item to edit, or create a new one.</p></div>
+      }
+    </div>
+  </div>
+</section>

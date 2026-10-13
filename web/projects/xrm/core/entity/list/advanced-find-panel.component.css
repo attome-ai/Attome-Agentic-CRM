@@ -1,0 +1,170 @@
+/*
+ * `<xrm-advanced-find-panel>` (U12 Phase A, D-607). Self-contained for the
+ * same reason `bulk-edit-dialog.component.css` is: `entity-list.component.css`
+ * carries a `:host` rule meant only for the list itself. Logical properties
+ * throughout, so the panel mirrors in RTL.
+ */
+:host {
+  display: block;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.35rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.btn-secondary {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+.btn-text {
+  padding-inline: 0.4rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.af-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-block-end: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface, #111827);
+  color: var(--color-text-primary, #e5eefc);
+}
+
+.af-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.af-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.af-header .af-hint {
+  flex: 1;
+  margin: 0;
+}
+
+.af-hint {
+  color: var(--color-text-secondary, #94a3b8);
+  font-size: 12px;
+}
+
+.af-close,
+.af-remove {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 7px;
+  color: inherit;
+  background: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.af-close:hover,
+.af-remove:hover {
+  background: rgb(148 163 184 / .1);
+}
+
+.af-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.af-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.af-joiner {
+  flex: none;
+  min-inline-size: 3.5rem;
+  color: var(--color-text-secondary, #94a3b8);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.af-row select,
+.af-row input {
+  padding: 7px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg, #0f172a);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+}
+
+.af-field {
+  min-inline-size: 10rem;
+}
+
+.af-value {
+  flex: 1 1 10rem;
+  min-inline-size: 8rem;
+}
+
+.af-lookup {
+  display: block;
+}
+
+.af-kept-text {
+  flex: 1;
+  font-size: 12px;
+}
+
+.af-status {
+  margin: 0;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.af-error {
+  color: var(--color-danger, #f87171);
+}
+
+.af-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.af-spacer {
+  flex: 1;
+}

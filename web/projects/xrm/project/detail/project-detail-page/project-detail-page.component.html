@@ -1,0 +1,68 @@
+@if (loading()) {
+  <p class="pm-state-msg">Loading project…</p>
+} @else if (error()) {
+  <p class="pm-state-msg pm-state-error">{{ error() }}</p>
+} @else if (record(); as r) {
+  <div class="pm-header">
+    <div class="pm-header-crumb">PROJECTS / {{ display(r, 'project_code') }}</div>
+    <div class="pm-header-row">
+      <div>
+        <h2 class="pm-header-title">{{ display(r, 'name') }}</h2>
+        <p class="pm-header-subtitle">
+          {{ lookupName(r, 'organization_id') ?? '—' }} &middot;
+          {{ deliveryTypeLabel(r) }} &middot;
+          Owner: {{ lookupName(r, 'owner_id') ?? '—' }}
+        </p>
+      </div>
+      <div class="pm-header-actions">
+        <button type="button" class="pm-btn" (click)="goBack()">Back</button>
+        <button type="button" class="pm-btn pm-btn-primary" (click)="selectTab('settings')">
+          <i class="las la-check"></i> Update
+        </button>
+      </div>
+    </div>
+    <nav class="pm-tabs" role="tablist">
+      @for (tab of tabs; track tab.key) {
+        <button type="button" role="tab" class="pm-tab" [class.pm-tab-active]="selectedTab() === tab.key"
+                [attr.aria-selected]="selectedTab() === tab.key" (click)="selectTab(tab.key)">
+          <i class="las" [class]="tab.icon"></i> {{ tab.label }}
+        </button>
+      }
+    </nav>
+  </div>
+
+  <div class="pm-tab-content">
+    @switch (selectedTab()) {
+      @case ('overview') {
+        <attome-project-overview-tab [projectId]="id()" />
+      }
+      @case ('work_plan') {
+        <attome-project-work-plan-tab [projectId]="id()" />
+      }
+      @case ('deliverables') {
+        <xrm-related-grid entityName="project_deliverable" [allowCreate]="true"
+          [filters]="[{ field: 'project_id', value: id() }]" />
+      }
+      @case ('issues') {
+        <xrm-related-grid entityName="project_issue" [allowCreate]="true"
+          [filters]="[{ field: 'project_id', value: id() }]" />
+      }
+      @case ('change_requests') {
+        <attome-project-change-requests-tab [projectId]="id()" />
+      }
+      @case ('communications') {
+        <xrm-related-grid entityName="project_communication" [allowCreate]="true"
+          [filters]="[{ field: 'project_id', value: id() }]" />
+      }
+      @case ('team') {
+        <xrm-related-grid entityName="project_team_member" [allowCreate]="true"
+          [filters]="[{ field: 'project_id', value: id() }]" />
+      }
+      @case ('settings') {
+        @if (settingsForm(); as form) {
+          <ng-container [ngComponentOutlet]="form" [ngComponentOutletInputs]="settingsInputs()" />
+        }
+      }
+    }
+  </div>
+}

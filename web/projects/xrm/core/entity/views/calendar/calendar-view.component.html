@@ -1,0 +1,37 @@
+<div class="cal-container">
+  <div class="cal-toolbar">
+    <div class="cal-nav">
+      <button type="button" class="btn btn-secondary" (click)="previousMonth()">
+        <i class="las la-angle-left"></i>
+      </button>
+      <button type="button" class="btn btn-text" (click)="today()">{{ 'entityViews.calendar.today' | translate }}</button>
+      <button type="button" class="btn btn-secondary" (click)="nextMonth()">
+        <i class="las la-angle-right"></i>
+      </button>
+    </div>
+    <div class="cal-month-label">{{ monthLabel() }}</div>
+  </div>
+
+  @if (loading()) {
+  <div class="cal-status">{{ 'entityViews.calendar.loading' | translate }}</div>
+  } @else if (error()) {
+  <div class="cal-status cal-status--error">{{ error() }}</div>
+  } @else {
+  <div class="cal-grid">
+    @for (week of weeks(); track $index) {
+    @for (day of week; track day.date.getTime()) {
+    <div class="cal-day" [class.cal-day--out]="!day.inMonth" [class.cal-day--today]="day.isToday">
+      <div class="cal-day-number">{{ day.date.getDate() }}</div>
+      <div class="cal-day-events">
+        @for (ev of day.events; track ev.id) {
+        <button type="button" class="cal-event" [class]="ev.colorClass" (click)="onEventClick(ev)">
+          {{ ev.title }}
+        </button>
+        }
+      </div>
+    </div>
+    }
+    }
+  </div>
+  }
+</div>

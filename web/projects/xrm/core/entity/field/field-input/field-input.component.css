@@ -1,0 +1,166 @@
+/* One grid cell per field when the parent form lays fields out in
+   .xf-grid-2 — without this the custom element collapses inline. */
+:host { display: block; }
+:host(.xf-field-wide) { grid-column: 1 / -1; }
+
+/* Input/label/select styling now comes from the shared xrm-form.css
+   (.xf-field, .xf-label-row, .xf-input, .xf-select-wrap). Only the
+   field types with bespoke UI keep rules of their own below. */
+input[type="file"] {
+  padding: 9px 12px;
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 6px; font-size: 14px; outline: none;
+  background: var(--color-bg, #0f172a);
+  color: var(--color-text-primary, #e5eefc);
+}
+input::placeholder { color: var(--color-text-secondary, #94a3b8); opacity: .6; }
+.lookup-search-row input:focus, input[type="file"]:focus {
+  border-color: var(--color-accent, #14b8a6);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent, #14b8a6) 20%, transparent);
+}
+select option { background: var(--color-bg-alt, #111c33); }
+
+/* bool */
+.bool-label { display: flex; align-items: center; gap: 8px; cursor: pointer;
+              color: var(--color-text-primary, #e5eefc); font-size: 14px; }
+.bool-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-accent, #14b8a6); }
+
+/* multi-choice */
+.multi-choice { display: flex; flex-wrap: wrap; gap: 8px; }
+.check-item { display: flex; align-items: center; gap: 6px; font-size: 13px;
+              color: var(--color-text-primary, #e5eefc); cursor: pointer; }
+.check-item input[type="checkbox"] { accent-color: var(--color-accent, #14b8a6); }
+
+/* lookup */
+.lookup-wrap { position: relative; }
+/* Matches .xf-input's box so a filled lookup reads as the same kind of
+   control as the text/number inputs beside it in the grid. */
+.lookup-selected {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 12px; min-height: 40px;
+  border: 1px solid var(--color-border, #24324d); border-radius: 6px;
+  background: var(--color-bg, #0f172a);
+}
+.lookup-label { font-size: 14px; color: var(--color-text-primary, #e5eefc); flex: 1; }
+.btn-lookup {
+  padding: 9px 14px; border: 1px solid var(--color-border, #24324d); border-radius: 6px;
+  background: var(--color-bg, #0f172a); font-size: 14px;
+  color: var(--color-text-secondary, #94a3b8); cursor: pointer; text-align: left; width: 100%;
+}
+.btn-lookup:hover { border-color: var(--color-accent, #14b8a6); color: var(--color-accent, #14b8a6); }
+.xf-input.is-invalid { border-color: #ef4444; }
+.field-error { margin: 6px 0 0; color: #f87171; font-size: 12px; }
+.btn-icon {
+  background: none; border: none; cursor: pointer; font-size: 16px;
+  padding: 2px 4px; color: var(--color-text-secondary, #94a3b8); border-radius: 4px;
+}
+.btn-icon:hover { background: var(--color-bg-alt, #111c33); color: var(--color-text-primary, #e5eefc); }
+.btn-clear { color: #f87171; }
+.btn-clear:hover { color: #ef4444; }
+
+.lookup-popup {
+  position: absolute; z-index: 200; top: 100%; left: 0; right: 0;
+  margin-top: 4px; background: var(--color-bg-alt, #111c33);
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  max-height: 280px; display: flex; flex-direction: column;
+}
+.lookup-search-row {
+  display: flex; gap: 6px; padding: 8px;
+  border-bottom: 1px solid var(--color-border, #24324d);
+}
+.lookup-search-row input {
+  flex: 1; padding: 6px 10px;
+  border: 1px solid var(--color-border, #24324d); border-radius: 6px;
+  font-size: 13px; background: var(--color-bg, #0f172a);
+  color: var(--color-text-primary, #e5eefc);
+}
+.lookup-results { list-style: none; margin: 0; padding: 4px 0; overflow-y: auto; flex: 1; }
+.lookup-results li {
+  padding: 8px 14px; font-size: 14px;
+  color: var(--color-text-primary, #e5eefc); cursor: pointer;
+}
+.lookup-results li:hover { background: var(--color-bg, #0f172a);
+                           color: var(--color-accent, #14b8a6); }
+.lookup-results li.is-selected { color: var(--color-accent, #14b8a6); font-weight: 600; }
+.lookup-msg { padding: 12px 14px; font-size: 13px;
+              color: var(--color-text-secondary, #94a3b8); margin: 0; }
+
+/* icon */
+.icon-field { display: flex; align-items: center; gap: 10px; }
+.icon-field .xf-input { flex: 1; }
+.icon-preview { font-size: 20px; color: var(--color-text-primary, #e5eefc); }
+
+/* color */
+.color-field { display: flex; align-items: center; gap: 10px; }
+.color-swatch-input {
+  width: 40px; height: 40px; padding: 2px;
+  border: 1px solid var(--color-border, #24324d); border-radius: 6px;
+  background: var(--color-bg, #0f172a); cursor: pointer;
+}
+.color-field .xf-input { flex: 1; }
+
+/* currency */
+.currency-field { display: flex; align-items: center; gap: 8px; }
+.currency-field .xf-input { flex: 1; }
+.currency-icon { font-size: 15px; color: var(--color-text-secondary, #94a3b8); min-width: 1.2em; text-align: center; }
+.currency-code-select {
+  flex-shrink: 0; width: 4.5rem; padding: 6px 4px;
+  border: 1px solid var(--color-border, #24324d); border-radius: 6px;
+  background: var(--color-bg, #0f172a); color: var(--color-text-primary, #e5eefc);
+  font-size: 13px;
+}
+
+/* file */
+.file-field  { display: flex; flex-direction: column; gap: 8px; }
+.file-hint   { font-size: 13px; color: var(--color-text-secondary, #94a3b8); margin: 0; }
+.file-current {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 6px;
+  background: var(--color-bg-alt, #111c33);
+  border: 1px solid var(--color-border, #24324d);
+}
+.file-name { flex: 1; font-size: 13px; color: var(--color-text-primary, #e5eefc);
+             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-pending-note { font-size: 12px; color: var(--color-text-secondary, #94a3b8); }
+input[type="file"] {
+  font-size: 13px; color: var(--color-text-secondary, #94a3b8);
+}
+.file-progress {
+  height: 6px; border-radius: 3px; overflow: hidden;
+  background: var(--color-bg-alt, #111c33);
+}
+.file-progress-bar {
+  height: 100%; background: var(--color-accent, #14b8a6); transition: width .15s ease;
+}
+.file-status { font-size: 12px; color: var(--color-text-secondary, #94a3b8); margin: 0; }
+.file-status-error { color: #f87171; }
+
+/* U9 (D-604) — a formula's computed value: read-only, visibly not an input. */
+.formula-field { display: flex; flex-direction: column; gap: 4px; }
+.formula-value {
+  display: block;
+  background: var(--xf-hover, #f4f4f5);
+  cursor: default;
+  text-align: start;
+}
+
+/* D-789 section 5 — a field a business rule locks, and the rule messages. */
+.xf-lock-note {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-inline-start: auto;
+  color: var(--color-text-secondary, #94a3b8); font-size: 12px;
+}
+.xf-locked-value {
+  display: block;
+  min-height: 1.5em;
+  color: var(--color-text-secondary, #94a3b8);
+  background: var(--color-bg-alt, #111c33);
+  cursor: not-allowed;
+  white-space: pre-wrap;
+}
+.xf-rule-message {
+  display: flex; align-items: flex-start; gap: 6px;
+  margin: 6px 0 0; font-size: 12px; color: #f87171;
+}
+.xf-rule-message-warning { color: #fbbf24; }

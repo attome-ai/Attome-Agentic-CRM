@@ -1,0 +1,25 @@
+:host { display: block; }
+
+.np-notice:empty { display: none; }
+.np-notice {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.np-caption {
+  caption-side: top;
+  text-align: start;
+  padding: 0 0 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.np-category { text-align: start; font-weight: 500; }
+.np-channel  { text-align: center; width: 120px; }
+
+.np-footnote {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}

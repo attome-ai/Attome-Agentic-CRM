@@ -1,0 +1,68 @@
+<section class="gap-page">
+  <header class="gap-header">
+    <div>
+      <h1>{{ 'knowledgeDrafts.title' | translate }}</h1>
+      <p class="gap-sub">{{ 'knowledgeDrafts.lede' | translate }}</p>
+    </div>
+  </header>
+
+  @if (outcome(); as o) {
+    <p class="gap-count-line" role="status">
+      {{ o.key | translate: { title: o.title } }}
+      @if (actionError(); as message) {
+        {{ message }}
+      }
+    </p>
+  }
+
+  @if (failed()) {
+    <div class="gap-error" role="alert">{{ error() ?? ('knowledgeDrafts.loadFailed' | translate) }}</div>
+  } @else if (loading()) {
+    <div class="gap-empty">{{ 'knowledgeDrafts.loading' | translate }}</div>
+  } @else if (drafts().length === 0) {
+    <div class="gap-empty">{{ 'knowledgeDrafts.empty' | translate }}</div>
+  } @else {
+    <p class="gap-count-line">{{ 'knowledgeDrafts.count' | translate: { total: total() } }}</p>
+    <table class="gap-table">
+      <thead>
+        <tr>
+          <th scope="col">{{ 'knowledgeDrafts.colTitle' | translate }}</th>
+          <th scope="col">{{ 'knowledgeDrafts.colCollection' | translate }}</th>
+          <th scope="col">{{ 'knowledgeDrafts.colUpdated' | translate }}</th>
+          <th scope="col"><span class="gap-visually-hidden">{{ 'knowledgeDrafts.colActions' | translate }}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of drafts(); track row.id) {
+          <tr>
+            <td class="gap-phrase">
+              <a [routerLink]="formRoute" [queryParams]="{ id: row.id }">{{ row.title }}</a>
+            </td>
+            <td>{{ row.collection ?? '—' }}</td>
+            <td>
+              @if (row.updatedAt) {
+                {{ row.updatedAt | localDate: { dateStyle: 'medium' } }}
+              }
+            </td>
+            <td class="gap-actions">
+              @if (rejectConfirm() === row.id) {
+                <span role="alert">{{ 'knowledgeDrafts.rejectWarn' | translate }}</span>
+                <button type="button" [disabled]="busy() === row.id" (click)="confirmReject(row)">
+                  {{ 'knowledgeDrafts.confirmReject' | translate }}
+                </button>
+                <button type="button" (click)="cancelReject()">{{ 'knowledgeDrafts.cancel' | translate }}</button>
+              } @else {
+                <button type="button" class="kd-publish" [disabled]="busy() === row.id" (click)="publish(row)">
+                  {{ 'knowledgeDrafts.publish' | translate }}
+                </button>
+                <button type="button" class="kd-reject" [disabled]="busy() === row.id" (click)="askReject(row)">
+                  {{ 'knowledgeDrafts.reject' | translate }}
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

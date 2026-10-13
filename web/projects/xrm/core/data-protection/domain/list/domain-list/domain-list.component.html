@@ -1,0 +1,107 @@
+<div class="page-header">
+  <div>
+    <h2>Data Domains</h2>
+    <p class="subtitle">
+      The accountability register — who owns each area of data. Assign entities to a
+      domain so it is answerable who is responsible for them.
+    </p>
+  </div>
+  <button class="btn-primary" (click)="toggleCreate()">
+    <i class="las la-plus"></i> New Domain
+  </button>
+</div>
+
+@if (showCreate()) {
+  <div class="create-panel">
+    <h3>New Data Domain</h3>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="dom-new-name">Name</label>
+        <input id="dom-new-name" [(ngModel)]="newName" placeholder="e.g. Customer" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="dom-new-desc">Description <span class="hint">(optional)</span></label>
+        <input id="dom-new-desc" [(ngModel)]="newDescription" placeholder="what this domain covers" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="dom-new-steward">Steward user ID <span class="hint">(optional)</span></label>
+        <input id="dom-new-steward" [(ngModel)]="newStewardRef" placeholder="uuid" autocomplete="off" class="mono-input">
+      </div>
+      <div class="field">
+        <label for="dom-new-deputy">Deputy user ID <span class="hint">(optional)</span></label>
+        <input id="dom-new-deputy" [(ngModel)]="newDeputyRef" placeholder="uuid" autocomplete="off" class="mono-input">
+      </div>
+    </div>
+    @if (createError()) { <p class="error-msg">{{ createError() }}</p> }
+    <div class="btn-row">
+      <button class="btn-primary" (click)="create()" [disabled]="creating()">
+        {{ creating() ? 'Creating…' : 'Create Domain' }}
+      </button>
+      <button class="btn-ghost" (click)="toggleCreate()">Cancel</button>
+    </div>
+  </div>
+}
+
+@if (loading()) {
+  <p class="state-msg">Loading data domains…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (domains().length === 0) {
+  <div class="empty-state"><p>No data domains yet. Create one to start assigning entities to a steward.</p></div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Steward</th>
+          <th>Deputy</th>
+          <th>Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (d of domains(); track d.id) {
+          <tr>
+            <td>{{ d.name }}</td>
+            <td class="cell-muted">{{ d.description || '—' }}</td>
+            <td class="cell-mono">{{ d.steward_ref || '—' }}</td>
+            <td class="cell-mono">{{ d.deputy_ref || '—' }}</td>
+            <td class="cell-muted">{{ d.updated_at | date:'medium' }}</td>
+            <td class="actions">
+              <button class="btn-sm" (click)="startAssign(d)">Assign Entities</button>
+              <button class="btn-sm btn-sm-accent" (click)="viewReport(d)">Report</button>
+            </td>
+          </tr>
+          @if (assigningId() === d.id) {
+            <tr>
+              <td colspan="6">
+                <div class="inline-form-panel">
+                  <div class="form-row-1">
+                    <div class="field">
+                      <label for="assign-entities-{{ d.id }}">
+                        Entity logicalnames <span class="hint">(comma-separated)</span>
+                      </label>
+                      <input id="assign-entities-{{ d.id }}" [(ngModel)]="assignEntitiesInput"
+                             placeholder="e.g. contact, account" autocomplete="off">
+                    </div>
+                  </div>
+                  @if (assignError()) { <p class="error-msg">{{ assignError() }}</p> }
+                  <div class="btn-row">
+                    <button class="btn-primary" (click)="submitAssign(d)" [disabled]="assigning()">
+                      {{ assigning() ? 'Assigning…' : 'Assign' }}
+                    </button>
+                    <button class="btn-ghost" (click)="cancelAssign()">Cancel</button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+}

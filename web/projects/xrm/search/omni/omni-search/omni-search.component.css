@@ -1,0 +1,27 @@
+.omni { position: relative; }
+.omni__input {
+  width: 100%; box-sizing: border-box; padding: 6px 12px;
+  border: 1px solid var(--color-border, #d0d5dd); border-radius: 8px;
+  background: var(--color-bg, #fff); color: var(--color-text-primary, inherit);
+  font: inherit; font-size: 13px;
+}
+.omni__input:focus-visible { outline: 2px solid var(--color-accent, #4f46e5); outline-offset: 1px; }
+.omni__panel {
+  position: absolute; z-index: 20; inset-inline: 0; margin-top: 4px;
+  max-height: 60vh; overflow-y: auto;
+  background: var(--color-bg, #fff); color: var(--color-text-primary, inherit);
+  border: 1px solid var(--color-border, #d0d5dd); border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
+.omni__notice { padding: 8px 12px; font-size: 12px; }
+.omni__notice--relaxed { color: var(--warning, #b54708); }
+.omni__notice--degraded { color: var(--warning, #b54708); }
+.omni__group-label {
+  padding: 6px 12px; font-size: 12px; font-weight: 600;
+  text-transform: uppercase; opacity: 0.65;
+}
+.omni__option { padding: 8px 12px; cursor: pointer; }
+.omni__option[aria-selected='true'] { background: color-mix(in srgb, var(--color-accent, #4f46e5) 14%, transparent); }
+.omni__option-title { display: block; }
+.omni__option-subtitle { display: block; font-size: 12px; opacity: 0.7; }
+.omni__footer { padding: 6px 12px; font-size: 12px; opacity: 0.7; }

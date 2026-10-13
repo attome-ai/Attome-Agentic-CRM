@@ -1,0 +1,180 @@
+<xrm-governance-nav />
+
+<div class="page-header">
+  <div>
+    <h2>{{ 'governance.catalog.title' | translate }}</h2>
+    <p class="subtitle">{{ 'governance.catalog.subtitle' | translate }}</p>
+  </div>
+</div>
+
+<form class="gov-filters dc-search" role="search" (ngSubmit)="search()">
+  <label for="dc-q">{{ 'governance.catalog.search' | translate }}</label>
+  <input id="dc-q" name="q" class="mono-input" type="search"
+         [placeholder]="'governance.catalog.searchPlaceholder' | translate"
+         [ngModel]="query()" (ngModelChange)="query.set($event)" />
+  <label for="dc-class">{{ 'governance.catalog.classification' | translate }}</label>
+  <select id="dc-class" name="classification" [ngModel]="classification()" (ngModelChange)="setClassification($event)">
+    <option value="">{{ 'governance.common.all' | translate }}</option>
+    @for (c of classifications; track c) {
+      <option [value]="c">{{ 'governance.catalog.classifications.' + c | translate }}</option>
+    }
+  </select>
+  <button type="submit" class="btn-ghost" [disabled]="loading()">
+    <i class="las la-search" aria-hidden="true"></i> {{ 'governance.catalog.searchButton' | translate }}
+  </button>
+</form>
+
+<div class="dc-layout">
+  <section class="card dc-list" aria-labelledby="dc-list-title">
+    <h3 id="dc-list-title">
+      {{ 'governance.catalog.entities' | translate }}
+      <span class="count">{{ total() | localNumber }}</span>
+    </h3>
+    @if (loading()) {
+      <p class="state-msg">{{ 'governance.common.loading' | translate }}</p>
+    } @else if (error()) {
+      <p class="error-msg" role="alert">{{ error() }}</p>
+    } @else if (items().length === 0) {
+      <div class="empty-state"><p>{{ 'governance.catalog.noEntities' | translate }}</p></div>
+    } @else {
+      <ul class="dc-entities">
+        @for (e of items(); track e.id) {
+          <li>
+            <button type="button" class="dc-entity" [class.dc-entity--active]="selected() === e.logicalname"
+                    [attr.aria-pressed]="selected() === e.logicalname"
+                    (click)="openDetail(e.logicalname)">
+              <span class="dc-entity__name">{{ e.name || e.logicalname }}</span>
+              <span class="dc-entity__meta cell-mono">{{ e.logicalname }}</span>
+              @if (e.category) { <span class="badge">{{ e.category }}</span> }
+            </button>
+          </li>
+        }
+      </ul>
+      @if (pages() > 1) {
+        <nav class="gov-pager" [attr.aria-label]="'governance.common.pagination' | translate">
+          <button type="button" class="btn-ghost" (click)="goToPage(page() - 1)" [disabled]="page() <= 1">
+            {{ 'governance.common.previous' | translate }}
+          </button>
+          <span>{{ 'governance.common.pageOf' | translate: { page: page(), pages: pages() } }}</span>
+          <button type="button" class="btn-ghost" (click)="goToPage(page() + 1)" [disabled]="page() >= pages()">
+            {{ 'governance.common.next' | translate }}
+          </button>
+        </nav>
+      }
+    }
+  </section>
+
+  <section class="card dc-detail" aria-live="polite" aria-labelledby="dc-detail-title">
+    @if (!selected()) {
+      <h3 id="dc-detail-title">{{ 'governance.catalog.detailTitle' | translate }}</h3>
+      <p class="gov-muted">{{ 'governance.catalog.pickEntity' | translate }}</p>
+    } @else if (detailLoading()) {
+      <h3 id="dc-detail-title">{{ selected() }}</h3>
+      <p class="state-msg">{{ 'governance.common.loading' | translate }}</p>
+    } @else if (detailError()) {
+      <h3 id="dc-detail-title">{{ selected() }}</h3>
+      <p class="error-msg" role="alert">{{ detailError() }}</p>
+    } @else if (detail(); as d) {
+      <div class="section-header">
+        <h3 id="dc-detail-title">{{ d.name || d.logicalname }}</h3>
+        <button type="button" class="btn-text" (click)="closeDetail()">
+          <i class="las la-times" aria-hidden="true"></i> {{ 'governance.common.close' | translate }}
+        </button>
+      </div>
+      <dl class="dc-facts">
+        <dt>{{ 'governance.catalog.logicalname' | translate }}</dt>
+        <dd class="cell-mono">{{ d.logicalname }}</dd>
+        <dt>{{ 'governance.catalog.category' | translate }}</dt>
+        <dd>{{ d.category || ('governance.common.none' | translate) }}</dd>
+      </dl>
+
+      <h4>{{ 'governance.catalog.usage' | translate }}</h4>
+      @if (d.usage; as u) {
+        <dl class="dc-facts">
+          <dt>{{ 'governance.catalog.recordCount' | translate }}</dt>
+          <dd>{{ u.record_count | localNumber }}</dd>
+          <dt>{{ 'governance.catalog.lastWrite' | translate }}</dt>
+          <dd>
+            @if (u.last_write_at) {
+              {{ u.last_write_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}
+            } @else {
+              {{ 'governance.common.none' | translate }}
+            }
+          </dd>
+          <dt>{{ 'governance.catalog.impressions' | translate }}</dt>
+          <dd>{{ u.search_impressions_30d | localNumber }}</dd>
+          <dt>{{ 'governance.catalog.usageComputed' | translate }}</dt>
+          <dd>{{ u.computed_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</dd>
+        </dl>
+      } @else {
+        <p class="gov-muted">{{ 'governance.catalog.noUsage' | translate }}</p>
+      }
+
+      <h4>{{ 'governance.catalog.fields' | translate }} <span class="count">{{ d.fields.length }}</span></h4>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'governance.catalog.fieldName' | translate }}</th>
+              <th scope="col">{{ 'governance.catalog.logicalname' | translate }}</th>
+              <th scope="col">{{ 'governance.catalog.fieldType' | translate }}</th>
+              <th scope="col">{{ 'governance.catalog.classification' | translate }}</th>
+              <th scope="col">{{ 'governance.catalog.required' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of d.fields; track f.logicalname) {
+              <tr>
+                <td>{{ f.display_name }}</td>
+                <td class="cell-mono">{{ f.logicalname }}</td>
+                <td>{{ 'fieldTypes.' + f.field_type | translate }}</td>
+                <td><span class="badge">{{ 'governance.catalog.classifications.' + f.data_classification | translate }}</span></td>
+                <td>{{ (f.is_required ? 'governance.common.yes' : 'governance.common.no') | translate }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <h4>{{ 'governance.catalog.lineage' | translate }} <span class="count">{{ d.lineage.length }}</span></h4>
+      @if (d.lineage.length === 0) {
+        <p class="gov-muted">{{ 'governance.catalog.noLineage' | translate }}</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">{{ 'governance.catalog.lineageKind' | translate }}</th>
+                <th scope="col">{{ 'governance.catalog.lineageFrom' | translate }}</th>
+                <th scope="col">{{ 'governance.catalog.lineageField' | translate }}</th>
+                <th scope="col">{{ 'governance.catalog.lineageSince' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of d.lineage; track l.from_kind + l.from_ref + (l.to_attribute ?? '')) {
+                <tr>
+                  <td><span class="badge">{{ 'governance.catalog.lineageKinds.' + l.from_kind | translate }}</span></td>
+                  <td>{{ l.from_label }} <span class="hint cell-mono">{{ l.from_ref }}</span></td>
+                  <td class="cell-mono">{{ l.to_attribute || ('governance.catalog.wholeEntity' | translate) }}</td>
+                  <td class="cell-muted">{{ l.created_at | localDate: { dateStyle: 'medium' } }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <h4>{{ 'governance.catalog.glossary' | translate }} <span class="count">{{ d.glossary_terms.length }}</span></h4>
+      @if (d.glossary_terms.length === 0) {
+        <p class="gov-muted">{{ 'governance.catalog.noGlossary' | translate }}</p>
+      } @else {
+        <dl class="dc-glossary">
+          @for (g of d.glossary_terms; track g.id) {
+            <dt>{{ g.term }} <span class="badge">{{ g.status }}</span></dt>
+            <dd>{{ g.definition }}</dd>
+          }
+        </dl>
+      }
+    }
+  </section>
+</div>

@@ -1,0 +1,43 @@
+<!-- D-535: read-only. No Save in either mode, no Assign/Share, no create form. -->
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="core-api_key"
+               [readOnly]="true" [recordTabs]="false" [customTitle]="true">
+  <div xrmHeaderTitle>
+    <div class="xf-breadcrumb">
+      <span class="xf-breadcrumb-link" role="link" tabindex="0"
+            (click)="cancel()" (keydown.enter)="cancel()">{{ schema()?.name }}</span>
+      <span class="xf-breadcrumb-sep">›</span>
+      <span>{{ 'apiKeyForm.details' | translate }}</span>
+    </div>
+    <h1 class="xf-title">{{ schema()?.name }}</h1>
+  </div>
+
+  <div xrmOperations>
+    @if (!isEdit()) {
+      <div class="xf-error-banner" role="status">
+        <i class="las la-info-circle" aria-hidden="true"></i> {{ 'apiKeyForm.createUnavailable' | translate }}
+      </div>
+    } @else if (!error()) {
+      <div class="xf-error-banner" role="note">
+        <i class="las la-info-circle" aria-hidden="true"></i> {{ 'apiKeyForm.readOnly' | translate }}
+      </div>
+    }
+  </div>
+
+  <ng-template xrmTab="details">
+    @if (isEdit()) {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+          <div class="xf-section-meta"><h2 class="xf-section-title">Details</h2></div>
+        </div>
+        <div class="xf-section-body">
+          <div class="xf-grid-2">
+            @for (field of fieldsIn(detailFields); track field.id) {
+              <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+            }
+          </div>
+        </div>
+      </section>
+    }
+  </ng-template>
+</xrm-base-form>

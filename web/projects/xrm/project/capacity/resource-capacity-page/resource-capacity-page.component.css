@@ -1,0 +1,47 @@
+.rc-panel { border: 1px solid var(--color-border, #24324d); border-radius: 12px; background: var(--color-surface, #111c33); margin: 16px; overflow: hidden; }
+.rc-panel-header { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid var(--color-border, #24324d); flex-wrap: wrap; }
+.rc-panel-header i { color: var(--color-accent, #8b5cf6); font-size: 15px; }
+.rc-panel-header h3 { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--color-text-secondary, #94a3b8); }
+.rc-panel-subtitle { margin: 2px 0 0; font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: normal; color: var(--color-text-secondary, #94a3b8); }
+
+.rc-filters { display: flex; gap: 8px; margin-left: auto; align-items: center; }
+.rc-input { padding: 6px 10px; font-size: 12px; border: 1px solid var(--color-border, #24324d); border-radius: 6px; background: none; color: var(--color-text-primary, #e5eefc); width: 120px; }
+.rc-btn { padding: 6px 12px; font-size: 12px; border: 1px solid var(--color-border, #24324d); border-radius: 6px; background: none; color: var(--color-text-primary, #e5eefc); cursor: pointer; }
+.rc-btn:hover { background: color-mix(in srgb, var(--color-accent, #8b5cf6) 12%, transparent); }
+
+.rc-state-msg { margin: 0; padding: 16px 20px; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
+.rc-state-error { color: var(--color-danger, #ef4444); }
+
+.rc-legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 10px 20px; font-size: 11px; color: var(--color-text-secondary, #94a3b8); border-bottom: 1px solid var(--color-border, #24324d); }
+.rc-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.rc-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+
+.rc-grid-scroll { overflow-x: auto; }
+.rc-grid { border-collapse: collapse; width: 100%; min-width: 640px; }
+.rc-grid-resource-head, .rc-grid-week-head {
+  position: sticky; top: 0; z-index: 1; background: var(--color-surface, #111c33);
+  padding: 8px 14px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--color-text-secondary, #94a3b8); border-bottom: 1px solid var(--color-border, #24324d); text-align: left;
+}
+.rc-grid-week-head { text-align: center; min-width: 84px; }
+.rc-grid-resource-head { position: sticky; left: 0; z-index: 2; }
+.rc-grid-resource {
+  padding: 8px 14px; font-size: 13px; color: var(--color-text-primary, #e5eefc); white-space: nowrap;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border, #24324d) 60%, transparent);
+  position: sticky; left: 0; background: var(--color-surface, #111c33);
+}
+.rc-grid-cell {
+  padding: 6px 8px; text-align: center; vertical-align: middle;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border, #24324d) 60%, transparent);
+  border-left: 2px solid var(--color-surface, #111c33);
+}
+.rc-cell-value { display: block; font-size: 13px; font-weight: 700; }
+.rc-cell-label { display: block; font-size: 10px; opacity: .85; text-transform: uppercase; letter-spacing: .03em; }
+
+/* Fixed status palette — never themed, always paired with the text label
+   above (dataviz skill: color never carries meaning alone). */
+.rc-cell-under    { background: color-mix(in srgb, #64748b 22%, transparent); color: #cbd5e1; }
+.rc-cell-healthy  { background: color-mix(in srgb, #0ca30c 22%, transparent); color: #4ade80; }
+.rc-cell-warning  { background: color-mix(in srgb, #fab219 26%, transparent); color: #fbbf24; }
+.rc-cell-critical { background: color-mix(in srgb, #d03b3b 26%, transparent); color: #f87171; }
+.rc-cell-empty    { background: none; color: var(--color-text-secondary, #94a3b8); }

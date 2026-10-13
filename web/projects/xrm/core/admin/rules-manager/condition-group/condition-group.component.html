@@ -1,0 +1,166 @@
+<fieldset class="cg" [class.cg-nested]="!isRoot()" [class.cg-has-issue]="hasIssue(path())">
+  <legend class="cg-legend">
+    @if (isRoot()) { {{ 'businessRules.condition.title' | translate }} }
+    @else { {{ 'businessRules.condition.group' | translate }} }
+  </legend>
+
+  <div class="cg-mode" role="group" [attr.aria-label]="'businessRules.condition.matchLabel' | translate">
+    <button type="button" class="cg-mode-btn" [attr.aria-pressed]="mode() === 'all'"
+            [class.active]="mode() === 'all'" (click)="setMode('all')">
+      {{ 'businessRules.condition.matchAll' | translate }}
+    </button>
+    <button type="button" class="cg-mode-btn" [attr.aria-pressed]="mode() === 'any'"
+            [class.active]="mode() === 'any'" (click)="setMode('any')">
+      {{ 'businessRules.condition.matchAny' | translate }}
+    </button>
+    @if (!isRoot()) {
+      <button type="button" class="cg-icon-btn cg-remove-group" (click)="removeGroup.emit()"
+              [attr.aria-label]="'businessRules.condition.removeGroup' | translate">
+        <i class="las la-trash-alt" aria-hidden="true"></i>
+      </button>
+    }
+  </div>
+
+  @if (children().length === 0) {
+    <p class="cg-always">{{ 'businessRules.condition.always' | translate }}</p>
+  }
+
+  <ul class="cg-children">
+    @for (child of children(); track $index; let i = $index) {
+      <li class="cg-child" [class.cg-has-issue]="hasIssue(childPath(i))">
+        @if (asLeaf(child); as leaf) {
+          @let field = fieldOf(leaf.field);
+          <div class="cg-leaf">
+            <select class="cg-field"
+                    [attr.aria-label]="'businessRules.condition.field' | translate"
+                    (change)="setField(i, leaf, $any($event.target).value)">
+              @if (!field) { <option [value]="leaf.field" selected>{{ leaf.field }}</option> }
+              @for (f of fields(); track f.name) {
+                <option [value]="f.name" [selected]="f.name === leaf.field">{{ f.label }}</option>
+              }
+            </select>
+
+            <select class="cg-op"
+                    [attr.aria-label]="'businessRules.condition.operator' | translate"
+                    (change)="setOp(i, leaf, $any($event.target).value)">
+              @for (op of opsFor(leaf); track op) {
+                <option [value]="op" [selected]="op === leaf.op">{{ ('businessRules.op.' + op) | translate }}</option>
+              }
+            </select>
+
+            @if (!takesNoValue(leaf.op)) {
+              @if (takesList(leaf)) {
+                @if (field && (field.kind === 'choice' || field.kind === 'multi_choice')) {
+                  <div class="cg-choices" role="group" [attr.aria-label]="'businessRules.condition.values' | translate">
+                    @for (c of field.choices; track c) {
+                      <label class="cg-check">
+                        <input type="checkbox" [checked]="isListed(leaf, c)" (change)="toggleListed(i, leaf, c)" />
+                        {{ choiceLabel(field, c) }}
+                      </label>
+                    }
+                  </div>
+                } @else {
+                  <textarea class="cg-value cg-list" rows="3" [value]="valueText(leaf)"
+                            [attr.aria-label]="'businessRules.condition.valuesOnePerLine' | translate"
+                            [placeholder]="'businessRules.condition.valuesOnePerLine' | translate"
+                            (change)="setListText(i, leaf, $any($event.target).value)"></textarea>
+                }
+              } @else {
+                @switch (field?.kind) {
+                  @case ('bool') {
+                    <select class="cg-value"
+                            [attr.aria-label]="'businessRules.condition.value' | translate"
+                            (change)="setValue(i, leaf, $any($event.target).value)">
+                      <option value="true" [selected]="valueText(leaf) === 'true'">{{ 'businessRules.condition.yes' | translate }}</option>
+                      <option value="false" [selected]="valueText(leaf) === 'false'">{{ 'businessRules.condition.no' | translate }}</option>
+                    </select>
+                  }
+                  @case ('choice') {
+                    <select class="cg-value"
+                            [attr.aria-label]="'businessRules.condition.value' | translate"
+                            (change)="setValue(i, leaf, $any($event.target).value)">
+                      <option value="">{{ 'businessRules.condition.pickValue' | translate }}</option>
+                      @for (c of field?.choices ?? []; track c) {
+                        <option [value]="c" [selected]="c === valueText(leaf)">{{ choiceLabel(field, c) }}</option>
+                      }
+                    </select>
+                  }
+                  @case ('multi_choice') {
+                    <select class="cg-value"
+                            [attr.aria-label]="'businessRules.condition.value' | translate"
+                            (change)="setValue(i, leaf, $any($event.target).value)">
+                      <option value="">{{ 'businessRules.condition.pickValue' | translate }}</option>
+                      @for (c of field?.choices ?? []; track c) {
+                        <option [value]="c" [selected]="c === valueText(leaf)">{{ choiceLabel(field, c) }}</option>
+                      }
+                    </select>
+                  }
+                  @case ('date') {
+                    <input class="cg-value" type="date" [value]="valueText(leaf)"
+                           [attr.aria-label]="'businessRules.condition.value' | translate"
+                           (change)="setValue(i, leaf, $any($event.target).value)" />
+                  }
+                  @case ('number') {
+                    <input class="cg-value" type="number" [value]="valueText(leaf)"
+                           [attr.aria-label]="'businessRules.condition.value' | translate"
+                           (change)="setValue(i, leaf, $any($event.target).value)" />
+                  }
+                  @case ('lookup') {
+                    <input class="cg-value cg-mono" type="text" [value]="valueText(leaf)" dir="ltr"
+                           [attr.aria-label]="'businessRules.condition.recordId' | translate"
+                           [placeholder]="'businessRules.condition.recordId' | translate"
+                           (change)="setValue(i, leaf, $any($event.target).value)" />
+                  }
+                  @default {
+                    <input class="cg-value" type="text" [value]="valueText(leaf)"
+                           [attr.aria-label]="'businessRules.condition.value' | translate"
+                           (change)="setValue(i, leaf, $any($event.target).value)" />
+                  }
+                }
+              }
+            }
+
+            <button type="button" class="cg-icon-btn" (click)="removeChild(i)"
+                    [attr.aria-label]="'businessRules.condition.removeCondition' | translate">
+              <i class="las la-times" aria-hidden="true"></i>
+            </button>
+          </div>
+        } @else if (asGroup(child); as nested) {
+          <xrm-condition-group [group]="nested" [fields]="fields()" [depth]="depth() + 1"
+                               [path]="childPath(i)" [issuePaths]="issuePaths()"
+                               (groupChange)="updateChild(i, $event)" (removeGroup)="removeChild(i)" />
+        } @else if (asExpression(child); as ex) {
+          <div class="cg-expression">
+            <span class="cg-tag">
+              <i class="las la-code" aria-hidden="true"></i>
+              {{ 'businessRules.condition.advanced' | translate }}
+            </span>
+            <textarea class="cg-value cg-mono" rows="2" dir="ltr" [value]="ex.expression"
+                      [attr.aria-label]="'businessRules.condition.advancedLabel' | translate"
+                      [placeholder]="'businessRules.condition.advancedPlaceholder' | translate"
+                      (change)="setExpression(i, $any($event.target).value)"></textarea>
+            <button type="button" class="cg-icon-btn" (click)="removeChild(i)"
+                    [attr.aria-label]="'businessRules.condition.removeCondition' | translate">
+              <i class="las la-times" aria-hidden="true"></i>
+            </button>
+          </div>
+          <p class="cg-hint">{{ 'businessRules.condition.advancedHint' | translate }}</p>
+        }
+      </li>
+    }
+  </ul>
+
+  <div class="cg-actions">
+    <button type="button" class="cg-add" (click)="addLeaf()" [disabled]="fields().length === 0">
+      <i class="las la-plus" aria-hidden="true"></i> {{ 'businessRules.condition.addCondition' | translate }}
+    </button>
+    @if (canNest()) {
+      <button type="button" class="cg-add" (click)="addGroup()" [disabled]="fields().length === 0">
+        <i class="las la-layer-group" aria-hidden="true"></i> {{ 'businessRules.condition.addGroup' | translate }}
+      </button>
+    }
+    <button type="button" class="cg-add" (click)="addExpression()">
+      <i class="las la-code" aria-hidden="true"></i> {{ 'businessRules.condition.addAdvanced' | translate }}
+    </button>
+  </div>
+</fieldset>

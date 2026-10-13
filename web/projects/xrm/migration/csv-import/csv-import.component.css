@@ -1,0 +1,114 @@
+:host {
+  display: block;
+}
+
+.csv-import {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ci-step {
+  border: 1px solid var(--border-color, #d0d5dd);
+  border-radius: 8px;
+  padding: 1rem;
+  min-inline-size: 0;
+}
+
+.ci-step legend {
+  font-weight: 600;
+  padding-inline: 0.25rem;
+}
+
+.ci-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-block-end: 0.75rem;
+}
+
+.ci-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-inline-size: 12rem;
+}
+
+.ci-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ci-intro,
+.ci-hint,
+.ci-summary {
+  margin: 0 0 0.5rem;
+  color: var(--text-muted, #5f6b7a);
+}
+
+.ci-notice:empty {
+  display: none;
+}
+
+.ci-table-wrap {
+  overflow-x: auto;
+  max-inline-size: 100%;
+  margin-block-end: 0.75rem;
+}
+
+.ci-table {
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.ci-table caption {
+  text-align: start;
+  caption-side: top;
+  padding-block-end: 0.25rem;
+}
+
+.ci-table th,
+.ci-table td {
+  border: 1px solid var(--border-color, #d0d5dd);
+  padding: 0.25rem 0.5rem;
+  text-align: start;
+  vertical-align: top;
+  white-space: pre-wrap;
+  max-inline-size: 18rem;
+}
+
+.ci-table th {
+  display: table-cell;
+}
+
+.ci-table th select,
+.ci-table th input {
+  display: block;
+  inline-size: 100%;
+  margin-block-start: 0.25rem;
+}
+
+.ci-header {
+  font-weight: 600;
+}
+
+.ci-ignored {
+  opacity: 0.5;
+}
+
+.ci-errors ul,
+.ci-result ul {
+  max-block-size: 16rem;
+  overflow-y: auto;
+  padding-inline-start: 1.25rem;
+}
+
+.ci-progress-label {
+  display: block;
+}
+
+.ci-result progress {
+  inline-size: 100%;
+}

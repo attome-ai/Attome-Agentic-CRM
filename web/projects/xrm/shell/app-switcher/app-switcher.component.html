@@ -1,0 +1,27 @@
+@if (apps().length > 0) {
+  <button class="app-switcher-btn" (click)="toggle()"
+          [class.active]="isOpen()" [title]="'shell.apps' | translate">
+    <i [class]="selectedApp()?.icon || 'las la-th-large'"></i>
+    <span class="app-switcher-label">{{ selectedApp()?.name || ('shell.allApps' | translate) }}</span>
+    <i class="las la-angle-down app-switcher-caret"></i>
+  </button>
+
+  <div class="hdr-panel app-switcher-panel" [class.open]="isOpen()">
+    <div class="panel-header">
+      <span class="panel-title">{{ 'shell.apps' | translate }}</span>
+    </div>
+    <div class="app-switcher-list">
+      <button type="button" class="app-switcher-item" [class.active]="!selectedApp()" (click)="clear()">
+        <i class="las la-th-large"></i>
+        <span>{{ 'shell.allApps' | translate }}</span>
+      </button>
+      @for (app of apps(); track app.id) {
+        <button type="button" class="app-switcher-item" [class.active]="selectedApp()?.id === app.id"
+                (click)="select(app)">
+          <i [class]="app.icon"></i>
+          <span>{{ app.name }}</span>
+        </button>
+      }
+    </div>
+  </div>
+}

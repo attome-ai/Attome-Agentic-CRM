@@ -1,0 +1,136 @@
+/*
+ * Self-contained styles for `<xrm-bulk-edit-dialog>` (C-28).
+ *
+ * Deliberately NOT `styleUrl: '../list/entity-list.component.css'` even
+ * though that file already carries these exact `.bulk-edit-*` rules: that
+ * file's `:host { display: flex; height: 100%; ... }` targets whichever
+ * component includes it, and `<xrm-bulk-edit-dialog>` sits as an always-
+ * present sibling in `entity-list.component.html`'s flex column — inheriting
+ * that rule would make its own (usually empty) host compete for layout space
+ * it was never meant to occupy. The handful of `.btn`/`.btn-primary`/
+ * `.btn-text` rules the dialog's footer needs are copied here rather than
+ * shared for the same reason: importing the whole file back in to reach
+ * them would reintroduce the `:host` problem this file exists to avoid.
+ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.35rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.btn-text {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+/* ── Bulk edit dialog (PROD-12) — same shell as related-grid's relationship picker ── */
+.bulk-edit-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(0 0 0 / .62);
+}
+
+.bulk-edit-dialog {
+  width: min(520px, 100%);
+  max-height: min(720px, calc(100vh - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  color: var(--color-text-primary, #e5eefc);
+  background: var(--color-surface, #111827);
+  box-shadow: 0 24px 64px rgb(0 0 0 / .5);
+  overflow: auto;
+}
+
+.bulk-edit-dialog header,
+.bulk-edit-dialog footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bulk-edit-dialog header h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+}
+
+.bulk-edit-dialog footer {
+  justify-content: flex-end;
+}
+
+.bulk-edit-dialog .close-button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 7px;
+  color: inherit;
+  background: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.bulk-edit-dialog .close-button:hover {
+  background: rgb(148 163 184 / .1);
+}
+
+.bulk-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.bulk-edit-field select {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg, #0f172a);
+  color: inherit;
+  font: inherit;
+}
+
+.bulk-edit-clear {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.bulk-edit-status {
+  margin: 0;
+  color: var(--color-text-secondary, #94a3b8);
+}

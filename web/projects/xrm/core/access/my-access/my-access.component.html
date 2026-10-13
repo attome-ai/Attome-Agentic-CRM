@@ -1,0 +1,43 @@
+<div class="page-header">
+  <div>
+    <h2>My Access</h2>
+    <p class="subtitle">What the current session is authorized to do, resolved live from Postgres/Redis.</p>
+  </div>
+</div>
+
+@if (loading()) {
+  <p class="state-msg">Checking your access…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (ctx(); as c) {
+  <div class="card">
+    <h3>Session</h3>
+    <p>User ID: <span class="cell-mono">{{ c.user_id }}</span></p>
+    <p>
+      Admin:
+      @if (c.is_admin) {
+        <span class="badge badge-boolean">Yes — system.admin</span>
+      } @else {
+        <span class="badge">No</span>
+      }
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>Privileges <span class="count">{{ c.privileges.length }}</span></h3>
+    @if (c.privileges.length === 0) {
+      <p class="state-msg">No privileges held (and not an admin).</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Key</th></tr></thead>
+          <tbody>
+            @for (p of c.privileges; track p) {
+              <tr><td class="cell-mono">{{ p }}</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+}

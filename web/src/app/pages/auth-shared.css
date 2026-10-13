@@ -1,0 +1,105 @@
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  padding: 24px;
+}
+
+.auth-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.logo-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #6366f1;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+h1 { font-size: 22px; font-weight: 700; color: #111827; }
+h2 { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+.subtitle { color: #6b7280; font-size: 14px; margin-bottom: 24px; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+label { font-size: 13px; font-weight: 500; color: #374151; }
+
+input {
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+}
+
+/* Indigo-600 (#4f46e5), not indigo-500 (#6366f1). White on indigo-500 is
+   4.46:1 — WCAG AA for normal text needs 4.5:1, so axe flags this button and
+   the .auth-link anchors below as serious `color-contrast` violations
+   (e2e/tests/accessibility.spec.ts gates on exactly that). Indigo-600 is
+   5.5:1 and is already this file's hover shade, so nothing new enters the
+   palette; the hover step just moves one stop darker to keep the affordance. */
+.btn-submit {
+  width: 100%;
+  padding: 11px;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.15s;
+}
+.btn-submit:hover:not(:disabled) { background: #4338ca; }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.error-msg {
+  color: #dc2626;
+  font-size: 13px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+
+.auth-link {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 13px;
+  color: #6b7280;
+}
+/* Indigo-600 for the same 4.46:1 -> 5.5:1 reason as .btn-submit above. */
+.auth-link a { color: #4f46e5; font-weight: 500; }

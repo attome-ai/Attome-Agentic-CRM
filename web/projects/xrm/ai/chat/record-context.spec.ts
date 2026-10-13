@@ -1,0 +1,30 @@
+import { describe, expect, it } from 'vitest';
+import { recordContextFromUrl } from './record-context';
+
+const ID = '01900000-0000-7000-8000-0000000000a1';
+
+describe('recordContextFromUrl', () => {
+  it('reads the entity and record from an entity form URL', () => {
+    expect(recordContextFromUrl(`/xrm/contact/form?id=${ID}`)).toEqual({
+      entity: 'contact',
+      record_id: ID,
+    });
+    expect(recordContextFromUrl(`/xrm/core/entity/info/form?id=${ID}&tab=2`)).toEqual({
+      entity: 'entity_info',
+      record_id: ID,
+    });
+  });
+
+  it('is null anywhere that is not a saved record form', () => {
+    for (const url of [
+      '/xrm/contact/list',
+      '/xrm/contact/form',
+      `/xrm/contact/form?id=not-a-uuid`,
+      `/admin/form?id=${ID}`,
+      `/xrm/Contact/form?id=${ID}`,
+      '/',
+    ]) {
+      expect(recordContextFromUrl(url), url).toBeNull();
+    }
+  });
+});

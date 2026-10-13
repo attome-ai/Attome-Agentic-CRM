@@ -1,0 +1,52 @@
+@if (open()) {
+<div class="bulk-edit-backdrop" role="presentation" (click)="close()">
+  <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
+  <section class="bulk-edit-dialog" role="dialog" aria-modal="true"
+    [attr.aria-label]="'entityList.bulkEditTitle' | translate: { count: recordIds().length }"
+    (click)="$event.stopPropagation()">
+    <header>
+      <h3>{{ 'entityList.bulkEditTitle' | translate: { count: recordIds().length } }}</h3>
+      <button type="button" class="close-button" [attr.aria-label]="'entityList.close' | translate"
+        [disabled]="applying()" (click)="close()">×</button>
+    </header>
+
+    @if (loading()) {
+    <p class="bulk-edit-status">{{ 'entityList.loadingRecords' | translate }}</p>
+    } @else if (!fields().length) {
+    <p class="bulk-edit-status">{{ 'entityList.bulkEditNoFields' | translate }}</p>
+    } @else {
+    <label class="bulk-edit-field">
+      <span>{{ 'entityList.bulkEditField' | translate }}</span>
+      <select [ngModel]="fieldName()" (ngModelChange)="selectField($event)"
+        [disabled]="applying()">
+        @for (f of fields(); track f.name) {
+        <option [value]="f.name">{{ f.display_name || f.name }}</option>
+        }
+      </select>
+    </label>
+    @if (field(); as f) {
+    @if (!clear()) {
+    <form class="bulk-edit-form" [formGroup]="form" (ngSubmit)="apply()">
+      <attome-field-input [field]="f" [entityName]="entityName()" />
+    </form>
+    }
+    @if (!f.is_required) {
+    <label class="bulk-edit-clear">
+      <input type="checkbox" [ngModel]="clear()" (ngModelChange)="clear.set($event)"
+        [disabled]="applying()" />
+      <span>{{ 'entityList.bulkEditClear' | translate }}</span>
+    </label>
+    }
+    }
+    }
+
+    <footer>
+      <button type="button" class="btn btn-text" [disabled]="applying()"
+        (click)="close()">{{ 'entityList.cancel' | translate }}</button>
+      <button type="button" class="btn btn-primary"
+        [disabled]="applying() || loading() || !field()"
+        (click)="apply()">{{ 'entityList.bulkEditApply' | translate }}</button>
+    </footer>
+  </section>
+</div>
+}

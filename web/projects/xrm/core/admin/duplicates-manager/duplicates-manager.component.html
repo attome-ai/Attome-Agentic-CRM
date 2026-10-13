@@ -1,0 +1,129 @@
+<div class="page-header">
+  <div>
+    <h2>Duplicate Records</h2>
+    <p class="subtitle">
+      Candidate duplicates found by the match-rule sweep. Merge folds one
+      record into the other by rule (survivorship); Dismiss marks the pair as
+      not actually a duplicate and the sweep will never re-flag it.
+    </p>
+  </div>
+  <div class="header-actions">
+    <input
+      class="mono-input"
+      type="text"
+      placeholder="Filter by entity (e.g. contact)"
+      [ngModel]="entityFilter()"
+      (ngModelChange)="entityFilter.set($event)"
+      (keyup.enter)="load()"
+    />
+    <button class="btn-ghost" (click)="load()" [disabled]="loading()">
+      <i class="las la-sync"></i> Refresh
+    </button>
+  </div>
+</div>
+
+@if (loading()) {
+  <p class="state-msg">Loading duplicate candidates…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (items().length === 0) {
+  <div class="empty-state"><p>No open duplicate candidates.</p></div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Entity</th>
+          <th>Record A</th>
+          <th>Record B</th>
+          <th>Score</th>
+          <th>Detected</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of items(); track c.id) {
+          <tr>
+            <td class="mono-input">{{ c.entity_logicalname }}</td>
+            <td class="mono-input">{{ c.record_a }}</td>
+            <td class="mono-input">{{ c.record_b }}</td>
+            <td>
+              {{ scorePercent(c) }}
+              @if (c.auto_merge_eligible) {
+                <span class="badge" title="Flagged low-risk; may already have an auto-merge approval pending">auto</span>
+              }
+            </td>
+            <td class="cell-muted">{{ c.detected_at | date:'medium' }}</td>
+            <td class="actions">
+              <button class="btn-sm" (click)="toggleMerge(c)" [disabled]="busyId() === c.id">
+                <i class="las la-code-branch"></i> Merge
+              </button>
+              <button class="btn-sm btn-ghost" (click)="toggleDismiss(c)" [disabled]="busyId() === c.id">
+                <i class="las la-times"></i> Dismiss
+              </button>
+            </td>
+          </tr>
+          @if (conflictsById()[c.id]; as conflicts) {
+            <tr class="conflict-row">
+              <td colspan="6">
+                <p class="error-msg">
+                  Merged, but survivorship could not auto-decide: {{ conflicts.join(', ') }}.
+                  Review the surviving record's field values by hand.
+                </p>
+              </td>
+            </tr>
+          }
+          @if (mergingId() === c.id) {
+            <tr class="merge-row">
+              <td colspan="6">
+                <div class="merge-form">
+                  <p>Which record survives?</p>
+                  <label>
+                    <input type="radio" name="canonical-{{ c.id }}"
+                           [checked]="canonicalChoice()[c.id] === c.record_a"
+                           (change)="pickCanonical(c.id, c.record_a)" />
+                    Record A ({{ c.record_a }})
+                  </label>
+                  <label>
+                    <input type="radio" name="canonical-{{ c.id }}"
+                           [checked]="canonicalChoice()[c.id] === c.record_b"
+                           (change)="pickCanonical(c.id, c.record_b)" />
+                    Record B ({{ c.record_b }})
+                  </label>
+                  <div class="merge-form-actions">
+                    <button class="btn-sm" (click)="confirmMerge(c)" [disabled]="busyId() === c.id">
+                      {{ busyId() === c.id ? 'Merging…' : 'Confirm merge' }}
+                    </button>
+                    <button class="btn-sm btn-ghost" (click)="toggleMerge(c)">Cancel</button>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          }
+          @if (dismissingId() === c.id) {
+            <tr class="dismiss-row">
+              <td colspan="6">
+                <div class="dismiss-form">
+                  <label>
+                    Note (optional)
+                    <input
+                      class="mono-input"
+                      type="text"
+                      [ngModel]="dismissNote()"
+                      (ngModelChange)="dismissNote.set($event)"
+                      placeholder="e.g. different people, same employer"
+                    />
+                  </label>
+                  <button class="btn-sm" (click)="confirmDismiss(c)" [disabled]="busyId() === c.id">
+                    {{ busyId() === c.id ? 'Dismissing…' : 'Confirm dismiss' }}
+                  </button>
+                  <button class="btn-sm btn-ghost" (click)="toggleDismiss(c)">Cancel</button>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+}

@@ -1,0 +1,82 @@
+<div class="xwr-backdrop" aria-hidden="true"></div>
+<section #panel class="xwr-panel" role="dialog" aria-modal="true" aria-labelledby="xwr-title" tabindex="-1">
+  <header class="xwr-header">
+    <div>
+      <h2 id="xwr-title" class="xwr-title">{{ 'dashboard.records.title' | translate }}</h2>
+      <p class="xwr-subtitle">{{ widgetName() }}@if (bucketLabel()) { · {{ bucketLabel() }} }</p>
+    </div>
+    <button type="button" class="xwr-close" [attr.aria-label]="'dashboard.records.close' | translate" (click)="closed.emit()">
+      <i class="las la-times"></i>
+    </button>
+  </header>
+
+  @if (error()) {
+    <div class="xf-error-banner" role="alert"><i class="las la-exclamation-circle"></i> {{ error() }}</div>
+  }
+
+  @if (response(); as res) {
+    <div class="xwr-context">
+      <p class="xwr-total">{{ 'dashboard.records.total' | translate: { total: res.records.total } }}</p>
+      <p class="xwr-meta">{{ 'dashboard.viewer.asOf' | translate: { time: asOf() } }} · {{ res.timezone }}</p>
+      @if (res.applied_filters.length > 0) {
+        <ul class="xwr-filters" [attr.aria-label]="'dashboard.explain.filters' | translate">
+          @for (f of res.applied_filters; track $index) {
+            <li><code>{{ f.filter.field }} {{ f.filter.op }} {{ filterValue(f.filter.value) }}</code>
+              <span class="xwr-origin">{{ f.origin.kind }}</span></li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div class="xwr-actions">
+      @if (res.records.drill_filters) {
+        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" (click)="exportRecords('csv')">
+          <i class="las la-file-download"></i> {{ 'dashboard.records.exportCsv' | translate }}
+        </button>
+        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" (click)="exportRecords('xlsx')">
+          {{ 'dashboard.records.exportXlsx' | translate }}
+        </button>
+      }
+      @if (canCrossFilter() && bucketKey()?.kind === 'value') {
+        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" (click)="crossFilter.emit()">
+          <i class="las la-filter"></i> {{ 'dashboard.records.filterDashboard' | translate }}
+        </button>
+      }
+    </div>
+    @if (exportMessage(); as message) {
+      <p class="xwr-meta" role="status">{{ message }}</p>
+    }
+
+    <div class="xwr-table-wrap">
+      <table class="xwr-table">
+        <thead>
+          <tr>
+            @for (c of res.records.columns; track c.name) { <th scope="col">{{ c.name }}</th> }
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rows(); track r['id']) {
+            <tr>
+              @for (c of res.records.columns; track c.name; let first = $first) {
+                <td>
+                  @if (first) {
+                    <button type="button" class="xwr-link" (click)="openRecord(r)">{{ cell(r, c.name) }}</button>
+                  } @else {
+                    {{ cell(r, c.name) }}
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (res.records.next_cursor) {
+      <button type="button" class="xf-btn xf-btn-secondary" [disabled]="loading()" (click)="loadMore()">
+        {{ 'dashboard.records.loadMore' | translate }}
+      </button>
+    }
+  } @else if (loading()) {
+    <div class="xf-loading" role="status"><i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i></div>
+  }
+</section>

@@ -1,0 +1,10 @@
+:host {
+  display: block;
+  width: 100%;
+  min-height: 100%;
+}
+
+.attome-dashboard-shell {
+  width: 100%;
+  padding: 0;
+}

@@ -1,0 +1,253 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="ai-agent-policy">
+  <div xrmOperations>
+    <div class="policy-notice" role="note">
+      <i class="las la-shield-alt" aria-hidden="true"></i>
+      <div>
+        <strong>This policy only ever narrows.</strong>
+        <p>
+          Every invocation still checks the licence, the caller's own privileges, the session's risk
+          ceiling and the gate. Nothing ticked on this form can add a privilege, raise the ceiling,
+          bypass the gate or make an unlicensed module available — a grant contributes the allow-list
+          term and nothing else.
+        </p>
+        <p>
+          Saving applies to sessions started after this save. A session that is already running keeps
+          the ceiling and the grants it started with; pause or kill it on the Live Sessions screen to
+          stop it now.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <ng-template xrmTab="general">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt" aria-hidden="true"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Identity &amp; ceiling</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['name', 'description', 'risk_ceiling']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-tachometer-alt" aria-hidden="true"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">Session budgets</h2>
+          <p class="xf-section-desc">
+            Hard limits on a session started under this policy. They narrow what the ceiling and the
+            allow-list already permit; they never widen either.
+          </p>
+        </div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['max_invocations_per_session', 'max_writes_per_day', 'max_tokens_per_session', 'max_session_duration_minutes']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-shield-alt" aria-hidden="true"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">Capabilities</h2>
+          <p class="xf-section-desc">
+            The policy's explicit allow-list. Left unrestricted, the session's ceiling and the
+            budgets are what bound it; restricted, only the ids ticked here (plus any pack below) may
+            be invoked at all.
+          </p>
+        </div>
+      </div>
+      <div class="xf-section-body">
+        @if (hasCtrl('allowed_action_ids')) {
+          <label class="xf-switch">
+            <input type="checkbox" class="xf-switch-input"
+                   [checked]="restrictActions()"
+                   (change)="onRestrictActionsChange($any($event.target).checked)" />
+            <span class="xf-switch-pill"></span>
+            <span class="xf-switch-content">
+              <span class="xf-switch-label">Restrict to the selected list</span>
+              <span class="xf-switch-desc">On: only the ids ticked below may be invoked. Off: this policy is not narrowed by a list at all.</span>
+            </span>
+          </label>
+
+          @if (restrictActions()) {
+            <p class="policy-hint">
+              Restricted. An empty selection here is a real posture — it grants <strong>nothing</strong>,
+              which is not the same as turning this off.
+            </p>
+          } @else {
+            <p class="policy-hint policy-hint--warn">
+              Not narrowed by a list: whatever the ceiling permits is what a session started under this
+              policy may invoke, bounded by the budgets and the gate. The ticks below are kept only so
+              that turning this back on does not lose them.
+            </p>
+          }
+
+          <xrm-capability-picker
+            [actions]="actions()"
+            [loaded]="catalogueLoaded()"
+            [selected]="actionSelection()"
+            [ceiling]="riskCeiling()"
+            [dimmed]="!restrictActions()"
+            idPrefix="policy-actions"
+            (selectionChange)="onActionSelectionChange($event)" />
+
+          <p class="policy-hint">
+            A Consequential action never auto-executes for an agent — it is four-eyes approved
+            whatever this policy says. Granting an id here only contributes the allow-list term: the
+            licence, the caller's own privileges, the session's ceiling and the gate all still apply
+            to every invocation.
+          </p>
+        }
+      </div>
+    </section>
+
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-layer-group" aria-hidden="true"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">Capability packs</h2>
+          <p class="xf-section-desc">
+            The effective allow-list of a session started under this policy is the <strong>union</strong>
+            of the packs referenced here and the ids ticked above; that union is then intersected with
+            every other constraint — the licence, the caller's own privileges, the ceiling, the budgets
+            and the gate. A pack grants and never authorizes, and can never raise the ceiling.
+          </p>
+          <p class="xf-section-desc">
+            Resolution happens when a session <strong>starts</strong>. Editing or deleting a pack never
+            reaches a session that is already running — pause or kill it on the Live Sessions screen.
+          </p>
+        </div>
+        <a class="xf-btn xf-btn-secondary xf-btn-sm xf-section-header-action"
+           [routerLink]="['/xrm/ai_capability_pack/form']">New capability pack</a>
+      </div>
+      <div class="xf-section-body">
+        @if (!packsLoaded()) {
+          <p class="policy-hint" role="status">Loading capability packs…</p>
+        } @else if (packs().length === 0) {
+          <p class="xf-empty">
+            No capability packs are defined on this deployment yet. Create one to reuse a set of action
+            ids across policies.
+          </p>
+        } @else {
+          <div class="xf-table-wrap">
+            <table class="xf-table ref-table">
+              <thead>
+                <tr>
+                  <th scope="col">Reference</th>
+                  <th scope="col">Description</th>
+                  <th scope="col">Action ids granted</th>
+                  <th scope="col">Edit</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (pack of packs(); track pack.id) {
+                  <tr>
+                    <th scope="row" class="ref-rowhead">
+                      <label class="refcheck">
+                        <input type="checkbox" class="refcheck__box"
+                               [checked]="packSelection().includes(pack.id)"
+                               (change)="onPackToggle(pack.id, $event)" />
+                        <span class="refcheck__name">{{ pack.name }}</span>
+                      </label>
+                    </th>
+                    <td class="xf-cell-muted">
+                      @if (pack.description) { {{ pack.description }} } @else { — }
+                    </td>
+                    <td class="xf-cell-muted">{{ packActionCount(pack) }}</td>
+                    <td class="xf-cell-actions">
+                      <a class="ref-link" [routerLink]="['/xrm/ai_capability_pack/form']"
+                         [queryParams]="{ id: pack.id }">Edit</a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-book" aria-hidden="true"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">Knowledge sources</h2>
+          <p class="xf-section-desc">
+            Retrieval evaluates the caller's live visibility first — what they may already read — and
+            then this scope. The selection may only ever <strong>narrow</strong> that: it can never grant
+            access to a source the caller could not already see.
+          </p>
+        </div>
+      </div>
+      <div class="xf-section-body">
+        @if (hasCtrl('knowledge_source_refs')) {
+          <label class="xf-switch">
+            <input type="checkbox" class="xf-switch-input"
+                   [checked]="restrictSources()"
+                   (change)="onRestrictSourcesChange($any($event.target).checked)" />
+            <span class="xf-switch-pill"></span>
+            <span class="xf-switch-content">
+              <span class="xf-switch-label">Restrict retrieval to the selected sources</span>
+              <span class="xf-switch-desc">On: retrieval is scoped to the sources ticked below. Off: no narrowing from this policy.</span>
+            </span>
+          </label>
+
+          @if (restrictSources()) {
+            <p class="policy-hint">
+              Restricted. An empty selection here is a real posture — a session started under this
+              policy retrieves from <strong>nothing</strong>, which is not the same as turning this off.
+            </p>
+          } @else {
+            <p class="policy-hint policy-hint--warn">
+              Not narrowed: this policy puts no scope on retrieval, so the caller's own visibility is
+              the only bound. The ticks below are kept only so that turning this back on does not lose
+              them.
+            </p>
+          }
+
+          @if (!sourcesLoaded()) {
+            <p class="policy-hint" role="status">Loading knowledge sources…</p>
+          } @else if (sources().length === 0) {
+            <p class="xf-empty">No knowledge data sources are available on this deployment.</p>
+          } @else {
+            <div class="xf-table-wrap">
+              <table class="xf-table ref-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Reference</th>
+                    <th scope="col">Source id</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (source of sources(); track source.id) {
+                    <tr>
+                      <th scope="row" class="ref-rowhead">
+                        <label class="refcheck">
+                          <input type="checkbox" class="refcheck__box"
+                                 [checked]="sourceSelection().includes(source.id)"
+                                 (change)="onSourceSelectionChange(source.id, $event)" />
+                          <span class="refcheck__name">{{ source.name ? source.name : source.id }}</span>
+                        </label>
+                      </th>
+                      <td class="xf-cell-muted ref-table__id">{{ source.id }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

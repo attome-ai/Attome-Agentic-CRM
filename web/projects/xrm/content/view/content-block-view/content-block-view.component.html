@@ -1,0 +1,164 @@
+@switch (block().kind) {
+  @case ('heading') {
+    @switch (level()) {
+      @case (1) { <h1 class="cbv-heading">{{ text() }}</h1> }
+      @case (2) { <h2 class="cbv-heading">{{ text() }}</h2> }
+      @case (3) { <h3 class="cbv-heading">{{ text() }}</h3> }
+      @case (4) { <h4 class="cbv-heading">{{ text() }}</h4> }
+      @case (5) { <h5 class="cbv-heading">{{ text() }}</h5> }
+      @default  { <h6 class="cbv-heading">{{ text() }}</h6> }
+    }
+  }
+  @case ('rich_text') {
+    <!-- Angular's default DomSanitizer runs on every [innerHTML] bind —
+         deliberately never bypassed with DomSanitizer.bypassSecurityTrustHtml,
+         so this stays safe even though the source is admin-authored, not
+         just user-generated. -->
+    <div class="cbv-richtext" [innerHTML]="stringProp('html')"></div>
+  }
+  @case ('alert') {
+    <div class="cbv-alert" [class]="'cbv-alert-' + (stringProp('variant') || 'info')">
+      <i class="las" [class]="alertIcon()"></i>
+      <span>{{ stringProp('message') }}</span>
+    </div>
+  }
+  @case ('image') {
+    <img class="cbv-image" [src]="stringProp('src')" [alt]="stringProp('alt')" loading="lazy" />
+  }
+  @case ('columns') {
+    <div class="cbv-columns" [style.grid-template-columns]="columnsTemplate()">
+      @for (col of columnBlocks(); track $index) {
+        <div class="cbv-column">
+          @for (b of col; track b.id) {
+            <attome-content-block-view [block]="b" [isPublic]="isPublic()" />
+          }
+        </div>
+      }
+    </div>
+  }
+  @case ('data_table') {
+    @if (requiresAuth() && !authed()) {
+      <p class="cbv-gated">Sign in to view this table.</p>
+    } @else if (queryError()) {
+      <p class="cbv-error">{{ queryError() }}</p>
+    } @else if (!queryData()) {
+      <p class="cbv-loading">Loading…</p>
+    } @else {
+      <div class="cbv-table-wrap">
+        <table class="cbv-table">
+          <thead>
+            <tr>
+              @for (col of visibleColumns(); track col.name) { <th>{{ col.display_name }}</th> }
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of queryData()!.records; track $index) {
+              <tr>
+                @for (col of visibleColumns(); track col.name) {
+                  <td>{{ formatCell(row[col.name]) }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+  @case ('chart') {
+    @if (requiresAuth() && !authed()) {
+      <p class="cbv-gated">Sign in to view this chart.</p>
+    } @else if (queryError()) {
+      <p class="cbv-error">{{ queryError() }}</p>
+    } @else if (!queryData()) {
+      <p class="cbv-loading">Loading…</p>
+    } @else if (chartBars().length === 0) {
+      <p class="cbv-loading">No data to chart.</p>
+    } @else {
+      <figure class="cbv-chart">
+        <svg [attr.viewBox]="'0 0 ' + chartWidth() + ' 140'" class="cbv-chart-svg" role="img"
+             [attr.aria-label]="'Bar chart: ' + chartBars().length + ' values'">
+          <line x1="0" y1="120" [attr.x2]="chartWidth()" y2="120" class="cbv-chart-axis" />
+          @for (bar of chartBars(); track $index) {
+            <rect [attr.x]="bar.x" [attr.y]="bar.y" [attr.width]="barWidth()" [attr.height]="bar.height"
+                  rx="3" class="cbv-chart-bar">
+              <title>{{ bar.label }}: {{ bar.value }}</title>
+            </rect>
+            @if (chartBars().length <= 12) {
+              <text [attr.x]="bar.x + barWidth() / 2" y="134" class="cbv-chart-label" text-anchor="middle">{{ bar.label }}</text>
+            }
+          }
+        </svg>
+        <figcaption>
+          <button type="button" class="cbv-chart-toggle" (click)="showTable.set(!showTable())">
+            {{ showTable() ? 'Hide' : 'View' }} as table
+          </button>
+        </figcaption>
+        @if (showTable()) {
+          <div class="cbv-table-wrap">
+            <table class="cbv-table">
+              <thead><tr><th>Label</th><th>Value</th></tr></thead>
+              <tbody>
+                @for (bar of chartBars(); track $index) {
+                  <tr><td>{{ bar.label }}</td><td>{{ bar.value }}</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </figure>
+    }
+  }
+  @case ('form') {
+    @if (isPublic()) {
+      <p class="cbv-gated">This form isn't available to visitors yet.</p>
+    } @else if (!authed()) {
+      <p class="cbv-gated">Sign in to use this form.</p>
+    } @else {
+      <form class="cbv-form" (submit)="submitForm($event)">
+        @for (field of formFields(); track field) {
+          <label class="cbv-form-field">
+            <span>{{ field }}</span>
+            <input type="text" name="{{ field }}" [(ngModel)]="formValues[field]" ngDefaultControl />
+          </label>
+        }
+        <button type="submit" class="cbv-form-submit" [disabled]="formSubmitting()">
+          {{ formSubmitting() ? 'Submitting…' : (stringProp('submit_label') || 'Submit') }}
+        </button>
+        @if (formMessage()) { <p class="cbv-form-message">{{ formMessage() }}</p> }
+      </form>
+    }
+  }
+  @case ('component') {
+    @switch (componentKey()) {
+      @case ('cta-banner') {
+        <div class="cbv-cta">
+          <h3>{{ stringProp('heading') || 'Ready to get started?' }}</h3>
+          <p>{{ stringProp('body') }}</p>
+          <a class="cbv-cta-btn" [href]="stringProp('href') || '#'">{{ stringProp('button_label') || 'Get started' }}</a>
+        </div>
+      }
+      @case ('pricing-table') {
+        <div class="cbv-pricing">
+          <h4>{{ stringProp('plan_name') || 'Plan' }}</h4>
+          <p class="cbv-pricing-price">{{ stringProp('price') }}</p>
+          <p>{{ stringProp('description') }}</p>
+        </div>
+      }
+      @case ('testimonial-grid') {
+        <blockquote class="cbv-testimonial">
+          <p>{{ stringProp('quote') }}</p>
+          <cite>{{ stringProp('author') }}</cite>
+        </blockquote>
+      }
+      @case ('newsletter-signup') {
+        <div class="cbv-newsletter">
+          <h4>{{ stringProp('heading') || 'Subscribe' }}</h4>
+          <p class="cbv-gated">Newsletter sign-up isn't available to visitors yet.</p>
+        </div>
+      }
+      @default {
+        <p class="cbv-error">Unknown component.</p>
+      }
+    }
+  }
+}

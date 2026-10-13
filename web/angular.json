@@ -1,0 +1,258 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "base": {
+      "projectType": "library",
+      "root": "projects/base",
+      "sourceRoot": "projects/base",
+      "prefix": "base",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/base/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/base/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/base/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/base/tsconfig.spec.json",
+            "buildTarget": "::development",
+            "runnerConfig": false
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/base/**/*.ts",
+              "projects/base/**/*.html"
+            ],
+            "eslintConfig": "projects/base/eslint.config.js"
+          }
+        }
+      }
+    },
+    "sdk": {
+      "projectType": "library",
+      "root": "projects/sdk",
+      "sourceRoot": "projects/sdk/src",
+      "prefix": "sdk",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/sdk/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/sdk/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/sdk/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/sdk/tsconfig.spec.json",
+            "buildTarget": "::development",
+            "runnerConfig": true
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/sdk/**/*.ts"
+            ],
+            "eslintConfig": "projects/sdk/eslint.config.js"
+          }
+        }
+      }
+    },
+    "xrm": {
+      "projectType": "library",
+      "root": "projects/xrm",
+      "sourceRoot": "projects/xrm",
+      "prefix": "xrm",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "options": {
+            "project": "projects/xrm/ng-package.json"
+          },
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/xrm/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/xrm/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/xrm/tsconfig.spec.json",
+            "buildTarget": "::development",
+            "runnerConfig": true
+          }
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "projects/xrm/**/*.ts",
+              "projects/xrm/**/*.html"
+            ],
+            "eslintConfig": "projects/xrm/eslint.config.js"
+          }
+        }
+      }
+    },
+    "attome-website": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": "dist/attome-website",
+            "index": "src/index.html",
+            "browser": "src/main.ts",
+            "tsConfig": "tsconfig.app.json",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "public"
+              }
+            ],
+            "styles": [
+              "node_modules/@fontsource/inter/index.css",
+              "node_modules/@fontsource/inter/500.css",
+              "node_modules/@fontsource/inter/600.css",
+              "node_modules/@fontsource/inter/700.css",
+              "node_modules/@fontsource/dm-sans/index.css",
+              "node_modules/@fontsource/dm-sans/500.css",
+              "node_modules/@fontsource/dm-sans/600.css",
+              "node_modules/@fontsource/dm-sans/700.css",
+              "node_modules/@fontsource/cairo/index.css",
+              "node_modules/@fontsource/cairo/500.css",
+              "node_modules/@fontsource/cairo/600.css",
+              "node_modules/@fontsource/cairo/700.css",
+              "node_modules/@fontsource/playfair-display/index.css",
+              "node_modules/@fontsource/playfair-display/700.css",
+              "src/styles/line-awesome-subset.css",
+              "projects/xrm/styles/xrm-form-global.css",
+              "src/styles.css"
+            ],
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "@messageformat/core"
+            ],
+            "define": {
+              "ATTOME_FLEET_CONSOLE": "false"
+            }
+          },
+          "configurations": {
+            "production": {
+              "define": {
+                "ATTOME_FLEET_CONSOLE": "false"
+              },
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumError": "595kB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumError": "15kB"
+                },
+                {
+                  "type": "any",
+                  "maximumError": "570kB"
+                }
+              ],
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ]
+            },
+            "development": {
+              "optimization": false,
+              "sourceMap": true,
+              "extractLicenses": false,
+              "define": {
+                "ATTOME_FLEET_CONSOLE": "true"
+              }
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "tsconfig.spec.json",
+            "buildTarget": "::development",
+            "runnerConfig": false
+          }
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "options": {
+            "prebundle": {
+              "exclude": [
+                "@attome/base",
+                "@attome/xrm"
+              ]
+            }
+          },
+          "configurations": {
+            "production": {
+              "buildTarget": "attome-website:build:production"
+            },
+            "development": {
+              "buildTarget": "attome-website:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "lint": {
+          "builder": "@angular-eslint/builder:lint",
+          "options": {
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "cli": {
+    "schematicCollections": [
+      "angular-eslint"
+    ],
+    "analytics": false
+  }
+}

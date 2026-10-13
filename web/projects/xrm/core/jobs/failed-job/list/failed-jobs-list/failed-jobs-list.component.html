@@ -1,0 +1,71 @@
+<div class="page-header">
+  <div>
+    <h2>Failed Jobs</h2>
+    <p class="subtitle">
+      Dead-lettered platform jobs — attempts exhausted, never silently retried again.
+    </p>
+  </div>
+  <button class="btn-ghost" (click)="load()" [disabled]="loading()">
+    <i class="las la-sync"></i> Refresh
+  </button>
+</div>
+
+@if (loading()) {
+  <p class="state-msg">Loading failed jobs…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else {
+  <section>
+    <h3>Fast queue <span class="cell-muted">(email, notifications, maintenance)</span></h3>
+    @if (fast().length === 0) {
+      <div class="empty-state"><p>No dead-lettered fast-queue jobs.</p></div>
+    } @else {
+      <ng-container *ngTemplateOutlet="table; context: { $implicit: fast() }" />
+    }
+  </section>
+
+  <section>
+    <h3>Batch queue <span class="cell-muted">(bulk import/export, staged-import apply, secret rewrap)</span></h3>
+    @if (batch().length === 0) {
+      <div class="empty-state"><p>No dead-lettered batch-queue jobs.</p></div>
+    } @else {
+      <ng-container *ngTemplateOutlet="table; context: { $implicit: batch() }" />
+    }
+  </section>
+}
+
+<ng-template #table let-jobs>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Job type</th>
+          <th>Attempts</th>
+          <th>Last error</th>
+          <th>Failed at</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (j of jobs; track j.id) {
+          <tr>
+            <td class="mono-input">{{ j.variant }}</td>
+            <td>{{ j.attempts }} / {{ j.max_attempts }}</td>
+            <td class="cell-muted">{{ j.last_error || '—' }}</td>
+            <td class="cell-muted">{{ j.done_at ? (j.done_at | date:'medium') : (j.run_at | date:'medium') }}</td>
+            <td class="actions">
+              <button
+                class="btn-sm"
+                (click)="replay(j)"
+                [disabled]="replayingId() === j.id"
+              >
+                <i class="las la-redo"></i>
+                {{ replayingId() === j.id ? 'Replaying…' : 'Replay' }}
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</ng-template>

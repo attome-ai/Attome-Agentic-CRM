@@ -1,0 +1,99 @@
+<div class="ra" data-testid="recovery-archive">
+  <form class="ra-filters" (ngSubmit)="apply()">
+    <label for="ra-field">{{ 'fieldChange.archive.field' | translate }}</label>
+    <input id="ra-field" name="field" type="text" dir="ltr"
+           list="ra-fields"
+           [placeholder]="'fieldChange.archive.allFields' | translate"
+           [ngModel]="field()" (ngModelChange)="field.set($event)" />
+    <datalist id="ra-fields">
+      @for (f of fieldNames(); track f) {
+        <option [value]="f"></option>
+      }
+    </datalist>
+    <label for="ra-reason">{{ 'fieldChange.archive.reason' | translate }}</label>
+    <select id="ra-reason" name="reason" [ngModel]="reason()" (ngModelChange)="reason.set($event)">
+      <option value="">{{ 'releaseReport.filters.all' | translate }}</option>
+      @for (r of reasons; track r) {
+        <option [value]="r">{{ reasonKey(r) | translate }}</option>
+      }
+    </select>
+    <label class="ra-check">
+      <input type="checkbox" name="includeRestored"
+             [ngModel]="includeRestored()" (ngModelChange)="includeRestored.set($event)" />
+      {{ 'fieldChange.archive.includeRestored' | translate }}
+    </label>
+    <button type="submit" class="btn-ghost btn-sm" [disabled]="loading()">
+      <i class="las la-filter" aria-hidden="true"></i> {{ 'releaseReport.filters.apply' | translate }}
+    </button>
+  </form>
+
+  <div class="ra-restore-all">
+    <button type="button" class="btn-primary btn-sm" data-testid="restore-all"
+            [disabled]="!restoreAllField() || busyId() !== null" (click)="restoreAll()">
+      <i class="las la-undo" aria-hidden="true"></i>
+      {{ (busyId() === '*' ? 'fieldChange.dialog.working' : 'fieldChange.archive.restoreAll') | translate }}
+    </button>
+    @if (!restoreAllField()) {
+      <span class="ra-muted">{{ 'fieldChange.archive.restoreAllHint' | translate }}</span>
+    }
+  </div>
+
+  <p class="ra-notice" role="status" data-testid="archive-notice">{{ notice() }}</p>
+  @if (error()) {
+    <p class="error-msg" role="alert" data-testid="archive-error">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="state-msg" role="status">{{ 'fieldChange.archive.loading' | translate }}</p>
+  } @else if (rows().length === 0) {
+    <div class="empty-state"><p>{{ 'fieldChange.archive.empty' | translate }}</p></div>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'fieldChange.archive.field' | translate }}</th>
+            <th scope="col">{{ 'fieldChange.archive.reason' | translate }}</th>
+            <th scope="col">{{ 'fieldChange.archive.record' | translate }}</th>
+            <th scope="col">{{ 'fieldChange.archive.archivedAt' | translate }}</th>
+            <th scope="col">{{ 'fieldChange.archive.expiresAt' | translate }}</th>
+            <th scope="col">{{ 'fieldChange.archive.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rows(); track r.id) {
+            <tr>
+              <td class="cell-mono">{{ r.field_logicalname }}</td>
+              <td>{{ reasonKey(r.reason) | translate }}</td>
+              <td class="cell-mono" dir="ltr">{{ r.record_id }}</td>
+              <td class="cell-muted">{{ r.archived_at | localDate: dateFmt }}</td>
+              <td class="cell-muted">{{ r.expires_at | localDate: dateFmt }}</td>
+              <td>
+                @if (r.restored_at) {
+                  <span class="badge">{{ 'fieldChange.archive.restored' | translate }}</span>
+                } @else {
+                  <button type="button" class="btn-ghost btn-sm"
+                          [attr.aria-label]="'fieldChange.archive.restoreRow' | translate: { record: r.record_id }"
+                          [disabled]="busyId() !== null" (click)="restoreOne(r)">
+                    {{ (busyId() === r.id ? 'fieldChange.dialog.working' : 'fieldChange.archive.restore') | translate }}
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pages() > 1) {
+      <nav class="ra-pager" [attr.aria-label]="'releaseReport.pager.label' | translate">
+        <button type="button" class="btn-ghost btn-sm" (click)="previous()" [disabled]="!hasPrevious()">
+          {{ 'releaseReport.pager.previous' | translate }}
+        </button>
+        <span>{{ 'releaseReport.pager.pageOf' | translate: { page: page(), pages: pages() } }}</span>
+        <button type="button" class="btn-ghost btn-sm" (click)="next()" [disabled]="!hasNext()">
+          {{ 'releaseReport.pager.next' | translate }}
+        </button>
+      </nav>
+    }
+  }
+</div>

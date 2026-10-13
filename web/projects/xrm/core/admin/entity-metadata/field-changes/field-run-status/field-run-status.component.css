@@ -1,0 +1,33 @@
+.frs {
+  margin-block-start: 12px;
+  padding: 12px 14px;
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.frs-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.frs p {
+  margin: 0 0 6px;
+}
+
+.frs-list {
+  margin: 0;
+  padding-inline-start: 18px;
+}
+
+.frs-muted {
+  color: var(--color-text-secondary);
+}
+
+.frs-mono {
+  font-family: var(--font-mono, monospace);
+}

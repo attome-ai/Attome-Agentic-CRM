@@ -1,0 +1,6 @@
+{
+  "name": "@attome/sdk",
+  "version": "1.0.0",
+  "description": "Generated TypeScript client for the Attome XRM platform's HTTP API (M68). Framework-agnostic: fetch + Web Crypto only, no Angular dependency.",
+  "sideEffects": false
+}

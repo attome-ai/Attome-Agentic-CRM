@@ -1,0 +1,28 @@
+@if (loading()) {
+  <div class="xf-loading">
+    <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+  </div>
+} @else if (emptyState()) {
+  <div class="xde-empty-state">
+    <i class="las la-columns xde-empty-icon"></i>
+    <p>{{ 'dashboard.viewer.noHomeDashboard' | translate }}</p>
+    <a class="xf-btn xf-btn-secondary xf-btn-sm" [routerLink]="newDashboardRoute">
+      {{ 'dashboard.viewer.goToDashboards' | translate }}
+    </a>
+  </div>
+} @else if (error()) {
+  <div class="xf-error-banner"><i class="las la-exclamation-circle"></i> {{ error() }}</div>
+} @else if (selectedId(); as id) {
+  @if (matches().length > 1) {
+    <div class="xde-picker">
+      <label for="xde-picker-select">{{ 'dashboard.viewer.dashboardPickerLabel' | translate }}</label>
+      <select id="xde-picker-select" class="xde-picker-select" [value]="id"
+              (change)="selectDashboard($any($event.target).value)">
+        @for (m of matches(); track m.id) {
+          <option [value]="m.id">{{ m.data['name'] }}</option>
+        }
+      </select>
+    </div>
+  }
+  <attome-dashboard-viewer [id]="id" [embedded]="embedded()" />
+}

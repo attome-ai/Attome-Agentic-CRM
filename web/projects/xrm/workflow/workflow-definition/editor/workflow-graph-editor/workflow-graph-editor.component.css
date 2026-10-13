@@ -1,0 +1,252 @@
+/* ── Workflow graph canvas ────────────────────────────────────────────────── */
+
+/* The editor claims the whole content area rather than guessing at it: the
+   host fills `.xrm-main` (a flex item with a definite height), the breadcrumb
+   and toolbar take what they need, and the canvas gets the rest. The old
+   `calc(100vh - 220px)` assumed a fixed amount of chrome above and left a
+   growing strip of dead space below whenever that guess was too large.
+   `min-height` is the fallback if the host's height ever resolves to auto. */
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Two columns: the node palette is gone — nodes come from the double-click
+   picker on the canvas and from the `+` beside an output port. */
+.editor-shell {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 16px;
+  flex: 1;
+  min-height: 480px;
+}
+
+/* No scrollbars: the work surface is larger than the viewport and is moved by
+   dragging its background (or the wheel), so the editor never shows a scroll
+   track in either axis. Panning is clamped to the surface, so no node can be
+   left somewhere unreachable. */
+.canvas-wrap {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-bg);
+  overflow: hidden;
+}
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2000px;
+  height: 1400px;
+  cursor: grab;
+  /* The dot grid rides on the surface, so panning is visible even over empty
+     space — on the wrap it would have stayed nailed to the frame. */
+  background: radial-gradient(circle, var(--color-border) 1px, transparent 1px) 0 0 / 20px 20px;
+}
+.canvas.panning { cursor: grabbing; }
+.edge-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+/* Wires are cubic beziers (see `wirePath`), so `fill: none` is load-bearing —
+   without it a path closes across its own arc and floods the canvas. */
+.edge-line {
+  stroke: var(--color-accent); stroke-width: 2.5; fill: none; opacity: 0.8;
+  stroke-linecap: round;
+}
+.edge-line:hover { opacity: 1; stroke-width: 3; }
+.edge-line.pending { stroke-dasharray: 5 5; opacity: 0.55; }
+
+.node {
+  position: absolute;
+  width: 160px;
+  border-radius: 9px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-bg-alt);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  user-select: none;
+  cursor: grab;
+}
+.node.selected { border-color: var(--color-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent); }
+.node:active { cursor: grabbing; }
+/* Fixed height, not padding around a text line: the edge layer places every
+   wire by adding HEADER_H to the node's top, so a header that grows — a long
+   label wrapping to two lines, a different font stack — would slide every port
+   below it out from under its wire. The label is clipped instead. */
+.node-header {
+  height: 32px; padding: 0 10px; gap: 8px;
+  font-size: 12px; font-weight: 600; color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-border); border-radius: 9px 9px 0 0;
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.node-header .node-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.node-header .node-type-tag { flex: 0 0 auto; font-size: 9px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; }
+
+/* Ordinal badge above the node, ComfyUI-style, replacing the generated id that
+   used to sit inside the card. Positioned outside the node box so it does not
+   shift the port rows the edges are drawn against. */
+.node-number {
+  position: absolute; top: -19px; right: 0;
+  padding: 1px 6px; border-radius: 5px;
+  font-size: 10px; font-weight: 600; font-family: monospace; line-height: 1.5;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-bg));
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+.node-number.inline { position: static; margin-right: 4px; }
+
+.canvas-empty {
+  position: absolute; top: 24px; left: 24px; margin: 0;
+  font-size: 13px; color: var(--color-text-secondary); pointer-events: none;
+}
+
+/* Port rows are on a fixed grid — PORT_TOP, then PORT_H-tall rows PORT_GAP
+   apart — because `portScreenPos` computes each wire's endpoint from exactly
+   these numbers. Change one side and the wires miss their dots. */
+.port-row { display: flex; justify-content: space-between; padding-bottom: 8px; }
+.port-col { display: flex; flex-direction: column; gap: 4px; padding: 6px 0; }
+.port {
+  position: relative; height: 16px;
+  display: flex; align-items: center; font-size: 10px; color: var(--color-text-secondary);
+  padding: 0 11px;
+}
+
+/* "Add the next node here": sits outside the node's right edge so it never
+   pushes the port dot, which is what the edges are anchored to. */
+.port-add {
+  position: absolute; right: -30px; top: 50%; transform: translateY(-50%);
+  width: 17px; height: 17px; padding: 0; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 50%, transparent);
+  background: var(--color-bg-alt); color: var(--color-accent);
+  font-size: 13px; font-weight: 600;
+}
+.port-add:hover { background: var(--color-accent); color: var(--color-bg); }
+.port.output { justify-content: flex-end; text-align: right; }
+/* The dot straddles the node's own border, ComfyUI-style, rather than sitting
+   inside the card: the node paints over the edge layer, so a dot set in from
+   the edge would leave the last stretch of every wire hidden under the card.
+   Centred on the border, the wire visibly lands on the dot. `left`/`right` are
+   -6px because the dot is 10px wide and `.port`'s box starts inside the node's
+   1.5px border — that puts the centre 0.5px in from the node's outer edge,
+   which is the PORT_INSET the edge layer draws to. */
+.port-dot {
+  position: absolute; top: 50%; left: -6px;
+  transform: translateY(-50%);
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--color-bg); border: 2px solid var(--color-accent);
+  cursor: crosshair;
+  transition: background 0.1s, box-shadow 0.1s, transform 0.1s;
+}
+.port.output .port-dot { left: auto; right: -6px; }
+/* A 10px dot is a cruel drag handle and an even crueller drop target, so the
+   pointer area is grown to ~24px without moving the dot itself. */
+.port-dot::after {
+  content: ''; position: absolute; inset: -7px; border-radius: 50%;
+}
+.port-dot:hover, .port-dot:focus-visible { background: var(--color-accent); }
+.port-dot.required { border-color: #f59e0b; }
+.port-dot.wired { background: var(--color-accent); }
+
+/* While a wire is in flight, every port it could legally land on lights up. */
+.port-dot.drop-target {
+  transform: translateY(-50%) scale(1.25);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 28%, transparent);
+}
+/* ...and the ports it cannot land on stop inviting the drop, the end it is
+   anchored to excepted — that one stays lit so the wire's origin is obvious. */
+.canvas.wiring .port-dot:not(.drop-target):not(.wire-anchor) { opacity: 0.45; }
+.port-dot.wire-anchor { background: var(--color-accent); }
+.canvas.wiring .node { cursor: crosshair; }
+
+/* ── Node-type picker (double-click canvas, or `+` on an output) ──────────── */
+
+.type-menu {
+  position: absolute; z-index: 5;
+  width: 190px; max-height: 300px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 6px; border-radius: 10px;
+  background: var(--color-bg-alt); border: 1px solid var(--color-border);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+.type-menu-search {
+  width: 100%; box-sizing: border-box; margin-bottom: 4px;
+  padding: 6px 8px; font-size: 12px;
+  border: 1px solid var(--color-border); border-radius: 7px;
+  background: var(--color-bg); color: var(--color-text-primary);
+}
+.type-menu-item {
+  text-align: left; padding: 6px 8px; border-radius: 6px; cursor: pointer;
+  border: 1px solid transparent; background: transparent;
+  font-size: 12px; color: var(--color-text-primary);
+}
+.type-menu-item:hover, .type-menu-item:focus-visible {
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  border-color: var(--color-accent);
+}
+.type-menu-empty { margin: 4px 6px; font-size: 11px; color: var(--color-text-secondary); }
+
+.inspector {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px;
+  overflow-y: auto;
+}
+.inspector h4 { margin: 0 0 2px; font-size: 13px; font-weight: 600; color: var(--color-text-primary); }
+.inspector textarea {
+  width: 100%; box-sizing: border-box; min-height: 62px; font-size: 12px;
+  padding: 8px; border: 1px solid var(--color-border); border-radius: 7px;
+  background: var(--color-bg); color: var(--color-text-primary); resize: vertical;
+}
+.inspector-empty { color: var(--color-text-secondary); font-size: 13px; }
+.inspector .node-ref { font-family: monospace; font-size: 10px; margin: 0 0 14px; }
+
+/* ── Generated per-node-type config form ──────────────────────────────────── */
+
+.cfg-field { margin-bottom: 12px; }
+.cfg-field > label {
+  display: block; margin-bottom: 4px; font-size: 11px; font-weight: 600;
+  color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.03em;
+}
+.cfg-field > input[type="text"],
+.cfg-field > input[type="number"],
+.cfg-field > select {
+  width: 100%; box-sizing: border-box; font-size: 12px; padding: 6px 8px;
+  border: 1px solid var(--color-border); border-radius: 7px;
+  background: var(--color-bg); color: var(--color-text-primary);
+}
+.cfg-field > input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--color-accent); }
+.cfg-field > input:disabled, .cfg-field > select:disabled, .cfg-field > textarea:disabled { opacity: 0.6; }
+.cfg-required { margin-left: 6px; font-size: 9px; color: #f59e0b; letter-spacing: 0; }
+
+.inspector .cfg-json { font-family: monospace; }
+
+.cfg-hint { margin: 4px 0 0; font-size: 10.5px; line-height: 1.45; color: var(--color-text-secondary); }
+.cfg-extra { color: #f59e0b; }
+.cfg-field .error-msg { margin: 4px 0 0; font-size: 10.5px; }
+
+.toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.toolbar .status-row { display: flex; align-items: center; gap: 10px; }
+.validation-errors {
+  margin-top: 10px; padding: 10px; border-radius: 8px;
+  background: rgba(239,68,68,0.1); border: 1px solid #7f1d1d;
+  font-size: 12px; color: #f87171; white-space: pre-wrap;
+}
+
+/* M06 checklist item 2 — dry-run trace panel. */
+.simulate-panel {
+  margin-bottom: 12px; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--color-border); background: var(--color-bg-secondary, transparent);
+}
+.simulate-panel-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.simulate-panel-header h4 { margin: 0; font-size: 13px; font-weight: 600; }
+.simulate-trace { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 8px; }
+.simulate-trace th {
+  text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary); font-weight: 500;
+}
+.simulate-trace td { padding: 5px 8px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+.simulate-trace tr:last-child td { border-bottom: none; }
+.simulate-trace tr.trace-failed td { color: #f87171; }

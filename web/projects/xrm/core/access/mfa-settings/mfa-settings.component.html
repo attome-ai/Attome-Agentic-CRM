@@ -1,0 +1,81 @@
+<div class="page-header">
+  <div>
+    <h2>Two-Factor Authentication</h2>
+    <p class="subtitle">An authenticator-app code required alongside your password at sign-in.</p>
+  </div>
+</div>
+
+@if (loading()) {
+  <p class="state-msg">Checking your two-factor status…</p>
+} @else {
+  @if (error()) {
+    <p class="error-msg">{{ error() }}</p>
+  }
+
+  @if (recoveryCodes(); as codes) {
+    <div class="card">
+      <h3>Save your recovery codes</h3>
+      <p class="subtitle">
+        Each code can be used once if you lose access to your authenticator app. Store
+        them somewhere safe — they won't be shown again.
+      </p>
+      <ul class="mfa-recovery-codes">
+        @for (code of codes; track code) {
+          <li>{{ code }}</li>
+        }
+      </ul>
+      <button type="button" class="btn-primary" (click)="acknowledgeRecoveryCodes()">Done</button>
+    </div>
+  } @else if (enrolling(); as info) {
+    <div class="card">
+      <h3>Set up two-factor authentication</h3>
+      <p class="subtitle">Scan into an authenticator app (Google Authenticator, 1Password, Authy…), or enter the key manually.</p>
+      <div class="mfa-secret">{{ info.secret_base32 }}</div>
+      <p><a [href]="info.otpauth_uri">Open in authenticator app</a></p>
+
+      <div class="field">
+        <label for="confirm-code">Authentication code</label>
+        <input id="confirm-code" type="text" autocomplete="one-time-code" placeholder="123456"
+               [value]="codeInput()" (input)="codeInput.set($any($event.target).value)" />
+      </div>
+
+      <div class="mfa-actions">
+        <button type="button" class="btn-primary" [disabled]="submitting()" (click)="confirmEnrollment()">
+          {{ submitting() ? 'Confirming…' : 'Confirm' }}
+        </button>
+        <button type="button" class="btn-secondary" (click)="cancelEnrollment()">Cancel</button>
+      </div>
+    </div>
+  } @else if (status(); as s) {
+    <div class="card">
+      @if (s.enrolled) {
+        <h3>Status: <span class="badge badge-boolean">Enabled</span></h3>
+
+        @if (pendingAction(); as action) {
+          <p class="subtitle">
+            {{ action === 'disable' ? 'Enter a current code or a recovery code to disable two-factor authentication.' : 'Enter a current code to regenerate your recovery-code batch.' }}
+          </p>
+          <div class="field">
+            <label for="action-code">Code</label>
+            <input id="action-code" type="text" autocomplete="one-time-code" placeholder="123456 or XXXX-XXXX"
+                   [value]="codeInput()" (input)="codeInput.set($any($event.target).value)" />
+          </div>
+          <div class="mfa-actions">
+            <button type="button" class="btn-primary" [disabled]="submitting()" (click)="confirmPendingAction()">
+              {{ submitting() ? 'Working…' : 'Confirm' }}
+            </button>
+            <button type="button" class="btn-secondary" (click)="cancelPendingAction()">Cancel</button>
+          </div>
+        } @else {
+          <div class="mfa-actions">
+            <button type="button" class="btn-secondary" (click)="startPendingAction('regenerate')">Regenerate recovery codes</button>
+            <button type="button" class="btn-secondary" (click)="startPendingAction('disable')">Disable</button>
+          </div>
+        }
+      } @else {
+        <h3>Status: <span class="badge">Not enabled</span></h3>
+        <button type="button" class="btn-primary" (click)="startEnrollment()">Enable two-factor authentication</button>
+      }
+    </div>
+  }
+}

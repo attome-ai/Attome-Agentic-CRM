@@ -1,0 +1,115 @@
+@switch (role()) {
+  @case ('user') {
+    <div class="msg msg--user">
+      <span class="visually-hidden">{{ 'aiChat.message.you' | translate }}</span>
+      <p class="msg__text" dir="auto">{{ message().content }}</p>
+    </div>
+  }
+  @case ('tool') {
+    <details class="msg msg--tool">
+      <summary>{{ 'aiChat.message.toolResult' | translate }}</summary>
+      <pre class="msg__raw" dir="auto">{{ message().content }}</pre>
+    </details>
+  }
+  @default {
+    <div class="msg msg--assistant">
+      <span class="visually-hidden">{{ 'aiChat.message.assistant' | translate }}</span>
+      @if (message().content) {
+        <p class="msg__text" dir="auto">{{ message().content }}</p>
+      }
+
+      @if (isTurnFinal()) {
+        @switch (terminalState()) {
+          @case ('max_steps') {
+            <p class="msg__notice" role="status">{{ 'aiChat.terminal.max_steps' | translate }}</p>
+          }
+          @case ('budget_exceeded') {
+            <p class="msg__notice" role="status">{{ 'aiChat.terminal.budget_exceeded' | translate }}</p>
+          }
+          @case ('session_revoked') {
+            <p class="msg__notice" role="status">{{ 'aiChat.terminal.session_revoked' | translate }}</p>
+          }
+          @case ('kill_switch') {
+            <p class="msg__notice" role="status">{{ 'aiChat.terminal.kill_switch' | translate }}</p>
+          }
+          @case ('privilege_revoked') {
+            <p class="msg__notice" role="status">{{ 'aiChat.terminal.privilege_revoked' | translate }}</p>
+          }
+          @case ('invalid_tool_call') {
+            <p class="msg__notice" role="status">{{ 'aiChat.terminal.invalid_tool_call' | translate }}</p>
+          }
+          @case ('model_failure') {
+            <p class="msg__notice" role="status">{{ 'aiChat.terminal.model_failure' | translate }}</p>
+          }
+          @case ('tool_failure') {
+            <p class="msg__notice" role="status">{{ 'aiChat.terminal.tool_failure' | translate }}</p>
+          }
+          @case ('protocol_error') {
+            <p class="msg__notice" role="status">{{ 'aiChat.terminal.protocol_error' | translate }}</p>
+          }
+          @case ('cancelled') {
+            <p class="msg__notice msg__notice--quiet" role="status">{{ 'aiChat.terminal.cancelled' | translate }}</p>
+          }
+        }
+
+        @switch (grounding()) {
+          @case ('sourced') {
+            <section class="msg__sources" [attr.aria-label]="'aiChat.grounding.sourced' | translate">
+              <p class="msg__grounding msg__grounding--sourced">
+                <i class="las la-book" aria-hidden="true"></i>
+                {{ 'aiChat.grounding.sourced' | translate }}
+              </p>
+              <ol class="msg__citations">
+                @for (c of citations(); track c.item_id + '|' + headingPath(c)) {
+                  <li class="msg__citation" dir="auto">
+                    <a [routerLink]="citationLink()" [queryParams]="{ id: c.item_id }">{{ c.title }}</a>
+                    @if (c.heading_path.length) {
+                      <span class="msg__heading">{{ headingPath(c) }}</span>
+                    }
+                    @if (c.stale) {
+                      <span class="msg__flag">{{ 'aiChat.citation.stale' | translate }}</span>
+                    }
+                    @if (c.truncated) {
+                      <span class="msg__flag">{{ 'aiChat.citation.truncated' | translate }}</span>
+                    }
+                  </li>
+                }
+              </ol>
+            </section>
+          }
+          @case ('no_sources') {
+            <p class="msg__grounding msg__grounding--ungrounded">
+              <i class="las la-exclamation-circle" aria-hidden="true"></i>
+              {{ 'aiChat.grounding.no_sources' | translate }}
+            </p>
+          }
+        }
+
+        @if (rateable()) {
+          <div class="msg__feedback" role="group" [attr.aria-label]="'aiChat.feedback.label' | translate">
+            <button type="button" class="icon-btn" (click)="cast('up')" [attr.aria-pressed]="vote() === 'up'"
+                    [attr.aria-label]="'aiChat.feedback.up' | translate" [title]="'aiChat.feedback.up' | translate">
+              <i class="las la-thumbs-up" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="icon-btn" (click)="cast('down')" [attr.aria-pressed]="vote() === 'down'"
+                    [attr.aria-label]="'aiChat.feedback.down' | translate" [title]="'aiChat.feedback.down' | translate">
+              <i class="las la-thumbs-down" aria-hidden="true"></i>
+            </button>
+          </div>
+        }
+
+        <p class="msg__meta">
+          @if (message().model_id) {
+            <span>{{ 'aiChat.message.model' | translate }}: {{ message().model_id }}</span>
+          }
+          @if (message().prompt_version) {
+            <span>{{ 'aiChat.message.promptVersion' | translate }}: {{ message().prompt_version }}</span>
+          }
+          @if (latencyMs() !== undefined) {
+            <span>{{ 'aiChat.message.latency' | translate }}: {{ latencyMs() }} ms</span>
+          }
+        </p>
+      }
+    </div>
+  }
+}

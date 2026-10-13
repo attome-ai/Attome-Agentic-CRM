@@ -1,0 +1,34 @@
+.ts-page { padding: 24px; max-width: 1100px; margin: 0 auto; }
+.ts-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.ts-header h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--color-text-primary, #e5eefc); }
+.ts-subtitle { margin: 4px 0 0; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
+
+.ts-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.ts-filter-btn { padding: 6px 12px; font-size: 12px; font-weight: 600; text-transform: capitalize; border: 1px solid var(--color-border, #24324d); border-radius: 999px; background: none; color: var(--color-text-secondary, #94a3b8); cursor: pointer; }
+.ts-filter-btn:hover { color: var(--color-text-primary, #e5eefc); }
+.ts-filter-active { border-color: var(--color-accent, #8b5cf6); background: var(--color-accent, #8b5cf6); color: white; }
+
+.ts-note { margin: 0 0 12px; padding: 10px 14px; font-size: 12px; color: var(--color-text-secondary, #94a3b8); border: 1px solid var(--color-border, #24324d); border-radius: 8px; }
+.ts-state-msg { margin: 0; padding: 24px; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
+.ts-state-error { color: var(--color-danger, #ef4444); }
+
+.ts-table-wrap { overflow-x: auto; border: 1px solid var(--color-border, #24324d); border-radius: 12px; background: var(--color-surface, #111c33); }
+.ts-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ts-table th { text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--color-text-secondary, #94a3b8); border-bottom: 1px solid var(--color-border, #24324d); }
+.ts-table td { padding: 10px 16px; color: var(--color-text-primary, #e5eefc); border-bottom: 1px solid var(--color-border, #24324d); }
+.ts-table tr:last-child td { border-bottom: 0; }
+.ts-mono { font-family: ui-monospace, monospace; font-size: 12px; color: var(--color-text-secondary, #94a3b8); }
+
+.ts-badge { display: inline-block; padding: 3px 9px; font-size: 11px; font-weight: 600; text-transform: capitalize; border-radius: 999px; background: color-mix(in srgb, var(--color-text-primary, #e5eefc) 10%, transparent); }
+.ts-badge-approved  { background: color-mix(in srgb, var(--color-success, #22c55e) 18%, transparent); color: var(--color-success, #22c55e); }
+.ts-badge-rejected  { background: color-mix(in srgb, var(--color-danger, #ef4444) 18%, transparent); color: var(--color-danger, #ef4444); }
+.ts-badge-submitted { background: color-mix(in srgb, #f59e0b 18%, transparent); color: #f59e0b; }
+
+.ts-actions { display: flex; gap: 8px; }
+.ts-btn { padding: 6px 12px; font-size: 12px; font-weight: 600; border-radius: 6px; border: 1px solid var(--color-border, #24324d); background: none; cursor: pointer; }
+.ts-btn:disabled { opacity: .5; cursor: not-allowed; }
+.ts-btn-primary { border-color: var(--color-accent, #8b5cf6); background: var(--color-accent, #8b5cf6); color: white; }
+.ts-btn-approve { border-color: var(--color-success, #22c55e); color: var(--color-success, #22c55e); }
+.ts-btn-approve:hover:not(:disabled) { background: color-mix(in srgb, var(--color-success, #22c55e) 12%, transparent); }
+.ts-btn-reject { border-color: var(--color-danger, #ef4444); color: var(--color-danger, #ef4444); }
+.ts-btn-reject:hover:not(:disabled) { background: color-mix(in srgb, var(--color-danger, #ef4444) 12%, transparent); }

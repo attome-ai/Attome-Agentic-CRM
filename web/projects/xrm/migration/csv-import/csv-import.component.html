@@ -1,0 +1,299 @@
+<section class="csv-import" data-testid="csv-import">
+  <p class="ci-intro">{{ 'csvImport.intro' | translate: { max: maxRows } }}</p>
+
+  @if (error(); as message) {
+    <p class="error-msg" role="alert" data-testid="csv-error">{{ message }}</p>
+  }
+  <p class="ci-notice" role="status" data-testid="csv-notice">{{ notice() }}</p>
+
+  <!-- 1. Target entity and file -->
+  <fieldset class="ci-step" [disabled]="busy()">
+    <legend>{{ 'csvImport.step.file' | translate }}</legend>
+    <div class="ci-row">
+      <label class="ci-field">
+        <span>{{ 'csvImport.entityLabel' | translate }}</span>
+        <input type="text" data-testid="csv-entity" [value]="entity()" [disabled]="locked()"
+               (input)="entity.set($any($event.target).value)" (keydown.enter)="loadEntity()" />
+      </label>
+      <button type="button" class="btn-ghost" data-testid="csv-entity-load"
+              [disabled]="locked() || !entity().trim()" (click)="loadEntity()">
+        {{ 'csvImport.entityLoad' | translate }}
+      </button>
+    </div>
+
+    @if (schema(); as s) {
+      @if (projects().length && !project()) {
+        <label class="ci-field">
+          <span>{{ 'csvImport.resume' | translate }}</span>
+          <select data-testid="csv-resume" (change)="chooseResume($any($event.target).value)">
+            <option value="">{{ 'csvImport.resumeNone' | translate }}</option>
+            @for (p of projects(); track p.id) {
+              <option [value]="p.id">{{ p.name }}</option>
+            }
+          </select>
+        </label>
+      }
+
+      <div class="ci-row">
+        <label class="ci-field">
+          <span>{{ 'csvImport.fileLabel' | translate }}</span>
+          <input type="file" accept=".csv,.tsv,.txt,text/csv" data-testid="csv-file" (change)="onFile($event)" />
+        </label>
+        <label class="ci-field">
+          <span>{{ 'csvImport.encodingLabel' | translate }}</span>
+          <select data-testid="csv-encoding" [disabled]="locked()" (change)="setEncoding($any($event.target).value)">
+            @for (e of ['auto', 'utf-8', 'windows-1256', 'windows-1252', 'utf-16le', 'utf-16be']; track e) {
+              <option [value]="e" [selected]="encodingChoice() === e">{{ 'csvImport.encoding.' + e | translate }}</option>
+            }
+          </select>
+        </label>
+        <label class="ci-field">
+          <span>{{ 'csvImport.delimiterLabel' | translate }}</span>
+          <select data-testid="csv-delimiter" (change)="setDelimiter($any($event.target).value)">
+            <option value="auto" [selected]="delimiterChoice() === 'auto'">{{ 'csvImport.delimiter.auto' | translate }}</option>
+            <option value="," [selected]="delimiterChoice() === ','">{{ 'csvImport.delimiter.comma' | translate }}</option>
+            <option value=";" [selected]="delimiterChoice() === ';'">{{ 'csvImport.delimiter.semicolon' | translate }}</option>
+            <option value="&#9;" [selected]="delimiterChoice() === '\t'">{{ 'csvImport.delimiter.tab' | translate }}</option>
+          </select>
+        </label>
+      </div>
+
+      @if (parsed(); as p) {
+        <p class="ci-summary" data-testid="csv-summary">
+          {{ 'csvImport.fileSummary' | translate: { rows: p.rows.length, columns: p.headers.length, encoding: encoding() } }}
+        </p>
+        @if (p.tooManyRows) {
+          <p class="error-msg" role="alert" data-testid="csv-too-many">{{ 'csvImport.tooManyRows' | translate: { max: maxRows } }}</p>
+        }
+        @if (p.unterminatedQuoteRow !== null) {
+          <p class="error-msg" role="alert" data-testid="csv-unterminated">
+            {{ 'csvImport.unterminated' | translate: { row: p.unterminatedQuoteRow } }}
+          </p>
+        }
+      }
+    }
+  </fieldset>
+
+  <!-- 2. Preview and mapping -->
+  @if (parsed(); as p) {
+    @if (!p.tooManyRows && schema()) {
+      <fieldset class="ci-step" [disabled]="busy()">
+        <legend>{{ 'csvImport.step.map' | translate }}</legend>
+        @if (locked()) {
+          <p class="ci-hint" data-testid="csv-locked">{{ 'csvImport.lockedNote' | translate }}</p>
+        }
+
+        <div class="ci-row">
+          <label class="ci-field">
+            <span>{{ 'csvImport.savedMapping' | translate }}</span>
+            <select data-testid="csv-mapping" [disabled]="locked()" (change)="selectMapping($any($event.target).value)">
+              <option value="">{{ 'csvImport.savedMappingNone' | translate }}</option>
+              @for (m of mappings(); track m.id) {
+                <option [value]="m.id" [selected]="selectedMappingId() === m.id">{{ m.name }}</option>
+              }
+            </select>
+          </label>
+          @if (!locked() && !reusableMapping()) {
+            <label class="ci-field">
+              <span>{{ 'csvImport.mappingName' | translate }}</span>
+              <input type="text" data-testid="csv-mapping-name" maxlength="200" [value]="mappingName()"
+                     (input)="mappingName.set($any($event.target).value)" />
+            </label>
+          }
+          <label class="ci-field">
+            <span>{{ 'csvImport.dateFormatLabel' | translate }}</span>
+            <select data-testid="csv-date-format" [disabled]="locked()" (change)="setDateFormat($any($event.target).value)">
+              @for (f of ['iso', 'dmy', 'mdy']; track f) {
+                <option [value]="f" [selected]="dateFormat() === f">{{ 'csvImport.date.' + f | translate }}</option>
+              }
+            </select>
+          </label>
+          <label class="ci-field">
+            <span>{{ 'csvImport.decimalLabel' | translate }}</span>
+            <select data-testid="csv-decimal" [disabled]="locked()" (change)="setDecimal($any($event.target).value)">
+              <option value="." [selected]="decimal() === '.'">{{ 'csvImport.decimal.dot' | translate }}</option>
+              <option value="," [selected]="decimal() === ','">{{ 'csvImport.decimal.comma' | translate }}</option>
+            </select>
+          </label>
+        </div>
+
+        @if (missingSources().length) {
+          <p class="error-msg" role="alert" data-testid="csv-missing-sources">
+            {{ 'csvImport.missingSources' | translate: { columns: missingSources().join(', ') } }}
+          </p>
+        }
+
+        <div class="ci-table-wrap">
+          <table class="ci-table" data-testid="csv-preview">
+            <caption>{{ 'csvImport.previewTitle' | translate: { count: previewRows().length } }}</caption>
+            <thead>
+              <tr>
+                @for (c of columns(); track c.column) {
+                  <th scope="col">
+                    <span class="ci-header">{{ c.source }}</span>
+                    <select data-testid="csv-target" [disabled]="locked()"
+                            [attr.aria-label]="'csvImport.columnTarget' | translate: { column: c.source }"
+                            (change)="setTarget(c.column, $any($event.target).value)">
+                      <option value="" [selected]="c.target === null">{{ 'csvImport.ignore' | translate }}</option>
+                      @for (f of fields(); track f.name) {
+                        <option [value]="f.name" [selected]="c.target === f.name">{{ f.display_name }} ({{ f.name }})</option>
+                      }
+                    </select>
+                    @if (fieldFor(c.target)?.field_type === 'lookup') {
+                      <select data-testid="csv-resolution" [disabled]="locked()"
+                              [attr.aria-label]="'csvImport.lookupResolution' | translate: { column: c.source }"
+                              (change)="setResolution(c.column, $any($event.target).value)">
+                        @for (r of ['by_label', 'by_natural_key', 'by_id']; track r) {
+                          <option [value]="r" [selected]="c.lookupResolution === r">{{ 'csvImport.resolution.' + r | translate }}</option>
+                        }
+                      </select>
+                      @if (c.lookupResolution === 'by_natural_key') {
+                        <input type="text" data-testid="csv-match-field" [disabled]="locked()"
+                               [value]="c.lookupMatchField ?? ''"
+                               [attr.aria-label]="'csvImport.matchField' | translate: { column: c.source }"
+                               [attr.placeholder]="'csvImport.matchFieldPlaceholder' | translate"
+                               (change)="setMatchField(c.column, $any($event.target).value)" />
+                      }
+                    }
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of previewRows(); track $index) {
+                <tr>
+                  @for (c of columns(); track c.column) {
+                    <td [class.ci-ignored]="c.target === null">{{ row[c.column] }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @for (problem of problems(); track $index) {
+          <p class="error-msg" role="alert" data-testid="csv-mapping-problem">
+            @switch (problem.code) {
+              @case ('none_mapped') { {{ 'csvImport.problem.none_mapped' | translate }} }
+              @case ('duplicate_target') { {{ 'csvImport.problem.duplicate_target' | translate: { target: $any(problem).target } }} }
+              @case ('match_field_missing') { {{ 'csvImport.problem.match_field_missing' | translate: { column: $any(problem).source } }} }
+            }
+          </p>
+        }
+
+        @if (built(); as b) {
+          <p class="ci-summary" data-testid="csv-ready">
+            {{ 'csvImport.readyRows' | translate: { count: b.records.length } }}
+          </p>
+          @if (b.invalidRows > 0) {
+            <div class="ci-errors" data-testid="csv-cell-errors">
+              <p class="error-msg" role="alert">{{ 'csvImport.errorsTitle' | translate: { count: b.invalidRows } }}</p>
+              <ul>
+                @for (e of shownErrors(); track $index) {
+                  <li data-testid="csv-cell-error">{{ cellErrorText(e) }}</li>
+                }
+              </ul>
+              @if (b.errorCount > shownErrors().length) {
+                <p class="ci-hint">{{ 'csvImport.moreErrors' | translate: { count: b.errorCount - shownErrors().length } }}</p>
+              }
+              <label class="ci-check">
+                <input type="checkbox" data-testid="csv-skip-invalid" [checked]="skipInvalid()" [disabled]="locked()"
+                       (change)="skipInvalid.set($any($event.target).checked)" />
+                {{ 'csvImport.skipInvalid' | translate: { count: b.invalidRows } }}
+              </label>
+            </div>
+          }
+        }
+      </fieldset>
+    }
+  }
+
+  <!-- 3. Dry run, stage, approve -->
+  @if (parsed() && schema()) {
+    <fieldset class="ci-step">
+      <legend>{{ 'csvImport.step.import' | translate }}</legend>
+      @if (blocker(); as key) {
+        <p class="ci-hint" data-testid="csv-blocker">{{ key | translate }}</p>
+      }
+
+      <div class="ci-row">
+        <button type="button" class="btn-ghost" data-testid="csv-dry-run"
+                [disabled]="busy() || !!blocker() || phase() === 'staging' || phase() === 'staged' || phase() === 'approving' || phase() === 'done'"
+                (click)="runDryRun()">
+          {{ 'csvImport.dryRunButton' | translate }}
+        </button>
+        <button type="button" class="btn-primary" data-testid="csv-stage"
+                [disabled]="busy() || !!blocker() || !project() || phase() === 'staged' || phase() === 'approving' || phase() === 'done'"
+                (click)="stageAll()">
+          {{ 'csvImport.stageButton' | translate: { count: built()?.records?.length ?? 0 } }}
+        </button>
+        @if (busy() && phase() === 'staging') {
+          <button type="button" class="btn-ghost" data-testid="csv-stop" (click)="stop()">
+            {{ 'csvImport.stop' | translate }}
+          </button>
+        }
+      </div>
+
+      @if (dryRun(); as d) {
+        <div class="ci-result" data-testid="csv-dry-run-result">
+          <h4>{{ 'csvImport.dryRunTitle' | translate }}</h4>
+          <p>{{ 'csvImport.dryRunSummary' | translate: { total: d.staged.total, passed: d.staged.passed, failed: d.staged.failed, rejected: d.staged.rejected } }}</p>
+          @if (d.problems.length) {
+            <ul>
+              @for (problem of d.problems; track $index) {
+                <li data-testid="csv-dry-run-problem">{{ 'csvImport.rowProblem' | translate: { row: problem.rowNumber, message: problem.message } }}</li>
+              }
+            </ul>
+          }
+        </div>
+      }
+
+      @if (chunkCount() > 0 && phase() !== 'setup' && phase() !== 'dry-run') {
+        <div class="ci-result" data-testid="csv-stage-result">
+          <label class="ci-progress-label" for="csv-stage-progress">
+            {{ 'csvImport.stagingProgress' | translate: { done: chunksDone(), total: chunkCount() } }}
+          </label>
+          <progress id="csv-stage-progress" data-testid="csv-stage-progress" [value]="chunksDone()" [max]="chunkCount()">
+            {{ stagePercent() }}%
+          </progress>
+          <p>{{ 'csvImport.stagedSummary' | translate: stagedCounts() }}</p>
+          @if (stageProblems().length) {
+            <ul>
+              @for (problem of stageProblems(); track $index) {
+                <li data-testid="csv-stage-problem">{{ 'csvImport.rowProblem' | translate: { row: problem.rowNumber, message: problem.message } }}</li>
+              }
+            </ul>
+          }
+        </div>
+      }
+
+      @if (phase() === 'staged' || phase() === 'approving' || phase() === 'done') {
+        <div class="ci-result" data-testid="csv-approve-section">
+          <p class="ci-hint">{{ 'csvImport.approveHint' | translate }}</p>
+          <div class="ci-row">
+            <button type="button" class="btn-primary" data-testid="csv-approve"
+                    [disabled]="busy() || phase() === 'done'" (click)="approveAll()">
+              {{ 'csvImport.approveButton' | translate }}
+            </button>
+            <button type="button" class="btn-ghost" data-testid="csv-refresh" [disabled]="busy()" (click)="refreshRuns()">
+              {{ 'csvImport.refresh' | translate }}
+            </button>
+          </div>
+          @if (approveTotal() > 0) {
+            <label class="ci-progress-label" for="csv-approve-progress">
+              {{ 'csvImport.approvingProgress' | translate: { done: approved(), total: approveTotal() } }}
+            </label>
+            <progress id="csv-approve-progress" data-testid="csv-approve-progress" [value]="approved()" [max]="approveTotal()">
+              {{ approvePercent() }}%
+            </progress>
+          }
+          <ul class="ci-status">
+            @for (s of runStatusCounts(); track s.status) {
+              <li data-testid="csv-run-status">{{ 'csvImport.runStatus' | translate: { count: s.count, status: s.status } }}</li>
+            }
+          </ul>
+        </div>
+      }
+    </fieldset>
+  }
+</section>

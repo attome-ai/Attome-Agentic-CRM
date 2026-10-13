@@ -1,0 +1,143 @@
+<section class="copilot" role="complementary" [attr.aria-label]="'aiChat.panel.title' | translate">
+  <header class="copilot__header">
+    <h2 class="copilot__title">
+      <i class="las la-robot" aria-hidden="true"></i>
+      {{ 'aiChat.panel.title' | translate }}
+    </h2>
+    <div class="copilot__tools">
+      <button type="button" class="icon-btn" (click)="newConversation()"
+              [attr.aria-label]="'aiChat.panel.newConversation' | translate"
+              [title]="'aiChat.panel.newConversation' | translate">
+        <i class="las la-plus" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="icon-btn" (click)="toggleDock()"
+              [attr.aria-pressed]="dock() === 'docked'"
+              [attr.aria-label]="'aiChat.panel.dock' | translate"
+              [title]="'aiChat.panel.dock' | translate">
+        <i class="las la-columns" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="icon-btn" (click)="close()"
+              [attr.aria-label]="'aiChat.panel.close' | translate"
+              [title]="'aiChat.panel.close' | translate">
+        <i class="las la-times" aria-hidden="true"></i>
+      </button>
+    </div>
+  </header>
+
+  @if (!conversation()) {
+    <div class="copilot__setup">
+      <label class="field">
+        <span>{{ 'aiChat.panel.agent' | translate }}</span>
+        <select [ngModel]="selectedAgentId()" (ngModelChange)="selectedAgentId.set($event)"
+                [disabled]="!agentsLoaded() || agents().length === 0">
+          <option value="" disabled>{{ 'aiChat.panel.chooseAgent' | translate }}</option>
+          @for (agent of agents(); track agent.id) {
+            <option [value]="agent.id">{{ agent.name }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        <span>{{ 'aiChat.panel.ceiling' | translate }}</span>
+        <select [ngModel]="riskCeiling()" (ngModelChange)="riskCeiling.set($event)">
+          <option value="read">{{ 'aiChat.ceiling.read' | translate }}</option>
+          <option value="reversible">{{ 'aiChat.ceiling.reversible' | translate }}</option>
+          <option value="consequential">{{ 'aiChat.ceiling.consequential' | translate }}</option>
+        </select>
+      </label>
+      @if (agentsLoaded() && agents().length === 0) {
+        <p class="copilot__hint">{{ 'aiChat.panel.noAgents' | translate }}</p>
+      }
+    </div>
+  }
+
+  <div class="copilot__log" role="log" aria-live="polite" [attr.aria-busy]="busy()">
+    @if (messages().length === 0 && !busy()) {
+      <p class="copilot__hint">{{ 'aiChat.panel.empty' | translate }}</p>
+    }
+    @for (m of messages(); track m.id) {
+      @if (isTurnFinal(m) && callsByTurn().get(m.turn_id); as calls) {
+        <ul class="copilot__steps" [attr.aria-label]="'aiChat.steps.label' | translate">
+          @for (call of calls; track call.tool_call_id) {
+            <li class="step" [attr.data-status]="call.status">
+              <code>{{ call.action_id }}</code>
+              <span class="step__status">{{ call.status }}</span>
+            </li>
+          }
+        </ul>
+      }
+      @if (isShown(m)) {
+        <attome-ai-chat-message [message]="m" [latencyMs]="latencyFor(m)" (voted)="onVote(m, $event)" />
+      }
+    }
+
+    @for (call of awaitingApproval(); track call.tool_call_id) {
+      <p class="copilot__approval" role="status">
+        <i class="las la-user-check" aria-hidden="true"></i>
+        {{ 'aiChat.approval.pending' | translate }} — <code>{{ call.action_id }}</code>
+      </p>
+    }
+
+    @for (call of proposals(); track call.tool_call_id) {
+      <attome-ai-confirm-card [conversationId]="conversation()!.conversation.id" [toolCall]="call"
+                           (resolved)="onCardResolved($event)" />
+    }
+
+    @if (runningCalls().length) {
+      <ul class="copilot__steps copilot__steps--live" [attr.aria-label]="'aiChat.steps.label' | translate">
+        @for (call of runningCalls(); track call.tool_call_id) {
+          <li class="step" [attr.data-status]="call.status">
+            <code>{{ call.action_id }}</code>
+            <span class="step__status">{{ call.status }}</span>
+          </li>
+        }
+      </ul>
+    }
+
+    @if (streamingText(); as text) {
+      <!-- Provisional: replaced by the answer. Hidden from assistive tech so it
+           is not read out piece by piece; the answer is announced once. -->
+      <div class="copilot__streaming" aria-hidden="true">
+        <p class="copilot__streaming-text" dir="auto">{{ text }}</p>
+      </div>
+      <span class="visually-hidden" role="status">{{ 'aiChat.panel.answering' | translate }}</span>
+    } @else if (busy()) {
+      <p class="copilot__hint" role="status">{{ 'aiChat.panel.thinking' | translate }}</p>
+    }
+  </div>
+
+  @if (notice(); as key) {
+    <p class="copilot__notice" role="status">{{ key | translate }}</p>
+  }
+  @if (errorKey(); as key) {
+    <p class="copilot__error" role="alert">{{ key | translate }}</p>
+  }
+  @if (errorText(); as text) {
+    <p class="copilot__error" role="alert">{{ text }}</p>
+  }
+
+  <footer class="copilot__composer">
+    @if (context(); as ctx) {
+      <label class="copilot__context">
+        <input type="checkbox" [ngModel]="shareContext()" (ngModelChange)="shareContext.set($event)" />
+        <span>{{ 'aiChat.context.share' | translate }}</span>
+        <code>{{ ctx.entity }}</code>
+      </label>
+    }
+    <label class="visually-hidden" for="copilot-composer">{{ 'aiChat.panel.message' | translate }}</label>
+    <textarea #composer id="copilot-composer" rows="2" [ngModel]="draft()" (ngModelChange)="draft.set($event)"
+              (keydown)="onComposerKeydown($event)" [placeholder]="'aiChat.panel.placeholder' | translate"
+              [disabled]="busy()"></textarea>
+    @if (busy()) {
+      <button type="button" class="btn" (click)="stop()" [disabled]="!runningTurnId()"
+              [attr.aria-disabled]="stopping() ? 'true' : null">
+        <i class="las la-stop-circle" aria-hidden="true"></i>
+        {{ (stopping() ? 'aiChat.panel.stopping' : 'aiChat.panel.stop') | translate }}
+      </button>
+    } @else {
+      <button type="button" class="btn btn--primary" (click)="send()" [disabled]="!canSend()">
+        <i class="las la-paper-plane" aria-hidden="true"></i>
+        {{ 'aiChat.panel.send' | translate }}
+      </button>
+    }
+  </footer>
+</section>

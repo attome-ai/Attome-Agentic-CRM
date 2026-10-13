@@ -1,0 +1,123 @@
+<div class="page-header">
+  <div>
+    <h2>Crawled Pages Details</h2>
+    @if (activeTarget(); as t) {
+      <p class="subtitle">Target: {{ t.url }}</p>
+    } @else if (!loading()) {
+      <p class="subtitle">Crawl a website first, then view its pages here.</p>
+    }
+  </div>
+  <div class="field">
+    <label for="selection-mode">Selection Mode</label>
+    <select id="selection-mode" [ngModel]="selectionMode()" (ngModelChange)="onModeChange($event)">
+      <option value="single">Select Single Page Only</option>
+      <option value="multiple">Select Multiple Pages</option>
+    </select>
+  </div>
+</div>
+
+@if (targets().length > 1) {
+  <div class="filter-bar">
+    <div class="field">
+      <label for="target-picker">Website</label>
+      <select id="target-picker" [ngModel]="activeTargetId()" (ngModelChange)="onSwitchTarget($event)">
+        @for (t of targets(); track t.id) {
+          <option [value]="t.id">{{ t.url }}</option>
+        }
+      </select>
+    </div>
+  </div>
+}
+
+@if (activeTarget(); as t) {
+  <div class="crawl-status" [class.is-running]="isRunning()" aria-live="polite">
+    <span class="badge" [class]="'status-' + t.status">
+      @if (isRunning()) { <i class="las la-sync la-spin" aria-hidden="true"></i> }
+      {{ t.status }}
+    </span>
+    <span class="crawl-counts">
+      <strong>{{ pages().length }}</strong> found ·
+      <strong>{{ crawledCount() }}</strong> crawled
+      @if (failedCount() > 0) { · <strong>{{ failedCount() }}</strong> failed }
+      @if (importedCount() > 0) { · <strong>{{ importedCount() }}</strong> imported }
+    </span>
+    @if (isRunning()) {
+      <span class="crawl-live-note">Live — pages appear here as the crawler finds them.</span>
+    }
+    <button class="btn-sm" (click)="refreshNow()" [disabled]="refreshing()">
+      <i class="las la-sync" aria-hidden="true"></i> Refresh
+    </button>
+    @if (t.last_error) { <span class="error-msg">{{ t.last_error }}</span> }
+    @if (pollError()) { <span class="error-msg">Live updates paused: {{ pollError() }}</span> }
+    @if (pollStalled()) {
+      <span class="error-msg">
+        Live updates stopped after 30 minutes — use Refresh to check on this crawl.
+      </span>
+    }
+    @if (isRunning()) { <div class="crawl-progress"><span></span></div> }
+  </div>
+}
+
+@if (loading()) {
+  <p class="state-msg">Loading…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (!activeTargetId()) {
+  <div class="empty-state">
+    <p>No websites have been crawled yet.</p>
+    <a class="btn-sm" routerLink="/xrm/admin/webcrawl/targets">
+      <i class="las la-globe"></i> Go to Web Crawling
+    </a>
+  </div>
+} @else if (pages().length === 0) {
+  <div class="empty-state">
+    @if (isRunning()) {
+      <p>Crawling started — waiting for the first page…</p>
+    } @else {
+      <p>This website has no crawled pages yet.</p>
+    }
+  </div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>Page URL</th>
+          <th>Size</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of pages(); track p.id) {
+          <tr class="page-row">
+            <td>
+              <input
+                type="checkbox"
+                [checked]="selected().has(p.id)"
+                [disabled]="p.status !== 'crawled' || !!p.imported_data_item_ref"
+                (change)="toggle(p)"
+              />
+            </td>
+            <td>
+              <span class="page-tree-cell" [style.paddingLeft.px]="p.depth * 20">
+                <i class="las la-file page-tree-icon"></i>
+                {{ p.url_path }}
+                @if (p.imported_data_item_ref) { <span class="cell-muted">(imported)</span> }
+              </span>
+            </td>
+            <td class="cell-muted">{{ formatSize(p.size_bytes) }}</td>
+            <td><span class="badge" [class]="'status-' + p.status">{{ p.status }}</span></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-primary" [disabled]="selected().size === 0 || importing()" (click)="importSelected()">
+      @if (importing()) { Importing… } @else { Import {{ selected().size }} Page(s) }
+    </button>
+    @if (importError()) { <span class="error-msg">{{ importError() }}</span> }
+  </div>
+}

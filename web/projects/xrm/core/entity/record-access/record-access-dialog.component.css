@@ -1,0 +1,194 @@
+/* U7 Phase A — Assign / Share dialog. Same shell as the list's bulk-edit
+ * dialog; logical properties so it mirrors in RTL. */
+.ra-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(0 0 0 / .62);
+}
+
+.ra-dialog {
+  width: min(520px, 100%);
+  max-height: min(720px, calc(100vh - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  color: var(--color-text-primary, #e5eefc);
+  background: var(--color-surface, #111827);
+  box-shadow: 0 24px 64px rgb(0 0 0 / .5);
+  overflow: auto;
+  text-align: start;
+}
+
+.ra-dialog header,
+.ra-dialog footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ra-dialog header h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+}
+
+.ra-dialog footer {
+  justify-content: flex-end;
+}
+
+.ra-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 7px;
+  color: inherit;
+  background: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.ra-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ra-section h4 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.ra-picker-row {
+  display: flex;
+  gap: 8px;
+}
+
+.ra-picker-row input {
+  flex: 1;
+}
+
+.ra-dialog select,
+.ra-dialog input {
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg, #0f172a);
+  color: inherit;
+  font: inherit;
+}
+
+.ra-results,
+.ra-shares,
+.ra-failures {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ra-results {
+  max-height: 200px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.ra-result {
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ra-result:hover,
+.ra-result.selected {
+  background: color-mix(in srgb, var(--color-accent, #14b8a6) 18%, transparent);
+}
+
+.ra-shares li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-block: 6px;
+  border-block-end: 1px solid var(--color-border);
+}
+
+.ra-principal {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.ra-kind,
+.ra-cap {
+  color: var(--color-text-secondary, #94a3b8);
+  font-size: 12px;
+}
+
+.ra-cap-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.ra-muted {
+  margin: 0;
+  padding: 8px 10px;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.ra-summary p {
+  margin: 0;
+}
+
+.ra-failures li {
+  font-size: 12px;
+  color: var(--color-danger, #f87171);
+}
+
+.ra-error {
+  margin: 0;
+  color: var(--color-danger, #f87171);
+}
+
+.ra-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.35rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ra-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ra-btn-primary {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.ra-btn-text {
+  padding-inline: 0.4rem;
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary);
+}

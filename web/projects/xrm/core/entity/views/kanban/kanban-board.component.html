@@ -1,0 +1,57 @@
+<div class="kanban-container">
+  @if (loading()) {
+  <div class="kanban-status">{{ 'entityViews.kanban.loading' | translate }}</div>
+  } @else if (error()) {
+  <div class="kanban-status kanban-status--error">{{ error() }}</div>
+  } @else {
+
+  @if (transitionError(); as message) {
+  <div class="kanban-banner kanban-banner--error">
+    <span>{{ message }}</span>
+    <button type="button" class="kanban-banner-close" (click)="dismissTransitionError()">
+      <i class="las la-times"></i>
+    </button>
+  </div>
+  }
+
+  <div class="kanban-board">
+    @for (col of columns(); track col.value) {
+    <div class="kanban-column"
+      [class.kanban-column--droppable]="isDropTarget(col)"
+      (dragover)="onDragOver(col, $event)"
+      (drop)="onDrop(col, $event)">
+      <div class="kanban-column-header">
+        <span class="kanban-column-title">{{ col.value }}</span>
+        @if (col.wipLimit !== null) {
+        <span class="kanban-wip" [class.kanban-wip--over]="isOverWip(col)">
+          {{ col.cards.length }} / {{ col.wipLimit }}
+        </span>
+        } @else {
+        <span class="kanban-wip">{{ col.cards.length }}</span>
+        }
+      </div>
+      <div class="kanban-column-body">
+        @for (card of col.cards; track card.id) {
+        <div class="kanban-card" draggable="true" role="button" tabindex="0"
+          (dragstart)="onDragStart(card, $event)"
+          (dragend)="onDragEnd()"
+          (click)="onCardClick(card)"
+          (keydown.enter)="onCardClick(card)"
+          (keydown.space)="onCardClick(card)">
+          @for (f of card.fields; track f.label) {
+          <div class="kanban-card-field">
+            <span class="kanban-card-label">{{ f.label }}</span>
+            <span class="kanban-card-value">{{ f.value }}</span>
+          </div>
+          }
+        </div>
+        }
+        @if (col.cards.length === 0) {
+        <div class="kanban-column-empty">{{ 'entityViews.kanban.empty' | translate }}</div>
+        }
+      </div>
+    </div>
+    }
+  </div>
+  }
+</div>

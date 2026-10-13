@@ -1,0 +1,52 @@
+<section class="rt" data-testid="record-timeline">
+  <div class="rt-chips" role="group" [attr.aria-label]="'recordTimeline.filterLabel' | translate">
+    <button type="button" class="rt-chip" [class.rt-chip-on]="selected().size === 0"
+            [attr.aria-pressed]="selected().size === 0" (click)="clearFilter()"
+            data-testid="timeline-chip-all">
+      {{ 'recordTimeline.all' | translate }}
+    </button>
+    @for (kind of kinds; track kind) {
+      <button type="button" class="rt-chip" [class.rt-chip-on]="isSelected(kind)"
+              [attr.aria-pressed]="isSelected(kind)" (click)="toggle(kind)"
+              [attr.data-testid]="'timeline-chip-' + kind">
+        <i [class]="icon(kind)" aria-hidden="true"></i>
+        {{ 'recordTimeline.kinds.' + kind | translate }}
+      </button>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="rt-error" role="alert">{{ 'recordTimeline.error' | translate }}</p>
+  }
+
+  @if (entries().length === 0 && !loading() && !error()) {
+    <p class="rt-hint" data-testid="timeline-empty">{{ 'recordTimeline.empty' | translate }}</p>
+  }
+
+  <ol class="rt-list">
+    @for (entry of entries(); track entry.kind + ':' + entry.source_id) {
+      <li class="rt-item" [attr.data-kind]="entry.kind" data-testid="timeline-entry">
+        <span class="rt-icon" aria-hidden="true"><i [class]="icon(entry.kind)"></i></span>
+        <div class="rt-body">
+          <div class="rt-summary">{{ entry.summary }}</div>
+          <div class="rt-meta">
+            <span class="rt-kind">{{ 'recordTimeline.kinds.' + entry.kind | translate }}</span>
+            <time [attr.datetime]="entry.occurred_at">
+              {{ entry.occurred_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}
+            </time>
+          </div>
+        </div>
+      </li>
+    }
+  </ol>
+
+  @if (loading()) {
+    <p class="rt-hint" aria-live="polite">
+      <i class="las la-spinner" aria-hidden="true"></i> {{ 'recordTimeline.loading' | translate }}
+    </p>
+  } @else if (nextCursor()) {
+    <button type="button" class="rt-more" (click)="loadMore()" data-testid="timeline-load-more">
+      {{ 'recordTimeline.loadMore' | translate }}
+    </button>
+  }
+</section>

@@ -1,0 +1,48 @@
+<div class="xpe-palette">
+  <div class="xpe-palette-header">
+    <span>{{ 'pageEditor.addWidget' | translate }}</span>
+    <button type="button" class="xpe-palette-close" (click)="closePalette.emit()"><i class="las la-times"></i></button>
+  </div>
+  <input
+    #searchInput
+    class="xpe-palette-search"
+    type="text"
+    [placeholder]="'pageEditor.searchWidgetTypes' | translate"
+    [value]="search()"
+    (input)="onSearchInput(searchInput.value)"
+  />
+  <div class="xpe-palette-categories">
+    @for (cat of categories(); track cat) {
+      <button
+        type="button"
+        class="xpe-palette-pill"
+        [class.xpe-palette-pill-active]="categoryFilter() === cat"
+        (click)="categoryFilter.set(cat)"
+      >
+        {{ cat === 'all' ? ('pageEditor.allCategories' | translate) : cat }}
+      </button>
+    }
+  </div>
+  <div class="xpe-palette-list">
+    @for (group of groups(); track group.category) {
+      <div class="xpe-palette-group-label">{{ group.category }}</div>
+      <div class="xpe-palette-grid">
+        @for (t of group.types; track t.type_id) {
+          <button
+            type="button"
+            class="xpe-palette-item"
+            draggable="true"
+            (dragstart)="onDragStart($event, t.type_id)"
+            (dragend)="onDragEnd()"
+            (click)="add.emit(t.type_id)"
+          >
+            <i [class]="'las ' + typeIcon(t.type_id)"></i>
+            <span>{{ t.display_name }}</span>
+          </button>
+        }
+      </div>
+    } @empty {
+      <p class="xpe-palette-empty">{{ 'pageEditor.noWidgetTypesMatch' | translate }}</p>
+    }
+  </div>
+</div>

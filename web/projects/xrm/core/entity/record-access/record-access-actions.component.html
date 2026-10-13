@@ -1,0 +1,20 @@
+@if (isAdmin()) {
+<button type="button" data-testid="record-assign"
+  class="ra-btn" [class.ra-btn--form]="variant() === 'form'" [class.ra-btn--list]="variant() === 'list'"
+  [disabled]="disabled() || !recordIds().length" (click)="open('assign')">
+  <i class="las la-user-check" aria-hidden="true"></i> {{ 'recordAccess.assign' | translate }}
+</button>
+@if (allowShare() && recordIds().length === 1) {
+<button type="button" data-testid="record-share"
+  class="ra-btn" [class.ra-btn--form]="variant() === 'form'" [class.ra-btn--list]="variant() === 'list'"
+  [disabled]="disabled()" (click)="open('share')">
+  <i class="las la-share-alt" aria-hidden="true"></i> {{ 'recordAccess.share' | translate }}
+</button>
+}
+}
+
+@defer (when requested()) {
+@if (mode(); as m) {
+<xrm-record-access-dialog [mode]="m" [entity]="entity()" [recordIds]="recordIds()" (closed)="onClosed($event)" />
+}
+}

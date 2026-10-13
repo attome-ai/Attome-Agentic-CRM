@@ -1,0 +1,286 @@
+/* ── Entity Manager — card list layout ────────────────────────────────────── */
+
+/* Header */
+.em-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.em-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.em-governance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 13px;
+}
+
+.em-governance a {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.em-governance a:hover,
+.em-governance a:focus-visible {
+  text-decoration: underline;
+}
+
+.em-subtitle {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  margin: 5px 0 0;
+}
+
+/* Search + Filters */
+.em-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.em-search-wrap {
+  position: relative;
+}
+
+.em-search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 22px;
+  color: var(--color-text-secondary);
+  pointer-events: none;
+  line-height: 1;
+}
+
+.em-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 15px 16px 15px 52px;
+  border: 2px solid var(--color-border);
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: inherit;
+  background: var(--color-bg-alt);
+  color: var(--color-text-primary);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.em-search::placeholder { color: var(--color-text-secondary); }
+.em-search:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
+}
+
+/* Filter tabs */
+.em-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.em-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 99px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-alt);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+}
+.em-filter-btn i { font-size: 15px; }
+.em-filter-btn:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-text-secondary);
+}
+.em-filter-btn.active {
+  background: var(--color-accent);
+  color: #fff;
+  border-color: var(--color-accent);
+}
+
+/* State containers */
+.em-state-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 72px 24px;
+  gap: 14px;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+.em-state-wrap p { font-size: 16px; margin: 0; }
+
+.em-state-icon {
+  font-size: 52px;
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+}
+
+.em-error-state  { color: #f87171; }
+.em-error-state .em-state-icon { color: #f87171; opacity: 1; }
+
+@keyframes em-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.em-spinning { animation: em-spin 0.9s linear infinite; }
+
+/* Card list */
+.em-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.em-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.em-card:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-border));
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+}
+
+/* Icon bubble */
+.em-icon-bubble {
+  width: 46px;
+  height: 46px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.em-icon-bubble i {
+  font-size: 22px;
+  color: var(--color-accent);
+  line-height: 1;
+}
+
+/* Entity name (clickable) */
+.em-card-name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.15s;
+}
+.em-card-name:hover { color: var(--color-accent); }
+
+/* Action buttons */
+.em-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.em-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition: all 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+}
+.em-btn i { font-size: 16px; line-height: 1; }
+
+.em-btn-edit {
+  background: color-mix(in srgb, var(--color-accent) 14%, transparent);
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 38%, transparent);
+}
+.em-btn-edit:hover {
+  background: color-mix(in srgb, var(--color-accent) 24%, transparent);
+  border-color: var(--color-accent);
+}
+
+/* ── Scaffold panel (dev-only) ─────────────────────────────────────────────
+   .em-card is a single flex row (name + actions). The panel opts out of that
+   row by claiming a full flex basis, so it stacks underneath instead of
+   squeezing the buttons — hence the wrap allowance on the card itself. */
+.em-card { flex-wrap: wrap; }
+
+.em-scaffold-panel {
+  flex: 0 0 100%;
+  margin-top: 4px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: var(--color-bg);
+  border: 1px dashed color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+}
+.em-scaffold-panel h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.em-scaffold-panel code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+.em-scaffold-panel .hint {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+.em-scaffold-panel input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.em-scaffold-done {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+.em-scaffold-done p { margin: 0 0 6px; }
+.em-scaffold-done ul { margin: 0 0 8px; padding-left: 20px; }
+.em-scaffold-done li { margin-bottom: 3px; }

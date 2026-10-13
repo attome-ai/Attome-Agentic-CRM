@@ -1,0 +1,32 @@
+@if (visible()) {
+  <div class="cs-indicator" role="group" [attr.aria-label]="'changesets.indicator.label' | translate"
+       [class.cs-indicator--active]="!!ctx.selected() || !!fallback()">
+    <i class="las la-code-branch cs-icon" aria-hidden="true"></i>
+    @if (ctx.status() === 'error') {
+      <span class="cs-text" role="alert">{{ 'changesets.indicator.error' | translate }}</span>
+    } @else if (ctx.open().length === 0) {
+      <span class="cs-text">{{ 'changesets.indicator.noneOpen' | translate }}</span>
+    } @else {
+      <label class="visually-hidden" [for]="selectId">{{ 'changesets.indicator.pick' | translate }}</label>
+      <select class="cs-select" [id]="selectId" (change)="onPick($event)">
+        <option value="" [selected]="!ctx.selectedId()">
+          @if (fallback(); as f) {
+            {{ 'changesets.indicator.yours' | translate: { title: f.title } }}
+          } @else {
+            {{ 'changesets.indicator.notPicked' | translate }}
+          }
+        </option>
+        @for (c of ctx.open(); track c.id) {
+          <option [value]="c.id" [selected]="c.id === ctx.selectedId()">
+            {{ c.title }} · {{ layerKey(c.layer) | translate }} · {{ 'changesets.indicator.ops' | translate: { count: c.op_count } }}
+          </option>
+        }
+      </select>
+    }
+    <button type="button" class="cs-refresh" (click)="refresh()"
+            [attr.aria-label]="'changesets.indicator.refresh' | translate"
+            [title]="'changesets.indicator.refresh' | translate">
+      <i class="las la-sync" aria-hidden="true"></i>
+    </button>
+  </div>
+}

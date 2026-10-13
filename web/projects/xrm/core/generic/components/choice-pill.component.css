@@ -1,0 +1,26 @@
+:host { display: inline-flex; max-width: 100%; }
+.xf-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--pill-border, var(--color-border, #24324d));
+  background: var(--pill-bg, transparent);
+  color: var(--pill-fg, var(--color-text-primary, #e5eefc));
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.xf-pill i { font-size: 0.9em; flex: none; }
+.xf-pill-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--pill-fg, currentColor);
+}

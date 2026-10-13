@@ -1,0 +1,205 @@
+@if (loading()) {
+  <p class="state-msg">Loading client…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (client()) {
+
+  <div class="breadcrumb">
+    <a routerLink="/xrm/admin/s2s/clients">&larr; S2S Clients</a>
+    &rsaquo; {{ client()!.name }}
+  </div>
+
+  <!-- ── Main Info ─────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h3>Main Information</h3>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="s2s-client-name">Name</label>
+        <input id="s2s-client-name" [(ngModel)]="editName" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="s2s-client-status">Status</label>
+        <select id="s2s-client-status" [(ngModel)]="editStatus">
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
+          <option value="revoked">Revoked</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row-1">
+      <div class="field">
+        <label for="s2s-client-description">Description</label>
+        <input id="s2s-client-description" [(ngModel)]="editDescription" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="s2s-client-rpm">Rate limit (rpm)</label>
+        <input id="s2s-client-rpm" [(ngModel)]="editRpm" type="number" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="s2s-client-max-concurrent">Max concurrent</label>
+        <input id="s2s-client-max-concurrent" [(ngModel)]="editMaxConcurrent" type="number" autocomplete="off">
+      </div>
+    </div>
+    @if (metaError()) { <p class="error-msg">{{ metaError() }}</p> }
+    <div class="btn-row">
+      <button class="btn-primary" (click)="saveMeta()" [disabled]="savingMeta()">
+        {{ savingMeta() ? 'Saving…' : 'Save Changes' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Keys ──────────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="section-header">
+      <h3>Keys</h3>
+    </div>
+
+    @if (revealedSecret()) {
+      <div class="migrate-banner">
+        <strong>New secret (shown once — copy it now):</strong>
+        <div class="cell-mono" style="margin-top:6px; word-break:break-all">{{ revealedSecret() }}</div>
+        <div class="btn-row"><button class="btn-ghost" (click)="revealedSecret.set(null)">Dismiss</button></div>
+      </div>
+    }
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Slot</th><th>Public ID</th><th>Status</th><th>Last 4</th><th>Created</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (slot of slots; track slot) {
+            @if (keyFor(slot); as k) {
+              <tr>
+                <td>{{ slot }}</td>
+                <td class="cell-mono">{{ k.public_id }}</td>
+                <td><span class="badge">{{ k.status }}</span></td>
+                <td class="cell-mono">{{ k.secret_last4 ?? '—' }}</td>
+                <td class="cell-muted">{{ k.created_at | date:'medium' }}</td>
+                <td class="actions">
+                  <button class="btn-sm btn-sm-danger" (click)="revokeKey(slot)">
+                    <i class="las la-ban"></i> Revoke
+                  </button>
+                </td>
+              </tr>
+            } @else {
+              <tr>
+                <td>{{ slot }}</td>
+                <td colspan="3" class="cell-muted">empty</td>
+                <td class="cell-muted"></td>
+                <td class="actions">
+                  <button class="btn-sm btn-sm-accent" (click)="generateKey(slot)" [disabled]="generating()">
+                    <i class="las la-key"></i> Generate
+                  </button>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (keyError()) { <p class="error-msg">{{ keyError() }}</p> }
+  </div>
+
+  <!-- ── Permissions ───────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="section-header">
+      <h3>Permissions <span class="count">{{ client()!.permissions.length }}</span></h3>
+      <button class="btn-ghost" (click)="showPermForm.set(!showPermForm())">
+        <i class="las la-plus"></i> Add Permission
+      </button>
+    </div>
+
+    @if (client()!.permissions.length === 0 && !showPermForm()) {
+      <p class="state-msg">No per-entity permissions set.</p>
+    }
+
+    @if (client()!.permissions.length > 0) {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Entity</th><th>Read</th><th>Create</th><th>Update</th><th>Delete</th><th>Export</th><th>Bulk</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (p of client()!.permissions; track p.id) {
+              <tr>
+                <td class="cell-mono">{{ p.entity_name }}</td>
+                <td>{{ p.can_read ? '✓' : '—' }}</td>
+                <td>{{ p.can_create ? '✓' : '—' }}</td>
+                <td>{{ p.can_update ? '✓' : '—' }}</td>
+                <td>{{ p.can_delete ? '✓' : '—' }}</td>
+                <td>{{ p.can_export ? '✓' : '—' }}</td>
+                <td>{{ p.can_bulk ? '✓' : '—' }}</td>
+                <td class="actions">
+                  <button class="btn-sm btn-sm-danger" (click)="removePermission(p)">
+                    <i class="las la-trash-alt"></i>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (showPermForm()) {
+      <div class="inline-form-panel">
+        <div class="form-row-1">
+          <div class="field">
+            <label for="s2s-perm-entity-name">Entity logical name</label>
+            <input id="s2s-perm-entity-name" [(ngModel)]="permForm.entity_name" placeholder="e.g. core_customer" class="mono-input" autocomplete="off">
+          </div>
+        </div>
+        <div class="form-row-3">
+          <label class="checkbox-row"><input type="checkbox" [(ngModel)]="permForm.can_read"> Read</label>
+          <label class="checkbox-row"><input type="checkbox" [(ngModel)]="permForm.can_create"> Create</label>
+          <label class="checkbox-row"><input type="checkbox" [(ngModel)]="permForm.can_update"> Update</label>
+        </div>
+        <div class="form-row-3">
+          <label class="checkbox-row"><input type="checkbox" [(ngModel)]="permForm.can_delete"> Delete</label>
+          <label class="checkbox-row"><input type="checkbox" [(ngModel)]="permForm.can_export"> Export</label>
+          <label class="checkbox-row"><input type="checkbox" [(ngModel)]="permForm.can_bulk"> Bulk</label>
+        </div>
+        @if (permError()) { <p class="error-msg">{{ permError() }}</p> }
+        <div class="btn-row">
+          <button class="btn-primary" (click)="savePermission()" [disabled]="savingPerm()">
+            {{ savingPerm() ? 'Saving…' : 'Save Permission' }}
+          </button>
+          <button class="btn-ghost" (click)="showPermForm.set(false)">Cancel</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- ── Access Log ────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h3>Access Log <span class="count">{{ logTotal() }}</span></h3>
+    @if (logsLoading()) {
+      <p class="state-msg">Loading access log…</p>
+    } @else if (logs().length === 0) {
+      <p class="state-msg">No requests logged yet.</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Method</th><th>Path</th><th>Status</th><th>Time (ms)</th><th>When</th></tr>
+          </thead>
+          <tbody>
+            @for (l of logs(); track l.id) {
+              <tr>
+                <td>{{ l.method }}</td>
+                <td class="cell-mono">{{ l.path }}</td>
+                <td>{{ l.status_code ?? '—' }}</td>
+                <td>{{ l.response_time_ms ?? '—' }}</td>
+                <td class="cell-muted">{{ l.created_at | date:'medium' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+}

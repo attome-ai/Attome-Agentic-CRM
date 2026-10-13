@@ -1,0 +1,3 @@
+:host { display: block; }
+
+.fleet-link-button { text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }

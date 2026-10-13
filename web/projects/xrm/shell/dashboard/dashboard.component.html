@@ -1,0 +1,13 @@
+<div class="attome-dashboard-shell">
+  @if (embedComponent(); as comp) {
+    <ng-container *ngComponentOutlet="comp; inputs: embedInputs()" />
+  } @else if (loadError(); as errKey) {
+    <div class="xf-error-banner">
+      <i class="las la-exclamation-circle"></i> {{ errKey | translate }}
+    </div>
+  } @else {
+    <div class="xf-loading">
+      <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+    </div>
+  }
+</div>

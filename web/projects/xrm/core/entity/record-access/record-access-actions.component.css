@@ -1,0 +1,46 @@
+/* Own button rules, like `remind-me.component.css`: the host's `xf-btn` (form
+ * header) and `btn` (list toolbar) rules do not cross this component's style
+ * boundary, so each look is restated here. */
+:host {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ra-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--color-border, #24324d);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ra-btn:disabled { opacity: .4; cursor: not-allowed; }
+.ra-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent, #14b8a6) 40%, transparent);
+}
+
+/* Record form header — matches `.xf-btn.xf-btn-secondary`. */
+.ra-btn--form {
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: var(--color-text-secondary, #94a3b8);
+  font-size: 13px;
+  font-weight: 700;
+}
+.ra-btn--form:hover:not(:disabled) { color: var(--color-text-primary, #e5eefc); }
+.ra-btn--form i { font-size: 15px; }
+
+/* List selection bar — matches the list's `.btn.btn-secondary`. */
+.ra-btn--list {
+  min-height: 2.35rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.7rem;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}

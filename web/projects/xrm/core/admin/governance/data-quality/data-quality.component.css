@@ -1,0 +1,60 @@
+.dq-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dq-bar {
+  display: inline-block;
+  inline-size: 80px;
+  block-size: 6px;
+  border-radius: 999px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.dq-bar__fill {
+  display: block;
+  block-size: 100%;
+  border-radius: 999px;
+}
+
+.dq-bar__fill--good { background: var(--color-success, #16a34a); }
+.dq-bar__fill--fair { background: var(--color-warning, #d97706); }
+.dq-bar__fill--poor { background: var(--color-danger, #dc2626); }
+
+.dq-trend-row td {
+  background: color-mix(in srgb, var(--color-accent) 4%, transparent);
+}
+
+.dq-trend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.dq-trend__chart {
+  inline-size: 320px;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+.dq-trend__axis {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.dq-trend__line {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2;
+}
+
+.dq-trend__dot {
+  fill: var(--color-accent);
+}
+
+.dq-trend__table {
+  max-inline-size: 260px;
+}

@@ -1,0 +1,58 @@
+<section class="xf-section" data-testid="consent-panel">
+  @if (loading()) {
+    <p class="xf-hint">Loading consent…</p>
+  } @else {
+    @if (errorMessage(); as msg) {
+      <p class="consent-error">{{ msg }}</p>
+    }
+    <table class="consent-status-table">
+      <thead>
+        <tr>
+          <th>Purpose</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (entry of statuses(); track entry.purpose.id) {
+          <tr>
+            <td>
+              <span class="consent-key">{{ entry.purpose.key }}</span>
+              @if (entry.purpose.description) {
+                <span class="consent-desc">{{ entry.purpose.description }}</span>
+              }
+            </td>
+            <td>
+              <span
+                class="consent-badge"
+                [class.consent-badge-granted]="entry.status === 'granted'"
+                [class.consent-badge-withdrawn]="entry.status === 'withdrawn'"
+                [class.consent-badge-expired]="entry.status === 'expired'"
+                [class.consent-badge-none]="!entry.status"
+              >{{ entry.status || 'never granted' }}</span>
+            </td>
+            <td class="consent-actions">
+              @if (entry.status === 'granted') {
+                <button
+                  type="button"
+                  class="xf-btn xf-btn-secondary"
+                  [disabled]="withdrawing() === entry.purpose.id"
+                  (click)="withdraw(entry)"
+                >{{ withdrawing() === entry.purpose.id ? 'Withdrawing…' : 'Withdraw' }}</button>
+              }
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="3" class="xf-hint">No consent purposes are configured on this deployment.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  <div class="consent-history">
+    <h4 class="consent-history-title">Consent history</h4>
+    <xrm-related-grid entityName="audit_consent" [filters]="filters()" [allowCreate]="true" [pageSize]="10" />
+  </div>
+</section>

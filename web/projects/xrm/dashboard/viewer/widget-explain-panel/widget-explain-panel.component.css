@@ -1,0 +1,28 @@
+.xwe-section h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+
+.xwe-section p,
+.xwe-section ul {
+  margin: 2px 0;
+  font-size: 13px;
+}
+
+.xwe-section ul {
+  padding-inline-start: 18px;
+}
+
+.xwe-metric {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.xwe-lineage {
+  margin: 4px 0;
+  padding-inline-start: 16px;
+  font-size: 12px;
+}

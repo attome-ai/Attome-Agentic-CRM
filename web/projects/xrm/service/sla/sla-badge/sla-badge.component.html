@@ -1,0 +1,22 @@
+@if (state(); as s) {
+  <span [class]="'sla-badge sla-' + s.kind" data-testid="sla-badge"
+        [attr.data-kind]="s.kind"
+        [attr.title]="s.dueAt ? (s.dueAt | localDate: { dateStyle: 'medium', timeStyle: 'short' }) : null">
+    <i [class]="icon()" aria-hidden="true"></i>
+    @switch (s.kind) {
+      @case ('due') { {{ 'serviceSla.badge.due' | translate: { when: when() } }} }
+      @case ('warning') { {{ 'serviceSla.badge.warning' | translate: { when: when() } }} }
+      @case ('overdue') { {{ 'serviceSla.badge.overdue' | translate: { when: when() } }} }
+      @case ('breached') { {{ 'serviceSla.badge.breached' | translate }} }
+      @case ('resolved') { {{ 'serviceSla.badge.resolved' | translate }} }
+      @case ('resolved_breached') { {{ 'serviceSla.badge.resolvedBreached' | translate }} }
+      @case ('not_calculated') {
+        @if (reasonKey(); as key) {
+          {{ 'serviceSla.badge.notCalculatedReason' | translate: { reason: (key | translate) } }}
+        } @else {
+          {{ 'serviceSla.badge.notCalculated' | translate }}
+        }
+      }
+    }
+  </span>
+}

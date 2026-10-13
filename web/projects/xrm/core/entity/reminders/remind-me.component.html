@@ -1,0 +1,35 @@
+<button type="button" class="rm-btn rm-btn-secondary rm-trigger"
+        [attr.aria-expanded]="open()" aria-controls="xrm-remind-me-panel"
+        (click)="toggle()" data-testid="remind-me-toggle">
+  <i class="las la-clock" aria-hidden="true"></i>
+  {{ 'reminders.remindMe' | translate }}
+</button>
+
+<span class="rm-notice" role="status" data-testid="remind-me-notice">{{ notice() }}</span>
+
+@if (open()) {
+  <div class="rm-panel" id="xrm-remind-me-panel" role="group"
+       [attr.aria-label]="'reminders.remindMe' | translate" data-testid="remind-me-panel">
+    <label class="rm-field">
+      <span>{{ 'reminders.when' | translate }}</span>
+      <input type="datetime-local" [value]="when()" (input)="onWhen($event)" data-testid="remind-me-when" />
+    </label>
+    <label class="rm-field">
+      <span>{{ 'reminders.note' | translate }}</span>
+      <textarea rows="2" [maxLength]="maxNoteLength" [value]="note()" (input)="onNote($event)"
+                data-testid="remind-me-note"></textarea>
+    </label>
+    @if (error(); as message) {
+      <p class="rm-error" role="alert" data-testid="remind-me-error">{{ message }}</p>
+    }
+    <div class="rm-actions">
+      <button type="button" class="rm-btn rm-btn-secondary" (click)="toggle()">
+        {{ 'reminders.cancel' | translate }}
+      </button>
+      <button type="button" class="rm-btn rm-btn-primary" [disabled]="saving()" (click)="save()"
+              data-testid="remind-me-save">
+        {{ (saving() ? 'reminders.saving' : 'reminders.save') | translate }}
+      </button>
+    </div>
+  </div>
+}

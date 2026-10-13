@@ -1,0 +1,15 @@
+<div class="xdv-section">
+  @if (widgets().length > 0) {
+    <div class="xdv-grid" [style]="gridStyle()">
+      @for (w of widgets(); track w.id) {
+        <div class="xdv-grid-item" [style]="widgetStyle(w)">
+          <attome-dashboard-widget-view [widget]="w"
+                                     [dashboardId]="dashboardId()"
+                                     [preview]="preview()"
+                                     [result]="resultFor(w.id)"
+                                     [parameters]="parameters()" />
+        </div>
+      }
+    </div>
+  }
+</div>

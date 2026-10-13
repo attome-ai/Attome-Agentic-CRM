@@ -1,0 +1,101 @@
+<div class="pg">
+  <header class="pg__header">
+    <div class="pg__header-icon"><i class="las la-flask"></i></div>
+    <div>
+      <h1>AI Playground</h1>
+      <p class="pg__hint">
+        Send a message to an agent's persona and see how it replies. Nothing here creates a
+        session or is saved once you leave the page.
+      </p>
+    </div>
+  </header>
+
+  <div class="pg__card">
+    <div class="pg__toolbar">
+      <div class="pg__field">
+        <label for="agent-select"><i class="las la-robot"></i> Agent</label>
+        <select id="agent-select" [ngModel]="selectedAgentId()" (ngModelChange)="selectedAgentId.set($event)">
+          <option value="" disabled selected>Choose an agent…</option>
+          @for (agent of agents(); track agent.id) {
+            <option [value]="agent.id">{{ agent.name }}</option>
+          }
+        </select>
+      </div>
+      @if (turns().length > 0) {
+        <button type="button" class="pg__ghost-btn" (click)="clear()">
+          <i class="las la-trash-alt"></i> Clear
+        </button>
+      }
+    </div>
+
+    @if (agentsLoaded() && agents().length === 0) {
+      <p class="pg__empty">No AI agents found yet. Create one first.</p>
+    } @else {
+      <div class="pg__transcript">
+        @if (turns().length === 0 && !busy()) {
+          <div class="pg__blank">
+            <i class="las la-comments"></i>
+            <p>
+              @if (selectedAgentName()) {
+                Ready to chat with <strong>{{ selectedAgentName() }}</strong>.
+              } @else {
+                Pick an agent above, then say hello.
+              }
+            </p>
+            @if (selectedAgentId()) {
+              <div class="pg__suggestions">
+                @for (prompt of suggestedPrompts; track prompt) {
+                  <button type="button" class="pg__chip" (click)="useSuggestion(prompt)">{{ prompt }}</button>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        @for (turn of turns(); track $index) {
+          <div class="msg" [class.msg--user]="turn.role === 'user'" [class.msg--error]="turn.role === 'error'">
+            <div class="msg__avatar">
+              <i [class]="turn.role === 'user' ? 'las la-user' : turn.role === 'error' ? 'las la-exclamation-circle' : 'las la-robot'"></i>
+            </div>
+            <div class="msg__bubble">
+              @if (turn.modelId || turn.latencyMs !== undefined) {
+                <span class="msg__meta">
+                  @if (turn.modelId) {
+                    {{ turn.modelId }}
+                  }
+                  @if (turn.latencyMs !== undefined) {
+                    <span class="msg__latency"><i class="las la-stopwatch"></i> {{ turn.latencyMs }} ms</span>
+                  }
+                </span>
+              }
+              <p class="msg__text">{{ turn.text }}</p>
+            </div>
+          </div>
+        }
+
+        @if (busy()) {
+          <div class="msg">
+            <div class="msg__avatar"><i class="las la-robot"></i></div>
+            <div class="msg__bubble msg__bubble--thinking">
+              <span class="pg__dot"></span><span class="pg__dot"></span><span class="pg__dot"></span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <form class="pg__composer" (ngSubmit)="send()">
+        <textarea
+          rows="2"
+          placeholder="Type a message…"
+          [ngModel]="message()"
+          (ngModelChange)="message.set($event)"
+          name="message"
+          [disabled]="busy() || !selectedAgentId()"
+        ></textarea>
+        <button type="submit" class="pg__send" [disabled]="busy() || !selectedAgentId() || !message().trim()">
+          <i class="las la-paper-plane"></i>
+        </button>
+      </form>
+    }
+  </div>
+</div>

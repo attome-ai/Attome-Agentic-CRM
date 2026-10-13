@@ -1,0 +1,422 @@
+<div class="list-container" [class.list-container--compact]="compact()">
+  <div class="list-toolbar">
+    @if (showSelectionMode()) {
+    <div class="toolbar-selection-mode">
+      <div class="selection-summary">
+        <strong>{{ 'entityList.selectedCount' | translate: { count: selectedRecordIds().size } }}</strong>
+        @if (activeFilterCount() > 0) {
+        <span class="summary-chip">{{ activeFilterSummary() }}</span>
+        }
+      </div>
+      <div class="toolbar-actions">
+        @if (showRelationshipActions()) {
+        <button type="button" class="btn btn-primary" (click)="handleRemoveRelationship()">
+          <i class="las la-unlink"></i> {{ 'entityList.removeRelationship' | translate }}
+        </button>
+        <button type="button" class="btn btn-text" (click)="clearSelection()">{{ 'entityList.cancel' | translate }}</button>
+        } @else {
+        <button type="button" class="btn btn-secondary" [disabled]="bulkActionRunning()"
+          (click)="openBulkEdit()"><i class="las la-edit"></i> {{ 'entityList.bulkEdit' | translate }}</button>
+        <!-- U7 Phase A: admin-only bulk Assign (renders nothing otherwise). -->
+        <xrm-record-access-actions [entity]="entityName()" [recordIds]="selectedRecordIdList()"
+          [allowShare]="false" [disabled]="bulkActionRunning()" (changed)="onRecordAccessChanged()" />
+        <button type="button" class="btn btn-secondary" (click)="duplicateSelected()">{{ 'entityList.duplicate' | translate }}</button>
+        @for (action of selectionActions(); track action.key) {
+        <button type="button" [class]="'btn btn-' + (action.style || 'secondary')"
+          [disabled]="!isSelectionActionEnabled(action)"
+          (click)="runSelectionAction(action)">{{ action.labelKey | translate }}</button>
+        }
+        @if (showDeleteAction()) {
+        <button type="button" class="btn btn-secondary"
+          [disabled]="!canDeactivateSelection()" (click)="deactivateSelected()">
+          {{ 'entityList.deactivateSelected' | translate }}
+        </button>
+        <button type="button" class="btn btn-primary"
+          [disabled]="!canActivateSelection()" (click)="activateSelected()">
+          {{ 'entityList.activateSelected' | translate }}
+        </button>
+        <button type="button" class="btn btn-danger" [disabled]="bulkActionRunning()"
+          (click)="deleteSelected()">{{ 'entityList.deleteSelected' | translate }}</button>
+        }
+        <button type="button" class="btn btn-text" (click)="clearSelection()">{{ 'entityList.cancel' | translate }}</button>
+        }
+      </div>
+    </div>
+    } @else {
+    <div class="toolbar-main">
+      <div class="toolbar-left">
+        <ng-content select="[xrmListToolbarStart]" />
+        @if (showViewSelection() && pickerViews().length > 0) {
+        <div class="view-picker" data-view-picker>
+          <button type="button" class="view-picker-trigger" (click)="toggleViewMenu($event)"
+            [attr.aria-expanded]="viewMenuOpen()" aria-haspopup="listbox">
+            <i [class]="activeView()?.icon || 'las la-table'"></i>
+            <span>{{ activeView()?.name || ('entityList.selectView' | translate) }}</span>
+            <i class="las la-angle-down view-picker-chevron"></i>
+          </button>
+          @if (viewMenuOpen()) {
+          <div class="view-picker-menu" role="listbox">
+            @for (view of pickerViews(); track view.id) {
+            <button type="button" class="view-picker-option" role="option"
+              [class.selected]="view.id === viewId()" [attr.aria-selected]="view.id === viewId()"
+              (click)="selectView(view.id)">
+              <i [class]="view.icon || 'las la-table'"></i><span>{{ view.name }}</span>
+              @if (view.id === viewId()) { <i class="las la-check view-picker-check"></i> }
+            </button>
+            }
+          </div>
+          }
+        </div>
+        }
+        @if (activeFilterCount() > 0) {
+        <button type="button" class="summary-chip summary-chip-button" (click)="clearAllFilters()">
+          {{ activeFilterSummary() }}
+        </button>
+        }
+      </div>
+      <div class="toolbar-actions">
+        @if (showViewSelection() && canEditView() && viewId(); as activeViewId) {
+        <a class="btn btn-secondary edit-query-btn"
+          [routerLink]="['/xrm/admin/views', activeViewId]">
+          <i class="las la-pen"></i>
+          {{ 'entityList.editView' | translate }}
+        </a>
+        }
+        @if (showViewSelection() && activeView()?.scope === 'personal' && activeView()?.is_mine) {
+        <button type="button" class="btn btn-secondary" (click)="sharePersonalView()">
+          <i class="las la-share-alt"></i>
+          {{ 'entityList.share' | translate }}
+        </button>
+        <button type="button" class="btn btn-secondary" (click)="deletePersonalView()">
+          <i class="las la-trash"></i>
+          {{ 'entityList.deleteSelected' | translate }}
+        </button>
+        }
+        @if (showViewSelection()) {
+        <button type="button" class="btn btn-secondary" data-testid="advanced-find-toggle"
+          [class.active]="advancedFindOpen()" [attr.aria-expanded]="advancedFindOpen()"
+          (click)="toggleAdvancedFind()">
+          <i class="las la-filter"></i>
+          {{ 'advancedFind.title' | translate }}
+          @if (advancedFilters().length) { <span class="summary-chip">{{ advancedFilters().length }}</span> }
+        </button>
+        }
+        @if (showViewSelection() && currentQueryId()) {
+        <button type="button" class="btn btn-secondary" [disabled]="savingPersonalView()"
+          (click)="saveAsMyView()">
+          <i class="las la-star"></i>
+          {{ 'entityList.saveAsMyView' | translate }}
+        </button>
+        }
+        <label class="search-box" [attr.aria-label]="'entityList.searchPlaceholder' | translate">
+          <i class="las la-search"></i>
+          <input type="search" [ngModel]="searchDraft()" (ngModelChange)="onSearchChange($event)"
+            [placeholder]="'entityList.searchPlaceholder' | translate" />
+        </label>
+        @if (showRelationshipActions()) {
+        <button type="button" class="btn btn-primary" (click)="handleAddRelationship()">
+          <i class="las la-link"></i> {{ 'entityList.addRelationship' | translate }}
+        </button>
+        <button type="button" class="btn btn-secondary" [disabled]="selectedRecordIds().size === 0"
+          (click)="handleRemoveRelationship()">
+          <i class="las la-unlink"></i> {{ 'entityList.removeRelationship' | translate }}
+        </button>
+        }
+        @if (allowCreate()) {
+        <button type="button" class="btn btn-primary" (click)="handleAdd()">{{ 'entityList.newRecord' | translate }}</button>
+        }
+        <button type="button" class="btn btn-secondary" (click)="refresh()">{{ 'entityList.refresh' | translate }}</button>
+        <button type="button" class="btn btn-secondary" [disabled]="bulkActionRunning()" (click)="exportList('csv')">
+          <i class="las la-download"></i> {{ 'entityList.exportCsv' | translate }}
+        </button>
+        <button type="button" class="btn btn-secondary" [disabled]="bulkActionRunning()" (click)="exportList('xlsx')">
+          <i class="las la-file-excel"></i> {{ 'entityList.exportExcel' | translate }}
+        </button>
+      </div>
+    </div>
+    }
+  </div>
+
+  @defer (when advancedFindRequested()) {
+  @if (advancedFindOpen()) {
+  <xrm-advanced-find-panel [entityName]="entityName()" [filters]="advancedFilters()"
+    [columnNames]="queryColumnNames()"
+    [canSave]="!!currentQueryId()"
+    (applied)="applyAdvancedFilters($event)" (saveAsView)="saveAdvancedFindAsView($event)"
+    (closed)="advancedFindOpen.set(false)" />
+  }
+  }
+
+  @if (error() && !loading()) {
+  <div class="list-error">{{ error() }}</div>
+  }
+
+  <div class="table-container" [attr.aria-busy]="loading()">
+    @if (showLoading() && records().length > 0) {
+    <div class="table-loading-overlay">{{ 'entityList.refreshingRecords' | translate }}</div>
+    }
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="w-checkbox">
+            <div class="custom-checkbox-wrapper">
+              <input type="checkbox" id="check-all" [checked]="isAllOnPageSelected()"
+                (change)="isAllOnPageSelected() ? deselectAllOnPage() : selectAllOnPage()" />
+              <label for="check-all"></label>
+            </div>
+          </th>
+
+          @for (col of columns(); track col.name; let colIndex = $index) {
+          <th class="column-header" [class.filtered]="isColumnFilterApplied(col.name)">
+            <div class="th-content" data-filter-shell>
+              <button type="button" class="column-trigger" [class.filtered]="isColumnFilterApplied(col.name)"
+                (click)="toggleColumnFilter(col.name, $event)">
+                <span>{{ col.display_name }}</span>
+                @if (isColumnFilterApplied(col.name)) {
+                <span class="filter-dot"></span>
+                }
+              </button>
+
+              <button type="button" class="sort-button" [class.active]="isSortedBy(col.name)"
+                (click)="sortByColumnClick(col.name, $event)"
+                [attr.aria-label]="sortAriaLabel(col)">
+                <i [class]="getSortIcon(col.name)"></i>
+              </button>
+            </div>
+
+            @if (openColumnFilter() === col.name) {
+            <!-- Not an interactive control — this click handler only stops
+                 propagation so a click inside the popover doesn't trigger the
+                 document-level "close on outside click" listener. Adding a
+                 keyboard handler/tabindex here would misleadingly announce
+                 this container as focusable to screen readers. -->
+            <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+            <div class="column-filter-popover" data-filter-shell (click)="$event.stopPropagation()">
+              <div class="popover-header">
+                <div>
+                  <h4>{{ col.display_name }}</h4>
+                  <p>{{ getFilterKind(col) }}</p>
+                </div>
+                <button type="button" class="btn btn-text" (click)="closeColumnFilter($event)">{{ 'entityList.close' | translate }}</button>
+              </div>
+
+              <div class="filter-field-group">
+                @switch (getFilterKind(col)) {
+                @case ('text') {
+                <select [ngModel]="getTextOperator(col.name)" (ngModelChange)="setTextOperator(col.name, $event)">
+                  <option value="contains">{{ 'entityList.filterOpContains' | translate }}</option>
+                  <option value="equals">{{ 'entityList.filterOpEquals' | translate }}</option>
+                  <option value="neq">{{ 'entityList.filterOpNotEquals' | translate }}</option>
+                  <option value="starts_with">{{ 'entityList.filterOpStartsWith' | translate }}</option>
+                  <option value="ends_with">{{ 'entityList.filterOpEndsWith' | translate }}</option>
+                  <option value="is_null">{{ 'entityList.filterOpIsEmpty' | translate }}</option>
+                  <option value="is_not_null">{{ 'entityList.filterOpIsNotEmpty' | translate }}</option>
+                </select>
+                @if (requiresTextValue(col.name)) {
+                <input type="text" [ngModel]="getTextValue(col.name)" (ngModelChange)="setTextValue(col.name, $event)"
+                  [placeholder]="'entityList.filterFieldPlaceholder' | translate: { field: col.display_name }" />
+                }
+                }
+
+                @case ('number') {
+                <select [ngModel]="getNumberOperator(col.name)" (ngModelChange)="setNumberOperator(col.name, $event)">
+                  <option value="eq">{{ 'entityList.filterOpEquals' | translate }}</option>
+                  <option value="neq">{{ 'entityList.filterOpNotEquals' | translate }}</option>
+                  <option value="gt">{{ 'entityList.filterOpGreaterThan' | translate }}</option>
+                  <option value="gte">{{ 'entityList.filterOpGreaterThanOrEqual' | translate }}</option>
+                  <option value="lt">{{ 'entityList.filterOpLessThan' | translate }}</option>
+                  <option value="lte">{{ 'entityList.filterOpLessThanOrEqual' | translate }}</option>
+                  <option value="between">{{ 'entityList.filterOpBetween' | translate }}</option>
+                  <option value="is_null">{{ 'entityList.filterOpIsEmpty' | translate }}</option>
+                  <option value="is_not_null">{{ 'entityList.filterOpIsNotEmpty' | translate }}</option>
+                </select>
+                @if (isRangeOperator(col.name)) {
+                <input type="number" [ngModel]="getNumberValue(col.name)"
+                  (ngModelChange)="setNumberValue(col.name, $event)"
+                  [placeholder]="'entityList.filterRangeFrom' | translate"
+                  [attr.aria-label]="'entityList.filterRangeFrom' | translate" />
+                <input type="number" [ngModel]="getValueTo(col.name)"
+                  (ngModelChange)="setValueTo(col.name, $event)"
+                  [placeholder]="'entityList.filterRangeTo' | translate"
+                  [attr.aria-label]="'entityList.filterRangeTo' | translate" />
+                } @else if (requiresNumberValue(col.name)) {
+                <input type="number" [ngModel]="getNumberValue(col.name)"
+                  (ngModelChange)="setNumberValue(col.name, $event)"
+                  [placeholder]="'entityList.filterValuePlaceholder' | translate" />
+                }
+                }
+
+                @case ('date') {
+                <select [ngModel]="getDateOperator(col.name)" (ngModelChange)="setDateOperator(col.name, $event)">
+                  <option value="">{{ 'entityList.selectFilter' | translate }}</option>
+                  <option value="today">{{ 'entityList.dateToday' | translate }}</option>
+                  <option value="past_7_days">{{ 'entityList.datePast7Days' | translate }}</option>
+                  <option value="past_month">{{ 'entityList.datePastMonth' | translate }}</option>
+                  <option value="past_year">{{ 'entityList.datePastYear' | translate }}</option>
+                  <option value="on">{{ 'entityList.dateOn' | translate }}</option>
+                  <option value="after">{{ 'entityList.dateAfter' | translate }}</option>
+                  <option value="before">{{ 'entityList.dateBefore' | translate }}</option>
+                  <option value="between">{{ 'entityList.filterOpBetween' | translate }}</option>
+                  <option value="is_null">{{ 'entityList.filterOpIsEmpty' | translate }}</option>
+                  <option value="is_not_null">{{ 'entityList.filterOpIsNotEmpty' | translate }}</option>
+                </select>
+                @if (isRangeOperator(col.name)) {
+                <input type="date" [ngModel]="getDateValue(col.name)"
+                  (ngModelChange)="setDateValue(col.name, $event)"
+                  [attr.aria-label]="'entityList.filterRangeFrom' | translate" />
+                <input type="date" [ngModel]="getValueTo(col.name)"
+                  (ngModelChange)="setValueTo(col.name, $event)"
+                  [attr.aria-label]="'entityList.filterRangeTo' | translate" />
+                } @else if (requiresDateValue(col.name)) {
+                <input type="date" [ngModel]="getDateValue(col.name)"
+                  (ngModelChange)="setDateValue(col.name, $event)" />
+                }
+                }
+
+                @case ('boolean') {
+                <select [ngModel]="getBooleanValue(col.name)" (ngModelChange)="setBooleanValue(col.name, $event)">
+                  <option value="">{{ 'entityList.all' | translate }}</option>
+                  <option value="true">{{ 'entityList.yes' | translate }}</option>
+                  <option value="false">{{ 'entityList.no' | translate }}</option>
+                </select>
+                }
+
+                @case ('lookup') {
+                <select [ngModel]="getLookupOperator(col.name)" (ngModelChange)="setLookupOperator(col.name, $event)">
+                  <option value="">{{ 'entityList.selectFilter' | translate }}</option>
+                  <option value="is_null">{{ 'entityList.filterOpIsEmpty' | translate }}</option>
+                  <option value="is_not_null">{{ 'entityList.filterOpIsNotEmpty' | translate }}</option>
+                </select>
+                }
+
+                @case ('optionset') {
+                <select [ngModel]="getOptionsetValue(col.name)" (ngModelChange)="setOptionsetValue(col.name, $event)">
+                  <option value="">{{ 'entityList.all' | translate }}</option>
+                  @for (option of getColumnOptions(col); track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                  }
+                </select>
+                }
+                }
+              </div>
+
+              <div class="popover-actions">
+                @if (isColumnFilterApplied(col.name)) {
+                <button type="button" class="btn btn-text" (click)="clearColumnFilter(col.name, $event)">
+                  {{ 'entityList.clear' | translate }}
+                </button>
+                }
+                <button type="button" class="btn btn-secondary" (click)="closeColumnFilter($event)">{{ 'entityList.cancel' | translate }}</button>
+                <button type="button" class="btn btn-primary" (click)="applyColumnFilter(col.name, $event)">
+                  {{ 'entityList.apply' | translate }}
+                </button>
+              </div>
+            </div>
+            }
+          </th>
+          }
+        </tr>
+      </thead>
+
+      <tbody>
+        @if (showLoading() && records().length === 0) {
+        <tr>
+          <td [attr.colspan]="columns().length + 1" class="empty-state">
+            {{ 'entityList.loadingRecords' | translate }}
+          </td>
+        </tr>
+        } @else if (!loading() && records().length === 0) {
+        <tr>
+          <td [attr.colspan]="columns().length + 1" class="empty-state">
+            {{ 'entityList.noRecords' | translate }}
+          </td>
+        </tr>
+        } @else {
+        @for (row of records(); track row.id) {
+        <tr [class.selected]="selectedRecordIds().has(row.id)" data-testid="entity-grid-row"
+          [attr.data-record-id]="row.id">
+          <td class="w-checkbox">
+            <div class="custom-checkbox-wrapper">
+              <input type="checkbox" [id]="'check-' + row.id"
+                [checked]="selectedRecordIds().has(row.id)" (change)="toggleRecordSelection(row)" />
+              <label [for]="'check-' + row.id"></label>
+            </div>
+          </td>
+
+          @for (col of columns(); track col.name; let colIndex = $index) {
+          <td class="data-cell">
+            @if (cellRenderer(col); as renderer) {
+            <ng-container *ngComponentOutlet="renderer; inputs: { row: row.data }" />
+            } @else if (col.type === 'icon' && !isCellLinked(col, colIndex, row)) {
+            <span class="cell-text cell-icon" [title]="cellDisplayValue(row, col)">
+              @if (cellDisplayValue(row, col)) {
+              <i class="las {{ cellDisplayValue(row, col) }}" aria-hidden="true"></i>
+              }
+            </span>
+            } @else if (col.type === 'color' && !isCellLinked(col, colIndex, row)) {
+            <span class="cell-color" [title]="cellDisplayValue(row, col)">
+              @if (cellDisplayValue(row, col)) {
+              <span class="color-swatch" [style.background]="cellDisplayValue(row, col)"></span>
+              }
+              <span class="color-hex">{{ cellDisplayValue(row, col) }}</span>
+            </span>
+            } @else if (col.type === 'image' && !isCellLinked(col, colIndex, row)) {
+            <!-- U9: an image field's thumbnail (presigned, read-checked). -->
+            <xrm-image-thumb [entityName]="entityName()" [recordId]="row.id" [fieldName]="col.name"
+              [value]="row.data[col.name]" [label]="col.display_name" />
+            } @else if (col.type === 'currency' && !isCellLinked(col, colIndex, row)) {
+            <span class="cell-text cell-currency" [title]="currencyCellDisplay(row, col)">
+              {{ currencyCellDisplay(row, col) || '—' }}
+            </span>
+            } @else if (col.type === 'choice' && !isCellLinked(col, colIndex, row)) {
+            <span class="cell-choices">
+              @for (value of choiceCellValues(row, col); track value) {
+              <xrm-choice-pill [value]="value" [style]="col.choice_styles?.[value]" />
+              }
+            </span>
+            } @else if (isCellLinked(col, colIndex, row)) {
+            <button type="button" class="cell-link" [class.cell-route-link]="col.is_clickable"
+              [class.cell-link-empty]="!cellDisplayValue(row, col)"
+              [title]="col.is_clickable ? ('entityList.openLinkedRecord' | translate) : cellDisplayValue(row, col)"
+              (click)="handleCellNavigation(row, col, colIndex)">
+              {{ cellDisplayValue(row, col) || '—' }}
+            </button>
+            } @else {
+            <span class="cell-text"
+              [title]="cellDisplayValue(row, col)">
+              {{ cellDisplayValue(row, col) }}
+            </span>
+            }
+          </td>
+          }
+        </tr>
+        }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="list-footer">
+    <div class="footer-meta">
+      <span class="total-text">{{ 'entityList.showingRange' | translate: { start: rangeStart(), end: rangeEnd(), total: total() } }}</span>
+    </div>
+
+    <div class="footer-right">
+      <div class="pagination-group">
+        <button type="button" class="btn-page" [disabled]="currentPage() === 1" (click)="previousPage()">
+          {{ 'entityList.prev' | translate }}
+        </button>
+        <span class="page-info">{{ 'entityList.pageInfo' | translate: { current: currentPage(), total: totalPages() } }}</span>
+        <button type="button" class="btn-page" [disabled]="currentPage() >= totalPages()" (click)="nextPage()">
+          {{ 'entityList.next' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  @defer (when bulkEditRequested()) {
+  <xrm-bulk-edit-dialog #bulkEditDialog [entityName]="entityName()" [recordIds]="selectedRecordIdList()"
+    (busyChange)="bulkActionRunning.set($event)" (applied)="onBulkEditApplied()" />
+  }
+</div>

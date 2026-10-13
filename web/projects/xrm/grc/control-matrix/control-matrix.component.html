@@ -1,0 +1,50 @@
+<div class="control-matrix">
+  <div class="control-matrix__toolbar">
+    <h2 class="control-matrix__title">{{ 'grc.controlMatrix.title' | translate }}</h2>
+    @if (!loading() && !error()) {
+      <span class="control-matrix__coverage">
+        {{ 'grc.controlMatrix.coverage' | translate }}: {{ coveragePercent() }}%
+      </span>
+    }
+  </div>
+
+  @if (loading()) {
+    <p class="control-matrix__hint">{{ 'grc.controlMatrix.loading' | translate }}</p>
+  } @else if (error(); as errorKey) {
+    <p class="control-matrix__error">{{ errorKey | translate }}</p>
+  } @else if (controls().length === 0 || requirements().length === 0) {
+    <p class="control-matrix__hint">{{ 'grc.controlMatrix.empty' | translate }}</p>
+  } @else {
+    <div class="control-matrix__scroll">
+      <table class="control-matrix__table">
+        <thead>
+          <tr>
+            <th class="control-matrix__corner">{{ 'grc.controlMatrix.controls' | translate }}</th>
+            @for (requirement of requirements(); track requirement.id) {
+              <th class="control-matrix__col-header" [title]="requirement.label">
+                {{ requirement.label }}
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (control of controls(); track control.id) {
+            <tr>
+              <th class="control-matrix__row-header" scope="row">{{ control.label }}</th>
+              @for (requirement of requirements(); track requirement.id) {
+                <td
+                  class="control-matrix__cell"
+                  [class.control-matrix__cell--mapped]="isMapped(control.id, requirement.id)"
+                >
+                  @if (isMapped(control.id, requirement.id)) {
+                    <span aria-hidden="true">&#10003;</span>
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

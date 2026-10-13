@@ -1,0 +1,26 @@
+<section class="option-card">
+  <header class="option-header">
+    <h3>{{ title() }} <span class="count">{{ activeCount() }} / {{ options().length }}</span></h3>
+    <div class="actions">
+      <button class="action" type="button" [disabled]="disabled()" (click)="setAll.emit(true)">{{ enableAllLabel() }}</button>
+      <button class="action" type="button" [disabled]="disabled()" (click)="setAll.emit(false)">{{ disableAllLabel() }}</button>
+    </div>
+  </header>
+
+  <div class="option-grid">
+    @for (option of options(); track option.id) {
+      <div class="option-item">
+        <div class="option-content">
+          <i [class]="option.icon + ' option-icon'" aria-hidden="true"></i>
+          <strong class="option-title">{{ option.title }}</strong>
+          <p class="option-description">{{ option.description }}</p>
+        </div>
+        <label class="switch" [title]="(option.active ? 'Disable ' : 'Enable ') + option.title">
+          <input type="checkbox" [checked]="option.active" [disabled]="disabled()"
+                 (change)="changeOption(option.id, $event)">
+          <span class="slider"></span>
+        </label>
+      </div>
+    }
+  </div>
+</section>

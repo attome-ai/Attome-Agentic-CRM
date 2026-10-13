@@ -1,0 +1,77 @@
+<ng-template #cell let-v>
+  @if (v.text === null) {
+    <span class="rh-empty">{{ 'recordHistory.emptyValue' | translate }}</span>
+  } @else if (v.isDate) {
+    <time [attr.datetime]="v.text">{{ v.text | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</time>
+  } @else {
+    {{ v.text }}
+  }
+</ng-template>
+
+<section class="rh" data-testid="record-history">
+  @if (error()) {
+    <p class="rh-error" role="alert">{{ 'recordHistory.error' | translate }}</p>
+  }
+
+  @if (changes().length === 0 && !loading() && !error()) {
+    <p class="rh-hint" data-testid="history-empty">{{ 'recordHistory.empty' | translate }}</p>
+  }
+
+  @for (change of changes(); track change.audit_id) {
+    <article class="rh-change" data-testid="history-change">
+      <header class="rh-head">
+        <span class="rh-op">{{ operationLabel(change) }}</span>
+        <span class="rh-by">
+          {{ 'recordHistory.by' | translate: { user: change.user_display_name || ('recordHistory.system' | translate) } }}
+        </span>
+        <time class="rh-when" [attr.datetime]="change.changed_on">
+          {{ change.changed_on | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}
+        </time>
+      </header>
+
+      @if (change.fields.length > 0) {
+        <table class="rh-fields">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'recordHistory.field' | translate }}</th>
+              <th scope="col">{{ 'recordHistory.oldValue' | translate }}</th>
+              <th scope="col">{{ 'recordHistory.newValue' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (field of change.fields; track field.field_name) {
+              <tr [attr.data-field]="field.field_name" data-testid="history-field">
+                <th scope="row">{{ fieldLabel(field) }}</th>
+                @if (field.masked) {
+                  <td colspan="2" class="rh-masked" data-testid="history-masked">
+                    <i class="las la-lock" aria-hidden="true"></i>
+                    {{ 'recordHistory.masked' | translate }}
+                  </td>
+                } @else {
+                  @let oldV = value(field, 'old');
+                  @let newV = value(field, 'new');
+                  <td class="rh-old">
+                    <ng-container *ngTemplateOutlet="cell; context: { $implicit: oldV }" />
+                  </td>
+                  <td>
+                    <ng-container *ngTemplateOutlet="cell; context: { $implicit: newV }" />
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </article>
+  }
+
+  @if (loading()) {
+    <p class="rh-hint" aria-live="polite">
+      <i class="las la-spinner" aria-hidden="true"></i> {{ 'recordHistory.loading' | translate }}
+    </p>
+  } @else if (nextCursor()) {
+    <button type="button" class="rh-more" (click)="loadMore()" data-testid="history-load-more">
+      {{ 'recordHistory.loadMore' | translate }}
+    </button>
+  }
+</section>

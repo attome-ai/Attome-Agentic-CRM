@@ -1,0 +1,59 @@
+<div class="policy-list">
+  <div class="policy-list__toolbar">
+    <h2 class="policy-list__title">{{ 'grc.policyList.title' | translate }}</h2>
+    <button type="button" class="btn-primary" (click)="createPolicy()">
+      {{ 'grc.policyList.new' | translate }}
+    </button>
+  </div>
+
+  @if (loading()) {
+    <p class="policy-list__hint">{{ 'grc.policyList.loading' | translate }}</p>
+  } @else if (error(); as errorKey) {
+    <p class="policy-list__error">{{ errorKey | translate }}</p>
+  } @else if (rows().length === 0) {
+    <p class="policy-list__hint">{{ 'grc.policyList.empty' | translate }}</p>
+  } @else {
+    <table class="policy-list__table">
+      <thead>
+        <tr>
+          <th>{{ 'grc.policyList.column.title' | translate }}</th>
+          <th>{{ 'grc.policyList.column.status' | translate }}</th>
+          <th>{{ 'grc.policyList.column.version' | translate }}</th>
+          <th>{{ 'grc.policyList.column.effective' | translate }}</th>
+          <th>{{ 'grc.policyList.column.expiry' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.id) {
+          <tr
+            class="policy-list__row"
+            [class.policy-list__row--expired]="isExpired(row.expiryDate)"
+            [class.policy-list__row--expiring]="!isExpired(row.expiryDate) && isExpiringSoon(row.expiryDate)"
+            (click)="openPolicy(row.id)"
+          >
+            <td>{{ row.title }}</td>
+            <td>
+              @if (row.status) {
+                <xrm-choice-pill [value]="row.status" [style]="statusStyle(row.status)" />
+              }
+            </td>
+            <td>{{ row.version }}</td>
+            <td>{{ row.effectiveDate }}</td>
+            <td>
+              {{ row.expiryDate }}
+              @if (isExpired(row.expiryDate)) {
+                <span class="policy-list__badge policy-list__badge--expired">
+                  {{ 'grc.policyList.expired' | translate }}
+                </span>
+              } @else if (isExpiringSoon(row.expiryDate)) {
+                <span class="policy-list__badge policy-list__badge--expiring">
+                  {{ 'grc.policyList.expiringSoon' | translate }}
+                </span>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

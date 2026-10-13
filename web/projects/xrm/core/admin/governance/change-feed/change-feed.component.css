@@ -1,0 +1,21 @@
+.cf-filters {
+  margin-block-end: 6px;
+}
+
+.cf-window {
+  margin: 0 0 16px;
+}
+
+.cf-when {
+  white-space: nowrap;
+}
+
+.cf-ref {
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.cf-kind--security,
+.cf-kind--license {
+  color: var(--color-accent);
+}

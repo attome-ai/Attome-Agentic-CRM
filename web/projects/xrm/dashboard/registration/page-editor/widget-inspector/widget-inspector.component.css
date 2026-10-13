@@ -1,0 +1,343 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.xpe-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.xpe-inspector::-webkit-scrollbar {
+  width: 6px;
+}
+.xpe-inspector::-webkit-scrollbar-track {
+  background: transparent;
+}
+.xpe-inspector::-webkit-scrollbar-thumb {
+  background: var(--color-border, #24324d);
+  border-radius: 3px;
+}
+.xpe-inspector::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+.xpe-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--color-text-primary, #e5eefc);
+  padding-bottom: 2px;
+}
+
+.xpe-inspector-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  color: var(--color-text-secondary, #94a3b8);
+  cursor: pointer;
+  font-size: 14px;
+  transition: color .15s, background .15s;
+}
+
+.xpe-inspector-close:hover {
+  color: var(--color-text-primary, #e5eefc);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.xpe-inspector-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.xpe-inspector-type {
+  margin: -6px 0 2px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+  color: var(--color-accent, #818cf8);
+  background: color-mix(in srgb, var(--color-accent, #6366f1) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent, #6366f1) 28%, transparent);
+  border-radius: 4px;
+  padding: 2px 8px;
+  width: fit-content;
+}
+
+/* ── Field labels & layout ── */
+.xf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.xf-field > span,
+.xf-field > label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--color-text-secondary, #94a3b8);
+  line-height: 1.2;
+}
+
+/* ── Inputs & Selects matching the dark theme ── */
+.xf-input {
+  width: 100%;
+  padding: 8px 11px;
+  background: var(--color-bg, #0b1120);
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 7px;
+  font-size: 13px;
+  color: var(--color-text-primary, #e5eefc);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color .15s ease, box-shadow .15s ease;
+  font-family: inherit;
+}
+
+.xf-input::placeholder {
+  color: var(--color-text-secondary, #94a3b8);
+  opacity: .4;
+}
+
+.xf-input:hover:not(:focus):not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-accent, #6366f1) 40%, var(--color-border, #24324d));
+}
+
+.xf-input:focus {
+  border-color: var(--color-accent, #6366f1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent, #6366f1) 20%, transparent);
+}
+
+.xf-input:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+select.xf-input {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px 14px;
+  cursor: pointer;
+}
+
+select.xf-input option,
+select.xf-input optgroup {
+  background: var(--color-bg-alt, #0f172a);
+  color: var(--color-text-primary, #e5eefc);
+}
+
+/* ── Section containers (e.g. New Chart View, Chart Settings) ── */
+.xpe-inspector-chart-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--color-bg, #0b1120) 70%, transparent);
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 8px;
+}
+
+.xpe-inspector-section-title {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--color-accent, #818cf8);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Buttons ── */
+.xf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity .15s, background .15s, border-color .15s, box-shadow .15s, color .15s;
+  border: 1px solid transparent;
+  font-family: inherit;
+}
+
+.xf-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.xf-btn-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-secondary, #94a3b8);
+  border: 1px solid var(--color-border, #24324d);
+}
+
+.xf-btn-secondary:hover:not(:disabled) {
+  color: var(--color-text-primary, #e5eefc);
+  border-color: color-mix(in srgb, var(--color-accent, #6366f1) 50%, var(--color-border, #24324d));
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.xpe-inspector-chart-settings > .xf-btn {
+  width: 100%;
+  margin-top: 2px;
+  background: color-mix(in srgb, var(--color-accent, #6366f1) 15%, transparent);
+  border-color: color-mix(in srgb, var(--color-accent, #6366f1) 40%, transparent);
+  color: var(--color-accent, #818cf8);
+}
+
+.xpe-inspector-chart-settings > .xf-btn:hover:not(:disabled) {
+  background: var(--color-accent, #6366f1);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+
+/* ── Actions bar (Duplicate & Delete) ── */
+.xpe-inspector-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border, #24324d);
+}
+
+.xpe-inspector-actions .xf-btn {
+  width: 100%;
+}
+
+.xpe-btn-danger {
+  background: rgba(248, 113, 113, 0.08) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(248, 113, 113, 0.3) !important;
+}
+
+.xpe-btn-danger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.2) !important;
+  border-color: #f87171 !important;
+  color: #fca5a5 !important;
+}
+
+/* ── Checkboxes ── */
+.xpe-inspector-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--color-text-primary, #e5eefc);
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+}
+
+.xpe-inspector-checkbox input[type="checkbox"] {
+  accent-color: var(--color-accent, #6366f1);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+/* ── Raw Config ── */
+.xpe-inspector-config {
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+  font-size: 11px;
+  resize: vertical;
+}
+
+.xpe-inspector-config-errors {
+  margin: -4px 0 0;
+  padding-left: 18px;
+  font-size: 11px;
+  color: #f87171;
+}
+
+.xpe-inspector-hint {
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--color-text-secondary, #94a3b8);
+  opacity: .8;
+}
+
+/* ── Filters / Bindings rows (Dashboard 10/10 Phase 5.A) ── */
+.xpe-inspector-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border, #24324d);
+}
+
+.xpe-inspector-rows-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.xpe-inspector-rows-header > span {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--color-accent, #818cf8);
+}
+
+.xpe-inspector-row-add {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
+.xpe-inspector-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.xpe-inspector-row-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 7px;
+  color: var(--color-text-secondary, #94a3b8);
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+
+.xpe-inspector-row-remove:hover {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.08);
+}

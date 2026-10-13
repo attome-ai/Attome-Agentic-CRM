@@ -1,0 +1,61 @@
+<div class="page-header">
+  <div>
+    <h2>Feature Flags</h2>
+    <p class="subtitle">Ship code dark and turn it on separately. A flag can never make a feature reachable that Module Management already hides — see each flag's module.</p>
+  </div>
+</div>
+
+@if (loading()) {
+  <p class="state-msg">Loading feature flags…</p>
+} @else {
+  @if (error()) { <p class="error-msg">{{ error() }}</p> }
+
+  <table class="flag-table">
+    <thead>
+      <tr>
+        <th>Flag</th>
+        <th>Module</th>
+        <th>Deployment</th>
+        <th>Rollout %</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of items(); track item.key) {
+        <tr>
+          <td>
+            <div class="flag-key">{{ item.key }}</div>
+            <div class="flag-description">{{ item.description }}</div>
+            @if (item.requires.length) { <div class="flag-requires">{{ requiresLabel(item) }}</div> }
+          </td>
+          <td><span class="module-badge">{{ item.module }}</span></td>
+          <td>
+            <label class="switch" title="Deployment-wide default">
+              <input
+                type="checkbox"
+                [checked]="item.policy.deployment"
+                [disabled]="savingKey() === item.key"
+                (change)="toggleDeployment(item, $event)"
+              >
+              <span class="slider"></span>
+            </label>
+          </td>
+          <td>
+            <input
+              class="pct-input"
+              type="number"
+              min="0"
+              max="100"
+              placeholder="100"
+              [value]="percentageValue(item)"
+              [disabled]="savingKey() === item.key"
+              (change)="setPercentage(item, $event)"
+            >
+          </td>
+        </tr>
+        @if (savedKey() === item.key) {
+          <tr><td colspan="4" class="success-msg">Applied.</td></tr>
+        }
+      }
+    </tbody>
+  </table>
+}

@@ -1,0 +1,61 @@
+# npm advisory waiver file — the npm leg of D-206's waiver discipline
+# (ENGINEERING-REVIEW-2026-08-10.md TODO-023, P-supply-chain-pinning).
+#
+# NOT read by npm, and it cannot be: `npm audit` has no ignore-file, no
+# per-advisory allowlist, and no --ignore flag of any kind. The severity
+# threshold in angular/package.json's audit scripts IS the waiver mechanism
+# (`audit:prod` --omit=dev --audit-level=moderate, `audit:dev`
+# --audit-level=high), and every entry below documents one advisory class that
+# threshold is deliberately letting through, who owns it, and until when.
+#
+# This file exists so a waiver is reviewable rather than a comment buried in a
+# build step, which is what the one advisory exception used to be (F-004's
+# residual failure mode). The schema check that used to validate every entry —
+# and fail the build the moment a `revisit` date had passed — lived in a CI
+# workflow, and this repository has no CI. NOTHING ENFORCES THE FIELDS BELOW
+# NOW, and nothing notices a lapsed `revisit` date: check them by reading this
+# header when you add an entry, and re-read the dates before a release.
+#
+# Required per entry (all six, every time — an entry missing any one of these
+# is not reviewable):
+#   id          GHSA identifier being waived, as `npm audit --json` reports it
+#               in `via[].url`.
+#   packages    the exact `package@version` nodes npm audit flags for this id.
+#               Ties the waiver to the dependency graph that was actually
+#               reviewed, so an unrelated future package pulling in the same
+#               advisory id does not silently inherit the waiver (same
+#               reasoning as .trivyignore.yaml's `purls`).
+#   severity    `low` or `moderate` only. A `high`/`critical` entry would be
+#               fiction: `audit:dev` fails on those regardless, so no
+#               threshold waiver can hold — fix or override the dependency
+#               instead of recording a waiver here.
+#   scope       `dev` or `prod`. `prod` requires severity `low`: `audit:prod`
+#               runs at --audit-level=moderate, so a moderate *production*
+#               advisory is not waivable through the threshold either.
+#   statement   starts with "Owner: <name-or-team> — " followed by the
+#               justification (why no fix is available / why the exposure is
+#               not reachable in this deployment). The owner is who re-triages
+#               this before `revisit`, not just whoever added the line. Keep it
+#               a single-line double-quoted string — the schema-check job's awk
+#               pass is line-based and a folded block scalar (`>-`) puts
+#               `Owner:` on a different physical line than `statement:`, which
+#               reports a false MISSING-owner failure (the same constraint
+#               .trivyignore.yaml's header documents).
+#   revisit     bare `yyyy-mm-dd`, the last day the waiver is honored. The
+#               schema-check job fails once it has passed, so re-triage means
+#               either fixing the advisory and deleting the entry, or
+#               re-waiving with a fresh owner/date/reason. Never set more than
+#               90 days out; a waiver is a snooze, not a permanent exception
+#               (deny.toml's RUSTSEC ignores and .trivyignore.yaml's
+#               `expired_at` follow the same discipline — see D-046/D-206). A
+#               bare date is correct here, unlike .trivyignore.yaml's
+#               RFC3339-or-Trivy-chokes `expired_at`, because nothing but the
+#               hygiene job ever parses this field.
+# 2026-09-28 (MASTER-PLAN P0 0.12): the one waiver this file carried,
+# GHSA-frvp-7c67-39w9 (@hono/node-server serve-static path traversal, revisit
+# 2026-10-17), was re-triaged and DELETED because it is fixed, not renewed:
+# the committed package-lock.json now resolves @angular/cli 22.1.8 ->
+# @modelcontextprotocol/sdk 1.30.0 -> @hono/node-server 2.1.1 (the fix landed
+# in 2.0.5; the SDK's range is now `^1.19.9 || ^2.0.5`). `npm audit --json`
+# and `npm audit --omit=dev --json` both report 0 findings at every severity.
+advisories: []

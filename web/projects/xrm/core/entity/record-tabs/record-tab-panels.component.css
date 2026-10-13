@@ -1,0 +1,8 @@
+:host { display: contents; }
+
+/* Mirrors xrm-form.css's .xf-tab-panel, which the host forms use for their
+   own panels. */
+.xf-tab-panel { display: flex; flex-direction: column; gap: 14px; padding-top: 16px; }
+.xf-tab-panel[hidden] { display: none; }
+
+.xf-hint { margin: 0; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }

@@ -1,0 +1,101 @@
+/* Logical properties only, so the card mirrors under dir="rtl". */
+
+.ri {
+  padding: 14px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg);
+}
+
+.ri--open {
+  border-inline-start: 4px solid var(--color-warning, #b58900);
+}
+
+.ri-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.ri-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ri-kind,
+.ri-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--color-border);
+}
+
+.ri-status--open {
+  font-weight: 600;
+}
+
+.ri-date {
+  margin-inline-start: auto;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.ri-sentence {
+  margin: 10px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ri-meta,
+.ri-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0 0 10px;
+}
+
+.ri-meta dt,
+.ri-values dt {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.ri-meta dd,
+.ri-values dd {
+  margin: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.ri-value {
+  min-inline-size: 180px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.ri-mono {
+  font-family: var(--font-mono, monospace);
+}
+
+.ri-note {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.ri-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ri-notice {
+  min-block-size: 1em;
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}

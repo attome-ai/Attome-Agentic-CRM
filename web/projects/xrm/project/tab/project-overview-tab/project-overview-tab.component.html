@@ -1,0 +1,130 @@
+@if (loading()) {
+  <p class="pm-state-msg">Loading control center…</p>
+} @else if (error()) {
+  <p class="pm-state-msg pm-state-error">{{ error() }}</p>
+} @else if (summary(); as s) {
+  <section class="pm-panel">
+    <header class="pm-panel-header">
+      <i class="las la-th-large"></i>
+      <h3>Project Control Center</h3>
+    </header>
+    <div class="pm-stat-grid">
+      <div class="pm-tile">
+        <span class="pm-tile-label">Health</span>
+        <span class="pm-tile-value">
+          @if (s.health) {
+            <span class="pm-health-dot" [class]="'pm-health-' + s.health"></span>
+            {{ s.health | titlecase }}
+          } @else {
+            <span class="pm-tile-caption">Not set</span>
+          }
+        </span>
+        <span class="pm-tile-caption">{{ healthCaption(s.health) }}</span>
+      </div>
+      <div class="pm-tile">
+        <span class="pm-tile-label">Weighted Progress</span>
+        <span class="pm-tile-value">{{ s.weighted_progress_pct }}%</span>
+        <span class="pm-tile-caption">Point-based completion</span>
+      </div>
+      <div class="pm-tile">
+        <span class="pm-tile-label">Budget Consumed</span>
+        <span class="pm-tile-value">{{ s.budget_consumed_pct ?? '—' }}{{ s.budget_consumed_pct !== null ? '%' : '' }}</span>
+        <span class="pm-tile-caption">{{ budgetCaption(s) }}</span>
+      </div>
+      <div class="pm-tile">
+        <span class="pm-tile-label">Open Risks</span>
+        <span class="pm-tile-value">{{ s.open_risks_total }}</span>
+        <span class="pm-tile-caption">{{ s.open_risks_critical }} critical</span>
+      </div>
+      <div class="pm-tile">
+        <span class="pm-tile-label">Pending Approvals</span>
+        <span class="pm-tile-value">{{ s.pending_change_requests_total }}</span>
+        <span class="pm-tile-caption">{{ s.pending_change_requests_customer_facing }} customer-facing</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="pm-panel pm-panel-spaced">
+    <header class="pm-panel-header pm-panel-header-actions">
+      <div class="pm-panel-header-title">
+        <i class="las la-history"></i>
+        <h3>Baseline &amp; Earned Value</h3>
+      </div>
+      @if (!showCaptureForm()) {
+        <button type="button" class="pm-btn" (click)="openCaptureForm()">
+          <i class="las la-camera"></i> Capture Baseline
+        </button>
+      }
+    </header>
+
+    @if (showCaptureForm()) {
+      <div class="pm-capture-form">
+        <div class="pm-capture-row">
+          <label>
+            Label
+            <input type="text" placeholder="e.g. Sprint 3 baseline" [ngModel]="captureLabel()" (ngModelChange)="captureLabel.set($event)" />
+          </label>
+          <label>
+            Trigger
+            <select [ngModel]="captureTrigger()" (ngModelChange)="captureTrigger.set($event)">
+              @for (t of triggerOptions; track t) { <option [value]="t">{{ t }}</option> }
+            </select>
+          </label>
+        </div>
+        @if (captureError()) { <p class="pm-state-msg pm-state-error">{{ captureError() }}</p> }
+        @if (captureResult(); as r) {
+          <p class="pm-state-msg pm-capture-ok">
+            Captured "{{ r.label }}" — {{ r.item_count }} work item(s) snapshotted.
+          </p>
+        }
+        <div class="pm-capture-actions">
+          <button type="button" class="pm-btn pm-btn-primary" [disabled]="capturing()" (click)="submitCapture()">
+            {{ capturing() ? 'Capturing…' : 'Capture' }}
+          </button>
+          <button type="button" class="pm-btn" (click)="closeCaptureForm()">Close</button>
+        </div>
+      </div>
+    }
+
+    @if (!s.baseline_id) {
+      <p class="pm-state-msg pm-panel-padded">No baseline captured yet — variance and EVM figures need one to compare against.</p>
+    } @else {
+      <p class="pm-baseline-strip pm-panel-padded">
+        Compared against <strong>{{ s.baseline_label }}</strong>, captured {{ formatDate(s.baseline_captured_at) }}.
+        {{ scopeVarianceCaption(s.scope_item_count_variance) }}
+      </p>
+      <div class="pm-stat-grid">
+        <div class="pm-tile">
+          <span class="pm-tile-label">Schedule Variance</span>
+          <span class="pm-tile-value">{{ s.schedule_variance_days ?? '—' }}{{ s.schedule_variance_days !== null ? 'd' : '' }}</span>
+          <span class="pm-tile-caption">{{ scheduleVarianceCaption(s.schedule_variance_days) }}</span>
+        </div>
+        <div class="pm-tile">
+          <span class="pm-tile-label">Planned / Earned Value</span>
+          <span class="pm-tile-value">{{ formatMoney(s.earned_value) }}</span>
+          <span class="pm-tile-caption">PV {{ formatMoney(s.planned_value) }} · BAC {{ formatMoney(s.budget_at_completion) }}</span>
+        </div>
+        <div class="pm-tile">
+          <span class="pm-tile-label">Cost Performance (CPI)</span>
+          <span class="pm-tile-value">{{ formatIndex(s.cost_performance_index) }}</span>
+          <span class="pm-tile-caption">Actual cost {{ formatMoney(s.actual_cost) }}</span>
+        </div>
+        <div class="pm-tile">
+          <span class="pm-tile-label">Schedule Performance (SPI)</span>
+          <span class="pm-tile-value">{{ formatIndex(s.schedule_performance_index) }}</span>
+          <span class="pm-tile-caption">&gt;1 ahead of plan, &lt;1 behind</span>
+        </div>
+        <div class="pm-tile">
+          <span class="pm-tile-label">Estimate at Completion</span>
+          <span class="pm-tile-value">{{ formatMoney(s.estimate_at_completion) }}</span>
+          <span class="pm-tile-caption">ETC {{ formatMoney(s.estimate_to_complete) }}</span>
+        </div>
+        <div class="pm-tile">
+          <span class="pm-tile-label">Variance at Completion</span>
+          <span class="pm-tile-value">{{ formatMoney(s.variance_at_completion) }}</span>
+          <span class="pm-tile-caption">BAC − EAC</span>
+        </div>
+      </div>
+    }
+  </section>
+}

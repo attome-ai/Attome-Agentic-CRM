@@ -1,0 +1,63 @@
+@if (loading()) {
+  <p class="state-msg">Loading instance…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (instance(); as inst) {
+
+  <div class="breadcrumb">
+    <a routerLink="/xrm/admin/workflow/instances">&larr; Instances</a>
+    &rsaquo; {{ inst.id }}
+  </div>
+
+  <div class="card">
+    <div class="section-header">
+      <h3>Instance</h3>
+      <span class="badge">{{ inst.status }}</span>
+    </div>
+    <div class="form-row-3">
+      <div class="field"><span class="field-caption">Started</span><p class="cell-muted">{{ inst.started_at | date:'medium' }}</p></div>
+      <div class="field"><span class="field-caption">Completed</span><p class="cell-muted">{{ inst.completed_at ? (inst.completed_at | date:'medium') : '—' }}</p></div>
+      <div class="field"><span class="field-caption">Correlated Record</span><p class="cell-muted mono-input">{{ inst.correlation_entity_id ?? '—' }}</p></div>
+    </div>
+    @if (cancelError()) { <p class="error-msg">{{ cancelError() }}</p> }
+    @if (inst.status === 'running' || inst.status === 'waiting') {
+      <div class="btn-row">
+        <button class="btn-danger-outline" (click)="cancel()" [disabled]="cancelling()">
+          {{ cancelling() ? 'Cancelling…' : 'Cancel Instance' }}
+        </button>
+      </div>
+    }
+  </div>
+
+  <div class="card">
+    <h3>Node Runs</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Node</th><th>Status</th><th>Attempts</th><th>Started</th><th>Completed</th><th>Last Error</th></tr>
+        </thead>
+        <tbody>
+          @for (nr of inst.node_runs; track nr.node_id) {
+            <tr>
+              <td class="mono-input">{{ nr.node_id }}</td>
+              <td><span class="badge">{{ nr.status }}</span></td>
+              <td class="cell-muted">{{ nr.attempt_count }}</td>
+              <td class="cell-muted">{{ nr.started_at ? (nr.started_at | date:'medium') : '—' }}</td>
+              <td class="cell-muted">{{ nr.completed_at ? (nr.completed_at | date:'medium') : '—' }}</td>
+              <td class="error-msg">{{ nr.last_error ?? '' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Context</h3>
+    <pre class="mono-input">{{ inst.context | json }}</pre>
+  </div>
+  <div class="card">
+    <h3>Node Data</h3>
+    <pre class="mono-input">{{ inst.node_data | json }}</pre>
+  </div>
+}

@@ -1,0 +1,50 @@
+# i18n grep rule (scripts/check-i18n.sh in attome-base, P-frontend-baseline) —
+# sanctioned-exception ledger, same pattern as the audit-system skill's Part B/G
+# ledger. Every line is baseline debt found when the check was first landed
+# (2026-07-16), NOT a false positive. Grandfathered so the check gates only NEW
+# violations; clean these up incrementally and delete the line once fixed.
+#
+# The landing.component.html block (public marketing page, pre-login) is a
+# larger judgment call than the auth-modal aria-labels — whether it needs
+# Arabic-first treatment at all, or is deliberately English-only marketing
+# copy, is a product decision this baseline pass doesn't make. Flagged here
+# rather than silently exempted; revisit with product before translating.
+
+# :4/:6 and :296/:320 refreshed 2026-07-27 — the
+# file drifted since this ledger was written and these 4 no longer matched
+# their flagged lines; the other 8 landing.component.html lines were still
+# correct and are unchanged. This whole host-app check never actually ran
+# during the ~5 days the check was silently dead (it's the step after xrm's, which
+# was failing first and aborting the job before reaching this one) — see the
+# xrm block below for why the same drift happened there.
+src/app/components/auth-modal/auth-modal.component.html:4
+src/app/components/auth-modal/auth-modal.component.html:6
+src/app/pages/landing/landing.component.html:48
+src/app/pages/landing/landing.component.html:97
+src/app/pages/landing/landing.component.html:137
+src/app/pages/landing/landing.component.html:139
+src/app/pages/landing/landing.component.html:180
+src/app/pages/landing/landing.component.html:182
+src/app/pages/landing/landing.component.html:222
+src/app/pages/landing/landing.component.html:223
+src/app/pages/landing/landing.component.html:296
+src/app/pages/landing/landing.component.html:320
+
+# check-i18n.sh scanned projects/xrm/src, a dead path since @attome/xrm
+# moved to secondary entry points — projects/xrm/src holds no templates, so the
+# gate silently checked nothing and this ledger's old entity-list.component.html
+# paths (projects/xrm/src/lib/entity/list/...) never matched anything real. Fixed
+# to scan projects/xrm. Running the corrected check surfaced 11 hits in
+# entity-list.component.html — 9 were real hardcoded strings (wired through
+# LangService/TranslatePipe against the entityList.* catalog keys) and 2 were
+# a multi-line HTML comment's continuation lines, allowlisted here at the time.
+#
+# Those two entries are gone again (2026-08-25): the file moved once more, to
+# projects/xrm/core/entity/list/entity-list.component.html, so the ledger's
+# `projects/xrm/entity/list/...` lines matched nothing — and check-i18n.sh's
+# drop_commented_hits now excludes comment continuations before the allowlist
+# is consulted, so the hits they covered no longer exist either. Verified:
+# `bash ../scripts/check-i18n.sh projects/xrm/core/entity/list` reports zero
+# hits. Entries in this file must be `path:line` exactly as the check prints
+# them; a stale path is silently inert, never an error, so re-check paths
+# whenever an entry point moves.

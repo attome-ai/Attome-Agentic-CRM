@@ -1,0 +1,317 @@
+<div class="cpe">
+  @if (loading()) {
+    <p class="cpe-status">Loading…</p>
+  } @else if (loadError()) {
+    <p class="cpe-status cpe-error">{{ loadError() }}</p>
+  } @else if (page(); as p) {
+    <header class="cpe-topbar">
+      <div class="cpe-crumb">
+        <a routerLink="/xrm/admin/content/pages">CONTENT MANAGEMENT</a> ›
+        <a routerLink="/xrm/admin/content/pages">PAGES</a> › EDIT PAGE
+      </div>
+      <div class="cpe-titlebar">
+        <h2>{{ p.title }}</h2>
+        <div class="cpe-actions">
+          <button type="button" class="btn-ghost" (click)="openLibrary('canvas')">
+            <i class="las la-plus"></i> Add block
+          </button>
+          <button type="button" class="btn-ghost" (click)="openSettings()">
+            <i class="las la-cog"></i> Page settings
+          </button>
+          <button type="button" class="btn-ghost" (click)="previewMode.set(!previewMode())">
+            {{ previewMode() ? 'Edit' : 'Preview' }}
+          </button>
+          <button type="button" class="btn-ghost" (click)="saveDraft()" [disabled]="saving()">
+            {{ saving() ? 'Saving…' : 'Save draft' }}
+          </button>
+          <button type="button" class="btn-primary" (click)="publish()" [disabled]="publishing()">
+            <i class="las la-check"></i> {{ publishing() ? 'Publishing…' : 'Publish' }}
+          </button>
+        </div>
+      </div>
+      @if (statusMessage()) { <p class="cpe-save-status">{{ statusMessage() }}</p> }
+      @if (saveError()) { <p class="cpe-save-status cpe-error">{{ saveError() }}</p> }
+    </header>
+
+    <div class="cpe-body">
+      <aside class="cpe-sidebar">
+        <h3>Pages</h3>
+        <attome-content-page-tree [spaceId]="p.content_space_id" [selectedId]="p.id" (pageSelected)="goTo($event.id)" />
+      </aside>
+
+      <main class="cpe-canvas-wrap">
+        <div class="cpe-canvas-meta">
+          <span class="cpe-path">{{ p.url_path }}</span>
+          <span class="cpe-template">{{ p.template_id ? 'Built from a template' : 'Blank page' }}</span>
+        </div>
+        <div class="cpe-canvas">
+          @if (blocks().length === 0) {
+            <div class="cpe-empty" role="button" tabindex="0" (click)="openLibrary('canvas')" (keydown.enter)="openLibrary('canvas')">
+              <i class="las la-plus-circle"></i>
+              <p>Add your first block</p>
+            </div>
+          }
+          @for (block of blocks(); track block.id; let index = $index) {
+            <div class="cpe-block" [class.cpe-block-selected]="!previewMode() && block.id === selectedBlockId()"
+                 [attr.role]="previewMode() ? null : 'button'" [attr.tabindex]="previewMode() ? null : 0"
+                 (click)="!previewMode() && selectBlock(block.id)"
+                 (keydown.enter)="!previewMode() && selectBlock(block.id)">
+              @if (!previewMode() && block.id === selectedBlockId()) {
+                <span class="cpe-block-tag"><i class="las la-grip-lines"></i> {{ labelFor(block.kind) }}</span>
+                <div class="cpe-block-toolbar">
+                  <button type="button" title="Duplicate" (click)="duplicateBlock(index); $event.stopPropagation()">
+                    <i class="las la-copy"></i>
+                  </button>
+                  <button type="button" title="Remove" (click)="removeBlock(index); $event.stopPropagation()">
+                    <i class="las la-times"></i>
+                  </button>
+                </div>
+              }
+              @if (!previewMode() && block.kind === 'columns') {
+                <button type="button" class="cpe-edit-columns" (click)="columnsEditorFor.set(block.id); $event.stopPropagation()">
+                  <i class="las la-edit"></i> Edit columns
+                </button>
+              }
+              <attome-content-block-view [block]="block" />
+            </div>
+            @if (!previewMode()) {
+              <button type="button" class="cpe-insert" (click)="openLibrary('canvas', index)">
+                <i class="las la-plus"></i>
+              </button>
+            }
+          }
+        </div>
+      </main>
+
+      <aside class="cpe-inspector">
+        @if (selectedBlock(); as block) {
+          <div class="cpe-tabs">
+            <button type="button" [class.cpe-tab-active]="inspectorTab() === 'content'" (click)="inspectorTab.set('content')">Content</button>
+            <button type="button" [class.cpe-tab-active]="inspectorTab() === 'appearance'" (click)="inspectorTab.set('appearance')">Appearance</button>
+            <button type="button" [class.cpe-tab-active]="inspectorTab() === 'data'" (click)="inspectorTab.set('data')">Data</button>
+          </div>
+          <h4 class="cpe-inspector-title">SELECTED BLOCK</h4>
+          <p class="cpe-block-type-label">BLOCK TYPE</p>
+          <p class="cpe-block-type-value">{{ labelFor(block.kind) }}</p>
+
+          @if (inspectorTab() === 'content') {
+            @switch (block.kind) {
+              @case ('heading') {
+                <label class="cpe-field"><span>TEXT</span>
+                  <textarea rows="2" [ngModel]="strProp(block, 'text')" (ngModelChange)="setProp(block.id, 'text', $event)"></textarea>
+                </label>
+                <label class="cpe-field"><span>HEADING LEVEL</span>
+                  <select [ngModel]="numProp(block, 'level', 2)" (ngModelChange)="setProp(block.id, 'level', +$event)">
+                    @for (l of [1, 2, 3, 4, 5, 6]; track l) { <option [ngValue]="l">H{{ l }}</option> }
+                  </select>
+                </label>
+              }
+              @case ('rich_text') {
+                <label class="cpe-field"><span>HTML</span>
+                  <textarea rows="6" [ngModel]="strProp(block, 'html')" (ngModelChange)="setProp(block.id, 'html', $event)"></textarea>
+                </label>
+              }
+              @case ('alert') {
+                <label class="cpe-field"><span>MESSAGE</span>
+                  <textarea rows="2" [ngModel]="strProp(block, 'message')" (ngModelChange)="setProp(block.id, 'message', $event)"></textarea>
+                </label>
+                <label class="cpe-field"><span>VARIANT</span>
+                  <select [ngModel]="strProp(block, 'variant')" (ngModelChange)="setProp(block.id, 'variant', $event)">
+                    @for (v of ['info', 'warning', 'danger', 'success']; track v) { <option [ngValue]="v">{{ v }}</option> }
+                  </select>
+                </label>
+              }
+              @case ('image') {
+                <label class="cpe-field"><span>IMAGE URL</span>
+                  <input type="text" [ngModel]="strProp(block, 'src')" (ngModelChange)="setProp(block.id, 'src', $event)" />
+                </label>
+                <label class="cpe-field"><span>ALT TEXT</span>
+                  <input type="text" [ngModel]="strProp(block, 'alt')" (ngModelChange)="setProp(block.id, 'alt', $event)" />
+                </label>
+              }
+              @case ('columns') {
+                <p class="cpe-hint">Use "Edit columns" on the block to add content inside each column.</p>
+              }
+              @case ('form') {
+                <label class="cpe-field"><span>ENTITY</span>
+                  <input type="text" [ngModel]="strProp(block, 'entity')" (ngModelChange)="setProp(block.id, 'entity', $event)" />
+                </label>
+                <label class="cpe-field"><span>FIELDS (comma-separated)</span>
+                  <input type="text" [ngModel]="fieldsProp(block)" (ngModelChange)="setFieldsProp(block.id, $event)" />
+                </label>
+                <label class="cpe-field"><span>SUBMIT LABEL</span>
+                  <input type="text" [ngModel]="strProp(block, 'submit_label')" (ngModelChange)="setProp(block.id, 'submit_label', $event)" />
+                </label>
+              }
+              @case ('component') {
+                <label class="cpe-field"><span>COMPONENT</span>
+                  <select [ngModel]="strProp(block, 'component_key')" (ngModelChange)="setProp(block.id, 'component_key', $event)">
+                    @for (key of allowedComponents; track key) { <option [ngValue]="key">{{ key }}</option> }
+                  </select>
+                </label>
+              }
+              @default {
+                <p class="cpe-hint">Use the Data tab to configure this block.</p>
+              }
+            }
+          }
+
+          @if (inspectorTab() === 'appearance') {
+            <p class="cpe-hint">No appearance options for this block yet.</p>
+          }
+
+          @if (inspectorTab() === 'data') {
+            @if (block.kind === 'data_table' || block.kind === 'chart') {
+              <label class="cpe-field"><span>QUERY ID</span>
+                <input type="text" [ngModel]="strProp(block, 'query_id')" (ngModelChange)="setProp(block.id, 'query_id', $event)" />
+              </label>
+              <label class="cpe-field"><span>PAGE SIZE</span>
+                <input type="number" min="1" max="50" [ngModel]="numProp(block, 'page_size', 10)" (ngModelChange)="setProp(block.id, 'page_size', +$event)" />
+              </label>
+            } @else {
+              <p class="cpe-hint">Nothing to configure here.</p>
+            }
+          }
+        } @else {
+          <p class="cpe-hint">Select a block to edit its properties.</p>
+        }
+      </aside>
+    </div>
+
+    @if (columnsEditorFor(); as columnsBlockId) {
+      <!-- Backdrop-dismiss only; not an interactive control in its own
+           right — same convention as document-folder-browser's context
+           menu backdrop. Escape-to-close is handled separately if added. -->
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+      <div class="cpe-modal-backdrop" (click)="columnsEditorFor.set(null)">
+        <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+        <div class="cpe-modal cpe-columns-modal" (click)="$event.stopPropagation()">
+          <div class="cpe-modal-header">
+            <h3>Edit columns</h3>
+            <button type="button" (click)="columnsEditorFor.set(null)"><i class="las la-times"></i></button>
+          </div>
+          <div class="cpe-columns-grid">
+            @for (col of columnsOf(columnsBlockId); track $index; let ci = $index) {
+              <div class="cpe-column-editor">
+                <h4>Column {{ ci + 1 }}</h4>
+                @for (b of col.blocks; track b.id; let bi = $index) {
+                  <div class="cpe-column-block">
+                    <span>{{ labelFor(b.kind) }}</span>
+                    <button type="button" (click)="removeColumnBlock(columnsBlockId, ci, bi)"><i class="las la-times"></i></button>
+                  </div>
+                }
+                <button type="button" class="btn-sm" (click)="openLibrary({ columnsBlockId, columnIndex: ci })">
+                  <i class="las la-plus"></i> Add block
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (library(); as lib) {
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+      <div class="cpe-modal-backdrop" (click)="closeLibrary()">
+        <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+        <div class="cpe-modal cpe-library-modal" (click)="$event.stopPropagation()">
+          <div class="cpe-library-search">
+            <input type="text" placeholder="Search blocks…" [(ngModel)]="librarySearch" />
+            <button type="button" (click)="closeLibrary()"><i class="las la-times"></i></button>
+          </div>
+          <div class="cpe-library-grid">
+            @for (t of filteredBlockTypes(lib); track t.kind) {
+              <button type="button" class="cpe-library-item" (click)="pickBlockType(t.kind)">
+                <span class="cpe-library-icon"><i class="las" [class]="t.icon"></i></span>
+                <span class="cpe-library-label">{{ t.label }}</span>
+                <span class="cpe-library-desc">{{ t.description }}</span>
+              </button>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (showSettings()) {
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+      <div class="cpe-modal-backdrop" (click)="showSettings.set(false)">
+        <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+        <div class="cpe-modal cpe-settings-modal" (click)="$event.stopPropagation()">
+          <div class="cpe-modal-header">
+            <h3>Page settings</h3>
+            <button type="button" (click)="showSettings.set(false)"><i class="las la-times"></i></button>
+          </div>
+          <label class="cpe-field"><span>TITLE</span>
+            <input type="text" [(ngModel)]="settingsTitle" />
+          </label>
+          <label class="cpe-field"><span>URL PATH</span>
+            <input type="text" [(ngModel)]="settingsUrlPath" />
+          </label>
+          <label class="cpe-field"><span>SEO TITLE</span>
+            <input type="text" [(ngModel)]="settingsSeoTitle" />
+          </label>
+          <label class="cpe-field"><span>SEO DESCRIPTION</span>
+            <textarea rows="3" [(ngModel)]="settingsSeoDescription"></textarea>
+          </label>
+          @if (settingsError()) { <p class="error-msg">{{ settingsError() }}</p> }
+          <div class="btn-row">
+            <button type="button" class="btn-primary" (click)="saveSettings()" [disabled]="savingSettings()">
+              {{ savingSettings() ? 'Saving…' : 'Save' }}
+            </button>
+            <button type="button" class="btn-ghost" (click)="showSettings.set(false)">Cancel</button>
+          </div>
+
+          <div class="cpe-review-by">
+            <span class="cpe-field-label">
+              REVIEW BY
+              @if (isStale()) { <span class="cpe-stale-badge">Stale</span> }
+            </span>
+            <div class="btn-row">
+              <input type="date" [(ngModel)]="settingsReviewBy" />
+              <button type="button" class="btn-primary" (click)="saveReviewBy()" [disabled]="savingReviewBy()">
+                {{ savingReviewBy() ? 'Saving…' : 'Save' }}
+              </button>
+            </div>
+            @if (reviewByError()) { <p class="error-msg">{{ reviewByError() }}</p> }
+          </div>
+
+          @if (stats(); as s) {
+            <div class="cpe-stats">
+              <span class="cpe-field-label">ARTICLE ANALYTICS</span>
+              <dl class="cpe-stats-grid">
+                <dt>Views</dt><dd>{{ s.views }}</dd>
+                <dt>Used in AI answers</dt><dd>{{ s.retrievals }}</dd>
+                <dt>Helpful votes</dt><dd>{{ s.helpfulness_up }} / {{ s.helpfulness_up + s.helpfulness_down }}</dd>
+              </dl>
+            </div>
+          }
+
+          <div class="cpe-related">
+            <span class="cpe-field-label">RELATED PAGES</span>
+            <input type="text" placeholder="Search pages in this space…"
+                   [(ngModel)]="relatedSearch" (ngModelChange)="onRelatedSearchChange()" />
+            <ul class="cpe-related-list">
+              @for (candidate of relatedCandidates(); track candidate.id) {
+                <li>
+                  <label>
+                    <input type="checkbox" [checked]="relatedSelectedIds().has(candidate.id)"
+                           (change)="toggleRelated(candidate.id)" />
+                    {{ candidate.title }}
+                  </label>
+                </li>
+              } @empty {
+                <li class="cpe-related-empty">No other pages match.</li>
+              }
+            </ul>
+            @if (relatedError()) { <p class="error-msg">{{ relatedError() }}</p> }
+            <div class="btn-row">
+              <button type="button" class="btn-primary" (click)="saveRelated()" [disabled]="savingRelated()">
+                {{ savingRelated() ? 'Saving…' : 'Save related pages' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  }
+</div>

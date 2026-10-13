@@ -1,0 +1,24 @@
+@if (!dismissed() && candidates().length > 0) {
+  <div class="dup-banner">
+    <i class="las la-exclamation-triangle"></i>
+    <div class="dup-banner-body">
+      <p>
+        This record may be a duplicate of
+        {{ candidates().length === 1 ? 'another record' : (candidates().length + ' other records') }}.
+      </p>
+      <ul>
+        @for (c of candidates(); track c.id) {
+          <li>
+            <a [routerLink]="formRoute()" [queryParams]="{ id: otherRecordId(c) }" target="_blank">
+              {{ otherRecordId(c) }}
+            </a>
+            <span class="cell-muted">({{ scorePercent(c) }} match)</span>
+          </li>
+        }
+      </ul>
+    </div>
+    <button class="btn-sm btn-ghost" type="button" (click)="dismissed.set(true)">
+      <i class="las la-times"></i>
+    </button>
+  </div>
+}

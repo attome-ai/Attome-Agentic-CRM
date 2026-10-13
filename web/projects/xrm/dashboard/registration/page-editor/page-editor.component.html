@@ -1,0 +1,260 @@
+@if (loading()) {
+  <div class="xf-loading">
+    <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+  </div>
+} @else if (loadError()) {
+  <div class="xf-error-banner"><i class="las la-exclamation-circle"></i> {{ loadError() }}</div>
+} @else if (needsPageCreation()) {
+  <div class="xpe-create-page">
+    <p class="xpe-create-page-title">{{ 'pageEditor.createPageTitle' | translate }}</p>
+    @if (dashboardId()) {
+      <p class="xpe-create-page-hint">{{ 'pageEditor.createPageHint' | translate }}</p>
+      @if (error()) {
+        <div class="xf-error-banner"><i class="las la-exclamation-circle"></i> {{ error() }}</div>
+      }
+      <label class="xf-field">
+        <span>{{ 'pageEditor.pageNameLabel' | translate }}</span>
+        <input #newPageNameInput class="xf-input" type="text" [value]="newPageName()"
+               (input)="onNewPageNameChange(newPageNameInput.value)"
+               (keydown.enter)="createPage()" />
+      </label>
+      <button type="button" class="xf-btn xf-btn-primary" [disabled]="!newPageName().trim() || creatingPage()" (click)="createPage()">
+        <i class="las la-plus"></i> {{ 'pageEditor.createPageButton' | translate }}
+      </button>
+    } @else {
+      <p class="xpe-create-page-hint">{{ 'pageEditor.noDashboard' | translate }}</p>
+    }
+  </div>
+} @else {
+  <div class="xpe-editor">
+    <div class="xpe-header">
+      <button type="button" class="xpe-icon-btn" (click)="goBack()" [title]="'pageEditor.back' | translate">
+        <i class="las la-arrow-left"></i>
+      </button>
+
+      <div class="xpe-header-title-row">
+        @if (editingTitle()) {
+          <input
+            #titleInput
+            class="xpe-title-input"
+            type="text"
+            [value]="titleDraft"
+            (blur)="commitTitle(titleInput.value)"
+            (keydown.enter)="commitTitle(titleInput.value)"
+          />
+        } @else {
+          <h1 class="xpe-title">
+            {{ page()?.data?.['name'] || ('pageEditor.title' | translate) }}
+          </h1>
+          <button type="button" class="xpe-icon-btn xpe-icon-btn-sm" (click)="startEditTitle()" [title]="'pageEditor.rename' | translate">
+            <i class="las la-pen"></i>
+          </button>
+        }
+        @if (dirty()) {
+          <span class="xpe-draft-badge">{{ 'pageEditor.draftBadge' | translate }}</span>
+        }
+      </div>
+
+      @if (!previewMode()) {
+        <button type="button" class="xf-btn xf-btn-secondary" [disabled]="!rootSectionId()" (click)="paletteOpen.set(true)">
+          <i class="las la-plus"></i> {{ 'pageEditor.addWidget' | translate }}
+        </button>
+        <button type="button" class="xf-btn xf-btn-secondary" (click)="openPageSettings()">
+          <i class="las la-cog"></i> {{ 'pageEditor.pageSettings' | translate }}
+        </button>
+      }
+
+      <div class="xpe-header-spacer"></div>
+
+      @if (!previewMode()) {
+        <button type="button" class="xpe-icon-btn" [disabled]="!canUndo()" (click)="undo()" [title]="'pageEditor.undo' | translate">
+          <i class="las la-undo"></i>
+        </button>
+        <button type="button" class="xpe-icon-btn" [disabled]="!canRedo()" (click)="redo()" [title]="'pageEditor.redo' | translate">
+          <i class="las la-redo"></i>
+        </button>
+        <button
+          type="button"
+          class="xpe-icon-btn xpe-icon-btn-danger"
+          [disabled]="selectedWidgetIds().size === 0"
+          (click)="onDeleteSelectedWidget()"
+          [title]="'pageEditor.deleteSelectedWidgetTitle' | translate"
+        >
+          <i class="las la-trash"></i>
+        </button>
+      }
+
+      <div class="xpe-header-actions">
+        <button type="button" class="xf-btn xf-btn-secondary" (click)="togglePreview()">
+          <i class="las" [class.la-eye]="!previewMode()" [class.la-eye-slash]="previewMode()"></i> {{ 'pageEditor.preview' | translate }}
+        </button>
+        <button type="button" class="xf-btn xf-btn-secondary" [disabled]="!dirty()" (click)="cancelChanges()">
+          {{ 'pageEditor.cancel' | translate }}
+        </button>
+        <button type="button" class="xf-btn xf-btn-primary" [disabled]="!dirty() || saving()" (click)="saveChanges()">
+          @if (saving()) {
+            <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+          }
+          {{ 'pageEditor.saveChanges' | translate }}
+        </button>
+      </div>
+    </div>
+
+    @if (error()) {
+      <div class="xf-error-banner xpe-banner" role="alert">
+        <i class="las la-exclamation-circle"></i> {{ error() }}
+        <button type="button" class="xpe-icon-btn xpe-icon-btn-sm" (click)="error.set(null)"
+                [attr.aria-label]="'pageEditor.cancel' | translate">
+          <i class="las la-times"></i>
+        </button>
+      </div>
+    }
+    @if (recoverableDraft()) {
+      <div class="xf-error-banner xpe-banner" role="status">
+        <i class="las la-history"></i> {{ 'pageEditor.recoverDraft' | translate }}
+        <button type="button" class="xf-btn xf-btn-primary xf-btn-sm" (click)="restoreRecoveredDraft()">
+          {{ 'dashboardForm.restore' | translate }}
+        </button>
+        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" (click)="discardRecoveredDraft()">
+          {{ 'pageEditor.delete' | translate }}
+        </button>
+      </div>
+    }
+    @if (needsRootSection()) {
+      <div class="xf-error-banner xpe-banner" role="status">
+        <i class="las la-exclamation-triangle"></i>
+        <button type="button" class="xf-btn xf-btn-primary xf-btn-sm" [disabled]="repairingRootSection()" (click)="repairRootSection()">
+          {{ 'pageEditor.addSection' | translate }}
+        </button>
+      </div>
+    }
+
+    <div class="xpe-body">
+      <div class="xpe-pane xpe-pane-canvas">
+        <div
+          class="xpe-canvas-grid"
+          #gridEl
+          [style]="gridStyle()"
+          (dragover)="onCanvasDragOver($event)"
+          (dragleave)="onCanvasDragLeave($event)"
+          (drop)="onCanvasDrop($event)"
+        >
+          @for (w of widgets(); track w.id) {
+            <div
+              class="xpe-widget-wrapper"
+              [class.xpe-widget-active]="activeDragWidgetId() === w.id || activeResizeWidgetId() === w.id"
+              [style]="widgetStyleMap().get(w.id)"
+            >
+              <div
+                class="xpe-tile"
+                role="button"
+                tabindex="0"
+                [class.xpe-tile-selected]="selectedWidgetIds().has(w.id)"
+                [class.xpe-tile-dragging]="activeDragWidgetId() === w.id"
+                [class.xpe-tile-resizing]="activeResizeWidgetId() === w.id"
+                [class.xpe-tile-preview]="previewMode()"
+                [class.xpe-tile-conflict]="conflictedWidgetIds().has(w.id)"
+                (click)="selectWidget(w.id, $event)"
+                (keydown.enter)="selectWidget(w.id)"
+                (keydown)="onTileKeydown($event, w)"
+              >
+                @if (!previewMode()) {
+                  <div class="xpe-tile-header" (pointerdown)="startDrag($event, w)">
+                    <input type="checkbox" class="xpe-tile-checkbox"
+                           [checked]="selectedWidgetIds().has(w.id)"
+                           (click)="$event.stopPropagation()"
+                           (change)="toggleWidgetSelected(w.id, $any($event.target).checked)" />
+                    <div class="xpe-tile-title-group">
+                      <span class="xpe-tile-dot"></span>
+                      <span class="xpe-tile-title">{{ w.data['name'] || w.data['widget_type'] }}</span>
+                    </div>
+                    <div class="xpe-tile-actions">
+                      <button type="button" [title]="'pageEditor.duplicate' | translate" (click)="onDuplicateWidgetId(w.id); $event.stopPropagation()">
+                        <i class="las la-copy"></i>
+                      </button>
+                      <button type="button" [title]="'pageEditor.delete' | translate" (click)="onDeleteWidgetId(w.id); $event.stopPropagation()">
+                        <i class="las la-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                  @if (conflictedWidgetIds().has(w.id)) {
+                    <div class="xpe-tile-conflict-bar" role="alert">
+                      <span>{{ 'pageEditor.conflict' | translate }}</span>
+                      <button type="button" class="xf-btn xf-btn-primary xf-btn-sm" (click)="keepMine(w.id); $event.stopPropagation()">
+                        {{ 'pageEditor.keepMine' | translate }}
+                      </button>
+                      <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" (click)="takeTheirs(w.id); $event.stopPropagation()">
+                        {{ 'pageEditor.takeTheirs' | translate }}
+                      </button>
+                    </div>
+                  }
+                }
+
+                <div class="xpe-tile-body">
+                  <attome-dashboard-widget-view [widget]="w" [dashboardId]="effectiveDashboardId()" [preview]="true" />
+                </div>
+
+                @if (!previewMode()) {
+                  <div
+                    class="xpe-handle-se"
+                    [title]="'pageEditor.dragToResize' | translate"
+                    (pointerdown)="startResize($event, w)"
+                  ></div>
+                }
+              </div>
+            </div>
+          }
+
+          @if (gridGhost(); as ghost) {
+            <div class="xpe-ghost" [style]="gridGhostStyle(ghost)">
+              <div class="placeholder-content"></div>
+            </div>
+          }
+
+          @if (widgets().length === 0) {
+            <div class="xpe-empty-canvas">
+              {{ 'pageEditor.emptyCanvas' | translate }}
+            </div>
+          }
+        </div>
+      </div>
+
+      @if (!previewMode()) {
+        <div class="xpe-pane xpe-pane-inspector">
+          @if (paletteOpen()) {
+            <xrm-widget-palette
+              [widgetTypes]="widgetTypes()"
+              (add)="onAddWidget($event)"
+              (dragStart)="onPaletteDragStart($event)"
+              (dragEnd)="onPaletteDragEnd()"
+              (closePalette)="paletteOpen.set(false)"
+            />
+          } @else if (selectedWidget(); as widget) {
+            <xrm-widget-inspector
+              [widget]="widget"
+              [viewGroups]="viewGroups()"
+              [configErrors]="configErrors()"
+              [fieldOptions]="fieldOptions()"
+              [declaredParameters]="declaredParameterNames()"
+              (fieldChange)="onWidgetField($event.key, $event.value)"
+              (duplicateWidget)="onDuplicateSelectedWidget()"
+              (deleteWidget)="onDeleteSelectedWidget()"
+              (deselect)="clearWidgetSelection()"
+            />
+          } @else if (page(); as p) {
+            <xrm-page-settings-panel
+              [page]="p"
+              [parameters]="parameters()"
+              (pagePatch)="onSavePageSettings($event)"
+              (parameterAdd)="addParameter()"
+              (parameterChange)="updateParameterField($event.id, $event.field, $event.value)"
+              (parameterDelete)="deleteParameter($event)"
+            />
+          } @else {
+            <p class="xf-empty">{{ 'pageEditor.selectWidgetPrompt' | translate }}</p>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

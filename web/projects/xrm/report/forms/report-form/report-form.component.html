@@ -1,0 +1,69 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="report">
+  <!-- Run report (D-440): a saved record only, never over unsaved edits. -->
+  <ng-container ngProjectAs="[xrmHeaderActions]">
+    @if (isEdit()) {
+      <button type="button" class="xf-btn xf-btn-secondary"
+              [disabled]="runState() === 'running' || dirty()"
+              [attr.title]="dirty() ? ('reportRun.saveFirst' | translate) : null"
+              (click)="runReport()">
+        @if (runState() === 'running') {
+          <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite" aria-hidden="true"></i>
+          {{ 'reportRun.running' | translate }}
+        } @else {
+          <i class="las la-play-circle" aria-hidden="true"></i>
+          {{ 'reportRun.run' | translate }}
+        }
+      </button>
+    }
+  </ng-container>
+
+  <div xrmOperations>
+    @switch (runState()) {
+      @case ('running') {
+        <div class="report-run-banner" role="status">
+          <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite" aria-hidden="true"></i>
+          {{ 'reportRun.runningDetail' | translate }}
+        </div>
+      }
+      @case ('completed') {
+        <div class="report-run-banner report-run-banner--ok" role="status">
+          <i class="las la-check-circle" aria-hidden="true"></i>
+          <span>{{ 'reportRun.completed' | translate: { rows: lastRun()?.row_count ?? 0, format: (lastRun()?.format ?? '').toUpperCase() } }}</span>
+          @if (lastRun()?.download_url; as url) {
+            <a class="xf-btn xf-btn-secondary" [href]="url" target="_blank" rel="noopener">
+              <i class="las la-download" aria-hidden="true"></i> {{ 'reportRun.download' | translate }}
+            </a>
+          }
+        </div>
+      }
+      @case ('failed') {
+        <div class="xf-error-banner" role="alert">
+          <i class="las la-exclamation-circle" aria-hidden="true"></i>
+          {{ 'reportRun.failed' | translate }}@if (runError()) {: {{ runError() }}}
+        </div>
+      }
+      @case ('timeout') {
+        <div class="report-run-banner" role="status">
+          <i class="las la-history" aria-hidden="true"></i>
+          {{ 'reportRun.timeout' | translate }}
+        </div>
+      }
+    }
+  </div>
+
+  <ng-template xrmTab="details">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Details</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['name', 'query_ref', 'parameters', 'format', 'owner', 'is_template']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

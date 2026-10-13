@@ -1,0 +1,109 @@
+<div class="page-header crawl-header">
+  <div>
+    <h2>{{ 'webcrawl.newTask' | translate }}</h2>
+    <p class="subtitle">{{ 'webcrawl.subtitle' | translate }}</p>
+  </div>
+</div>
+
+<div class="crawl-bar">
+  <div class="field field-url">
+    <span class="crawl-label">
+      <label for="crawl-url">{{ 'webcrawl.startUrl' | translate }}</label>
+      <i class="las la-info-circle crawl-info" role="img"
+         [attr.aria-label]="'webcrawl.startUrlHelp' | translate"
+         [title]="'webcrawl.startUrlHelp' | translate"></i>
+    </span>
+    <div class="crawl-control">
+      <i class="las la-link" aria-hidden="true"></i>
+      <input
+        id="crawl-url" type="url" [placeholder]="'webcrawl.urlPlaceholder' | translate"
+        [ngModel]="urlInput()" (ngModelChange)="urlInput.set($event)"
+        (keydown.enter)="startCrawling()"
+      />
+    </div>
+  </div>
+
+  <span class="crawl-bar-divider" aria-hidden="true"></span>
+
+  <div class="field field-depth">
+    <span class="crawl-label">
+      <i class="las la-layer-group crawl-label-icon" aria-hidden="true"></i>
+      <label for="crawl-depth">{{ 'webcrawl.depth' | translate }}</label>
+      <i class="las la-info-circle crawl-info" role="img"
+         [attr.aria-label]="'webcrawl.depthHelp' | translate"
+         [title]="'webcrawl.depthHelp' | translate"></i>
+    </span>
+    <div class="crawl-control crawl-control-select">
+      <select
+        id="crawl-depth"
+        [ngModel]="depthInput()" (ngModelChange)="depthInput.set($event)"
+      >
+        @for (d of depthOptions; track d) {
+          <option [ngValue]="d">{{ d }}</option>
+        }
+      </select>
+      <i class="las la-angle-down" aria-hidden="true"></i>
+    </div>
+  </div>
+
+  <button class="btn-primary crawl-start" (click)="startCrawling()"
+          [disabled]="!urlInput().trim() || starting()">
+    @if (starting()) {
+      <i class="las la-sync la-spin" aria-hidden="true"></i> {{ 'webcrawl.starting' | translate }}
+    } @else {
+      <i class="las la-play-circle" aria-hidden="true"></i>
+      <span>{{ 'webcrawl.startCrawling' | translate }}</span>
+      <i class="las la-arrow-right" aria-hidden="true"></i>
+    }
+  </button>
+</div>
+@if (formError()) { <p class="error-msg crawl-bar-error">{{ formError() }}</p> }
+
+@if (loading()) {
+  <p class="state-msg">{{ 'webcrawl.loading' | translate }}</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (targets().length === 0) {
+  <div class="empty-state crawl-empty">
+    <div class="crawl-empty-icon" aria-hidden="true"><i class="las la-flask"></i></div>
+    <h3>{{ 'webcrawl.emptyTitle' | translate }}</h3>
+    <p>{{ 'webcrawl.emptyHint' | translate }}</p>
+  </div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>{{ 'webcrawl.colUrl' | translate }}</th>
+          <th>{{ 'webcrawl.colStatus' | translate }}</th>
+          <th>{{ 'webcrawl.colLastCrawled' | translate }}</th>
+          <th class="actions-header">{{ 'webcrawl.colAction' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (t of targets(); track t.id) {
+          <tr>
+            <td>
+              <a class="cell-link" [routerLink]="['/xrm/admin/webcrawl/targets', t.id]">{{ t.url }}</a>
+            </td>
+            <td>
+              <span class="badge" [class]="'status-' + t.status">
+                @if (isRunning(t)) { <i class="las la-sync la-spin" aria-hidden="true"></i> }
+                {{ t.status }}
+              </span>
+            </td>
+            <td class="cell-muted">{{ t.last_crawled_at ? (t.last_crawled_at | date:'medium') : '—' }}</td>
+            <td class="actions">
+              <button class="btn-sm" (click)="recrawl(t)" [disabled]="isRunning(t)">
+                <i class="las la-sync"></i> {{ 'webcrawl.recrawl' | translate }}
+              </button>
+              <button class="btn-sm btn-sm-danger" (click)="remove(t)">
+                <i class="las la-trash"></i> {{ 'webcrawl.delete' | translate }}
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

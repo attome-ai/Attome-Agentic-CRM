@@ -1,0 +1,60 @@
+<div class="ts-page">
+  <div class="ts-header">
+    <div>
+      <h2>Timesheets</h2>
+      <p class="ts-subtitle">Weekly timesheets — submit your own, approve or reject someone else's.</p>
+    </div>
+    <div class="ts-filters">
+      @for (opt of statusOptions; track opt) {
+        <button type="button" class="ts-filter-btn" [class.ts-filter-active]="statusFilter() === opt" (click)="setStatusFilter(opt)">
+          {{ opt }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (note()) { <p class="ts-note">{{ note() }}</p> }
+
+  @if (loading()) {
+    <p class="ts-state-msg">Loading timesheets…</p>
+  } @else if (error()) {
+    <p class="ts-state-msg ts-state-error">{{ error() }}</p>
+  } @else if (rows().length === 0) {
+    <p class="ts-state-msg">No timesheets match this filter.</p>
+  } @else {
+    <div class="ts-table-wrap">
+      <table class="ts-table">
+        <thead>
+          <tr>
+            <th>Week Start</th>
+            <th>User</th>
+            <th>Status</th>
+            <th>Approved By</th>
+            <th>Approved At</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rows(); track r.id) {
+            <tr>
+              <td>{{ weekStart(r) ? (weekStart(r) | date:'mediumDate') : '—' }}</td>
+              <td class="ts-mono">{{ shortId(r.data['user_id']) }}</td>
+              <td><span class="ts-badge" [class]="'ts-badge-' + status(r)">{{ status(r) }}</span></td>
+              <td class="ts-mono">{{ shortId(r.data['approved_by']) }}</td>
+              <td>{{ approvedAt(r) ? (approvedAt(r) | date:'medium') : '—' }}</td>
+              <td class="ts-actions">
+                @if (status(r) === 'draft') {
+                  <button type="button" class="ts-btn ts-btn-primary" [disabled]="decidingId() === r.id" (click)="submit(r)">Submit</button>
+                }
+                @if (status(r) === 'submitted') {
+                  <button type="button" class="ts-btn ts-btn-approve" [disabled]="decidingId() === r.id" (click)="approve(r)">Approve</button>
+                  <button type="button" class="ts-btn ts-btn-reject" [disabled]="decidingId() === r.id" (click)="reject(r)">Reject</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

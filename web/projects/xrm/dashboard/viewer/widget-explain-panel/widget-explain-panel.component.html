@@ -1,0 +1,113 @@
+<div class="xwr-backdrop" aria-hidden="true"></div>
+<section #panel class="xwr-panel" role="dialog" aria-modal="true" aria-labelledby="xwe-title" tabindex="-1">
+  <header class="xwr-header">
+    <div>
+      <h2 id="xwe-title" class="xwr-title">{{ 'dashboard.explain.title' | translate }}</h2>
+      <p class="xwr-subtitle">{{ widgetName() }}</p>
+    </div>
+    <button type="button" class="xwr-close" [attr.aria-label]="'dashboard.records.close' | translate" (click)="closed.emit()">
+      <i class="las la-times"></i>
+    </button>
+  </header>
+
+  @if (loading()) {
+    <div class="xf-loading" role="status"><i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i></div>
+  } @else if (error()) {
+    <div class="xf-error-banner" role="alert"><i class="las la-exclamation-circle"></i> {{ error() }}</div>
+  } @else if (explanation(); as e) {
+    @if (e.structured; as s) {
+      <section class="xwe-section">
+        <h3>{{ 'dashboard.explain.calculation' | translate }}</h3>
+        <p>{{ s.entity_display_name || s.entity_logical_name }}</p>
+        <ul>
+          @for (m of s.measures; track $index) {
+            <li><strong>{{ m.label || m.field_display_name || m.aggregation }}</strong> <code>{{ m.expression }}</code></li>
+          }
+        </ul>
+        @if (s.group_field) {
+          <p>{{ 'pageEditor.chartGroupByField' | translate }}: {{ s.group_field_display_name || s.group_field }}@if (s.bucket) { ({{ s.bucket }}) }</p>
+        }
+        @if (s.series_field) {
+          <p>{{ 'pageEditor.dataSeries' | translate }}: {{ s.series_field_display_name || s.series_field }}</p>
+        }
+      </section>
+    }
+
+    @if (e.filters.length > 0) {
+      <section class="xwe-section">
+        <h3>{{ 'dashboard.explain.filters' | translate }}</h3>
+        <ul>
+          @for (f of e.filters; track $index) {
+            <li>
+              {{ f.field_display_name || f.field }} <code>{{ f.op }}</code>
+              {{ f.value_display ?? filterValue(f.value) }}
+              <span class="xwr-origin">{{ f.origin.kind }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (e.structured; as s) {
+      <section class="xwe-section">
+        <h3>{{ 'dashboard.explain.scope' | translate }}</h3>
+        <p>{{ 'dashboard.explain.accessLevel' | translate: { level: s.access_level } }}</p>
+        @if (s.live_rows_only) { <p>{{ 'dashboard.explain.liveRows' | translate }}</p> }
+      </section>
+    }
+
+    @if (e.kpi; as k) {
+      <section class="xwe-section">
+        <h3>{{ 'dashboard.explain.calculation' | translate }}</h3>
+        <p>{{ 'dashboard.viewer.kpiServiceScoped' | translate }}</p>
+        @for (m of k.metrics; track m.metric.metric_id) {
+          <div class="xwe-metric">
+            <p><strong>{{ m.metric.name || m.metric.key }}</strong> · {{ m.source_kind }} · {{ m.metric.period }}</p>
+            @if (m.formula) { <p><code>{{ m.formula }}</code></p> }
+            @if (m.query_name) { <p>{{ m.query_name }}</p> }
+            @if (m.metric.current; as c) {
+              <p>{{ c.actual }} {{ m.metric.unit || '' }} · {{ time(c.computed_at) }} · {{ c.status }}</p>
+            }
+            @if (m.target; as t) {
+              <p>{{ 'dashboard.explain.target' | translate: { target: t.target_value ?? '' } }}</p>
+            }
+            @if (m.lineage; as root) {
+              <ng-container [ngTemplateOutlet]="lineageTree" [ngTemplateOutletContext]="{ $implicit: lineageChildren(root) }" />
+            }
+          </div>
+        }
+      </section>
+    }
+
+    @if (e.query; as q) {
+      <section class="xwe-section">
+        <h3>{{ 'dashboard.explain.calculation' | translate }}</h3>
+        <p>{{ q.query_name }}</p>
+        <p>{{ 'dashboard.explain.rowsAreResult' | translate }}</p>
+      </section>
+    }
+
+    <section class="xwe-section">
+      <h3>{{ 'dashboard.explain.freshness' | translate }}</h3>
+      <p>{{ 'dashboard.viewer.asOf' | translate: { time: time(e.as_of) } }}</p>
+      <p>{{ e.timezone }} ({{ e.timezone_source }})</p>
+      @if (e.published_version_number) { <p>v{{ e.published_version_number }}</p> }
+    </section>
+  }
+</section>
+
+<ng-template #lineageTree let-nodes>
+  <ul class="xwe-lineage">
+    @for (n of nodes; track $index) {
+      <li>
+        {{ n.name || n.key }}
+        @if (n.weight !== null && n.weight !== undefined) { × {{ n.weight }} }
+        @if (n.snapshot; as snap) { · {{ snap.actual }} }
+        @if (n.missing) { <span class="xwr-origin">{{ 'dashboard.viewer.kpiMissing' | translate }}</span> }
+        @if (n.children?.length) {
+          <ng-container [ngTemplateOutlet]="lineageTree" [ngTemplateOutletContext]="{ $implicit: n.children }" />
+        }
+      </li>
+    }
+  </ul>
+</ng-template>

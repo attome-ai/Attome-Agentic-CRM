@@ -1,0 +1,68 @@
+<section class="xf-section" data-testid="tags-panel">
+  @if (loading()) {
+    <p class="xf-hint">Loading tags…</p>
+  } @else {
+    @if (errorMessage(); as msg) {
+      <p class="tags-error">{{ msg }}</p>
+    }
+
+    <div class="tags-add-row">
+      @if (categories().length === 0) {
+        <p class="xf-hint">No tag categories exist yet — create one under Tags &rsaquo; Tag Categories.</p>
+      } @else if (availableCategories().length === 0) {
+        <p class="xf-hint">Every tag category is already applied to this record.</p>
+      } @else {
+        <select
+          [(ngModel)]="selectedCategoryId" [ngModelOptions]="{ standalone: true }"
+          class="tags-category-select"
+          data-testid="tags-category-select"
+        >
+          <option value="" disabled>Select a category…</option>
+          @for (c of availableCategories(); track c.id) {
+            <option [value]="c.id">{{ c.name }}</option>
+          }
+        </select>
+        <button
+          type="button"
+          class="xf-btn xf-btn-secondary"
+          [disabled]="saving() || !selectedCategoryId"
+          (click)="addTag()"
+          data-testid="tags-add-button"
+        >{{ saving() ? 'Adding…' : 'Add tag' }}</button>
+      }
+    </div>
+
+    <table class="tags-table" data-testid="tags-grid">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Applied</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (tag of appliedTags(); track tag.id) {
+          <tr>
+            <td>
+              <xrm-choice-pill [value]="categoryName(tag.category_id)" [style]="{ color: categoryColor(tag.category_id) }" />
+            </td>
+            <td class="tags-applied-cell">{{ tag.created_at | date: 'mediumDate' }}</td>
+            <td class="tags-actions-cell">
+              <button
+                type="button"
+                class="xf-btn xf-btn-secondary tags-remove-button"
+                (click)="removeTag(tag)"
+                [attr.aria-label]="'Remove tag ' + categoryName(tag.category_id)"
+                data-testid="tags-remove-button"
+              ><i class="las la-trash-alt" aria-hidden="true"></i></button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="3" class="xf-hint">No tags on this record yet.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

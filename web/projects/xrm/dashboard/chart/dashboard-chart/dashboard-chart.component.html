@@ -1,0 +1,162 @@
+<div class="xch">
+  <div class="xch-toolbar">
+    <button type="button" class="xch-toggle" [attr.aria-pressed]="showTable()" (click)="toggleTable()"
+            [title]="(showTable() ? 'dashboard.chart.showChart' : 'dashboard.chart.showTable') | translate">
+      <i class="las" [class.la-chart-bar]="showTable()" [class.la-table]="!showTable()"></i>
+      <span class="xch-sr-only">{{ (showTable() ? 'dashboard.chart.showChart' : 'dashboard.chart.showTable') | translate }}</span>
+    </button>
+  </div>
+
+  @if (showTable()) {
+    <div class="xch-table-wrap">
+      <table class="xch-table">
+        <caption class="xch-sr-only">{{ summary() }}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'dashboard.chart.category' | translate }}</th>
+            @for (s of series(); track s.trackKey) {
+              <th scope="col">{{ s.name || ('dashboard.chart.value' | translate) }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of tableRows(); track row.category.trackKey) {
+            <tr>
+              <th scope="row">{{ row.category.label }}</th>
+              @for (cell of row.cells; track cell.trackKey) {
+                <td>
+                  @if (cell.bucket; as b) {
+                    @if (interactive()) {
+                      <button type="button" class="xch-cell-button" [attr.aria-label]="markLabel(b, '')" (click)="activate(b)">{{ format(b.value) }}</button>
+                    } @else {
+                      {{ format(b.value) }}
+                    }
+                  } @else {
+                    —
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    @switch (kind()) {
+      @case ('funnel') {
+        <div class="xch-funnel" [attr.role]="interactive() ? 'group' : 'img'" [attr.aria-label]="summary()">
+          @for (stage of stages(); track stage.bucket.trackKey) {
+            @if (interactive()) {
+              <button type="button" class="xch-funnel-row xch-interactive" [attr.aria-label]="markLabel(stage.bucket, '')"
+                      (click)="activate(stage.bucket)">
+                <span class="xch-funnel-label">{{ stage.bucket.label }}</span>
+                <span class="xch-funnel-track"><span class="xch-funnel-fill" [style.width.%]="stage.percent"></span></span>
+                <span class="xch-funnel-value">{{ format(stage.bucket.value) }}</span>
+              </button>
+            } @else {
+              <div class="xch-funnel-row" aria-hidden="true">
+                <span class="xch-funnel-label">{{ stage.bucket.label }}</span>
+                <span class="xch-funnel-track"><span class="xch-funnel-fill" [style.width.%]="stage.percent"></span></span>
+                <span class="xch-funnel-value">{{ format(stage.bucket.value) }}</span>
+              </div>
+            }
+          }
+        </div>
+      }
+      @case ('donut') {
+        <div class="xch-donut-wrap">
+          <svg class="xch-donut" [attr.width]="donutSize()" [attr.height]="donutSize()"
+               [attr.viewBox]="'0 0 ' + donutSize() + ' ' + donutSize()"
+               [attr.role]="interactive() ? 'group' : 'img'" [attr.aria-label]="summary()">
+            @for (slice of slices(); track slice.bucket.trackKey) {
+              @if (slice.path) {
+                <path [attr.d]="slice.path" [attr.fill]="slice.color" class="xch-mark" [class.xch-interactive]="interactive()"
+                      [attr.role]="interactive() ? 'button' : null" [attr.tabindex]="interactive() ? 0 : null"
+                      [attr.aria-hidden]="interactive() ? null : 'true'"
+                      [attr.aria-label]="interactive() ? markLabel(slice.bucket, '') : null"
+                      (mouseenter)="showHover(slice.bucket, percent(slice.share), donutSize() / 2, donutSize() / 2)"
+                      (mouseleave)="clearHover()" (focus)="showHover(slice.bucket, percent(slice.share), donutSize() / 2, donutSize() / 2)" (blur)="clearHover()"
+                      (click)="activate(slice.bucket)" (keydown.enter)="activate(slice.bucket, $event)" (keydown.space)="activate(slice.bucket, $event)" />
+              }
+            }
+          </svg>
+          <ul class="xch-legend xch-legend-column">
+            @for (slice of slices(); track slice.bucket.trackKey) {
+              <li class="xch-legend-item">
+                <span class="xch-swatch" [style.background]="slice.color"></span>
+                <span class="xch-legend-text">{{ slice.bucket.label }}</span>
+                <span class="xch-muted">{{ format(slice.bucket.value) }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+      @default {
+        <div class="xch-surface" #surface>
+          <svg class="xch-svg" [attr.width]="width()" [attr.height]="height()" [attr.viewBox]="'0 0 ' + width() + ' ' + height()"
+               [attr.role]="interactive() ? 'group' : 'img'" [attr.aria-label]="summary()">
+            <g class="xch-grid" aria-hidden="true">
+              @for (t of ticks(); track t.value) {
+                <line [attr.x1]="area().left" [attr.x2]="gridX2()" [attr.y1]="t.y" [attr.y2]="t.y" [class.xch-zero]="t.value === 0" />
+                <text class="xch-axis-label" [attr.x]="t.labelX" [attr.y]="t.y + 3" [attr.text-anchor]="labelAnchor()">{{ t.label }}</text>
+              }
+              @for (l of categoryLabels(); track l.trackKey) {
+                <g><title>{{ l.full }}</title><text class="xch-axis-label" [attr.x]="l.x" [attr.y]="labelY()" text-anchor="middle">{{ l.text }}</text></g>
+              }
+            </g>
+            @if (thresholdY() !== null) {
+              <line class="xch-threshold" aria-hidden="true" [attr.x1]="area().left" [attr.x2]="gridX2()" [attr.y1]="thresholdY()" [attr.y2]="thresholdY()" />
+            }
+            @if (kind() === 'bar') {
+              @for (bar of bars(); track bar.bucket.trackKey + '|' + bar.series) {
+                <rect class="xch-mark" [class.xch-interactive]="interactive()"
+                      [attr.x]="bar.x" [attr.y]="bar.y" [attr.width]="bar.width" [attr.height]="bar.height" [attr.fill]="bar.color" rx="2"
+                      [attr.role]="interactive() ? 'button' : null" [attr.tabindex]="interactive() ? 0 : null"
+                      [attr.aria-hidden]="interactive() ? null : 'true'"
+                      [attr.aria-label]="interactive() ? markLabel(bar.bucket, bar.seriesName) : null"
+                      (mouseenter)="showHover(bar.bucket, bar.seriesName, bar.x + bar.width / 2, bar.y)" (mouseleave)="clearHover()"
+                      (focus)="showHover(bar.bucket, bar.seriesName, bar.x + bar.width / 2, bar.y)" (blur)="clearHover()"
+                      (click)="activate(bar.bucket)" (keydown.enter)="activate(bar.bucket, $event)" (keydown.space)="activate(bar.bucket, $event)" />
+              }
+            } @else {
+              @for (line of lines(); track line.trackKey) {
+                @if (kind() === 'area') {
+                  <polygon [attr.points]="line.area" [attr.fill]="line.color" fill-opacity="0.18" aria-hidden="true" />
+                }
+                <polyline [attr.points]="line.points" fill="none" [attr.stroke]="line.color" stroke-width="2" aria-hidden="true" />
+                @for (m of line.marks; track m.bucket.trackKey) {
+                  <circle class="xch-mark xch-point" [class.xch-interactive]="interactive()"
+                          [attr.cx]="m.x" [attr.cy]="m.y" r="3.5" [attr.fill]="line.color"
+                          [attr.role]="interactive() ? 'button' : null" [attr.tabindex]="interactive() ? 0 : null"
+                          [attr.aria-hidden]="interactive() ? null : 'true'"
+                          [attr.aria-label]="interactive() ? markLabel(m.bucket, line.name) : null"
+                          (mouseenter)="showHover(m.bucket, line.name, m.x, m.y)" (mouseleave)="clearHover()"
+                          (focus)="showHover(m.bucket, line.name, m.x, m.y)" (blur)="clearHover()"
+                          (click)="activate(m.bucket)" (keydown.enter)="activate(m.bucket, $event)" (keydown.space)="activate(m.bucket, $event)" />
+                }
+              }
+            }
+          </svg>
+          @if (hover(); as h) {
+            <div class="xch-tooltip" aria-hidden="true" [style.left.px]="h.x" [style.top.px]="h.y">
+              <div class="xch-tooltip-label">{{ h.bucket.label }}@if (h.series) { · {{ h.series }} }</div>
+              <div class="xch-tooltip-value">{{ format(h.bucket.value) }}</div>
+            </div>
+          }
+        </div>
+        @if (legend()) {
+          <ul class="xch-legend">
+            @for (s of series(); track s.trackKey) {
+              <li class="xch-legend-item"><span class="xch-swatch" [style.background]="s.color"></span><span class="xch-legend-text">{{ s.name }}</span></li>
+            }
+          </ul>
+        }
+      }
+    }
+    @if (kind() === 'donut') {
+      @if (hover(); as h) {
+        <p class="xch-donut-hover" aria-hidden="true">{{ h.bucket.label }}: {{ format(h.bucket.value) }} ({{ h.series }})</p>
+      }
+    }
+  }
+</div>

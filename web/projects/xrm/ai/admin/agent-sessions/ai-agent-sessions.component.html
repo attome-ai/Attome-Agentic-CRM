@@ -1,0 +1,244 @@
+<div class="as">
+  <header class="as__header">
+    <div class="as__header-icon"><i class="las la-heartbeat" aria-hidden="true"></i></div>
+    <div>
+      <h1 class="as__title">Live agent sessions</h1>
+      <p class="as__hint">
+        Every session the platform is running, with the ceiling and the grants it actually holds right
+        now — snapshotted when it started. Pause, resume or kill a session here.
+      </p>
+    </div>
+  </header>
+
+  <!-- C11 B5: the deployment-wide emergency lever, above the per-session ones.
+       Renders nothing for a caller who is not an administrator. -->
+  <attome-ai-runtime-switch />
+
+  <!-- C10 B2b: the assistant's analytics, aggregates only; administrators only. -->
+  <attome-ai-bot-analytics />
+
+  <!-- The load-bearing copy of this screen. A policy edit does not reach a
+       session that is already running; an administrator who believes otherwise
+       and does nothing is a security incident. -->
+  <div class="as__notice" role="note">
+    <i class="las la-exclamation-triangle" aria-hidden="true"></i>
+    <div>
+      <strong>
+        Editing an agent policy — its ceiling, its capability packs, or its explicit grants — applies
+        to the NEXT session only.
+      </strong>
+      <p>
+        A session that is already running keeps the ceiling and the grants it started with. To remove a
+        capability from a running session NOW, pause or kill it here.
+      </p>
+      <p>{{ 'agentSessions.retrievalModeNotice' | translate }}</p>
+    </div>
+  </div>
+
+  <p class="as__privnote">
+    <i class="las la-lock" aria-hidden="true"></i>
+    This page and the three supervisor actions are gated on <code>ai_agent.supervise</code>. A 403
+    means your account does not hold it — ask an administrator to grant it, or have them act here.
+  </p>
+
+  <div class="as__toolbar">
+    <div class="as__field">
+      <label for="as-status">Status</label>
+      <select id="as-status" [ngModel]="status()" (ngModelChange)="changeStatus($event)">
+        @for (filter of statusFilters; track filter.value) {
+          <option [value]="filter.value">{{ filter.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="as__field as__field--grow">
+      <label for="as-reason">Reason for the next pause / resume / kill (optional)</label>
+      <input id="as-reason" type="text" [ngModel]="reason()" (ngModelChange)="reason.set($event)"
+             placeholder="Recorded with the action, e.g. “suspected prompt injection”" />
+    </div>
+    <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" [disabled]="loading()" (click)="load()">
+      <i class="las la-sync" aria-hidden="true"></i>
+      {{ loading() ? 'Loading…' : 'Refresh' }}
+    </button>
+  </div>
+
+  <!-- One live region for every action result, so a screen reader hears the
+       outcome of a pause or a kill without hunting for it. -->
+  @if (outcome()) {
+    <p class="as__outcome" role="status">{{ outcome() }}</p>
+  }
+
+  @if (forbidden()) {
+    <div class="xf-error-banner" role="alert">
+      <i class="las la-lock" aria-hidden="true"></i>
+      <span>
+        Your account does not hold <code>ai_agent.supervise</code>, so live sessions cannot be read
+        or acted on from here. Nothing has been changed.
+      </span>
+    </div>
+  } @else if (error()) {
+    <div class="xf-error-banner" role="alert">
+      <i class="las la-exclamation-circle" aria-hidden="true"></i>
+      <span>{{ error() }}</span>
+    </div>
+  } @else if (loading()) {
+    <div class="xf-loading" role="status">
+      <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite" aria-hidden="true"></i>
+      Loading live sessions…
+    </div>
+  } @else if (sessions().length === 0) {
+    <p class="xf-empty">
+      No sessions match this filter. Sessions appear here as agents start them, and leave the view as
+      their status changes.
+    </p>
+  } @else {
+    <div class="xf-table-wrap">
+      <table class="xf-table as__table">
+        <caption class="as__caption">
+          {{ total() }} session{{ total() === 1 ? '' : 's' }} matching this filter, page {{ page() }} of
+          {{ totalPages() }}. Ceiling and grants are the values the session started with.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Session</th>
+            <th scope="col">Status</th>
+            <th scope="col">Effective ceiling</th>
+            <th scope="col">Grants — as snapshotted at start</th>
+            <th scope="col">
+              {{ 'agentSessions.colRetrieval' | translate }}
+              <span class="as__thnote">{{ 'agentSessions.colRetrievalNote' | translate }}</span>
+            </th>
+            <th scope="col">
+              Pack provenance
+              <span class="as__thnote">provenance only, never authorization</span>
+            </th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (session of sessions(); track session.id) {
+            <tr>
+              <th scope="row" class="as__rowhead">
+                <div class="as__cellstack">
+                  <span class="as__sid">{{ shortId(session.id) }}</span>
+                  <span class="as__meta">owner {{ shortId(session.owner_user_id) }}</span>
+                  <span class="as__meta">surface {{ session.surface }}</span>
+                  @if (session.agent_definition_ref) {
+                    <span class="as__meta">agent {{ shortId(session.agent_definition_ref) }}</span>
+                  }
+                  <span class="as__meta">started {{ session.started_at | localDate: { dateStyle: 'short', timeStyle: 'short' } }}</span>
+                </div>
+              </th>
+
+              <td>
+                <span class="as__status" [class.as__status--live]="session.status === 'active'"
+                      [class.as__status--paused]="session.status === 'paused'"
+                      [class.as__status--dead]="session.status === 'revoked' || session.status === 'ended'">
+                  {{ session.status }}
+                </span>
+                @if (session.tainted) {
+                  <span class="as__tainted"
+                        title="This session's context is tainted; the gate is stricter on every call it makes.">
+                    tainted
+                  </span>
+                }
+              </td>
+
+              <td>
+                <span class="as__ceiling">{{ session.risk_ceiling }}</span>
+                <span class="as__meta">snapshot at start</span>
+              </td>
+
+              <td>
+                @let grants = grantState(session);
+                @if (grants === 'unrestricted') {
+                  <span class="as__muted">Not narrowed by list — whatever the ceiling permits</span>
+                } @else if (grants === 'nothing') {
+                  <strong class="as__nothing">Nothing — this session is explicitly granted no actions</strong>
+                } @else if (grants === 'listed') {
+                  <span class="as__chips">
+                    @for (id of grantIds(session); track id) {
+                      <span class="as__chip">{{ id }}</span>
+                    }
+                  </span>
+                } @else {
+                  <span class="as__muted">
+                    Unreadable allow-list value — re-read this row before acting on it.
+                  </span>
+                }
+              </td>
+
+              <td>
+                <div class="as__cellstack">
+                  <span class="as__ceiling">{{ modeKey(session.retrieval_mode) | translate }}</span>
+                  <span class="as__meta">{{ 'agentSessions.modeStored' | translate }}</span>
+                  @if (session.agent_retrieval_mode) {
+                    <span class="as__meta" [class.as__modediff]="modeDiffers(session)">
+                      {{ 'agentSessions.modeConfigured' | translate: { mode: (modeKey(session.agent_retrieval_mode) | translate) } }}
+                    </span>
+                    @if (modeDiffers(session)) {
+                      <span class="as__meta as__modediff">{{ 'agentSessions.modeDiffers' | translate }}</span>
+                    }
+                  }
+                </div>
+              </td>
+
+              <td>
+                @let refs = packRefs(session);
+                @if (refs === null) {
+                  <span class="as__muted">—</span>
+                } @else if (refs.length === 0) {
+                  <span class="as__muted">No packs recorded</span>
+                } @else {
+                  <span class="as__chips">
+                    @for (ref of refs; track ref.id) {
+                      <span class="as__chip as__chip--pack">pack {{ shortId(ref.id) }} v{{ ref.row_version }}</span>
+                    }
+                  </span>
+                }
+              </td>
+
+              <td class="xf-cell-actions as__actions">
+                @if (killConfirmId() === session.id) {
+                  <p class="as__killwarn" role="alert">
+                    Kill is final: this session is <strong>not resumable</strong> and must be started
+                    fresh. It stops immediately.
+                  </p>
+                  <button type="button" class="xf-btn xf-btn-sm as__danger"
+                          [disabled]="busyId() === session.id" (click)="confirmKill(session)">
+                    Confirm kill
+                  </button>
+                  <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" (click)="cancelKill()">
+                    Cancel
+                  </button>
+                } @else {
+                  <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
+                          [disabled]="!canPause(session) || busyId() === session.id"
+                          (click)="pause(session)">Pause</button>
+                  <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
+                          [disabled]="!canResume(session) || busyId() === session.id"
+                          (click)="resume(session)">Resume</button>
+                  <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm as__danger-outline"
+                          [disabled]="!canKill(session) || busyId() === session.id"
+                          (click)="askKill(session)">Kill…</button>
+                  <p class="as__refnote">
+                    Takes effect now. Editing the policy does not — it reaches the next session only.
+                  </p>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages() > 1) {
+      <div class="as__pager">
+        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
+                [disabled]="page() <= 1 || loading()" (click)="previousPage()">Previous</button>
+        <span class="as__pagemeta">Page {{ page() }} of {{ totalPages() }} — {{ total() }} sessions</span>
+        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
+                [disabled]="page() >= totalPages() || loading()" (click)="nextPage()">Next</button>
+      </div>
+    }
+  }
+</div>

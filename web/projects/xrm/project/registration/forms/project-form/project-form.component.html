@@ -1,0 +1,17 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="project">
+  <ng-template xrmTab="details">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">{{ 'xrmForm.tabs.details' | translate }}</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['name', 'project_code', 'organization_id', 'delivery_type', 'owner_id', 'status', 'health', 'priority', 'is_confidential', 'budget_amount', 'budget_consumed', 'start_date', 'target_end_date', 'actual_start_date', 'actual_end_date', 'description', 'objectives', 'success_criteria', 'assumptions', 'constraints', 'program_id']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

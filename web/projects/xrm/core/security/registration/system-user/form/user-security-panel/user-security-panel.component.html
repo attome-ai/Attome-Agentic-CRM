@@ -1,0 +1,180 @@
+@if (loading()) {
+  <p class="xf-helper" role="status">{{ 'userForm.security.loading' | translate }}</p>
+} @else if (loadError()) {
+  <div class="xf-error-banner" role="alert">
+    <i class="las la-exclamation-circle" aria-hidden="true"></i>
+    <span class="usp-grow">{{ loadError() }}</span>
+    <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" (click)="load()">
+      {{ 'userForm.security.retry' | translate }}
+    </button>
+  </div>
+} @else {
+  <div class="usp-live" role="status" aria-live="polite" data-testid="security-notice">{{ notice() }}</div>
+  @if (actionError()) {
+    <div class="xf-error-banner" role="alert" data-testid="security-error">
+      <i class="las la-exclamation-circle" aria-hidden="true"></i>
+      {{ actionError() }}
+    </div>
+  }
+
+  <!-- ── Account status ───────────────────────────────────────────── -->
+  @if (part() !== 'access') {
+  <section class="xf-section" aria-labelledby="usp-status-title">
+    <div class="xf-section-header">
+      <div class="xf-section-icon"><i class="las la-user-shield" aria-hidden="true"></i></div>
+      <div class="xf-section-meta">
+        <h2 class="xf-section-title" id="usp-status-title">{{ 'userForm.security.statusTitle' | translate }}</h2>
+      </div>
+    </div>
+    <div class="xf-section-body usp-stack">
+      <div class="usp-row">
+        <span class="usp-badge" [class.usp-badge-on]="isActive()" data-testid="account-status">
+          <i class="las" [class.la-check-circle]="isActive()" [class.la-ban]="!isActive()" aria-hidden="true"></i>
+          {{ (isActive() ? 'userForm.security.active' : 'userForm.security.inactive') | translate }}
+        </span>
+        <button type="button" data-testid="toggle-active"
+                class="xf-btn xf-btn-sm" [class.usp-btn-danger]="isActive()" [class.xf-btn-primary]="!isActive()"
+                [disabled]="busy() !== null || (isActive() && isSelf())"
+                (click)="toggleActive()">
+          {{ (isActive() ? 'userForm.security.deactivate' : 'userForm.security.activate') | translate }}
+        </button>
+      </div>
+      <p class="xf-helper usp-help">
+        {{ (isActive() ? 'userForm.security.activeHelp' : 'userForm.security.inactiveHelp') | translate }}
+      </p>
+      @if (isActive() && isSelf()) {
+        <p class="xf-helper usp-help" data-testid="self-note">{{ 'userForm.security.selfNote' | translate }}</p>
+      }
+    </div>
+  </section>
+
+  }
+
+  @if (part() !== 'status') {
+  <!-- ── Sign-in ──────────────────────────────────────────────────── -->
+  <section class="xf-section" aria-labelledby="usp-signin-title">
+    <div class="xf-section-header">
+      <div class="xf-section-icon"><i class="las la-sign-in-alt" aria-hidden="true"></i></div>
+      <div class="xf-section-meta">
+        <h2 class="xf-section-title" id="usp-signin-title">{{ 'userForm.security.signInTitle' | translate }}</h2>
+      </div>
+    </div>
+    <div class="xf-section-body usp-stack">
+      <dl class="usp-facts">
+        <dt>{{ 'userForm.security.lastLogin' | translate }}</dt>
+        <dd data-testid="last-login">{{ lastLogin() ? (lastLogin() | localDate) : ('userForm.security.never' | translate) }}</dd>
+      </dl>
+      <div class="usp-row">
+        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" data-testid="reset-mfa"
+                [disabled]="busy() !== null" (click)="resetMfa()">
+          <i class="las la-mobile" aria-hidden="true"></i>
+          {{ 'userForm.security.resetMfa' | translate }}
+        </button>
+      </div>
+      <p class="xf-helper usp-help">{{ 'userForm.security.resetMfaHelp' | translate }}</p>
+    </div>
+  </section>
+
+  <!-- ── Roles ────────────────────────────────────────────────────── -->
+  <section class="xf-section" aria-labelledby="usp-roles-title">
+    <div class="xf-section-header">
+      <div class="xf-section-icon"><i class="las la-id-badge" aria-hidden="true"></i></div>
+      <div class="xf-section-meta">
+        <h2 class="xf-section-title" id="usp-roles-title">{{ 'userForm.security.rolesTitle' | translate }}</h2>
+      </div>
+    </div>
+    <div class="xf-section-body usp-stack">
+      <p class="xf-helper usp-help">{{ 'userForm.security.rolesHelp' | translate }}</p>
+      @if (userRoles().length === 0) {
+        <p class="xf-empty" data-testid="no-roles">{{ 'userForm.security.noRoles' | translate }}</p>
+      } @else {
+        <ul class="usp-list" data-testid="role-list">
+          @for (r of userRoles(); track r.role_id) {
+            <li class="usp-list-item">
+              <span>{{ r.role_name }}</span>
+              <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
+                      [attr.aria-label]="'userForm.security.removeRoleNamed' | translate: { name: r.role_name }"
+                      [disabled]="busy() !== null" (click)="removeRole(r)">
+                {{ 'userForm.security.removeRole' | translate }}
+              </button>
+            </li>
+          }
+        </ul>
+      }
+      @if (assignableRoles().length > 0) {
+        <div class="usp-row">
+          <label class="usp-sr-only" for="usp-role-select">{{ 'userForm.security.roleToAssign' | translate }}</label>
+          <div class="xf-select-wrap usp-grow">
+            <select id="usp-role-select" class="xf-input" data-testid="role-select"
+                    [(ngModel)]="selectedRoleId" [ngModelOptions]="{ standalone: true }">
+              <option value="">{{ 'userForm.security.chooseRole' | translate }}</option>
+              @for (r of assignableRoles(); track r.id) {
+                <option [value]="r.id">{{ r.name }}</option>
+              }
+            </select>
+          </div>
+          <button type="button" class="xf-btn xf-btn-primary xf-btn-sm" data-testid="assign-role"
+                  [disabled]="!selectedRoleId || busy() !== null" (click)="assignRole()">
+            {{ 'userForm.security.assignRole' | translate }}
+          </button>
+        </div>
+      }
+    </div>
+  </section>
+
+  <!-- ── Effective access ─────────────────────────────────────────── -->
+  @if (preview(); as p) {
+    <section class="xf-section" aria-labelledby="usp-effective-title">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-key" aria-hidden="true"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title" id="usp-effective-title">{{ 'userForm.security.effectiveTitle' | translate }}</h2>
+        </div>
+        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm xf-section-header-action" data-testid="refresh-access"
+                [disabled]="refreshing()" (click)="refreshAccess()">
+          <i class="las la-sync" aria-hidden="true"></i>
+          {{ (refreshing() ? 'userForm.security.refreshing' : 'userForm.security.refresh') | translate }}
+        </button>
+      </div>
+      <div class="xf-section-body usp-stack">
+        <p class="xf-helper usp-help">{{ 'userForm.security.effectiveHelp' | translate }}</p>
+        @if (p.effective.is_admin) {
+          <p class="usp-badge usp-badge-accent" data-testid="is-admin">
+            <i class="las la-crown" aria-hidden="true"></i>{{ 'userForm.security.isAdmin' | translate }}
+          </p>
+        }
+        <dl class="usp-facts">
+          <dt>{{ 'userForm.security.viaTeams' | translate }}</dt>
+          <dd>
+            @for (t of p.configured.teams; track t.id; let last = $last) {
+              {{ t.name }}@if (t.roles.length) { ({{ names(t.roles) }}) }@if (!last) {, }
+            } @empty {
+              {{ 'userForm.security.none' | translate }}
+            }
+          </dd>
+          <dt>{{ 'userForm.security.position' | translate }}</dt>
+          <dd>{{ p.configured.position?.name ?? ('userForm.security.none' | translate) }}</dd>
+          <dt>{{ 'userForm.security.businessUnits' | translate }}</dt>
+          <dd>
+            @for (o of p.configured.organizations; track o.id; let last = $last) {
+              {{ o.name ?? o.id }}@if (!last) {, }
+            } @empty {
+              {{ 'userForm.security.none' | translate }}
+            }
+          </dd>
+        </dl>
+        <details class="usp-details">
+          <summary data-testid="privilege-summary">
+            {{ 'userForm.security.privilegeCount' | translate: { count: p.effective.privileges.length } }}
+          </summary>
+          @if (p.effective.privileges.length) {
+            <ul class="usp-privs">
+              @for (k of p.effective.privileges; track k) { <li><code>{{ k }}</code></li> }
+            </ul>
+          }
+        </details>
+      </div>
+    </section>
+  }
+  }
+}

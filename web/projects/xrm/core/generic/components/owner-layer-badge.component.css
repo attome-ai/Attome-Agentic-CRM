@@ -1,0 +1,42 @@
+:host { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.5rem; max-width: 100%; }
+
+.xrm-owner-layer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--layer-border, var(--color-border, #24324d));
+  background: var(--layer-bg, transparent);
+  color: var(--layer-fg, var(--color-text-secondary, #9fb0cc));
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.xrm-owner-layer i { font-size: 0.95em; flex: none; }
+
+.xrm-owner-layer--platform { --layer-fg: var(--color-info, #5aa9ff); }
+.xrm-owner-layer--product  { --layer-fg: var(--color-accent, #b08cff); }
+.xrm-owner-layer--project  { --layer-fg: var(--color-success, #3ecf8e); }
+.xrm-owner-layer--customer { --layer-fg: var(--color-warning, #f5a524); }
+
+.xrm-owner-layer.is-locked { border-style: dashed; }
+
+.xrm-owner-layer-note {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #9fb0cc);
+  text-align: start;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

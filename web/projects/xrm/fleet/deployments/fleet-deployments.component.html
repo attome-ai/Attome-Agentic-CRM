@@ -1,0 +1,222 @@
+<div class="page-header">
+  <div>
+    <h2><i class="las la-network-wired" aria-hidden="true"></i> {{ 'fleet.deployments.title' | translate }}</h2>
+    <p class="subtitle">{{ 'fleet.deployments.subtitle' | translate }}</p>
+  </div>
+  <div class="fleet-header-actions">
+    <button type="button" class="btn-ghost" (click)="syncAll()" [disabled]="syncingAll()">
+      <i class="las la-sync" aria-hidden="true"></i> {{ 'fleet.deployments.syncAll' | translate }}
+    </button>
+    <button type="button" class="btn-primary" (click)="openForm()" [disabled]="formOpen()">
+      <i class="las la-plus" aria-hidden="true"></i> {{ 'fleet.deployments.register' | translate }}
+    </button>
+  </div>
+</div>
+
+<p class="fleet-note">{{ 'fleet.common.devOnly' | translate }}</p>
+
+@if (notice()) {
+  <p class="fleet-status" role="status">{{ notice() }}</p>
+}
+@if (error()) {
+  <p class="error-msg" role="alert">{{ error() }}</p>
+}
+
+@if (formOpen()) {
+  <section class="create-panel" aria-labelledby="fleet-register-title">
+    <h3 id="fleet-register-title">{{ 'fleet.deployments.registerTitle' | translate }}</h3>
+    <form (ngSubmit)="register()" novalidate>
+      <div class="fleet-form">
+        <div class="field">
+          <label for="fleet-reg-code">{{ 'fleet.fields.projectCode' | translate }}</label>
+          <input id="fleet-reg-code" name="project_code" maxlength="10" autocomplete="off" required
+                 [ngModel]="projectCode()" (ngModelChange)="projectCode.set($event)"
+                 aria-describedby="fleet-reg-code-hint" />
+          <span id="fleet-reg-code-hint" class="hint">{{ 'fleet.fields.projectCodeHint' | translate }}</span>
+        </div>
+        <div class="field">
+          <label for="fleet-reg-label">{{ 'fleet.fields.label' | translate }}</label>
+          <input id="fleet-reg-label" name="label" maxlength="200" required
+                 [ngModel]="label()" (ngModelChange)="label.set($event)" />
+        </div>
+        <div class="field">
+          <label for="fleet-reg-env">{{ 'fleet.fields.environment' | translate }}</label>
+          <select id="fleet-reg-env" name="environment" [ngModel]="environment()" (ngModelChange)="environment.set($event)">
+            @for (env of environments; track env) {
+              <option [value]="env">{{ text('environment', env) }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="fleet-reg-ring">{{ 'fleet.fields.ring' | translate }}</label>
+          <select id="fleet-reg-ring" name="ring" [ngModel]="ring()" (ngModelChange)="ring.set($event)"
+                  aria-describedby="fleet-reg-ring-hint">
+            @for (r of rings; track r) {
+              <option [value]="r">{{ text('ring', r) }}</option>
+            }
+          </select>
+          <span id="fleet-reg-ring-hint" class="hint">{{ 'fleet.fields.ringHint' | translate }}</span>
+        </div>
+        <div class="field field-wide">
+          <label for="fleet-reg-url">{{ 'fleet.fields.baseUrl' | translate }}</label>
+          <input id="fleet-reg-url" name="base_url" type="url" required class="mono-input"
+                 [ngModel]="baseUrl()" (ngModelChange)="baseUrl.set($event)"
+                 aria-describedby="fleet-reg-url-hint" />
+          <span id="fleet-reg-url-hint" class="hint">{{ 'fleet.fields.baseUrlHint' | translate }}</span>
+        </div>
+        <div class="field field-wide">
+          <label for="fleet-reg-window">{{ 'fleet.fields.maintenanceWindow' | translate }}</label>
+          <input id="fleet-reg-window" name="maintenance_window" maxlength="200"
+                 [ngModel]="maintenanceWindow()" (ngModelChange)="maintenanceWindow.set($event)" />
+        </div>
+        <div class="field field-wide">
+          <label class="checkbox-row" for="fleet-reg-with-cred">
+            <input id="fleet-reg-with-cred" type="checkbox" name="with_credential"
+                   [ngModel]="withCredential()" (ngModelChange)="withCredential.set($event)" />
+            {{ 'fleet.deployments.withCredential' | translate }}
+          </label>
+        </div>
+        @if (withCredential()) {
+          <p class="fleet-note field-wide">{{ 'fleet.credential.note' | translate }}</p>
+          <div class="field">
+            <label for="fleet-reg-client">{{ 'fleet.credential.clientId' | translate }}</label>
+            <input id="fleet-reg-client" name="s2s_client_id" autocomplete="off" class="mono-input"
+                   [ngModel]="clientId()" (ngModelChange)="clientId.set($event)" />
+          </div>
+          <div class="field">
+            <label for="fleet-reg-key">{{ 'fleet.credential.keyId' | translate }}</label>
+            <input id="fleet-reg-key" name="s2s_key_id" autocomplete="off" class="mono-input"
+                   [ngModel]="keyId()" (ngModelChange)="keyId.set($event)" />
+          </div>
+          <div class="field">
+            <label for="fleet-reg-secret">{{ 'fleet.credential.secret' | translate }}</label>
+            <input id="fleet-reg-secret" name="secret" type="password" autocomplete="new-password" class="mono-input"
+                   [ngModel]="secret()" (ngModelChange)="secret.set($event)" />
+          </div>
+        }
+      </div>
+      @if (formError()) {
+        <p class="error-msg" role="alert">{{ formError() }}</p>
+      }
+      <div class="btn-row">
+        <button type="submit" class="btn-primary" [disabled]="!canRegister() || saving()">
+          {{ (saving() ? 'fleet.common.saving' : 'fleet.deployments.registerSubmit') | translate }}
+        </button>
+        <button type="button" class="btn-ghost" (click)="closeForm()" [disabled]="saving()">
+          {{ 'fleet.common.cancel' | translate }}
+        </button>
+      </div>
+    </form>
+  </section>
+}
+
+<div class="filter-bar">
+  <label class="checkbox-row" for="fleet-include-inactive">
+    <input id="fleet-include-inactive" type="checkbox"
+           [checked]="includeInactive()" (change)="toggleInactive($any($event.target).checked)" />
+    {{ 'fleet.deployments.showInactive' | translate }}
+  </label>
+</div>
+
+<section class="card" aria-labelledby="fleet-deployments-list-title">
+  <h3 id="fleet-deployments-list-title">
+    {{ 'fleet.deployments.listTitle' | translate }}
+    <span class="count">{{ total() | localNumber }}</span>
+  </h3>
+  @if (loading()) {
+    <p class="state-msg" role="status">{{ 'fleet.common.loading' | translate }}</p>
+  } @else if (deployments().length === 0 && !error()) {
+    <div class="empty-state"><p>{{ 'fleet.deployments.empty' | translate }}</p></div>
+  } @else if (deployments().length > 0) {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'fleet.columns.customer' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.environment' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.ring' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.version' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.ready' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.openItems' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.drift' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.lastCheck' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (d of deployments(); track d.id) {
+            <tr>
+              <td>
+                <a class="cell-link" [routerLink]="['/xrm/fleet/deployments', d.id]">{{ d.label }}</a>
+                <div class="fleet-muted">
+                  {{ d.project_code }}
+                  @if (!d.is_active) { · {{ 'fleet.deployments.inactive' | translate }} }
+                  @if (!d.has_credential) { · {{ 'fleet.deployments.noCredential' | translate }} }
+                </div>
+              </td>
+              <td>{{ text('environment', d.environment) }}</td>
+              <td>{{ text('ring', d.ring) }}</td>
+              <td>
+                @if (d.observation?.application_version; as v) {
+                  <span class="fleet-code">{{ v }}</span>
+                } @else {
+                  <span class="fleet-muted">{{ 'fleet.common.unknown' | translate }}</span>
+                }
+                @if (d.observation?.schema_version !== null && d.observation?.schema_version !== undefined) {
+                  <div class="fleet-muted">{{ 'fleet.deployments.schemaShort' | translate: { version: d.observation?.schema_version } }}</div>
+                }
+              </td>
+              <td>
+                @switch (d.observation?.ready) {
+                  @case (true) { <span class="fleet-pill fleet-pill--ok">{{ 'fleet.common.yes' | translate }}</span> }
+                  @case (false) { <span class="fleet-pill fleet-pill--bad">{{ 'fleet.common.no' | translate }}</span> }
+                  @default { <span class="fleet-muted">{{ 'fleet.common.unknown' | translate }}</span> }
+                }
+              </td>
+              <td>
+                @if (d.observation?.open_items !== null && d.observation?.open_items !== undefined) {
+                  {{ (d.observation?.open_items ?? 0) | localNumber }}
+                } @else {
+                  <span class="fleet-muted">{{ 'fleet.common.unknown' | translate }}</span>
+                }
+              </td>
+              <td>
+                <span [class]="'fleet-pill ' + driftTone(d.drift.status)">{{ text('drift', d.drift.status) }}</span>
+                @if (d.drift.fields.length > 0) {
+                  <div class="fleet-muted">
+                    @for (f of d.drift.fields; track f; let last = $last) {
+                      {{ text('driftField', f) }}@if (!last) {, }
+                    }
+                  </div>
+                }
+              </td>
+              <td>
+                @if (d.observation; as o) {
+                  <span class="cell-muted">{{ o.observed_at | localDate: dateFmt }}</span>
+                  @if (o.error_code) {
+                    <div><span class="fleet-pill fleet-pill--bad fleet-code">{{ o.error_code }}</span></div>
+                  }
+                } @else {
+                  <span class="fleet-muted">{{ 'fleet.deployments.neverChecked' | translate }}</span>
+                }
+              </td>
+              <td class="actions">
+                <button type="button" class="btn-sm" (click)="syncOne(d)" [disabled]="syncingId() !== null"
+                        [attr.aria-label]="'fleet.deployments.syncOneLabel' | translate: { name: d.label }">
+                  <i class="las la-sync" aria-hidden="true"></i> {{ 'fleet.deployments.syncOne' | translate }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pages() > 1) {
+      <nav class="fleet-pager" [attr.aria-label]="'fleet.pager.label' | translate">
+        <button type="button" class="btn-ghost" (click)="previous()" [disabled]="!hasPrevious()">{{ 'fleet.pager.previous' | translate }}</button>
+        <span>{{ 'fleet.pager.pageOf' | translate: { page: page(), pages: pages() } }}</span>
+        <button type="button" class="btn-ghost" (click)="next()" [disabled]="!hasNext()">{{ 'fleet.pager.next' | translate }}</button>
+      </nav>
+    }
+  }
+</section>

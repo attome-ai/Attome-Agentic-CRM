@@ -1,0 +1,67 @@
+@if (visible()) {
+  <section class="rs" [attr.aria-label]="'aiSwitch.title' | translate">
+    <header class="rs__header">
+      <h2 class="rs__title">
+        <i class="las la-power-off" aria-hidden="true"></i>
+        {{ 'aiSwitch.title' | translate }}
+      </h2>
+      <p class="rs__hint">{{ 'aiSwitch.hint' | translate }}</p>
+    </header>
+
+    <table class="rs__table">
+      <thead>
+        <tr>
+          <th scope="col">{{ 'aiSwitch.surface' | translate }}</th>
+          <th scope="col">{{ 'aiSwitch.configured' | translate }}</th>
+          <th scope="col">{{ 'aiSwitch.runtime' | translate }}</th>
+          <th scope="col">{{ 'aiSwitch.effective' | translate }}</th>
+          <th scope="col"><span class="visually-hidden">{{ 'aiSwitch.action' | translate }}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (s of surfaces(); track s.surface) {
+          <tr [attr.data-effective]="s.effective">
+            <th scope="row">{{ 'aiSwitch.surfaces.' + s.surface | translate }}</th>
+            <td>{{ (s.configured ? 'aiSwitch.on' : 'aiSwitch.off') | translate }}</td>
+            <td>
+              @if (s.runtime_enabled === null || s.runtime_enabled === undefined) {
+                <span class="rs__unknown">{{ 'aiSwitch.unknown' | translate }}</span>
+              } @else {
+                {{ (s.runtime_enabled ? 'aiSwitch.on' : 'aiSwitch.off') | translate }}
+                @if (s.reason) { <span class="rs__reason" dir="auto">— {{ s.reason }}</span> }
+                @if (s.changed_at) { <span class="rs__when">{{ s.changed_at | localDate }}</span> }
+              }
+            </td>
+            <td>
+              <strong>{{ (s.effective ? 'aiSwitch.on' : 'aiSwitch.off') | translate }}</strong>
+            </td>
+            <td>
+              <button type="button" class="btn" [disabled]="busy() !== null" (click)="toggle(s)"
+                      [attr.aria-label]="(s.runtime_enabled === false ? 'aiSwitch.turnOn' : 'aiSwitch.turnOff') | translate">
+                {{ (s.runtime_enabled === false ? 'aiSwitch.turnOn' : 'aiSwitch.turnOff') | translate }}
+              </button>
+            </td>
+          </tr>
+          @if (confirming() === s.surface) {
+            <tr class="rs__confirm">
+              <td colspan="5">
+                <label class="field">
+                  <span>{{ 'aiSwitch.reason' | translate }}</span>
+                  <input type="text" maxlength="500" [ngModel]="reason()" (ngModelChange)="reason.set($event)" />
+                </label>
+                <button type="button" class="btn btn--danger" (click)="confirmOff()" [disabled]="busy() !== null">
+                  {{ 'aiSwitch.confirmOff' | translate }}
+                </button>
+                <button type="button" class="btn" (click)="cancel()">{{ 'aiSwitch.cancel' | translate }}</button>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+
+    @if (error(); as message) {
+      <p class="rs__error" role="alert">{{ message }}</p>
+    }
+  </section>
+}

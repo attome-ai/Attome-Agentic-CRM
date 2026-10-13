@@ -1,0 +1,317 @@
+/* ai-agent-sessions — the live-session supervisor. Shared xf-* rules (buttons,
+   table shell, banners, empty state) come from xrm-form.css. */
+
+.as {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.as__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.as__header-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-accent, #14b8a6) 12%, transparent);
+  color: var(--color-accent, #14b8a6);
+  font-size: 19px;
+}
+
+.as__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--color-text-primary, #e5eefc);
+}
+
+.as__hint {
+  margin: 5px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+/* Deliberately loud: this is the sentence whose absence causes an incident. */
+.as__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 17px;
+  border: 1px solid rgba(251, 191, 36, .38);
+  border-inline-start: 4px solid #fbbf24;
+  border-radius: 9px;
+  background: rgba(251, 191, 36, .08);
+  color: var(--color-text-primary, #e5eefc);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.as__notice i {
+  font-size: 19px;
+  color: #fbbf24;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.as__notice p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: var(--color-text-primary, #e5eefc);
+}
+
+.as__privnote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.as__privnote code,
+.as__notice code {
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+  font-size: 11.5px;
+}
+
+.as__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 10px;
+  background: var(--color-bg-alt, #111c33);
+}
+
+.as__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.as__field--grow { flex: 1 1 260px; }
+
+.as__field label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.as__field select,
+.as__field input {
+  padding: 9px 12px;
+  border: 1px solid var(--color-border, #24324d);
+  border-radius: 7px;
+  background: var(--color-bg, #0f172a);
+  color: var(--color-text-primary, #e5eefc);
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.as__field select:focus-visible,
+.as__field input:focus-visible {
+  outline: none;
+  border-color: var(--color-accent, #14b8a6);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent, #14b8a6) 14%, transparent);
+}
+
+.as__outcome {
+  margin: 0;
+  padding: 11px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-accent, #14b8a6) 30%, transparent);
+  border-inline-start: 3px solid var(--color-accent, #14b8a6);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-accent, #14b8a6) 8%, transparent);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-text-primary, #e5eefc);
+}
+
+.as__table { table-layout: auto; }
+
+.as__caption {
+  caption-side: top;
+  padding: 10px 16px;
+  text-align: start;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.as__thnote {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: none;
+  color: var(--color-text-secondary, #94a3b8);
+  opacity: .8;
+}
+
+/* A row header is a real <th scope="row">, so it must be reset out of the
+   column-header look xrm-form.css's `.xf-table th` gives it — and it must stay
+   `display: table-cell`: `display: flex` on a cell collapses the row geometry
+   (the same note `admin-page.css` carries). The stack lives in a wrapper. */
+.xf-table tbody th[scope="row"] {
+  padding: 12px 16px;
+  text-align: start;
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: normal;
+  background: transparent;
+  color: var(--color-text-primary, #e5eefc);
+  border-bottom: 1px solid var(--color-border, #24324d);
+  vertical-align: middle;
+}
+
+.as__cellstack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.as__sid {
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-text-primary, #e5eefc);
+}
+
+.as__meta {
+  font-size: 11px;
+  color: var(--color-text-secondary, #94a3b8);
+}
+
+.as__status {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: capitalize;
+  color: var(--color-text-secondary, #94a3b8);
+  background: color-mix(in srgb, var(--color-text-secondary, #94a3b8) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text-secondary, #94a3b8) 26%, transparent);
+}
+
+.as__status--live {
+  color: var(--color-success, #22c55e);
+  background: color-mix(in srgb, var(--color-success, #22c55e) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-success, #22c55e) 34%, transparent);
+}
+
+.as__status--paused {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, .13);
+  border-color: rgba(251, 191, 36, .34);
+}
+
+.as__status--dead {
+  color: #f87171;
+  background: rgba(248, 113, 113, .13);
+  border-color: rgba(248, 113, 113, .32);
+}
+
+.as__tainted {
+  display: inline-block;
+  margin-inline-start: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #fca5a5;
+  background: rgba(248, 113, 113, .12);
+  border: 1px solid rgba(248, 113, 113, .3);
+}
+
+.as__ceiling {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--color-text-primary, #e5eefc);
+}
+
+.as__muted { font-size: 12.5px; color: var(--color-text-secondary, #94a3b8); }
+
+/* "Explicitly granted nothing" is a real security posture, not an empty cell. */
+.as__nothing { font-size: 12.5px; color: #fbbf24; }
+
+.as__chips { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.as__chip {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-family: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--color-text-primary, #e5eefc);
+  background: color-mix(in srgb, var(--color-text-secondary, #94a3b8) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-text-secondary, #94a3b8) 22%, transparent);
+}
+
+.as__chip--pack { color: var(--color-accent, #14b8a6); }
+
+.as__actions { min-width: 190px; }
+
+.as__killwarn {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #fca5a5;
+  text-align: start;
+}
+
+.as__refnote {
+  margin: 7px 0 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--color-text-secondary, #94a3b8);
+  text-align: start;
+}
+
+.as__danger {
+  background: #dc2626;
+  color: #fff;
+}
+
+.as__danger:hover:not(:disabled) { background: #b91c1c; }
+
+.as__danger-outline {
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, .4);
+}
+
+.as__danger-outline:hover:not(:disabled) {
+  color: #fff;
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.as__pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.as__pagemeta { font-size: 12px; color: var(--color-text-secondary, #94a3b8); }
+.as__modediff { color: var(--color-warning, #b45309); }

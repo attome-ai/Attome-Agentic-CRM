@@ -1,0 +1,115 @@
+<section class="gap-page">
+  <header class="gap-header">
+    <div>
+      <h1>Knowledge Gap Queue</h1>
+      <p class="gap-sub">
+        Topics the assistant could not answer. Each row is a scrubbed phrase,
+        never a caller's raw question. An empty queue means every question asked
+        so far had an answer.
+      </p>
+    </div>
+    <div class="gap-filters" role="tablist" aria-label="Gap status">
+      @for (option of filters; track option.id) {
+        <button
+          type="button"
+          role="tab"
+          [attr.aria-selected]="filter() === option.id"
+          [class.gap-filter-active]="filter() === option.id"
+          (click)="setFilter(option.id)"
+        >{{ option.label }}</button>
+      }
+    </div>
+  </header>
+
+  @if (error(); as message) {
+    <div class="gap-error" role="alert">{{ message }}</div>
+  }
+
+  @if (loading()) {
+    <div class="gap-empty">Loading&hellip;</div>
+  } @else if (topics().length === 0) {
+    <div class="gap-empty">
+      Nothing in this queue. That is the good outcome: every question asked so
+      far had an answer.
+    </div>
+  } @else {
+    <p class="gap-count-line">{{ total() }} topic(s)</p>
+    <table class="gap-table">
+      <thead>
+        <tr>
+          <th scope="col">Topic</th>
+          <th scope="col">Last seen</th>
+          <th scope="col">Asked</th>
+          <th scope="col">Status</th>
+          <th scope="col"><span class="gap-visually-hidden">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (topic of topics(); track topic.id) {
+          <tr>
+            <td class="gap-phrase">{{ topic.normalized_phrase }}</td>
+            <td>{{ topic.last_seen_at | date: 'mediumDate' }}</td>
+            <td class="gap-num">{{ topic.hit_count }}</td>
+            <td><span class="gap-pill gap-pill-{{ topic.status }}">{{ topic.status }}</span></td>
+            <td class="gap-actions">
+              @if (topic.status !== 'addressed') {
+                <button type="button" [disabled]="busy() === topic.id" (click)="openAddressedPicker(topic)">
+                  Addressed
+                </button>
+              }
+              @if (topic.status !== 'dismissed') {
+                <button type="button" [disabled]="busy() === topic.id" (click)="triage(topic, 'dismissed')">
+                  Dismiss
+                </button>
+              }
+              @if (topic.status !== 'open') {
+                <button type="button" [disabled]="busy() === topic.id" (click)="triage(topic, 'open')">
+                  Reopen
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (pickerFor(); as topic) {
+    <div class="gap-picker-backdrop">
+      <div class="gap-picker" role="dialog" aria-modal="true" aria-label="Choose the article that answers this topic">
+        <h2 class="gap-picker-title">What answers "{{ topic.normalized_phrase }}"?</h2>
+        <input
+          type="text"
+          class="gap-picker-search"
+          placeholder="Search published articles by title…"
+          [value]="pickerQuery()"
+          (input)="searchPicker($any($event.target).value)"
+        />
+        @if (pickerLoading()) {
+          <p class="gap-picker-status">Searching&hellip;</p>
+        } @else if (pickerResults().length === 0) {
+          <p class="gap-picker-status">No published article matches.</p>
+        } @else {
+          <ul class="gap-picker-list">
+            @for (item of pickerResults(); track item.id) {
+              <li>
+                <button
+                  type="button"
+                  class="gap-picker-item"
+                  [class.gap-picker-item-selected]="pickerSelected()?.id === item.id"
+                  (click)="selectPickerItem(item)"
+                >{{ item.title }}</button>
+              </li>
+            }
+          </ul>
+        }
+        <div class="gap-picker-actions">
+          <button type="button" (click)="cancelAddressedPicker()">Cancel</button>
+          <button type="button" [disabled]="!pickerSelected()" (click)="confirmAddressedPicker()">
+            Mark addressed
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</section>

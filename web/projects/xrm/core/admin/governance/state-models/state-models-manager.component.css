@@ -1,0 +1,60 @@
+.sm-conflict {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-block-end: 12px;
+}
+
+.sm-row--selected td {
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+.sm-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 24px;
+  align-items: start;
+  margin-block-end: 20px;
+}
+
+@media (max-width: 900px) {
+  .sm-editor { grid-template-columns: 1fr; }
+}
+
+.sm-editor__diagram {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.sm-editor__diagram figcaption {
+  display: block;
+  margin-block-start: 6px;
+}
+
+.sm-transitions input,
+.sm-transitions select {
+  inline-size: 100%;
+  min-inline-size: 90px;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-size: 13px;
+}
+
+.sm-transitions .sm-order {
+  min-inline-size: 56px;
+  inline-size: 64px;
+}
+
+.sm-transitions .actions {
+  white-space: nowrap;
+}
+
+.sm-new-row td {
+  border-block-start: 2px dashed var(--color-border);
+}

@@ -1,0 +1,5 @@
+:host { display: block; }
+
+.page-header h2 i { margin-inline-end: 6px; }
+
+.filter-bar .checkbox-row { margin: 0; }

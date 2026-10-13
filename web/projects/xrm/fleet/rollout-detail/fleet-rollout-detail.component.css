@@ -1,0 +1,20 @@
+:host { display: block; }
+
+.breadcrumb { margin-bottom: 12px; }
+
+.card h3 { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.fleet-list { margin: 0; padding-inline-start: 22px; }
+.fleet-list li { margin-bottom: 4px; }
+
+.fleet-plan { margin: 0; padding-inline-start: 18px; font-size: 12px; }
+.fleet-plan-bad { color: var(--color-text-primary); font-weight: 600; }
+.fleet-plan-warn { color: var(--color-text-primary); font-weight: 600; }
+
+.fleet-approval { margin-top: 6px; }
+.fleet-approval a { color: var(--color-accent); font-weight: 500; }
+
+.fleet-backup { max-width: 260px; margin-bottom: 6px; }
+.fleet-small { font-size: 12px; padding: 6px 10px; margin-bottom: 6px; }
+
+.fleet-target-actions { display: flex; flex-wrap: wrap; gap: 6px; }

@@ -1,0 +1,57 @@
+<button class="avatar-btn" (click)="toggle()"
+        [class.active]="isOpen()" [title]="shortId()">
+  {{ initial() }}
+</button>
+
+<div class="hdr-panel profile-panel" #profilePanel [class.open]="isOpen()">
+  <div class="panel-header profile-panel-header">
+    <div class="pp-avatar">{{ initial() }}</div>
+    <div class="pp-info">
+      <span class="pp-id">{{ shortId() }}</span>
+      <span class="pp-role">System User</span>
+    </div>
+  </div>
+  <!-- U15 — the approver's own inbox. -->
+  <nav class="pp-links" [attr.aria-label]="'shell.myWork' | translate">
+    <a class="pp-link" routerLink="/xrm/my-work/approvals" (click)="isOpen.set(false)"
+       data-testid="profile-my-approvals">
+      <i class="las la-clipboard-check" aria-hidden="true"></i>
+      {{ 'shell.myApprovals' | translate }}
+    </a>
+    <!-- U5 (D-602) — the user's own notification preferences. -->
+    <a class="pp-link" routerLink="/xrm/me/notifications" (click)="isOpen.set(false)"
+       data-testid="profile-notification-settings">
+      <i class="las la-bell" aria-hidden="true"></i>
+      {{ 'shell.notificationSettings' | translate }}
+    </a>
+  </nav>
+  <div class="pp-settings">
+    <div class="pp-setting-row">
+      <span class="pp-setting-label"><i class="las la-adjust"></i> {{ 'shell.theme' | translate }}</span>
+      <div class="pp-segmented">
+        <button type="button" [class.active]="themeMode() === 'light'" (click)="setThemeMode('light')" [title]="'shell.themeLight' | translate">
+          <i class="las la-sun"></i>
+        </button>
+        <button type="button" [class.active]="themeMode() === 'dark'" (click)="setThemeMode('dark')" [title]="'shell.themeDark' | translate">
+          <i class="las la-moon"></i>
+        </button>
+        <button type="button" [class.active]="themeMode() === 'auto'" (click)="setThemeMode('auto')" [title]="'shell.themeSystem' | translate">
+          <i class="las la-desktop"></i>
+        </button>
+      </div>
+    </div>
+    <div class="pp-setting-row">
+      <span class="pp-setting-label"><i class="las la-language"></i> {{ 'shell.language' | translate }}</span>
+      <div class="pp-segmented">
+        <button type="button" [class.active]="currentLang() === 'en'" (click)="setLang('en')">EN</button>
+        <button type="button" [class.active]="currentLang() === 'ar'" (click)="setLang('ar')">AR</button>
+      </div>
+    </div>
+  </div>
+  <div class="pp-footer">
+    <button class="pp-logout" (click)="logout()">
+      <i class="las la-sign-out-alt"></i>
+      {{ 'shell.signOut' | translate }}
+    </button>
+  </div>
+</div>

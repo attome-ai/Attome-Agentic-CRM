@@ -1,0 +1,539 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'portalAdmin.title' | translate }}</h2>
+    <p class="subtitle">{{ 'portalAdmin.subtitle' | translate }}</p>
+  </div>
+</div>
+
+@if (error()) { <p class="error-msg" role="alert">{{ error() }}</p> }
+@if (notice()) { <p class="success-msg" role="status">{{ notice() }}</p> }
+
+<!-- Portals -->
+<section class="card" aria-labelledby="portals-heading">
+  <h3 id="portals-heading">{{ 'portalAdmin.portals' | translate }}</h3>
+  @if (loading()) {
+    <p class="state-msg">{{ 'portalAdmin.loading' | translate }}</p>
+  } @else if (portals().length === 0) {
+    <p class="state-msg">{{ 'portalAdmin.noPortals' | translate }}</p>
+  } @else {
+    <table class="portal-table">
+      <thead>
+        <tr>
+          <th scope="col">{{ 'portalAdmin.name' | translate }}</th>
+          <th scope="col">{{ 'portalAdmin.keyword' | translate }}</th>
+          <th scope="col">{{ 'portalAdmin.type' | translate }}</th>
+          <th scope="col">{{ 'portalAdmin.enabled' | translate }}</th>
+          <th scope="col"><span class="visually-hidden">{{ 'portalAdmin.actions' | translate }}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of portals(); track p.id) {
+          <tr [class.selected]="selected()?.id === p.id">
+            <td>{{ p.name }}</td>
+            <td><code>{{ p.keyword }}</code></td>
+            <td>{{ ('portalAdmin.portalType.' + p.portal_type) | translate }}</td>
+            <td>{{ (p.is_enabled ? 'portalAdmin.yes' : 'portalAdmin.no') | translate }}</td>
+            <td><button type="button" class="btn-ghost" (click)="select(p)">{{ 'portalAdmin.manage' | translate }}</button></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  <form class="inline-form-panel" (ngSubmit)="createPortal()">
+    <h4>{{ 'portalAdmin.createPortal' | translate }}</h4>
+    <div class="form-row-3">
+      <div class="field">
+        <label for="np-name">{{ 'portalAdmin.name' | translate }}</label>
+        <input id="np-name" name="np-name" [(ngModel)]="newPortal.name" required>
+      </div>
+      <div class="field">
+        <label for="np-keyword">{{ 'portalAdmin.keyword' | translate }}</label>
+        <input id="np-keyword" name="np-keyword" [(ngModel)]="newPortal.keyword" required
+               pattern="[a-z0-9-]{3,40}" aria-describedby="np-keyword-hint">
+        <span id="np-keyword-hint" class="hint">{{ 'portalAdmin.keywordHint' | translate }}</span>
+      </div>
+      <div class="field">
+        <label for="np-type">{{ 'portalAdmin.type' | translate }}</label>
+        <select id="np-type" name="np-type" [(ngModel)]="newPortal.portal_type">
+          @for (t of portalTypes; track t) {
+            <option [value]="t">{{ ('portalAdmin.portalType.' + t) | translate }}</option>
+          }
+        </select>
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="np-team">{{ 'portalAdmin.owningTeam' | translate }}</label>
+        <select id="np-team" name="np-team" [(ngModel)]="newPortal.owning_team_ref" aria-describedby="np-team-hint">
+          <option value="">{{ 'portalAdmin.noTeam' | translate }}</option>
+          @for (t of teams(); track t.id) { <option [value]="t.id">{{ t.name }}</option> }
+        </select>
+        <span id="np-team-hint" class="hint">{{ 'portalAdmin.owningTeamHint' | translate }}</span>
+      </div>
+      <div class="field field-cb">
+        <label><input type="checkbox" name="np-enabled" [(ngModel)]="newPortal.is_enabled"> {{ 'portalAdmin.enabled' | translate }}</label>
+      </div>
+    </div>
+    <button type="submit" class="btn-primary" [disabled]="busy()">{{ 'portalAdmin.createPortal' | translate }}</button>
+  </form>
+</section>
+
+@if (selected(); as portal) {
+  <!-- Picker suggestions: entities by display name (value = logical name), and the grant entity's fields. -->
+  <datalist id="portal-entity-options">
+    @for (e of entities(); track e.id) { <option [value]="e.logicalname">{{ e.name }}</option> }
+  </datalist>
+  <datalist id="grant-field-options">
+    @for (a of grantFields(); track a.id) { <option [value]="a.logicalname">{{ a.name }}</option> }
+  </datalist>
+
+  <!-- Settings -->
+  @if (settings(); as s) {
+    <section class="card" aria-labelledby="settings-heading">
+      <h3 id="settings-heading">{{ 'portalAdmin.settingsOf' | translate: { name: portal.name } }}</h3>
+      <form (ngSubmit)="saveSettings()">
+        <div class="form-row-3">
+          <div class="field">
+            <label for="ps-keyword">{{ 'portalAdmin.keyword' | translate }}</label>
+            <input id="ps-keyword" name="ps-keyword" [(ngModel)]="s.keyword" required pattern="[a-z0-9-]{3,40}"
+                   aria-describedby="ps-keyword-hint">
+            <span id="ps-keyword-hint" class="hint">{{ 'portalAdmin.keywordChangeHint' | translate }}</span>
+          </div>
+          <div class="field">
+            <label for="ps-type">{{ 'portalAdmin.type' | translate }}</label>
+            <select id="ps-type" name="ps-type" [(ngModel)]="s.portal_type">
+              @for (t of portalTypes; track t) { <option [value]="t">{{ ('portalAdmin.portalType.' + t) | translate }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label for="ps-mfa">{{ 'portalAdmin.mfaPolicy' | translate }}</label>
+            <select id="ps-mfa" name="ps-mfa" [(ngModel)]="s.mfa_policy">
+              @for (m of mfaPolicies; track m) { <option [value]="m">{{ ('portalAdmin.mfa.' + m) | translate }}</option> }
+            </select>
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="field">
+            <label for="ps-team">{{ 'portalAdmin.owningTeam' | translate }}</label>
+            <select id="ps-team" name="ps-team" [(ngModel)]="s.owning_team_ref" aria-describedby="ps-team-hint">
+              <option value="">{{ 'portalAdmin.noTeam' | translate }}</option>
+              @for (t of teams(); track t.id) { <option [value]="t.id">{{ t.name }}</option> }
+            </select>
+            <span id="ps-team-hint" class="hint">{{ 'portalAdmin.owningTeamHint' | translate }}</span>
+          </div>
+          <div class="field field-cb">
+            <label><input type="checkbox" name="ps-enabled" [(ngModel)]="s.is_enabled"> {{ 'portalAdmin.enabled' | translate }}</label>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary" [disabled]="busy()">{{ 'portalAdmin.saveSettings' | translate }}</button>
+      </form>
+    </section>
+  }
+
+  <!-- Account policy -->
+  <section class="card" aria-labelledby="policy-heading">
+    <h3 id="policy-heading">{{ 'portalAdmin.accountPolicy' | translate }}</h3>
+    @if (policyDraft(); as d) {
+      <form (ngSubmit)="savePolicy()">
+        <div class="form-row-2">
+          <div class="field">
+            <label for="pp-mode">{{ 'portalAdmin.signupMode' | translate }}</label>
+            <select id="pp-mode" name="pp-mode" [(ngModel)]="d.signup_mode">
+              @for (m of signupModes; track m) { <option [value]="m">{{ ('portalAdmin.signup.' + m) | translate }}</option> }
+            </select>
+          </div>
+          <div class="field">
+            <label for="pp-role">{{ 'portalAdmin.signupRole' | translate }}</label>
+            <select id="pp-role" name="pp-role" [(ngModel)]="d.signup_role_ref" aria-describedby="pp-role-hint">
+              <option value="">{{ 'portalAdmin.noSignupRole' | translate }}</option>
+              @for (r of roles(); track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+            </select>
+            <span id="pp-role-hint" class="hint">{{ 'portalAdmin.signupRoleHint' | translate }}</span>
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="field">
+            <label for="pp-domains">{{ 'portalAdmin.signupDomains' | translate }}</label>
+            <textarea id="pp-domains" name="pp-domains" rows="3" [(ngModel)]="d.signup_domains" aria-describedby="pp-list-hint"></textarea>
+          </div>
+          <div class="field">
+            <label for="pp-oidc">{{ 'portalAdmin.oidcProviders' | translate }}</label>
+            <textarea id="pp-oidc" name="pp-oidc" rows="3" [(ngModel)]="d.oidc_providers" aria-describedby="pp-list-hint"></textarea>
+          </div>
+        </div>
+        <p id="pp-list-hint" class="hint">{{ 'portalAdmin.listHint' | translate }}</p>
+        <div class="form-row-2">
+          <div class="field">
+            <label for="pp-terms">{{ 'portalAdmin.termsVersion' | translate }}</label>
+            <input id="pp-terms" name="pp-terms" [(ngModel)]="d.terms_version" aria-describedby="pp-consent-hint">
+          </div>
+          <div class="field">
+            <label for="pp-privacy">{{ 'portalAdmin.privacyVersion' | translate }}</label>
+            <input id="pp-privacy" name="pp-privacy" [(ngModel)]="d.privacy_version" aria-describedby="pp-consent-hint">
+          </div>
+        </div>
+        <p id="pp-consent-hint" class="hint">{{ 'portalAdmin.consentHint' | translate }}</p>
+        <div class="field">
+          <label for="pp-profile">{{ 'portalAdmin.editableProfileFields' | translate }}</label>
+          <textarea id="pp-profile" name="pp-profile" rows="2" [(ngModel)]="d.editable_profile_fields" aria-describedby="pp-profile-hint"></textarea>
+          <span id="pp-profile-hint" class="hint">{{ 'portalAdmin.editableProfileFieldsHint' | translate }}</span>
+        </div>
+        <div class="form-row-3">
+          <div class="field">
+            <label for="pp-cap">{{ 'portalAdmin.pageSizeCap' | translate }}</label>
+            <input id="pp-cap" name="pp-cap" type="number" min="1" max="100" [(ngModel)]="d.page_size_cap" required>
+          </div>
+          <div class="field">
+            <label for="pp-rpm">{{ 'portalAdmin.recordsRpm' | translate }}</label>
+            <input id="pp-rpm" name="pp-rpm" type="number" min="60" max="100000" [(ngModel)]="d.records_rpm" required>
+          </div>
+          <div class="field">
+            <label for="pp-cidrs">{{ 'portalAdmin.allowedCidrs' | translate }}</label>
+            <textarea id="pp-cidrs" name="pp-cidrs" rows="2" [(ngModel)]="d.allowed_cidrs" aria-describedby="pp-cidrs-hint"></textarea>
+            <span id="pp-cidrs-hint" class="hint">{{ 'portalAdmin.allowedCidrsHint' | translate }}</span>
+          </div>
+        </div>
+        <div class="form-row-3">
+          <div class="field">
+            <label for="pp-umin">{{ 'portalAdmin.usernameMinLen' | translate }}</label>
+            <input id="pp-umin" name="pp-umin" type="number" min="1" max="64" [(ngModel)]="d.username_min_len" required>
+          </div>
+          <div class="field">
+            <label for="pp-umax">{{ 'portalAdmin.usernameMaxLen' | translate }}</label>
+            <input id="pp-umax" name="pp-umax" type="number" min="1" max="64" [(ngModel)]="d.username_max_len" required>
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="field">
+            <label for="pp-ublocked">{{ 'portalAdmin.usernameBlockedWords' | translate }}</label>
+            <textarea id="pp-ublocked" name="pp-ublocked" rows="3" [(ngModel)]="d.username_blocked_words" aria-describedby="pp-ublocked-hint"></textarea>
+            <span id="pp-ublocked-hint" class="hint">{{ 'portalAdmin.usernameBlockedWordsHint' | translate }}</span>
+          </div>
+          <div class="field">
+            <label for="pp-ureserved">{{ 'portalAdmin.usernameReserved' | translate }}</label>
+            <textarea id="pp-ureserved" name="pp-ureserved" rows="3" [(ngModel)]="d.username_reserved" aria-describedby="pp-ureserved-hint"></textarea>
+            <span id="pp-ureserved-hint" class="hint">{{ 'portalAdmin.usernameReservedHint' | translate }}</span>
+          </div>
+        </div>
+        <div class="field field-cb">
+          <label><input id="pp-trusted" name="pp-trusted" type="checkbox" [(ngModel)]="d.trusted_server_login" aria-describedby="pp-trusted-hint"> {{ 'portalAdmin.trustedServerLogin' | translate }}</label>
+          <span id="pp-trusted-hint" class="hint">{{ 'portalAdmin.trustedServerLoginHint' | translate }}</span>
+        </div>
+        <button type="submit" class="btn-primary" [disabled]="busy()">{{ 'portalAdmin.savePolicy' | translate }}</button>
+      </form>
+    } @else {
+      <p class="state-msg">{{ 'portalAdmin.loading' | translate }}</p>
+    }
+  </section>
+
+  <!-- Users -->
+  <section class="card" aria-labelledby="users-heading">
+    <h3 id="users-heading">{{ 'portalAdmin.usersOf' | translate: { name: portal.name } }}</h3>
+    @if (users().length === 0) {
+      <p class="state-msg">{{ 'portalAdmin.noUsers' | translate }}</p>
+    } @else {
+      <table class="portal-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'portalAdmin.name' | translate }}</th>
+            <th scope="col">{{ 'portalAdmin.username' | translate }}</th>
+            <th scope="col">{{ 'portalAdmin.email' | translate }}</th>
+            <th scope="col">{{ 'portalAdmin.status' | translate }}</th>
+            <th scope="col">{{ 'portalAdmin.role' | translate }}</th>
+            <th scope="col">{{ 'portalAdmin.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (u of users(); track u.id) {
+            <tr>
+              <td>{{ u.name }}</td>
+              <td>{{ u.username ?? '—' }}</td>
+              <td>{{ u.email ?? '—' }}</td>
+              <td>{{ ('portalAdmin.userStatus.' + u.status) | translate }}</td>
+              <td class="row-actions">
+                <label class="visually-hidden" [for]="'role-' + u.id">{{ 'portalAdmin.chooseRole' | translate }}</label>
+                <select [id]="'role-' + u.id" [name]="'role-' + u.id" [(ngModel)]="roleChoice[u.id]">
+                  <option value="">{{ 'portalAdmin.chooseRole' | translate }}</option>
+                  @for (r of roles(); track r.id) { <option [value]="r.id">{{ r.name }}</option> }
+                </select>
+                <button type="button" class="btn-ghost" [disabled]="busy() || !roleChoice[u.id]" (click)="assignRole(u)"
+                        [attr.aria-label]="'portalAdmin.assignRoleTo' | translate: { name: u.name }">{{ 'portalAdmin.assignRole' | translate }}</button>
+                <button type="button" class="btn-ghost" [disabled]="busy()" (click)="unassignRole(u)"
+                        [attr.aria-label]="'portalAdmin.removeRoleOf' | translate: { name: u.name }">{{ 'portalAdmin.removeRole' | translate }}</button>
+              </td>
+              <td class="row-actions">
+                @if (u.status === 'invited' && u.email) {
+                  <button type="button" class="btn-ghost" [disabled]="busy()" (click)="invite(u)">{{ 'portalAdmin.invite' | translate }}</button>
+                }
+                @if (u.status === 'disabled') {
+                  <button type="button" class="btn-ghost" [disabled]="busy()" (click)="setEnabled(u, true)">{{ 'portalAdmin.enable' | translate }}</button>
+                } @else {
+                  <button type="button" class="btn-ghost" [disabled]="busy()" (click)="setEnabled(u, false)">{{ 'portalAdmin.disable' | translate }}</button>
+                }
+                <button type="button" class="btn-ghost" [disabled]="busy()" (click)="exportData(u)">{{ 'portalAdmin.exportData' | translate }}</button>
+                <button type="button" class="btn-danger-outline" [disabled]="busy()" (click)="erase(u)">{{ 'portalAdmin.erase' | translate }}</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (users().length < usersTotal()) {
+        <div class="row-actions load-more">
+          <span class="hint">{{ 'portalAdmin.usersShown' | translate: { shown: users().length, total: usersTotal() } }}</span>
+          <button type="button" class="btn-ghost" [disabled]="busy()" (click)="loadMoreUsers()">{{ 'portalAdmin.loadMore' | translate }}</button>
+        </div>
+      }
+    }
+    <form class="inline-form-panel" (ngSubmit)="createUser()">
+      <h4>{{ 'portalAdmin.addUser' | translate }}</h4>
+      <div class="form-row-2">
+        <div class="field">
+          <label for="nu-name">{{ 'portalAdmin.name' | translate }}</label>
+          <input id="nu-name" name="nu-name" [(ngModel)]="newUser.name" required>
+        </div>
+        <div class="field">
+          <label for="nu-username">{{ 'portalAdmin.username' | translate }}</label>
+          <input id="nu-username" name="nu-username" autocomplete="off" [(ngModel)]="newUser.username">
+        </div>
+        <div class="field">
+          <label for="nu-email">{{ 'portalAdmin.email' | translate }}</label>
+          <input id="nu-email" name="nu-email" type="email" [(ngModel)]="newUser.email">
+        </div>
+      </div>
+      <p class="hint">{{ 'portalAdmin.usernameOrEmail' | translate }}</p>
+      <button type="submit" class="btn-primary" [disabled]="busy()">{{ 'portalAdmin.addUser' | translate }}</button>
+    </form>
+  </section>
+
+  <!-- Roles and grants -->
+  <section class="card" aria-labelledby="roles-heading">
+    <h3 id="roles-heading" tabindex="-1">{{ 'portalAdmin.roles' | translate }}</h3>
+    @if (roles().length === 0) {
+      <p class="state-msg">{{ 'portalAdmin.noRoles' | translate }}</p>
+    } @else {
+      <ul class="role-list">
+        @for (r of roles(); track r.id) {
+          <li>
+            <button type="button" class="btn-text" [attr.aria-pressed]="role()?.id === r.id" (click)="openRole(r.id)">{{ r.name }}</button>
+            <span class="hint">{{ 'portalAdmin.userCount' | translate: { count: r.user_count } }}</span>
+          </li>
+        }
+      </ul>
+    }
+    <form class="inline-form-panel form-inline" (ngSubmit)="createRole()">
+      <div class="field">
+        <label for="nr-name">{{ 'portalAdmin.newRole' | translate }}</label>
+        <input id="nr-name" name="nr-name" [(ngModel)]="newRoleName" required>
+      </div>
+      <button type="submit" class="btn-primary" [disabled]="busy()">{{ 'portalAdmin.createRole' | translate }}</button>
+    </form>
+
+    @if (role(); as r) {
+      <div class="inline-form-panel">
+        <h4>{{ 'portalAdmin.grantsOf' | translate: { name: r.name } }}</h4>
+        <form class="form-inline role-manage" (ngSubmit)="renameRole()">
+          <div class="field">
+            <label for="rr-name">{{ 'portalAdmin.roleName' | translate }}</label>
+            <input id="rr-name" name="rr-name" [(ngModel)]="roleName" required>
+          </div>
+          <button type="submit" class="btn-ghost" [disabled]="busy() || !roleName.trim() || roleName.trim() === r.name">{{ 'portalAdmin.renameRole' | translate }}</button>
+          <button type="button" class="btn-danger-outline" [disabled]="busy()" (click)="deleteRole()"
+                  aria-describedby="rr-delete-hint">{{ 'portalAdmin.deleteRole' | translate }}</button>
+          <span id="rr-delete-hint" class="hint">{{ 'portalAdmin.deleteRoleHint' | translate }}</span>
+        </form>
+        @if (r.grants.length === 0) {
+          <p class="state-msg">{{ 'portalAdmin.noGrants' | translate }}</p>
+        } @else {
+          <table class="portal-table">
+            <thead>
+              <tr>
+                <th scope="col">{{ 'portalAdmin.entity' | translate }}</th>
+                <th scope="col">{{ 'portalAdmin.actionsAllowed' | translate }}</th>
+                <th scope="col">{{ 'portalAdmin.condition' | translate }}</th>
+                <th scope="col">{{ 'portalAdmin.actions' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (g of r.grants; track g.entity) {
+                <tr>
+                  <td>
+                    {{ entityName(g.entity) }} <code>{{ g.entity }}</code>
+                    @if (g.public) { <span class="badge-public">{{ 'portalAdmin.publicLabel' | translate }}</span> }
+                  </td>
+                  <td>
+                    @if (g.can_read) { {{ 'portalAdmin.canRead' | translate }} }
+                    @if (g.can_create) { · {{ 'portalAdmin.canCreate' | translate }} }
+                    @if (g.can_update) { · {{ 'portalAdmin.canUpdate' | translate }} }
+                    @if (g.can_delete) { · {{ 'portalAdmin.canDelete' | translate }} }
+                  </td>
+                  <td>
+                    @for (c of g.conditions; track $index) {
+                      <div><code>{{ c.field }} {{ c.operator }} {{ c.value_ref ?? c.value }}</code></div>
+                    }
+                  </td>
+                  <td class="row-actions">
+                    <button type="button" class="btn-ghost" (click)="editGrant(g.entity)">{{ 'portalAdmin.edit' | translate }}</button>
+                    <button type="button" class="btn-danger-outline" [disabled]="busy()" (click)="deleteGrant(g.entity)">{{ 'portalAdmin.deleteGrant' | translate }}</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+
+        <form class="grant-editor" (ngSubmit)="saveGrant()">
+          <h4>{{ 'portalAdmin.editGrant' | translate }}</h4>
+          <div class="form-row-2">
+            <div class="field">
+              <label for="g-entity">{{ 'portalAdmin.entity' | translate }}</label>
+              <input id="g-entity" name="g-entity" list="portal-entity-options" autocomplete="off"
+                     [(ngModel)]="grant.entity" (ngModelChange)="onGrantEntityChange($event)" required
+                     aria-describedby="g-entity-hint">
+              <span id="g-entity-hint" class="hint">{{ 'portalAdmin.entityPickerHint' | translate }}</span>
+            </div>
+            <fieldset class="field checks">
+              <legend class="field-caption">{{ 'portalAdmin.actionsAllowed' | translate }}</legend>
+              <label><input type="checkbox" name="g-read" [(ngModel)]="grant.can_read"> {{ 'portalAdmin.canRead' | translate }}</label>
+              <label><input type="checkbox" name="g-create" [(ngModel)]="grant.can_create"> {{ 'portalAdmin.canCreate' | translate }}</label>
+              <label><input type="checkbox" name="g-update" [(ngModel)]="grant.can_update"> {{ 'portalAdmin.canUpdate' | translate }}</label>
+              <label><input type="checkbox" name="g-delete" [(ngModel)]="grant.can_delete"> {{ 'portalAdmin.canDelete' | translate }}</label>
+            </fieldset>
+          </div>
+          <fieldset class="conditions">
+            <legend class="field-caption">{{ 'portalAdmin.conditions' | translate }}</legend>
+            <p id="g-value-hint" class="hint">{{ 'portalAdmin.conditionValueHint' | translate }}</p>
+            @for (c of grant.conditions; track c; let i = $index) {
+              <div class="form-row-3 condition-row">
+                <div class="field">
+                  <label [for]="'g-cfield-' + i">{{ 'portalAdmin.conditionField' | translate }}</label>
+                  <input [id]="'g-cfield-' + i" [name]="'g-cfield-' + i" list="grant-field-options" autocomplete="off" [(ngModel)]="c.field">
+                </div>
+                <div class="field">
+                  <label [for]="'g-op-' + i">{{ 'portalAdmin.operator' | translate }}</label>
+                  <select [id]="'g-op-' + i" [name]="'g-op-' + i" [(ngModel)]="c.operator">
+                    @for (op of operators; track op) { <option [value]="op">{{ op }}</option> }
+                  </select>
+                </div>
+                <div class="field">
+                  <label [for]="'g-value-' + i">{{ 'portalAdmin.conditionValue' | translate }}</label>
+                  <input [id]="'g-value-' + i" [name]="'g-value-' + i" [(ngModel)]="c.value" aria-describedby="g-value-hint">
+                </div>
+                <button type="button" class="btn-ghost" (click)="removeCondition(i)"
+                        [attr.aria-label]="'portalAdmin.removeCondition' | translate: { n: i + 1 }">{{ 'portalAdmin.remove' | translate }}</button>
+              </div>
+            }
+            @if (grant.conditions.length < maxConditions) {
+              <button type="button" class="btn-ghost" (click)="addCondition()">{{ 'portalAdmin.addCondition' | translate }}</button>
+            } @else {
+              <p class="hint">{{ 'portalAdmin.maxConditions' | translate: { max: maxConditions } }}</p>
+            }
+          </fieldset>
+
+          <table class="portal-table field-profile">
+            <caption>{{ 'portalAdmin.fieldProfile' | translate }}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{{ 'portalAdmin.field' | translate }}</th>
+                <th scope="col">{{ 'portalAdmin.canRead' | translate }}</th>
+                <th scope="col">{{ 'portalAdmin.canWrite' | translate }}</th>
+                <th scope="col">{{ 'portalAdmin.canFilter' | translate }}</th>
+                <th scope="col"><span class="visually-hidden">{{ 'portalAdmin.actions' | translate }}</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of grant.fields; track $index; let i = $index) {
+                <tr>
+                  <td>
+                    <label class="visually-hidden" [for]="'gf-' + i">{{ 'portalAdmin.field' | translate }}</label>
+                    <input [id]="'gf-' + i" [name]="'gf-' + i" list="grant-field-options" autocomplete="off" [(ngModel)]="f.field">
+                  </td>
+                  <td><input type="checkbox" [name]="'gfr-' + i" [(ngModel)]="f.can_read" [attr.aria-label]="'portalAdmin.canRead' | translate"></td>
+                  <td><input type="checkbox" [name]="'gfw-' + i" [(ngModel)]="f.can_write" [attr.aria-label]="'portalAdmin.canWrite' | translate"></td>
+                  <td><input type="checkbox" [name]="'gff-' + i" [(ngModel)]="f.can_filter" [attr.aria-label]="'portalAdmin.canFilter' | translate"></td>
+                  <td><button type="button" class="btn-ghost" (click)="removeField(i)">{{ 'portalAdmin.remove' | translate }}</button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <p class="hint">{{ 'portalAdmin.fieldProfileHint' | translate }}</p>
+          <div class="row-actions">
+            <button type="button" class="btn-ghost" (click)="addField()">{{ 'portalAdmin.addField' | translate }}</button>
+            <button type="submit" class="btn-primary" [disabled]="busy()">{{ 'portalAdmin.saveGrant' | translate }}</button>
+          </div>
+        </form>
+      </div>
+    }
+  </section>
+
+  <!-- Entity settings -->
+  <section class="card" aria-labelledby="entities-heading">
+    <h3 id="entities-heading">{{ 'portalAdmin.entitySettings' | translate }}</h3>
+    @if (entityConfigs().length > 0) {
+      <table class="portal-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'portalAdmin.entity' | translate }}</th>
+            <th scope="col">{{ 'portalAdmin.portalUserField' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of entityConfigs(); track c.entity) {
+            <tr><td>{{ entityName(c.entity) }} <code>{{ c.entity }}</code></td><td><code>{{ c.portal_user_field ?? '—' }}</code></td></tr>
+          }
+        </tbody>
+      </table>
+    }
+    <form class="inline-form-panel form-inline" (ngSubmit)="saveEntityConfig()">
+      <div class="field">
+        <label for="ec-entity">{{ 'portalAdmin.entity' | translate }}</label>
+        <input id="ec-entity" name="ec-entity" list="portal-entity-options" autocomplete="off"
+               [(ngModel)]="entityConfig.entity" (ngModelChange)="onConfigEntityChange($event)" required
+               aria-describedby="ec-entity-hint">
+        <span id="ec-entity-hint" class="hint">{{ 'portalAdmin.entityPickerHint' | translate }}</span>
+      </div>
+      <div class="field">
+        <label for="ec-field">{{ 'portalAdmin.portalUserField' | translate }}</label>
+        <select id="ec-field" name="ec-field" [(ngModel)]="entityConfig.portal_user_field" aria-describedby="ec-field-hint">
+          <option value="">{{ 'portalAdmin.noPortalUserField' | translate }}</option>
+          @for (a of portalUserFields(); track a.id) { <option [value]="a.logicalname">{{ a.name }} ({{ a.logicalname }})</option> }
+        </select>
+        <span id="ec-field-hint" class="hint">{{ 'portalAdmin.portalUserFieldHint' | translate }}</span>
+      </div>
+      <button type="submit" class="btn-primary" [disabled]="busy()">{{ 'portalAdmin.save' | translate }}</button>
+    </form>
+  </section>
+
+  <!-- Erasure requests -->
+  <section class="card" aria-labelledby="erasure-heading">
+    <h3 id="erasure-heading">{{ 'portalAdmin.erasureRequests' | translate }}</h3>
+    @if (erasures().length === 0) {
+      <p class="state-msg">{{ 'portalAdmin.noErasureRequests' | translate }}</p>
+    } @else {
+      <table class="portal-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'portalAdmin.email' | translate }}</th>
+            <th scope="col">{{ 'portalAdmin.status' | translate }}</th>
+            <th scope="col">{{ 'portalAdmin.requestedAt' | translate }}</th>
+            <th scope="col">{{ 'portalAdmin.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (e of erasures(); track e.id) {
+            <tr>
+              <td>{{ userName(e.webportal_user_id) }}</td>
+              <td>{{ ('portalAdmin.erasureStatus.' + e.status) | translate }}</td>
+              <td>{{ e.requested_at | localDate }}</td>
+              <td class="row-actions">
+                @if (e.status === 'open') {
+                  <button type="button" class="btn-ghost" [disabled]="busy()" (click)="rejectErasure(e)">{{ 'portalAdmin.reject' | translate }}</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+}

@@ -1,0 +1,43 @@
+<div class="tl-container">
+  <div class="tl-toolbar">
+    <div class="tl-nav">
+      <button type="button" class="btn btn-secondary" (click)="previousWindow()">
+        <i class="las la-angle-left"></i>
+      </button>
+      <button type="button" class="btn btn-text" (click)="today()">{{ 'entityViews.timeline.today' | translate }}</button>
+      <button type="button" class="btn btn-secondary" (click)="nextWindow()">
+        <i class="las la-angle-right"></i>
+      </button>
+    </div>
+  </div>
+
+  @if (loading()) {
+  <div class="tl-status">{{ 'entityViews.timeline.loading' | translate }}</div>
+  } @else if (error()) {
+  <div class="tl-status tl-status--error">{{ error() }}</div>
+  } @else {
+  <div class="tl-scroll">
+    <div class="tl-header">
+      @for (day of days(); track day.getTime()) {
+      <div class="tl-header-cell">{{ day.getDate() }}</div>
+      }
+    </div>
+    <div class="tl-rows">
+      @for (bar of bars(); track bar.id) {
+      <div class="tl-row">
+        <div class="tl-track">
+          <button type="button" class="tl-bar" [class]="bar.colorClass"
+            [style.left.%]="bar.leftPct * 100" [style.width.%]="bar.widthPct * 100"
+            (click)="onBarClick(bar)">
+            {{ bar.title }}
+          </button>
+        </div>
+      </div>
+      }
+      @if (bars().length === 0) {
+      <div class="tl-empty">{{ 'entityViews.timeline.empty' | translate }}</div>
+      }
+    </div>
+  </div>
+  }
+</div>

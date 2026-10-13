@@ -1,0 +1,79 @@
+<xrm-governance-nav />
+
+<div class="page-header">
+  <div>
+    <h2>{{ 'governance.changes.title' | translate }}</h2>
+    <p class="subtitle">{{ 'governance.changes.subtitle' | translate }}</p>
+  </div>
+</div>
+
+<form class="gov-filters cf-filters" (ngSubmit)="apply()">
+  <label for="cf-kind">{{ 'governance.changes.kind' | translate }}</label>
+  <select id="cf-kind" name="kind" [ngModel]="kind()" (ngModelChange)="kind.set($event)">
+    <option value="">{{ 'governance.common.all' | translate }}</option>
+    @for (k of kinds; track k) {
+      <option [value]="k">{{ 'governance.changes.kinds.' + k | translate }}</option>
+    }
+  </select>
+  <label for="cf-from">{{ 'governance.changes.from' | translate }}</label>
+  <input id="cf-from" name="from" type="date" [ngModel]="from()" (ngModelChange)="from.set($event)" />
+  <label for="cf-to">{{ 'governance.changes.to' | translate }}</label>
+  <input id="cf-to" name="to" type="date" [ngModel]="to()" (ngModelChange)="to.set($event)" />
+  <button type="submit" class="btn-ghost" [disabled]="loading()">
+    <i class="las la-filter" aria-hidden="true"></i> {{ 'governance.changes.apply' | translate }}
+  </button>
+  <button type="button" class="btn-text" (click)="reset()" [disabled]="loading()">
+    {{ 'governance.changes.reset' | translate }}
+  </button>
+</form>
+<p class="gov-muted cf-window">{{ 'governance.changes.windowHint' | translate }}</p>
+
+<section class="card" aria-labelledby="cf-title">
+  <h3 id="cf-title">
+    {{ 'governance.changes.listTitle' | translate }}
+    <span class="count">{{ total() | localNumber }}</span>
+  </h3>
+  @if (loading()) {
+    <p class="state-msg">{{ 'governance.common.loading' | translate }}</p>
+  } @else if (error()) {
+    <p class="error-msg" role="alert">{{ error() }}</p>
+  } @else if (items().length === 0) {
+    <div class="empty-state"><p>{{ 'governance.changes.empty' | translate }}</p></div>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'governance.changes.when' | translate }}</th>
+            <th scope="col">{{ 'governance.changes.kind' | translate }}</th>
+            <th scope="col">{{ 'governance.changes.description' | translate }}</th>
+            <th scope="col">{{ 'governance.changes.actor' | translate }}</th>
+            <th scope="col">{{ 'governance.changes.reference' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (c of items(); track $index) {
+            <tr>
+              <td class="cell-muted cf-when">{{ c.occurred_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</td>
+              <td><span [class]="'badge cf-kind cf-kind--' + c.kind">{{ 'governance.changes.kinds.' + c.kind | translate }}</span></td>
+              <td>{{ c.description }}</td>
+              <td [class.cell-muted]="!c.actor">{{ c.actor || ('governance.changes.noActor' | translate) }}</td>
+              <td class="cell-mono cf-ref">{{ c.reference }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (hasPrevious() || hasNext()) {
+      <nav class="gov-pager" [attr.aria-label]="'governance.common.pagination' | translate">
+        <button type="button" class="btn-ghost" (click)="previous()" [disabled]="!hasPrevious()">
+          {{ 'governance.common.previous' | translate }}
+        </button>
+        <span>{{ 'governance.common.pageOf' | translate: { page: page(), pages: pages() } }}</span>
+        <button type="button" class="btn-ghost" (click)="next()" [disabled]="!hasNext()">
+          {{ 'governance.common.next' | translate }}
+        </button>
+      </nav>
+    }
+  }
+</section>

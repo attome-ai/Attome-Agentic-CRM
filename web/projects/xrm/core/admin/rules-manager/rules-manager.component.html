@@ -1,0 +1,85 @@
+<section class="page">
+  <header>
+    <div>
+      <h1>{{ 'businessRules.title' | translate }}</h1>
+      <p>{{ 'businessRules.intro' | translate }}</p>
+    </div>
+    <button type="button" class="primary" (click)="startCreate()">
+      <i class="las la-plus" aria-hidden="true"></i> {{ 'businessRules.action.new' | translate }}
+    </button>
+  </header>
+
+  @if (error()) { <div class="notice error" role="alert">{{ error() }}</div> }
+
+  <div class="workspace">
+    <div class="list-panel">
+      <div class="toolbar">
+        <select [attr.aria-label]="'businessRules.list.entityFilter' | translate"
+                (change)="setEntityFilter($any($event.target).value)">
+          <option value="" [selected]="entityFilter() === ''">{{ 'businessRules.list.allEntities' | translate }}</option>
+          @for (e of entities(); track e.id) {
+            <option [value]="e.logicalname" [selected]="e.logicalname === entityFilter()">{{ e.name }}</option>
+          }
+        </select>
+        <input type="search" autocomplete="off" [value]="search()"
+               [attr.aria-label]="'businessRules.list.search' | translate"
+               [placeholder]="'businessRules.list.search' | translate"
+               (input)="search.set($any($event.target).value)" />
+        <span class="count" role="status">{{ 'businessRules.list.count' | translate: { count: filtered().length } }}</span>
+      </div>
+      @if (loading()) {
+        <div class="empty" role="status">{{ 'businessRules.list.loading' | translate }}</div>
+      } @else {
+        <ul class="items">
+          @for (item of filtered(); track item.id) {
+            <li>
+              <button type="button" class="item" [class.selected]="selected()?.id === item.id"
+                      [attr.aria-current]="selected()?.id === item.id ? 'true' : null"
+                      [disabled]="opening() === item.id" (click)="open(item)">
+                <span class="item-icon" aria-hidden="true">
+                  <i class="las" [class.la-shield-alt]="item.kind === 'business'" [class.la-code]="item.kind !== 'business'"></i>
+                </span>
+                <span class="item-copy">
+                  <strong>{{ label(item) }}</strong>
+                  <small>{{ item.entity_logicalname }} · {{ audienceText(item) }}</small>
+                  <small>{{ policyText(item) }}</small>
+                </span>
+                <span class="item-tags">
+                  @if (!item.is_active) { <span class="tag off">{{ 'businessRules.badge.inactive' | translate }}</span> }
+                  @if (item.applies_to_nobody) {
+                    <span class="tag warn">
+                      <i class="las la-user-lock" aria-hidden="true"></i> {{ 'businessRules.list.appliesToNobody' | translate }}
+                    </span>
+                  }
+                  @if (item.disabled_reason) {
+                    <span class="tag warn">
+                      <i class="las la-exclamation-triangle" aria-hidden="true"></i> {{ 'businessRules.list.turnedOff' | translate }}
+                    </span>
+                  }
+                  @if (item.load_error) { <span class="tag warn">{{ 'businessRules.list.loadError' | translate }}</span> }
+                  <xrm-owner-layer-badge [layer]="item.owner_layer" />
+                </span>
+              </button>
+            </li>
+          } @empty {
+            <li class="empty">{{ 'businessRules.list.empty' | translate }}</li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div class="editor">
+      @if (editing()) {
+        <xrm-business-rule-editor [rule]="selected()" [entities]="entities()"
+                                  [staffRoles]="staffRoles()" [portalRoles]="portalRoles()"
+                                  [defaultEntity]="entityFilter()"
+                                  (saved)="onSaved($event)" (retired)="onRetired()" (closed)="close()" />
+      } @else {
+        <div class="empty editor-empty">
+          <i class="las la-shield-alt" aria-hidden="true"></i>
+          <p>{{ 'businessRules.list.pick' | translate }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>

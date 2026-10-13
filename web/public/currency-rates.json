@@ -1,0 +1,10 @@
+[
+  { "code": "USD", "icon": "$", "rate": 1 },
+  { "code": "EUR", "icon": "€", "rate": 0.92 },
+  { "code": "GBP", "icon": "£", "rate": 0.79 },
+  { "code": "AED", "icon": "د.إ", "rate": 3.67 },
+  { "code": "SAR", "icon": "﷼", "rate": 3.75 },
+  { "code": "EGP", "icon": "ج.م", "rate": 48.5 },
+  { "code": "INR", "icon": "₹", "rate": 83.3 },
+  { "code": "JPY", "icon": "¥", "rate": 149.5 }
+]

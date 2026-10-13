@@ -1,0 +1,77 @@
+<div class="page-header">
+  <div>
+    <h2>New Request</h2>
+    <p class="subtitle">Pick a service and tell us what you need — priority and routing are set automatically.</p>
+  </div>
+</div>
+
+@if (result(); as r) {
+  <div class="card">
+    <h3>Request submitted</h3>
+    <p>Your request is <strong>{{ r.status }}</strong>. Keep this tracking token to check its status later:</p>
+    <p class="mono-input" style="padding: 8px; border: 1px solid var(--color-border); border-radius: 6px;">{{ r.portal_token }}</p>
+    <div class="btn-row">
+      <button class="btn-primary" (click)="startAnother()">Start another request</button>
+    </div>
+  </div>
+} @else {
+  @if (loading()) {
+    <p class="state-msg">Loading services…</p>
+  } @else if (error()) {
+    <p class="error-msg">{{ error() }}</p>
+  } @else if (offerings().length === 0) {
+    <div class="empty-state">
+      <h3>No services available</h3>
+      <p>No active service offerings are configured yet.</p>
+    </div>
+  } @else {
+    <div class="card">
+      <h3>1. Choose a service</h3>
+      <div class="form-row-2">
+        @for (offering of offerings(); track offering.id) {
+          <label class="field" style="cursor: pointer; border: 1px solid var(--color-border); border-radius: 8px; padding: 10px;"
+                 [style.borderColor]="selectedOfferingId() === offering.id ? 'var(--color-accent)' : 'var(--color-border)'">
+            <span class="field-caption">
+              <input type="radio" name="offering" [checked]="selectedOfferingId() === offering.id" (change)="select(offering)" />
+              <strong>{{ offering.name }}</strong>
+            </span>
+            @if (offering.description) { <span class="hint">{{ offering.description }}</span> }
+            <span class="badge badge-other">{{ offering.default_priority }} priority</span>
+          </label>
+        }
+      </div>
+    </div>
+
+    @if (selectedOfferingId()) {
+      <div class="card">
+        <h3>2. Describe your request</h3>
+        <div class="form-row-1">
+          <div class="field">
+            <label for="req-title">Title</label>
+            <input id="req-title" type="text" [ngModel]="title()" (ngModelChange)="title.set($event)" />
+          </div>
+        </div>
+        <div class="form-row-1">
+          <div class="field">
+            <label for="req-description">Description</label>
+            <textarea id="req-description" rows="4" [ngModel]="description()" (ngModelChange)="description.set($event)"></textarea>
+          </div>
+        </div>
+        <div class="form-row-1">
+          <div class="field">
+            <label for="req-type">Type</label>
+            <select id="req-type" [ngModel]="requestType()" (ngModelChange)="requestType.set($event)">
+              @for (t of requestTypes; track t) { <option [value]="t">{{ t }}</option> }
+            </select>
+          </div>
+        </div>
+        @if (submitError()) { <p class="error-msg">{{ submitError() }}</p> }
+        <div class="btn-row">
+          <button class="btn-primary" (click)="submit()" [disabled]="submitting() || !title().trim()">
+            {{ submitting() ? 'Submitting…' : 'Submit request' }}
+          </button>
+        </div>
+      </div>
+    }
+  }
+}

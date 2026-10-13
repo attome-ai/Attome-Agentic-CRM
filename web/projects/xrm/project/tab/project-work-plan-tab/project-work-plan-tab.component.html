@@ -1,0 +1,136 @@
+@if (loading()) {
+  <p class="pm-state-msg">Loading work plan…</p>
+} @else if (error()) {
+  <p class="pm-state-msg pm-state-error">{{ error() }}</p>
+} @else {
+  <section class="pm-panel">
+    <header class="pm-panel-header pm-wp-header">
+      <div>
+        <i class="las la-sitemap"></i>
+        <h3>Enterprise Work Plan</h3>
+        <p class="pm-panel-subtitle">Hierarchical WBS &middot; point-weighted progress &middot; phase rollups</p>
+      </div>
+      <div class="pm-wp-actions">
+        <button type="button" class="pm-btn" (click)="expandAll()">Expand all</button>
+        <button type="button" class="pm-btn" (click)="collapseAll()">Collapse</button>
+      </div>
+    </header>
+
+    @if (summary(); as s) {
+      <div class="pm-wp-summary">
+        <div class="pm-wp-summary-item pm-wp-summary-main">
+          <span class="pm-tile-label">Project completion</span>
+          <span class="pm-tile-value">{{ s.weighted_progress_pct }}%</span>
+          <div class="pm-progress-bar"><div class="pm-progress-fill" [style.width.%]="s.weighted_progress_pct"></div></div>
+        </div>
+        <div class="pm-wp-summary-item">
+          <span class="pm-tile-label">Points</span>
+          <span class="pm-tile-value">{{ s.points_completed }} / {{ s.points_total }}</span>
+          <span class="pm-tile-caption">completed / total</span>
+        </div>
+        <div class="pm-wp-summary-item">
+          <span class="pm-tile-label">Work items</span>
+          <span class="pm-tile-value">{{ s.work_items_done }} / {{ s.work_items_actionable }}</span>
+          <span class="pm-tile-caption">done / actionable</span>
+        </div>
+        <div class="pm-wp-summary-item">
+          <span class="pm-tile-label">Blocked points</span>
+          <span class="pm-tile-value">{{ s.points_blocked }}</span>
+          <span class="pm-tile-caption">delivery exposure</span>
+        </div>
+        <div class="pm-wp-summary-item">
+          <span class="pm-tile-label">Forecast</span>
+          <span class="pm-tile-value pm-forecast">{{ formatDate(s.forecast_date) }}</span>
+          <span class="pm-tile-caption">{{ forecastCaption(s) }}</span>
+        </div>
+      </div>
+    }
+
+    <div class="pm-view-toggle">
+      <button type="button" class="pm-view-btn pm-view-btn-active">WBS</button>
+      <button type="button" class="pm-view-btn" disabled title="Timeline view is not built yet">Timeline</button>
+      <button type="button" class="pm-view-btn" disabled title="Board view is not built yet">Board</button>
+    </div>
+
+    @if (rootItems().length === 0) {
+      <p class="pm-state-msg">No work items yet.</p>
+    } @else {
+      <div class="pm-wbs-table">
+        <div class="pm-wbs-row pm-wbs-head">
+          <span>Work item</span><span>Points</span><span>Status</span>
+          <span>Owner</span><span>Progress</span><span>Start</span><span>Due</span>
+        </div>
+        <ul class="pm-wbs-tree" role="tree">
+          @for (node of rootItems(); track node.id) {
+            <ng-container *ngTemplateOutlet="itemTpl; context: { $implicit: node, depth: 0 }" />
+          }
+        </ul>
+      </div>
+    }
+
+    <ng-template #itemTpl let-node let-depth="depth">
+      <li class="pm-wbs-item">
+        <div class="pm-wbs-row" role="treeitem" tabindex="0"
+             [attr.aria-expanded]="hasChildren(node.id) ? isExpanded(node.id) : null"
+             [attr.aria-selected]="false"
+             [style.paddingLeft.px]="depth * 20">
+          <span class="pm-wbs-name-cell">
+            @if (hasChildren(node.id)) {
+              <button type="button" class="pm-caret-btn"
+                      [attr.aria-label]="isExpanded(node.id) ? 'Collapse' : 'Expand'"
+                      (click)="toggleExpand(node.id)">
+                <i class="las" [class.la-caret-right]="!isExpanded(node.id)" [class.la-caret-down]="isExpanded(node.id)"></i>
+              </button>
+            } @else {
+              <span class="pm-caret-spacer"></span>
+            }
+            <i class="las pm-type-icon" [class.la-flag]="node.item_type === 'phase'" [class.la-check-circle]="node.item_type !== 'phase'"></i>
+            <span class="pm-wbs-name" [title]="node.name">{{ node.name }}</span>
+          </span>
+          <span>{{ node.points_completed }} / {{ node.points_total }}</span>
+          <span><span class="pm-badge" [class]="'pm-status-' + node.status">{{ statusLabel(node.status) }}</span></span>
+          <span class="pm-cell-muted">{{ node.owner_id ? shortId(node.owner_id) : '—' }}</span>
+          <span class="pm-progress-cell">
+            <div class="pm-progress-bar pm-progress-bar-sm"><div class="pm-progress-fill" [style.width.%]="node.progress_pct"></div></div>
+            <span class="pm-progress-pct">{{ node.progress_pct }}%</span>
+          </span>
+          <span class="pm-cell-muted">{{ formatDate(node.start_date) }}</span>
+          <span class="pm-cell-muted">{{ formatDate(node.due_date) }}</span>
+        </div>
+        @if (hasChildren(node.id) && isExpanded(node.id)) {
+          <ul class="pm-wbs-children" role="group">
+            @for (child of childrenOf(node.id); track child.id) {
+              <ng-container *ngTemplateOutlet="itemTpl; context: { $implicit: child, depth: depth + 1 }" />
+            }
+          </ul>
+        }
+      </li>
+    </ng-template>
+  </section>
+
+  <section class="pm-panel pm-phase-panel">
+    <header class="pm-panel-header">
+      <i class="las la-chart-bar"></i>
+      <h3>Phase Performance</h3>
+    </header>
+    <div class="pm-phase-list">
+      @for (node of rootItems(); track node.id) {
+        <div class="pm-phase-row">
+          <div class="pm-phase-row-head">
+            <span>{{ node.name }}</span>
+            <span>{{ node.progress_pct }}% &middot; {{ node.points_completed }}/{{ node.points_total }} pts</span>
+          </div>
+          <div class="pm-progress-bar"><div class="pm-progress-fill" [style.width.%]="node.progress_pct"></div></div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <section class="pm-panel pm-activity-panel">
+    <header class="pm-panel-header">
+      <i class="las la-history"></i>
+      <h3>Work Plan Activity</h3>
+    </header>
+    <p class="pm-state-msg">Activity feed not yet available — no event log is wired up for work items yet.</p>
+  </section>
+}

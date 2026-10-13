@@ -1,0 +1,15 @@
+@if (!style()?.color && !style()?.icon) {
+  {{ value() }}
+} @else {
+  <span class="xf-pill"
+        [style.--pill-fg]="style()?.color"
+        [style.--pill-bg]="pillBg()"
+        [style.--pill-border]="pillBorder()">
+    @if (style()?.icon) {
+      <i [class]="style()!.icon" aria-hidden="true"></i>
+    } @else {
+      <span class="xf-pill-dot" aria-hidden="true"></span>
+    }
+    <span>{{ value() }}</span>
+  </span>
+}

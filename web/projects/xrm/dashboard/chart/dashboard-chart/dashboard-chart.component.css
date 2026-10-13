@@ -1,0 +1,278 @@
+:host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.xch {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.xch-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+
+.xch-toggle {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 0 2px;
+}
+
+.xch-toggle:hover,
+.xch-toggle:focus-visible,
+.xch-toggle[aria-pressed='true'] {
+  opacity: 1;
+}
+
+.xch-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.xch-surface {
+  position: relative;
+  flex: 1;
+  min-height: 80px;
+  min-width: 0;
+}
+
+.xch-svg {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+}
+
+.xch-grid line {
+  stroke: var(--color-border, #2a2f3a);
+  stroke-width: 1;
+}
+
+.xch-grid line.xch-zero {
+  stroke: var(--color-text-secondary, #94a3b8);
+}
+
+.xch-axis-label {
+  fill: currentColor;
+  opacity: 0.65;
+  font-size: 10px;
+}
+
+.xch-threshold {
+  stroke: #94a3b8;
+  stroke-width: 1;
+  stroke-dasharray: 4 2;
+}
+
+.xch-mark:focus {
+  outline: none;
+}
+
+.xch-interactive {
+  cursor: pointer;
+}
+
+.xch-interactive:hover,
+.xch-interactive:focus-visible {
+  opacity: 0.8;
+  stroke: var(--color-text-primary, #e5eefc);
+  stroke-width: 2;
+}
+
+.xch-point {
+  stroke: var(--color-surface, #151922);
+  stroke-width: 1;
+}
+
+.xch-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 8px));
+  pointer-events: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--color-surface-alt, #0f1218);
+  border: 1px solid var(--color-border, #2a2f3a);
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.xch-tooltip-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.xch-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.xch-legend-column {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow: auto;
+}
+
+.xch-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  min-width: 0;
+}
+
+.xch-legend-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xch-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+
+.xch-muted {
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.xch-donut-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 0;
+}
+
+.xch-donut {
+  flex: 0 0 auto;
+}
+
+.xch-donut-hover {
+  margin: 4px 0 0;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.xch-funnel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.xch-funnel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 2px;
+  border-radius: 4px;
+  text-align: start;
+}
+
+button.xch-funnel-row:hover,
+button.xch-funnel-row:focus-visible {
+  background: color-mix(in srgb, var(--color-primary, #8b5cf6) 14%, transparent);
+}
+
+.xch-funnel-label {
+  flex: 0 0 30%;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xch-funnel-track {
+  flex: 1;
+  height: 16px;
+  background: var(--color-surface-alt, #0f1218);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.xch-funnel-fill {
+  display: block;
+  height: 100%;
+  background: var(--color-primary, #8b5cf6);
+  border-radius: 4px;
+  min-width: 2px;
+}
+
+.xch-funnel-value {
+  flex: 0 0 auto;
+  min-width: 32px;
+  font-size: 12px;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.xch-table-wrap {
+  flex: 1;
+  overflow: auto;
+}
+
+.xch-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.xch-table th,
+.xch-table td {
+  padding: 3px 8px;
+  text-align: start;
+  border-bottom: 1px solid var(--color-border, #2a2f3a);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.xch-table thead th {
+  opacity: 0.7;
+  font-weight: 600;
+}
+
+.xch-table tbody th {
+  font-weight: 400;
+}
+
+.xch-cell-button {
+  border: 0;
+  background: transparent;
+  color: var(--color-primary, #8b5cf6);
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}

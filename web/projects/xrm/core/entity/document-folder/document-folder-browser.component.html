@@ -1,0 +1,285 @@
+<div class="xdf">
+  @if (loading() && !loadedOnce()) {
+    <div class="xdf-browser xdf-skeleton" [attr.aria-label]="'documents.loading' | translate" aria-busy="true">
+      <aside class="xdf-sidebar">
+        <h3>{{ 'documents.locations' | translate }}</h3>
+        <div class="xdf-skeleton-line xdf-skeleton-location"></div>
+        <div class="xdf-skeleton-line xdf-skeleton-location xdf-skeleton-short"></div>
+      </aside>
+      <main class="xdf-main">
+        <ul class="xdf-list">
+          <li class="xdf-list-head">
+            <span>{{ 'documents.colName' | translate }}</span><span>{{ 'documents.colCreated' | translate }}</span><span>{{ 'documents.colModified' | translate }}</span><span>{{ 'documents.colSize' | translate }}</span>
+          </li>
+          @for (placeholder of [1, 2, 3, 4]; track placeholder) {
+            <li class="xdf-skeleton-row">
+              <span class="xdf-skeleton-line"></span>
+              <span class="xdf-skeleton-line"></span>
+              <span class="xdf-skeleton-line"></span>
+              <span class="xdf-skeleton-line xdf-skeleton-short"></span>
+            </li>
+          }
+        </ul>
+      </main>
+    </div>
+    <p class="xdf-status"><i class="las la-circle-notch" style="animation:xdf-spin .9s linear infinite"></i> Loading…</p>
+  } @else {
+    @if (error()) {
+      <p class="xdf-status xdf-status-error">{{ error() }}</p>
+    }
+
+    @if (tiles().length === 0 && rows().length === 0 && !canUploadHere()) {
+      <p class="xdf-status">Nothing here yet.</p>
+    }
+
+    @if (uploadState() === 'error' || (uploadState() === 'idle' && uploadMessage())) {
+      <p class="xdf-status xdf-upload-status" [class.xdf-status-error]="uploadState() === 'error'">
+        {{ uploadMessage() }}
+        @if (uploadState() === 'idle' && uploadMessage()) {
+          <button type="button" class="xdf-upload-dismiss" (click)="uploadMessage.set(null)" [attr.aria-label]="'documents.dismiss' | translate">
+            <i class="las la-times"></i>
+          </button>
+        }
+      </p>
+    }
+
+    <!-- Background click only dismisses the open context menu; it has a
+         keyboard equivalent already (the global Escape handler below),
+         so this container doesn't need its own key handler or focus stop. -->
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+    <div class="xdf-browser" (click)="closeContextMenu()"
+         (contextmenu)="openBackgroundMenu($event)">
+    <aside class="xdf-sidebar" [attr.aria-label]="'documents.locations' | translate">
+      <h3>{{ 'documents.locations' | translate }}</h3>
+      <button type="button" class="xdf-location" [class.xdf-location-active]="!curFolderValue()"
+              (click)="goToRecordRoot(); $event.stopPropagation()"
+              (contextmenu)="openRootMenu($event)">
+        <i class="las la-folder"></i><span>Root Directory</span>
+      </button>
+      @if (canShowFolderTree()) {
+        <ul class="xdf-tree" role="tree">
+          @for (node of childrenOf(null); track node.path) {
+            <ng-container *ngTemplateOutlet="folderNodeTpl; context: { $implicit: node }" />
+          }
+        </ul>
+      }
+    </aside>
+
+    <ng-template #folderNodeTpl let-node>
+      <li class="xdf-tree-item">
+        <div class="xdf-tree-row" role="treeitem" tabindex="0"
+             [attr.aria-expanded]="isExpanded(node.path)" [attr.aria-selected]="node.path === curFolderValue()"
+             [class.xdf-tree-active]="node.path === curFolderValue()"
+             [class.xdf-drop-target]="dragTarget() === node.path"
+             (click)="selectTreeFolder(node); $event.stopPropagation()"
+             (keydown.enter)="selectTreeFolder(node)"
+             (keydown.space)="selectTreeFolder(node); $event.preventDefault()"
+             (contextmenu)="openFolderMenu($event, treeTile(node))"
+             (dragover)="onFolderDragOver($event, node.path)"
+             (dragleave)="dragTarget.set(null)" (drop)="dropIntoFolder($event, treeTile(node))">
+          <button type="button" class="xdf-tree-caret-btn"
+                  [attr.aria-label]="isExpanded(node.path) ? 'Collapse ' + node.label : 'Expand ' + node.label"
+                  (click)="toggleExpand(node.path); $event.stopPropagation()">
+            <i class="las xdf-tree-caret" [class.la-caret-right]="!isExpanded(node.path)" [class.la-caret-down]="isExpanded(node.path)"></i>
+          </button>
+          <i class="las xdf-tile-icon" [class.la-folder]="!isExpanded(node.path)" [class.la-folder-open]="isExpanded(node.path)"></i>
+          <span class="xdf-tree-label" [title]="node.label">{{ node.label }}</span>
+          <span class="xdf-tile-count">{{ node.count }}</span>
+        </div>
+        @if (isExpanded(node.path)) {
+          <ul class="xdf-tree-children" role="group">
+            @for (child of childrenOf(node.path); track child.path) {
+              <ng-container *ngTemplateOutlet="folderNodeTpl; context: { $implicit: child }" />
+            }
+            @for (file of filesOf(node.path); track file.id) {
+              <li class="xdf-tree-item">
+                <div class="xdf-tree-row xdf-tree-file" role="treeitem" tabindex="-1"
+                     [attr.aria-selected]="false"
+                     [title]="file.name"
+                     (dblclick)="!isFailed(file) && download(file)">
+                  <i class="las xdf-tree-file-icon" [class]="fileIconClasses(file)"></i>
+                  <span class="xdf-tree-label">{{ file.name }}</span>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </li>
+    </ng-template>
+
+    <main class="xdf-main" [class.xdf-refreshing]="loading()" [attr.aria-busy]="loading() || null"
+          (pointerdown)="startMarquee($event)">
+      <div class="xdf-list-head">
+        <button type="button" (click)="sortBy('name')">{{ 'documents.colName' | translate }} <i [class]="sortIcon('name')"></i></button>
+        <button type="button" (click)="sortBy('created_at')">{{ 'documents.colCreated' | translate }} <i [class]="sortIcon('created_at')"></i></button>
+        <button type="button" (click)="sortBy('modified_at')">{{ 'documents.colModified' | translate }} <i [class]="sortIcon('modified_at')"></i></button>
+        <button type="button" (click)="sortBy('size')">{{ 'documents.colSize' | translate }} <i [class]="sortIcon('size')"></i></button>
+      </div>
+      <!-- FE-6: the tree route returns every file in a folder (and every
+           record with documents, in entity mode) with no LIMIT, so only the
+           rows in view are in the DOM. Every row is `rowHeight` tall. -->
+      <cdk-virtual-scroll-viewport class="xdf-viewport" [itemSize]="rowHeight"
+          [minBufferPx]="rowHeight * 10" [maxBufferPx]="rowHeight * 20">
+      <ul class="xdf-list">
+        <ng-container *cdkVirtualFor="let item of listItems(); trackBy: trackListItem">
+        @switch (item.kind) {
+        @case ('tile') {
+          @let tile = item.tile;
+          <li class="xdf-row xdf-row-folder" [class.xdf-drop-target]="dragTarget() === tile.key"
+              role="button" tabindex="0"
+              (click)="enter(tile); $event.stopPropagation()"
+              (keydown.enter)="enter(tile)"
+              (keydown.space)="enter(tile); $event.preventDefault()"
+              (contextmenu)="openFolderMenu($event, tile)"
+              (dragover)="onFolderDragOver($event, tile.key)"
+              (dragleave)="dragTarget.set(null)" (drop)="dropIntoFolder($event, tile)">
+            <i class="las la-folder xdf-icon"></i>
+            <span class="xdf-text xdf-name" [title]="tile.label">{{ tile.label }}</span>
+            <time class="xdf-created">--</time>
+            <time class="xdf-modified">--</time>
+            <span class="xdf-size">{{ tile.count }} item{{ tile.count === 1 ? '' : 's' }}</span>
+          </li>
+        }
+        @case ('busy') {
+          <li class="xdf-row xdf-row-busy" aria-live="polite">
+            <i class="las xdf-icon" [class.la-circle-notch]="uploadState() === 'uploading'"
+               [class.la-shield-alt]="uploadState() === 'processing'"
+               [style.animation]="uploadState() === 'uploading' ? 'xdf-spin .9s linear infinite' : null"></i>
+            <span class="xdf-text xdf-name" [title]="uploadingName()">
+              @switch (uploadState()) {
+                @case ('processing') { Scanning {{ uploadingName() }}… }
+                @default { {{ uploadingName() }} }
+              }
+            </span>
+            <time class="xdf-created">--</time>
+            <time class="xdf-modified">--</time>
+            <span class="xdf-size">
+              @if (uploadState() === 'uploading') { {{ uploadProgress() }}% }
+            </span>
+          </li>
+        }
+        @case ('file') {
+          @let row = item.row;
+          @let index = item.index;
+          <li class="xdf-row" [class.xdf-row-failed]="isFailed(row)" [attr.data-document-id]="row.id"
+              [class.xdf-selected]="selectedIds().has(row.id)" draggable="true"
+              role="option" [attr.aria-selected]="selectedIds().has(row.id)" tabindex="0"
+              (click)="selectRow($event, row, index)" (dblclick)="!isFailed(row) && download(row)"
+              (keydown)="onRowKeydown($event, row, index)"
+              (contextmenu)="openRowMenu($event, row, index)"
+              (dragstart)="startRowDrag($event, row)">
+            <i class="las xdf-icon" [class]="fileIconClasses(row)"></i>
+            <span class="xdf-text xdf-name" [title]="isFailed(row) ? row.name + ' — upload never completed' : row.name">{{ row.name }}</span>
+            @if (row.source_field) {
+              <span class="xdf-badge" [title]="'Synced from the ' + row.source_field + ' field'">
+                synced · {{ row.source_field }}
+              </span>
+            } @else if (isFailed(row)) {
+              <span class="xdf-badge xdf-badge-failed" [title]="'documents.uploadFailedTitle' | translate">
+                {{ 'documents.uploadFailed' | translate }}
+              </span>
+            }
+            <time class="xdf-created">{{ formatDate(row.created_at) }}</time>
+            <time class="xdf-modified">{{ formatDate(row.modified_at ?? row.created_at) }}</time>
+            <span class="xdf-size">{{ formatSize(row.size_bytes) }}</span>
+            <button type="button" class="xdf-action" (click)="download(row)"
+                    [disabled]="isFailed(row) || downloadingId() === row.id">
+              {{ downloadingId() === row.id ? 'Preparing…' : 'Download' }}
+            </button>
+            @if (!row.source_field) {
+              <button type="button" class="xdf-remove" [title]="'documents.remove' | translate" [attr.aria-label]="'documents.remove' | translate"
+                      (click)="remove(row)" [disabled]="busy()">
+                <i class="las la-times"></i>
+              </button>
+            }
+          </li>
+        }
+        }
+        </ng-container>
+      </ul>
+      </cdk-virtual-scroll-viewport>
+    @if (marquee(); as box) {
+      <div class="xdf-marquee" [style.left.px]="box.left" [style.top.px]="box.top"
+           [style.width.px]="box.width" [style.height.px]="box.height"></div>
+    }
+    </main>
+    </div>
+
+    @if (contextMenu(); as menu) {
+      <!-- Not an interactive control — this click handler only stops
+           propagation so a click inside the menu doesn't trigger the
+           background's "close on outside click" listener. The actual
+           interactive elements are the buttons inside. -->
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+      <div class="xdf-menu" [style.left.px]="menu.x" [style.top.px]="menu.y"
+           (click)="$event.stopPropagation()">
+        <button type="button" (click)="addNewDocument()" [disabled]="!pasteTarget()">
+          <i class="las la-plus"></i> New document
+        </button>
+        <button type="button" (click)="addNewFolder()" [disabled]="!canCreateFolder()">
+          <i class="las la-folder"></i> New folder
+        </button>
+        <div></div>
+        <button type="button" (click)="cutSelection()" [disabled]="!canChangeSelection()">
+          <i class="las la-cut"></i> Cut
+        </button>
+        <button type="button" (click)="copySelection()" [disabled]="!canChangeSelection()">
+          <i class="las la-copy"></i> Copy
+        </button>
+        <button type="button" (click)="pasteIntoMenuFolder()" [disabled]="!clipboardIds().size || !pasteTarget()">
+          <i class="las la-paste"></i> Paste
+        </button>
+        <div></div>
+        <button type="button" (click)="renameSelected()" [disabled]="!canRenameSelection()">
+          <i class="las la-edit"></i> Rename
+        </button>
+        <div></div>
+        <button type="button" class="xdf-danger" (click)="deleteSelection()" [disabled]="!canChangeSelection()">
+          <i class="las la-trash"></i> Delete
+        </button>
+      </div>
+    }
+
+    <input #newDocumentInput type="file" multiple class="xdf-native"
+           (change)="onNewDocumentsSelected($any($event.target).files); newDocumentInput.value = ''" />
+
+    @if (false) {
+      @switch (uploadState()) {
+        @case ('uploading') {
+          <div class="xdf-row xdf-row-busy" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+               [attr.aria-valuenow]="uploadProgress()">
+            <div class="xdf-fill" [style.width.%]="uploadProgress()"></div>
+            <i class="las la-upload xdf-icon"></i>
+            <span class="xdf-text">Uploading {{ uploadingName() }}…</span>
+            <span class="xdf-pct">{{ uploadProgress() }}%</span>
+          </div>
+        }
+        @case ('processing') {
+          <div class="xdf-row xdf-row-busy" aria-live="polite">
+            <div class="xdf-fill xdf-fill-pulse"></div>
+            <i class="las la-shield-alt xdf-icon"></i>
+            <span class="xdf-text">Scanning {{ uploadingName() }} for malware…</span>
+          </div>
+        }
+        @default {
+          <div class="xdf-row xdf-drop" role="button" tabindex="0"
+               [attr.aria-label]="'documents.dropzone' | translate"
+               [class.xdf-drop-active]="dragging()"
+               (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)"
+               (drop)="onDrop($event)" (paste)="onPaste($event)"
+               (click)="fileInput.click()"
+               (keydown.enter)="fileInput.click()"
+               (keydown.space)="fileInput.click(); $event.preventDefault()">
+            <i class="las la-file xdf-icon"></i>
+            <span class="xdf-text">Drag files here, paste, or click to browse</span>
+          </div>
+          <input #fileInput type="file" multiple class="xdf-native"
+                 (change)="onFilesSelected($any($event.target).files); fileInput.value = ''" />
+        }
+      }
+      @if (uploadMessage()) {
+        <p class="xdf-status" [class.xdf-status-error]="uploadState() === 'error'">{{ uploadMessage() }}</p>
+      }
+    }
+  }
+</div>

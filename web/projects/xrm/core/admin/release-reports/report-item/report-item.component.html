@@ -1,0 +1,110 @@
+<article class="ri" [class.ri--open]="isOpen()" [attr.aria-labelledby]="'ri-title-' + item().id">
+  <header class="ri-head">
+    <h4 class="ri-title" [id]="'ri-title-' + item().id">
+      <span [class]="'ri-kind ri-kind--' + item().kind">{{ kindKey() | translate }}</span>
+    </h4>
+    <span [class]="'ri-status ri-status--' + item().status">{{ statusKey() | translate }}</span>
+    <span class="ri-date">
+      {{ 'releaseReport.item.created' | translate: { date: (item().created_at | localDate: dateFmt) } }}
+    </span>
+  </header>
+
+  <p class="ri-sentence">{{ sentence() }}</p>
+
+  <dl class="ri-meta">
+    <div>
+      <dt>{{ 'releaseReport.item.entity' | translate }}</dt>
+      <dd class="ri-mono">{{ item().entity_logicalname }}</dd>
+    </div>
+    @if (item().field_logicalname) {
+      <div>
+        <dt>{{ 'releaseReport.item.field' | translate }}</dt>
+        <dd class="ri-mono">{{ item().field_logicalname }}</dd>
+      </div>
+    }
+    @if (item().record_id) {
+      <div>
+        <dt>{{ 'releaseReport.item.record' | translate }}</dt>
+        <dd class="ri-mono">{{ item().record_id }}</dd>
+      </div>
+    }
+    @if (item().object_kind) {
+      <div>
+        <dt>{{ 'releaseReport.item.object' | translate }}</dt>
+        <dd>{{ item().object_kind }}</dd>
+      </div>
+    }
+  </dl>
+
+  @if (isConflict()) {
+    @if (item().values) {
+      <dl class="ri-values" data-testid="conflict-values">
+        <div class="ri-value ri-value--theirs">
+          <dt>{{ 'releaseReport.item.theirs' | translate }}</dt>
+          <dd>{{ value('theirs') }}</dd>
+        </div>
+        <div class="ri-value ri-value--ours">
+          <dt>{{ 'releaseReport.item.ours' | translate }}</dt>
+          <dd>{{ value('ours') }}</dd>
+        </div>
+        @if (hasKey()) {
+          <div class="ri-value">
+            <dt>{{ 'releaseReport.item.key' | translate }}</dt>
+            <dd class="ri-mono">{{ value('key') }}</dd>
+          </div>
+        }
+      </dl>
+    } @else if (item().values_hidden) {
+      <p class="ri-note" data-testid="values-hidden">
+        <i class="las la-eye-slash" aria-hidden="true"></i>
+        {{ 'releaseReport.item.valuesHidden' | translate }}
+      </p>
+    } @else if (valuesMissing()) {
+      <p class="ri-note" data-testid="values-missing">{{ 'releaseReport.item.valuesMissing' | translate }}</p>
+    }
+  }
+
+  @if (item().decided_at) {
+    <p class="ri-date">
+      {{ 'releaseReport.item.decided' | translate: { date: (item().decided_at | localDate: dateFmt) } }}
+    </p>
+  }
+
+  @if (canDecideConflict() || canRestore() || canDismiss()) {
+    <div class="ri-actions" role="group" [attr.aria-label]="'releaseReport.actions.label' | translate">
+      @if (canDecideConflict()) {
+        <button type="button" class="btn-primary btn-sm" data-testid="accept"
+                [disabled]="busy() !== null" [title]="'releaseReport.actions.acceptHint' | translate"
+                (click)="accept()">
+          {{ (busy() === 'accept' ? 'releaseReport.actions.working' : 'releaseReport.actions.accept') | translate }}
+        </button>
+        @if (canUseMine()) {
+          <button type="button" class="btn-ghost btn-sm" data-testid="use-mine"
+                  [disabled]="busy() !== null || !useMineReady()" [title]="'releaseReport.actions.useMineHint' | translate"
+                  (click)="useMine()">
+            {{ (busy() === 'useMine' ? 'releaseReport.actions.working' : 'releaseReport.actions.useMine') | translate }}
+          </button>
+        }
+      }
+      @if (canRestore()) {
+        <button type="button" class="btn-primary btn-sm" data-testid="restore"
+                [disabled]="busy() !== null" [title]="'releaseReport.actions.restoreHint' | translate"
+                (click)="restore()">
+          {{ (busy() === 'restore' ? 'releaseReport.actions.working' : 'releaseReport.actions.restore') | translate }}
+        </button>
+      }
+      @if (canDismiss()) {
+        <button type="button" class="btn-text btn-sm" data-testid="dismiss"
+                [disabled]="busy() !== null" [title]="'releaseReport.actions.dismissHint' | translate"
+                (click)="dismiss()">
+          {{ (busy() === 'dismiss' ? 'releaseReport.actions.working' : 'releaseReport.actions.dismiss') | translate }}
+        </button>
+      }
+    </div>
+  }
+
+  <p class="ri-notice" role="status">{{ notice() }}</p>
+  @if (error()) {
+    <p class="error-msg" role="alert" data-testid="item-error">{{ error() }}</p>
+  }
+</article>

@@ -1,0 +1,150 @@
+/* The card is sized by its cell: .xf-grid-photo states a two-field-row
+   height and makes the column that same width, so the card comes out
+   square. The floor is that square's side, and keeps the card honest
+   anywhere else. */
+:host {
+  display: block;
+  flex: 1 1 auto;
+  min-height: var(--xiu-min-height, 148px);
+  /* Same number as the height: the card stays square, and a host that
+     drops it into a plain full-width block cannot stretch it into a
+     letterbox. */
+  max-width: var(--xiu-min-height, 148px);
+}
+
+/* The card carries the dashed accent border itself — there is no inner
+   ring; the glyph and the one copy line sit directly inside it. */
+.xiu {
+  position: relative;
+  display: flex; flex-direction: column;
+  height: 100%;
+  border: 1.5px dashed color-mix(in srgb, var(--color-accent, #14b8a6) 38%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--color-accent, #14b8a6) 4%, var(--color-bg, #0f172a));
+  overflow: hidden;
+  transition: border-color .15s ease, background .15s ease;
+}
+.xiu:hover, .xiu:focus-within {
+  border-color: color-mix(in srgb, var(--color-accent, #14b8a6) 75%, transparent);
+}
+/* A photo of its own makes the "drop something here" dashes redundant. */
+.xiu-filled {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--color-accent, #14b8a6) 55%, transparent);
+}
+
+/* ── Drop zone: fills the card so the whole surface is the target ────── */
+.xiu-drop {
+  position: relative;
+  flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; cursor: pointer;
+}
+.xiu-drop:focus-visible { outline: none; }
+.xiu-drop-disabled { pointer-events: none; }
+
+.xiu-photo {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+/* Prompt/status layer. Over a photo it is a scrim that only appears on
+   hover — unless something has to be said right now (pinned). */
+.xiu-overlay {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; padding: 14px; width: 100%; height: 100%;
+  transition: background .15s ease, opacity .15s ease;
+}
+.xiu-drop:hover .xiu-overlay,
+.xiu-drop:focus-visible .xiu-overlay,
+.xiu-drop-active .xiu-overlay {
+  background: color-mix(in srgb, var(--color-accent, #14b8a6) 8%, transparent);
+}
+
+.xiu-filled .xiu-overlay { opacity: 0; background: rgba(0, 0, 0, .55); }
+.xiu-filled .xiu-drop:hover .xiu-overlay,
+.xiu-filled .xiu-drop:focus-visible .xiu-overlay,
+.xiu-filled .xiu-drop-active .xiu-overlay,
+.xiu-filled .xiu-overlay-pinned { opacity: 1; background: rgba(0, 0, 0, .55); }
+.xiu-filled .xiu-overlay .xiu-icon,
+.xiu-filled .xiu-overlay .xiu-hint { color: #fff; }
+.xiu-filled .xiu-ring {
+  border-color: rgba(255, 255, 255, .55);
+  background: rgba(255, 255, 255, .12);
+}
+
+/* Circle inside the square, glyph inside the circle. 96 + 28 padding = 124
+   in the 148px square's 145px content box. When there is something to
+   report, the circle gives way to make room for the words. */
+.xiu-ring {
+  display: flex; align-items: center; justify-content: center;
+  flex: none; width: 96px; height: 96px; border-radius: 50%;
+  border: 1.5px dashed color-mix(in srgb, var(--color-accent, #14b8a6) 40%, transparent);
+  background: color-mix(in srgb, var(--color-accent, #14b8a6) 7%, transparent);
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.xiu-drop:hover .xiu-ring,
+.xiu-drop:focus-visible .xiu-ring,
+.xiu-drop-active .xiu-ring {
+  border-color: color-mix(in srgb, var(--color-accent, #14b8a6) 80%, transparent);
+  background: color-mix(in srgb, var(--color-accent, #14b8a6) 14%, transparent);
+  transform: scale(1.04);
+}
+.xiu-overlay-msg .xiu-ring { width: 52px; height: 52px; }
+
+.xiu-icon { font-size: 38px; color: var(--color-accent, #14b8a6); line-height: 1; }
+.xiu-overlay-msg .xiu-icon { font-size: 22px; }
+.xiu-spin { animation: xiu-spin .9s linear infinite; }
+@keyframes xiu-spin { to { transform: rotate(360deg); } }
+
+/* ── Copy ───────────────────────────────────────────────────────────── */
+.xiu-hint {
+  margin: 0; max-width: 190px;
+  font-size: 11px; line-height: 1.5; font-weight: 500;
+  color: color-mix(in srgb, var(--color-accent, #14b8a6) 80%, var(--color-text-primary, #e5eefc));
+}
+.xiu-hint-error { color: #f87171; }
+.xiu-hint-ok    { color: var(--color-accent, #14b8a6); }
+/* Beats the blanket white the scrim gives copy over a photo. */
+.xiu-filled .xiu-overlay .xiu-hint-error { color: #fca5a5; }
+
+.xiu-progress {
+  width: 132px; height: 4px;
+  border-radius: 2px; overflow: hidden;
+  background: color-mix(in srgb, var(--color-border, #24324d) 70%, transparent);
+}
+.xiu-progress-bar {
+  height: 100%; background: var(--color-accent, #14b8a6); transition: width .15s ease;
+}
+
+/* ── Gated state (no record yet) ─────────────────────────────────────── */
+.xiu-gated {
+  align-items: center; justify-content: center;
+  gap: 10px; padding: 12px; text-align: center;
+  border-color: var(--color-border, #24324d);
+}
+.xiu-gated:hover { border-color: var(--color-border, #24324d); }
+.xiu-gated .xiu-ring {
+  width: 56px; height: 56px;
+  border-color: var(--color-border, #24324d); background: transparent;
+}
+.xiu-gated .xiu-icon { font-size: 24px; color: var(--color-text-secondary, #94a3b8); opacity: .6; }
+.xiu-gated .xiu-hint { color: var(--color-text-secondary, #94a3b8); }
+
+/* ── Remove ─────────────────────────────────────────────────────────── */
+.xiu-remove {
+  position: absolute; top: 8px; inset-inline-end: 8px; z-index: 2;
+  width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; cursor: pointer;
+  color: var(--color-text-secondary, #94a3b8);
+  background: var(--color-bg-alt, #111c33);
+  border: 1px solid var(--color-border, #24324d);
+  transition: color .15s ease, border-color .15s ease;
+}
+.xiu-remove:hover { color: #f87171; border-color: #f87171; }
+
+.xiu-native { display: none; }

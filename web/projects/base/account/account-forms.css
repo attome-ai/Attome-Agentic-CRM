@@ -1,0 +1,228 @@
+/* Shared styles for the account pages (forgot-password,
+   reset-password, verify-email). Originally two sheets: this one for the form
+   controls, and login-page.component.css for the card/page chrome the pages
+   borrowed. NGB-5.3 deletes the unrouted LoginPageComponent, so its CSS moved
+   here — minus the selectors only that page used (Google/OIDC buttons, the
+   divider, the retry link, the logo mark), which would have been dead rules.
+   Text alignment uses logical `start`, so RTL needs no override. */
+
+/* ── Page chrome ─────────────────────────────────────────────────────────── */
+
+.account-page {
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+  transition: background-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.bg-shape {
+  position: absolute;
+  filter: blur(80px);
+  z-index: 0;
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.shape-1 {
+  top: -100px;
+  left: -100px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, var(--color-accent) 0%, transparent 70%);
+}
+
+.shape-2 {
+  bottom: -100px;
+  right: -100px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, var(--color-primary) 0%, transparent 70%);
+}
+
+.login-card {
+  position: relative;
+  z-index: 1;
+  background-color: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 25px 50px -12px var(--color-card-shadow);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.card-header {
+  margin-bottom: 20px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.back-link:hover { color: var(--color-text-primary); }
+
+.back-link svg {
+  width: 18px;
+  height: 18px;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex-grow: 1;
+}
+
+.page-title {
+  color: var(--color-text-primary);
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.page-subtitle {
+  color: var(--color-text-secondary);
+  font-size: 15px;
+  margin: 0 0 32px 0;
+}
+
+.error-banner {
+  width: 100%;
+  background: color-mix(in srgb, #ff5252 10%, var(--color-bg));
+  border: 1px solid color-mix(in srgb, #ff5252 30%, transparent);
+  /* Pulled toward the theme's text colour so it meets WCAG AA (4.5:1) in light and dark. */
+  color: color-mix(in srgb, #d32f2f 70%, var(--color-text-primary, #1a1a2e));
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  box-sizing: border-box;
+}
+
+.error-banner svg { width: 20px; height: 20px; flex-shrink: 0; }
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  padding: 20px 0;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* NGB-3.6 — a spinner is decoration; a viewer who asked for reduced motion
+   gets a static indicator instead of an endless rotation. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; }
+}
+
+/* RTL — the back arrow points the way the document reads. */
+:host-context([dir="rtl"]) .back-arrow {
+  transform: scaleX(-1);
+}
+
+@media (max-width: 480px) {
+  .account-page { padding: 0; background-color: var(--color-bg-alt); }
+  .login-card  { height: 100vh; border-radius: 0; border: none; background: transparent; padding: 24px; box-shadow: none; }
+  .bg-shape    { display: none; }
+  .page-title  { font-size: 24px; }
+}
+
+/* ── Form controls ───────────────────────────────────────────────────────── */
+
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* NGB-3.6 — `start` follows the document direction on its own, so the
+   :host-context([dir="rtl"]) override this used to need is gone. */
+.field-label {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: start;
+  margin-top: 12px;
+}
+
+.text-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.field-hint {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.submit-btn {
+  margin-top: 24px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background-color: var(--color-accent);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background-color: var(--color-accent-hover);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

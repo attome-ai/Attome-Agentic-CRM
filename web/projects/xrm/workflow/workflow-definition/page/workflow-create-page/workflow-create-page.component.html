@@ -1,0 +1,88 @@
+<form class="xf-page" (ngSubmit)="create()">
+
+  <div class="xf-header">
+    <div>
+      <div class="xf-breadcrumb">
+        <span class="xf-breadcrumb-link" role="link" tabindex="0"
+              (click)="cancel()" (keydown.enter)="cancel()"
+              (keydown.space)="cancel(); $event.preventDefault()">{{ 'xrmForm.entities.workflow' | translate }}</span>
+        <span class="xf-breadcrumb-sep">›</span>
+        <span>{{ 'workflowForm.newRecord' | translate }}</span>
+      </div>
+      <h1 class="xf-title">{{ 'workflowForm.newWorkflow' | translate }}</h1>
+      <p class="xf-subtitle">{{ 'workflowForm.createSubtitle' | translate }}</p>
+    </div>
+    <div class="xf-actions">
+      <button type="button" class="xf-btn xf-btn-secondary" (click)="cancel()">
+        {{ 'xrmForm.back' | translate }}
+      </button>
+      <button type="submit" class="xf-btn xf-btn-primary" [disabled]="creating()">
+        @if (creating()) {
+          <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+          {{ 'workflowForm.creating' | translate }}
+        } @else {
+          <i class="las la-project-diagram"></i>
+          {{ 'workflowForm.createAndOpen' | translate }}
+        }
+      </button>
+    </div>
+  </div>
+
+  <div class="xf-body">
+
+    @if (error()) {
+      <div class="xf-error-banner">
+        <i class="las la-exclamation-circle"></i>
+        {{ error() }}
+      </div>
+    }
+
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-sitemap"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">{{ 'workflowForm.identity' | translate }}</h2>
+          <p class="xf-section-desc">{{ 'workflowForm.identityDesc' | translate }}</p>
+        </div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          <div class="xf-field">
+            <div class="xf-label-row">
+              <label for="wf-name">{{ 'workflowForm.name' | translate }}</label>
+              <span class="xf-required">{{ 'workflowForm.required' | translate }}</span>
+            </div>
+            <input id="wf-name" type="text" name="name" class="xf-input"
+                   [(ngModel)]="name" (ngModelChange)="onNameChange($event)"
+                   [placeholder]="'workflowForm.namePlaceholder' | translate" autocomplete="off" />
+            <p class="xf-helper">{{ 'workflowForm.nameHelp' | translate }}</p>
+          </div>
+          <div class="xf-field">
+            <div class="xf-label-row">
+              <label for="wf-logicalname">{{ 'workflowForm.logicalName' | translate }}</label>
+              <span class="xf-required">{{ 'workflowForm.required' | translate }}</span>
+            </div>
+            <input id="wf-logicalname" type="text" name="logicalname" class="xf-input"
+                   [(ngModel)]="logicalname" (ngModelChange)="slugTouched = true"
+                   [placeholder]="'workflowForm.logicalNamePlaceholder' | translate" autocomplete="off" />
+            <p class="xf-helper">
+              {{ 'workflowForm.logicalNameHelpCreate' | translate }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-info-circle"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">{{ 'workflowForm.whatNext' | translate }}</h2>
+          <p class="xf-section-desc">
+            {{ 'workflowForm.whatNextDesc' | translate }}
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
+</form>

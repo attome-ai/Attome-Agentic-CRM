@@ -1,0 +1,20 @@
+.pm-state-msg { margin: 0; padding: 24px; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
+.pm-state-error { color: var(--color-danger, #ef4444); }
+
+.pm-header { margin-bottom: 20px; }
+.pm-header-crumb { font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--color-accent, #8b5cf6); margin-bottom: 8px; }
+.pm-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.pm-header-title { margin: 0; font-size: 22px; font-weight: 700; color: var(--color-text-primary, #e5eefc); }
+.pm-header-subtitle { margin: 6px 0 0; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
+.pm-header-actions { display: flex; gap: 10px; flex: none; }
+.pm-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; font-size: 13px; font-weight: 600; border: 1px solid var(--color-border, #24324d); border-radius: 8px; background: none; color: var(--color-text-primary, #e5eefc); cursor: pointer; }
+.pm-btn:hover { background: color-mix(in srgb, var(--color-text-primary, #e5eefc) 6%, transparent); }
+.pm-btn-primary { border-color: var(--color-accent, #8b5cf6); background: var(--color-accent, #8b5cf6); color: white; }
+.pm-btn-primary:hover { background: color-mix(in srgb, var(--color-accent, #8b5cf6) 85%, black); }
+
+.pm-tabs { display: flex; gap: 4px; margin-top: 18px; border-bottom: 1px solid var(--color-border, #24324d); overflow-x: auto; }
+.pm-tab { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; font-size: 13px; font-weight: 500; white-space: nowrap; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--color-text-secondary, #94a3b8); cursor: pointer; }
+.pm-tab:hover { color: var(--color-text-primary, #e5eefc); }
+.pm-tab-active { color: var(--color-accent, #8b5cf6); border-bottom-color: var(--color-accent, #8b5cf6); }
+
+.pm-tab-content { padding-bottom: 24px; }

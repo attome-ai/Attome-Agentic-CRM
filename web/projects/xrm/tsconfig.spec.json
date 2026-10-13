@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../out-tsc/spec",
+    "types": ["node"],
+    "paths": {
+      "@angular/animations/*":     ["node_modules/@angular/animations/*"],
+      "@angular/common/*":         ["node_modules/@angular/common/*"],
+      "@angular/core/*":           ["node_modules/@angular/core/*"],
+      "@angular/forms/*":          ["node_modules/@angular/forms/*"],
+      "@angular/platform-browser/*": ["node_modules/@angular/platform-browser/*"],
+      "@angular/router/*":         ["node_modules/@angular/router/*"],
+      "rxjs/*":                    ["node_modules/rxjs/*"],
+      "@attome/base":              ["node_modules/@attome/base"],
+      "@attome/xrm":               ["projects/xrm/src/public-api.ts"],
+      "@attome/xrm/*":             ["projects/xrm/*/public-api.ts"]
+    }
+  },
+  "include": [
+    "**/*.spec.ts",
+    "src/**/*.d.ts"
+  ]
+}

@@ -1,0 +1,60 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'fleet.rollouts.title' | translate }}</h2>
+    <p class="subtitle">{{ 'fleet.rollouts.subtitle' | translate }}</p>
+  </div>
+  <div class="fleet-header-actions">
+    <button type="button" class="btn-ghost" (click)="load()" [disabled]="loading()">
+      <i class="las la-sync" aria-hidden="true"></i> {{ 'fleet.common.refresh' | translate }}
+    </button>
+    <a class="btn-primary fleet-link-button" routerLink="/xrm/fleet/publish">
+      <i class="las la-plus" aria-hidden="true"></i> {{ 'fleet.rollouts.newRollout' | translate }}
+    </a>
+  </div>
+</div>
+
+<section class="card" aria-labelledby="fleet-rollouts-title">
+  <h3 id="fleet-rollouts-title">
+    {{ 'fleet.rollouts.title' | translate }}
+    <span class="count">{{ total() | localNumber }}</span>
+  </h3>
+  @if (loading()) {
+    <p class="state-msg" role="status">{{ 'fleet.common.loading' | translate }}</p>
+  } @else if (error()) {
+    <p class="error-msg" role="alert">{{ error() }}</p>
+  } @else if (rollouts().length === 0) {
+    <div class="empty-state"><p>{{ 'fleet.rollouts.empty' | translate }}</p></div>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'fleet.columns.rollout' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.status' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.wave' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.changesets' | translate }}</th>
+            <th scope="col">{{ 'fleet.columns.created' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rollouts(); track r.id) {
+            <tr>
+              <td><a class="cell-link" [routerLink]="['/xrm/fleet/rollouts', r.id]">{{ r.title }}</a></td>
+              <td><span [class]="'fleet-pill ' + tone(r.status)">{{ text('rollout', r.status) }}</span></td>
+              <td>{{ waveText(r) }}</td>
+              <td>{{ r.changesets.length | localNumber }}</td>
+              <td class="cell-muted">{{ r.created_at | localDate: dateFmt }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pages() > 1) {
+      <nav class="fleet-pager" [attr.aria-label]="'fleet.pager.label' | translate">
+        <button type="button" class="btn-ghost" (click)="previous()" [disabled]="page() <= 1">{{ 'fleet.pager.previous' | translate }}</button>
+        <span>{{ 'fleet.pager.pageOf' | translate: { page: page(), pages: pages() } }}</span>
+        <button type="button" class="btn-ghost" (click)="next()" [disabled]="page() >= pages()">{{ 'fleet.pager.next' | translate }}</button>
+      </nav>
+    }
+  }
+</section>

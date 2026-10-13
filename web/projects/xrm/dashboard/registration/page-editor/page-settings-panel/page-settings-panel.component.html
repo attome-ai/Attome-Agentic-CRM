@@ -1,0 +1,131 @@
+<div class="xpe-inspector">
+  <div class="xf-tabs">
+    <button type="button" class="xf-tab" [class.xf-tab-active]="tab() === 'general'" (click)="tab.set('general')">
+      <i class="las la-cog"></i> {{ 'pageEditor.settingsTabGeneral' | translate }}
+    </button>
+    <button type="button" class="xf-tab" [class.xf-tab-active]="tab() === 'parameters'" (click)="tab.set('parameters')">
+      <i class="las la-sliders-h"></i> {{ 'pageEditor.settingsTabParameters' | translate }}
+    </button>
+    <button type="button" class="xf-tab" [class.xf-tab-active]="tab() === 'access'" (click)="tab.set('access')">
+      <i class="las la-user-shield"></i> {{ 'pageEditor.settingsTabAccess' | translate }}
+    </button>
+  </div>
+
+  <div class="xf-tab-panel" [hidden]="tab() !== 'general'">
+    <label class="xf-field">
+      <span>{{ 'pageEditor.pageNameLabel' | translate }}</span>
+      <input #nameInput class="xf-input" type="text" [value]="page().data['name'] || ''" (blur)="onField('name', nameInput.value)" />
+    </label>
+    <label class="xf-field">
+      <span>{{ 'pageEditor.descriptionLabel' | translate }}</span>
+      <textarea #descInput class="xf-input" rows="3" [value]="settings().description || ''" (blur)="onSettingsField('description', descInput.value || undefined)"></textarea>
+    </label>
+    <label class="xf-field">
+      <span>{{ 'pageEditor.refreshIntervalLabel' | translate }}</span>
+      <select #refreshSelect class="xf-input" [value]="settings().refresh_interval_minutes ?? 0" (change)="onSettingsField('refresh_interval_minutes', +refreshSelect.value)">
+        @for (opt of refreshIntervalOptions; track opt.value) { <option [value]="opt.value">{{ opt.label | translate }}</option> }
+      </select>
+    </label>
+    <label class="xf-field">
+      <span>{{ 'pageEditor.timezoneLabel' | translate }}</span>
+      <select #tzSelect class="xf-input" [value]="settings().timezone || 'UTC'" (change)="onSettingsField('timezone', tzSelect.value)">
+        @for (tz of timezoneOptions; track tz) { <option [value]="tz">{{ tz }}</option> }
+      </select>
+    </label>
+
+    <label class="xf-field">
+      <span>{{ 'pageEditor.nameArabic' | translate }}</span>
+      <input #nameArInput class="xf-input" type="text" [value]="page().data['name_ar'] || ''" (blur)="onField('name_ar', nameArInput.value || null)" />
+    </label>
+    <label class="xf-field">
+      <span>{{ 'pageEditor.slug' | translate }}</span>
+      <input #slugInput class="xf-input" type="text" [value]="page().data['slug'] || ''" (blur)="onField('slug', slugInput.value || null)" />
+    </label>
+    <label class="xf-field">
+      <span>{{ 'pageEditor.icon' | translate }}</span>
+      <input #iconInput class="xf-input" type="text" [value]="page().data['icon'] || ''" [placeholder]="'pageEditor.iconPlaceholder' | translate" (blur)="onField('icon', iconInput.value || null)" />
+    </label>
+    <label class="xf-field">
+      <span>{{ 'pageEditor.background' | translate }}</span>
+      <select #bgKindSelect class="xf-input" [value]="page().data['background_kind'] || 'color'" (change)="onField('background_kind', bgKindSelect.value)">
+        @for (k of backgroundKinds; track k) { <option [value]="k">{{ k }}</option> }
+      </select>
+    </label>
+    <label class="xf-field">
+      <span>{{ 'pageEditor.backgroundValue' | translate }}</span>
+      <input #bgValueInput class="xf-input" type="text" [value]="page().data['background_value'] || ''" [placeholder]="'pageEditor.backgroundValuePlaceholder' | translate" (blur)="onField('background_value', bgValueInput.value || null)" />
+    </label>
+    <label class="xf-field">
+      <span>{{ 'pageEditor.padding' | translate }}</span>
+      <input #paddingInput class="xf-input" type="text" [value]="page().data['padding'] || ''" [placeholder]="'pageEditor.paddingPlaceholder' | translate" (blur)="onField('padding', paddingInput.value || null)" />
+    </label>
+
+    <label class="xf-switch">
+      <input #visibleInput class="xf-switch-input" type="checkbox" [checked]="page().data['is_visible'] !== false" (change)="onField('is_visible', visibleInput.checked)" />
+      <span class="xf-switch-pill"></span>
+      <span class="xf-switch-content">
+        <span class="xf-switch-label">{{ 'pageEditor.visibleLabel' | translate }}</span>
+        <span class="xf-switch-desc">{{ 'pageEditor.visibleDesc' | translate }}</span>
+      </span>
+    </label>
+
+    <div class="xpe-settings-section-label">{{ 'pageEditor.appearanceLabel' | translate }}</div>
+    <label class="xf-field xpe-color-field">
+      <span>{{ 'pageEditor.textColorLabel' | translate }}</span>
+      <div class="xpe-color-input">
+        <input #textColorPicker type="color" [value]="settings().text_color || '#e2e8f0'" (change)="onSettingsField('text_color', textColorPicker.value)" />
+        <input #textColorInput class="xf-input" type="text" [value]="settings().text_color || '#E2E8F0'" (blur)="onSettingsField('text_color', textColorInput.value || undefined)" />
+      </div>
+    </label>
+    <label class="xf-field xpe-color-field">
+      <span>{{ 'pageEditor.accentColorLabel' | translate }}</span>
+      <div class="xpe-color-input">
+        <input #accentColorPicker type="color" [value]="settings().accent_color || '#7c3aed'" (change)="onSettingsField('accent_color', accentColorPicker.value)" />
+        <input #accentColorInput class="xf-input" type="text" [value]="settings().accent_color || '#7C3AED'" (blur)="onSettingsField('accent_color', accentColorInput.value || undefined)" />
+      </div>
+    </label>
+    <label class="xf-field">
+      <span>{{ 'pageEditor.borderRadiusLabel' | translate }}</span>
+      <select #radiusSelect class="xf-input" [value]="settings().border_radius || 'medium'" (change)="onBorderRadiusChange(radiusSelect.value)">
+        @for (r of borderRadiusOptions; track r) { <option [value]="r">{{ r }}</option> }
+      </select>
+    </label>
+  </div>
+
+  <div class="xf-tab-panel" [hidden]="tab() !== 'parameters'">
+    <p class="xpe-settings-hint">{{ 'pageEditor.parametersHint' | translate }}</p>
+    <div class="xpe-param-list">
+      @for (param of parameters(); track param.id) {
+        <div class="xpe-param-row">
+          <input
+            #paramNameInput
+            class="xf-input"
+            type="text"
+            [value]="param.data['name'] || ''"
+            (blur)="onParameterField(param.id, 'name', paramNameInput.value)"
+          />
+          <select
+            #paramTypeSelect
+            class="xf-input"
+            [value]="param.data['parameter_type'] || 'text'"
+            (change)="onParameterField(param.id, 'parameter_type', paramTypeSelect.value)"
+          >
+            @for (t of parameterTypes; track t) { <option [value]="t">{{ t }}</option> }
+          </select>
+          <button type="button" class="xpe-icon-btn xpe-icon-btn-sm" (click)="parameterDelete.emit(param.id)" [title]="'pageEditor.removeParam' | translate">
+            <i class="las la-times"></i>
+          </button>
+        </div>
+      } @empty {
+        <p class="xpe-settings-hint">{{ 'pageEditor.noGlobalFilters' | translate }}</p>
+      }
+    </div>
+    <button type="button" class="xf-btn xf-btn-secondary" (click)="parameterAdd.emit()">
+      <i class="las la-plus"></i> {{ 'pageEditor.addFilter' | translate }}
+    </button>
+  </div>
+
+  <div class="xf-tab-panel" [hidden]="tab() !== 'access'">
+    <xrm-record-shares lockedEntity="dashboard_page" [lockedRecordId]="page().id" />
+  </div>
+</div>

@@ -1,0 +1,128 @@
+.xdv-page {
+  padding: 24px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Nested inside a host form's own tab/section chrome — that host already
+ * supplies outer padding and a container, so this component's own padding
+ * would double up. */
+.xdv-page-embedded {
+  padding: 0;
+}
+
+.xdv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.xdv-page-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--color-border, #2a2f3a);
+}
+
+.xdv-page-tab {
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.xdv-page-tab:hover {
+  opacity: 1;
+}
+
+.xdv-page-tab-active {
+  opacity: 1;
+  border-bottom-color: var(--color-primary, #8b5cf6);
+  font-weight: 600;
+}
+
+.xdv-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-border, #2a2f3a);
+  border-radius: 8px;
+  background: var(--color-surface, #151922);
+}
+
+.xdv-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.xdv-filter label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.7;
+}
+
+.xdv-filter-range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.xdv-filter input {
+  background: var(--color-surface-alt, #0f1218);
+  border: 1px solid var(--color-border, #2a2f3a);
+  border-radius: 6px;
+  color: inherit;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.xdv-filter-input {
+  min-width: 140px;
+}
+
+/* ── Dashboard 10/10 Phase 4.3: freshness and refresh ─────────────────── */
+
+.xdv-freshness {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.xdv-freshness-stale {
+  color: var(--color-warning, #f59e0b);
+  opacity: 1;
+}
+
+.xdv-freshness-interval {
+  opacity: 0.7;
+}
+
+.xdv-spin {
+  animation: xf-spin 0.9s linear infinite;
+}
+
+@media (max-width: 599px) {
+  .xdv-page {
+    padding: 12px;
+  }
+
+  .xdv-header {
+    flex-direction: column;
+  }
+}

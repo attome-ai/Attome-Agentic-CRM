@@ -1,0 +1,96 @@
+<div class="page-header">
+  <div>
+    <h2>S2S Clients</h2>
+    <p class="subtitle">{{ clients().length }} machine-to-machine clients</p>
+  </div>
+  <button class="btn-primary" (click)="toggleCreate()">
+    <i class="las la-plus"></i> New Client
+  </button>
+</div>
+
+@if (showCreate()) {
+  <div class="create-panel">
+    <h3>New S2S Client</h3>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="s2s-new-client-id">Client ID <span class="hint">(slug, e.g. sap-erp)</span></label>
+        <input id="s2s-new-client-id" [(ngModel)]="newClientId" placeholder="sap-erp" autocomplete="off" class="mono-input">
+      </div>
+      <div class="field">
+        <label for="s2s-new-client-name">Name</label>
+        <input id="s2s-new-client-name" [(ngModel)]="newName" placeholder="SAP ERP Integration" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="s2s-new-client-rpm">Rate limit (rpm)</label>
+        <input id="s2s-new-client-rpm" [(ngModel)]="newRpm" type="number" placeholder="1000" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="s2s-new-client-max-concurrent">Max concurrent</label>
+        <input id="s2s-new-client-max-concurrent" [(ngModel)]="newMaxConcurrent" type="number" placeholder="10" autocomplete="off">
+      </div>
+    </div>
+    @if (createError()) { <p class="error-msg">{{ createError() }}</p> }
+    <div class="btn-row">
+      <button class="btn-primary" (click)="create()" [disabled]="creating()">
+        {{ creating() ? 'Creating…' : 'Create Client' }}
+      </button>
+      <button class="btn-ghost" (click)="toggleCreate()">Cancel</button>
+    </div>
+  </div>
+}
+
+<div class="filter-bar">
+  <input class="search" [(ngModel)]="search" placeholder="Search clients…" autocomplete="off">
+  <div class="prefix-tabs">
+    <button [class.active]="statusFilter() === ''" (click)="setStatus('')">All</button>
+    <button [class.active]="statusFilter() === 'active'" (click)="setStatus('active')">Active</button>
+    <button [class.active]="statusFilter() === 'suspended'" (click)="setStatus('suspended')">Suspended</button>
+    <button [class.active]="statusFilter() === 'revoked'" (click)="setStatus('revoked')">Revoked</button>
+  </div>
+</div>
+
+@if (loading()) {
+  <p class="state-msg">Loading clients…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (filtered().length === 0) {
+  <div class="empty-state">
+    <p>No S2S clients match.</p>
+  </div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Status</th>
+          <th>Rate Limit</th>
+          <th>Keys</th>
+          <th>Last Used</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of filtered(); track c.id) {
+          <tr>
+            <td>
+              <a [routerLink]="['/xrm/admin/s2s/clients', c.id]" class="cell-link">{{ c.name }}</a>
+              <div class="cell-muted">{{ c.client_id }}</div>
+            </td>
+            <td><span class="badge">{{ c.status }}</span></td>
+            <td>{{ c.rate_limit_rpm }}/min</td>
+            <td class="cell-muted">{{ c.key_slots.length ? c.key_slots.join(', ') : 'none' }}</td>
+            <td class="cell-muted">{{ c.last_used_at ? (c.last_used_at | date:'medium') : 'never' }}</td>
+            <td class="actions">
+              <a [routerLink]="['/xrm/admin/s2s/clients', c.id]" class="btn-sm">
+                <i class="las la-pen"></i> Manage
+              </a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

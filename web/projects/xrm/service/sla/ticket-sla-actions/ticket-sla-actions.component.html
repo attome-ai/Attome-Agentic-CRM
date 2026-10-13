@@ -1,0 +1,52 @@
+<section class="sla-actions" [attr.aria-label]="'serviceSla.title' | translate" data-testid="ticket-sla-actions">
+  <div class="sla-row">
+    <span class="sla-title">{{ 'serviceSla.title' | translate }}</span>
+
+    <button type="button" class="sla-btn" data-testid="sla-apply"
+            [disabled]="disabled()" (click)="apply()">
+      <i class="las la-flag" aria-hidden="true"></i>
+      {{ 'serviceSla.action.apply' | translate }}
+    </button>
+
+    <span class="sla-pause">
+      <label class="sla-label" for="sla-pause-reason">{{ 'serviceSla.pauseReason' | translate }}</label>
+      <select id="sla-pause-reason" class="sla-select" [disabled]="disabled()"
+              [value]="pauseReason()" (change)="onReasonChange($event)">
+        @for (r of pauseReasons; track r) {
+          <option [value]="r">{{ 'serviceSla.pauseReasons.' + r | translate }}</option>
+        }
+      </select>
+      <button type="button" class="sla-btn" data-testid="sla-pause"
+              [disabled]="disabled()" (click)="pause()">
+        <i class="las la-stopwatch" aria-hidden="true"></i>
+        {{ 'serviceSla.action.pause' | translate }}
+      </button>
+    </span>
+
+    <button type="button" class="sla-btn" data-testid="sla-resume"
+            [disabled]="disabled()" (click)="resume()">
+      <i class="las la-play-circle" aria-hidden="true"></i>
+      {{ 'serviceSla.action.resume' | translate }}
+    </button>
+
+    <button type="button" class="sla-btn" data-testid="sla-recalculate"
+            [disabled]="disabled()" (click)="recalculate()">
+      <i class="las la-sync" aria-hidden="true"></i>
+      {{ 'serviceSla.action.recalculate' | translate }}
+    </button>
+
+    @if (busy()) {
+      <i class="las la-circle-notch sla-spin" aria-hidden="true"></i>
+    }
+  </div>
+
+  @if (locked()) {
+    <p class="sla-hint" data-testid="sla-locked">{{ 'serviceSla.saveFirst' | translate }}</p>
+  }
+  @if (error(); as message) {
+    <p class="sla-error" role="alert" data-testid="sla-error">
+      <i class="las la-exclamation-circle" aria-hidden="true"></i> {{ message }}
+    </p>
+  }
+  <p class="sla-notice" role="status" data-testid="sla-notice">{{ notice() }}</p>
+</section>

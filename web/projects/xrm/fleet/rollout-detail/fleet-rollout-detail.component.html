@@ -1,0 +1,173 @@
+<nav class="breadcrumb" [attr.aria-label]="'fleet.common.breadcrumb' | translate">
+  <a routerLink="/xrm/fleet/rollouts">{{ 'fleet.rollouts.title' | translate }}</a>
+</nav>
+
+@if (loading() && !detail()) {
+  <p class="state-msg" role="status">{{ 'fleet.common.loading' | translate }}</p>
+}
+@if (error()) {
+  <p class="error-msg" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="fleet-status" role="status">{{ notice() }}</p>
+}
+
+@if (detail(); as d) {
+  <div class="page-header">
+    <div>
+      <h2>{{ d.rollout.title }}</h2>
+      <p class="subtitle">
+        {{ text('rollout', d.rollout.status) }} · {{ d.rollout.created_at | localDate: dateFmt }}
+      </p>
+    </div>
+    <div class="fleet-header-actions">
+      <button type="button" class="btn-ghost" (click)="reload()" [disabled]="loading()">
+        <i class="las la-sync" aria-hidden="true"></i> {{ 'fleet.rollout.reload' | translate }}
+      </button>
+      <button type="button" class="btn-ghost" (click)="refreshSteps()" [disabled]="busy()"
+              aria-describedby="fleet-refresh-hint">
+        <i class="las la-redo" aria-hidden="true"></i> {{ 'fleet.rollout.refreshSteps' | translate }}
+      </button>
+      @if (canHalt()) {
+        <button type="button" class="btn-ghost" (click)="halt()" [disabled]="busy()">
+          <i class="las la-ban" aria-hidden="true"></i> {{ 'fleet.rollout.halt' | translate }}
+        </button>
+      }
+      @if (canResume()) {
+        <button type="button" class="btn-primary" (click)="resume()" [disabled]="busy()">
+          {{ 'fleet.rollout.resume' | translate }}
+        </button>
+      }
+      @if (canCancel()) {
+        <button type="button" class="btn-danger-outline" (click)="cancel()" [disabled]="busy()">
+          <i class="las la-times" aria-hidden="true"></i> {{ 'fleet.rollout.cancel' | translate }}
+        </button>
+      }
+    </div>
+  </div>
+  <p id="fleet-refresh-hint" class="fleet-muted">{{ 'fleet.rollout.refreshHint' | translate }}</p>
+
+  <p class="fleet-note">{{ 'fleet.rollout.neverApproves' | translate }}</p>
+
+  <section class="card" aria-labelledby="fleet-ro-changesets">
+    <h3 id="fleet-ro-changesets">
+      {{ 'fleet.columns.changesets' | translate }}
+      <span class="count">{{ d.rollout.changesets.length }}</span>
+    </h3>
+    <ol class="fleet-list">
+      @for (c of d.rollout.changesets; track c.id) {
+        <li class="fleet-code">{{ c.path }}</li>
+      }
+    </ol>
+  </section>
+
+  @for (g of groups(); track g.index) {
+    <section class="card" [attr.aria-labelledby]="'fleet-wave-' + g.index">
+      <h3 [id]="'fleet-wave-' + g.index">
+        {{ 'fleet.rollout.waveTitle' | translate: { number: g.index + 1, name: text('ring', g.wave.name) } }}
+        <span class="fleet-pill">{{ text('wave', g.wave.state) }}</span>
+        @if (g.current) {
+          <span class="fleet-pill fleet-pill--warn">{{ 'fleet.rollout.currentWave' | translate }}</span>
+        }
+      </h3>
+      @if (g.targets.length === 0) {
+        <p class="fleet-muted">{{ 'fleet.rollout.noTargets' | translate }}</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">{{ 'fleet.columns.customer' | translate }}</th>
+                <th scope="col">{{ 'fleet.columns.status' | translate }}</th>
+                <th scope="col">{{ 'fleet.columns.plan' | translate }}</th>
+                <th scope="col">{{ 'fleet.columns.actions' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (t of g.targets; track t.id) {
+                <tr>
+                  <td>
+                    <a class="cell-link" [routerLink]="['/xrm/fleet/deployments', t.deployment_id]">{{ t.deployment_label }}</a>
+                    <div class="fleet-muted">{{ t.project_code }} · {{ text('environment', t.environment) }}</div>
+                    @if (t.maintenance_window) {
+                      <div class="fleet-muted">{{ 'fleet.rollout.window' | translate: { window: t.maintenance_window } }}</div>
+                    }
+                  </td>
+                  <td>
+                    <span class="fleet-pill">{{ text('target', t.status) }}</span>
+                    @if (t.error_code) {
+                      <div><span class="fleet-pill fleet-pill--bad fleet-code">{{ t.error_code }}</span></div>
+                    }
+                    @if (t.backup_ref) {
+                      <div class="fleet-muted">{{ 'fleet.rollout.backupUsed' | translate }} <span class="fleet-code">{{ t.backup_ref }}</span></div>
+                    }
+                    @if (approvalUrl(t); as url) {
+                      <div class="fleet-approval">
+                        <a [href]="url" target="_blank" rel="noopener noreferrer">
+                          {{ 'fleet.rollout.approvalLink' | translate }}
+                          <span class="fleet-visually-hidden">{{ 'fleet.common.opensNewTab' | translate }}</span>
+                        </a>
+                        <div class="fleet-muted">{{ 'fleet.rollout.approvalHint' | translate }}</div>
+                      </div>
+                    }
+                  </td>
+                  <td>
+                    @if (t.plan_summary; as p) {
+                      <ul class="fleet-plan">
+                        <li>{{ 'fleet.rollout.planChangesets' | translate: { count: p.changesets, applied: p.already_applied } }}</li>
+                        @if (p.blocked.length > 0) {
+                          <li class="fleet-plan-bad">{{ 'fleet.rollout.planBlocked' | translate: { count: p.blocked.length } }}
+                            <span class="fleet-code">{{ p.blocked.join(', ') }}</span></li>
+                        }
+                        @if (p.risky_operations > 0) {
+                          <li class="fleet-plan-warn">{{ 'fleet.rollout.planRisky' | translate: { count: p.risky_operations } }}</li>
+                        }
+                        <li>{{ 'fleet.rollout.planPhase' | translate: { phase: text('phase', p.phase) } }}</li>
+                        @if (!p.applicable) {
+                          <li class="fleet-plan-bad">{{ 'fleet.rollout.planNotApplicable' | translate }}</li>
+                        }
+                      </ul>
+                    } @else {
+                      <span class="fleet-muted">{{ 'fleet.rollout.notPlanned' | translate }}</span>
+                    }
+                  </td>
+                  <td>
+                    @if (canApply(t)) {
+                      <label class="field fleet-backup">
+                        <span class="field-caption">
+                          {{ (t.environment === 'prod' ? 'fleet.rollout.backupRequired' : 'fleet.rollout.backupOptional') | translate }}
+                        </span>
+                        <input class="mono-input" [attr.maxlength]="maxBackupRef"
+                               [attr.aria-required]="t.environment === 'prod'"
+                               [value]="backupRefOf(t.id)" (input)="setBackupRef(t.id, $any($event.target).value)" />
+                      </label>
+                      @if (t.maintenance_window) {
+                        <p class="fleet-note fleet-note--warn fleet-small">{{ 'fleet.rollout.windowWarning' | translate: { window: t.maintenance_window } }}</p>
+                      }
+                    }
+                    <div class="fleet-target-actions">
+                      @if (canApply(t)) {
+                        <button type="button" class="btn-sm btn-sm-accent" (click)="apply(t)"
+                                [disabled]="busyTarget() !== null || !applyReady(t)">
+                          <i class="las la-check" aria-hidden="true"></i> {{ 'fleet.rollout.apply' | translate }}
+                        </button>
+                      }
+                      @if (canSkip(t)) {
+                        <button type="button" class="btn-sm" (click)="skip(t)" [disabled]="busyTarget() !== null">
+                          {{ 'fleet.rollout.skip' | translate }}
+                        </button>
+                      }
+                    </div>
+                    @if (targetError(t.id); as e) {
+                      <p class="error-msg" role="alert">{{ e }}</p>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
+}

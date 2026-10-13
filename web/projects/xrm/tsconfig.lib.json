@@ -1,0 +1,44 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../out-tsc/lib",
+    "declaration": true,
+    "declarationMap": true,
+    "inlineSources": true,
+    // Overrides (not merges) the root tsconfig's `paths` — TS replaces the
+    // whole map on redeclare, not per-key. Identical to the root except
+    // @attome/base is redirected to node_modules (the real package
+    // boundary) instead of raw source: ng-packagr compiles each secondary
+    // entry point (access, entity, forms, …) as its own isolated program
+    // scoped to that entry's own folder, so resolving @attome/base straight
+    // to projects/base/src/public-api.ts — a source file outside every xrm
+    // entry's folder — trips a TS6059 rootDir error. @attome/xrm/* stays
+    // source-mapped: those are ng-packagr's own sibling secondary entry
+    // points within this same project (ng-packagr resolves cross-entry
+    // references internally, not through this file), so pointing them at
+    // dist/xrm would be circular — dist/xrm doesn't exist until this same
+    // build finishes. node_modules/@attome/base is `file:`-linked to
+    // dist/base (see /frontend-angular's build-order rule) — base must
+    // already be built for this to resolve.
+    "paths": {
+      "@angular/animations":       ["node_modules/@angular/animations"],
+      "@angular/animations/*":     ["node_modules/@angular/animations/*"],
+      "@angular/common":           ["node_modules/@angular/common"],
+      "@angular/common/*":         ["node_modules/@angular/common/*"],
+      "@angular/core":             ["node_modules/@angular/core"],
+      "@angular/core/*":           ["node_modules/@angular/core/*"],
+      "@angular/forms":            ["node_modules/@angular/forms"],
+      "@angular/forms/*":          ["node_modules/@angular/forms/*"],
+      "@angular/platform-browser": ["node_modules/@angular/platform-browser"],
+      "@angular/platform-browser/*": ["node_modules/@angular/platform-browser/*"],
+      "@angular/router":           ["node_modules/@angular/router"],
+      "@angular/router/*":         ["node_modules/@angular/router/*"],
+      "@attome/base":              ["node_modules/@attome/base"],
+      "@attome/xrm":               ["projects/xrm/src/public-api.ts"],
+      "@attome/xrm/*":             ["projects/xrm/*/public-api.ts"],
+      "rxjs":                      ["node_modules/rxjs"],
+      "rxjs/*":                    ["node_modules/rxjs/*"]
+    }
+  },
+  "exclude": ["**/*.spec.ts"]
+}

@@ -1,0 +1,60 @@
+@if (enabled()) {
+<section class="xf-section" data-testid="communications-grid">
+  <div class="xf-section-body">
+    <!-- The list frame is always shown: headers, then rows or one state row. -->
+    <div class="xcp-table" role="table" [attr.aria-label]="'xrmForm.tabs.communications' | translate"
+         [attr.aria-busy]="loading() || null">
+      <div class="xcp-head" role="row">
+        <span class="xcp-col-channel" role="columnheader">{{ 'communications.colChannel' | translate }}</span>
+        <span class="xcp-col-subject" role="columnheader">{{ 'communications.colSubject' | translate }}</span>
+        <span class="xcp-col-to" role="columnheader">{{ 'communications.colRecipient' | translate }}</span>
+        <span class="xcp-col-status" role="columnheader">{{ 'communications.colStatus' | translate }}</span>
+        <span class="xcp-col-date" role="columnheader">{{ 'communications.colDate' | translate }}</span>
+      </div>
+
+      @if (loading() && rows().length === 0) {
+        <div class="xcp-state" role="row"><span role="cell">{{ 'communications.loading' | translate }}</span></div>
+      } @else if (failed()) {
+        <div class="xcp-state" role="row"><span role="cell" class="xcp-error">{{ 'communications.error' | translate }}</span></div>
+      } @else if (rows().length === 0) {
+        <div class="xcp-state" role="row" data-testid="communications-empty">
+          <span role="cell">
+            <i class="las la-inbox" aria-hidden="true"></i>
+            {{ 'communications.empty' | translate }}
+          </span>
+        </div>
+      } @else {
+        @for (row of rows(); track row.id) {
+          <button type="button" class="xcp-row" role="row" (click)="open(row)" data-testid="communication-row">
+            <span class="xcp-col-channel xcp-channel-cell" role="cell">
+              <span class="xcp-channel"><i [class]="channelIcon(row.channel)" aria-hidden="true"></i></span>
+              <span class="xcp-channel-name">{{ 'communications.channels.' + row.channel | translate }}</span>
+            </span>
+            <span class="xcp-col-subject xcp-title" role="cell">
+              @if (row.direction) {
+                <i class="las xcp-dir" aria-hidden="true"
+                   [class.la-arrow-down]="row.direction === 'inbound'"
+                   [class.la-arrow-up]="row.direction === 'outbound'"></i>
+                <span class="xcp-sr-only">{{ 'communications.' + row.direction | translate }}</span>
+              }
+              {{ row.title || ('communications.noSubject' | translate) }}
+            </span>
+            <span class="xcp-col-to xcp-muted" role="cell" dir="auto" [title]="row.to">{{ row.to || '—' }}</span>
+            <span class="xcp-col-status" role="cell">
+              @if (row.status) { <span class="xcp-status">{{ row.status }}</span> } @else { <span class="xcp-muted">—</span> }
+            </span>
+            <span class="xcp-col-date xcp-muted" role="cell">
+              @if (row.sentAt) {
+                <time [attr.datetime]="row.sentAt">{{ row.sentAt | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</time>
+              } @else { — }
+            </span>
+          </button>
+        }
+      }
+    </div>
+    @if (total() > rows().length) {
+      <p class="xf-hint">{{ 'communications.showingLatest' | translate: { shown: rows().length, total: total() } }}</p>
+    }
+  </div>
+</section>
+}

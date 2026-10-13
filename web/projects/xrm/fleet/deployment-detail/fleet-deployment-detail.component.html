@@ -1,0 +1,311 @@
+<nav class="breadcrumb" [attr.aria-label]="'fleet.common.breadcrumb' | translate">
+  <a routerLink="/xrm/fleet/deployments">{{ 'fleet.deployments.title' | translate }}</a>
+</nav>
+
+@if (loading() && !deployment()) {
+  <p class="state-msg" role="status">{{ 'fleet.common.loading' | translate }}</p>
+}
+@if (error()) {
+  <p class="error-msg" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="fleet-status" role="status">{{ notice() }}</p>
+}
+
+@if (deployment(); as d) {
+  <div class="page-header">
+    <div>
+      <h2>{{ d.label }}</h2>
+      <p class="subtitle">
+        {{ d.project_code }} · {{ text('environment', d.environment) }} · {{ text('ring', d.ring) }}
+        @if (!d.is_active) { · {{ 'fleet.deployments.inactive' | translate }} }
+      </p>
+    </div>
+    <div class="fleet-header-actions">
+      <button type="button" class="btn-ghost" (click)="sync()" [disabled]="syncing()">
+        <i class="las la-sync" aria-hidden="true"></i> {{ 'fleet.detail.syncNow' | translate }}
+      </button>
+      <button type="button" class="btn-ghost" (click)="openEdit()" [disabled]="panel() !== 'none'">
+        <i class="las la-pen" aria-hidden="true"></i> {{ 'fleet.detail.edit' | translate }}
+      </button>
+      <button type="button" class="btn-ghost" (click)="openCredential()" [disabled]="panel() !== 'none'">
+        <i class="las la-key" aria-hidden="true"></i> {{ 'fleet.detail.setCredential' | translate }}
+      </button>
+      <a class="btn-ghost" [routerLink]="['/xrm/fleet/release-reports']" [queryParams]="{ deployment: d.id }">
+        <i class="las la-list" aria-hidden="true"></i> {{ 'fleet.detail.releaseReports' | translate }}
+      </a>
+    </div>
+  </div>
+
+  @if (panel() === 'edit') {
+    <section class="create-panel" aria-labelledby="fleet-edit-title">
+      <h3 id="fleet-edit-title">{{ 'fleet.detail.editTitle' | translate }}</h3>
+      <form (ngSubmit)="saveEdit()" novalidate>
+        <div class="fleet-form">
+          <div class="field">
+            <label for="fleet-edit-label">{{ 'fleet.fields.label' | translate }}</label>
+            <input id="fleet-edit-label" name="label" maxlength="200"
+                   [ngModel]="editLabel()" (ngModelChange)="editLabel.set($event)" />
+          </div>
+          <div class="field">
+            <label for="fleet-edit-env">{{ 'fleet.fields.environment' | translate }}</label>
+            <select id="fleet-edit-env" name="environment" [ngModel]="editEnvironment()" (ngModelChange)="editEnvironment.set($event)">
+              @for (env of environments; track env) {
+                <option [value]="env">{{ text('environment', env) }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label for="fleet-edit-ring">{{ 'fleet.fields.ring' | translate }}</label>
+            <select id="fleet-edit-ring" name="ring" [ngModel]="editRing()" (ngModelChange)="editRing.set($event)">
+              @for (r of rings; track r) {
+                <option [value]="r">{{ text('ring', r) }}</option>
+              }
+            </select>
+          </div>
+          <div class="field field-wide">
+            <label for="fleet-edit-url">{{ 'fleet.fields.baseUrl' | translate }}</label>
+            <input id="fleet-edit-url" name="base_url" type="url" class="mono-input"
+                   [ngModel]="editBaseUrl()" (ngModelChange)="editBaseUrl.set($event)"
+                   aria-describedby="fleet-edit-url-hint" />
+            <span id="fleet-edit-url-hint" class="hint">{{ 'fleet.detail.baseUrlStepUp' | translate }}</span>
+          </div>
+          <div class="field field-wide">
+            <label for="fleet-edit-window">{{ 'fleet.fields.maintenanceWindow' | translate }}</label>
+            <input id="fleet-edit-window" name="maintenance_window" maxlength="200"
+                   [ngModel]="editWindow()" (ngModelChange)="editWindow.set($event)" />
+          </div>
+          <div class="field field-wide">
+            <label class="checkbox-row" for="fleet-edit-active">
+              <input id="fleet-edit-active" type="checkbox" name="is_active"
+                     [ngModel]="editActive()" (ngModelChange)="editActive.set($event)" />
+              {{ 'fleet.detail.active' | translate }}
+            </label>
+          </div>
+        </div>
+        @if (formError()) {
+          <p class="error-msg" role="alert">{{ formError() }}</p>
+        }
+        <div class="btn-row">
+          <button type="submit" class="btn-primary" [disabled]="saving()">
+            {{ (saving() ? 'fleet.common.saving' : 'fleet.common.save') | translate }}
+          </button>
+          <button type="button" class="btn-ghost" (click)="closePanel()" [disabled]="saving()">{{ 'fleet.common.cancel' | translate }}</button>
+        </div>
+      </form>
+    </section>
+  }
+
+  @if (panel() === 'credential') {
+    <section class="create-panel" aria-labelledby="fleet-cred-title">
+      <h3 id="fleet-cred-title">{{ 'fleet.detail.credentialTitle' | translate }}</h3>
+      <p class="fleet-note">{{ 'fleet.credential.note' | translate }}</p>
+      <form (ngSubmit)="saveCredential()" novalidate>
+        <div class="fleet-form">
+          <div class="field">
+            <label for="fleet-cred-client">{{ 'fleet.credential.clientId' | translate }}</label>
+            <input id="fleet-cred-client" name="s2s_client_id" autocomplete="off" class="mono-input"
+                   [ngModel]="clientId()" (ngModelChange)="clientId.set($event)" />
+          </div>
+          <div class="field">
+            <label for="fleet-cred-key">{{ 'fleet.credential.keyId' | translate }}</label>
+            <input id="fleet-cred-key" name="s2s_key_id" autocomplete="off" class="mono-input"
+                   [ngModel]="keyId()" (ngModelChange)="keyId.set($event)" />
+          </div>
+          <div class="field">
+            <label for="fleet-cred-secret">{{ 'fleet.credential.secret' | translate }}</label>
+            <input id="fleet-cred-secret" name="secret" type="password" autocomplete="new-password" class="mono-input"
+                   [ngModel]="secret()" (ngModelChange)="secret.set($event)" />
+          </div>
+          <div class="field field-wide">
+            <label class="checkbox-row" for="fleet-cred-verify">
+              <input id="fleet-cred-verify" type="checkbox" name="verify"
+                     [ngModel]="verify()" (ngModelChange)="verify.set($event)" />
+              {{ 'fleet.credential.verify' | translate }}
+            </label>
+          </div>
+        </div>
+        @if (formError()) {
+          <p class="error-msg" role="alert">{{ formError() }}</p>
+        }
+        <div class="btn-row">
+          <button type="submit" class="btn-primary" [disabled]="!canSaveCredential() || saving()">
+            {{ (saving() ? 'fleet.common.saving' : 'fleet.credential.save') | translate }}
+          </button>
+          <button type="button" class="btn-ghost" (click)="closePanel()" [disabled]="saving()">{{ 'fleet.common.cancel' | translate }}</button>
+        </div>
+      </form>
+    </section>
+  }
+
+  <section class="card" aria-labelledby="fleet-reg-title">
+    <h3 id="fleet-reg-title">{{ 'fleet.detail.registration' | translate }}</h3>
+    <dl class="fleet-grid">
+      <div><dt>{{ 'fleet.fields.baseUrl' | translate }}</dt><dd class="fleet-code">{{ d.base_url }}</dd></div>
+      <div>
+        <dt>{{ 'fleet.fields.maintenanceWindow' | translate }}</dt>
+        <dd>{{ d.maintenance_window || ('fleet.common.none' | translate) }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'fleet.detail.credential' | translate }}</dt>
+        <dd>
+          @if (d.has_credential) {
+            <span class="fleet-code">{{ d.s2s_client_id }} / {{ d.s2s_key_id }}</span>
+            <div class="fleet-muted">{{ 'fleet.detail.secretEnds' | translate: { last4: d.secret_last4 } }}</div>
+            @if (d.secret_rotated_at) {
+              <div class="fleet-muted">{{ 'fleet.detail.secretSetAt' | translate: { date: (d.secret_rotated_at | localDate: dateFmt) } }}</div>
+            }
+          } @else {
+            <span class="fleet-pill fleet-pill--warn">{{ 'fleet.deployments.noCredential' | translate }}</span>
+          }
+        </dd>
+      </div>
+      <div><dt>{{ 'fleet.detail.registered' | translate }}</dt><dd>{{ d.created_at | localDate: dateFmt }}</dd></div>
+    </dl>
+  </section>
+
+  <section class="card" aria-labelledby="fleet-health-title">
+    <h3 id="fleet-health-title">{{ 'fleet.detail.health' | translate }}</h3>
+    @if (d.observation; as o) {
+      @if (o.error_code) {
+        <p class="fleet-note fleet-note--warn" role="status">
+          {{ 'fleet.detail.lastCheckFailed' | translate }} <span class="fleet-code">{{ o.error_code }}</span>
+        </p>
+      }
+      <dl class="fleet-grid">
+        <div><dt>{{ 'fleet.detail.checkedAt' | translate }}</dt><dd>{{ o.observed_at | localDate: dateFmt }}</dd></div>
+        <div>
+          <dt>{{ 'fleet.columns.ready' | translate }}</dt>
+          <dd>
+            @switch (o.ready) {
+              @case (true) { <span class="fleet-pill fleet-pill--ok">{{ 'fleet.common.yes' | translate }}</span> }
+              @case (false) { <span class="fleet-pill fleet-pill--bad">{{ 'fleet.common.no' | translate }}</span> }
+              @default { {{ 'fleet.common.unknown' | translate }} }
+            }
+          </dd>
+        </div>
+        <div><dt>{{ 'fleet.detail.appVersion' | translate }}</dt><dd class="fleet-code">{{ o.application_version ?? ('fleet.common.unknown' | translate) }}</dd></div>
+        <div><dt>{{ 'fleet.detail.gitRevision' | translate }}</dt><dd class="fleet-code">{{ o.git_revision ?? ('fleet.common.unknown' | translate) }}</dd></div>
+        <div>
+          <dt>{{ 'fleet.detail.schemaVersion' | translate }}</dt>
+          <dd>
+            {{ o.schema_version ?? ('fleet.common.unknown' | translate) }}
+            @if (o.schema_dirty) { <span class="fleet-pill fleet-pill--bad">{{ 'fleet.detail.schemaDirty' | translate }}</span> }
+          </dd>
+        </div>
+        <div><dt>{{ 'fleet.detail.configVersion' | translate }}</dt><dd class="fleet-code">{{ o.configuration_version ?? ('fleet.common.unknown' | translate) }}</dd></div>
+        <div><dt>{{ 'fleet.columns.openItems' | translate }}</dt><dd>{{ o.open_items ?? ('fleet.common.unknown' | translate) }}</dd></div>
+        <div><dt>{{ 'fleet.detail.pendingApprovals' | translate }}</dt><dd>{{ o.pending_approvals ?? ('fleet.common.unknown' | translate) }}</dd></div>
+        <div>
+          <dt>{{ 'fleet.detail.lastRelease' | translate }}</dt>
+          <dd>
+            @if (o.last_release_at) { {{ o.last_release_at | localDate: dateFmt }} } @else { {{ 'fleet.common.none' | translate }} }
+          </dd>
+        </div>
+      </dl>
+
+      <h4 class="fleet-subtitle">{{ 'fleet.detail.ledgerHead' | translate }}</h4>
+      @if (ledgerHead().length === 0) {
+        <p class="fleet-muted">{{ 'fleet.detail.ledgerEmpty' | translate }}</p>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">{{ 'fleet.columns.layer' | translate }}</th>
+                <th scope="col">{{ 'fleet.columns.scope' | translate }}</th>
+                <th scope="col">{{ 'fleet.columns.seq' | translate }}</th>
+                <th scope="col">{{ 'fleet.columns.changeset' | translate }}</th>
+                <th scope="col">{{ 'fleet.columns.status' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of ledgerHead(); track row.changeset_id) {
+                <tr>
+                  <td>{{ row.layer }}</td>
+                  <td>{{ row.scope }}</td>
+                  <td>{{ row.seq }}</td>
+                  <td class="fleet-code">{{ row.changeset_id }}</td>
+                  <td class="fleet-code">{{ row.status }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    } @else {
+      <p class="fleet-muted">{{ 'fleet.deployments.neverChecked' | translate }}</p>
+    }
+  </section>
+
+  <section class="card" aria-labelledby="fleet-drift-title">
+    <h3 id="fleet-drift-title">{{ 'fleet.columns.drift' | translate }}</h3>
+    <p>
+      <span [class]="'fleet-pill ' + driftTone(d.drift.status)">{{ text('drift', d.drift.status) }}</span>
+    </p>
+    <p class="fleet-muted">{{ 'fleet.detail.driftExplain' | translate }}</p>
+    @if (d.drift.fields.length > 0) {
+      <p>
+        {{ 'fleet.detail.driftDifferent' | translate }}
+        @for (f of d.drift.fields; track f; let last = $last) { {{ text('driftField', f) }}@if (!last) {, } }
+      </p>
+    }
+    @if (d.drift.unconfirmed.length > 0) {
+      <p class="fleet-muted">
+        {{ 'fleet.detail.driftUnconfirmed' | translate }}
+        @for (f of d.drift.unconfirmed; track f; let last = $last) { {{ text('driftField', f) }}@if (!last) {, } }
+      </p>
+    }
+  </section>
+
+  <section class="card" aria-labelledby="fleet-actions-title">
+    <h3 id="fleet-actions-title">
+      {{ 'fleet.detail.actionLog' | translate }}
+      <span class="count">{{ actionsTotal() | localNumber }}</span>
+    </h3>
+    @if (actionsLoading()) {
+      <p class="state-msg" role="status">{{ 'fleet.common.loading' | translate }}</p>
+    } @else if (actionsError()) {
+      <p class="error-msg" role="alert">{{ actionsError() }}</p>
+    } @else if (actions().length === 0) {
+      <p class="fleet-muted">{{ 'fleet.detail.actionLogEmpty' | translate }}</p>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ 'fleet.columns.when' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.action' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.outcome' | translate }}</th>
+              <th scope="col">{{ 'fleet.columns.remoteCall' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of actions(); track a.id) {
+              <tr>
+                <td class="cell-muted">{{ a.created_at | localDate: dateFmt }}</td>
+                <td class="fleet-code">{{ a.action }}</td>
+                <td>{{ text('outcome', a.outcome) }}</td>
+                <td class="fleet-code">
+                  @if (a.remote_path) {
+                    {{ a.remote_method }} {{ a.remote_path }}
+                    @if (a.remote_status !== null) { → {{ a.remote_status }} }
+                  } @else {
+                    <span class="fleet-muted">{{ 'fleet.detail.localOnly' | translate }}</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (actionsPages() > 1) {
+        <nav class="fleet-pager" [attr.aria-label]="'fleet.pager.label' | translate">
+          <button type="button" class="btn-ghost" (click)="previousActions()" [disabled]="actionsPage() <= 1">{{ 'fleet.pager.previous' | translate }}</button>
+          <span>{{ 'fleet.pager.pageOf' | translate: { page: actionsPage(), pages: actionsPages() } }}</span>
+          <button type="button" class="btn-ghost" (click)="nextActions()" [disabled]="actionsPage() >= actionsPages()">{{ 'fleet.pager.next' | translate }}</button>
+        </nav>
+      }
+    }
+  </section>
+}

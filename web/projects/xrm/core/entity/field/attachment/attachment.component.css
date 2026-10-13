@@ -1,0 +1,89 @@
+.xat { display: flex; flex-direction: column; gap: 8px; }
+
+.xat-label {
+  margin: 0; font-size: 11px; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--color-text-secondary, #94a3b8);
+}
+.xat-req { color: #f87171; margin-left: 2px; }
+
+.xat-gate { margin: 0; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
+
+/* One shared row geometry, so the zone does not resize as it changes state. */
+.xat-row {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 12px;
+  min-height: 48px; padding: 0 16px; border-radius: 8px;
+  background: var(--color-bg, #0f172a);
+  border: 1px solid var(--color-border, #24324d);
+}
+
+.xat-icon  { flex: none; font-size: 18px; color: var(--color-accent, #5D5CDE); }
+.xat-text  { flex: 1; min-width: 0; font-size: 13px; color: var(--color-text-primary, #e5eefc); }
+.xat-name  { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── Empty drop zone ─────────────────────────────────────────────────── */
+.xat-drop {
+  cursor: pointer;
+  border: 1px dashed color-mix(in srgb, var(--color-accent, #5D5CDE) 55%, transparent);
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.xat-drop:hover, .xat-drop:focus-visible, .xat-drop-active {
+  outline: none;
+  border-color: var(--color-accent, #5D5CDE);
+  background: color-mix(in srgb, var(--color-accent, #5D5CDE) 8%, var(--color-bg, #0f172a));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent, #5D5CDE) 18%, transparent);
+}
+.xat-browse {
+  flex: none; font-size: 13px; font-weight: 600;
+  color: var(--color-accent, #5D5CDE);
+}
+
+/* ── Busy (upload + scan) ────────────────────────────────────────────── */
+.xat-row-busy { border-color: var(--color-accent, #5D5CDE); }
+.xat-fill {
+  position: absolute; inset: 0 auto 0 0; z-index: 0;
+  background: color-mix(in srgb, var(--color-accent, #5D5CDE) 22%, transparent);
+  transition: width .2s ease;
+}
+/* No server-side percentage exists during the scan, so the fill sweeps
+   instead of claiming a progress figure it does not have. */
+.xat-fill-pulse { width: 100%; animation: xat-pulse 1.4s ease-in-out infinite; }
+@keyframes xat-pulse { 0%, 100% { opacity: .25; } 50% { opacity: .7; } }
+
+.xat-row-busy .xat-icon,
+.xat-row-busy .xat-text,
+.xat-row-busy .xat-pct { position: relative; z-index: 1; }
+
+.xat-pct {
+  flex: none; font-size: 13px; font-weight: 600;
+  color: var(--color-accent, #5D5CDE);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xat-fill { transition: none; }
+  .xat-fill-pulse { animation: none; opacity: .45; }
+}
+
+/* ── Attached ────────────────────────────────────────────────────────── */
+.xat-row-filled { border-style: solid; }
+.xat-action {
+  flex: none; padding: 4px 10px; font-size: 12px; cursor: pointer;
+  background: none; border: 1px solid var(--color-border, #24324d);
+  border-radius: 6px; color: var(--color-accent, #5D5CDE);
+}
+.xat-action:hover:not(:disabled) { border-color: var(--color-accent, #5D5CDE); }
+.xat-action:disabled { cursor: default; opacity: .6; }
+.xat-note { flex: none; font-size: 12px; color: var(--color-text-secondary, #94a3b8); }
+.xat-remove {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; cursor: pointer; font-size: 16px;
+  background: none; border: none; border-radius: 6px;
+  color: var(--color-text-secondary, #94a3b8);
+}
+.xat-remove:hover { color: #f87171; }
+
+.xat-native { display: none; }
+
+.xat-status { margin: 0; font-size: 12px; color: var(--color-text-secondary, #94a3b8); }
+.xat-status-error { color: #f87171; }

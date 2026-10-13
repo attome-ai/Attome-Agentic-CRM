@@ -1,0 +1,11 @@
+:host { display: block; }
+
+.field { max-width: 520px; }
+
+.fleet-list { margin: 0 0 14px; padding-inline-start: 22px; font-size: 13px; color: var(--color-text-primary); }
+.fleet-list li { margin-bottom: 4px; }
+
+.fleet-inline-title { margin: 0 0 6px; font-weight: 600; }
+
+/* The "back" arrow points the reading direction's way back. */
+:host-context([dir="rtl"]) .fleet-flip { display: inline-block; transform: scaleX(-1); }

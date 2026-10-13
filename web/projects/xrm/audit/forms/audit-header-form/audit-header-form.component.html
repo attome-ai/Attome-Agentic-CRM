@@ -1,0 +1,17 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="audit-header">
+  <ng-template xrmTab="details">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-list-alt"></i></div>
+        <div class="xf-section-meta"><h2 class="xf-section-title">Details</h2></div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @for (field of fieldsIn(['organization_ref', 'is_active', 'category', 'entity_name', 'record_id', 'operation', 'version_before', 'version_after', 'user_id', 'user_name', 'user_display_name', 'user_email', 'user_job_ref', 'user_job_name', 'changed_on', 'source', 'ip_address', 'browser', 'device_type', 'correlation_id', 'batch_id', 'event_name', 'event_comment', 'event_index', 'prev_hash', 'event_hash', 'signing_key_id', 'signature', 'chain_batch_ref', 'initiator', 'agent_session_id', 'agent_action_id']); track field.id) {
+            <attome-field-input [field]="field" [entityName]="name()" [recordId]="id()" />
+          }
+        </div>
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

@@ -1,0 +1,132 @@
+<div class="metric-page">
+  <header class="metric-page__header">
+    <h2>Metrics &amp; KPIs</h2>
+    <p class="metric-page__subtitle">
+      Definitions and targets are plain records — edit them from
+      <code>Metric Definitions</code> / <code>Metric Targets</code> in the
+      sidebar. This page shows each metric's live status and history.
+    </p>
+    <nav class="metric-page__links" [attr.aria-label]="'reportRun.navLabel' | translate">
+      <a [routerLink]="reportsRoute"><i class="las la-file-alt" aria-hidden="true"></i> {{ 'reportRun.reports' | translate }}</a>
+      <a [routerLink]="schedulesRoute"><i class="las la-calendar-alt" aria-hidden="true"></i> {{ 'reportRun.schedules' | translate }}</a>
+    </nav>
+  </header>
+
+  @if (loading()) {
+    <p class="metric-state metric-state--muted">Loading metrics…</p>
+  } @else if (error()) {
+    <p class="metric-state metric-state--error">{{ error() }}</p>
+  } @else if (metrics().length === 0) {
+    <p class="metric-state metric-state--muted">No active metric definitions yet.</p>
+  } @else {
+    <div class="metric-layout">
+      <table class="metric-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Source</th>
+            <th>Period</th>
+            <th>Weight</th>
+            <th>Lineage</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of metrics(); track m.id) {
+            <tr
+              class="metric-row"
+              [class.metric-row--selected]="selected()?.id === m.id"
+              (click)="select(m)"
+            >
+              <td>
+                <div class="metric-name">{{ m.name }}</div>
+                <div class="metric-key">{{ m.key }}</div>
+              </td>
+              <td>{{ m.source_kind }}</td>
+              <td>{{ m.period }}</td>
+              <td>{{ m.weight ?? '—' }}</td>
+              <td>
+                @if (m.lineage_entities.length > 0) {
+                  {{ m.lineage_entities.join(', ') }}
+                } @else {
+                  <span class="metric-state--muted">—</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      @if (selected(); as sel) {
+        <aside class="metric-detail">
+          <h3>{{ sel.name }}</h3>
+          <p class="metric-detail__meta">
+            {{ sel.direction }} · {{ sel.period }}
+            @if (sel.unit) { · {{ sel.unit }} }
+          </p>
+
+          <div class="metric-actions">
+            <button type="button" (click)="computeNow(false)" [disabled]="computing()">
+              Compute now
+            </button>
+            <button type="button" (click)="computeNow(true)" [disabled]="computing()" title="Always writes a new snapshot (D-407 restatement), even if this period was already computed">
+              Restate (force)
+            </button>
+          </div>
+          @if (computeError()) {
+            <p class="metric-state metric-state--error">{{ computeError() }}</p>
+          }
+
+          @if (snapshotsLoading()) {
+            <p class="metric-state metric-state--muted">Loading trend…</p>
+          } @else if (snapshots().length === 0) {
+            <p class="metric-state metric-state--muted">No snapshots recorded yet.</p>
+          } @else {
+            <table class="metric-trend-table">
+              <caption class="sr-only">Snapshot history for {{ sel.name }}, newest first</caption>
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Period</th>
+                  <th>Actual</th>
+                  <th></th>
+                  <th>Computed</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of snapshots(); track s.id) {
+                  <tr>
+                    <td class="metric-status-cell">
+                      <span [class]="statusClass(s.status)"></span>
+                      <span class="metric-status-label">{{ s.status }}</span>
+                    </td>
+                    <td>{{ s.period_start }}</td>
+                    <td>
+                      {{ s.actual !== null ? (s.actual | number: '1.0-2') : '—' }}
+                      @if (s.superseded_ref) {
+                        <span class="metric-badge" title="This snapshot restates an earlier one (D-407) — the row it replaced is still in the history, unchanged.">restated</span>
+                      }
+                    </td>
+                    <td class="metric-trend-bar-cell">
+                      <span
+                        class="metric-trend-bar"
+                        [class]="statusClass(s.status)"
+                        [style.height.%]="barHeightPct(s, snapshots())"
+                      ></span>
+                    </td>
+                    <td>{{ s.computed_at | date: 'short' }}</td>
+                  </tr>
+                  @if (s.error_message) {
+                    <tr class="metric-error-row">
+                      <td></td>
+                      <td colspan="4">{{ s.error_message }}</td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          }
+        </aside>
+      }
+    </div>
+  }
+</div>

@@ -1,0 +1,470 @@
+@if (loading()) {
+  <div class="ee-state-wrap">
+    <i class="las la-circle-notch ee-state-icon ee-spinning"></i>
+    <p>Loading item details…</p>
+  </div>
+
+} @else if (error()) {
+  <div class="ee-state-wrap ee-error-state">
+    <i class="las la-exclamation-circle ee-state-icon"></i>
+    <p>{{ error() }}</p>
+  </div>
+
+} @else if (entity()) {
+
+  <!-- ── Breadcrumb ──────────────────────────────────────────────────── -->
+  <div class="ee-breadcrumb">
+    <a routerLink="/xrm/admin/entities" class="ee-breadcrumb-link">
+      <i class="las la-arrow-left"></i> Items
+    </a>
+    <span class="ee-breadcrumb-sep">›</span>
+    <span class="ee-breadcrumb-current">{{ entity()!.name }}</span>
+  </div>
+
+  <!-- ── Main Information ────────────────────────────────────────────── -->
+  <div class="ee-info-card">
+    <h2 class="ee-card-title">
+      <i class="las la-info-circle"></i>
+      Main Information
+    </h2>
+    <xrm-owner-layer-badge [layer]="entity()!.owner_layer" variant="full" />
+
+    <div class="form-row-2">
+      <div class="field">
+        <span class="field-caption">Item Name</span>
+        <p class="ee-readonly-value">{{ entity()!.name }}</p>
+      </div>
+      <div class="field">
+        <span class="field-caption">Category</span>
+        <p class="ee-readonly-value">{{ entity()!.category || '—' }}</p>
+      </div>
+    </div>
+
+    <!-- Advanced: Primary Field + System Name collapsed by default -->
+    <details class="ee-advanced">
+      <summary>
+        <i class="las la-cog"></i>
+        Advanced — System Settings
+      </summary>
+      <div class="ee-advanced-body">
+        <div class="form-row-2">
+          <div class="field">
+            <span class="field-caption">Primary Field</span>
+            <p class="ee-readonly-value mono-input">{{ entity()!.primary_name_attribute || '—' }}</p>
+          </div>
+          <div class="field">
+            <span class="field-caption">System Name</span>
+            <p class="ee-readonly-value mono-input">{{ entity()!.logicalname }}</p>
+          </div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- ── Fields ──────────────────────────────────────────────────────── -->
+  <div class="ee-fields-section">
+    <div class="ee-section-header">
+      <div>
+        <h2 class="ee-card-title">
+          <i class="las la-th-list"></i>
+          Fields
+          <span class="ee-count-badge">{{ entity()!.attributes.length }}</span>
+        </h2>
+        <p class="ee-section-sub">{{ 'fieldChange.editor.fieldsHint' | translate }}</p>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    @if (entity()!.attributes.length === 0) {
+      <div class="ee-empty">
+        <i class="las la-layer-group ee-empty-icon"></i>
+        <p>This item has no fields.</p>
+      </div>
+    }
+
+    <!-- Field cards -->
+    @if (entity()!.attributes.length > 0) {
+      <div class="ee-field-list">
+        @for (a of entity()!.attributes; track a.id) {
+          <div class="ee-field-card">
+
+            <!-- Left: name + type badge -->
+            <div class="ee-field-left">
+              <span class="ee-field-name">{{ a.name }}</span>
+              <span [class]="'ee-type-badge ee-type-' + a.field_type">
+                {{ typeLabel(a.field_type) }}
+              </span>
+              <xrm-owner-layer-badge [layer]="a.owner_layer" />
+            </div>
+
+            <!-- Middle: detail lines -->
+            <div class="ee-field-details">
+              <p>Must fill out: <strong>{{ a.is_required ? 'Yes' : 'No' }}</strong></p>
+              <p>Maximum letters: <strong>{{ a.max_length ?? 'None' }}</strong></p>
+              @if (a.lookup_entity_name) {
+                <p>Links to: <strong>{{ a.lookup_entity_name }}</strong></p>
+              }
+              @if (a.field_type === 'formula') {
+                <p data-testid="formula-expression">{{ typeLabel('formula') }}: <code>{{ formulaExpression(a.options) }}</code></p>
+              }
+            </div>
+
+            <!-- Right: structure changes (Solution 7 Phase 2, D-788) -->
+            <div class="ee-field-actions ee-field-change-actions" role="group"
+                 [attr.aria-label]="'fieldChange.editor.actions' | translate: { field: a.name }">
+              <button type="button" class="btn-sm btn-ghost" data-testid="field-rename"
+                      (click)="openFieldChange(a, 'rename')">
+                <i class="las la-pen" aria-hidden="true"></i> {{ 'fieldChange.editor.rename' | translate }}
+              </button>
+              <button type="button" class="btn-sm btn-ghost" data-testid="field-change-type"
+                      (click)="openFieldChange(a, 'changeType')">
+                {{ 'fieldChange.editor.changeType' | translate }}
+              </button>
+              @if (a.field_type === 'choice') {
+                <button type="button" class="btn-sm btn-ghost" data-testid="field-choices"
+                        (click)="openFieldChange(a, 'choices')">
+                  <i class="las la-list" aria-hidden="true"></i> {{ 'fieldChange.editor.choices' | translate }}
+                </button>
+              }
+              <button type="button" class="btn-sm btn-danger-outline" data-testid="field-delete"
+                      (click)="openFieldChange(a, 'delete')">
+                <i class="las la-trash" aria-hidden="true"></i> {{ 'fieldChange.editor.delete' | translate }}
+              </button>
+            </div>
+
+          </div>
+        }
+      </div>
+    }
+
+    <!-- System fields — present on every item, not editable -->
+    <div class="ee-system-fields-header">
+      <i class="las la-lock"></i>
+      <span>System Fields</span>
+      <span class="ee-count-badge ee-count-badge-muted">{{ systemFields.length }}</span>
+    </div>
+    <p class="ee-section-sub" style="margin-bottom:14px">
+      Every item has these built in automatically. They can't be edited or removed.
+    </p>
+    <div class="ee-field-list">
+      @for (f of systemFields; track f.name) {
+        <div class="ee-field-card ee-field-card-system">
+          <div class="ee-field-left">
+            <span class="ee-field-name">{{ f.name }}</span>
+            <span [class]="'ee-type-badge ' + f.badge_class">{{ f.type_label }}</span>
+          </div>
+          <div class="ee-field-details">
+            <p>{{ f.description }}</p>
+          </div>
+          <div class="ee-field-actions">
+            <span class="ee-system-lock" title="Built-in field — not editable">
+              <i class="las la-lock"></i>
+              <span>Locked</span>
+            </span>
+          </div>
+        </div>
+      }
+    </div>
+
+  </div>
+
+  <!-- ── Recovery archive (Solution 7 Phase 2, design §8.5) ────────────── -->
+  <div class="ee-fields-section">
+    <div class="ee-section-header">
+      <div>
+        <h2 class="ee-card-title">
+          <i class="las la-archive" aria-hidden="true"></i>
+          {{ 'fieldChange.editor.archiveTitle' | translate }}
+        </h2>
+        <p class="ee-section-sub">{{ 'fieldChange.editor.archiveHint' | translate }}</p>
+      </div>
+      <button type="button" class="ee-add-btn" data-testid="toggle-archive"
+              [attr.aria-expanded]="showArchive()" (click)="toggleArchive()">
+        <i [class]="showArchive() ? 'las la-chevron-up' : 'las la-chevron-down'" aria-hidden="true"></i>
+        {{ (showArchive() ? 'fieldChange.editor.hide' : 'fieldChange.editor.show') | translate }}
+      </button>
+    </div>
+    @if (showArchive()) {
+      <xrm-recovery-archive [entity]="entity()!.logicalname" [fieldNames]="fieldNames()" />
+    }
+  </div>
+
+  <!-- ── Auto Value ──────────────────────────────────────────────────── -->
+  <div class="ee-fields-section">
+    <div class="ee-section-header">
+      <div>
+        <h2 class="ee-card-title">
+          <i class="las la-magic"></i>
+          Auto Value
+          @if (autoValuesLoaded()) {
+            <span class="ee-count-badge">{{ autoValues().length }}</span>
+          }
+        </h2>
+        <p class="ee-section-sub">
+          Fills a field automatically when a record is created — invoice numbers,
+          case references, employee IDs. Rules are defined at development time and
+          shown here read-only.
+        </p>
+      </div>
+      <button class="ee-add-btn" (click)="toggleAutoValues()">
+        <i [class]="showAutoValues() ? 'las la-chevron-up' : 'las la-chevron-down'"></i>
+        {{ showAutoValues() ? 'Hide' : 'Auto Value' }}
+      </button>
+    </div>
+
+    @if (showAutoValues()) {
+      @if (autoValuesLoading()) {
+        <div class="ee-empty">
+          <i class="las la-circle-notch ee-empty-icon ee-spinning"></i>
+          <p>Loading rules…</p>
+        </div>
+      } @else {
+        @if (autoValueError()) { <p class="error-msg">{{ autoValueError() }}</p> }
+
+        @if (autoValues().length === 0) {
+          <div class="ee-empty">
+            <i class="las la-magic ee-empty-icon"></i>
+            <p>No fields on this item are filled in automatically.</p>
+          </div>
+        }
+
+        @if (autoValues().length > 0) {
+          <div class="ee-field-list">
+            @for (r of autoValues(); track r.id) {
+              <div class="ee-field-card">
+                <div class="ee-field-left">
+                  <span class="ee-field-name">{{ fieldLabel(r.attribute_logicalname) }}</span>
+                  <span class="ee-type-badge ee-type-text">{{ r.format }}</span>
+                </div>
+                <div class="ee-field-details">
+                  <p>Next number: <strong>{{ r.next_value }}</strong></p>
+                  <p>Restarts: <strong>{{ resetLabel(r.reset_scope) }}</strong></p>
+                  <p>Preview: <strong>{{ preview(r) }}</strong></p>
+                </div>
+                <div class="ee-field-actions">
+                  <span class="ee-system-lock" title="Auto Value rules are defined at development time — read-only here">
+                    <i class="las la-lock"></i>
+                    <span>Read-only</span>
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+    }
+  </div>
+
+  <!-- ── Labels (M05 Phase 1, D-426) ─────────────────────────────────── -->
+  <div class="ee-fields-section">
+    <div class="ee-section-header">
+      <div>
+        <h2 class="ee-card-title">
+          <i class="las la-language"></i>
+          Labels
+          @if (labelsLoaded()) {
+            <span class="ee-count-badge">{{ labels().length }}</span>
+          }
+        </h2>
+        <p class="ee-section-sub">
+          Translated names shown instead of this item's built-in name and field
+          names when a visitor's language matches. The built-in name always stays
+          the same underneath.
+        </p>
+      </div>
+      <button class="ee-add-btn" (click)="toggleLabels()">
+        <i [class]="showLabels() ? 'las la-chevron-up' : 'las la-chevron-down'"></i>
+        {{ showLabels() ? 'Hide' : 'Labels' }}
+      </button>
+    </div>
+
+    @if (showLabels()) {
+      @if (labelsLoading()) {
+        <div class="ee-empty">
+          <i class="las la-circle-notch ee-empty-icon ee-spinning"></i>
+          <p>Loading labels…</p>
+        </div>
+      } @else {
+        @if (labelsError()) { <p class="error-msg">{{ labelsError() }}</p> }
+
+        @if (labels().length === 0) {
+          <div class="ee-empty">
+            <i class="las la-language ee-empty-icon"></i>
+            <p>No translated labels yet for this item.</p>
+          </div>
+        }
+
+        @if (labels().length > 0) {
+          <div class="ee-field-list">
+            @for (l of labels(); track l.id) {
+              <div class="ee-field-card">
+                <div class="ee-field-left">
+                  <span class="ee-field-name">{{ labelTarget(l) }}</span>
+                  <span class="ee-type-badge ee-type-text">{{ l.locale }}</span>
+                </div>
+                <div class="ee-field-details">
+                  <p>Shown as: <strong>{{ l.display_name }}</strong></p>
+                  @if (l.description) { <p>{{ l.description }}</p> }
+                </div>
+                <div class="ee-field-actions">
+                  <button type="button" class="ee-add-btn" (click)="deleteLabel(l)">
+                    <i class="las la-trash"></i>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Add label -->
+        <div class="ee-advanced-body" style="margin-top:14px">
+          @if (labelFormError()) { <p class="error-msg">{{ labelFormError() }}</p> }
+          <div class="form-row-2">
+            <div class="field">
+              <span class="field-caption">Applies to</span>
+              <select [ngModel]="newLabelTarget()" (ngModelChange)="newLabelTarget.set($event)">
+                <option value="__entity__">Item name</option>
+                @for (a of entity()!.attributes; track a.id) {
+                  <option [value]="a.logicalname">{{ a.name }} field</option>
+                }
+              </select>
+            </div>
+            <div class="field">
+              <span class="field-caption">Locale (e.g. "ar" or "ar-AE")</span>
+              <input [ngModel]="newLabelLocale()" (ngModelChange)="newLabelLocale.set($event)" />
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="field">
+              <span class="field-caption">Translated name</span>
+              <input [ngModel]="newLabelDisplayName()" (ngModelChange)="newLabelDisplayName.set($event)" />
+            </div>
+            <div class="field">
+              <span class="field-caption">Description (optional)</span>
+              <input [ngModel]="newLabelDescription()" (ngModelChange)="newLabelDescription.set($event)" />
+            </div>
+          </div>
+          <button class="ee-add-btn" [disabled]="labelSaving()" (click)="addLabel()">
+            <i class="las la-plus"></i>
+            {{ labelSaving() ? 'Saving…' : 'Add label' }}
+          </button>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- ── Relationships (M01 Core P3 gap, D-455) ──────────────────────── -->
+  <div class="ee-fields-section">
+    <div class="ee-section-header">
+      <div>
+        <h2 class="ee-card-title">
+          <i class="las la-link"></i>
+          Relationships
+          @if (relationshipsLoaded()) {
+            <span class="ee-count-badge">{{ relationships().length }}</span>
+          }
+        </h2>
+        <p class="ee-section-sub">
+          Named many-to-many relationships this item can have with another
+          item type. Creating one provisions its own linking table
+          immediately, and it becomes available on this item's form and to
+          the query engine right away.
+        </p>
+      </div>
+      <button class="ee-add-btn" (click)="toggleRelationships()">
+        <i [class]="showRelationships() ? 'las la-chevron-up' : 'las la-chevron-down'"></i>
+        {{ showRelationships() ? 'Hide' : 'Relationships' }}
+      </button>
+    </div>
+
+    @if (showRelationships()) {
+      @if (relationshipsLoading()) {
+        <div class="ee-empty">
+          <i class="las la-circle-notch ee-empty-icon ee-spinning"></i>
+          <p>Loading relationships…</p>
+        </div>
+      } @else {
+        @if (relationshipsError()) { <p class="error-msg">{{ relationshipsError() }}</p> }
+
+        @if (relationships().length === 0) {
+          <div class="ee-empty">
+            <i class="las la-link ee-empty-icon"></i>
+            <p>No relationships configured for this item yet.</p>
+          </div>
+        }
+
+        @if (relationships().length > 0) {
+          <div class="ee-field-list">
+            @for (r of relationships(); track r.id) {
+              <div class="ee-field-card">
+                <div class="ee-field-left">
+                  <span class="ee-field-name">{{ thisRoleLabel(r) }}</span>
+                  <span class="ee-type-badge ee-type-lookup">{{ otherEntityLabel(r) }}</span>
+                  <xrm-owner-layer-badge [layer]="r.owner_layer" />
+                </div>
+                <div class="ee-field-details">
+                  <p>Relationship name: <strong>{{ r.name }}</strong></p>
+                  <p>On delete: {{ cascadeLabel(r.cascade) }}</p>
+                  @if (r.is_customized) { <p>Admin-customized</p> }
+                </div>
+                <div class="ee-field-actions">
+                  <button type="button" class="ee-add-btn" (click)="deleteRelationship(r)">
+                    <i class="las la-trash"></i>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Add relationship -->
+        <div class="ee-advanced-body" style="margin-top:14px">
+          @if (relationshipFormError()) { <p class="error-msg">{{ relationshipFormError() }}</p> }
+          <div class="form-row-2">
+            <div class="field">
+              <span class="field-caption">Relationship name (unique, e.g. "project_members")</span>
+              <input [ngModel]="newRelName()" (ngModelChange)="newRelName.set($event)" />
+            </div>
+            <div class="field">
+              <span class="field-caption">Other item type</span>
+              <select [ngModel]="newRelOtherEntity()" (ngModelChange)="newRelOtherEntity.set($event)">
+                <option value="" disabled>Choose an item type…</option>
+                @for (e of allEntities(); track e.id) {
+                  <option [value]="e.logicalname">{{ e.name }}</option>
+                }
+              </select>
+            </div>
+          </div>
+          <div class="form-row-2">
+            <div class="field">
+              <span class="field-caption">Label on THIS item's form (for the linked other items)</span>
+              <input [ngModel]="newRelRoleThis()" (ngModelChange)="newRelRoleThis.set($event)" />
+            </div>
+            <div class="field">
+              <span class="field-caption">Label on the OTHER item's form (for the linked items here)</span>
+              <input [ngModel]="newRelRoleOther()" (ngModelChange)="newRelRoleOther.set($event)" />
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-caption">On delete</span>
+            <select [ngModel]="newRelCascade()" (ngModelChange)="newRelCascade.set($event)">
+              @for (c of cascadeOptions; track c) {
+                <option [value]="c">{{ cascadeLabel(c) }}</option>
+              }
+            </select>
+          </div>
+          <button class="ee-add-btn" [disabled]="relationshipSaving()" (click)="addRelationship()">
+            <i class="las la-plus"></i>
+            {{ relationshipSaving() ? 'Saving…' : 'Add relationship' }}
+          </button>
+        </div>
+      }
+    }
+  </div>
+
+  @if (dialogField(); as f) {
+    <attome-field-change-dialog [entityId]="id()" [field]="f" [mode]="dialogMode()"
+                             (closed)="onFieldChangeClosed($event)" />
+  }
+
+}

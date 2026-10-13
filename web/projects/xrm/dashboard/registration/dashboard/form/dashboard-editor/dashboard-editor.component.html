@@ -1,0 +1,279 @@
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="db" [customTitle]="true">
+  <div xrmHeaderTitle>
+    <div class="xf-breadcrumb">
+      <a class="xf-breadcrumb-link" [routerLink]="listLink()">{{ 'xrmForm.entities.dashboard' | translate }}</a>
+      <span class="xf-breadcrumb-sep">›</span>
+      <span>{{ (isEdit() ? 'xrmForm.editRecord' : 'xrmForm.newRecord') | translate }}</span>
+    </div>
+    <h1 class="xf-title">
+      {{ form().get('name')?.value || ('dashboardForm.newDashboard' | translate) }}
+      @if (isEdit()) {
+        <span class="xf-badge xd-title-badge" [class.xf-badge-published]="currentStatus() === 'published'">{{ currentStatus() }}</span>
+      }
+    </h1>
+  </div>
+
+  <ng-container ngProjectAs="[xrmHeaderActions]">
+    @if (isEdit()) {
+      <a class="xf-btn xf-btn-secondary" [routerLink]="['/xrm/dashboard/view']" [queryParams]="{ id: id() }">
+        <i class="las la-eye"></i> {{ 'dashboardForm.view' | translate }}
+      </a>
+      <a class="xf-btn xf-btn-secondary" [routerLink]="['/xrm/dashboard/view']" [queryParams]="{ id: id(), draft: 1 }">
+        <i class="las la-pencil-ruler"></i> {{ 'dashboardForm.previewDraft' | translate }}
+      </a>
+      @for (a of lifecycleActions(); track a.action) {
+        <button type="button" class="xf-btn"
+                [class.xf-btn-primary]="a.style === 'primary'"
+                [class.xf-btn-secondary]="a.style !== 'primary'"
+                [class.xd-danger]="a.style === 'danger'"
+                [disabled]="lifecycleBusy()"
+                (click)="runLifecycleAction(a.action)">
+          <i class="las" [class]="a.icon"></i> {{ a.label | translate }}
+        </button>
+      }
+      <button type="button" class="xf-btn xf-btn-secondary" [disabled]="lifecycleBusy()" (click)="cloneDashboard()">
+        <i class="las la-clone"></i> {{ 'dashboardForm.clone' | translate }}
+      </button>
+      <button type="button" class="xf-btn xf-btn-secondary" [disabled]="healthCheckRunning()" (click)="runHealthCheck()">
+        @if (healthCheckRunning()) {
+          <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+        } @else {
+          <i class="las la-heartbeat"></i>
+        }
+        {{ 'dashboardForm.healthCheck' | translate }}
+      </button>
+    }
+  </ng-container>
+
+  <div xrmOperations>
+    @if (lifecycleError()) {
+      <div class="xf-error-banner"><i class="las la-exclamation-circle"></i> {{ lifecycleError() }}</div>
+    }
+    @if (approvalPending()) {
+      <div class="xf-empty" role="status">
+        <i class="las la-user-check"></i> {{ 'dashboardForm.approvalPending' | translate }}
+      </div>
+    }
+    @if (healthCheckResult(); as hc) {
+      <div class="xf-empty">
+        <i class="las la-check-circle"></i> {{ 'dashboardForm.healthCheckPassed' | translate: { count: hc.checked } }}
+        @if (hc.warnings.length > 0) {
+          <p>{{ 'dashboard.editor.gateWarnings' | translate: { count: hc.warnings.length } }}</p>
+          <ul>
+            @for (w of hc.warnings; track $index) {
+              <li>{{ 'dashboard.editor.gateLine' | translate: { widget: w.widget_id ?? w.page_id ?? '', message: w.message } }}</li>
+            }
+          </ul>
+        }
+      </div>
+    }
+  </div>
+
+  <ng-template xrmTab="general">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-home"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">{{ 'dashboardForm.identity' | translate }}</h2>
+          <p class="xf-section-desc">{{ 'dashboardForm.identityDesc' | translate }}</p>
+        </div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @if (hasCtrl('name')) {
+            <div class="xf-field">
+              <div class="xf-label-row">
+                <label for="db-name">{{ label('name') }}</label>
+                @if (required('name')) { <span class="xf-required">{{ 'dashboardForm.required' | translate }}</span> }
+              </div>
+              <input id="db-name" type="text" formControlName="name" class="xf-input" autocomplete="off" />
+            </div>
+          }
+          @if (hasCtrl('name_ar')) {
+            <div class="xf-field">
+              <label for="db-name-ar">{{ label('name_ar') }}</label>
+              <input id="db-name-ar" type="text" formControlName="name_ar" class="xf-input" dir="rtl" autocomplete="off" />
+            </div>
+          }
+          @if (hasCtrl('dashboard_type')) {
+            <div class="xf-field">
+              <div class="xf-label-row">
+                <label for="db-type">{{ label('dashboard_type') }}</label>
+                @if (required('dashboard_type')) { <span class="xf-required">{{ 'dashboardForm.required' | translate }}</span> }
+              </div>
+              <div class="xf-select-wrap">
+                <select id="db-type" formControlName="dashboard_type" class="xf-input">
+                  @for (c of choices('dashboard_type'); track c) { <option [value]="c">{{ c }}</option> }
+                </select>
+              </div>
+            </div>
+          }
+          @if (hasCtrl('visibility')) {
+            <div class="xf-field">
+              <label for="db-visibility">{{ label('visibility') }}</label>
+              <div class="xf-select-wrap">
+                <select id="db-visibility" formControlName="visibility" class="xf-input">
+                  @for (c of choices('visibility'); track c) { <option [value]="c">{{ c }}</option> }
+                </select>
+              </div>
+            </div>
+          }
+        </div>
+        @if (hasCtrl('description')) {
+          <div class="xf-field xf-field-full">
+            <label for="db-description">{{ label('description') }}</label>
+            <textarea id="db-description" formControlName="description" class="xf-input" rows="2"></textarea>
+          </div>
+        }
+
+      </div>
+    </section>
+  </ng-template>
+
+  <ng-template xrmTab="pages">
+    @if (!isEdit()) {
+      <p class="xf-empty">{{ 'dashboardForm.saveFirst' | translate }}</p>
+    } @else {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-file"></i></div>
+          <div class="xf-section-meta">
+            <h2 class="xf-section-title">{{ 'dashboardForm.pages' | translate }}</h2>
+            <p class="xf-section-desc">{{ 'dashboardForm.pagesDesc' | translate }}</p>
+          </div>
+        </div>
+        <div class="xf-section-body">
+          @if (pagesLoading()) {
+            <p class="xf-empty"><i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i> {{ 'dashboardForm.loadingPages' | translate }}</p>
+          } @else if (pages().length === 0) {
+            <p class="xf-empty">{{ 'dashboardForm.noPages' | translate }}</p>
+          } @else {
+            <div class="xf-table-wrap">
+              <table class="xf-table">
+                <thead><tr>
+                  <th>{{ 'dashboardForm.colName' | translate }}</th>
+                  <th>{{ 'dashboardForm.visible' | translate }}</th>
+                  <th></th>
+                </tr></thead>
+                <tbody>
+                  @for (p of pages(); track p.id) {
+                    <tr>
+                      <td>{{ p.data['name'] }}</td>
+                      <td class="xf-cell-muted">{{ (p.data['is_visible'] === false ? 'dashboardForm.hidden' : 'dashboardForm.visible') | translate }}</td>
+                      <td class="xf-cell-actions">
+                        <a class="xf-btn xf-btn-secondary xf-btn-sm" [routerLink]="['/xrm/dashboard/page/editor']"
+                           [queryParams]="{ pageId: p.id, dashboardId: id() }">
+                          <i class="las la-object-group"></i> {{ 'dashboardForm.editLayout' | translate }}
+                        </a>
+                        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
+                                [attr.aria-label]="'dashboardForm.deletePage' | translate: { name: p.data['name'] }" (click)="deletePage(p.id)">
+                          <i class="las la-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          <div class="xd-add-row">
+            <input type="text" class="xf-input" [placeholder]="'dashboardForm.newPagePlaceholder' | translate"
+                   [ngModel]="newPageName()" (ngModelChange)="newPageName.set($event)" [ngModelOptions]="{standalone: true}" />
+            <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" [disabled]="addingPage() || !newPageName().trim()" (click)="addPage()">
+              <i class="las la-plus"></i> {{ 'dashboardForm.addPage' | translate }}
+            </button>
+          </div>
+        </div>
+      </section>
+    }
+  </ng-template>
+
+  <ng-template xrmTab="versions">
+    @if (!isEdit()) {
+      <p class="xf-empty">{{ 'dashboardForm.saveFirstVersions' | translate }}</p>
+    } @else {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-history"></i></div>
+          <div class="xf-section-meta">
+            <h2 class="xf-section-title">{{ 'dashboardForm.versions' | translate }}</h2>
+            <p class="xf-section-desc">{{ 'dashboardForm.versionsDesc' | translate }}</p>
+          </div>
+        </div>
+        <div class="xf-section-body">
+          @if (versionsLoading()) {
+            <p class="xf-empty"><i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i> {{ 'dashboardForm.loadingVersions' | translate }}</p>
+          } @else if (versions().length === 0) {
+            <p class="xf-empty">{{ 'dashboardForm.noVersions' | translate }}</p>
+          } @else {
+            <div class="xf-table-wrap">
+              <table class="xf-table">
+                <thead><tr>
+                  <th>{{ 'dashboardForm.colVersion' | translate }}</th>
+                  <th>{{ 'dashboardForm.colLabel' | translate }}</th>
+                  <th>{{ 'dashboardForm.colPublished' | translate }}</th>
+                  <th></th>
+                </tr></thead>
+                <tbody>
+                  @for (v of versions(); track v.id) {
+                    <tr>
+                      <td>
+                        v{{ v.data['version_number'] }}
+                        @if (isLive(v)) {
+                          <span class="xf-badge xf-badge-published">{{ 'dashboardForm.live' | translate }}</span>
+                        }
+                      </td>
+                      <td class="xf-cell-muted">{{ v.data['label'] || '—' }}</td>
+                      <td class="xf-cell-muted">{{ v.data['published_at'] ? ($any(v.data['published_at']) | date:'medium') : '—' }}</td>
+                      <td class="xf-cell-actions">
+                        @if (!isLive(v)) {
+                          <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
+                                  [disabled]="activatingId() === v.id" (click)="activateVersion(v.id)">
+                            @if (activatingId() === v.id) {
+                              <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+                            } @else {
+                              <i class="las la-broadcast-tower"></i>
+                            }
+                            {{ 'dashboardForm.activate' | translate }}
+                          </button>
+                        }
+                        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
+                                [disabled]="restoringId() === v.id" (click)="restoreVersion(v.id)">
+                          @if (restoringId() === v.id) {
+                            <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+                          } @else {
+                            <i class="las la-undo"></i>
+                          }
+                          {{ 'dashboardForm.restore' | translate }}
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  </ng-template>
+
+  <ng-template xrmTab="sharing">
+    @if (!isEdit()) {
+      <p class="xf-empty">{{ 'dashboardForm.saveFirstSharing' | translate }}</p>
+    } @else {
+      <section class="xf-section">
+        <div class="xf-section-header">
+          <div class="xf-section-icon"><i class="las la-user-shield"></i></div>
+          <div class="xf-section-meta">
+            <h2 class="xf-section-title">{{ 'dashboardForm.sharing' | translate }}</h2>
+            <p class="xf-section-desc">{{ 'dashboardForm.sharingDesc' | translate }}</p>
+          </div>
+        </div>
+        <div class="xf-section-body">
+          <xrm-record-shares lockedEntity="attome_dashboard" [lockedRecordId]="id()!" />
+        </div>
+      </section>
+    }
+  </ng-template>
+</xrm-base-form>

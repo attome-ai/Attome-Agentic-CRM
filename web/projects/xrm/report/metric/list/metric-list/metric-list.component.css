@@ -1,0 +1,80 @@
+.metric-page { padding: 20px; color: var(--color-text-primary, #e5eefc); }
+.metric-page__header { margin-bottom: 16px; }
+.metric-page__header h2 { margin: 0 0 4px; font-size: 18px; font-weight: 700; }
+.metric-page__subtitle { margin: 0; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
+.metric-page__subtitle code { font-size: 12px; }
+.metric-page__links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 8px; font-size: 13px; }
+.metric-page__links a { display: inline-flex; align-items: center; gap: 6px; color: var(--color-accent, #5D5CDE); text-decoration: none; }
+.metric-page__links a:hover,
+.metric-page__links a:focus-visible { text-decoration: underline; }
+
+.metric-state { margin: 0; padding: 16px 0; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
+.metric-state--muted { color: var(--color-text-secondary, #94a3b8); }
+.metric-state--error { color: var(--color-danger, #ef4444); }
+
+.metric-layout { display: grid; grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .metric-layout { grid-template-columns: 1fr; } }
+
+.metric-table, .metric-trend-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.metric-table th, .metric-trend-table th {
+  text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--color-text-secondary, #94a3b8); padding: 8px 10px; border-bottom: 1px solid var(--color-border, #24324d);
+}
+.metric-table td, .metric-trend-table td { padding: 8px 10px; border-bottom: 1px solid var(--color-border, #24324d); vertical-align: middle; }
+
+.metric-row { cursor: pointer; }
+.metric-row:hover { background: color-mix(in srgb, var(--color-accent, #8b5cf6) 8%, transparent); }
+.metric-row--selected { background: color-mix(in srgb, var(--color-accent, #8b5cf6) 16%, transparent); }
+
+.metric-name { font-weight: 600; }
+.metric-key { font-size: 11px; color: var(--color-text-secondary, #94a3b8); }
+
+/* Status dots — same green/amber/red convention attome-project's own
+   .pm-health-dot already uses (project-overview-tab.component.css). */
+.metric-dot { display: inline-block; width: 9px; height: 9px; border-radius: 999px; }
+.metric-dot--ok { background: var(--color-success, #22c55e); }
+.metric-dot--warn { background: var(--color-warning, #f59e0b); }
+.metric-dot--crit { background: var(--color-danger, #ef4444); }
+.metric-dot--failed { background: var(--color-text-secondary, #94a3b8); }
+
+/* Status is never color-alone (dataviz skill's status-palette rule) — the
+   dot is paired with this visible text label in the trend table. */
+.metric-status-cell { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.metric-status-label { font-size: 12px; text-transform: capitalize; }
+
+.metric-detail {
+  border: 1px solid var(--color-border, #24324d); border-radius: 12px;
+  background: var(--color-surface, #111c33); padding: 16px 18px;
+}
+.metric-detail h3 { margin: 0 0 4px; font-size: 15px; font-weight: 700; }
+.metric-detail__meta { margin: 0 0 12px; font-size: 12px; color: var(--color-text-secondary, #94a3b8); text-transform: capitalize; }
+
+.metric-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+.metric-actions button {
+  font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 6px;
+  border: 1px solid var(--color-border, #24324d); background: transparent; color: inherit; cursor: pointer;
+}
+.metric-actions button:hover:not(:disabled) { background: color-mix(in srgb, var(--color-accent, #8b5cf6) 12%, transparent); }
+.metric-actions button:disabled { opacity: .5; cursor: default; }
+
+.metric-badge {
+  margin-left: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  padding: 1px 6px; border-radius: 999px; background: color-mix(in srgb, var(--color-accent, #8b5cf6) 20%, transparent);
+  color: var(--color-accent, #8b5cf6);
+}
+
+.metric-trend-bar-cell { width: 40px; }
+/* A thin, rounded-end bar per series point — the accessible primary view is
+   the table itself (actual/period/computed columns); this is a decorative
+   secondary encoding, not a replacement for it. */
+.metric-trend-bar {
+  display: inline-block; width: 6px; border-radius: 3px; min-height: 2px; max-height: 28px;
+  vertical-align: bottom;
+}
+
+.metric-error-row td { color: var(--color-danger, #ef4444); font-size: 12px; padding-top: 0; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}

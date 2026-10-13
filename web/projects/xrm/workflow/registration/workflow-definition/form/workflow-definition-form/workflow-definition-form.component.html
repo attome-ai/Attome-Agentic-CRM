@@ -1,0 +1,134 @@
+<!-- Always a saved definition: creating one redirects to the graph page (ngOnInit). -->
+<xrm-base-form [form]="this" [formGroup]="form()" idPrefix="workflow" [customTitle]="true">
+  <div xrmHeaderTitle>
+    <div class="xf-breadcrumb">
+      <span class="xf-breadcrumb-link" role="link" tabindex="0"
+            (click)="cancel()" (keydown.enter)="cancel()"
+            (keydown.space)="cancel(); $event.preventDefault()">{{ 'xrmForm.entities.workflow' | translate }}</span>
+      <span class="xf-breadcrumb-sep">›</span>
+      <span>{{ 'xrmForm.editRecord' | translate }}</span>
+    </div>
+    <h1 class="xf-title">{{ 'workflowForm.editWorkflow' | translate }}</h1>
+    <xrm-owner-layer-badge [layer]="ownerLayer()" variant="full" />
+    <p class="xf-subtitle">{{ id() }}</p>
+  </div>
+
+  <ng-template xrmTab="general">
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-sitemap"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">{{ 'workflowForm.identity' | translate }}</h2>
+          <p class="xf-section-desc">{{ 'workflowForm.identityDesc' | translate }}</p>
+        </div>
+      </div>
+      <div class="xf-section-body">
+        <div class="xf-grid-2">
+          @if (hasCtrl('name')) {
+            <div class="xf-field">
+              <div class="xf-label-row">
+                <label for="name">{{ 'workflowForm.name' | translate }}</label>
+                @if (required('name')) { <span class="xf-required">{{ 'workflowForm.required' | translate }}</span> }
+              </div>
+              <input id="name" type="text" formControlName="name"
+                     class="xf-input" [placeholder]="'workflowForm.namePlaceholder' | translate" autocomplete="off" />
+              <p class="xf-helper">{{ 'workflowForm.nameHelp' | translate }}</p>
+            </div>
+          }
+          @if (hasCtrl('logicalname')) {
+            <div class="xf-field">
+              <div class="xf-label-row">
+                <label for="logicalname">{{ 'workflowForm.logicalName' | translate }}</label>
+              </div>
+              <input id="logicalname" type="text" formControlName="logicalname"
+                     class="xf-input" autocomplete="off" />
+              <p class="xf-helper">
+                {{ 'workflowForm.logicalNameHelpEdit' | translate }}
+              </p>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="xf-section">
+      <div class="xf-section-header">
+        <div class="xf-section-icon"><i class="las la-project-diagram"></i></div>
+        <div class="xf-section-meta">
+          <h2 class="xf-section-title">{{ 'workflowForm.versions' | translate }}</h2>
+          <p class="xf-section-desc">
+            {{ 'workflowForm.versionsDesc' | translate }}
+          </p>
+        </div>
+        <div class="xf-section-header-action">
+          <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
+                  (click)="createVersion()" [disabled]="creatingVersion()">
+            @if (creatingVersion()) {
+              <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+              {{ 'workflowForm.creating' | translate }}
+            } @else {
+              <i class="las la-plus"></i>
+              {{ 'workflowForm.newDraftVersion' | translate }}
+            }
+          </button>
+        </div>
+      </div>
+      <div class="xf-section-body">
+        @if (versionError()) {
+          <div class="xf-error-banner">
+            <i class="las la-exclamation-circle"></i>
+            {{ versionError() }}
+          </div>
+        }
+        @if (versionsLoading()) {
+          <p class="xf-empty">
+            <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+            {{ 'workflowForm.loadingVersions' | translate }}
+          </p>
+        } @else if (versions().length === 0) {
+          <p class="xf-empty">{{ 'workflowForm.noVersions' | translate }}</p>
+        } @else {
+          <div class="xf-table-wrap">
+            <table class="xf-table">
+              <thead>
+                <tr>
+                  <th>{{ 'workflowForm.colVersion' | translate }}</th>
+                  <th>{{ 'workflowForm.colStatus' | translate }}</th>
+                  <th>{{ 'workflowForm.colPublished' | translate }}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (v of versions(); track v.id) {
+                  <tr>
+                    <td>v{{ v.version_number }}</td>
+                    <td>
+                      <span class="xf-badge"
+                            [class.xf-badge-published]="v.status !== 'draft'">{{ v.status }}</span>
+                    </td>
+                    <td class="xf-cell-muted">
+                      {{ v.published_at ? (v.published_at | date:'medium') : '—' }}
+                    </td>
+                    <td class="xf-cell-actions">
+                      <a class="xf-btn xf-btn-secondary xf-btn-sm"
+                         [routerLink]="['/xrm/admin/workflow/definitions', id(), 'versions', v.id]">
+                        <i class="las la-project-diagram"></i>
+                        {{ (v.status === 'draft' ? 'workflowForm.editGraph' : 'workflowForm.viewGraph') | translate }}
+                      </a>
+                      @if (v.status === 'draft') {
+                        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
+                                (click)="publish(v)" [disabled]="publishingId() === v.id">
+                          {{ (publishingId() === v.id ? 'workflowForm.publishing' : 'workflowForm.publish') | translate }}
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </section>
+  </ng-template>
+</xrm-base-form>

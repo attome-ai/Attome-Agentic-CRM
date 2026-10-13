@@ -1,0 +1,140 @@
+@if (loading()) {
+  <div class="xf-loading">
+    <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+  </div>
+} @else if (error()) {
+  <div class="xf-error-banner"><i class="las la-exclamation-circle"></i> {{ error() }}</div>
+} @else if (publishedState() === 'none') {
+  <div class="xdv-page xdv-not-published" [class.xdv-page-embedded]="embedded()">
+    <p class="xf-empty"><i class="las la-eye-slash"></i> {{ 'dashboard.viewer.notPublished' | translate }}</p>
+    @if (!embedded()) {
+      <div class="xf-actions">
+        <a class="xf-btn xf-btn-secondary xf-btn-sm" [routerLink]="editLink()" [queryParams]="{ id: id() }">
+          <i class="las la-pen"></i> {{ 'dashboard.viewer.edit' | translate }}
+        </a>
+        <button type="button" class="xf-btn xf-btn-secondary" (click)="cancel()">{{ 'dashboard.viewer.back' | translate }}</button>
+      </div>
+    }
+  </div>
+} @else if (dashboard(); as d) {
+  <div class="xdv-page" [class.xdv-page-embedded]="embedded()">
+    @if (draftPreview()) {
+      <div class="xf-error-banner xdv-draft-banner" role="status">
+        <i class="las la-pencil-ruler"></i> {{ 'dashboardForm.previewDraft' | translate }}
+      </div>
+    }
+
+    @if (!embedded()) {
+      <div class="xdv-header">
+        <div>
+          <h1 class="xf-title">{{ d.data['name'] }}</h1>
+          <p class="xf-subtitle">
+            {{ d.data['dashboard_type'] }} ·
+            @if (draftPreview()) {
+              {{ 'dashboard.viewer.draftStatus' | translate }}
+            } @else if (versionNumber() !== null) {
+              v{{ versionNumber() }}
+            }
+          </p>
+        </div>
+        <div class="xf-actions">
+          <a class="xf-btn xf-btn-secondary xf-btn-sm" [routerLink]="editLink()" [queryParams]="{ id: id() }">
+            <i class="las la-pen"></i> {{ 'dashboard.viewer.edit' | translate }}
+          </a>
+          <button type="button" class="xf-btn xf-btn-secondary" (click)="cancel()">{{ 'dashboard.viewer.back' | translate }}</button>
+        </div>
+      </div>
+    }
+
+    @if (pages().length > 1) {
+      <div class="xdv-page-tabs">
+        @for (p of pages(); track p.id) {
+          <button type="button" class="xdv-page-tab" [class.xdv-page-tab-active]="p.id === selectedPageId()"
+                  (click)="selectPage(p.id)">
+            {{ p.data['name'] }}
+          </button>
+        }
+      </div>
+    }
+
+    @if (visibleParameters().length > 0) {
+      <div class="xdv-filter-bar">
+        @for (p of visibleParameters(); track p.id) {
+          @switch (p.parameter_type) {
+            @case ('date_range') {
+              <div class="xdv-filter" role="group" [attr.aria-label]="parameterLabel(p)">
+                <div class="xf-field-caption">{{ parameterLabel(p) }}</div>
+                <div class="xdv-filter-range">
+                  <input type="date" [attr.aria-label]="parameterLabel(p) + ' from'"
+                         [value]="filterValues()[p.name + '__from'] || ''"
+                         (change)="setFilterValue(p.name + '__from', $any($event.target).value)" />
+                  <span>–</span>
+                  <input type="date" [attr.aria-label]="parameterLabel(p) + ' to'"
+                         [value]="filterValues()[p.name + '__to'] || ''"
+                         (change)="setFilterValue(p.name + '__to', $any($event.target).value)" />
+                </div>
+              </div>
+            }
+            @case ('number') {
+              <div class="xdv-filter">
+                <label [for]="'xdv-filter-' + p.id">{{ parameterLabel(p) }}</label>
+                <input type="number" class="xdv-filter-input" [id]="'xdv-filter-' + p.id"
+                       [value]="filterValues()[p.name] || ''"
+                       [placeholder]="p.default_value || ('dashboard.viewer.filterAllPlaceholder' | translate)"
+                       (change)="setFilterValue(p.name, $any($event.target).value)" />
+              </div>
+            }
+            @default {
+              <div class="xdv-filter">
+                <label [for]="'xdv-filter-' + p.id">{{ parameterLabel(p) }}</label>
+                <input type="text" class="xdv-filter-input" [id]="'xdv-filter-' + p.id"
+                       [value]="filterValues()[p.name] || ''"
+                       [placeholder]="p.default_value || ('dashboard.viewer.filterAllPlaceholder' | translate)"
+                       (change)="setFilterValue(p.name, $any($event.target).value)" />
+              </div>
+            }
+          }
+        }
+      </div>
+    }
+
+    @if (pages().length > 0) {
+      <div class="xdv-freshness" [class.xdv-freshness-stale]="stale() || refreshFailed()" role="status">
+        @if (loadedAt()) {
+          @if (refreshFailed()) {
+            <i class="las la-exclamation-triangle"></i> {{ 'dashboard.viewer.refreshFailed' | translate: { time: loadedAtText() } }}
+          } @else if (stale()) {
+            <i class="las la-exclamation-triangle"></i> {{ 'dashboard.viewer.staleSince' | translate: { time: loadedAtText() } }}
+          } @else {
+            <span>{{ 'dashboard.viewer.updatedAt' | translate: { time: loadedAtText() } }}</span>
+          }
+          @if (refreshMinutes() > 0) {
+            <span class="xdv-freshness-interval">{{ 'dashboard.viewer.autoRefresh' | translate: { minutes: refreshMinutes() } }}</span>
+          }
+        }
+        <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm" (click)="refresh()" [disabled]="refreshing() || results() === null">
+          <i class="las la-sync" [class.xdv-spin]="refreshing()"></i> {{ 'dashboard.viewer.refresh' | translate }}
+        </button>
+      </div>
+    }
+
+    @if (dataError(); as dataErr) {
+      <div class="xf-error-banner" role="alert"><i class="las la-exclamation-circle"></i> {{ dataErr }}</div>
+    }
+
+    @if (pages().length === 0) {
+      <p class="xf-empty">{{ 'dashboard.viewer.noPagesYet' | translate }}</p>
+    } @else if (!canvasSection()) {
+      <p class="xf-empty">{{ 'dashboard.viewer.noWidgetsYet' | translate }}</p>
+    } @else {
+      <attome-dashboard-section-view
+        [section]="canvasSection()!"
+        [widgetsBySection]="widgetsBySection()"
+        [dashboardId]="id()"
+        [preview]="draftPreview()"
+        [results]="results()"
+        [parameters]="parameterValues()"
+      />
+    }
+  </div>
+}

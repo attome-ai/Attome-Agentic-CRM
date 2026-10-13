@@ -1,0 +1,7 @@
+:host { display: block; }
+
+.breadcrumb { margin-bottom: 12px; }
+
+.fleet-header-actions a.btn-ghost { text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+
+.fleet-subtitle { margin: 20px 0 10px; font-size: 14px; font-weight: 600; color: var(--color-text-primary); }

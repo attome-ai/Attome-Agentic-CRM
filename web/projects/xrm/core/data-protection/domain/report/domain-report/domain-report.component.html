@@ -1,0 +1,133 @@
+<div class="page-header">
+  <div>
+    <p class="breadcrumb"><a routerLink="/xrm/admin/data-protection/domains">Data Domains</a> / Report</p>
+    <h2>{{ report()?.domain_name ?? 'Domain Report' }}</h2>
+    <p class="subtitle">Accountability report — who owns this data, its classification, and what is touching it.</p>
+  </div>
+</div>
+
+@if (loading()) {
+  <p class="state-msg">Loading report…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (report(); as r) {
+  <div class="card">
+    <h3>Ownership</h3>
+    <div class="form-row-2">
+      <div class="field">
+        <span class="field-caption">Steward</span>
+        <span class="cell-mono">{{ r.steward_ref || '— unassigned —' }}</span>
+      </div>
+      <div class="field">
+        <span class="field-caption">Deputy</span>
+        <span class="cell-mono">{{ r.deputy_ref || '—' }}</span>
+      </div>
+    </div>
+    <div class="form-row-1">
+      <div class="field">
+        <span class="field-caption">
+          Last reviewed <span class="hint">(best-effort — this domain's last edit, not a tracked review event)</span>
+        </span>
+        <span>{{ r.last_review_date ? (r.last_review_date | date:'medium') : 'never' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Classification breakdown</h3>
+    <p class="subtitle">Attribute count by data classification (D-266/0087) across every entity in this domain.</p>
+    <div class="classification-grid">
+      <div class="classification-tile">
+        <span class="badge badge-text">general</span>
+        <span class="classification-count">{{ r.classification_breakdown.general }}</span>
+      </div>
+      <div class="classification-tile">
+        <span class="badge badge-choice">personal</span>
+        <span class="classification-count">{{ r.classification_breakdown.personal }}</span>
+      </div>
+      <div class="classification-tile">
+        <span class="badge badge-uuid">sensitive_special_category</span>
+        <span class="classification-count">{{ r.classification_breakdown.sensitive_special_category }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-header">
+      <h3>Entities <span class="count">{{ r.entities.length }}</span></h3>
+    </div>
+    @if (r.entities.length === 0) {
+      <div class="empty-state"><p>No entities assigned to this domain yet.</p></div>
+    } @else {
+      <table class="nested-table">
+        <thead><tr><th>Logicalname</th><th>Display name</th></tr></thead>
+        <tbody>
+          @for (e of r.entities; track e.logicalname) {
+            <tr><td class="cell-mono">{{ e.logicalname }}</td><td>{{ e.name }}</td></tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+  <div class="card">
+    <div class="section-header">
+      <h3>Open issues <span class="count">{{ r.open_issues.length }}</span></h3>
+    </div>
+    <p class="subtitle hint">
+      Always empty today — duplicate-queue (M13) and data-quality-issue (M14) engines don't exist yet.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="section-header">
+      <h3>Legal holds <span class="count">{{ r.legal_holds.length }}</span></h3>
+    </div>
+    @if (r.legal_holds.length === 0) {
+      <div class="empty-state"><p>No legal holds touch this domain's entities.</p></div>
+    } @else {
+      <table class="nested-table">
+        <thead><tr><th>Entity</th><th>Record</th><th>Matter</th><th>Placed</th><th>Released</th></tr></thead>
+        <tbody>
+          @for (h of r.legal_holds; track h.id) {
+            <tr>
+              <td class="cell-mono">{{ h.entity_logicalname }}</td>
+              <td class="cell-mono">{{ h.record_id ?? 'whole entity' }}</td>
+              <td>{{ h.matter_reference }}</td>
+              <td class="cell-muted">{{ h.placed_at | date:'medium' }}</td>
+              <td class="cell-muted">{{ h.released_at ? (h.released_at | date:'medium') : '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+
+  <div class="card">
+    <div class="section-header">
+      <h3>DSR requests <span class="count">{{ r.dsr_requests.length }}</span></h3>
+    </div>
+    <p class="subtitle hint">
+      Best-effort — only fulfilled/blocked requests carry an entity association; a still-pending request cannot
+      yet be attributed to a domain.
+    </p>
+    @if (r.dsr_requests.length === 0) {
+      <div class="empty-state"><p>No DSR requests touch this domain's entities.</p></div>
+    } @else {
+      <table class="nested-table">
+        <thead><tr><th>Subject</th><th>Type</th><th>Status</th><th>Requested</th><th>Fulfilled</th></tr></thead>
+        <tbody>
+          @for (d of r.dsr_requests; track d.id) {
+            <tr>
+              <td>{{ d.subject_reference }}</td>
+              <td>{{ d.request_type }}</td>
+              <td>{{ d.status }}</td>
+              <td class="cell-muted">{{ d.requested_at | date:'medium' }}</td>
+              <td class="cell-muted">{{ d.fulfilled_at ? (d.fulfilled_at | date:'medium') : '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+}

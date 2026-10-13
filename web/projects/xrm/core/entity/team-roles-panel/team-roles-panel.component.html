@@ -1,0 +1,92 @@
+<div class="trp-toolbar">
+  <button type="button" class="xf-btn xf-btn-secondary" (click)="openPicker()">
+    <i class="las la-plus"></i>
+    {{ 'teamRoles.addRoles' | translate }}
+  </button>
+</div>
+
+@if (error()) { <p class="xf-helper trp-error">{{ error() }}</p> }
+
+@if (loading()) {
+  <p class="xf-empty">
+    <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+    {{ 'teamRoles.loading' | translate }}
+  </p>
+} @else if (roles().length === 0) {
+  <p class="xf-empty">{{ 'teamRoles.empty' | translate }}</p>
+} @else {
+  <div class="xf-table-wrap">
+    <table class="xf-table">
+      <thead><tr><th>{{ 'teamRoles.role' | translate }}</th><th></th></tr></thead>
+      <tbody>
+        @for (r of roles(); track r.id) {
+          <tr>
+            <td>{{ r.role_name }}</td>
+            <td class="xf-cell-actions">
+              <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
+                      [disabled]="removingId() === r.id" (click)="removeRole(r)">
+                @if (removingId() === r.id) {
+                  <i class="las la-circle-notch" style="animation:xf-spin .9s linear infinite"></i>
+                } @else {
+                  <i class="las la-times"></i>
+                }
+                {{ 'teamRoles.remove' | translate }}
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (pickerOpen()) {
+  <!-- Dismiss-on-backdrop-click has a keyboard equivalent: the
+       host-level (document:keydown.escape) listener closes the same
+       picker. role="presentation" is an intentional signal that this
+       div is not itself perceivable/interactive content. -->
+  <div class="trp-backdrop" role="presentation" (click)="closePicker()">
+    <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
+    <section class="trp-dialog" role="dialog" aria-modal="true" [attr.aria-label]="'teamRoles.addRoles' | translate"
+              (click)="$event.stopPropagation()">
+      <header>
+        <h3>{{ 'teamRoles.addRoles' | translate }}</h3>
+        <button type="button" class="trp-close-button" [attr.aria-label]="'teamRoles.close' | translate" (click)="closePicker()">×</button>
+      </header>
+      <label class="trp-search">
+        <i class="las la-search"></i>
+        <input type="search" #pickerSearchInput [placeholder]="'teamRoles.searchRoles' | translate"
+               [ngModel]="pickerSearch()" (ngModelChange)="pickerSearch.set($event)" />
+      </label>
+      <div class="trp-list">
+        @if (pickerItems().length === 0) {
+          <p class="trp-message">
+            {{ (pickerSearch() ? 'teamRoles.noneFound' : 'teamRoles.allAssigned') | translate }}
+          </p>
+        } @else {
+          <table>
+            <tbody>
+              @for (item of pickerItems(); track item.id) {
+                <tr [class.selected]="pickerSelection().has(item.id)" (click)="togglePickerItem(item.id)">
+                  <td class="trp-check-column">
+                    <input type="checkbox" [checked]="pickerSelection().has(item.id)"
+                           (click)="$event.stopPropagation()" (change)="togglePickerItem(item.id)" />
+                  </td>
+                  <td>{{ item.name }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+      @if (pickerError()) { <p class="trp-error-msg">{{ pickerError() }}</p> }
+      <footer>
+        <button type="button" class="trp-dialog-button" (click)="closePicker()">{{ 'teamRoles.cancel' | translate }}</button>
+        <button type="button" class="trp-dialog-button trp-dialog-button-primary"
+                [disabled]="pickerSaving() || pickerSelection().size === 0" (click)="addRoles()">
+          {{ (pickerSaving() ? 'teamRoles.adding' : 'teamRoles.add') | translate }}
+        </button>
+      </footer>
+    </section>
+  </div>
+}

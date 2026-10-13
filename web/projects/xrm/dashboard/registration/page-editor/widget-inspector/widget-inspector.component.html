@@ -1,0 +1,227 @@
+<div class="xpe-inspector">
+  <div class="xpe-inspector-header">
+    <span>{{ 'pageEditor.widgetHeader' | translate }}</span>
+    <button type="button" class="xpe-inspector-close" [title]="'pageEditor.deselect' | translate" (click)="deselect.emit()">
+      <i class="las la-times"></i>
+    </button>
+  </div>
+  <div class="xpe-inspector-body">
+    <p class="xpe-inspector-type">{{ widget().data['widget_type'] }}</p>
+
+    <label class="xf-field">
+      <span>{{ 'pageEditor.name' | translate }}</span>
+      <input #nameInput class="xf-input" type="text" [value]="widget().data['name'] || ''" (blur)="onNameBlur(nameInput.value)" />
+    </label>
+
+    @if (isStructuredWidget()) {
+      <div class="xpe-inspector-chart-settings">
+        <p class="xpe-inspector-section-title">{{ 'pageEditor.dataTitle' | translate }}</p>
+
+        <label class="xf-field">
+          <span>{{ 'pageEditor.dataEntity' | translate }}</span>
+          <select #sourceSel class="xf-input" [value]="definition().source" (change)="onSourceChange(sourceSel.value)">
+            <option value="">{{ 'pageEditor.chartSelectField' | translate }}</option>
+            @for (e of availableEntities(); track e) { <option [value]="e">{{ e }}</option> }
+          </select>
+        </label>
+
+        @if (definition().source) {
+          <label class="xf-field">
+            <span>{{ 'pageEditor.dataMeasure' | translate }}</span>
+            <select #fnSel class="xf-input" [value]="measure().aggregation" (change)="onMeasureFnChange($any(fnSel.value))">
+              @for (fn of measureFns; track fn) { <option [value]="fn">{{ fn }}</option> }
+            </select>
+          </label>
+          @if (measure().aggregation !== 'count') {
+            <label class="xf-field">
+              <span>{{ 'pageEditor.dataMeasureField' | translate }}</span>
+              <select #measureFieldSel class="xf-input" [value]="measure().field || ''"
+                      (change)="onMeasureFieldChange(measureFieldSel.value)">
+                <option value="">{{ 'pageEditor.chartSelectField' | translate }}</option>
+                @for (f of measureFieldOptions(); track f.name) { <option [value]="f.name">{{ f.label }}</option> }
+              </select>
+            </label>
+          }
+
+          @if (!isMetricWidget()) {
+            <label class="xf-field">
+              <span>{{ 'pageEditor.chartGroupByField' | translate }}</span>
+              <select #groupSel class="xf-input" [value]="definition().group?.field || ''" (change)="onGroupFieldChange(groupSel.value)">
+                <option value="">{{ 'pageEditor.chartNoGrouping' | translate }}</option>
+                @for (f of fieldOptions(); track f.name) { <option [value]="f.name">{{ f.label }}</option> }
+              </select>
+            </label>
+
+            @if (groupFieldIsDate()) {
+              <label class="xf-field">
+                <span>{{ 'pageEditor.chartXBucket' | translate }}</span>
+                <select #bucketSel class="xf-input" [value]="definition().group?.bucket || ''" (change)="onBucketChange(bucketSel.value)">
+                  <option value="">{{ 'pageEditor.chartNoBucketing' | translate }}</option>
+                  @for (b of dateBuckets; track b) { <option [value]="b">{{ b }}</option> }
+                </select>
+              </label>
+            }
+
+            @if (allowsSeries() && definition().group) {
+              <label class="xf-field">
+                <span>{{ 'pageEditor.dataSeries' | translate }}</span>
+                <select #seriesSel class="xf-input" [value]="definition().series || ''" (change)="onSeriesChange(seriesSel.value)">
+                  <option value="">{{ 'pageEditor.chartNoGrouping' | translate }}</option>
+                  @for (f of fieldOptions(); track f.name) { <option [value]="f.name">{{ f.label }}</option> }
+                </select>
+              </label>
+            }
+
+            @if (definition().group) {
+              <label class="xf-field">
+                <span>{{ 'pageEditor.chartSort' | translate }}</span>
+                <select #sortSel class="xf-input" [value]="definition().presentation?.sort || ''" (change)="onSortChange(sortSel.value)">
+                  <option value=""></option>
+                  @for (s of sortOrders; track s) { <option [value]="s">{{ s }}</option> }
+                </select>
+              </label>
+
+              @if (!definition().series) {
+                <label class="xf-field">
+                  <span>{{ 'pageEditor.chartLimit' | translate }}</span>
+                  <input #limitInput class="xf-input" type="number" min="1" max="200" [value]="definition().presentation?.limit || ''"
+                         (blur)="onLimitChange(limitInput.value)" />
+                </label>
+                @if (definition().presentation?.limit && !definition().group?.bucket) {
+                  <label class="xpe-inspector-checkbox">
+                    <input type="checkbox" [checked]="definition().presentation?.other_bucket || false"
+                           (change)="onOtherBucketChange($any($event.target).checked)" />
+                    {{ 'pageEditor.chartOtherBucket' | translate }}
+                  </label>
+                }
+              }
+
+              <label class="xpe-inspector-checkbox">
+                <input type="checkbox" [checked]="definition().presentation?.cumulative || false"
+                       (change)="onCumulativeChange($any($event.target).checked)" />
+                {{ 'pageEditor.chartCumulative' | translate }}
+              </label>
+              <label class="xpe-inspector-checkbox">
+                <input type="checkbox" [checked]="definition().presentation?.percent_of_total || false"
+                       (change)="onPercentOfTotalChange($any($event.target).checked)" />
+                {{ 'pageEditor.chartPercentOfTotal' | translate }}
+              </label>
+              <label class="xf-field">
+                <span>{{ 'pageEditor.chartMovingAverageWindow' | translate }}</span>
+                <input #maInput class="xf-input" type="number" min="2" max="90"
+                       [value]="definition().presentation?.moving_average_window || ''"
+                       (blur)="onMovingAverageChange(maInput.value)" />
+              </label>
+            }
+
+            <label class="xf-field">
+              <span>{{ 'pageEditor.chartThresholdValue' | translate }}</span>
+              <input #thVal class="xf-input" type="number" [value]="definition().presentation?.threshold ?? ''"
+                     (blur)="onThresholdChange(thVal.value)" />
+            </label>
+          }
+
+          <div class="xpe-inspector-rows">
+            <div class="xpe-inspector-rows-header">
+              <span>{{ 'pageEditor.dataFilters' | translate }}</span>
+              <button type="button" class="xf-btn xf-btn-secondary xpe-inspector-row-add" (click)="addFilter()">
+                <i class="las la-plus"></i> {{ 'pageEditor.dataFilterAdd' | translate }}
+              </button>
+            </div>
+            @for (filter of filters(); track $index) {
+              <div class="xpe-inspector-row">
+                <select #ffSel class="xf-input" [value]="filter.field" (change)="onFilterFieldChange($index, ffSel.value)">
+                  @for (f of fieldOptions(); track f.name) { <option [value]="f.name">{{ f.label }}</option> }
+                </select>
+                <select #foSel class="xf-input" [value]="filter.op" (change)="onFilterOpChange($index, $any(foSel.value))">
+                  @for (op of filterOps; track op) { <option [value]="op">{{ op }}</option> }
+                </select>
+                @if (filter.op !== 'is_null') {
+                  <input #fvInput class="xf-input" type="text"
+                         [value]="filterValueDisplay(filter)"
+                         [placeholder]="isListFilterOp(filter.op) ? ('pageEditor.dataFilterValueList' | translate) : ''"
+                         (blur)="onFilterValueChange($index, fvInput.value)" />
+                }
+                <button type="button" class="xpe-inspector-row-remove" [title]="'pageEditor.delete' | translate" (click)="removeFilter($index)">
+                  <i class="las la-times"></i>
+                </button>
+              </div>
+            }
+          </div>
+
+          <div class="xpe-inspector-rows">
+            <div class="xpe-inspector-rows-header">
+              <span>{{ 'pageEditor.dataBindings' | translate }}</span>
+              <button type="button" class="xf-btn xf-btn-secondary xpe-inspector-row-add" (click)="addBinding()">
+                <i class="las la-plus"></i> {{ 'pageEditor.dataBindingAdd' | translate }}
+              </button>
+            </div>
+            @for (binding of bindings(); track $index) {
+              <div class="xpe-inspector-row">
+                <select #bsSel class="xf-input" [value]="binding.source" (change)="onBindingSourceChange($index, $any(bsSel.value))">
+                  @for (s of bindingSources; track s) { <option [value]="s">{{ s }}</option> }
+                </select>
+                @if (binding.source === 'variable') {
+                  <input #bnInput class="xf-input" type="text" [value]="binding.name" (blur)="onBindingNameChange($index, bnInput.value)" />
+                } @else {
+                  <select #bnSel class="xf-input" [value]="binding.name" (change)="onBindingNameChange($index, bnSel.value)">
+                    @for (n of bindingNameOptions(binding.source); track n) { <option [value]="n">{{ n }}</option> }
+                  </select>
+                }
+                <select #bfSel class="xf-input" [value]="binding.field" (change)="onBindingFieldChange($index, bfSel.value)">
+                  @for (f of fieldOptions(); track f.name) { <option [value]="f.name">{{ f.label }}</option> }
+                </select>
+                <select #boSel class="xf-input" [value]="binding.op" (change)="onBindingOpChange($index, $any(boSel.value))">
+                  @for (op of bindingOps; track op) { <option [value]="op">{{ op }}</option> }
+                </select>
+                <button type="button" class="xpe-inspector-row-remove" [title]="'pageEditor.delete' | translate" (click)="removeBinding($index)">
+                  <i class="las la-times"></i>
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <label class="xf-field">
+        <span>{{ 'pageEditor.viewLabel' | translate }}</span>
+        <select #viewSelect class="xf-input" [value]="widget().data['view_id'] || ''" (change)="onViewChange(viewSelect.value)">
+          <option value="">{{ 'pageEditor.noViewSelected' | translate }}</option>
+          @for (group of viewGroups(); track group.entity_name) {
+            <optgroup [label]="group.entity_name">
+              @for (v of group.views; track v.id) {
+                <option [value]="v.id">{{ v.name }}</option>
+              }
+            </optgroup>
+          }
+        </select>
+      </label>
+    }
+
+    @if (isDeclarativeWidget()) {
+      <label class="xf-field">
+        <span>{{ 'pageEditor.configJsonLabel' | translate }}</span>
+        <textarea #configInput class="xf-input xpe-inspector-config" rows="10"
+                  [value]="widget().data['config'] || ''"
+                  (blur)="onConfigBlur(configInput.value)"></textarea>
+      </label>
+    }
+
+    @if (configErrors().length > 0) {
+      <ul class="xpe-inspector-config-errors" role="alert">
+        @for (err of configErrors(); track err) {
+          <li>{{ err }}</li>
+        }
+      </ul>
+    }
+
+    <div class="xpe-inspector-actions">
+      <button type="button" class="xf-btn xf-btn-secondary" (click)="duplicateWidget.emit()">
+        <i class="las la-copy"></i> {{ 'pageEditor.duplicate' | translate }}
+      </button>
+      <button type="button" class="xf-btn xpe-btn-danger" (click)="deleteWidget.emit()">
+        <i class="las la-trash"></i> {{ 'pageEditor.delete' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,38 @@
+.mfa-secret {
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  background: var(--color-surface-alt, #f3f4f6);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  word-break: break-all;
+}
+.mfa-recovery-codes {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  background: var(--color-surface-alt, #f3f4f6);
+  border-radius: 8px;
+  padding: 14px;
+  margin: 0 0 16px;
+}
+.mfa-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.btn-secondary {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.btn-secondary:hover { background: var(--color-surface-alt, rgba(255,255,255,0.06)); }

@@ -1,0 +1,24 @@
+/* report-form — form-specific overrides, if any. Shared xf-* rules live in xrm-form.css. */
+
+/* U16 — the report runner's progress/outcome line. */
+.report-run-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-block-end: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border, #24324d);
+  background: var(--color-bg, #0f172a);
+  color: var(--color-text-primary, #e5eefc);
+  font-size: 13px;
+}
+
+.report-run-banner--ok {
+  border-color: color-mix(in srgb, #16a34a 45%, transparent);
+}
+
+.report-run-banner--ok > i { color: #16a34a; }
+
+.report-run-banner a.xf-btn { margin-inline-start: auto; text-decoration: none; }

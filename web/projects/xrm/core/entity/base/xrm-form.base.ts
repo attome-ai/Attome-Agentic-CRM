@@ -1,0 +1,653 @@
+import {
+  computed, DestroyRef, Directive, effect, inject, input, OnInit, signal, untracked,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
+import { ApiError } from '@attome/base';
+import { BusinessRuleClient, ChoiceOptions, EntitySchema, FieldSchema } from '@attome/xrm';
+import { fieldKindResolver } from '../business-rules/business-rule-condition';
+import {
+  computeFieldPolicies, fieldErrorsFromApiError, isEmptyFieldValue, writeWarnings,
+  type FieldLockState, type FieldRuleMessage, type RuleWriteWarning,
+} from '../business-rules/field-policy';
+import { EntityRecordResponse, EntityService } from '../services/entity.service';
+import { entityFormRoute, entityListRoute } from '../services/entity-url.utils';
+import { RecordChange, RecordChangeNotifier } from '../services/record-change-notifier.service';
+
+/**
+ * How long the post-save tick holds before the submit button returns to its
+ * idle "Update" label. Long enough to be read after the eye moves back to the
+ * button, short enough that the form isn't left claiming a save that is by
+ * then several edits old.
+ */
+export const SAVED_CONFIRMATION_MS = 1500;
+
+const EMPTY_LOCKS: ReadonlyMap<string, FieldLockState> = new Map();
+const NO_RULE_MESSAGES: readonly FieldRuleMessage[] = [];
+
+/** Value equality for a reset decision: `undefined` equals `null`; lists and objects by content. */
+function sameValue(a: unknown, b: unknown): boolean {
+  const x = a === undefined ? null : a;
+  const y = b === undefined ? null : b;
+  if (x === y) return true;
+  if (typeof x === 'object' && typeof y === 'object' && x !== null && y !== null) {
+    return JSON.stringify(x) === JSON.stringify(y);
+  }
+  return false;
+}
+
+export interface XrmFormTabDef {
+  id: string;
+  label: string;
+  icon: string;
+}
+
+/**
+ * The one abstract base every xrm form extends — the generic metadata-driven
+ * dispatcher (`EntityFormComponent`) and every hand-written per-entity form
+ * (user, role, workflow-definition, and the per-built-in-entity forms) alike.
+ * Previously this logic was split three ways (a `FormBase` directive owning
+ * only request-lifecycle state, an `EngineFormBase` extending it with
+ * schema/form/save/cancel, and `EntityFormComponent` independently
+ * reimplementing that same schema/form/save/cancel logic plus its own tab
+ * handling) — merged here so there is exactly one implementation of each
+ * concern: data fetching, field validation, save/cancel button state, and
+ * tab navigation.
+ *
+ * Subclass pattern:
+ *
+ *   @Component({ template: `...` })
+ *   export class UserFormComponent extends EngineFormBase {
+ *     protected override defineTabs(): XrmFormTabDef[] { return [...]; }
+ *   }
+ *
+ * `name`/`id` are passed by `EntityRouterComponent` (routed entity logicalname
+ * and record id; `id` null = create mode). The base class handles schema
+ * loading, record GET/POST/PATCH, save-conflict/reload, dirty tracking, and
+ * keyboard tab navigation. Subclasses define the template — sections, field
+ * groups, custom validation, which tabs exist.
+ */
+@Directive()
+export abstract class EngineFormBase implements OnInit {
+  // ── Router inputs ─────────────────────────────────────────────────────────
+  readonly name = input.required<string>();            // entity logicalname from router
+  readonly id   = input<string | null>(null);           // record id (null = create mode)
+
+  // ── Request lifecycle state ────────────────────────────────────────────────
+  readonly loading = signal(true);
+  readonly saving  = signal(false);
+  readonly error   = signal<string | null>(null);
+
+  /** True while the post-save confirmation tick is showing. */
+  readonly justSaved = signal(false);
+  private savedTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // ── Shared form state (signal-based so templates react) ────────────────────
+  readonly schema = signal<EntitySchema | null>(null);
+  readonly form   = signal<FormGroup>(new FormGroup({}));
+  readonly isEdit = computed(() => !!this.id());
+
+  /**
+   * Mirrors `form().dirty` as a signal. A `FormGroup`'s own `dirty` is a plain
+   * property with no change notification, so a `computed()` reading it would
+   * never recompute and the submit button's disabled state would never track
+   * the user's edits — hence the explicit mirror, fed from `valueChanges`.
+   */
+  readonly dirty = signal(false);
+
+  /**
+   * Update is disabled while a save is in flight and while there is nothing to
+   * save. The pristine gate is edit-only: a create form is pristine until the
+   * operator types, but an entity whose fields are all optional or
+   * auto-generated is legitimately creatable from an untouched form, so
+   * gating create the same way would make those records unreachable.
+   */
+  readonly canSave = computed(() => !this.saving() && (!this.isEdit() || this.dirty()));
+
+  /** Set when a save's field validation fails client-side (not the same as a server error banner). */
+  readonly validationError = signal(false);
+  /** Set on a 409 from a stale `row_version` — resolved via `reload()`, not a generic error banner. */
+  readonly conflict  = signal(false);
+  readonly reloading = signal(false);
+
+  // ── Business rules (D-789 section 5, D-791 rule 6) ───────────────────────
+  /**
+   * The caller's client-side business rules, delivered with the schema
+   * (already filtered to this user's audience by the server). Lock and
+   * field-attached error policies only; `set_value` policies and advanced
+   * conditions are server-only.
+   */
+  readonly businessRules = computed<readonly BusinessRuleClient[]>(
+    () => this.schema()?.business_rules ?? []);
+
+  private readonly ruleFieldKinds = computed(() => fieldKindResolver(this.schema()?.fields ?? []));
+
+  /**
+   * The record as it would be saved: the loaded record overlaid with the
+   * form's raw value (disabled controls included), refreshed on every
+   * `valueChanges`. Conditions evaluate against this.
+   */
+  readonly recordValue = signal<Readonly<Record<string, unknown>>>({});
+
+  private readonly ruleOutcome = computed(() => computeFieldPolicies(
+    this.businessRules(), this.recordValue(), this.ruleFieldKinds()));
+
+  /** Field to the lock the rules put on it for this user (`hidden` beats `disabled`). */
+  readonly fieldPolicies = computed<ReadonlyMap<string, FieldLockState>>(() =>
+    this.businessRules().length ? this.ruleOutcome().locks : EMPTY_LOCKS);
+
+  /** Field to its field-attached `error` policies firing now (shown live, never blocking). */
+  readonly fieldErrors = computed(() => this.ruleOutcome().errors);
+
+  /** Field to the last save's refusal naming it (`field_locked*`, `rule_violation`). */
+  readonly serverFieldErrors = signal<ReadonlyMap<string, string>>(new Map());
+
+  /** D-791 rule 6: the `warning` policies the last successful save returned. */
+  readonly saveWarnings = signal<readonly RuleWriteWarning[]>([]);
+
+  /** Controls this base disabled for a lock (never one a subclass disabled itself). */
+  private readonly policyLocked = new Set<string>();
+  /** A create form's values as built: the "stored" value a locked control resets to. */
+  private initialValues: Record<string, unknown> = {};
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+  /** Override to declare this form's tabs; a single implicit "General" tab by default (no tab UI needed). */
+  protected defineTabs(): XrmFormTabDef[] {
+    return [{ id: 'general', label: 'General', icon: 'las la-list-alt' }];
+  }
+  readonly tabs = computed<XrmFormTabDef[]>(() => this.defineTabs());
+  readonly activeTab = signal('general');
+
+  // ── Services ──────────────────────────────────────────────────────────────
+  protected readonly svc    = inject(EntityService);
+  protected readonly fb     = inject(FormBuilder);
+  protected readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly recordChanges = inject(RecordChangeNotifier);
+
+  // `protected`, not `private`: a subclass that calls a bespoke, non-generic
+  // write endpoint of its own (e.g. `DashboardEditorComponent`'s lifecycle
+  // transitions) still needs the row_version the base class's own GET/save
+  // cycle already tracks, rather than re-fetching it or — worse — omitting
+  // it and letting a required-field deserialization error be the first sign
+  // (found while wiring `DashboardEditorComponent` through `DashboardService`,
+  // R-10).
+  protected record: EntityRecordResponse | null = null;
+
+  constructor() {
+    // The save-confirmation timer outlives a form the operator navigates away
+    // from mid-confirmation; without this it would fire against a destroyed
+    // component.
+    this.destroyRef.onDestroy(() => this.clearSavedTimer());
+    // Reset to the first tab whenever the routed entity changes, so a
+    // persisted instance switching straight from one entity's form to
+    // another's (the generic dispatcher's `NgComponentOutlet` reuse case)
+    // never leaves a tab selected that the new entity doesn't have.
+    effect(() => {
+      this.name();
+      untracked(() => this.activeTab.set(this.tabs()[0]?.id ?? 'general'));
+    });
+    this.recordChanges.changes
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(change => this.onServerRecordChange(change));
+    // D-789 section 5: apply the business-rule locks live. A locked control
+    // is disabled (so `fg.value`, and therefore a save, never carries it) and
+    // reset to its stored value; an unlocked one is re-enabled.
+    effect(() => {
+      const locks = this.fieldPolicies();
+      const fg = this.form();
+      untracked(() => this.applyFieldLocks(fg, locks));
+    });
+  }
+
+  /**
+   * U18 — a widget in this form changed the record on the server outside the
+   * form's own save (a file version restore). Re-GET it so the next save
+   * carries the new `row_version` instead of 409-ing, and show the server's
+   * value for exactly the changed fields. The operator's other unsaved edits
+   * are left alone and the form's dirty state is not touched.
+   */
+  private onServerRecordChange(change: RecordChange): void {
+    const id = this.id();
+    if (!id || change.recordId !== id || change.entityName !== this.entityLogicalName) return;
+    this.svc.get(this.entityLogicalName, id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: r => {
+        if (this.id() !== id) return;
+        this.record = r;
+        const fg = this.form();
+        for (const field of change.fields) {
+          const ctrl = fg.get(field);
+          if (ctrl && Object.prototype.hasOwnProperty.call(r.data, field)) {
+            ctrl.setValue(r.data[field], { emitEvent: true });
+            ctrl.markAsPristine();
+          }
+        }
+        this.dirty.set(fg.dirty);
+      },
+      error: (e: ApiError) => this.error.set(e.message),
+    });
+  }
+
+  /**
+   * The entity this form edits. Defaults to the routed `name` input —
+   * correct for every hand-written per-entity form (each is only ever
+   * registered against, and therefore only ever routed for, its own
+   * logicalname) and for the generic dispatcher (whose "entity" genuinely is
+   * whatever the route says). Override only if a form legitimately needs to
+   * edit a different entity than the one it was routed for.
+   */
+  protected get entityLogicalName(): string {
+    return this.name();
+  }
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    this.svc.getSchema(this.entityLogicalName).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: schema => {
+        this.schema.set(schema);
+        this.onSchemaLoaded(schema);
+        const fg = this.buildFormGroup(schema);
+        this.policyLocked.clear();
+        this.initialValues = { ...(fg.getRawValue() as Record<string, unknown>) };
+        this.form.set(fg);
+        this.syncRecordValue(fg);
+        this.trackDirtyState(fg);
+        if (this.id()) this.loadRecord();
+        else            this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
+  }
+
+  /** Hook — override to react when schema arrives (e.g. add cross-field validators). */
+  protected onSchemaLoaded(_schema: EntitySchema): void {}
+
+  /**
+   * Hook — called with the server's copy of the record every time the base
+   * class receives one: the initial GET, a `reload()`, and a successful save.
+   * `record` itself is a plain field (no change notification), so a subclass
+   * that renders server-computed values — the ticket form's SLA badge reads
+   * `resolution_due_at`/`sla_breached`, which the operator never edits —
+   * mirrors what it needs into a signal here.
+   */
+  protected onRecordLoaded(_record: EntityRecordResponse): void {}
+
+  /**
+   * Builds a FormGroup from schema fields. Override to customise validators
+   * or add synthetic controls.
+   */
+  protected buildFormGroup(schema: EntitySchema): FormGroup {
+    const controls: Record<string, unknown[]> = {};
+    for (const f of schema.fields) {
+      let def: unknown = null;
+      if (f.name === 'is_active') {
+        // The platform's soft-delete flag, registered as an ordinary attribute
+        // on some entities. A new record is live by definition, so `null` —
+        // which renders the switch off — would show the opposite of what the
+        // create actually produces. The backend no longer accepts the column
+        // from an insert body at all, so this is purely about the control
+        // matching the resulting record; in edit mode `patchValue` overwrites
+        // it with the record's own value.
+        def = true;
+      } else if (f.field_type === 'choice') {
+        const opts = f.options as ChoiceOptions | null;
+        if (opts?.multi) def = [];
+      }
+      // A related grid opens a create form with its locked parent lookup in
+      // the query string. Only schema-known fields are considered, and edit
+      // forms ignore these defaults completely (loadRecord's patchValue below
+      // overwrites them).
+      if (!this.id()) {
+        const supplied = this.router.parseUrl(this.router.url).queryParamMap.get(f.name);
+        if (supplied !== null) def = supplied;
+      }
+      // U9 (D-604): a formula is computed by the server on every write and a
+      // written value is refused (422). A disabled control keeps its loaded
+      // value for display but is left out of `FormGroup.value`, so it is
+      // never sent.
+      if (f.field_type === 'formula') {
+        controls[f.name] = [{ value: def, disabled: true }];
+        continue;
+      }
+      controls[f.name] = [def, f.is_required ? [Validators.required] : []];
+    }
+    return this.fb.group(controls);
+  }
+
+  /**
+   * Keeps `dirty` in step with the form and drops the "Saved" tick the moment
+   * there are unsaved changes again. `valueChanges` covers every user edit;
+   * programmatic writes (`patchValue` on load and after a save) also emit, but
+   * leave `fg.dirty` false, so reading the flag rather than assuming "changed
+   * means dirty" is what makes a freshly-loaded record read as pristine.
+   */
+  private trackDirtyState(fg: FormGroup): void {
+    this.dirty.set(fg.dirty);
+    fg.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.syncRecordValue(fg);
+      this.dirty.set(fg.dirty);
+      if (fg.valid) this.validationError.set(false);
+      if (fg.dirty) this.clearSaved();
+    });
+  }
+
+  /** Refreshes `recordValue` from the loaded record and the form's raw value. */
+  private syncRecordValue(fg: FormGroup = this.form()): void {
+    const stored = (this.record?.data ?? {}) as Record<string, unknown>;
+    this.recordValue.set({ ...stored, ...(fg.getRawValue() as Record<string, unknown>) });
+  }
+
+  /** The value a locked control holds: the record's stored value (edit) or the built default (create). */
+  private storedValue(name: string): unknown {
+    if (this.record) {
+      const data = this.record.data as Record<string, unknown>;
+      return Object.prototype.hasOwnProperty.call(data, name) ? data[name] : null;
+    }
+    return this.initialValues[name] ?? null;
+  }
+
+  private applyFieldLocks(fg: FormGroup, locks: ReadonlyMap<string, FieldLockState>): void {
+    let reset = false;
+    for (const name of locks.keys()) {
+      const ctrl = fg.get(name);
+      if (!ctrl) continue;
+      const stored = this.storedValue(name);
+      if (!sameValue(ctrl.value, stored)) {
+        ctrl.setValue(stored, { emitEvent: false });
+        reset = true;
+      }
+      if (ctrl.enabled) {
+        ctrl.disable({ emitEvent: false });
+        this.policyLocked.add(name);
+      }
+    }
+    for (const name of [...this.policyLocked]) {
+      if (locks.has(name)) continue;
+      this.policyLocked.delete(name);
+      const ctrl = fg.get(name);
+      // A formula stays disabled whatever the rules say (U9, D-604).
+      if (ctrl && this.schemaField(name)?.field_type !== 'formula') ctrl.enable({ emitEvent: false });
+    }
+    if (reset) this.syncRecordValue(fg);
+  }
+
+  private schemaField(name: string): FieldSchema | undefined {
+    return this.schema()?.fields.find(f => f.name === name);
+  }
+
+  private loadRecord(): void {
+    this.svc.get(this.entityLogicalName, this.id()!).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: r => {
+        this.record = r;
+        this.form().patchValue(r.data);
+        this.onRecordLoaded(r);
+        this.loading.set(false);
+      },
+      error: (e: ApiError) => {
+        this.error.set(e.message);
+        this.loading.set(false);
+      },
+    });
+  }
+
+  /**
+   * Re-GETs the record to resolve a version conflict — never overwrites the
+   * operator's in-progress edits on its own; `save()`'s conflict branch below
+   * leaves the form as-is and the operator chooses when to discard them by
+   * calling this.
+   */
+  reload(): void {
+    if (!this.id()) return;
+    this.reloading.set(true);
+    this.svc.get(this.entityLogicalName, this.id()!).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: r => {
+        this.record = r;
+        this.form().patchValue(r.data);
+        this.onRecordLoaded(r);
+        this.conflict.set(false);
+        this.reloading.set(false);
+      },
+      error: (e: ApiError) => {
+        this.reloading.set(false);
+        this.error.set(e.message);
+      },
+    });
+  }
+
+  // ── Save-lifecycle helpers ───────────────────────────────────────────────
+  protected beginSave(): void {
+    this.saving.set(true);
+    this.error.set(null);
+    this.serverFieldErrors.set(new Map());
+    this.saveWarnings.set([]);
+  }
+
+  protected completeSave(): void {
+    this.saving.set(false);
+  }
+
+  /** Shows the tick, then falls back to the idle button on its own. */
+  protected confirmSaved(): void {
+    this.clearSavedTimer();
+    this.justSaved.set(true);
+    this.savedTimer = setTimeout(() => {
+      this.savedTimer = null;
+      this.justSaved.set(false);
+    }, SAVED_CONFIRMATION_MS);
+  }
+
+  /**
+   * Drops the tick immediately — the record has been edited again, or another
+   * save has started, so the confirmation no longer describes the form.
+   */
+  protected clearSaved(): void {
+    this.clearSavedTimer();
+    this.justSaved.set(false);
+  }
+
+  private clearSavedTimer(): void {
+    if (this.savedTimer !== null) {
+      clearTimeout(this.savedTimer);
+      this.savedTimer = null;
+    }
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+
+  save(): void {
+    const fg = this.form();
+    if (!this.canSave()) return;
+    if (fg.invalid) {
+      fg.markAllAsTouched();
+      this.validationError.set(true);
+      return;
+    }
+    this.validationError.set(false);
+    this.beginSave();
+    this.conflict.set(false);
+    this.clearSaved();
+
+    const data = fg.value as Record<string, unknown>;
+    const req$ = this.isEdit()
+      ? this.svc.update(this.entityLogicalName, this.id()!, data, this.record?.row_version)
+      : this.svc.create(this.entityLogicalName, data);
+
+    req$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: r => {
+        // `r` carries the row_version the server just assigned. Keeping it is
+        // what lets an update stay on the page: the next save sends the
+        // current version instead of the one this form loaded with, which
+        // would otherwise conflict on the second consecutive save.
+        this.record = r;
+        this.completeSave();
+        // D-791 rule 6: warnings never block; the save went through.
+        this.saveWarnings.set(writeWarnings(r));
+        this.onRecordLoaded(r);
+        this.onSaved(r);
+      },
+      error: (e: ApiError) => {
+        this.completeSave();
+        // Preserve the user's in-progress edits — never overwrite the form on
+        // a version conflict; the operator chooses when to discard them via
+        // `reload()`.
+        if (e.kind === 'version_conflict') this.conflict.set(true);
+        else {
+          this.error.set(e.message);
+          // D-789 sections 3.4/3.5: a `field_locked*` or field-attached
+          // `rule_violation` refusal is also shown under its field (it covers
+          // a rule that changed after the form loaded).
+          this.serverFieldErrors.set(fieldErrorsFromApiError(e));
+        }
+      },
+    });
+  }
+
+  /**
+   * Called after a successful save. Both create and update stay on the
+   * record — navigating to the list on every save threw away the operator's
+   * context and gave no confirmation beyond the page changing, indistinguishable
+   * from a Cancel. `record` is replaced above before this runs, so the next
+   * save carries the `row_version` the server just returned rather than a
+   * stale one.
+   *
+   * A **create** additionally swaps the route to the new record's own form
+   * (`id` moves from absent to the new id) — the form has no record id yet
+   * because it comes from the route, so this is what turns the "New" form
+   * into the saved record's form instead of leaving it pointed at a create
+   * that already happened (which would insert a duplicate on the next save).
+   *
+   * `confirmSaved` shows the tick and hands the button back to "Update" after
+   * `SAVED_CONFIRMATION_MS` — the button stays disabled at that point, since
+   * a pristine record still has nothing to save.
+   */
+  protected onSaved(record: EntityRecordResponse): void {
+    if (!this.isEdit()) {
+      this.router.navigate(entityFormRoute(this.entityLogicalName), { queryParams: { id: record.id } });
+    }
+    const fg = this.form();
+    fg.patchValue(record.data);
+    fg.markAsPristine();
+    this.dirty.set(false);
+    this.confirmSaved();
+  }
+
+  cancel(): void {
+    this.router.navigate(entityListRoute(this.entityLogicalName));
+  }
+
+  /** The list route as a link target, for a breadcrumb rendered as a real anchor. */
+  listLink(): string[] {
+    return entityListRoute(this.entityLogicalName);
+  }
+
+  // ── Tab navigation ────────────────────────────────────────────────────────
+
+  selectTab(tab: string): void {
+    this.activeTab.set(tab);
+  }
+
+  /**
+   * ArrowRight/Left/Home/End cycling through `tabs()`, refocusing the
+   * corresponding DOM tab button by index. Bind `(keydown)` on each
+   * individual tab button (not the `role="tablist"` wrapper) — the buttons
+   * are expected to be direct children of that wrapper, so
+   * `event.currentTarget`'s parent is where the `[role="tab"]` query below
+   * finds its siblings.
+   */
+  onTabKeydown(event: KeyboardEvent): void {
+    const list = this.tabs();
+    const current = list.findIndex(t => t.id === this.activeTab());
+    let next: number;
+    if (event.key === 'ArrowRight') next = (current + 1) % list.length;
+    else if (event.key === 'ArrowLeft') next = (current - 1 + list.length) % list.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = list.length - 1;
+    else return;
+
+    event.preventDefault();
+    this.activeTab.set(list[next].id);
+    const tabButton = event.currentTarget as HTMLElement;
+    tabButton.parentElement?.querySelectorAll<HTMLElement>('[role="tab"]')[next]?.focus();
+  }
+
+  // ── Template helpers ──────────────────────────────────────────────────────
+
+  /** True when a control for `name` exists in the current form. */
+  hasCtrl(name: string): boolean {
+    return !!this.form().get(name);
+  }
+
+  /** Returns the display label for a field from the loaded schema. */
+  label(name: string): string {
+    return this.schema()?.fields.find(f => f.name === name)?.display_name ?? name;
+  }
+
+  // ── Business-rule helpers (D-789 section 5) ──────────────────────────────
+
+  /** The lock a business rule puts on `name` for this user, or `null`. */
+  fieldLock(name: string): FieldLockState | null {
+    return this.fieldPolicies().get(name) ?? null;
+  }
+
+  /** `hidden`: not shown and not editable. */
+  isHidden(name: string): boolean {
+    return this.fieldLock(name)?.effect === 'hidden';
+  }
+
+  /** `disabled`: shown read-only, not editable. */
+  isDisabled(name: string): boolean {
+    return this.fieldLock(name)?.effect === 'disabled';
+  }
+
+  /** The rule that locks `name` (display name, else name), or `null`. */
+  lockReason(name: string): string | null {
+    return this.fieldLock(name)?.ruleName ?? null;
+  }
+
+  /** Field-attached `error` policies firing on the current values. */
+  ruleMessages(name: string): readonly FieldRuleMessage[] {
+    return this.fieldErrors().get(name) ?? NO_RULE_MESSAGES;
+  }
+
+  /** A required field a rule locks and that is empty: saving fails naming field and rule (section 3.4). */
+  isRequiredLocked(name: string): boolean {
+    return this.required(name) && this.fieldLock(name) !== null
+      && isEmptyFieldValue(this.recordValue()[name]);
+  }
+
+  /** Whether a specific field is required per schema. */
+  required(name: string): boolean {
+    return this.schema()?.fields.find(f => f.name === name)?.is_required ?? false;
+  }
+
+  /**
+   * Allowed values of a `choice` field, straight from the loaded schema —
+   * so a subclass template renders the options the backend will actually
+   * accept, and a metadata edit needs no template change. Empty array for a
+   * missing field or any non-choice type.
+   */
+  choices(name: string): string[] {
+    const f = this.schema()?.fields.find(f => f.name === name);
+    if (f?.field_type !== 'choice') return [];
+    return (f.options as ChoiceOptions | null)?.choices ?? [];
+  }
+
+  /**
+   * Every schema field, sorted for display — the shape a form that renders
+   * its fields generically via `<attome-field-input>` (the generic dispatcher,
+   * and most per-entity forms whose fields don't need bespoke controls) wants
+   * as-is. Override `filterFields` to drop a field this form's UI
+   * deliberately hides (e.g. a self-referencing lookup with no supported
+   * picker workflow) — the field stays real and writable in metadata and the
+   * API, only the rendered list changes.
+   */
+  readonly sortedFields = computed<FieldSchema[]>(() => {
+    const fields = this.schema()?.fields ?? [];
+    return this.filterFields([...fields]).sort((a, b) => a.sort_order - b.sort_order);
+  });
+
+  protected filterFields(fields: FieldSchema[]): FieldSchema[] {
+    return fields;
+  }
+}

@@ -1,0 +1,216 @@
+<xrm-governance-nav />
+
+<div class="page-header">
+  <div>
+    <h2>{{ 'governance.quality.title' | translate }}</h2>
+    <p class="subtitle">{{ 'governance.quality.subtitle' | translate }}</p>
+  </div>
+  <div class="gov-actions">
+    <label class="gov-visually-hidden" for="dq-entity">{{ 'governance.common.entity' | translate }}</label>
+    <input
+      id="dq-entity"
+      class="mono-input"
+      type="text"
+      [placeholder]="'governance.common.entityFilterPlaceholder' | translate"
+      [ngModel]="entityFilter()"
+      (ngModelChange)="entityFilter.set($event)"
+      (keyup.enter)="refresh()"
+    />
+    <button type="button" class="btn-ghost" (click)="refresh()" [disabled]="scoresLoading() || issuesLoading()">
+      <i class="las la-sync" aria-hidden="true"></i> {{ 'governance.common.refresh' | translate }}
+    </button>
+  </div>
+</div>
+
+<!-- ── Scores ─────────────────────────────────────────────────────────── -->
+<section class="card" aria-labelledby="dq-scores-title">
+  <h3 id="dq-scores-title">{{ 'governance.quality.scoresTitle' | translate }}</h3>
+  @if (scoresLoading()) {
+    <p class="state-msg">{{ 'governance.common.loading' | translate }}</p>
+  } @else if (scoresError()) {
+    <p class="error-msg" role="alert">{{ scoresError() }}</p>
+  } @else if (scores().length === 0) {
+    <div class="empty-state"><p>{{ 'governance.quality.noScores' | translate }}</p></div>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'governance.common.entity' | translate }}</th>
+            <th scope="col">{{ 'governance.quality.dimension' | translate }}</th>
+            <th scope="col">{{ 'governance.quality.score' | translate }}</th>
+            <th scope="col">{{ 'governance.quality.passFail' | translate }}</th>
+            <th scope="col">{{ 'governance.quality.period' | translate }}</th>
+            <th scope="col">{{ 'governance.quality.computed' | translate }}</th>
+            <th scope="col"><span class="gov-visually-hidden">{{ 'governance.quality.trend' | translate }}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of scores(); track s.id) {
+            <tr>
+              <td class="cell-mono">{{ s.entity_logicalname }}</td>
+              <td>{{ 'governance.quality.dimensions.' + s.dimension | translate }}</td>
+              <td>
+                <div class="dq-score">
+                  <span class="dq-bar" aria-hidden="true">
+                    <span [class]="'dq-bar__fill dq-bar__fill--' + band(s.score)"
+                          [style.inline-size.%]="s.score"></span>
+                  </span>
+                  <span>{{ s.score | localNumber: { maximumFractionDigits: 1 } }}%</span>
+                </div>
+              </td>
+              <td class="cell-muted">
+                {{ s.pass_count | localNumber }} / {{ s.fail_count | localNumber }}
+                <span class="hint">({{ 'governance.quality.sample' | translate: { count: s.sample_size } }})</span>
+              </td>
+              <td class="cell-mono">{{ s.period }}</td>
+              <td class="cell-muted">{{ s.computed_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</td>
+              <td class="actions">
+                <button type="button" class="btn-sm" (click)="toggleTrend(s)" [attr.aria-expanded]="isTrendOpen(s)">
+                  <i class="las la-chart-line" aria-hidden="true"></i> {{ 'governance.quality.trend' | translate }}
+                </button>
+              </td>
+            </tr>
+            @if (isTrendOpen(s)) {
+              <tr class="dq-trend-row">
+                <td colspan="7">
+                  <h4>{{ 'governance.quality.trendTitle' | translate: { entity: s.entity_logicalname, dimension: ('governance.quality.dimensions.' + s.dimension | translate) } }}</h4>
+                  @if (trendLoading()) {
+                    <p class="state-msg">{{ 'governance.common.loading' | translate }}</p>
+                  } @else if (trendError()) {
+                    <p class="error-msg" role="alert">{{ trendError() }}</p>
+                  } @else if (trend().length === 0) {
+                    <p class="state-msg">{{ 'governance.quality.trendEmpty' | translate }}</p>
+                  } @else {
+                    <div class="dq-trend">
+                      <svg class="dq-trend__chart" [attr.viewBox]="'0 0 ' + trendWidth + ' ' + trendHeight"
+                           role="img" [attr.aria-label]="'governance.quality.trendAria' | translate">
+                        <line class="dq-trend__axis" x1="0" [attr.y1]="trendHeight - 6" [attr.x2]="trendWidth" [attr.y2]="trendHeight - 6" />
+                        <path class="dq-trend__line" [attr.d]="trendPath()" />
+                        @for (p of trendPoints(); track p.period) {
+                          <circle class="dq-trend__dot" [attr.cx]="p.x" [attr.cy]="p.y" r="3">
+                            <title>{{ p.period }}: {{ p.score | localNumber: { maximumFractionDigits: 1 } }}%</title>
+                          </circle>
+                        }
+                      </svg>
+                      <table class="nested-table dq-trend__table">
+                        <caption class="gov-visually-hidden">{{ 'governance.quality.trendAria' | translate }}</caption>
+                        <thead>
+                          <tr>
+                            <th scope="col">{{ 'governance.quality.period' | translate }}</th>
+                            <th scope="col">{{ 'governance.quality.score' | translate }}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (h of trend(); track h.id) {
+                            <tr>
+                              <td class="cell-mono">{{ h.period }}</td>
+                              <td>{{ h.score | localNumber: { maximumFractionDigits: 1 } }}%</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>
+
+<!-- ── Issues ─────────────────────────────────────────────────────────── -->
+<section class="card" aria-labelledby="dq-issues-title">
+  <div class="section-header">
+    <h3 id="dq-issues-title">
+      {{ 'governance.quality.issuesTitle' | translate }}
+      <span class="count">{{ issuesTotal() | localNumber }}</span>
+    </h3>
+    <div class="gov-filters">
+      <label for="dq-status">{{ 'governance.quality.status' | translate }}</label>
+      <select id="dq-status" [ngModel]="issueStatus()" (ngModelChange)="setIssueStatus($event)">
+        <option value="open">{{ 'governance.quality.statuses.open' | translate }}</option>
+        <option value="resolved">{{ 'governance.quality.statuses.resolved' | translate }}</option>
+        <option value="">{{ 'governance.common.all' | translate }}</option>
+      </select>
+      <label for="dq-dimension">{{ 'governance.quality.dimension' | translate }}</label>
+      <select id="dq-dimension" [ngModel]="issueDimension()" (ngModelChange)="setIssueDimension($event)">
+        <option value="">{{ 'governance.common.all' | translate }}</option>
+        @for (d of dimensions; track d) {
+          <option [value]="d">{{ 'governance.quality.dimensions.' + d | translate }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <p class="gov-notice" role="status" aria-live="polite">
+    @if (notice(); as n) { {{ n | translate }} }
+  </p>
+
+  @if (issuesLoading()) {
+    <p class="state-msg">{{ 'governance.common.loading' | translate }}</p>
+  } @else if (issuesError()) {
+    <p class="error-msg" role="alert">{{ issuesError() }}</p>
+  } @else if (issues().length === 0) {
+    <div class="empty-state"><p>{{ 'governance.quality.noIssues' | translate }}</p></div>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'governance.common.entity' | translate }}</th>
+            <th scope="col">{{ 'governance.quality.dimension' | translate }}</th>
+            <th scope="col">{{ 'governance.quality.field' | translate }}</th>
+            <th scope="col">{{ 'governance.quality.record' | translate }}</th>
+            <th scope="col">{{ 'governance.quality.detail' | translate }}</th>
+            <th scope="col">{{ 'governance.quality.detected' | translate }}</th>
+            <th scope="col">{{ 'governance.quality.status' | translate }}</th>
+            <th scope="col"><span class="gov-visually-hidden">{{ 'governance.quality.resolve' | translate }}</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (i of issues(); track i.id) {
+            <tr>
+              <td class="cell-mono">{{ i.entity_logicalname }}</td>
+              <td>{{ 'governance.quality.dimensions.' + i.dimension | translate }}</td>
+              <td class="cell-mono">{{ i.field_logicalname }}</td>
+              <td class="cell-mono">
+                {{ i.record_id }}
+                @if (i.related_record_id) {
+                  <span class="hint">{{ 'governance.quality.relatedRecord' | translate: { id: i.related_record_id } }}</span>
+                }
+              </td>
+              <td>{{ i.detail }}</td>
+              <td class="cell-muted">{{ i.detected_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</td>
+              <td>
+                <span class="badge">{{ 'governance.quality.statuses.' + i.status | translate }}</span>
+              </td>
+              <td class="actions">
+                @if (i.status === 'open') {
+                  <button type="button" class="btn-sm" (click)="resolve(i)" [disabled]="resolvingId() === i.id">
+                    <i class="las la-check" aria-hidden="true"></i> {{ 'governance.quality.resolve' | translate }}
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (issuesPages() > 1) {
+      <nav class="gov-pager" [attr.aria-label]="'governance.common.pagination' | translate">
+        <button type="button" class="btn-ghost" (click)="goToIssuesPage(issuesPage() - 1)" [disabled]="issuesPage() <= 1">
+          {{ 'governance.common.previous' | translate }}
+        </button>
+        <span>{{ 'governance.common.pageOf' | translate: { page: issuesPage(), pages: issuesPages() } }}</span>
+        <button type="button" class="btn-ghost" (click)="goToIssuesPage(issuesPage() + 1)" [disabled]="issuesPage() >= issuesPages()">
+          {{ 'governance.common.next' | translate }}
+        </button>
+      </nav>
+    }
+  }
+</section>

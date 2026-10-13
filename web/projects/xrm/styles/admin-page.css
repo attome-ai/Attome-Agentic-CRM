@@ -1,0 +1,379 @@
+/* ── Shared styles for XRM admin pages ───────────────────────────────────── */
+
+/* Page header */
+.page-header        { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
+.page-header h2     { font-size: 24px; font-weight: 700; color: var(--color-text-primary); margin: 0; }
+.page-header .subtitle { color: var(--color-text-secondary); font-size: 13px; margin: 4px 0 0; }
+
+/* Breadcrumb */
+.breadcrumb      { font-size: 14px; color: var(--color-text-secondary); }
+.breadcrumb a    { color: var(--color-accent); text-decoration: none; font-weight: 500; }
+.breadcrumb a:hover { text-decoration: underline; }
+
+/* Cards */
+.card {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.card h3 { font-size: 16px; font-weight: 600; color: var(--color-text-primary); margin: 0 0 18px; }
+.card h4 { font-size: 14px; font-weight: 600; color: var(--color-text-primary); margin: 0 0 14px; }
+
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.count {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  color: var(--color-accent);
+  border-radius: 999px; font-size: 11px; font-weight: 600; padding: 1px 8px; margin-left: 6px;
+}
+
+/* Inline form panel (inside a card) */
+.inline-form-panel { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--color-border); }
+
+/* Create / filter panel */
+.create-panel {
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 12px; padding: 20px; margin-bottom: 20px;
+}
+.create-panel h3 { margin: 0 0 14px; font-size: 15px; font-weight: 600; color: var(--color-text-primary); }
+
+/* Form grids */
+.form-row-1 { display: grid; grid-template-columns: 1fr; gap: 14px; margin-bottom: 12px; }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field.field-cb { justify-content: flex-end; padding-bottom: 3px; }
+/* `.field-caption` is the non-interactive twin of `.field label`: identical
+   typography, but for a caption above STATIC text (a `<p>`, a formatted date)
+   rather than above a form control. Using a real `<label>` there is wrong
+   both semantically and for screen readers — a label announces "this names an
+   input you can edit" and there is no input — which is what
+   @angular-eslint/template/label-has-associated-control was flagging. */
+.field label,
+.field .field-caption { font-size: 12px; font-weight: 500; color: var(--color-text-secondary); }
+.field .field-caption { display: block; }
+.hint { font-weight: 400; color: var(--color-text-secondary); opacity: 0.7; }
+
+.field input,
+.field select,
+.field textarea {
+  padding: 8px 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
+}
+.field input:disabled {
+  background: color-mix(in srgb, var(--color-bg-alt) 80%, transparent);
+  color: var(--color-text-secondary);
+  cursor: not-allowed;
+}
+.field select option { background: var(--color-bg-alt); color: var(--color-text-primary); }
+
+.mono-input { font-family: monospace; font-size: 13px; }
+
+.checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 13px;
+                color: var(--color-text-primary); cursor: pointer; }
+.checkbox-row input[type=checkbox] { width: 15px; height: 15px; cursor: pointer;
+                                     accent-color: var(--color-accent); }
+
+/* Button row */
+.btn-row { display: flex; gap: 8px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+
+/* Buttons */
+.btn-primary {
+  padding: 8px 18px; background: var(--color-accent); color: #fff; border: none;
+  border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 500;
+  font-family: inherit; transition: opacity 0.15s;
+}
+.btn-primary:hover:not(:disabled) { opacity: 0.88; }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-ghost {
+  padding: 8px 16px; background: transparent; color: var(--color-text-primary);
+  border: 1px solid var(--color-border); border-radius: 7px; cursor: pointer; font-size: 13px;
+  font-family: inherit; transition: background 0.15s;
+}
+.btn-ghost:hover { background: color-mix(in srgb, var(--color-text-primary) 8%, transparent); }
+
+.btn-danger-outline {
+  padding: 8px 16px; background: transparent; color: #f87171;
+  border: 1px solid #7f1d1d; border-radius: 7px; cursor: pointer; font-size: 13px;
+  font-family: inherit; transition: background 0.15s;
+}
+.btn-danger-outline:hover { background: rgba(239,68,68,0.12); }
+
+/* Filter bar */
+.filter-bar  { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+.search {
+  flex: 1; min-width: 180px; padding: 8px 11px;
+  border: 1px solid var(--color-border); border-radius: 7px;
+  font-size: 13px; font-family: inherit;
+  background: var(--color-bg); color: var(--color-text-primary);
+}
+.search::placeholder { color: var(--color-text-secondary); }
+.search:focus { outline: none; border-color: var(--color-accent); }
+.prefix-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.prefix-tabs button {
+  padding: 4px 11px; font-size: 12px; font-weight: 500; border-radius: 99px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-alt); color: var(--color-text-secondary);
+  cursor: pointer; font-family: inherit; transition: all 0.12s;
+}
+.prefix-tabs button:hover  { color: var(--color-text-primary); border-color: var(--color-text-secondary); }
+.prefix-tabs button.active { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+
+/* Table */
+.table-wrap {
+  overflow-x: auto;
+  background: var(--color-bg-alt);
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+}
+table  { width: 100%; border-collapse: collapse; font-size: 13px; }
+th     {
+  background: var(--color-bg); padding: 10px 14px; text-align: left;
+  font-weight: 600; color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border); white-space: nowrap;
+}
+td     {
+  padding: 11px 14px; border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary); vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr.editing td    { background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
+tr:hover td      { background: color-mix(in srgb, var(--color-text-primary) 4%, transparent); }
+tr.editing:hover td { background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
+
+/* Cell variants */
+.cell-mono { font-family: monospace; font-size: 12px; }
+.cell-link {
+  color: var(--color-accent); font-weight: 500;
+  font-family: monospace; font-size: 12px; text-decoration: none;
+}
+.cell-link:hover { text-decoration: underline; }
+.cell-muted { color: var(--color-text-secondary); font-size: 12px; }
+
+/* Small row actions */
+.actions { display: flex; gap: 6px; align-items: center; }
+
+/* ...but NOT when `.actions` is a table cell (23 of the 25 uses are
+   `<td class="actions">`). `display: flex` makes the <td> a flex container,
+   which means it is no longer a `table-cell`: the table then wraps it in an
+   anonymous cell, and the real cell's box stops sharing the row's geometry.
+   The visible symptom is the `tr:hover td` background above painting the
+   other cells at row height while this one sits at its own offset box — a
+   hover highlight that looks misaligned around the row's action buttons.
+   Keep it a table cell; `td`'s `vertical-align: middle` already supplies
+   what `align-items: center` was doing, and `margin-inline-start` (not
+   `margin-left`) keeps the spacing correct under RTL. */
+td.actions { display: table-cell; white-space: nowrap; }
+td.actions > * + * { margin-inline-start: 6px; }
+.btn-sm  {
+  padding: 4px 10px; font-size: 12px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg); color: var(--color-text-primary);
+  font-family: inherit; text-decoration: none; display: inline-block;
+  transition: background 0.12s;
+}
+.btn-sm:hover   { background: color-mix(in srgb, var(--color-text-primary) 10%, transparent); }
+.btn-sm-danger  {
+  background: rgba(239,68,68,0.12); color: #f87171; border-color: #7f1d1d;
+}
+.btn-sm-danger:hover { background: rgba(239,68,68,0.22); }
+.btn-sm-accent  {
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+.btn-sm-accent:hover { background: color-mix(in srgb, var(--color-accent) 25%, transparent); }
+
+/* Inline rename input inside table cell */
+.inline-rename-input {
+  width: 100%; padding: 3px 6px; font-size: 13px;
+  border: 1px solid var(--color-accent); border-radius: 5px;
+  outline: none; font-family: inherit;
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-bg));
+  color: var(--color-text-primary);
+}
+
+/* Type badge */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 11px;
+         font-family: monospace; font-weight: 500;
+         background: var(--color-border); color: var(--color-text-secondary); }
+.badge-text     { background: #1e3a5f; color: #93c5fd; }
+.badge-integer  { background: #422006; color: #fcd34d; }
+.badge-datetime { background: #14532d; color: #86efac; }
+.badge-boolean  { background: #3b0764; color: #d8b4fe; }
+.badge-choice   { background: #881337; color: #fda4af; }
+.badge-lookup   { background: #451a03; color: #fde68a; }
+.badge-uuid     { background: #0c4a6e; color: #7dd3fc; }
+.badge-bigint   { background: #451a03; color: #fde68a; }
+.badge-other    { background: var(--color-border); color: var(--color-text-secondary); }
+
+/* State messages */
+.state-msg  { color: var(--color-text-secondary); font-size: 14px; padding: 8px 0; }
+.error-msg  { color: #f87171; font-size: 13px; margin: 6px 0 0; }
+.warn-msg   { color: #fbbf24; font-size: 12px; font-weight: 500; }
+
+/* Inline button row in header */
+.btn-row-inline { display: flex; gap: 8px; align-items: center; }
+
+/* Migration banner */
+.migrate-banner {
+  padding: 10px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;
+  background: rgba(20,184,166,0.12); color: var(--color-accent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+.migrate-banner.error-msg {
+  background: rgba(239,68,68,0.12); color: #f87171; border-color: #7f1d1d;
+}
+
+/* Expandable row detail panel (e.g. field-security profile management) */
+.detail-panel {
+  padding: 16px; background: var(--color-bg);
+  border-radius: 8px; border: 1px solid var(--color-border);
+}
+.detail-panel h4 { font-size: 13px; font-weight: 600; color: var(--color-text-primary); margin: 0 0 12px; }
+.detail-panel h4:not(:first-child) { margin-top: 20px; }
+
+/* Table nested inside a detail panel — same look, tighter padding */
+.nested-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+.nested-table th {
+  background: var(--color-bg-alt); padding: 6px 10px; text-align: left;
+  font-weight: 600; color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+.nested-table td { padding: 6px 10px; border-bottom: 1px solid var(--color-border); }
+.nested-table tr:last-child td { border-bottom: none; }
+
+/* Empty state */
+.empty-state {
+  padding: 48px; text-align: center; color: var(--color-text-secondary);
+  font-size: 14px; background: var(--color-bg-alt);
+  border-radius: 12px; border: 1px solid var(--color-border);
+}
+.empty-state p { margin: 0; }
+
+/* Role form: Privilege Grants tab (per-entity privilege list, real catalog —
+   not a fixed action matrix — plus the per-grant conditions panel) */
+.pg-category-select {
+  padding: 8px 11px; border: 1px solid var(--color-border); border-radius: 7px;
+  font-size: 13px; font-family: inherit;
+  background: var(--color-bg); color: var(--color-text-primary);
+}
+.pg-header-card { margin-bottom: 16px; }
+.pg-header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.card-title-lg { font-size: 18px; font-weight: 700; color: var(--color-text-primary); margin: 0 0 4px; }
+.pg-legend { display: flex; gap: 16px; margin-top: 12px; }
+.pg-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-secondary); }
+.pg-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.pg-dot-granted { background: #22c55e; }
+.pg-dot-conditional { background: #f59e0b; }
+
+.pg-entity-card {
+  background: var(--color-bg-alt); border: 1px solid var(--color-border);
+  border-radius: 10px; margin-bottom: 12px; overflow: hidden;
+}
+.pg-entity-header {
+  cursor: pointer; padding: 12px 16px; display: flex; align-items: center; gap: 10px;
+}
+.pg-entity-header i { font-size: 12px; color: var(--color-text-secondary); width: 12px; }
+.pg-chevron { transition: transform 0.15s ease; }
+.pg-chevron-collapsed { transform: rotate(-90deg); }
+.pg-entity-avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  color: var(--color-accent); font-weight: 700; font-size: 13px;
+}
+.pg-entity-avatar-system { background: color-mix(in srgb, var(--color-text-secondary) 20%, transparent); color: var(--color-text-secondary); }
+.pg-entity-title { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.pg-entity-title strong { font-size: 14px; color: var(--color-text-primary); }
+.pg-entity-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px; border-top: 1px solid var(--color-border);
+}
+.btn-text {
+  padding: 0; border: none; background: transparent; cursor: pointer;
+  color: var(--color-accent); font-size: 12px; font-weight: 500; font-family: inherit;
+}
+.btn-text:hover { text-decoration: underline; }
+
+.pg-status {
+  display: inline-block; padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600;
+  background: var(--color-border); color: var(--color-text-secondary);
+}
+.pg-status-granted { background: rgba(34,197,94,0.15); color: #22c55e; }
+.pg-status-conditional { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.pg-status-none { background: var(--color-border); color: var(--color-text-secondary); }
+
+.pg-matrix th, .pg-matrix td { text-align: left; }
+.pg-matrix select { padding: 5px 8px; border: 1px solid var(--color-border); border-radius: 6px;
+                     font-size: 12px; font-family: inherit; background: var(--color-bg); color: var(--color-text-primary); }
+
+/* Custom filled-square + checkmark, not the native browser checkbox (which
+   `accent-color` alone only tints — it keeps the OS's own thin-outline
+   shape). `appearance: none` strips the native rendering entirely so this
+   fully replaces it. */
+.pg-matrix input[type=checkbox] {
+  appearance: none; -webkit-appearance: none;
+  width: 20px; height: 20px; flex-shrink: 0;
+  border: 1.5px solid var(--color-border); border-radius: 6px;
+  background: var(--color-bg); cursor: pointer; position: relative;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.pg-matrix input[type=checkbox]:checked {
+  background: var(--color-accent); border-color: var(--color-accent);
+}
+.pg-matrix input[type=checkbox]:checked::after {
+  content: ''; position: absolute; left: 6px; top: 2px;
+  width: 5px; height: 10px;
+  border: solid #fff; border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.pg-matrix input[type=checkbox]:disabled { opacity: 0.5; cursor: default; }
+.pg-matrix input[type=checkbox]:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+.pg-condition-btn-active {
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent) !important;
+  color: var(--color-accent) !important;
+  border-color: var(--color-accent) !important;
+}
+.pg-condition-btn-active::before {
+  content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--color-accent); margin-right: 5px; vertical-align: middle;
+}
+
+.pg-conditions-panel {
+  padding: 14px; background: var(--color-bg); border-radius: 8px;
+  border: 1px solid var(--color-border); margin: 4px 0;
+}
+.pg-conditions-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px; font-size: 13px; color: var(--color-text-primary);
+}
+.pg-condition-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px;
+}
+.pg-condition-row input, .pg-condition-row select {
+  padding: 6px 9px; border: 1px solid var(--color-border); border-radius: 6px;
+  font-size: 12px; font-family: inherit; background: var(--color-bg-alt); color: var(--color-text-primary);
+}
+.pg-condition-new input:first-child { flex: 1; }
+.pg-condition-new input:last-of-type { flex: 2; }

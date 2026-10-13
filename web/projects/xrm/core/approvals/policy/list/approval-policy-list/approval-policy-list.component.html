@@ -1,0 +1,189 @@
+<div class="page-header">
+  <div>
+    <h2>Approval Policies</h2>
+    <p class="subtitle">
+      Declares which requests need approval and what plan governs them
+      (sequential/parallel steps, any/all/n-of-m thresholds, per-step SLA and
+      timeout behavior) — extends the four-eyes primitive on the
+      <a routerLink="/approvals">Approval Queue</a> page, never a second
+      approval mechanism (D-421). A policy's <code>condition</code> is
+      schema-ready for a future rules engine and is not evaluated yet.
+    </p>
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" (click)="load()" [disabled]="loading()">
+      <i class="las la-sync"></i> Refresh
+    </button>
+    <button class="btn-primary" (click)="openCreate()">
+      <i class="las la-plus"></i> New policy
+    </button>
+  </div>
+</div>
+
+@if (error() && !formOpen()) {
+  <p class="error-msg">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p class="state-msg">Loading policies…</p>
+} @else if (items().length === 0) {
+  <div class="empty-state"><p>No approval policies yet.</p></div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Action type</th>
+          <th>Active</th>
+          <th>Steps</th>
+          <th>Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of items(); track p.id) {
+          <tr>
+            <td>{{ p.name }}</td>
+            <td class="mono-input">{{ p.action_type }}</td>
+            <td>
+              <span class="badge" [class.badge-warn]="!p.is_active">
+                {{ p.is_active ? 'active' : 'inactive' }}
+              </span>
+            </td>
+            <td class="cell-muted">{{ stepCount(p) }}</td>
+            <td class="cell-muted">{{ p.updated_at | date:'medium' }}</td>
+            <td class="actions">
+              <button class="btn-sm" (click)="openEdit(p)">
+                <i class="las la-pen"></i> Edit
+              </button>
+              <button
+                class="btn-sm btn-ghost"
+                (click)="remove(p)"
+                [disabled]="busyId() === p.id"
+              >
+                <i class="las la-trash"></i>
+                {{ busyId() === p.id ? 'Deleting…' : 'Delete' }}
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}
+
+@if (formOpen()) {
+  <div class="policy-form-overlay">
+    <div class="policy-form">
+      <h3>{{ editing() ? 'Edit policy' : 'New policy' }}</h3>
+
+      @if (error()) {
+        <p class="error-msg">{{ error() }}</p>
+      }
+
+      <label>
+        Name
+        <input class="mono-input" type="text" [(ngModel)]="name" name="name" />
+      </label>
+
+      <label>
+        Action type
+        <input
+          class="mono-input"
+          type="text"
+          [(ngModel)]="actionType"
+          name="actionType"
+          [disabled]="!!editing()"
+          placeholder="e.g. security.role_grant, workflow.approval"
+        />
+      </label>
+      @if (editing()) {
+        <p class="hint">action_type cannot be changed after creation.</p>
+      }
+
+      <label>
+        Condition (M45 expression — schema-ready, not evaluated yet)
+        <input class="mono-input" type="text" [(ngModel)]="condition" name="condition" />
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" [(ngModel)]="isActive" name="isActive" />
+        Active
+      </label>
+
+      <h4>Steps</h4>
+      <p class="hint">
+        Parallel = one step with mode "all"; sequential = multiple steps.
+        Approvers are comma-separated tokens — only <code>user:&lt;uuid&gt;</code>
+        and <code>role:&lt;uuid&gt;</code> resolve in this release.
+      </p>
+
+      @for (step of steps(); track $index) {
+        <div class="step-row">
+          <span class="step-index">{{ $index + 1 }}</span>
+
+          <select [(ngModel)]="step.mode" [name]="'mode' + $index">
+            <option value="any">any</option>
+            <option value="all">all</option>
+            <option value="n_of_m">n_of_m</option>
+          </select>
+
+          @if (step.mode === 'n_of_m') {
+            <input
+              class="mono-input threshold-input"
+              type="number"
+              min="1"
+              [(ngModel)]="step.threshold"
+              [name]="'threshold' + $index"
+              placeholder="N"
+            />
+          }
+
+          <input
+            class="mono-input approvers-input"
+            type="text"
+            [(ngModel)]="step.approvers"
+            [name]="'approvers' + $index"
+            placeholder="user:<uuid>, role:<uuid>"
+          />
+
+          <input
+            class="mono-input sla-input"
+            type="number"
+            min="1"
+            [(ngModel)]="step.sla_minutes"
+            [name]="'sla' + $index"
+            placeholder="SLA minutes"
+          />
+
+          <select [(ngModel)]="step.on_timeout" [name]="'onTimeout' + $index">
+            <option value="escalate">escalate</option>
+            <option value="auto_approve">auto_approve</option>
+            <option value="auto_reject">auto_reject</option>
+          </select>
+
+          <button
+            class="btn-sm btn-ghost"
+            type="button"
+            (click)="removeStep($index)"
+            [disabled]="steps().length === 1"
+          >
+            <i class="las la-times"></i>
+          </button>
+        </div>
+      }
+
+      <button class="btn-sm" type="button" (click)="addStep()">
+        <i class="las la-plus"></i> Add step
+      </button>
+
+      <div class="form-actions">
+        <button class="btn-primary" (click)="save()" [disabled]="busyId() !== null">
+          {{ busyId() !== null ? 'Saving…' : 'Save' }}
+        </button>
+        <button class="btn-ghost" (click)="closeForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+}

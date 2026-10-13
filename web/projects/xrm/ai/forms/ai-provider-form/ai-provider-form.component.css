@@ -1,0 +1,66 @@
+/* ai-provider-form — form-specific overrides, if any. Shared xf-* rules live in xrm-form.css. */
+
+/* The fetched model shortlist. A plain list, deliberately: these are not
+   records yet — an operator reads them and then authors the AI Model rows
+   they want, which is where the approval gate applies. */
+.ai-provider-models {
+  list-style: none;
+  margin: .75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.ai-provider-models li {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  padding: .35rem .5rem;
+  border-radius: 6px;
+  background: var(--surface-2, rgb(0 0 0 / 4%));
+}
+
+.ai-provider-models code {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: .85rem;
+}
+
+.ai-provider-models span {
+  color: var(--text-muted, #6b7280);
+  font-size: .85rem;
+}
+
+/* Ticking models to add. The whole row is the label, so the click target is
+   the row, not just the 13px box. */
+.ai-provider-models-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin: .75rem 0 0;
+}
+
+.ai-provider-check {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  cursor: pointer;
+}
+
+.ai-provider-check input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+}
+
+.ai-provider-models .ai-provider-added {
+  margin-inline-start: auto;
+  color: var(--success, #16a34a);
+}
+
+.ai-provider-models + .xf-error-banner,
+.ai-provider-models + .xf-helper,
+.ai-provider-models ~ .xf-btn {
+  margin-top: .75rem;
+}

@@ -1,0 +1,122 @@
+<section class="page">
+  <header>
+    <div>
+      <h1>Calendar Manager</h1>
+      <p>Business calendars — timezone, working days/hours, holidays, and one-off exceptions — for SLA due dates and schedules.</p>
+    </div>
+    <button class="primary" (click)="startCreate()"><i class="las la-plus"></i> New calendar</button>
+  </header>
+
+  @if (message()) { <div class="notice">{{ message() }}</div> }
+  @if (error()) { <div class="notice error">{{ error() }}</div> }
+
+  <div class="workspace">
+    <div class="list-panel">
+      <div class="toolbar">
+        <input [(ngModel)]="search" placeholder="Filter calendars…" autocomplete="off">
+        <span>{{ filtered().length }} calendars</span>
+      </div>
+      @if (loading()) {
+        <div class="empty">Loading calendars…</div>
+      } @else {
+        @for (item of filtered(); track item.id) {
+          <button class="item" [class.selected]="selectedId() === item.id" (click)="select(item)">
+            <span class="item-icon"><i class="las la-calendar-alt"></i></span>
+            <span class="item-copy">
+              <strong>{{ item.name }}</strong>
+              <small>{{ item.tz }} · {{ item.working_days.length }} working days</small>
+            </span>
+            <xrm-owner-layer-badge [layer]="item.owner_layer" />
+            @if (item.is_default) { <span class="tag">Default</span> }
+          </button>
+        } @empty {
+          <div class="empty">No calendars match.</div>
+        }
+      }
+    </div>
+
+    <div class="editor">
+      @if (editing()) {
+        <h2>{{ creating() ? 'New calendar' : 'Edit calendar' }}</h2>
+        <div class="grid">
+          <label>Name<input [(ngModel)]="draft.name" maxlength="120"></label>
+          <label>Timezone (IANA)<input [(ngModel)]="draft.tz" placeholder="e.g. Asia/Dubai"></label>
+          <label class="wide">Description<input [(ngModel)]="draft.description" placeholder="Optional"></label>
+          <label>Working hours start<input type="time" [(ngModel)]="draft.startClock"></label>
+          <label>Working hours end<input type="time" [(ngModel)]="draft.endClock"></label>
+          <label class="switch"><input type="checkbox" [(ngModel)]="draft.is_default"> Default calendar</label>
+        </div>
+
+        <div class="weekdays">
+          <h3>Working days</h3>
+          <div class="days">
+            @for (day of weekdays; track day.key) {
+              <label class="day" [class.active]="hasWorkingDay(day.key)">
+                <input type="checkbox" [checked]="hasWorkingDay(day.key)" (change)="toggleWorkingDay(day.key)">
+                {{ day.label }}
+              </label>
+            }
+          </div>
+          <p class="hint">One start/end time applies to every selected day. A richer per-day schedule (a lunch break, a shorter Friday) can be authored via the API or a bundle; editing here simplifies it back to one range per day.</p>
+        </div>
+
+        <div class="actions">
+          <button class="primary" [disabled]="saving() || !draft.name.trim() || !draft.tz.trim()" (click)="save()">
+            {{ saving() ? 'Saving…' : 'Save changes' }}
+          </button>
+          @if (!creating()) {
+            <button class="danger" [disabled]="saving()" (click)="deactivate()">Deactivate calendar</button>
+          }
+          <button class="ghost" (click)="cancel()">Cancel</button>
+        </div>
+
+        @if (!creating()) {
+          <div class="holidays">
+            <h3>Holidays</h3>
+            <div class="holiday-add">
+              <input [(ngModel)]="newHolidayName" placeholder="Holiday name" maxlength="120">
+              <input type="date" [(ngModel)]="newHolidayDate">
+              <button class="ghost" [disabled]="!newHolidayName.trim() || !newHolidayDate" (click)="addHoliday()">Add</button>
+            </div>
+            @for (holiday of holidays(); track holiday.id) {
+              <div class="holiday-row">
+                <span>{{ holiday.holiday_date }}</span>
+                <strong>{{ holiday.name }}</strong>
+                <button class="ghost small" (click)="removeHoliday(holiday)"><i class="las la-trash"></i></button>
+              </div>
+            } @empty {
+              <p class="hint">No holidays configured for this calendar.</p>
+            }
+          </div>
+
+          <div class="holidays">
+            <h3>Exceptions</h3>
+            <p class="hint">A date whose hours differ from its weekday: a half day, a one-off working Saturday, or an unplanned closure. A date cannot be both a holiday and an exception.</p>
+            <div class="holiday-add exception-add">
+              <input [(ngModel)]="newExceptionName" placeholder="Reason" maxlength="120">
+              <input type="date" [(ngModel)]="newExceptionDate">
+              <label class="switch"><input type="checkbox" [(ngModel)]="newExceptionClosed"> Closed all day</label>
+              @if (!newExceptionClosed) {
+                <input type="time" [(ngModel)]="newExceptionStart" aria-label="Exception start">
+                <input type="time" [(ngModel)]="newExceptionEnd" aria-label="Exception end">
+              }
+              <button class="ghost" [disabled]="!newExceptionName.trim() || !newExceptionDate" (click)="addException()">Add</button>
+            </div>
+            @for (exception of exceptions(); track exception.id) {
+              <div class="holiday-row">
+                <span>{{ exception.exception_date }}</span>
+                <strong>{{ exception.name }}</strong>
+                <span>{{ describeRanges(exception) }}</span>
+                <button class="ghost small" (click)="removeException(exception)" aria-label="Remove exception"><i class="las la-trash"></i></button>
+              </div>
+            } @empty {
+              <p class="hint">No exceptions configured for this calendar.</p>
+            }
+          </div>
+        }
+      } @else {
+        <div class="empty editor-empty"><i class="las la-calendar-alt"></i><p>Select a calendar to edit, or create a new one.</p></div>
+      }
+    </div>
+  </div>
+</section>

@@ -1,0 +1,102 @@
+<div class="ra-backdrop" role="presentation" (click)="close()">
+  <section class="ra-dialog" role="dialog" aria-modal="true"
+    [attr.aria-label]="(mode() === 'assign' ? 'recordAccess.assignTitle' : 'recordAccess.shareTitle') | translate: { count: recordCount() }"
+    (click)="$event.stopPropagation()" (keydown.escape)="close()">
+    <header>
+      <h3>{{ (mode() === 'assign' ? 'recordAccess.assignTitle' : 'recordAccess.shareTitle') | translate: { count: recordCount() } }}</h3>
+      <button type="button" class="ra-close" [attr.aria-label]="'entityList.close' | translate"
+        [disabled]="busy()" (click)="close()">×</button>
+    </header>
+
+    @if (summary(); as s) {
+    <div class="ra-summary" role="status" data-testid="record-assign-summary">
+      <p>{{ 'recordAccess.assignSummary' | translate: { succeeded: s.succeeded, failed: s.failed.length } }}</p>
+      @if (s.failed.length) {
+      <ul class="ra-failures">
+        @for (f of s.failed; track f.recordId) { <li>{{ failureLine(f) }}</li> }
+      </ul>
+      }
+    </div>
+    } @else {
+    @if (mode() === 'share') {
+    <div class="ra-section">
+      <h4>{{ 'recordAccess.currentShares' | translate }}</h4>
+      @if (sharesLoading()) {
+      <p class="ra-muted">{{ 'entityList.loadingRecords' | translate }}</p>
+      } @else if (!shares().length) {
+      <p class="ra-muted">{{ 'recordAccess.noShares' | translate }}</p>
+      } @else {
+      <ul class="ra-shares">
+        @for (row of shares(); track row.share.id) {
+        <li>
+          <span class="ra-principal">
+            <span class="ra-kind">{{ principalKindLabel(row.share.principal_type) | translate }}</span>
+            {{ row.label }}
+          </span>
+          <span class="ra-cap">{{ capabilityLabel(row.share.capability) | translate }}</span>
+          <button type="button" class="ra-btn ra-btn-text" [disabled]="busy()" (click)="revoke(row)">
+            {{ 'recordAccess.revoke' | translate }}
+          </button>
+        </li>
+        }
+      </ul>
+      }
+    </div>
+    }
+
+    <div class="ra-section">
+      @if (mode() === 'share') { <h4>{{ 'recordAccess.grant' | translate }}</h4> }
+      <div class="ra-picker-row">
+        <select [attr.aria-label]="'recordAccess.principalKind' | translate" [disabled]="busy()"
+          (change)="setKind($any($event.target).value)">
+          <option value="user" [selected]="principalKind() === 'user'">{{ 'recordAccess.user' | translate }}</option>
+          <option value="team" [selected]="principalKind() === 'team'">{{ 'recordAccess.team' | translate }}</option>
+        </select>
+        <input type="search" [value]="search()" [disabled]="busy()"
+          [placeholder]="(principalKind() === 'user' ? 'recordAccess.searchUser' : 'recordAccess.searchTeam') | translate"
+          [attr.aria-label]="(principalKind() === 'user' ? 'recordAccess.searchUser' : 'recordAccess.searchTeam') | translate"
+          (input)="onSearch($any($event.target).value)" />
+      </div>
+      <ul class="ra-results" role="listbox" [attr.aria-busy]="searching()">
+        @for (p of results(); track p.id) {
+        <li>
+          <button type="button" role="option" class="ra-result" [class.selected]="principal()?.id === p.id"
+            [attr.aria-selected]="principal()?.id === p.id" (click)="pick(p)">{{ p.label }}</button>
+        </li>
+        } @empty {
+        <li class="ra-muted">{{ (searching() ? 'entityList.loadingRecords' : 'recordAccess.noMatches') | translate }}</li>
+        }
+      </ul>
+      @if (mode() === 'share') {
+      <label class="ra-cap-picker">
+        <span>{{ 'recordAccess.capabilityLabel' | translate }}</span>
+        <select [disabled]="busy()" (change)="setCapability($any($event.target).value)">
+          @for (c of capabilities; track c) {
+          <option [value]="c" [selected]="c === capability()">{{ capabilityLabel(c) | translate }}</option>
+          }
+        </select>
+      </label>
+      }
+    </div>
+    }
+
+    @if (error(); as message) { <p class="ra-error" role="alert">{{ message }}</p> }
+
+    <footer>
+      <button type="button" class="ra-btn ra-btn-text" [disabled]="busy()" (click)="close()">
+        {{ (summary() ? 'entityList.close' : 'entityList.cancel') | translate }}
+      </button>
+      @if (!summary()) {
+      @if (mode() === 'assign') {
+      <button type="button" class="ra-btn ra-btn-primary" data-testid="record-assign-apply"
+        [disabled]="busy() || !principal()" (click)="assign()">
+        {{ 'recordAccess.assignApply' | translate: { count: recordCount() } }}
+      </button>
+      } @else {
+      <button type="button" class="ra-btn ra-btn-primary" data-testid="record-share-grant"
+        [disabled]="busy() || !principal()" (click)="grant()">{{ 'recordAccess.grant' | translate }}</button>
+      }
+      }
+    </footer>
+  </section>
+</div>

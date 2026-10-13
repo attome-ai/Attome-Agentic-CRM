@@ -1,0 +1,50 @@
+.rd-breadcrumb {
+  margin-block-end: 8px;
+  font-size: 13px;
+}
+
+/* The arrow points back: mirror it in right-to-left layouts. */
+:host-context([dir="rtl"]) .rd-back-icon {
+  transform: scaleX(-1);
+}
+
+.rd-head {
+  margin-block-end: 16px;
+}
+
+.rd-release {
+  margin: 0 0 10px;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.rd-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin: 0;
+}
+
+.rd-facts dt {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.rd-facts dd {
+  margin: 0;
+  font-size: 13px;
+}
+
+.rd-mono {
+  font-family: var(--font-mono, monospace);
+  overflow-wrap: anywhere;
+}
+
+.rd-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

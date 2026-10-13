@@ -1,0 +1,52 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "baseUrl":                "./",
+    "ignoreDeprecations":     "6.0",
+    "outDir":                 "./dist/out-tsc",
+    "strict":                 true,
+    "noImplicitOverride":     true,
+    "noImplicitReturns":      true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck":           true,
+    "esModuleInterop":        true,
+    "sourceMap":              true,
+    "declaration":            false,
+    "experimentalDecorators": true,
+    "moduleResolution":       "bundler",
+    "importHelpers":          true,
+    "target":                 "ES2022",
+    "module":                 "ES2022",
+    "useDefineForClassFields": false,
+    "lib":                    ["ES2022", "dom"],
+    "paths": {
+      "@angular/animations":       ["node_modules/@angular/animations"],
+      "@angular/animations/*":     ["node_modules/@angular/animations/*"],
+      "@angular/common":           ["node_modules/@angular/common"],
+      "@angular/common/*":         ["node_modules/@angular/common/*"],
+      "@angular/core":             ["node_modules/@angular/core"],
+      "@angular/core/*":           ["node_modules/@angular/core/*"],
+      "@angular/forms":            ["node_modules/@angular/forms"],
+      "@angular/forms/*":          ["node_modules/@angular/forms/*"],
+      "@angular/platform-browser": ["node_modules/@angular/platform-browser"],
+      "@angular/platform-browser/*": ["node_modules/@angular/platform-browser/*"],
+      "@angular/router":           ["node_modules/@angular/router"],
+      "@angular/router/*":         ["node_modules/@angular/router/*"],
+      "@attome/base":              ["projects/base/src/public-api.ts"],
+      "@attome/base/i18n-ar":      ["projects/base/i18n-ar/public-api.ts"],
+      "@attome/base/account":      ["projects/base/account/public-api.ts"],
+      "@attome/base/dialog":       ["projects/base/dialog/public-api.ts"],
+      "@attome/base/step-up":      ["projects/base/step-up/public-api.ts"],
+      "@attome/xrm":               ["projects/xrm/src/public-api.ts"],
+      "@attome/xrm/*":             ["projects/xrm/*/public-api.ts"],
+      "rxjs":                      ["node_modules/rxjs"],
+      "rxjs/*":                    ["node_modules/rxjs/*"]
+    }
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters":  true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates":            true
+  }
+}

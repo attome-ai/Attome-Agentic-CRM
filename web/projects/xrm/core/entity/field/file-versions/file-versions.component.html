@@ -1,0 +1,75 @@
+<div class="xfv">
+  <button #trigger type="button" class="xfv-trigger"
+          [attr.aria-expanded]="open()" [attr.aria-controls]="panelId"
+          (click)="toggle()">
+    <i class="las la-history" aria-hidden="true"></i>
+    <span>{{ 'fileVersions.versions' | translate }}</span>
+  </button>
+
+  @if (open()) {
+    <div class="xfv-panel" role="region" [id]="panelId" tabindex="-1"
+         [attr.aria-label]="'fileVersions.title' | translate"
+         (keydown)="onPanelKeydown($event)">
+      <div class="xfv-head">
+        <span class="xfv-title">{{ 'fileVersions.title' | translate }}</span>
+        <button type="button" class="xfv-icon-btn" (click)="close()"
+                [attr.aria-label]="'fileVersions.close' | translate" [title]="'fileVersions.close' | translate">
+          <i class="las la-times" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      @if (error()) {
+        <p class="xfv-error" role="alert">{{ error() }}</p>
+      }
+      <p class="xfv-status" role="status">{{ status() ?? '' }}</p>
+
+      @if (loading()) {
+        <p class="xfv-empty">{{ 'fileVersions.loading' | translate }}</p>
+      } @else if (versions().length === 0) {
+        <p class="xfv-empty">{{ 'fileVersions.empty' | translate }}</p>
+      } @else {
+        <ul class="xfv-list">
+          @for (version of versions(); track version.version_no) {
+            <li class="xfv-item" [class.xfv-item-current]="version.is_current">
+              <div class="xfv-meta">
+                <span class="xfv-name">
+                  {{ 'fileVersions.versionNo' | translate: { version: version.version_no } }}
+                  @if (version.is_current) {
+                    <span class="xfv-badge">{{ 'fileVersions.current' | translate }}</span>
+                  }
+                </span>
+                <span class="xfv-sub">
+                  <span class="xfv-file" [title]="fileName(version)">{{ fileName(version) }}</span>
+                  · {{ version.created_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}
+                  @if (version.size !== null && version.size !== undefined) { · {{ formatSize(version.size) }} }
+                </span>
+              </div>
+              <div class="xfv-actions">
+                <button type="button" class="xfv-icon-btn" (click)="download(version)"
+                        [disabled]="busyVersion() !== null"
+                        [attr.aria-label]="'fileVersions.downloadVersion' | translate: { version: version.version_no }"
+                        [title]="'fileVersions.download' | translate">
+                  <i class="las la-download" aria-hidden="true"></i>
+                </button>
+                @if (!version.is_current) {
+                  <button type="button" class="xfv-icon-btn" (click)="restore(version)"
+                          [disabled]="busyVersion() !== null"
+                          [attr.aria-label]="'fileVersions.restoreVersion' | translate: { version: version.version_no }"
+                          [title]="'fileVersions.restore' | translate">
+                    <i class="las la-undo" aria-hidden="true"></i>
+                  </button>
+                  <button type="button" class="xfv-icon-btn xfv-danger" (click)="purge(version)"
+                          [disabled]="busyVersion() !== null"
+                          [attr.aria-label]="'fileVersions.purgeVersion' | translate: { version: version.version_no }"
+                          [title]="'fileVersions.purge' | translate">
+                    <i class="las la-trash" aria-hidden="true"></i>
+                  </button>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</div>

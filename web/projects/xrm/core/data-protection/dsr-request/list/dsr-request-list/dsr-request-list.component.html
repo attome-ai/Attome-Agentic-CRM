@@ -1,0 +1,200 @@
+<div class="page-header">
+  <div>
+    <h2>DSR Requests</h2>
+    <p class="subtitle">
+      Data-subject-rights requests — access, erasure, portability, objection. Create a
+      request, then fulfill it by naming which entities and which attribute identifies
+      the subject in each.
+    </p>
+  </div>
+  <button class="btn-primary" (click)="toggleCreate()">
+    <i class="las la-plus"></i> New Request
+  </button>
+</div>
+
+@if (showCreate()) {
+  <div class="create-panel">
+    <h3>New DSR Request</h3>
+    <div class="form-row-2">
+      <div class="field">
+        <label for="dsr-new-subject">Subject reference</label>
+        <input id="dsr-new-subject" [(ngModel)]="newSubjectReference" placeholder="e.g. jane@example.com" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="dsr-new-type">Request type</label>
+        <select id="dsr-new-type" [(ngModel)]="newRequestType">
+          <option value="access">Access</option>
+          <option value="erasure">Erasure</option>
+          <option value="portability">Portability</option>
+          <option value="objection">Objection</option>
+        </select>
+      </div>
+    </div>
+    @if (createError()) { <p class="error-msg">{{ createError() }}</p> }
+    <div class="btn-row">
+      <button class="btn-primary" (click)="create()" [disabled]="creating()">
+        {{ creating() ? 'Creating…' : 'Create Request' }}
+      </button>
+      <button class="btn-ghost" (click)="toggleCreate()">Cancel</button>
+    </div>
+  </div>
+}
+
+<div class="filter-bar">
+  <div class="prefix-tabs">
+    <button [class.active]="statusFilter() === ''" (click)="setStatus('')">All</button>
+    <button [class.active]="statusFilter() === 'pending'" (click)="setStatus('pending')">Pending</button>
+    <button [class.active]="statusFilter() === 'blocked'" (click)="setStatus('blocked')">Blocked</button>
+    <button [class.active]="statusFilter() === 'fulfilled'" (click)="setStatus('fulfilled')">Fulfilled</button>
+    <button [class.active]="statusFilter() === 'rejected'" (click)="setStatus('rejected')">Rejected</button>
+  </div>
+</div>
+
+@if (loading()) {
+  <p class="state-msg">Loading DSR requests…</p>
+} @else if (error()) {
+  <p class="error-msg">{{ error() }}</p>
+} @else if (requests().length === 0) {
+  <div class="empty-state"><p>No DSR requests match.</p></div>
+} @else {
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Requested</th>
+          <th>Result</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (r of requests(); track r.id) {
+          <tr>
+            <td class="cell-mono">{{ r.subject_reference }}</td>
+            <td><span class="badge">{{ r.request_type }}</span></td>
+            <td><span class="badge">{{ r.status }}</span></td>
+            <td class="cell-muted">{{ r.requested_at | date:'medium' }}</td>
+            <td class="cell-muted">
+              @if (r.status === 'blocked') {
+                {{ r.block_reason }}
+              } @else if (r.status === 'fulfilled') {
+                fulfilled {{ r.fulfilled_at | date:'medium' }}
+              } @else {
+                —
+              }
+            </td>
+            <td class="actions">
+              @if (r.status === 'pending') {
+                <button class="btn-sm" (click)="toggleFulfill(r)">
+                  {{ expandedId() === r.id ? 'Hide' : 'Fulfill' }}
+                </button>
+              }
+            </td>
+          </tr>
+          @if (expandedId() === r.id) {
+            <tr>
+              <td colspan="6">
+                <div class="detail-panel">
+                  <h4>Scopes — which entities, matched on which attribute</h4>
+                  @for (scope of scopes(); track $index; let i = $index) {
+                    <div class="form-row-2">
+                      <div class="field">
+                        <label [attr.for]="'dsr-scope-entity-' + i">Entity logicalname</label>
+                        <input [id]="'dsr-scope-entity-' + i" [(ngModel)]="scope.entity_logicalname" placeholder="e.g. contact" autocomplete="off">
+                      </div>
+                      <div class="field">
+                        <label [attr.for]="'dsr-scope-attr-' + i">
+                          Match attribute
+                          <button type="button" class="btn-sm" style="float:right" (click)="removeScope(i)" [disabled]="scopes().length === 1">
+                            <i class="las la-trash"></i>
+                          </button>
+                        </label>
+                        <input [id]="'dsr-scope-attr-' + i" [(ngModel)]="scope.match_attribute" placeholder="e.g. email" autocomplete="off">
+                      </div>
+                    </div>
+                  }
+                  <div class="btn-row">
+                    <button class="btn-ghost" (click)="addScope()">
+                      <i class="las la-plus"></i> Add scope
+                    </button>
+                  </div>
+
+                  @if (r.request_type === 'access' || r.request_type === 'portability') {
+                    <label class="checkbox-row" style="margin: 10px 0;">
+                      <input type="checkbox" [(ngModel)]="adminOverride">
+                      Admin override cross-border transfer restriction
+                    </label>
+                  }
+
+                  @if (fulfillError()) { <p class="error-msg">{{ fulfillError() }}</p> }
+                  @if (fulfillPendingMessage()) {
+                    <p class="warn-msg">
+                      {{ fulfillPendingMessage() }}
+                      — review it in the <a routerLink="/xrm/admin/approvals">Approval Queue</a>.
+                    </p>
+                  }
+                  @if (exportResult()) {
+                    <h4>Export result</h4>
+                    <table class="nested-table">
+                      <thead><tr><th>Entity</th><th>Rows</th><th>Withheld (hold)</th><th>Object key</th></tr></thead>
+                      <tbody>
+                        @for (s of exportResult()!.scopes; track s.entity_logicalname) {
+                          <tr>
+                            <td>{{ s.entity_logicalname }}</td>
+                            <td>{{ s.exported_rows }}</td>
+                            <td>{{ s.withheld_for_legal_hold }}</td>
+                            <td class="cell-mono">{{ s.object_key }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  }
+                  @if (erasureResult()) {
+                    <h4>Erasure result — {{ erasureResult()!.status }}</h4>
+                    @if (erasureResult()!.block_reason) {
+                      <p class="warn-msg">{{ erasureResult()!.block_reason }}</p>
+                    }
+                    @if (erasureResult()!.erased.length) {
+                      <table class="nested-table">
+                        <thead><tr><th>Entity</th><th>Record</th><th>Key destroyed</th></tr></thead>
+                        <tbody>
+                          @for (e of erasureResult()!.erased; track e.record_id) {
+                            <tr>
+                              <td>{{ e.entity_logicalname }}</td>
+                              <td class="cell-mono">{{ e.record_id }}</td>
+                              <td>{{ e.key_destroyed }}</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    }
+                  }
+
+                  <div class="btn-row">
+                    @if (r.request_type === 'access') {
+                      <button class="btn-primary" (click)="fulfillAccess(r)" [disabled]="fulfilling()">
+                        {{ fulfilling() ? 'Fulfilling…' : 'Fulfill Access' }}
+                      </button>
+                    } @else if (r.request_type === 'portability') {
+                      <button class="btn-primary" (click)="fulfillPortability(r)" [disabled]="fulfilling()">
+                        {{ fulfilling() ? 'Fulfilling…' : 'Fulfill Portability' }}
+                      </button>
+                    } @else if (r.request_type === 'erasure') {
+                      <button class="btn-primary" (click)="fulfillErasure(r)" [disabled]="fulfilling()">
+                        {{ fulfilling() ? 'Submitting…' : 'Fulfill Erasure' }}
+                      </button>
+                    } @else {
+                      <p class="cell-muted">Objection requests have no automated fulfillment action here.</p>
+                    }
+                  </div>
+                </div>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+}

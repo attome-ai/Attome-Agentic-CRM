@@ -1,0 +1,126 @@
+<div class="page-header">
+  <div>
+    <h2>{{ 'releaseReport.title' | translate }}</h2>
+    <p class="subtitle">{{ 'releaseReport.subtitle' | translate }}</p>
+  </div>
+  <button type="button" class="btn-ghost" (click)="refresh()" [disabled]="loading()">
+    <i class="las la-sync" aria-hidden="true"></i> {{ 'releaseReport.refresh' | translate }}
+  </button>
+</div>
+
+@if (summary(); as s) {
+  <section class="card rr-summary" aria-labelledby="rr-summary-title" data-testid="summary">
+    <h3 id="rr-summary-title" class="rr-visually-hidden">{{ 'releaseReport.openItemsLabel' | translate }}</h3>
+    <p class="rr-summary-main">
+      <span class="rr-badge" [class.rr-badge--zero]="s.open_items === 0">
+        {{ s.open_items | localNumber }}
+      </span>
+      {{ 'releaseReport.openItems' | translate: { count: s.open_items } }}
+    </p>
+    @if (byKind().length > 0) {
+      <ul class="rr-kinds">
+        @for (k of byKind(); track k.kind) {
+          <li>{{ 'releaseReport.kinds.' + k.kind | translate }}: <strong>{{ k.count | localNumber }}</strong></li>
+        }
+      </ul>
+    }
+    <p class="rr-muted">
+      {{ 'releaseReport.lastRelease' | translate }}:
+      @if (s.last_release_at) {
+        {{ s.last_release_at | localDate: dateFmt }}
+      } @else {
+        {{ 'releaseReport.noRelease' | translate }}
+      }
+    </p>
+    @if (s.building > 0) {
+      <p class="rr-muted">{{ 'releaseReport.building' | translate: { count: s.building } }}</p>
+    }
+    <p class="rr-muted">{{ 'releaseReport.noDeadline' | translate }}</p>
+  </section>
+}
+
+<form class="rr-filters" (ngSubmit)="apply()" [attr.aria-label]="'releaseReport.filters.label' | translate">
+  <label for="rr-status">{{ 'releaseReport.filters.status' | translate }}</label>
+  <select id="rr-status" name="status" [ngModel]="status()" (ngModelChange)="status.set($event)">
+    <option value="">{{ 'releaseReport.filters.all' | translate }}</option>
+    @for (st of statuses; track st) {
+      <option [value]="st">{{ statusKey(st) | translate }}</option>
+    }
+  </select>
+  <label for="rr-source">{{ 'releaseReport.filters.source' | translate }}</label>
+  <select id="rr-source" name="source" [ngModel]="source()" (ngModelChange)="source.set($event)">
+    <option value="">{{ 'releaseReport.filters.all' | translate }}</option>
+    @for (so of sources; track so) {
+      <option [value]="so">{{ sourceKey(so) | translate }}</option>
+    }
+  </select>
+  <button type="submit" class="btn-ghost" [disabled]="loading()">
+    <i class="las la-filter" aria-hidden="true"></i> {{ 'releaseReport.filters.apply' | translate }}
+  </button>
+  <button type="button" class="btn-text" (click)="reset()" [disabled]="loading()">
+    {{ 'releaseReport.filters.reset' | translate }}
+  </button>
+</form>
+
+<section class="card" aria-labelledby="rr-list-title">
+  <h3 id="rr-list-title">
+    {{ 'releaseReport.title' | translate }}
+    <span class="count">{{ total() | localNumber }}</span>
+  </h3>
+  @if (loading()) {
+    <p class="state-msg" role="status">{{ 'releaseReport.loading' | translate }}</p>
+  } @else if (error()) {
+    <p class="error-msg" role="alert">{{ error() }}</p>
+  } @else if (reports().length === 0) {
+    <div class="empty-state"><p>{{ 'releaseReport.empty' | translate }}</p></div>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">{{ 'releaseReport.columns.created' | translate }}</th>
+            <th scope="col">{{ 'releaseReport.columns.release' | translate }}</th>
+            <th scope="col">{{ 'releaseReport.columns.source' | translate }}</th>
+            <th scope="col">{{ 'releaseReport.columns.status' | translate }}</th>
+            <th scope="col">{{ 'releaseReport.columns.items' | translate }}</th>
+            <th scope="col">{{ 'releaseReport.columns.actions' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of reports(); track r.id) {
+            <tr>
+              <td class="cell-muted">{{ r.created_at | localDate: dateFmt }}</td>
+              <td class="rr-release">{{ r.release }}</td>
+              <td>{{ sourceKey(r.source) | translate }}</td>
+              <td><span class="badge">{{ statusKey(r.status) | translate }}</span></td>
+              <td>
+                @if (r.items_open > 0) {
+                  <strong class="rr-open">{{ 'releaseReport.itemsCount' | translate: { open: r.items_open, total: r.items_total } }}</strong>
+                } @else {
+                  {{ 'releaseReport.itemsCount' | translate: { open: r.items_open, total: r.items_total } }}
+                }
+              </td>
+              <td>
+                <a class="cell-link" [routerLink]="['/xrm/admin/release-reports', r.id]"
+                   [attr.aria-label]="'releaseReport.viewReport' | translate: { date: (r.created_at | localDate: dateFmt) }">
+                  {{ 'releaseReport.view' | translate }}
+                </a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (pages() > 1) {
+      <nav class="rr-pager" [attr.aria-label]="'releaseReport.pager.label' | translate">
+        <button type="button" class="btn-ghost" (click)="previous()" [disabled]="!hasPrevious()">
+          {{ 'releaseReport.pager.previous' | translate }}
+        </button>
+        <span>{{ 'releaseReport.pager.pageOf' | translate: { page: page(), pages: pages() } }}</span>
+        <button type="button" class="btn-ghost" (click)="next()" [disabled]="!hasNext()">
+          {{ 'releaseReport.pager.next' | translate }}
+        </button>
+      </nav>
+    }
+  }
+</section>
