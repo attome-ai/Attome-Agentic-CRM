@@ -1,0 +1,58 @@
+[package]
+name = "attome-auth-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+# P-verification-depth-hardening (splits P-enterprise-maturity-backlog item 1,
+# triggered 2026-07-30) — fuzz targets for attome-auth's two parser-shaped,
+# attacker-influenced-input entry points named by that item: JWT decode
+# (fuzz_validate_token) and Cookie-header parsing (fuzz_cookie_extract).
+#
+# Deliberately NOT a workspace member (P-verification-depth-hardening §4,
+# folded into `document/base/auth/plans/attome-auth-plan.md` §12 as BAU-19):
+# cargo-fuzz requires a nightly toolchain and libFuzzer, and `cargo fuzz init`'s
+# own convention is a self-contained sub-crate with its own Cargo.lock, never
+# folded into the main workspace's `cargo build --workspace` (which every
+# contributor runs on stable).
+#
+# BAU-19 owns the run record: the targets compile and run, and their `Cargo.lock`
+# and seed corpus are committed. Run them with:
+#   cargo install cargo-fuzz
+#   cargo +nightly fuzz run fuzz_validate_token -- -max_total_time=60
+#   cargo +nightly fuzz run fuzz_cookie_extract -- -max_total_time=60
+
+[package.metadata]
+cargo-fuzz = true
+
+# Empty table, deliberate: tells Cargo this crate is its OWN workspace root
+# rather than being pulled into the parent repo's root `[workspace]` (which
+# does not list this path in `members`) — the standard `cargo fuzz init`
+# convention for a fuzz crate nested inside another workspace's tree. Without
+# this, `cargo build --workspace`/`cargo test --workspace` run from the repo
+# root would error trying to resolve this crate into that workspace.
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+http = "1"
+
+[dependencies.attome-auth]
+path = ".."
+
+[dependencies.attome-config]
+path = "../../attome-config"
+
+[[bin]]
+name = "fuzz_validate_token"
+path = "fuzz_targets/fuzz_validate_token.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_cookie_extract"
+path = "fuzz_targets/fuzz_cookie_extract.rs"
+test = false
+doc = false
+bench = false

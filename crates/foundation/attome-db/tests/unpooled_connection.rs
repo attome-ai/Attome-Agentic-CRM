@@ -28,7 +28,6 @@
     clippy::unwrap_used,
     reason = "test helpers: a failed setup step should panic with its message"
 )]
-
 #![allow(
     unsafe_code,
     reason = "`NonDebugAppEnv` sets APP_ENV for one test and restores it on drop"

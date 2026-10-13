@@ -14,6 +14,7 @@ members = [
     "crates/foundation/attome-profiler",
     "crates/foundation/attome-email",
     "crates/foundation/attome-jobs",
+    "crates/foundation/attome-auth",
     "crates/sdk/attome-sdk",
     "crates/apps/attome",
 ]
@@ -46,27 +47,36 @@ attome-inference = { path = "crates/foundation/attome-inference" }
 attome-profiler  = { path = "crates/foundation/attome-profiler" }
 attome-email     = { path = "crates/foundation/attome-email" }
 attome-jobs      = { path = "crates/foundation/attome-jobs" }
+attome-auth      = { path = "crates/foundation/attome-auth" }
 attome-sdk     = { path = "crates/sdk/attome-sdk" }
 
 # External crates
+aes-gcm       = { version = "0.10", features = ["aes"] }
 ammonia       = "~4.1"
 apalis        = { version = "0.7.4", default-features = false, features = ["limit", "tracing"] }
 apalis-sql    = { version = "0.7.4", default-features = false, features = ["postgres"] }
 arc-swap      = "1"
+argon2        = "0.6"
 axum          = { version = "0.8", features = ["macros"] }
+base64        = "0.23"
 chrono        = { version = "0.4", features = ["serde"] }
 chrono-tz     = "0.10"
 dotenvy       = "0.15"
-futures-util  = "0.3"
 fred          = { version = "9", features = ["subscriber-client", "enable-rustls", "i-scripts", "i-streams", "sentinel-auth"] }
+futures-util  = "0.3"
+hex           = "0.4"
+hmac          = "0.12"
 http          = "1"
+jsonwebtoken  = "9"
 lettre        = { version = "0.11", default-features = false, features = ["tokio1-rustls-tls", "smtp-transport", "builder"] }
 metrics       = "0.24"
 moka          = { version = "0.12", features = ["future"] }
 object_store  = { version = "0.14", features = ["aws"] }
 opentelemetry = "0.32"
 proptest      = "1"
+rand          = "0.8"
 reqwest       = { version = "0.13", default-features = false, features = ["json", "form", "rustls"] }
+rsa           = "0.9"
 rustls        = { version = "0.23", default-features = false, features = ["std", "ring"] }
 serde         = { version = "1", features = ["derive"] }
 serde_ignored = "0.1"
@@ -75,8 +85,10 @@ sha2          = "0.10"
 sqlx          = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "migrate", "tls-rustls", "json"] }
 thiserror     = "2"
 tokio         = { version = "1", features = ["full"] }
+totp-rs       = { version = "6", default-features = false, features = ["gen_secret", "otpauth", "std"] }
 tracing       = "0.1"
 tracing-opentelemetry = "0.33"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 url           = "2"
 utoipa        = { version = "5", features = ["macros", "uuid", "chrono"] }
 uuid          = { version = "1", features = ["v4", "v5", "v7", "serde"] }

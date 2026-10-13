@@ -77,7 +77,8 @@ pub async fn migrated_pool(max_connections: u32) -> Option<sqlx::PgPool> {
     Some(connect(&migrated_db_url()?, max_connections).await)
 }
 
-async fn connect(url: &str, max_connections: u32) -> sqlx::PgPool {
+/// A pool on `url`; panics when it cannot connect.
+pub async fn connect(url: &str, max_connections: u32) -> sqlx::PgPool {
     PgPoolOptions::new()
         .max_connections(max_connections)
         .connect(url)
