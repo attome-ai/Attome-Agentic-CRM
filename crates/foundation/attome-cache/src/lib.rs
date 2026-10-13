@@ -40,6 +40,8 @@
 //! both the concept and a place to put it?
 
 pub mod local;
+/// The in-process store Solo runs on instead of Redis (A5).
+pub mod memory;
 pub mod persistence;
 pub mod rate_limit;
 pub mod redis_pool;
