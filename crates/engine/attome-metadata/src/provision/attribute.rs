@@ -1,0 +1,355 @@
+//! Entity/attribute metadata registration and attribute-index synchronization.
+
+use attome_config::AppConfig;
+use attome_db::{DbPool, PgConnection};
+use attome_types::AppError;
+use tokio::sync::Semaphore;
+use uuid::Uuid;
+
+use super::identifiers::{attribute_index_name, valid_identifier};
+
+/// Caps how many `sync_attribute_index` calls in this process may hold a
+/// direct migrator-role connection open at once. `create_migrator_connection`
+/// (unlike `create_migrator_pool`) opens a brand-new physical connection per
+/// call with no pool ceiling of its own — one attribute create/update takes
+/// this cost as the price of a pinned `CONCURRENTLY` session (see the doc
+/// comment below), but a bulk metadata import that creates many attributes
+/// back-to-back, or a burst of `BuildAttributeIndex` jobs draining
+/// concurrently under `config.jobs.worker_concurrency`, would otherwise open
+/// one such connection per attribute with no limit — competing with
+/// `db_migrator`'s own pooled connections for the migrator role's
+/// server-side connection budget (P-db-privilege-separation / D-117) and, in
+/// the worst case, exhausting it. This is a background/admin-operation path,
+/// not request-latency-sensitive, so a queued build waiting briefly for a
+/// permit is harmless; a fixed, conservative, process-local cap is
+/// deliberately not wired to config — nobody should need to tune it per
+/// deployment (same posture as `DDL_LOCK_TIMEOUT` above).
+pub(super) static ATTRIBUTE_INDEX_CONNECTION_LIMIT: Semaphore = Semaphore::const_new(4);
+
+/// Ceiling on `attribute_info` rows per entity — counts soft-deleted
+/// attributes too, because `delete_attribute` leaves the physical column in
+/// place (P-data-lifecycle owns the purge path) and Postgres's hard limit is
+/// ~1,600 physical columns per table. 500 keeps a comfortable 3x margin.
+/// Deliberately not config-tunable — a customer who genuinely needs more is a
+/// design conversation, not a config edit. P-provisioning-hardening item (e).
+///
+/// Lives here rather than in `attome-types` (BTY-10): it is a statement about
+/// this engine's table and Postgres's column limit, not about the wire
+/// vocabulary, and attome-types is consumed by crates that have no entities.
+pub const MAX_ATTRIBUTES_PER_ENTITY: i64 = 500;
+
+/// P1.11(h): one btree index serves sortable/filterable access on an
+/// attribute AND (T2-1 / due-diligence finding 3.1) the FK existence and
+/// cascade-delete/restrict checks `entity_mutation.rs` runs against every
+/// Lookup column. `wanted` is the caller's business — `attome-server`'s
+/// `admin/attribute.rs` computes it as `is_sortable || is_filterable ||
+/// field_type == Lookup`, so a Lookup attribute is always indexed even when
+/// an admin never opts into sort/filter. It runs either inline for small
+/// tables or in the durable worker for larger tables. Both paths use one
+/// direct Postgres session because `CONCURRENTLY` cannot run in a
+/// transaction and a PgBouncer transaction-pooled connection cannot retain a
+/// session advisory lock across the catalog check and DDL.
+#[expect(
+    clippy::expect_used,
+    reason = "the semaphore is a static that is never closed"
+)]
+pub async fn sync_attribute_index(
+    config: &AppConfig,
+    entity_logicalname: &str,
+    field_logicalname: &str,
+    wanted: bool,
+) -> Result<(), AppError> {
+    // Held across the connection's whole lifetime (acquire through close),
+    // not just the connect call — the goal is bounding concurrently-open
+    // sessions, not connection-establishment throughput.
+    let _permit = ATTRIBUTE_INDEX_CONNECTION_LIMIT
+        .acquire()
+        .await
+        .expect("ATTRIBUTE_INDEX_CONNECTION_LIMIT is never closed");
+
+    // P-db-privilege-separation / D-117: the migrator identity, not the
+    // schema-bootstrap one — this runs from a live admin request or the
+    // async index-build job, not `main.rs`'s migration sequence.
+    let mut conn = attome_db::UnpooledSession::new(
+        attome_db::create_migrator_connection(config)
+            .await
+            .map_err(AppError::internal)?,
+    );
+    let result = sync_attribute_index_on_connection(
+        &mut conn,
+        entity_logicalname,
+        field_logicalname,
+        wanted,
+    )
+    .await;
+    let unlock = sqlx::query_scalar::<_, bool>("SELECT pg_advisory_unlock($1, hashtext($2))")
+        .bind(crate::ADVISORY_LOCK_NAMESPACE)
+        .bind(format!(
+            "attome-metadata/attribute-index:{entity_logicalname}:{field_logicalname}"
+        ))
+        .fetch_optional(&mut *conn)
+        .await;
+    match (&result, unlock) {
+        (_, Ok(Some(true))) => {}
+        // A successful sync took the lock on this session, so failing to
+        // release it means the statements did not all run on one backend —
+        // the pinned-session invariant above broke (D-497), and the lock may
+        // stay held until that backend closes, turning every later sync of
+        // this field into a 409.
+        (Ok(()), Ok(_)) => tracing::warn!(
+            entity = %entity_logicalname,
+            field = %field_logicalname,
+            "attribute index advisory lock was not held at release; the session was not \
+             pinned and the lock may be stranded until its backend closes — check that \
+             database.direct_url bypasses any transaction-mode pgbouncer"
+        ),
+        (_, Err(e)) => tracing::warn!(
+            error = %e,
+            entity = %entity_logicalname,
+            field = %field_logicalname,
+            "failed to release the attribute index advisory lock"
+        ),
+        // Error paths can return before the lock was taken; `false` is
+        // expected there.
+        (Err(_), Ok(_)) => {}
+    }
+    let _ = conn.close().await;
+    result
+}
+
+/// Runs the synchronization on one direct PostgreSQL session. The lock,
+/// catalog probe, repair, and concurrent DDL intentionally share this exact
+/// session; a transaction-pooled connection cannot provide that invariant.
+pub async fn sync_attribute_index_on_connection(
+    conn: &mut PgConnection,
+    entity_logicalname: &str,
+    field_logicalname: &str,
+    wanted: bool,
+) -> Result<(), AppError> {
+    if !valid_identifier(entity_logicalname) || !valid_identifier(field_logicalname) {
+        return Err(AppError::internal(format!(
+            "invalid identifier: entity={entity_logicalname}, field={field_logicalname}"
+        )));
+    }
+
+    let index_name = attribute_index_name(entity_logicalname, field_logicalname)?;
+    let lock_key =
+        format!("attome-metadata/attribute-index:{entity_logicalname}:{field_logicalname}");
+    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_lock($1, hashtext($2))")
+        .bind(crate::ADVISORY_LOCK_NAMESPACE)
+        .bind(&lock_key)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(AppError::internal)?;
+    if !locked {
+        return Err(AppError::Conflict(
+            "attribute index build already in progress",
+        ));
+    }
+
+    let build_in_progress: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM pg_stat_progress_create_index p JOIN pg_class c ON c.oid = p.index_relid WHERE c.relname = $1)",
+    )
+    .bind(&index_name)
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    if build_in_progress {
+        return Err(AppError::Conflict(
+            "attribute index build already in progress",
+        ));
+    }
+
+    let invalid: Option<bool> = sqlx::query_scalar(
+        "SELECT NOT i.indisvalid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid JOIN pg_class t ON t.oid = i.indrelid WHERE c.relname = $1 AND t.relname = $2",
+    )
+    .bind(&index_name)
+    .bind(entity_logicalname)
+    .fetch_optional(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    if invalid == Some(true) {
+        sqlx::query(&format!(
+            r#"DROP INDEX CONCURRENTLY IF EXISTS "{index_name}""#
+        ))
+        .execute(&mut *conn)
+        .await
+        .map_err(AppError::internal)?;
+    }
+
+    if wanted {
+        sqlx::query(&format!(
+            r#"CREATE INDEX CONCURRENTLY IF NOT EXISTS "{index_name}" ON "{entity_logicalname}" ("{field_logicalname}") WHERE is_active = TRUE"#
+        ))
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                error = %e, index = %index_name, entity = %entity_logicalname, field = %field_logicalname,
+                "CREATE INDEX CONCURRENTLY failed during attribute index sync"
+            );
+            AppError::internal(e)
+        })?;
+    } else {
+        sqlx::query(&format!(
+            r#"DROP INDEX CONCURRENTLY IF EXISTS "{index_name}""#
+        ))
+        .execute(&mut *conn)
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, index = %index_name, "DROP INDEX CONCURRENTLY failed during attribute index sync");
+            AppError::internal(e)
+        })?;
+    }
+
+    Ok(())
+}
+
+/// Registers an entity in `entity_info` and ensures its physical
+/// table exists (see `provision_table`). Returns the entity id.
+///
+/// Thin wrapper over [`super::reconcile_entity`] with
+/// [`super::ReconcilePolicy::Seed`] (P-environment-promotion §5 step 18), so
+/// every existing seed gets reconcile-or-skip for free without changing
+/// shape: an existing, non-customized row whose display name /
+/// `primary_name_attribute` / `is_append_only` differ from the call is
+/// **updated** (it used to be left as it was — the old `ON CONFLICT … DO
+/// UPDATE SET logicalname = EXCLUDED.logicalname` was a deliberate no-op);
+/// a row an admin customized (`is_customized = true`) is skipped and logged;
+/// an identical row costs one SELECT and no lock. The positional arguments
+/// this signature lacks (`category`) are passed as `None`, which under
+/// `Seed` means "not managed by this seed — leave as is"; `is_audited` is
+/// passed as `false` (nothing in the workspace writes that column, so this
+/// is a no-op in practice). `primary_name_attribute: None` likewise means
+/// "leave as is", not "clear".
+///
+/// Steady-state hot path (every boot, every entity already registered and
+/// unchanged): no global metadata-write lock, no per-entity lock, no log row
+/// — only a genuinely new or drifted registration pays for any of those.
+/// A *new* registration appends an `metadata_change_log` row (Plan
+/// 1.14) in the same transaction; without it, an entity registered by an
+/// engine seed never reaches `EntityMetaRegistry` on a node whose
+/// `pre_warm_registry` served a pre-existing Redis snapshot.
+pub async fn ensure_entity(
+    db: &DbPool,
+    logicalname: &str,
+    display_name: &str,
+    primary_name_attribute: Option<&str>,
+    is_append_only: bool,
+) -> Result<Uuid, AppError> {
+    let desc = super::EntityDesc {
+        logicalname: logicalname.to_owned(),
+        display_name: display_name.to_owned(),
+        primary_name_attribute: primary_name_attribute.map(str::to_owned),
+        is_append_only,
+        is_audited: false,
+        category: None,
+    };
+    super::reconcile_entity(db, &desc, super::ReconcilePolicy::Seed)
+        .await
+        .map(|(id, _)| id)
+}
+
+/// Registers an attribute on an entity in `attribute_info` and
+/// ensures the physical column exists (see `provision_column`). Returns the
+/// attribute id. Index synchronization is intentionally owned by the admin
+/// write/worker boundary so large-table requests can commit the metadata and
+/// durable job together.
+///
+/// Thin wrapper over the reconcile primitive with
+/// [`super::ReconcilePolicy::Seed`] — same reconcile-or-skip semantics as
+/// `ensure_entity` above. `lookup_entity_ref: None` and `options: None` mean
+/// "leave as is" on an existing row (and NULL on create); `max_length`,
+/// `on_target_delete`, `data_classification`, and `purpose` are not in this
+/// signature and are never touched by a seed. A field-type drift between the seed and
+/// the registered row is logged at `warn` and left alone (D-055 — never
+/// cast, and a boot must not fail over it; `reconcile_attribute` under
+/// `Admin`/`Bundle` refuses it with `AppError::Validation`).
+/// `is_required`/`max_length` stay metadata-only under `Seed`, exactly as
+/// every seed has always behaved.
+///
+/// The four adjacent `bool`s are the one hazard in this signature — a
+/// transposition compiles cleanly and silently flips a flag. It stays
+/// positional for now because its ~125 call sites span every engine's seed
+/// module and seven DB-backed test suites (MAINT-1, 2026-08-25); the
+/// `ensure_attribute_with_index_job` variant that used to sit alongside it
+/// was collapsed into this one once `admin/attribute.rs` stopped enqueueing
+/// the index job atomically with the metadata write (its only non-`None`
+/// caller — see the comment at that enqueue site).
+#[allow(clippy::too_many_arguments)] // positional, matches every other provision.rs/seed call site already in this shape
+pub async fn ensure_attribute(
+    db: &DbPool,
+    entity_id: Uuid,
+    logicalname: &str,
+    display_name: &str,
+    field_type: &str,
+    is_required: bool,
+    is_sensitive: bool,
+    is_sortable: bool,
+    is_filterable: bool,
+    lookup_entity_ref: Option<Uuid>,
+    options: Option<serde_json::Value>,
+) -> Result<Uuid, AppError> {
+    let desc = super::AttributeDesc {
+        logicalname: logicalname.to_owned(),
+        display_name: display_name.to_owned(),
+        field_type: field_type.to_owned(),
+        is_required,
+        is_sensitive,
+        // Seed callers never manage D-507's flag: `None` under `Seed` leaves
+        // an admin's or a bundle's setting alone.
+        is_write_restricted: None,
+        is_sortable,
+        is_filterable,
+        // Resolved uuid is passed straight through below; the logicalname
+        // form is only for callers that start from a bundle/admin payload.
+        lookup_entity: None,
+        options,
+        max_length: None,
+        on_target_delete: None,
+        data_classification: None,
+        purpose: None,
+    };
+    super::reconcile::reconcile_attribute_with_lookup_ref(
+        db,
+        entity_id,
+        &desc,
+        lookup_entity_ref,
+        super::ReconcilePolicy::Seed,
+        None,
+        None,
+    )
+    .await
+    .map(|(id, _)| id)
+}
+
+/// Bounded, exact row-count probe shared by the index-build gate and
+/// P-online-schema-change's `classify_schema_change` below. Stops once it
+/// observes the threshold plus one row rather than relying on planner stats
+/// (`pg_class.reltuples`, often `-1`/stale).
+pub async fn table_row_count_exceeds(
+    db: &DbPool,
+    entity_logicalname: &str,
+    threshold: i64,
+) -> Result<bool, AppError> {
+    if !valid_identifier(entity_logicalname) || threshold < 0 {
+        return Err(AppError::Validation("invalid row-count probe".into()));
+    }
+    sqlx::query_scalar(&format!(
+        "SELECT EXISTS (SELECT 1 FROM \"{entity_logicalname}\" OFFSET {threshold})"
+    ))
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Kept as a thin, named delegate (P-online-schema-change §4(a)) so the
+/// async-index gate's call sites don't need to change even though the probe
+/// itself is now shared with the schema-change classifier below.
+pub async fn attribute_index_requires_async(
+    db: &DbPool,
+    entity_logicalname: &str,
+    threshold: i64,
+) -> Result<bool, AppError> {
+    table_row_count_exceeds(db, entity_logicalname, threshold).await
+}

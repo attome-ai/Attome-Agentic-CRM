@@ -1,0 +1,27 @@
+[package]
+name         = "attome-field"
+description  = "Attome's field types: per-type validation and value normalisation for every attribute."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+attome-core.workspace  = true
+attome-types.workspace = true
+chrono.workspace       = true
+regex.workspace        = true
+serde.workspace        = true
+serde_json.workspace   = true
+thiserror.workspace    = true
+uuid.workspace         = true
+
+[dev-dependencies]
+proptest.workspace = true
+
+[lints]
+workspace = true

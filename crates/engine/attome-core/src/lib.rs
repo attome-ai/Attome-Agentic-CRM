@@ -97,6 +97,8 @@ pub mod filter;
 /// Basic-units U9 / B-R6 (D-604) — formula fields: options shape, the
 /// field-type -> rules-type map, and the save-time compile check.
 pub mod formula;
+/// The engine's job kinds (V2-D481).
+pub mod jobs;
 pub mod label_store;
 pub mod legal_hold;
 pub mod meta_registry;

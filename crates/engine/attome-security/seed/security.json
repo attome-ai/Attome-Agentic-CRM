@@ -1,0 +1,169 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=4.0.1",
+    "schema_version": 441,
+    "modules": ["core"]
+  },
+  "privileges": [
+    { "key": "sidebar.manage", "name": "Manage Sidebar", "description": "Create, edit, order, activate, and permission sidebar navigation items" },
+    { "key": "system.admin", "name": "System Admin", "description": "Full administrative access to every gated route" },
+    { "key": "metadata.rollout", "name": "Metadata Rollout", "description": "Plan and apply changesets, follow the changeset ledger, read and decide release-report items, read the rollout status and the caller's own approval requests (D-792). Never approves; reads no records." }
+  ],
+  "roles": [
+    {
+      "name": "Rollout operator",
+      "description": "The fleet console's rollout credential on a customer server (D-792): only metadata.rollout. Held by the password-less attome-rollout user an S2S rollout client is bound to. An apply it requests on a production server still needs a human approver (D-376).",
+      "access_level": 0,
+      "privileges": [
+        { "privilege": "metadata.rollout" }
+      ],
+      "entity_access": [],
+      "field_security_profiles": []
+    }
+  ],
+  "entities": [
+    {
+      "logicalname": "organization",
+      "display_name": "Organization",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "organization_ref", "display_name": "Parent Organization", "field_type": "lookup", "lookup_entity": "organization" }
+      ]
+    },
+    {
+      "logicalname": "team",
+      "display_name": "Team",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "organization_ref", "display_name": "Organization", "field_type": "lookup", "lookup_entity": "organization" }
+      ]
+    },
+    {
+      "logicalname": "user_account",
+      "display_name": "User",
+      "primary_name_attribute": "email",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "user_name", "display_name": "User Name", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "email", "display_name": "Email", "field_type": "text", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "phone", "display_name": "Phone", "field_type": "text" },
+        { "logicalname": "auth_type", "display_name": "Authentication Type", "field_type": "number" },
+        { "logicalname": "is_active", "display_name": "Is Active", "field_type": "bool", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "last_login", "display_name": "Last Login", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "organization_ref", "display_name": "Organization", "field_type": "lookup", "lookup_entity": "organization" },
+        { "logicalname": "language", "display_name": "Language", "field_type": "number" },
+        { "logicalname": "max_page_size", "display_name": "Max Page Size", "field_type": "number" },
+        { "logicalname": "currency", "display_name": "Currency", "field_type": "number" },
+        { "logicalname": "theme", "display_name": "Theme", "field_type": "text" },
+        { "logicalname": "timezone", "display_name": "Timezone", "field_type": "text" },
+        { "logicalname": "locale", "display_name": "Locale", "field_type": "text" },
+        {
+          "logicalname": "status",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_filterable": true,
+          "options": { "choices": ["online", "away", "busy", "offline"], "multi": false }
+        },
+        { "logicalname": "profile_image", "display_name": "Profile Image", "field_type": "file" }
+      ]
+    },
+    {
+      "logicalname": "user_account_mm_team",
+      "display_name": "Team Membership",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "user_ref", "display_name": "User", "field_type": "lookup", "is_required": true, "is_sortable": true, "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "team_ref", "display_name": "Team", "field_type": "lookup", "is_required": true, "is_sortable": true, "is_filterable": true, "lookup_entity": "team" }
+      ]
+    },
+    {
+      "logicalname": "privilege",
+      "display_name": "Privilege",
+      "primary_name_attribute": "key",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "key", "display_name": "Key", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" }
+      ]
+    },
+    {
+      "logicalname": "user_account_mm_privilege",
+      "display_name": "User Privilege Grant",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "user_ref", "display_name": "User", "field_type": "lookup", "is_required": true, "is_sortable": true, "is_filterable": true, "lookup_entity": "user_account" },
+        { "logicalname": "privilege_ref", "display_name": "Privilege", "field_type": "lookup", "is_required": true, "is_sortable": true, "is_filterable": true, "lookup_entity": "privilege" }
+      ]
+    },
+    {
+      "logicalname": "role",
+      "display_name": "Role",
+      "primary_name_attribute": "name",
+      "is_append_only": false,
+      "attributes": [
+        { "logicalname": "name", "display_name": "Name", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
+        { "logicalname": "description", "display_name": "Description", "field_type": "text" },
+        { "logicalname": "position_hierarchy_enabled", "display_name": "Position Hierarchy Enabled", "field_type": "bool", "is_filterable": true }
+      ]
+    }
+  ],
+  "queries": [
+    { "entity": "organization", "name": "Active Organizations", "sql": "SELECT id, name, created_at, is_active FROM organization WHERE is_active IS NOT FALSE", "required_privilege": "organization.read" },
+    { "entity": "organization", "name": "Inactive Organizations", "sql": "SELECT id, name, created_at, is_active FROM organization WHERE is_active = false", "required_privilege": "organization.read" },
+
+    { "entity": "team", "name": "Active Teams", "sql": "SELECT id, name, description, organization_ref, created_at, updated_at FROM team WHERE is_deleted = false AND is_active IS NOT FALSE", "required_privilege": "team.read" },
+    { "entity": "team", "name": "Inactive Teams", "sql": "SELECT id, name, description, organization_ref, created_at, updated_at FROM team WHERE is_deleted = false AND is_active = false", "required_privilege": "team.read" },
+    { "entity": "team", "name": "Teams (Related)", "sql": "SELECT id, name, description, organization_ref, created_at, updated_at FROM team WHERE is_deleted = false AND is_active IS NOT FALSE", "required_privilege": "team.read" },
+
+    { "entity": "user_account", "name": "Active Users", "sql": "SELECT id, user_name, email, auth_type, last_login, organization_ref, currency, theme FROM user_account WHERE is_active IS NOT FALSE", "required_privilege": "user_account.read" },
+    { "entity": "user_account", "name": "Inactive Users", "sql": "SELECT id, user_name, email, auth_type, last_login, organization_ref, currency, theme FROM user_account WHERE is_active = false", "required_privilege": "user_account.read" },
+    { "entity": "user_account", "name": "Users (Related)", "sql": "SELECT id, user_name, email, auth_type, last_login, organization_ref, currency, theme FROM user_account WHERE is_active IS NOT FALSE", "required_privilege": "user_account.read" },
+
+    { "entity": "user_account_mm_team", "name": "Active Team Memberships", "sql": "SELECT id, user_ref, team_ref, created_at, updated_at FROM user_account_mm_team WHERE is_deleted = false AND is_active IS NOT FALSE", "required_privilege": "user_account_mm_team.read" },
+    { "entity": "user_account_mm_team", "name": "Inactive Team Memberships", "sql": "SELECT id, user_ref, team_ref, created_at, updated_at FROM user_account_mm_team WHERE is_deleted = false AND is_active = false", "required_privilege": "user_account_mm_team.read" },
+    { "entity": "user_account_mm_team", "name": "Team Memberships (Related)", "sql": "SELECT id, user_ref, team_ref, created_at, updated_at FROM user_account_mm_team WHERE is_deleted = false AND is_active IS NOT FALSE", "required_privilege": "user_account_mm_team.read" },
+
+    { "entity": "privilege", "name": "Active Privileges", "sql": "SELECT id, key, name, description FROM privilege WHERE is_active = true", "required_privilege": "privilege.read" },
+    { "entity": "privilege", "name": "Inactive Privileges", "sql": "SELECT id, key, name, description FROM privilege WHERE is_active = false", "required_privilege": "privilege.read" },
+
+    { "entity": "user_account_mm_privilege", "name": "Active Privilege Grants", "sql": "SELECT id, user_ref, privilege_ref, created_at FROM user_account_mm_privilege WHERE is_active = true", "required_privilege": "user_account_mm_privilege.read" },
+    { "entity": "user_account_mm_privilege", "name": "Inactive Privilege Grants", "sql": "SELECT id, user_ref, privilege_ref, created_at FROM user_account_mm_privilege WHERE is_active = false", "required_privilege": "user_account_mm_privilege.read" },
+    { "entity": "user_account_mm_privilege", "name": "Privilege Grants (Related)", "sql": "SELECT id, user_ref, privilege_ref, created_at FROM user_account_mm_privilege WHERE is_active = true", "required_privilege": "user_account_mm_privilege.read" },
+
+    { "entity": "role", "name": "Active Roles", "sql": "SELECT id, name, description, position_hierarchy_enabled FROM role WHERE is_deleted = false AND is_active IS NOT FALSE", "required_privilege": "role.read" },
+    { "entity": "role", "name": "Inactive Roles", "sql": "SELECT id, name, description, position_hierarchy_enabled FROM role WHERE is_deleted = true OR is_active = false", "required_privilege": "role.read" }
+  ],
+  "views": [
+    { "entity": "organization", "name": "Active Organizations", "query": { "entity": "organization", "name": "Active Organizations" }, "is_default": true },
+    { "entity": "organization", "name": "Inactive Organizations", "query": { "entity": "organization", "name": "Inactive Organizations" }, "is_default": false },
+
+    { "entity": "team", "name": "Active Teams", "query": { "entity": "team", "name": "Active Teams" }, "is_default": true },
+    { "entity": "team", "name": "Inactive Teams", "query": { "entity": "team", "name": "Inactive Teams" }, "is_default": false },
+    { "entity": "team", "name": "Teams (Related)", "query": { "entity": "team", "name": "Teams (Related)" }, "is_default": false },
+
+    { "entity": "user_account", "name": "Active Users", "query": { "entity": "user_account", "name": "Active Users" }, "is_default": true },
+    { "entity": "user_account", "name": "Inactive Users", "query": { "entity": "user_account", "name": "Inactive Users" }, "is_default": false },
+    { "entity": "user_account", "name": "Users (Related)", "query": { "entity": "user_account", "name": "Users (Related)" }, "is_default": false },
+
+    { "entity": "user_account_mm_team", "name": "Active Team Memberships", "query": { "entity": "user_account_mm_team", "name": "Active Team Memberships" }, "is_default": true },
+    { "entity": "user_account_mm_team", "name": "Inactive Team Memberships", "query": { "entity": "user_account_mm_team", "name": "Inactive Team Memberships" }, "is_default": false },
+    { "entity": "user_account_mm_team", "name": "Team Memberships (Related)", "query": { "entity": "user_account_mm_team", "name": "Team Memberships (Related)" }, "is_default": false },
+
+    { "entity": "privilege", "name": "Active Privileges", "query": { "entity": "privilege", "name": "Active Privileges" }, "is_default": true },
+    { "entity": "privilege", "name": "Inactive Privileges", "query": { "entity": "privilege", "name": "Inactive Privileges" }, "is_default": false },
+
+    { "entity": "user_account_mm_privilege", "name": "Active Privilege Grants", "query": { "entity": "user_account_mm_privilege", "name": "Active Privilege Grants" }, "is_default": true },
+    { "entity": "user_account_mm_privilege", "name": "Inactive Privilege Grants", "query": { "entity": "user_account_mm_privilege", "name": "Inactive Privilege Grants" }, "is_default": false },
+    { "entity": "user_account_mm_privilege", "name": "Privilege Grants (Related)", "query": { "entity": "user_account_mm_privilege", "name": "Privilege Grants (Related)" }, "is_default": false },
+
+    { "entity": "role", "name": "Active Roles", "query": { "entity": "role", "name": "Active Roles" }, "is_default": true },
+    { "entity": "role", "name": "Inactive Roles", "query": { "entity": "role", "name": "Inactive Roles" }, "is_default": false }
+  ]
+}

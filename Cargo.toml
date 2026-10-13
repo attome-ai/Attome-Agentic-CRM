@@ -19,6 +19,11 @@ members = [
     "crates/foundation/attome-approval",
     "crates/engine/attome-modules",
     "crates/engine/attome-core",
+    "crates/engine/attome-metadata",
+    "crates/engine/attome-field",
+    "crates/engine/attome-audit",
+    "crates/engine/attome-security",
+    "crates/engine/attome-records",
     "crates/sdk/attome-sdk",
     "crates/apps/attome",
 ]
@@ -56,6 +61,11 @@ attome-server    = { path = "crates/foundation/attome-server" }
 attome-approval  = { path = "crates/foundation/attome-approval" }
 attome-modules   = { path = "crates/engine/attome-modules" }
 attome-core      = { path = "crates/engine/attome-core" }
+attome-metadata  = { path = "crates/engine/attome-metadata" }
+attome-field     = { path = "crates/engine/attome-field" }
+attome-audit     = { path = "crates/engine/attome-audit" }
+attome-security  = { path = "crates/engine/attome-security" }
+attome-records   = { path = "crates/engine/attome-records" }
 attome-sdk       = { path = "crates/sdk/attome-sdk" }
 
 # External crates

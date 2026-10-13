@@ -33,12 +33,11 @@ pub mod reference;
 pub mod store;
 
 /// Every metadata table that carries `owner_layer` (migration 0520 added it;
-/// 0525 dropped its `'project'` default, so every insert must name a layer).
+/// the column has no default, so every insert must name a layer).
 /// Generic entity CRUD reads this to stamp the layer on the registered
 /// entities among them (`role`, `privilege`,
 /// `workflow_definition`), whose attribute metadata does not list the
-/// column. Pinned by a test to migration 0525's tables minus those a later
-/// migration drops (0536 drops `form`: forms are code, D-788/D-790).
+/// column. A test pins it against the engine baseline migration.
 pub const OWNER_LAYER_TABLES: &[&str] = &[
     "entity_info",
     "attribute_info",
@@ -80,33 +79,38 @@ pub use store::{ChangesetRow, NewChangeset, OperationRow, Seal};
 mod owner_layer_tables_tests {
     use super::OWNER_LAYER_TABLES;
 
-    /// Tables a migration after 0525 drops (`DROP TABLE IF EXISTS <name>`).
-    const DROPPED_LATER: &[&str] = &[include_str!(
-        "../../../../server/migrations/0536_drop_xrm_core_form.sql"
-    )];
+    /// The engine baseline migration: every table with an `owner_layer`
+    /// column declares it `NOT NULL` with no default.
+    const ENGINE_MIGRATION: &str =
+        include_str!("../../../../apps/attome/migrations/0006_engine.sql");
 
-    /// The list must match migration 0525 (one `ALTER TABLE` per owner-layer
-    /// table) minus the tables a later migration dropped, so a table added to
-    /// the set cannot be missed here and a dropped one cannot linger.
+    /// Every table the engine baseline gives an `owner_layer` column must be
+    /// listed, so a new one cannot be missed. Module tables (content,
+    /// workflow, process) are listed ahead of their own migrations.
     #[test]
-    fn matches_migration_0525_minus_later_drops() {
-        let sql = include_str!("../../../../server/migrations/0525_owner_layer_drop_default.sql");
-        let dropped: Vec<&str> = DROPPED_LATER
-            .iter()
-            .flat_map(|m| m.lines())
-            .filter_map(|l| l.trim_start().strip_prefix("DROP TABLE IF EXISTS "))
-            .filter_map(|rest| rest.split([' ', ';']).next())
+    fn lists_every_owner_layer_table_of_the_baseline() {
+        let missing: Vec<&str> = ENGINE_MIGRATION
+            .split("CREATE TABLE IF NOT EXISTS ")
+            .skip(1)
+            .filter(|block| {
+                let body = block
+                    .split(
+                        "
+);",
+                    )
+                    .next()
+                    .unwrap_or("");
+                body.contains(
+                    "
+    owner_layer text NOT NULL",
+                )
+            })
+            .filter_map(|block| block.split_whitespace().next())
+            .filter(|table| !OWNER_LAYER_TABLES.contains(table))
             .collect();
-        assert!(dropped.contains(&"form"), "0536 drops form");
-        let mut in_migration: Vec<&str> = sql
-            .lines()
-            .filter_map(|l| l.trim_start().strip_prefix("ALTER TABLE "))
-            .filter_map(|rest| rest.split_whitespace().next())
-            .filter(|t| !dropped.contains(t))
-            .collect();
-        in_migration.sort_unstable();
-        let mut listed = OWNER_LAYER_TABLES.to_vec();
-        listed.sort_unstable();
-        assert_eq!(listed, in_migration);
+        assert!(
+            missing.is_empty(),
+            "owner-layer tables not listed: {missing:?}"
+        );
     }
 }

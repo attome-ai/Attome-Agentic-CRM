@@ -1,0 +1,860 @@
+use attome_core::FieldType;
+use attome_types::AppError;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::{Arc, LazyLock, RwLock};
+
+// ── Field options (stored as `options` JSONB on attribute_info,
+// migration 0029) ─────────────────────────────────────────────────────────
+
+/// Optional presentation hints for a single `choice` value — a colored pill
+/// and/or icon in the grid instead of plain text. Purely cosmetic: never
+/// consulted by `validate`/`validate_choice`, which only check membership in
+/// `choices`.
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct ChoiceStyle {
+    pub color: Option<String>,
+    pub icon: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct ChoiceOptions {
+    /// Allowed string values for this field.
+    pub choices: Vec<String>,
+    /// Whether the field accepts multiple selected values.
+    pub multi: bool,
+    /// Per-value display styling, keyed by the choice string. Absent/empty
+    /// means "no decoration" — the grid falls back to plain text.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub choice_styles: HashMap<String, ChoiceStyle>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct FileOptions {
+    /// Whether the field accepts multiple uploaded files (stored as a JSON
+    /// array of object-key strings) instead of a single one.
+    pub multi: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct LookupOptions {
+    /// The entity this field points to.
+    pub target_entity_id: Option<uuid::Uuid>,
+    /// Field on the target entity to display (default: "name").
+    pub display_field: Option<String>,
+}
+
+/// Range enforcement for `Number`/`Currency` fields. Either bound may be
+/// omitted; omitting both makes the field unbounded (today's implicit
+/// behavior). `Currency` reuses this struct rather than defining its own —
+/// a currency field is a plain NUMERIC amount in the system base (USD,
+/// always 1:1); it carries no currency-code option because there is nothing
+/// server-side to store per field (display conversion to a viewer's
+/// preferred currency is entirely an Angular concern against a static rate
+/// table, never persisted or validated here).
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct NumberOptions {
+    /// Inclusive lower bound. `None` means no lower bound.
+    pub min: Option<f64>,
+    /// Inclusive upper bound. `None` means no upper bound.
+    pub max: Option<f64>,
+}
+
+/// F012 — format enforcement for `Text` fields (phone/ID/IBAN-style masks).
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+pub struct TextOptions {
+    /// A regex a value must fully match (anchored at both ends regardless of
+    /// whether the caller wrote `^`/`$`) to be accepted. `None`/absent means
+    /// no format constraint — plain shape-only Text validation.
+    pub pattern: Option<String>,
+    /// Human-readable description of the expected format, e.g. "IBAN" — for
+    /// error messages and (later) the Angular field editor; never itself
+    /// interpreted as a pattern.
+    pub mask_description: Option<String>,
+    /// C-29 (M01 §7) — the HTML `<input>` type/keyboard hint the generic
+    /// record form should use for this text field: one of "text" | "email"
+    /// | "tel" | "url". `None`/absent means the client falls back to its own
+    /// name-based heuristic (`field-input.component.ts::textType()`) — this
+    /// is additive metadata, not a required migration, since every existing
+    /// text field's `options` (or lack of one) already round-trips through
+    /// this same JSONB column (migration 0029); nothing needs backfilling
+    /// for the fallback to keep working exactly as before. Never itself
+    /// validated against `pattern` — a deployment wanting both sets both.
+    pub text_type: Option<String>,
+}
+
+/// The only values `TextOptions.text_type` may hold — validated at write
+/// time by [`validate_options`] so a typo doesn't silently reach the client
+/// as an unrecognized hint (`field-input.component.ts` already falls back to
+/// plain `text` for anything it doesn't recognize, but the admin API should
+/// still reject it rather than accept silently-inert metadata).
+const VALID_TEXT_TYPES: [&str; 4] = ["text", "email", "tel", "url"];
+
+/// Shared by `Icon`/`Color` field-value validation (`validate`) and
+/// `choice_styles` validation (`validate_choice_styles`) — a `color` value is
+/// always a 6-digit hex string, whether it's a standalone field or a
+/// per-choice style.
+#[expect(
+    clippy::expect_used,
+    reason = "a literal regex that is known to compile"
+)]
+static HEX_COLOR_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^#[0-9a-fA-F]{6}$").expect("static regex is valid"));
+/// Shared by `Icon`/`Color` field-value validation (`validate`) and
+/// `choice_styles` validation — an `icon` value is a CSS glyph-class name
+/// (e.g. `la-robot`), whether it's a standalone field or a per-choice style.
+#[expect(
+    clippy::expect_used,
+    reason = "a literal regex that is known to compile"
+)]
+static ICON_CLASS_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"^[a-zA-Z0-9 _-]{1,64}$").expect("static regex is valid"));
+
+// ── Validation ────────────────────────────────────────────────────────────────
+
+/// Validates that `value` is an acceptable JSON representation for `field_type`.
+/// Pass `options` (the `options` JSONB from entity_fields) for Choice/Lookup checks.
+pub fn validate(
+    field_type: &FieldType,
+    value: &Value,
+    options: Option<&Value>,
+) -> Result<(), AppError> {
+    match field_type {
+        FieldType::Text => {
+            let s = value.as_str().ok_or_else(|| type_err("text", value))?;
+            if let Some(opts_val) = options
+                && let Ok(opts) = serde_json::from_value::<TextOptions>(opts_val.clone())
+            {
+                validate_text_mask(s, &opts)?;
+            }
+        }
+        FieldType::Number | FieldType::Currency => {
+            let n = value
+                .as_f64()
+                .ok_or_else(|| type_err(field_type.as_str(), value))?;
+            if let Some(opts_val) = options
+                && let Ok(opts) = serde_json::from_value::<NumberOptions>(opts_val.clone())
+            {
+                validate_number_bounds(n, &opts)?;
+            }
+        }
+        FieldType::Date => {
+            let s = value
+                .as_str()
+                .ok_or_else(|| type_err("date (ISO 8601 string)", value))?;
+            chrono::DateTime::parse_from_rfc3339(s)
+                .or_else(|_| {
+                    chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
+                        .map(|_| chrono::DateTime::default())
+                })
+                .map_err(|_| {
+                    AppError::Validation(format!(
+                        "date value must be ISO 8601 (YYYY-MM-DD or RFC 3339), got: {s}"
+                    ))
+                })?;
+        }
+        FieldType::Bool => {
+            if !value.is_boolean() {
+                return Err(type_err("bool", value));
+            }
+        }
+        FieldType::Choice => {
+            if let Some(opts_val) = options
+                && let Ok(opts) = serde_json::from_value::<ChoiceOptions>(opts_val.clone())
+                && !opts.choices.is_empty()
+            {
+                validate_choice(value, &opts)?;
+            }
+        }
+        FieldType::Lookup => {
+            let s = value
+                .as_str()
+                .ok_or_else(|| type_err("lookup (UUID string)", value))?;
+            uuid::Uuid::parse_str(s).map_err(|_| {
+                AppError::Validation(format!("lookup value must be a valid UUID, got: {s}"))
+            })?;
+        }
+        // B-R6 (D-604): a formula's value is computed on every write by the
+        // entity engine and merged in *after* this validator runs, so any
+        // value reaching here was written by a client — refused outright.
+        FieldType::Formula => {
+            return Err(AppError::Validation(
+                "is a formula field; its value is computed and cannot be written".into(),
+            ));
+        }
+        // B-R7 (D-605): any string; the entity engine sanitizes it against
+        // the rich-text allow-list before it is stored.
+        FieldType::RichText => {
+            if !value.is_string() {
+                return Err(type_err("rich_text (HTML string)", value));
+            }
+        }
+        FieldType::File | FieldType::Image => {
+            let is_multi = options
+                .and_then(|o| serde_json::from_value::<FileOptions>(o.clone()).ok())
+                .map(|o| o.multi)
+                .unwrap_or(false);
+            if is_multi {
+                validate_multi_file(value)?;
+            } else if !value.is_string() {
+                return Err(type_err("file (object key string)", value));
+            }
+        }
+        FieldType::Icon => {
+            let s = value.as_str().ok_or_else(|| type_err("icon", value))?;
+            if !ICON_CLASS_RE.is_match(s) {
+                return Err(AppError::Validation(format!(
+                    "icon value must be 1-64 chars of letters, digits, spaces, '-', '_', got: {s}"
+                )));
+            }
+        }
+        FieldType::Color => {
+            let s = value.as_str().ok_or_else(|| type_err("color", value))?;
+            if !HEX_COLOR_RE.is_match(s) {
+                return Err(AppError::Validation(format!(
+                    "color value must be a 6-digit hex color (e.g. #22c55e), got: {s}"
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn validate_number_bounds(n: f64, opts: &NumberOptions) -> Result<(), AppError> {
+    if let Some(min) = opts.min
+        && n < min
+    {
+        return Err(AppError::Validation(format!(
+            "value {n} is below the minimum allowed ({min})"
+        )));
+    }
+    if let Some(max) = opts.max
+        && n > max
+    {
+        return Err(AppError::Validation(format!(
+            "value {n} is above the maximum allowed ({max})"
+        )));
+    }
+    Ok(())
+}
+
+fn validate_choice(value: &Value, opts: &ChoiceOptions) -> Result<(), AppError> {
+    if opts.multi {
+        let items = value.as_array().ok_or_else(|| {
+            AppError::Validation("multi-select choice field expects a JSON array".to_owned())
+        })?;
+        for item in items {
+            let s = item.as_str().ok_or_else(|| {
+                AppError::Validation("each choice item must be a string".to_owned())
+            })?;
+            if !opts.choices.contains(&s.to_owned()) {
+                return Err(AppError::Validation(format!(
+                    "'{s}' is not a valid choice; allowed: {:?}",
+                    opts.choices
+                )));
+            }
+        }
+    } else {
+        let s = value.as_str().ok_or_else(|| {
+            AppError::Validation("single-select choice field expects a string".to_owned())
+        })?;
+        if !opts.choices.contains(&s.to_owned()) {
+            return Err(AppError::Validation(format!(
+                "'{s}' is not a valid choice; allowed: {:?}",
+                opts.choices
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// Validates `choice_styles` against the sibling `choices` list — called
+/// from `validate_options` at write time (never from `validate`, which
+/// governs record values, not presentation). Rejects a style entry for a
+/// value that isn't an allowed choice, and rejects malformed `color`/`icon`
+/// strings before they're persisted and later interpolated into a CSS
+/// custom property / class attribute on the frontend.
+fn validate_choice_styles(opts: &ChoiceOptions) -> Result<(), AppError> {
+    for (value, style) in &opts.choice_styles {
+        if !opts.choices.contains(value) {
+            return Err(AppError::Validation(format!(
+                "choice_styles has an entry for '{value}', which is not in choices: {:?}",
+                opts.choices
+            )));
+        }
+        if let Some(color) = style.color.as_deref()
+            && !HEX_COLOR_RE.is_match(color)
+        {
+            return Err(AppError::Validation(format!(
+                "choice_styles['{value}'].color must be a 6-digit hex color (e.g. #22c55e), got: {color}"
+            )));
+        }
+        if let Some(icon) = style.icon.as_deref()
+            && !ICON_CLASS_RE.is_match(icon)
+        {
+            return Err(AppError::Validation(format!(
+                "choice_styles['{value}'].icon must be 1-64 chars of letters, digits, spaces, '-', '_', got: {icon}"
+            )));
+        }
+    }
+    Ok(())
+}
+
+/// A multi-file field stores a JSON array of object-key strings — mirrors
+/// `validate_choice`'s multi arm, minus the allow-list check (a `choice`
+/// field validates against a fixed option set; a `file` reference is only
+/// ever checked against `upload_session` at the mutation layer,
+/// which `attome-field` — a pure, DB-free crate — cannot reach).
+fn validate_multi_file(value: &Value) -> Result<(), AppError> {
+    let items = value
+        .as_array()
+        .ok_or_else(|| AppError::Validation("multi-file field expects a JSON array".to_owned()))?;
+    for item in items {
+        if !item.is_string() {
+            return Err(type_err("file (object key string)", item));
+        }
+    }
+    Ok(())
+}
+
+/// F012: `pattern` is always anchored full-match, even if the caller didn't
+/// write `^`/`$` themselves — a mask describes the whole field's shape, not a
+/// substring, so an unanchored `\d{3}` would wrongly accept "abc123def".
+fn validate_text_mask(s: &str, opts: &TextOptions) -> Result<(), AppError> {
+    let Some(pattern) = opts.pattern.as_deref().filter(|p| !p.is_empty()) else {
+        return Ok(());
+    };
+    let re = compiled_pattern(pattern)?;
+    if !re.is_match(s) {
+        let desc = opts.mask_description.as_deref().unwrap_or(pattern);
+        return Err(AppError::Validation(format!(
+            "'{s}' does not match the required format ({desc})"
+        )));
+    }
+    Ok(())
+}
+
+/// Upper bound on distinct mask patterns held by [`MASK_CACHE`]. Patterns are
+/// admin-authored metadata, so the real population is a handful per deployment;
+/// the cap only stops a pathological metadata set from growing the map without
+/// limit.
+const MASK_CACHE_MAX: usize = 512;
+
+/// Bounded, process-local cache of compiled mask regexes, keyed by the raw
+/// `pattern` string exactly as written in the field's `options` blob.
+///
+/// Before this existed, [`compiled_pattern`] allocated a `String` and ran
+/// `regex::Regex::new` on **every** call — and `validate_text_mask` calls it on
+/// every record create and update for every masked text field, i.e. on the hot
+/// write path (PLATFORM-REVIEW-2026-08-24 §4 / PERF-1).
+///
+/// Per coding-guidelines §5, the cache contract:
+///
+/// - **Source of truth:** `TextOptions.pattern` inside the `options` JSONB on
+///   `attribute_info` (migration 0029). This cache never answers
+///   *which* pattern a field has — only what a given pattern string compiles to.
+/// - **Key shape:** the raw, pre-anchoring pattern string. Anchoring is a pure
+///   function of the key, so key and value are 1:1.
+/// - **TTL / invalidation:** none, and none is needed. The cache is
+///   content-addressed: a compiled `Regex` is a pure function of its pattern, so
+///   an entry cannot go stale. An admin editing a field's mask produces a
+///   *different* key; the previous entry becomes unused, never wrong. That is
+///   why a process-local map needs no cross-node pub/sub invalidation here — it
+///   is not shared mutable state whose correctness depends on every node
+///   agreeing on a value.
+/// - **Failure behavior:** an invalid pattern returns `AppError::Validation` and
+///   is never inserted, so a bad pattern costs one failed compile per call
+///   rather than poisoning the cache. `validate_options` rejects such patterns
+///   at admin-write time anyway, so this path is close to unreachable.
+/// - **Cold start:** empty; the first write per pattern compiles it. Two threads
+///   racing on the same missing key both compile and both insert the same value,
+///   which is wasteful once and never incorrect.
+static MASK_CACHE: LazyLock<RwLock<HashMap<String, Arc<regex::Regex>>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
+
+/// Anchors `pattern` at both ends unless already anchored — shared by
+/// `validate_text_mask` (checking a value) and `validate_options` (checking
+/// the pattern itself compiles before it's ever persisted). The compiled result
+/// is memoized in [`MASK_CACHE`]; see that item for the cache contract.
+fn compiled_pattern(pattern: &str) -> Result<Arc<regex::Regex>, AppError> {
+    // Hit path: one read lock and one hash lookup, no allocation, no compile.
+    if let Some(re) = read_mask_cache().get(pattern) {
+        return Ok(Arc::clone(re));
+    }
+
+    let anchored = match (pattern.starts_with('^'), pattern.ends_with('$')) {
+        (true, true) => pattern.to_owned(),
+        (true, false) => format!("{pattern}$"),
+        (false, true) => format!("^{pattern}"),
+        (false, false) => format!("^{pattern}$"),
+    };
+    let re = Arc::new(
+        regex::Regex::new(&anchored)
+            .map_err(|e| AppError::Validation(format!("invalid mask pattern '{pattern}': {e}")))?,
+    );
+
+    let mut cache = write_mask_cache();
+    if cache.len() >= MASK_CACHE_MAX && !cache.contains_key(pattern) {
+        // Drop everything rather than evict by LRU: recompiling is microseconds,
+        // the map rebuilds itself from the next writes, and reaching the cap at
+        // all means the metadata is pathological rather than merely busy.
+        cache.clear();
+    }
+    cache.insert(pattern.to_owned(), Arc::clone(&re));
+    Ok(re)
+}
+
+// A panic while a `MASK_CACHE` guard is held cannot leave the map logically
+// inconsistent — the only mutations are `clear`/`insert` of a value that is a
+// pure function of its key — so poisoning is recovered rather than propagated.
+// Doing otherwise would turn one unrelated panic into a permanently failing
+// validation path for every masked field in the process.
+fn read_mask_cache() -> std::sync::RwLockReadGuard<'static, HashMap<String, Arc<regex::Regex>>> {
+    MASK_CACHE.read().unwrap_or_else(|e| e.into_inner())
+}
+
+fn write_mask_cache() -> std::sync::RwLockWriteGuard<'static, HashMap<String, Arc<regex::Regex>>> {
+    MASK_CACHE.write().unwrap_or_else(|e| e.into_inner())
+}
+
+/// Validates that an `options` JSONB blob is well-formed for `field_type` —
+/// called by the admin attribute create/update handlers BEFORE persisting,
+/// so a malformed pattern or option shape is rejected at write time rather
+/// than silently accepted and only discovered the first time a record write
+/// runs `validate` against it. Every field type accepts an absent/empty
+/// options blob (no-op); only a *present* blob is shape-checked.
+pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), AppError> {
+    match field_type {
+        FieldType::Choice => {
+            let opts = serde_json::from_value::<ChoiceOptions>(options.clone())
+                .map_err(|e| AppError::Validation(format!("invalid choice options: {e}")))?;
+            validate_choice_styles(&opts)?;
+        }
+        FieldType::Text => {
+            let opts = serde_json::from_value::<TextOptions>(options.clone())
+                .map_err(|e| AppError::Validation(format!("invalid text options: {e}")))?;
+            if let Some(pattern) = opts.pattern.as_deref().filter(|p| !p.is_empty()) {
+                compiled_pattern(pattern)?;
+            }
+            if let Some(text_type) = opts.text_type.as_deref()
+                && !VALID_TEXT_TYPES.contains(&text_type)
+            {
+                return Err(AppError::Validation(format!(
+                    "text_type '{text_type}' is not one of {}",
+                    VALID_TEXT_TYPES.join("|")
+                )));
+            }
+        }
+        FieldType::Lookup => {
+            serde_json::from_value::<LookupOptions>(options.clone())
+                .map_err(|e| AppError::Validation(format!("invalid lookup options: {e}")))?;
+        }
+        FieldType::File | FieldType::Image => {
+            serde_json::from_value::<FileOptions>(options.clone())
+                .map_err(|e| AppError::Validation(format!("invalid file options: {e}")))?;
+        }
+        // B-R6 (D-604): the shape only; the expression is compiled against
+        // the entity's fields by `attome-metadata`'s reconcile before the field
+        // is saved (`attome_core::formula::compile_formula`).
+        FieldType::Formula => {
+            attome_core::formula::parse_options(Some(options))?;
+        }
+        FieldType::Number | FieldType::Currency => {
+            let opts = serde_json::from_value::<NumberOptions>(options.clone())
+                .map_err(|e| AppError::Validation(format!("invalid number options: {e}")))?;
+            if let (Some(min), Some(max)) = (opts.min, opts.max)
+                && min > max
+            {
+                return Err(AppError::Validation(format!(
+                    "number options min ({min}) must not exceed max ({max})"
+                )));
+            }
+        }
+        _ => {
+            return Err(AppError::Validation(format!(
+                "{field_type} fields do not accept an `options` configuration"
+            )));
+        }
+    }
+    Ok(())
+}
+
+fn type_err(expected: &str, got: &Value) -> AppError {
+    AppError::Validation(format!("expected {expected}, got: {got}"))
+}
+
+// ── Tests (P1.8 pure-logic units; `validate` is wired into `entity_crud.rs`'s
+// create/update path since 2026-07-13, audit #12) ─────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn formula_values_are_never_writable() {
+        let err = validate(&FieldType::Formula, &json!(42), None).unwrap_err();
+        assert!(matches!(err, AppError::Validation(_)));
+        assert!(validate(&FieldType::Formula, &json!("x"), None).is_err());
+    }
+
+    #[test]
+    fn formula_options_need_expression_and_result_type() {
+        assert!(
+            validate_options(
+                &FieldType::Formula,
+                &json!({"expression": "a + 1", "result_type": "number"})
+            )
+            .is_ok()
+        );
+        assert!(validate_options(&FieldType::Formula, &json!({"expression": "a"})).is_err());
+        assert!(
+            validate_options(
+                &FieldType::Formula,
+                &json!({"expression": "a", "result_type": "choice"})
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn rich_text_accepts_strings_only() {
+        assert!(validate(&FieldType::RichText, &json!("<p>x</p>"), None).is_ok());
+        assert!(validate(&FieldType::RichText, &json!(1), None).is_err());
+        assert!(validate_options(&FieldType::RichText, &json!({"x": 1})).is_err());
+    }
+
+    #[test]
+    fn image_validates_like_file() {
+        assert!(validate(&FieldType::Image, &json!("e/1/f/k-a.png"), None).is_ok());
+        assert!(validate(&FieldType::Image, &json!(1), None).is_err());
+        let multi = json!({"multi": true});
+        assert!(validate(&FieldType::Image, &json!(["a", "b"]), Some(&multi)).is_ok());
+        assert!(validate_options(&FieldType::Image, &multi).is_ok());
+    }
+
+    #[test]
+    fn text_accepts_string_rejects_number() {
+        assert!(validate(&FieldType::Text, &json!("hello"), None).is_ok());
+        assert!(validate(&FieldType::Text, &json!(42), None).is_err());
+    }
+
+    #[test]
+    fn number_accepts_number_rejects_string() {
+        assert!(validate(&FieldType::Number, &json!(42), None).is_ok());
+        assert!(validate(&FieldType::Number, &json!(42.5), None).is_ok());
+        assert!(validate(&FieldType::Number, &json!("42"), None).is_err());
+    }
+
+    #[test]
+    fn number_bounds_enforce_min_and_max() {
+        let opts = json!({ "min": 0, "max": 100 });
+        assert!(validate(&FieldType::Number, &json!(50), Some(&opts)).is_ok());
+        assert!(validate(&FieldType::Number, &json!(0), Some(&opts)).is_ok());
+        assert!(validate(&FieldType::Number, &json!(100), Some(&opts)).is_ok());
+        assert!(validate(&FieldType::Number, &json!(-1), Some(&opts)).is_err());
+        assert!(validate(&FieldType::Number, &json!(101), Some(&opts)).is_err());
+    }
+
+    #[test]
+    fn number_bounds_allow_one_sided_ranges() {
+        let min_only = json!({ "min": 0 });
+        assert!(validate(&FieldType::Number, &json!(1_000_000), Some(&min_only)).is_ok());
+        assert!(validate(&FieldType::Number, &json!(-1), Some(&min_only)).is_err());
+
+        let max_only = json!({ "max": 10 });
+        assert!(validate(&FieldType::Number, &json!(-1_000_000), Some(&max_only)).is_ok());
+        assert!(validate(&FieldType::Number, &json!(11), Some(&max_only)).is_err());
+    }
+
+    #[test]
+    fn number_with_no_options_is_unbounded() {
+        assert!(validate(&FieldType::Number, &json!(f64::MAX), None).is_ok());
+        assert!(validate(&FieldType::Number, &json!(-1_000_000_000_i64), None).is_ok());
+    }
+
+    #[test]
+    fn currency_accepts_number_rejects_string() {
+        // A currency field is a plain NUMERIC amount in the system base
+        // (USD) — validation is identical to `Number`; only the client's
+        // rendering (amount + the viewer's preferred-currency symbol,
+        // converted against a static rate table) differs.
+        assert!(validate(&FieldType::Currency, &json!(19.99), None).is_ok());
+        assert!(validate(&FieldType::Currency, &json!("19.99"), None).is_err());
+    }
+
+    #[test]
+    fn currency_bounds_enforce_min_and_max() {
+        let opts = json!({ "min": 0 });
+        assert!(validate(&FieldType::Currency, &json!(0.002), Some(&opts)).is_ok());
+        assert!(validate(&FieldType::Currency, &json!(-0.01), Some(&opts)).is_err());
+    }
+
+    #[test]
+    fn validate_options_accepts_well_formed_currency_bounds() {
+        assert!(validate_options(&FieldType::Currency, &json!({ "min": 0 })).is_ok());
+        assert!(validate_options(&FieldType::Currency, &json!({})).is_ok());
+    }
+
+    #[test]
+    fn validate_options_rejects_number_min_greater_than_max() {
+        let err =
+            validate_options(&FieldType::Number, &json!({ "min": 10, "max": 5 })).unwrap_err();
+        assert!(matches!(err, AppError::Validation(_)));
+    }
+
+    #[test]
+    fn validate_options_accepts_well_formed_number_bounds() {
+        assert!(validate_options(&FieldType::Number, &json!({ "min": 0, "max": 100 })).is_ok());
+        assert!(validate_options(&FieldType::Number, &json!({})).is_ok());
+    }
+
+    #[test]
+    fn bool_accepts_bool_rejects_string() {
+        assert!(validate(&FieldType::Bool, &json!(true), None).is_ok());
+        assert!(validate(&FieldType::Bool, &json!("true"), None).is_err());
+    }
+
+    #[test]
+    fn date_accepts_rfc3339_and_plain_date_rejects_garbage() {
+        assert!(validate(&FieldType::Date, &json!("2026-07-06T12:00:00Z"), None).is_ok());
+        assert!(validate(&FieldType::Date, &json!("2026-07-06"), None).is_ok());
+        assert!(validate(&FieldType::Date, &json!("not-a-date"), None).is_err());
+        assert!(validate(&FieldType::Date, &json!(20260706), None).is_err());
+    }
+
+    #[test]
+    fn lookup_accepts_uuid_string_rejects_non_uuid() {
+        assert!(
+            validate(
+                &FieldType::Lookup,
+                &json!("550e8400-e29b-41d4-a716-446655440000"),
+                None
+            )
+            .is_ok()
+        );
+        assert!(validate(&FieldType::Lookup, &json!("not-a-uuid"), None).is_err());
+        assert!(validate(&FieldType::Lookup, &json!(123), None).is_err());
+    }
+
+    #[test]
+    fn file_accepts_string_key_rejects_object() {
+        assert!(validate(&FieldType::File, &json!("s3://bucket/key.pdf"), None).is_ok());
+        assert!(validate(&FieldType::File, &json!({"key": "x"}), None).is_err());
+    }
+
+    #[test]
+    fn multi_file_accepts_string_array_rejects_scalar_and_non_string_items() {
+        let opts = json!({"multi": true});
+        assert!(validate(&FieldType::File, &json!(["a", "b"]), Some(&opts)).is_ok());
+        assert!(validate(&FieldType::File, &json!([]), Some(&opts)).is_ok());
+        // A single-file-shaped value is not a valid multi-file value — the
+        // column is JSONB expecting an array, not a bare string.
+        assert!(validate(&FieldType::File, &json!("a"), Some(&opts)).is_err());
+        assert!(validate(&FieldType::File, &json!(["a", 1]), Some(&opts)).is_err());
+    }
+
+    #[test]
+    fn single_file_options_multi_false_still_expects_a_bare_string() {
+        let opts = json!({"multi": false});
+        assert!(validate(&FieldType::File, &json!("a"), Some(&opts)).is_ok());
+        assert!(validate(&FieldType::File, &json!(["a"]), Some(&opts)).is_err());
+    }
+
+    #[test]
+    fn validate_options_accepts_well_formed_file_multi_flag() {
+        assert!(validate_options(&FieldType::File, &json!({"multi": true})).is_ok());
+        assert!(validate_options(&FieldType::File, &json!({"multi": false})).is_ok());
+        assert!(validate_options(&FieldType::File, &json!({"multi": "yes"})).is_err());
+    }
+
+    #[test]
+    fn choice_single_select_enforces_allowed_list() {
+        let opts = json!({ "choices": ["red", "green", "blue"], "multi": false });
+        assert!(validate(&FieldType::Choice, &json!("green"), Some(&opts)).is_ok());
+        assert!(validate(&FieldType::Choice, &json!("purple"), Some(&opts)).is_err());
+        // Array where a single string is expected must be rejected, not coerced.
+        assert!(validate(&FieldType::Choice, &json!(["green"]), Some(&opts)).is_err());
+    }
+
+    #[test]
+    fn choice_multi_select_enforces_allowed_list_per_item() {
+        let opts = json!({ "choices": ["red", "green", "blue"], "multi": true });
+        assert!(validate(&FieldType::Choice, &json!(["red", "blue"]), Some(&opts)).is_ok());
+        assert!(validate(&FieldType::Choice, &json!(["red", "purple"]), Some(&opts)).is_err());
+        // Bare string where an array is expected must be rejected, not coerced.
+        assert!(validate(&FieldType::Choice, &json!("red"), Some(&opts)).is_err());
+    }
+
+    #[test]
+    fn choice_with_no_options_or_empty_choices_is_a_no_op() {
+        // No `options` at all — nothing to validate against, so anything passes.
+        assert!(validate(&FieldType::Choice, &json!("anything"), None).is_ok());
+        // `choices` present but empty — same no-op behavior (see `validate`'s
+        // `if !opts.choices.is_empty()` guard).
+        let opts = json!({ "choices": [], "multi": false });
+        assert!(validate(&FieldType::Choice, &json!("anything"), Some(&opts)).is_ok());
+    }
+
+    #[test]
+    fn text_mask_enforces_pattern_and_reports_description() {
+        let opts = json!({ "pattern": "[0-9]{3}-[0-9]{4}", "mask_description": "phone" });
+        assert!(validate(&FieldType::Text, &json!("555-1234"), Some(&opts)).is_ok());
+        let err = validate(&FieldType::Text, &json!("not-a-phone"), Some(&opts)).unwrap_err();
+        assert!(matches!(err, AppError::Validation(ref m) if m.contains("phone")));
+    }
+
+    #[test]
+    fn text_mask_is_full_match_not_substring() {
+        // An unanchored pattern would wrongly accept this via a partial match.
+        let opts = json!({ "pattern": "[0-9]{3}" });
+        assert!(validate(&FieldType::Text, &json!("123"), Some(&opts)).is_ok());
+        assert!(validate(&FieldType::Text, &json!("abc123def"), Some(&opts)).is_err());
+    }
+
+    #[test]
+    fn text_with_no_pattern_or_no_options_is_a_no_op() {
+        assert!(validate(&FieldType::Text, &json!("anything"), None).is_ok());
+        let opts = json!({ "pattern": null });
+        assert!(validate(&FieldType::Text, &json!("anything"), Some(&opts)).is_ok());
+    }
+
+    /// PERF-1 (PLATFORM-REVIEW-2026-08-24 §4): `validate_text_mask` runs on
+    /// every record write for every masked text field, so the mask regex must
+    /// be compiled once per pattern, not once per call.
+    ///
+    /// The three assertions live in one test on purpose. `MASK_CACHE` is a
+    /// process-wide static and `cargo test` runs this module's tests in
+    /// parallel, so a separate bound test could `clear()` the map between the
+    /// two `compiled_pattern` calls of a separate identity test and fail it
+    /// spuriously. Sequencing them here — identity first, then the fill that
+    /// may clear — removes that race entirely.
+    #[test]
+    fn mask_regex_is_compiled_once_bounded_and_not_cached_when_invalid() {
+        // Same pattern twice hands back the *same* compiled regex, not a copy.
+        let first = compiled_pattern(r"[0-9]{3}-[0-9]{4}").expect("valid pattern");
+        let second = compiled_pattern(r"[0-9]{3}-[0-9]{4}").expect("valid pattern");
+        assert!(
+            Arc::ptr_eq(&first, &second),
+            "a repeated pattern must be served from MASK_CACHE, not recompiled"
+        );
+
+        // Caching must not change behavior: still anchored, still a full match.
+        assert!(first.is_match("123-4567"));
+        assert!(!first.is_match("x123-4567x"));
+
+        // A different pattern is a different key, hence a different regex.
+        let other = compiled_pattern(r"[0-9]{3}").expect("valid pattern");
+        assert!(!Arc::ptr_eq(&first, &other));
+
+        // An invalid pattern errors and is never inserted, so it cannot poison
+        // the cache for the next caller.
+        assert!(compiled_pattern("[unterminated").is_err());
+        assert!(!read_mask_cache().contains_key("[unterminated"));
+
+        // The map stays bounded: filling past the cap clears rather than grows.
+        for i in 0..=MASK_CACHE_MAX {
+            compiled_pattern(&format!("bound-probe-{i}")).expect("valid pattern");
+        }
+        assert!(read_mask_cache().len() <= MASK_CACHE_MAX);
+    }
+
+    #[test]
+    fn validate_options_accepts_well_formed_choice_and_text() {
+        assert!(
+            validate_options(
+                &FieldType::Choice,
+                &json!({ "choices": ["a", "b"], "multi": true })
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_options(&FieldType::Text, &json!({ "pattern": "[0-9]{3}-[0-9]{4}" })).is_ok()
+        );
+    }
+
+    #[test]
+    fn validate_options_rejects_invalid_regex_and_wrong_field_types() {
+        let err =
+            validate_options(&FieldType::Text, &json!({ "pattern": "[unterminated" })).unwrap_err();
+        assert!(matches!(err, AppError::Validation(_)));
+
+        // Date/Bool/File don't accept an options config at all today.
+        assert!(validate_options(&FieldType::Bool, &json!({ "pattern": "x" })).is_err());
+    }
+
+    // C-29 (M01 §7) — `text_type`: an additive `TextOptions` field, not a
+    // new column (migration 0029's `options` JSONB already round-trips this
+    // for every text field), so field-input.component.ts can be told the
+    // input mode instead of guessing it from the field's name.
+    #[test]
+    fn validate_options_accepts_well_formed_text_type() {
+        for text_type in VALID_TEXT_TYPES {
+            assert!(
+                validate_options(&FieldType::Text, &json!({ "text_type": text_type })).is_ok(),
+                "{text_type} should be accepted"
+            );
+        }
+        // Absent altogether stays valid — the client's name heuristic keeps
+        // covering every field created before this option existed.
+        assert!(validate_options(&FieldType::Text, &json!({})).is_ok());
+    }
+
+    #[test]
+    fn validate_options_rejects_unknown_text_type() {
+        let err =
+            validate_options(&FieldType::Text, &json!({ "text_type": "password" })).unwrap_err();
+        assert!(matches!(err, AppError::Validation(_)));
+    }
+
+    #[test]
+    fn validate_options_accepts_well_formed_choice_styles() {
+        let opts = json!({
+            "choices": ["Inbound", "Outbound"],
+            "multi": false,
+            "choice_styles": {
+                "Inbound": { "color": "#ef4444", "icon": "las la-arrow-down" },
+                "Outbound": { "color": "#22c55e", "icon": "las la-arrow-up" },
+            }
+        });
+        assert!(validate_options(&FieldType::Choice, &opts).is_ok());
+    }
+
+    #[test]
+    fn validate_options_rejects_choice_style_for_unknown_value() {
+        let opts = json!({
+            "choices": ["Inbound", "Outbound"],
+            "multi": false,
+            "choice_styles": { "Sideways": { "color": "#ef4444" } }
+        });
+        let err = validate_options(&FieldType::Choice, &opts).unwrap_err();
+        assert!(matches!(err, AppError::Validation(ref m) if m.contains("Sideways")));
+    }
+
+    #[test]
+    fn validate_options_rejects_malformed_choice_style_color_and_icon() {
+        let bad_color = json!({
+            "choices": ["Sent"],
+            "multi": false,
+            "choice_styles": { "Sent": { "color": "green" } }
+        });
+        assert!(validate_options(&FieldType::Choice, &bad_color).is_err());
+
+        let bad_icon = json!({
+            "choices": ["Sent"],
+            "multi": false,
+            "choice_styles": { "Sent": { "icon": "<script>" } }
+        });
+        assert!(validate_options(&FieldType::Choice, &bad_icon).is_err());
+    }
+
+    #[test]
+    fn choice_options_round_trips_without_choice_styles() {
+        // Existing rows in `attribute_info.options` have no
+        // `choice_styles` key at all — must still deserialize cleanly.
+        let opts: ChoiceOptions =
+            serde_json::from_value(json!({ "choices": ["a", "b"], "multi": false })).unwrap();
+        assert!(opts.choice_styles.is_empty());
+    }
+}

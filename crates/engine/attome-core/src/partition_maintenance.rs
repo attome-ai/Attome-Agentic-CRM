@@ -464,7 +464,7 @@ fn add_months(t: chrono::DateTime<Utc>, months: u32) -> chrono::DateTime<Utc> {
 // (`ArchiveCandidate`/`propose_partition_archive_actions`/`detach_partition`/
 // `drop_detached_partition`/`count_partition_rows`) and is NOT covered by
 // this crate's unit tests; see the integration test file this plan adds
-// under `crates/xrm/attome-core/tests/` for the live-Postgres coverage
+// under `crates/engine/attome-core/tests/` for the live-Postgres coverage
 // this needs (marked as requiring a database this sandbox does not have).
 #[cfg(test)]
 mod tests {

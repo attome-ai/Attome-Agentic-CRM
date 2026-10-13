@@ -1,0 +1,321 @@
+use attome_core::{AttrInfo, EngineState, quote_ident};
+use attome_security::record_action::Read;
+use attome_security::{
+    RecordAction, SecurityContextExt, bind_rls_predicate, resolve_entity_access_level,
+    resolve_owner_visible, rls_predicate_with_conditions,
+};
+use attome_server::authz::{Authorized, RecordScoped};
+use attome_server::security::SecurityContext;
+use attome_types::{AppError, PaginatedResponse};
+use axum::{
+    Json,
+    extract::{Path, State},
+};
+use serde_json::Value;
+use uuid::Uuid;
+
+use crate::entity_mutation::MAX_HIERARCHY_DEPTH;
+
+use super::access::require_record_access;
+use super::resolve::resolve_entity;
+use super::response::{EntityRecordResponse, build_response};
+use attome_types::ErrorResponse;
+
+// â”€â”€ GET /api/v1/{entity}/{id}/ancestors, /descendants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+/// F019 â€” finds the entity's self-referencing hierarchy field: a lookup
+/// attribute whose `lookup_entity_ref` is the entity's own id. Exactly one
+/// is supported today (the "org/case tree" shape the plan describes) â€”
+/// zero is a 422 naming the gap, and more than one is a 422 asking for the
+/// (currently unbuilt) disambiguation a `?field=` query param would need,
+/// rather than silently guessing which hierarchy the caller meant.
+fn hierarchy_field(entity_id: Uuid, attrs: &[AttrInfo]) -> Result<&AttrInfo, AppError> {
+    let mut candidates = attrs
+        .iter()
+        .filter(|a| a.field_type_int == 11 && a.lookup_entity_ref == Some(entity_id));
+    let field = candidates.next().ok_or_else(|| {
+        AppError::Validation("entity has no self-referencing hierarchy lookup field".into())
+    })?;
+    if candidates.next().is_some() {
+        return Err(AppError::Validation(
+            "entity has more than one self-referencing lookup field; disambiguation is not supported yet".into(),
+        ));
+    }
+    Ok(field)
+}
+
+/// Shared by `list_ancestors`/`list_descendants`: runs `sql` (a `WITH
+/// RECURSIVE` query already shaped to select `row_to_json(t)` per matched
+/// row, ordered by hierarchy depth) and builds the same response shape a
+/// single-record read would, minus the tombstone/`lookups` enrichment
+/// (`resolve_lookup_meta`) â€” a deliberate simplification: a hierarchy walk
+/// can return many rows, and that enrichment is one extra query per row.
+///
+/// D-102 follow-up: each caller's final join now sources the row from
+/// `(SELECT {cols} FROM {table}) t` instead of bare `{table} t`, `{cols}`
+/// built by the same `attome_core::select_columns(&attrs, ctx.is_admin)`
+/// `get_record` uses â€” the recursive CTE definition itself is untouched
+/// (it only ever needs `id`/the hierarchy field/`depth` to walk the graph,
+/// never the full row, and structural traversal must see every row
+/// regardless of field-level visibility; only the final row-fetch join is
+/// privilege-projected). Unverified against a live Postgres in this
+/// session â€” see this repo's `/testing` skill before trusting it in
+/// production; a wrong column reference here would surface as a query error
+/// on first real use, not silently.
+async fn hierarchy_rows(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_id: Uuid,
+    entity_name: &str,
+    attrs: &[AttrInfo],
+    sql: &str,
+    record_id: Uuid,
+) -> Result<Vec<EntityRecordResponse>, AppError> {
+    let pool = state.base.read_pool(ctx.user_id).await;
+
+    // D-133 follow-up: the recursive walk above deliberately reads the raw
+    // table (structural traversal must see every row), but the final
+    // row-fetch join was never record-level filtered â€” only field-level
+    // (`select_columns_filtered`). Without this, a narrowed-access caller
+    // who can see the starting record could still receive ancestors/
+    // descendants they have no record-level access to. $1/$2 are always
+    // `record_id`/`MAX_HIERARCHY_DEPTH` in both callers' SQL, so the
+    // predicate's placeholders start at $3; both callers' final SELECT ends
+    // in a `WHERE ...` clause the fragment (`AND (...)`) can append to.
+    let access_level = resolve_entity_access_level(
+        &state.base.db,
+        ctx.user_id,
+        entity_id,
+        entity_name,
+        RecordAction::Read,
+    )
+    .await?;
+    let owner_visible = resolve_owner_visible(
+        &state.base.db,
+        ctx.user_id,
+        entity_id,
+        entity_name,
+        RecordAction::Read,
+    )
+    .await?;
+    let privilege_key = format!("{entity_name}.read");
+    let rls = rls_predicate_with_conditions(
+        ctx,
+        entity_id,
+        "t",
+        access_level,
+        RecordAction::Read.share_capability(),
+        &privilege_key,
+        attrs,
+        owner_visible,
+        3,
+    );
+    let sql = match &rls {
+        Some(pred) => sql.replacen(
+            "ORDER BY chain.depth",
+            &format!("{} ORDER BY chain.depth", pred.sql),
+            1,
+        ),
+        None => sql.to_owned(),
+    };
+
+    let mut q = sqlx::query_scalar(&sql)
+        .bind(record_id)
+        .bind(MAX_HIERARCHY_DEPTH as i32);
+    if let Some(pred) = &rls {
+        if let Some(tb) = &pred.tier_binds {
+            q = bind_rls_predicate(q, tb);
+        }
+        for bind in &pred.condition_binds {
+            q = q.bind(bind);
+        }
+    }
+    let rows: Vec<Value> = q.fetch_all(pool).await.map_err(AppError::internal)?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| build_response(entity_id, row, attrs, None, ctx, entity_name))
+        .collect())
+}
+
+/// P-api-contract Phase 4(b): returns `attome_types::PaginatedResponse<T>`
+/// instead of a bare `{"items": [...]}` — a genuine breaking response-shape
+/// change for any existing client (see DECISIONS.md and the CHANGELOG
+/// **Breaking** entry this session added). This endpoint has no `page`/
+/// `page_size` *request* parameter — it always walks the full chain up to
+/// `MAX_HIERARCHY_DEPTH` in one shot — so honest pagination metadata here
+/// means "page 1 of 1, everything returned": `total` is the actual row count
+/// returned (never a separate, un-fetched count), `page_size` is the
+/// structural ceiling (`MAX_HIERARCHY_DEPTH`), not a caller-chosen value.
+/// This does NOT add offset/cursor paging semantics nobody asked for — see
+/// the plan's own Phase 4 gating discussion for why that would have been a
+/// bigger, undesired change (a `page_size` with no way to request page 2).
+#[utoipa::path(
+    get,
+    path = "/api/v1/{entity}/{id}/ancestors",
+    tag = "entity",
+    params(
+        ("entity" = String, Path),
+        ("id" = Uuid, Path),
+    ),
+    responses(
+        (status = 200, description = "Success", body = PaginatedResponse<EntityRecordResponse>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn list_ancestors(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Read>>,
+    Path((entity_input, record_id)): Path<(String, Uuid)>,
+) -> Result<Json<PaginatedResponse<EntityRecordResponse>>, AppError> {
+    let (entity_id, entity_name, attrs, _) = resolve_entity(&state, &entity_input).await?;
+    require_record_access(
+        &state,
+        &ctx,
+        entity_id,
+        &entity_name,
+        record_id,
+        RecordAction::Read,
+    )
+    .await?;
+    let field = hierarchy_field(entity_id, &attrs)?;
+
+    let table = quote_ident(&entity_name);
+    let field_ident = quote_ident(&field.logicalname);
+    // `chain` walks depth-by-depth from the given record ($1) up to
+    // MAX_HIERARCHY_DEPTH ($2) steps; `chain.id` at depth N is the Nth
+    // ancestor's own id (depth 0 is the starting record itself, excluded
+    // below), so joining back to the table by that id fetches each
+    // ancestor's full row, nearest-first. The recursive `chain` definition
+    // reads the real `{table}` unprojected (structural walk, needs every
+    // row regardless of field visibility); only the final row-fetch join
+    // (D-102) sources from a privilege-projected subquery, since that's the
+    // one whose output actually becomes `row_to_json(t)`.
+    let cols = attome_core::select_columns_filtered(&attrs, |attr| {
+        ctx.has_field_read_grant(&entity_name, &attr.logicalname)
+    });
+    let sql = format!(
+        "WITH RECURSIVE chain AS ( \
+            SELECT id, {field_ident} AS parent_id, 0 AS depth FROM {table} WHERE id = $1 \
+            UNION ALL \
+            SELECT t.id, t.{field_ident}, chain.depth + 1 \
+            FROM {table} t JOIN chain ON t.id = chain.parent_id \
+            WHERE chain.depth < $2 \
+         ) \
+         SELECT row_to_json(t) FROM chain JOIN (SELECT {cols} FROM {table}) t ON t.id = chain.id \
+         WHERE chain.depth > 0 AND (t.is_active IS NULL OR t.is_active = true) \
+         ORDER BY chain.depth"
+    );
+
+    let items = hierarchy_rows(
+        &state,
+        &ctx,
+        entity_id,
+        &entity_name,
+        &attrs,
+        &sql,
+        record_id,
+    )
+    .await?;
+    let total = items.len() as i64;
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        1,
+        MAX_HIERARCHY_DEPTH as i64,
+    )))
+}
+
+/// See `list_ancestors`'s doc comment (P-api-contract Phase 4(b)) — same
+/// "page 1 of 1, everything returned" reasoning applies here.
+#[utoipa::path(
+    get,
+    path = "/api/v1/{entity}/{id}/descendants",
+    tag = "entity",
+    params(
+        ("entity" = String, Path),
+        ("id" = Uuid, Path),
+    ),
+    responses(
+        (status = 200, description = "Success", body = PaginatedResponse<EntityRecordResponse>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn list_descendants(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Read>>,
+    Path((entity_input, record_id)): Path<(String, Uuid)>,
+) -> Result<Json<PaginatedResponse<EntityRecordResponse>>, AppError> {
+    let (entity_id, entity_name, attrs, _) = resolve_entity(&state, &entity_input).await?;
+    require_record_access(
+        &state,
+        &ctx,
+        entity_id,
+        &entity_name,
+        record_id,
+        RecordAction::Read,
+    )
+    .await?;
+    let field = hierarchy_field(entity_id, &attrs)?;
+
+    let table = quote_ident(&entity_name);
+    let field_ident = quote_ident(&field.logicalname);
+    // `chain` starts at the given record's direct children (depth 0: rows
+    // whose hierarchy field equals $1) and walks downward â€” every row this
+    // recursion ever adds is by construction a descendant, so unlike
+    // ancestors there's no self-row to exclude. Same D-102 split as
+    // `list_ancestors`: the recursive `chain` definition stays unprojected
+    // (structural walk), only the final row-fetch join is privilege-projected.
+    let cols = attome_core::select_columns_filtered(&attrs, |attr| {
+        ctx.has_field_read_grant(&entity_name, &attr.logicalname)
+    });
+    let sql = format!(
+        "WITH RECURSIVE chain AS ( \
+            SELECT id, 0 AS depth FROM {table} \
+             WHERE {field_ident} = $1 AND (is_active IS NULL OR is_active = true) \
+            UNION ALL \
+            SELECT t.id, chain.depth + 1 \
+            FROM {table} t JOIN chain ON t.{field_ident} = chain.id \
+            WHERE chain.depth < $2 AND (t.is_active IS NULL OR t.is_active = true) \
+         ) \
+         SELECT row_to_json(t) FROM chain JOIN (SELECT {cols} FROM {table}) t ON t.id = chain.id \
+         WHERE 1 = 1 \
+         ORDER BY chain.depth"
+    );
+
+    let items = hierarchy_rows(
+        &state,
+        &ctx,
+        entity_id,
+        &entity_name,
+        &attrs,
+        &sql,
+        record_id,
+    )
+    .await?;
+    let total = items.len() as i64;
+    Ok(Json(PaginatedResponse::new(
+        items,
+        total,
+        1,
+        MAX_HIERARCHY_DEPTH as i64,
+    )))
+}
+
+/// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
+/// because `#[utoipa::path]` generates a `__path_*` type with the handler's
+/// own visibility, and these handlers are module-private — the crate's
+/// `openapi()` merges every fragment back into one document.
+#[derive(utoipa::OpenApi)]
+#[openapi(paths(list_ancestors, list_descendants))]
+struct ApiDocFragment;
+
+pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
+    <ApiDocFragment as utoipa::OpenApi>::openapi()
+}

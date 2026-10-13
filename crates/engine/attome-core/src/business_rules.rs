@@ -1726,9 +1726,7 @@ mod tests {
 
     // ── Conformance fixture (shared with the Angular interpreter) ──────────
 
-    const CONFORMANCE: &str = include_str!(
-        "../../../../angular/projects/xrm/core/entity/business-rules/conformance.json"
-    );
+    const CONFORMANCE: &str = include_str!("../../../../schemas/business-rules-conformance.json");
 
     #[test]
     fn conformance_fixture_matches_compile_and_base_rules() {

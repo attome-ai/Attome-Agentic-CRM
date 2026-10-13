@@ -25,7 +25,7 @@
 //! value) does not open either: it is refused with
 //! [`ARCHIVE_VALUE_UNREADABLE`] (fail closed; pre-production, D-790).
 //!
-//! [`purge_expired`] is the hourly job body (`PlatformJob::PruneRecoveryArchive`):
+//! [`purge_expired`] is the hourly job body (`EngineJob::PruneRecoveryArchive`):
 //! bounded batches, each its own transaction, skipping rows whose record is
 //! under an active legal hold, and nothing at all while the deployment-wide
 //! `retention.legal_hold` flag is on. [`erase_record`] is the DSR-erasure arm.

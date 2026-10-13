@@ -61,4 +61,4 @@ where
 
 // Pure-logic coverage would just re-assert one SQL join with no branching
 // worth a unit test in isolation; DB-backed coverage lives in
-// `crates/xrm/attome-server/tests/governance_admin.rs`.
+// `crates/engine/attome-server/tests/governance_admin.rs`.

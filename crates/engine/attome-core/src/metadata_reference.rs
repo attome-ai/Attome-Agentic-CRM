@@ -147,7 +147,7 @@ where
 /// re-deriving it: the dashboard-widget lineage sweep
 /// (`attome_server::catalog_admin`) copies a widget's `query_id`'s query
 /// lineage instead of re-parsing SQL, and the backfill job
-/// (`PlatformJob::CatalogLineageBackfill`) is the mirror write path this
+/// (`EngineJob::CatalogLineageBackfill`) is the mirror write path this
 /// pairs with.
 pub async fn references_from<'e, E>(
     executor: E,

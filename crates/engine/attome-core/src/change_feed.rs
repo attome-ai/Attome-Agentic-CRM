@@ -160,7 +160,7 @@ pub async fn emit(
 /// whenever that lands; the caller (M73's `sla.rs`/`clock.rs`) additionally
 /// acts on it directly and synchronously, the same "add the publish call,
 /// call the consumer directly" shape `sla.rs`'s own module doc already uses
-/// for `sweep_breaches` not yet being a `PlatformJob`.
+/// for `sweep_breaches` not yet being a `EngineJob`.
 pub async fn emit_named(
     conn: &mut PgConnection,
     entity_logicalname: &str,
@@ -447,14 +447,13 @@ mod tests {
         }
     }
 
-    /// The five values here must be exactly the five in `0105`'s CHECK
+    /// The five values here must be exactly the five in the baseline's CHECK
     /// constraint. A value added on one side only is either a write that
     /// violates the constraint at runtime, or a constraint that admits
     /// something no consumer can interpret.
     #[test]
     fn wire_values_match_the_check_constraint() {
-        let migration =
-            include_str!("../../../server/migrations/0105_entity_change_event_delete_op.sql");
+        let migration = include_str!("../../../apps/attome/migrations/0006_engine.sql");
         for op in [
             ChangeOperation::Create,
             ChangeOperation::Update,
@@ -464,7 +463,7 @@ mod tests {
         ] {
             assert!(
                 migration.contains(&format!("'{}'", op.as_str())),
-                "{} is missing from 0105's CHECK constraint",
+                "{} is missing from the change-event CHECK constraint",
                 op.as_str()
             );
         }
