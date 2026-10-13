@@ -176,6 +176,9 @@ fn provision(migrate: bool) -> Result<Option<String>, String> {
 /// time.
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../../apps/attome/migrations");
 
+/// Server-wide advisory lock key serializing test-database migrations.
+const MIGRATE_LOCK_KEY: i64 = 0x41_54_54_4f_4d_45_01;
+
 fn create_database(admin_url: &str, name: &str, migrate_url: Option<&str>) -> Result<(), String> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -193,6 +196,18 @@ fn create_database(admin_url: &str, name: &str, migrate_url: Option<&str>) -> Re
             .await
             .map_err(|error| format!("close: {error}"))?;
         if let Some(url) = migrate_url {
+            // Migration 0009 creates and alters cluster-wide roles, which two
+            // processes migrating at once race on ("tuple concurrently
+            // updated"). One session lock on the server, held for the
+            // migration, serializes them; closing the session releases it.
+            let mut lock = PgConnection::connect(admin_url)
+                .await
+                .map_err(|error| format!("connect DATABASE_URL: {error}"))?;
+            sqlx::query("SELECT pg_advisory_lock($1)")
+                .bind(MIGRATE_LOCK_KEY)
+                .execute(&mut lock)
+                .await
+                .map_err(|error| format!("lock for migration: {error}"))?;
             let mut conn = PgConnection::connect(url)
                 .await
                 .map_err(|error| format!("connect {name}: {error}"))?;
@@ -201,6 +216,9 @@ fn create_database(admin_url: &str, name: &str, migrate_url: Option<&str>) -> Re
                 .await
                 .map_err(|error| format!("migrate {name}: {error}"))?;
             conn.close()
+                .await
+                .map_err(|error| format!("close: {error}"))?;
+            lock.close()
                 .await
                 .map_err(|error| format!("close: {error}"))?;
         }

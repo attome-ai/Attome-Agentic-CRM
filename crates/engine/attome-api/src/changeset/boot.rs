@@ -108,6 +108,12 @@ pub async fn apply_compiled(
     state: &EngineState,
     entry: &PlatformChangeset,
 ) -> Result<(), AppError> {
+    // Two engines built in one process (every integration test binary does
+    // this, concurrently, against one database) must not plan the same
+    // changeset at once: the second would take the first's live claim for a
+    // crashed boot's. Across processes the platform seed lock covers it.
+    static IN_PROCESS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+    let _serialized = IN_PROCESS.lock().await;
     let doc = parse_compiled(entry)?;
     for phase in doc.phases() {
         if phase == ApplyPhase::Contract && !contract_due(&doc) {
