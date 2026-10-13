@@ -1,8 +1,3 @@
-#![allow(
-    unsafe_code,
-    reason = "Rust 2024 makes std::env::set_var/remove_var unsafe; these tests set and clear process environment variables to exercise ${VAR} expansion"
-)]
-
 // ── Tests (D-038 — placeholder expansion + fail-fast reporting) ───────────────
 
 use super::{

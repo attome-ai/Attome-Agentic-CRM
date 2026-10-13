@@ -7,8 +7,6 @@ dist/
 # Local configuration and secrets never leave the machine
 .env
 .env.*
-!.env.example
-!.env.runtime.example
 *.local.toml
 *.local.json
 config.local.*

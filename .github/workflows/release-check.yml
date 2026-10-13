@@ -1,0 +1,39 @@
+name: release-check
+
+# The one release gate (`attome release --check`: format, clippy with warnings
+# as errors, tests) on Windows and Linux, on every push and pull request.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: release check (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      CARGO_TERM_COLOR: always
+      RUST_MIN_STACK: "33554432"
+    steps:
+      - uses: actions/checkout@v5
+
+      # Installs the toolchain pinned in rust-toolchain.toml (with clippy and
+      # rustfmt), caches the cargo registry and target directory, and turns
+      # compiler and clippy messages into annotations on the run.
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: attome release --check
+        run: cargo run -p attome -- release --check
