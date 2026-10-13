@@ -61,6 +61,7 @@ const HMAC_PREFIX: &str = "hmac256:v";
 /// The pepper id [`dummy_hmac_hash`] is tagged with.
 const DUMMY_PEPPER_ID: u32 = 0;
 
+#[expect(clippy::expect_used, reason = "HMAC accepts a key of any length")]
 fn hmac_hex(pepper: &str, secret: &str) -> String {
     // HMAC accepts any key length, so `new_from_slice` on an already
     // `check_secret`-validated (>=32 byte) pepper cannot fail.
@@ -143,6 +144,10 @@ impl PepperRing {
 
     /// Hashes a newly issued/rehashed secret with the *current* pepper —
     /// rotation only ever produces rows for the newest id, never a previous one.
+    #[expect(
+        clippy::expect_used,
+        reason = "PepperRing::new always inserts current_id into the ring"
+    )]
     pub fn hash(&self, secret: &str) -> String {
         let current = self
             .get(self.current_id)
@@ -180,6 +185,7 @@ fn parse_versioned(stored: &str) -> Option<(u32, &str)> {
 /// "wrong secret" shape as any other verify failure, no separate error
 /// variant an attacker could use to enumerate live ids (security contract
 /// I17).
+#[expect(clippy::expect_used, reason = "HMAC accepts a key of any length")]
 pub async fn verify_peppered_secret(
     ring: &PepperRing,
     secret: &str,

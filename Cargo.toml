@@ -15,6 +15,7 @@ members = [
     "crates/foundation/attome-email",
     "crates/foundation/attome-jobs",
     "crates/foundation/attome-auth",
+    "crates/foundation/attome-server",
     "crates/sdk/attome-sdk",
     "crates/apps/attome",
 ]
@@ -48,6 +49,7 @@ attome-profiler  = { path = "crates/foundation/attome-profiler" }
 attome-email     = { path = "crates/foundation/attome-email" }
 attome-jobs      = { path = "crates/foundation/attome-jobs" }
 attome-auth      = { path = "crates/foundation/attome-auth" }
+attome-server    = { path = "crates/foundation/attome-server" }
 attome-sdk     = { path = "crates/sdk/attome-sdk" }
 
 # External crates
@@ -58,7 +60,9 @@ apalis-sql    = { version = "0.7.4", default-features = false, features = ["post
 arc-swap      = "1"
 argon2        = "0.6"
 axum          = { version = "0.8", features = ["macros"] }
+axum-prometheus = "0.10.1"
 base64        = "0.23"
+bytes         = "1"
 chrono        = { version = "0.4", features = ["serde"] }
 chrono-tz     = "0.10"
 dotenvy       = "0.15"
@@ -70,6 +74,7 @@ http          = "1"
 jsonwebtoken  = "9"
 lettre        = { version = "0.11", default-features = false, features = ["tokio1-rustls-tls", "smtp-transport", "builder"] }
 metrics       = "0.24"
+metrics-exporter-prometheus = { version = "0.18", default-features = false }
 moka          = { version = "0.12", features = ["future"] }
 object_store  = { version = "0.14", features = ["aws"] }
 opentelemetry = "0.32"
@@ -86,6 +91,8 @@ sqlx          = { version = "0.8", features = ["runtime-tokio", "postgres", "uui
 thiserror     = "2"
 tokio         = { version = "1", features = ["full"] }
 totp-rs       = { version = "6", default-features = false, features = ["gen_secret", "otpauth", "std"] }
+tower         = { version = "0.5", features = ["full"] }
+tower-http    = { version = "0.7", features = ["catch-panic", "cors", "trace", "compression-gzip", "compression-br", "timeout", "limit", "request-id"] }
 tracing       = "0.1"
 tracing-opentelemetry = "0.33"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }

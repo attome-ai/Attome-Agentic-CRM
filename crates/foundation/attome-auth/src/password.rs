@@ -450,6 +450,10 @@ static DUMMY_HASH: OnceLock<String> = OnceLock::new();
 /// particular work factor, is what makes the timing symmetric. Under the test
 /// profile both sides drop together (see [`hasher`]), so the property still
 /// holds there.
+#[expect(
+    clippy::expect_used,
+    reason = "hashing a fixed constant with the build's own parameters cannot fail"
+)]
 pub(crate) fn dummy_hash() -> &'static str {
     DUMMY_HASH.get_or_init(|| {
         hash_password("attome-dummy-verify-constant-do-not-use")

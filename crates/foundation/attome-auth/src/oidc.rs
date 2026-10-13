@@ -75,6 +75,10 @@ const TOKEN_RESPONSE_MAX_BYTES: usize = 64 * 1024;
 ///
 /// `pub(crate)` so `accounts::verify_google_id_token` and `captcha` share the
 /// same pool (attome-auth hardening 1.6, BAU-6).
+#[expect(
+    clippy::expect_used,
+    reason = "a builder with only timeouts and a redirect policy cannot fail; a TLS backend failure is unrecoverable"
+)]
 pub(crate) fn http_client() -> &'static reqwest::Client {
     static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
     CLIENT.get_or_init(|| {

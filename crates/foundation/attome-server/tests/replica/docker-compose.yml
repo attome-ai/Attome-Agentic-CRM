@@ -1,0 +1,80 @@
+# Minimal, CI-only streaming-replication pair for
+# `attome-server/tests/read_pool.rs` and `readonly_query_pool.rs` (16 tests).
+#
+# Why this file exists rather than reusing
+# `deploy/examples/docker-compose.replica.yml`: that recipe is a full
+# production-shaped stack (pgbouncer, the app image, HAProxy overlay) and
+# deliberately publishes NO Postgres ports — the app reaches Postgres over the
+# compose network, not the host. These two suites need two genuinely distinct
+# host-reachable connection strings (`TEST_DATABASE_URL_PRIMARY` /
+# `TEST_DATABASE_URL_REPLICA`), so this file keeps only the primary/replica
+# pair and publishes both. It reuses that recipe's real init/entrypoint
+# scripts verbatim — the replication mechanism under test is the same one,
+# not a simplified stand-in.
+#
+# These suites need a real compose file rather than a plain container pair:
+# the replica needs `bash /pg-replica-entrypoint.sh` (pg_basebackup, then hand
+# off to the stock entrypoint), a boot-time command override — the same
+# limitation Keycloak's `start-dev --import-realm` hits.
+#
+# They also cannot share a replica with any other job: several scenarios call
+# `pg_wal_replay_pause()`/`pg_wal_replay_resume()`, which are CLUSTER-WIDE, not
+# per-connection (see read_pool.rs's header). That is why the suites run with
+# `--test-threads=1` against a pair dedicated to this job.
+#
+# Usage (runnable from anywhere — both bind mounts below are resolved
+# relative to THIS file, not the invocation directory):
+#   docker compose -f crates/base/attome-server/tests/replica/docker-compose.yml up -d
+#   docker compose -f crates/base/attome-server/tests/replica/docker-compose.yml down -v
+
+name: attome-replica-tests
+
+services:
+  postgres-primary:
+    image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a # pgvector/pgvector:pg18
+    environment:
+      POSTGRES_DB: attomedb_test
+      POSTGRES_USER: postgres
+      # Throwaway, CI-only: this pair is created and destroyed inside one job
+      # and is never reachable off the runner. Not a secret to protect.
+      POSTGRES_PASSWORD: postgres
+      REPLICATION_PASSWORD: replication-test-password
+    volumes:
+      # Compose-file-relative (../../../../../deploy = repo root/deploy), NOT
+      # invocation-directory-relative. Verified live: a repo-root-relative
+      # `./deploy/...` here silently bind-mounts a nonexistent path as an
+      # empty DIRECTORY rather than erroring, and the failure only surfaces
+      # downstream as "Is a directory" (exit 126) — the identical trap D-283
+      # hit in deploy/examples/docker-compose.replica.yml.
+      - ../../../../../deploy/pg-primary-init.sh:/docker-entrypoint-initdb.d/pg-primary-init.sh:ro
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  postgres-replica:
+    image: pgvector/pgvector:pg18@sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a # pgvector/pgvector:pg18
+    environment:
+      PGDATA: /var/lib/postgresql/18/docker
+      PRIMARY_HOST: postgres-primary
+      REPLICATION_PASSWORD: replication-test-password
+    volumes:
+      # Compose-file-relative — see postgres-primary's mount comment above.
+      - ../../../../../deploy/pg-replica-entrypoint.sh:/pg-replica-entrypoint.sh:ro
+    command: ["bash", "/pg-replica-entrypoint.sh"]
+    depends_on:
+      postgres-primary:
+        condition: service_healthy
+    ports:
+      - "5434:5432"
+    healthcheck:
+      # `pg_isready` reports ready on a standby that is still replaying its
+      # base backup; this asserts the standby is actually in recovery and
+      # accepting queries, which is what the suites need.
+      test: ["CMD-SHELL", "psql -U postgres -d attomedb_test -c 'SELECT pg_is_in_recovery()' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
