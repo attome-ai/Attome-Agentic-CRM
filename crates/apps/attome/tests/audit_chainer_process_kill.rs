@@ -1,6 +1,6 @@
 //! P1.13 §6's literal "kill the chainer mid-batch" test. This lives here
 //! (not in attome-xrm's own `attome-audit` test suite) because it needs the
-//! compiled `audit_chainer` binary, which only exists as a `src/bin/` target
+//! compiled `attome` binary (`attome audit-chainer`)
 //! of this crate — attome-xrm doesn't, and per the dependency-direction rule
 //! never should, depend on attome-website. The library-level half of P1.13's
 //! crash-recovery gap (an abandoned-transaction DB-guarantee proof) lives in
@@ -131,7 +131,8 @@ async fn killing_the_audit_chainer_process_mid_batch_leaves_a_cleanly_resumable_
     let database_url = attome_testkit::migrated_db_url().expect("checked by test_db() above");
     let config_path = debug_config_path();
 
-    let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_audit_chainer"))
+    let mut child = std::process::Command::new(env!("CARGO_BIN_EXE_attome"))
+        .arg("audit-chainer")
         .env("CONFIG_FILE", &config_path)
         .env("DATABASE_URL", &database_url)
         .stdout(std::process::Stdio::null())

@@ -28,6 +28,10 @@
     clippy::unwrap_used,
     reason = "test helpers: a failed setup step should panic with its message"
 )]
+#![allow(
+    clippy::print_stdout,
+    reason = "this measurement test prints its report for the reader"
+)]
 
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
