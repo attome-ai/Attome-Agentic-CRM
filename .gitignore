@@ -20,3 +20,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Shipped templates (placeholders only) are tracked; they are read by attome-config tests
+!.env.example
+!.env.runtime.example

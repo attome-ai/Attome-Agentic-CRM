@@ -18,6 +18,8 @@ mod loader;
 mod sections;
 
 #[cfg(test)]
+// The env-var tests need `set_var`/`remove_var`, unsafe in edition 2024; each carries a SAFETY note.
+#[allow(unsafe_code)]
 mod tests;
 
 // ── Public surface — mirrors lib.rs's `pub use config::{...}` list, name for
