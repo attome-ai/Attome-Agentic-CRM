@@ -6137,6 +6137,118 @@
         }
       }
     },
+    "/api/v1/admin/calendars/{id}/holidays/hijri-recurring": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "AG1-T6: a holiday that falls on the same Hijri date every year (Eid\nal-Fitr is 1 Shawwal), entered once: one holiday per Hijri year from\n`from_year` to `to_year` (at most 30 years), each on its Gregorian day\nin the deployment's Umm al-Qura calendar, all in one transaction. A 30th\nin a year whose month has 29 days falls on the next day, the 1st of the\nfollowing month, as announced holidays do. Refused whole when any day\nalready has a holiday or an exception.",
+        "operationId": "create_hijri_recurring_holidays",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HijriRecurringBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "One holiday per year",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HolidayDetail"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such calendar",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A day already has a holiday or an exception",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A date outside the Umm al-Qura calendar, or more than 30 years",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/admin/calendars/{id}/holidays/{holiday_id}": {
       "delete": {
         "tags": [
@@ -54843,6 +54955,15 @@
               "type": "integer",
               "format": "int64"
             }
+          },
+          {
+            "name": "field",
+            "in": "query",
+            "description": "B2-T3: only the changes to this one field (its logical name). A field\nthe caller may not read, or that does not exist, has no history.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -67739,7 +67860,9 @@
           "week",
           "month",
           "quarter",
-          "year"
+          "year",
+          "hijri_month",
+          "hijri_year"
         ]
       },
       "DeadLetterJobSummary": {
@@ -72077,6 +72200,33 @@
           }
         }
       },
+      "HijriDateBody": {
+        "type": "object",
+        "description": "A Hijri date on the wire (AG1-T6).",
+        "required": [
+          "year",
+          "month",
+          "day"
+        ],
+        "properties": {
+          "day": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "month": {
+            "type": "integer",
+            "format": "int32",
+            "description": "1 (Muharram) to 12 (Dhu al-Hijjah).",
+            "minimum": 0
+          },
+          "year": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
       "HijriMonthRow": {
         "type": "object",
         "description": "One month of `hijri_month`.",
@@ -72108,6 +72258,42 @@
           "source": {
             "type": "string",
             "description": "`umm_al_qura` (the published table) or `sighting` (corrected)."
+          }
+        }
+      },
+      "HijriRecurringBody": {
+        "type": "object",
+        "description": "`POST /api/v1/admin/calendars/{id}/holidays/hijri-recurring`.",
+        "required": [
+          "name",
+          "hijri_month",
+          "hijri_day",
+          "from_year",
+          "to_year"
+        ],
+        "properties": {
+          "from_year": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "hijri_day": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "hijri_month": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string"
+          },
+          "to_year": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
           }
         }
       },
@@ -72199,13 +72385,27 @@
       "HolidayBody": {
         "type": "object",
         "required": [
-          "name",
-          "holiday_date"
+          "name"
         ],
         "properties": {
+          "hijri_date": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HijriDateBody",
+                "description": "AG1-T6: the day as a Hijri date, stored as its Gregorian day."
+              }
+            ]
+          },
           "holiday_date": {
-            "type": "string",
-            "format": "date"
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The Gregorian day. Give this or `hijri_date`."
           },
           "name": {
             "type": "string"
@@ -72243,6 +72443,17 @@
           "calendar_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "hijri_date": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HijriDateBody",
+                "description": "AG1-T6: the same day in the deployment's Umm al-Qura calendar."
+              }
+            ]
           },
           "holiday_date": {
             "type": "string",

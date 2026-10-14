@@ -1144,6 +1144,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/calendars/{id}/holidays/hijri-recurring": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * AG1-T6: a holiday that falls on the same Hijri date every year (Eid
+         *     al-Fitr is 1 Shawwal), entered once: one holiday per Hijri year from
+         *     `from_year` to `to_year` (at most 30 years), each on its Gregorian day
+         *     in the deployment's Umm al-Qura calendar, all in one transaction. A 30th
+         *     in a year whose month has 29 days falls on the next day, the 1st of the
+         *     following month, as announced holidays do. Refused whole when any day
+         *     already has a holiday or an exception.
+         */
+        post: operations["create_hijri_recurring_holidays"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/calendars/{id}/holidays/{holiday_id}": {
         parameters: {
             query?: never;
@@ -14945,7 +14970,7 @@ export interface components {
             status: string;
         };
         /** @enum {string} */
-        DateBucket: "day" | "week" | "month" | "quarter" | "year";
+        DateBucket: "day" | "week" | "month" | "quarter" | "year" | "hijri_month" | "hijri_year";
         DeadLetterJobSummary: {
             /** Format: int32 */
             attempts: number;
@@ -16748,6 +16773,18 @@ export interface components {
             /** @description Who announced it, or why; kept on the audit event. */
             reason: string;
         };
+        /** @description A Hijri date on the wire (AG1-T6). */
+        HijriDateBody: {
+            /** Format: int32 */
+            day: number;
+            /**
+             * Format: int32
+             * @description 1 (Muharram) to 12 (Dhu al-Hijjah).
+             */
+            month: number;
+            /** Format: int32 */
+            year: number;
+        };
         /** @description One month of `hijri_month`. */
         HijriMonthRow: {
             /**
@@ -16763,6 +16800,18 @@ export interface components {
             hijri_year: number;
             /** @description `umm_al_qura` (the published table) or `sighting` (corrected). */
             source: string;
+        };
+        /** @description `POST /api/v1/admin/calendars/{id}/holidays/hijri-recurring`. */
+        HijriRecurringBody: {
+            /** Format: int32 */
+            from_year: number;
+            /** Format: int32 */
+            hijri_day: number;
+            /** Format: int32 */
+            hijri_month: number;
+            name: string;
+            /** Format: int32 */
+            to_year: number;
         };
         HistoryEntry: {
             /** Format: int32 */
@@ -16790,8 +16839,12 @@ export interface components {
             user_name: string;
         };
         HolidayBody: {
-            /** Format: date */
-            holiday_date: string;
+            hijri_date?: null | components["schemas"]["HijriDateBody"];
+            /**
+             * Format: date
+             * @description The Gregorian day. Give this or `hijri_date`.
+             */
+            holiday_date?: string | null;
             name: string;
         };
         /**
@@ -16811,6 +16864,7 @@ export interface components {
         HolidayDetail: {
             /** Format: uuid */
             calendar_id: string;
+            hijri_date?: null | components["schemas"]["HijriDateBody"];
             /** Format: date */
             holiday_date: string;
             /** Format: uuid */
@@ -30151,6 +30205,77 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_hijri_recurring_holidays: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HijriRecurringBody"];
+            };
+        };
+        responses: {
+            /** @description One holiday per year */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HolidayDetail"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such calendar */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A day already has a holiday or an exception */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A date outside the Umm al-Qura calendar, or more than 30 years */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -61821,6 +61946,11 @@ export interface operations {
                 cursor?: string;
                 /** @description Changes per page, 1..=200 (default 50); larger values are clamped. */
                 page_size?: number;
+                /**
+                 * @description B2-T3: only the changes to this one field (its logical name). A field
+                 *     the caller may not read, or that does not exist, has no history.
+                 */
+                field?: string;
             };
             header?: never;
             path: {
