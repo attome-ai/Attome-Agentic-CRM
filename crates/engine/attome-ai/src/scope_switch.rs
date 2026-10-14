@@ -143,6 +143,22 @@ fn validate(kind: &str, key: &str, reason: Option<&str>) -> Result<(), AppError>
 
 /// Sets a scope on or off, audited in the same transaction. Turning a scope
 /// on is refused for the actor who turned it off.
+/// An automatic trip (N31-T1): switches a scope off with an automatic cause
+/// (`budget`, `quality`, `injection`, `departure`) and no acting person. As
+/// with a manual switch-off, an administrator turns it back on.
+pub async fn trip(
+    state: &EngineState,
+    kind: &str,
+    key: &str,
+    cause: &str,
+    reason: &str,
+) -> Result<(), AppError> {
+    if cause == "manual" {
+        return Err(AppError::Validation("a trip has an automatic cause".into()));
+    }
+    set(state, kind, key, false, cause, Some(reason), None).await
+}
+
 async fn set(
     state: &EngineState,
     kind: &str,

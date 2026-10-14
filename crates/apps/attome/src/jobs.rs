@@ -835,6 +835,27 @@ async fn dispatch_platform_job(
                 groups_flagged = summary.groups_flagged,
                 "ai quality monitor: run complete"
             );
+            // N31-T1: a severe drop switches the action off until an
+            // administrator turns it back on. A failed trip is logged; the
+            // alert above has already gone out.
+            for action in &summary.severe_actions {
+                if let Err(error) = attome_ai::scope_switch::trip(
+                    &attome_state,
+                    "tool",
+                    action,
+                    "quality",
+                    "acceptance fell by 30 points or more against the prior period",
+                )
+                .await
+                {
+                    tracing::error!(%error, action, "ai quality monitor: automatic switch-off failed");
+                } else {
+                    tracing::warn!(
+                        action,
+                        "ai quality monitor: action switched off automatically"
+                    );
+                }
+            }
         }
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.

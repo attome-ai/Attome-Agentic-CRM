@@ -40,6 +40,10 @@ const MIN_SAMPLE: i64 = 10;
 /// A drop of at least this many percentage points in the acceptance rate
 /// (accepted+edited over decided) is "significant" enough to alert on.
 const ACCEPTANCE_DROP_THRESHOLD: f64 = 0.15;
+/// N31-T1: a drop this large switches the action off automatically
+/// (`scope_switch::trip`, cause `quality`) until an administrator turns it
+/// back on.
+pub const SEVERE_DROP_THRESHOLD: f64 = 0.30;
 
 const PERIOD_DAYS: i64 = 7;
 
@@ -76,6 +80,15 @@ impl GroupOutcome {
 
     /// Pure — unit-tested directly without a database. Both periods must
     /// clear [`MIN_SAMPLE`] and the drop must clear [`ACCEPTANCE_DROP_THRESHOLD`].
+    /// A significant drop of at least [`SEVERE_DROP_THRESHOLD`] (N31-T1).
+    pub fn is_severe_drop(&self) -> bool {
+        self.is_significant_drop()
+            && match (self.prior_acceptance_rate(), self.current_acceptance_rate()) {
+                (Some(prior), Some(current)) => prior - current >= SEVERE_DROP_THRESHOLD,
+                _ => false,
+            }
+    }
+
     pub fn is_significant_drop(&self) -> bool {
         if self.current_total < MIN_SAMPLE || self.prior_total < MIN_SAMPLE {
             return false;
@@ -221,6 +234,9 @@ async fn alert_significant_drop(
 pub struct QualityMonitorSummary {
     pub groups_checked: usize,
     pub groups_flagged: usize,
+    /// Actions whose acceptance fell by [`SEVERE_DROP_THRESHOLD`] or more,
+    /// for the caller to switch off (N31-T1).
+    pub severe_actions: Vec<String>,
 }
 
 impl std::fmt::Debug for QualityMonitorSummary {
@@ -242,6 +258,7 @@ pub async fn run(
 ) -> Result<QualityMonitorSummary, AppError> {
     let groups = fetch_group_outcomes(db, Utc::now()).await?;
     let mut flagged = 0usize;
+    let mut severe_actions: Vec<String> = Vec::new();
 
     for group in &groups {
         if group.is_significant_drop() {
@@ -257,12 +274,16 @@ pub async fn run(
                 "ai quality monitor: significant acceptance-rate drop detected"
             );
             alert_significant_drop(db, notification_cfg, group).await;
+            if group.is_severe_drop() && !severe_actions.contains(&group.action_id) {
+                severe_actions.push(group.action_id.clone());
+            }
         }
     }
 
     Ok(QualityMonitorSummary {
         groups_checked: groups.len(),
         groups_flagged: flagged,
+        severe_actions,
     })
 }
 
@@ -288,6 +309,15 @@ mod tests {
             prior_accepted,
             prior_edited: 0,
         }
+    }
+
+    #[test]
+    fn only_a_severe_drop_trips() {
+        // 90% to 50%: severe. 90% to 72%: significant only.
+        assert!(group(20, 10, 20, 18).is_severe_drop());
+        let mild = group(50, 36, 20, 18);
+        assert!(mild.is_significant_drop());
+        assert!(!mild.is_severe_drop());
     }
 
     #[test]
