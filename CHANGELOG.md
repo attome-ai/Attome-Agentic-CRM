@@ -11,6 +11,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Recycle bin: every delete records who, when, why and its operation (migration 0024);
+  `DELETE /api/v1/{entity}/{id}?reason=` and the `Attome-Operation-Id` header,
+  `POST /api/v1/{entity}/delete-impact`, `POST /api/v1/bin/restore`,
+  `POST /api/v1/bin/operations/{operation_id}/restore` and `/api/v1/admin/bin-settings`; a list
+  delete offers Undo; see docs/recycle-bin.md.
+- Backups copy the file store beside the database, `attome restore` puts files back, an erasure
+  ledger in object storage re-applies erasures after a restore, and a monthly restore drill
+  (`attome backup drill`) records evidence; `GET /api/v1/admin/backup` reports it all.
 - Tags in lists: select records and add or remove a tag at once (`POST /api/v1/{entity}/tags/bulk`,
   up to 500 records, each checked on its own); a tag chip opens a page of every record carrying it,
   grouped by entity, and each group opens its list filtered by the tag (`?tag=`).
@@ -228,6 +236,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- `DELETE /api/v1/{entity}/{id}/hard-delete` needs the new `{entity}.hard_delete` privilege besides
+  `delete`; an entity whose bin setting requires a reason answers `422` to a delete without one.
 - Boot refuses an `inference.generation.base_url` outside the deployment unless
   `inference.allow_external_provider` is true (it used to fail at the first request).
 - v2 renames every table, entity and API path segment that carried v1's `xrm_` or `core_` prefix
