@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Agents get `system.status`, and a tool call refused because a service is down says which one and
+  whether to retry (`degraded`, `retryable`).
 - Responses prefer Brotli, fall back to gzip, and are sent raw when under 1 KB or already
   compressed (images, video, zip, PDF, octet-stream).
 - A schema change blocked by a table lock retries after 1, 2, 4 and 8 seconds; a queued one then

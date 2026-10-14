@@ -984,9 +984,24 @@ async fn tools_call(
                 session_id = %session.id,
                 "MCP tool call refused"
             );
-            tool_result(&json!({ "error": sanitized(&error) }), true)
+            tool_result(&refusal_payload(state, &error), true)
         }
     })
+}
+
+/// A refused call's body. AB5-T10: a call refused because a service is down
+/// names it under `degraded` and says whether to retry: yes for a short
+/// outage, no once it has lasted five minutes, so an agent stops instead of
+/// looping. `system.status` lists every service.
+fn refusal_payload(state: &EngineState, error: &AppError) -> Value {
+    let mut payload = json!({ "error": sanitized(error) });
+    if let AppError::CapabilityUnavailable(name) = error {
+        let retryable = attome_server::Capability::from_name(name)
+            .is_none_or(|c| state.base.capabilities.agent_should_retry(c));
+        payload["degraded"] = json!(name);
+        payload["retryable"] = json!(retryable);
+    }
+    payload
 }
 
 /// A stable idempotency key for one (session, tool, arguments) triple.

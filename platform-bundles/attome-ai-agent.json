@@ -38,7 +38,7 @@
               "record.create", "record.delete", "record.get", "record.restore", "record.schema",
               "record.summarize", "record.transition", "record.transitions", "record.update",
               "record.update_field", "record.validate", "route.classify", "search.knowledge", "search.records",
-              "text.sentiment", "text.translate", "workflow.start"
+              "system.status", "text.sentiment", "text.translate", "workflow.start"
             ],
             "multi": true
           }

@@ -75,7 +75,7 @@
 
 use std::marker::PhantomData;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU8, AtomicU32, Ordering};
 
 use attome_types::AppError;
 use axum::extract::{FromRef, FromRequestParts};
@@ -136,6 +136,11 @@ impl Capability {
             Capability::FastJobs => "fast_jobs",
             Capability::BatchJobs => "batch_jobs",
         }
+    }
+
+    /// The capability named `name` ([`Self::as_str`]), if any.
+    pub fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|c| c.as_str() == name)
     }
 
     const fn index(self) -> usize {
@@ -208,6 +213,9 @@ pub enum ProbeOutcome {
 struct Slot {
     state: AtomicU8,
     consecutive_failures: AtomicU32,
+    /// AB5-T10: unix seconds when the state last became `Unavailable`; 0
+    /// while it is anything else.
+    unavailable_since: AtomicI64,
 }
 
 impl Slot {
@@ -215,9 +223,14 @@ impl Slot {
         Self {
             state: AtomicU8::new(CapabilityState::Unknown.as_u8()),
             consecutive_failures: AtomicU32::new(0),
+            unavailable_since: AtomicI64::new(0),
         }
     }
 }
+
+/// AB5-T10: how long a capability may be down before an agent is told not to
+/// retry a call that needs it.
+pub const AGENT_RETRY_WINDOW_SECS: u64 = 300;
 
 /// Per-node capability status, written by one poll task and read on the
 /// request path.
@@ -317,9 +330,37 @@ impl CapabilityRegistry {
             ProbeOutcome::Indeterminate => previous,
         };
 
+        if next == CapabilityState::Unavailable {
+            if previous != CapabilityState::Unavailable {
+                slot.unavailable_since
+                    .store(chrono::Utc::now().timestamp(), Ordering::Relaxed);
+            }
+        } else {
+            slot.unavailable_since.store(0, Ordering::Relaxed);
+        }
         slot.state.store(next.as_u8(), Ordering::Relaxed);
         crate::metrics::record_capability_state(capability.as_str(), next.as_u8());
         next
+    }
+
+    /// AB5-T10: how long this capability has been confirmed unavailable, or
+    /// `None` while it is not.
+    pub fn down_for_secs(&self, capability: Capability) -> Option<u64> {
+        if self.state(capability) != CapabilityState::Unavailable {
+            return None;
+        }
+        let since = self.slots[capability.index()]
+            .unavailable_since
+            .load(Ordering::Relaxed);
+        Some(u64::try_from(chrono::Utc::now().timestamp() - since).unwrap_or(0))
+    }
+
+    /// AB5-T10: whether an agent should retry a call refused because
+    /// `capability` is down: yes for a short outage, no once it has lasted
+    /// [`AGENT_RETRY_WINDOW_SECS`], so the agent stops instead of looping.
+    pub fn agent_should_retry(&self, capability: Capability) -> bool {
+        self.down_for_secs(capability)
+            .is_none_or(|secs| secs < AGENT_RETRY_WINDOW_SECS)
     }
 
     /// The gate itself. `Ok(())` unless this capability is confirmed
@@ -349,6 +390,7 @@ impl CapabilityRegistry {
                     .consecutive_failures
                     .load(Ordering::Relaxed),
                 enforced: self.is_enforced(),
+                down_for_secs: self.down_for_secs(*c),
             })
             .collect()
     }
@@ -370,6 +412,9 @@ pub struct CapabilityReport {
     /// Whether an `unavailable` state would actually reject
     /// (`capability.enforcement_enabled`).
     pub enforced: bool,
+    /// How long it has been `unavailable`; absent while it is not.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub down_for_secs: Option<u64>,
 }
 
 /// Cheap, cloneable handle to the registry, so the extractor costs one `Arc`

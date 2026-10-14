@@ -1,6 +1,6 @@
 {
   "author": "attome",
-  "checksum": "sha256:db9fb86ea8a581fcbfda0421d958bb352122eaea532450cbb6856dcd9a1454c0",
+  "checksum": "sha256:4efa403b973fd6ed42d4f4b85baa24cd572d73dd158ba2a6d7172de8d4c8dbe7",
   "closed_at": "2026-10-14T00:00:00Z",
   "description": "An agent policy may allow every registered action: the allow-list's choices follow the action registry.",
   "format": "attome-changeset/v1",
@@ -79,6 +79,7 @@
               "route.classify",
               "search.knowledge",
               "search.records",
+              "system.status",
               "text.sentiment",
               "text.translate",
               "workflow.start"
