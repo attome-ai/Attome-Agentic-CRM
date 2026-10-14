@@ -146,6 +146,86 @@ struct ExportPlan {
     params: Vec<String>,
 }
 
+/// B11-T3: how date columns read in a file a person opens (CSV, XLSX): in
+/// their own `core.calendar` (gregorian, hijri, both) and `core.digits`
+/// (latn, arab), with the deployment's Hijri corrections. JSON keeps ISO
+/// dates for machines.
+#[derive(Clone)]
+struct DatePresentation {
+    calendar: String,
+    arab_digits: bool,
+    date_columns: Vec<String>,
+    hijri: std::sync::Arc<attome_core::calendar::hijri::HijriCalendar>,
+}
+
+impl DatePresentation {
+    /// The person's settings, resolved as `/api/v1/settings/me` resolves them.
+    async fn for_user(state: &EngineState, user_id: Uuid, attrs: &[attome_core::AttrInfo]) -> Self {
+        let (_, org_ref) = entity_crud::fetch_audit_ctx(state, user_id).await;
+        let snapshot = state.settings.load();
+        let registry = attome_core::setting_registry();
+        let setting = |key: &str| {
+            registry
+                .get(key)
+                .map(|d| snapshot.resolve(d, Some(user_id), Some(org_ref)).0)
+        };
+        let calendar = setting("core.calendar")
+            .and_then(|v| v.as_str().map(str::to_owned))
+            .unwrap_or_else(|| "gregorian".to_owned());
+        let arab_digits = setting("core.digits").is_some_and(|v| v == "arab");
+        Self {
+            calendar,
+            arab_digits,
+            date_columns: attrs
+                .iter()
+                .filter(|a| a.field_type() == attome_core::FieldType::Date)
+                .map(|a| a.logicalname.clone())
+                .collect(),
+            hijri: state.hijri.load_full(),
+        }
+    }
+
+    fn apply(&self, mut row: Value) -> Value {
+        if self.calendar == "gregorian" && !self.arab_digits {
+            return row;
+        }
+        if let Value::Object(map) = &mut row {
+            for column in &self.date_columns {
+                if let Some(Value::String(text)) = map.get_mut(column) {
+                    *text = self.text(text);
+                }
+            }
+        }
+        row
+    }
+
+    /// One stored date as the person reads it: `1447-09-01`,
+    /// `2026-02-18 (1447-09-01)`, with Arabic-Indic digits when chosen.
+    fn text(&self, raw: &str) -> String {
+        let day = raw.get(..10).unwrap_or(raw);
+        let hijri = chrono::NaiveDate::parse_from_str(day, "%Y-%m-%d")
+            .ok()
+            .and_then(|d| self.hijri.to_hijri(d).ok())
+            .map(|h| h.to_string());
+        let text = match (self.calendar.as_str(), hijri) {
+            ("hijri", Some(h)) => h,
+            ("both", Some(h)) => format!("{raw} ({h})"),
+            _ => raw.to_owned(),
+        };
+        if self.arab_digits {
+            text.chars()
+                .map(|c| {
+                    c.to_digit(10)
+                        .and_then(|d| char::from_u32(0x0660 + d))
+                        .unwrap_or(c)
+                })
+                .collect()
+        } else {
+            text
+        }
+    }
+}
+
 /// Bundles the resolved entity so `plan_export` stays under clippy's
 /// `too_many_arguments` limit — same reasoning as `bulk.rs`'s
 /// `EntityMutationTarget`.
@@ -654,6 +734,7 @@ pub async fn process(
         "csv" => {
             let header_line = attome_report::render::csv_header_line(&header);
             let header_for_rows = header.clone();
+            let dates = DatePresentation::for_user(state, payload.user_id, &attrs).await;
             run_query_and_stream(
                 state,
                 &table,
@@ -661,11 +742,25 @@ pub async fn process(
                 &plan,
                 &path,
                 Some(header_line),
-                move |row| attome_report::render::csv_line(&header_for_rows, &row),
+                move |row| attome_report::render::csv_line(&header_for_rows, &dates.apply(row)),
             )
             .await
         }
-        _ => export_xlsx(state, &table, &select_list, &plan, &header, &path).await,
+        _ => {
+            let dates = DatePresentation::for_user(state, payload.user_id, &attrs).await;
+            export_xlsx(
+                state,
+                XlsxQuery {
+                    table: &table,
+                    select_list: &select_list,
+                    plan: &plan,
+                    header: &header,
+                    path: &path,
+                },
+                &dates,
+            )
+            .await
+        }
     };
 
     let (row_count, checksum) = match result {
@@ -833,14 +928,27 @@ async fn run_query_and_stream(
 /// whose manifest isn't known until every row is written — so this builds
 /// the whole file in memory (bounded by [`MAX_EXPORT_ROWS`] rows, same cap
 /// as the streamed formats) and uploads it as one object.
+/// What one XLSX export selects and where it goes.
+struct XlsxQuery<'a> {
+    table: &'a str,
+    select_list: &'a str,
+    plan: &'a ExportPlan,
+    header: &'a [String],
+    path: &'a ObjectPath,
+}
+
 async fn export_xlsx(
     state: &EngineState,
-    table: &str,
-    select_list: &str,
-    plan: &ExportPlan,
-    header: &[String],
-    path: &ObjectPath,
+    query: XlsxQuery<'_>,
+    dates: &DatePresentation,
 ) -> Result<(i64, String), AppError> {
+    let XlsxQuery {
+        table,
+        select_list,
+        plan,
+        header,
+        path,
+    } = query;
     let sql = format!(
         "SELECT row_to_json(xexp)::text FROM (SELECT {select_list} FROM {table} t {} \
          ORDER BY t.id ASC LIMIT {}) xexp",
@@ -865,7 +973,7 @@ async fn export_xlsx(
     let row_count = rows.len() as i64;
     let values = rows
         .into_iter()
-        .map(|raw| serde_json::from_str::<Value>(&raw))
+        .map(|raw| serde_json::from_str::<Value>(&raw).map(|row| dates.apply(row)))
         .collect::<Result<Vec<Value>, _>>()
         .map_err(AppError::internal)?;
     let buffer = attome_report::render::render_xlsx(header, &values)?;
@@ -900,4 +1008,39 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn presentation(calendar: &str, arab_digits: bool) -> DatePresentation {
+        DatePresentation {
+            calendar: calendar.to_owned(),
+            arab_digits,
+            date_columns: vec!["closed_on".to_owned()],
+            hijri: std::sync::Arc::new(
+                attome_core::calendar::hijri::HijriCalendar::umm_al_qura().clone(),
+            ),
+        }
+    }
+
+    /// B11-T3: a Hijri user's export shows Hijri dates; other columns and a
+    /// Gregorian user's export are untouched.
+    #[test]
+    fn export_uses_hijri_dates_for_a_hijri_user() {
+        let row = serde_json::json!({"closed_on": "2026-02-18", "name": "2026-02-18"});
+        let hijri = presentation("hijri", false).apply(row.clone());
+        assert_eq!(hijri["closed_on"], "1447-09-01");
+        assert_eq!(hijri["name"], "2026-02-18", "only date columns change");
+        assert_eq!(
+            presentation("both", false).apply(row.clone())["closed_on"],
+            "2026-02-18 (1447-09-01)"
+        );
+        assert_eq!(
+            presentation("hijri", true).apply(row.clone())["closed_on"],
+            "١٤٤٧-٠٩-٠١"
+        );
+        assert_eq!(presentation("gregorian", false).apply(row.clone()), row);
+    }
 }

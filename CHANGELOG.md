@@ -11,6 +11,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- CSV and XLSX exports write date columns in the exporting person's calendar and digits
+  (`core.calendar`, `core.digits`); JSON exports keep ISO dates.
 - Reports and dashboards group dates by `hijri_month` and `hijri_year` (Umm al-Qura, with the
   deployment's sighting corrections), labelled `1447-09` and `1447`.
 - Calendar holidays by Hijri date: `hijri_date` on a holiday (alternative to `holiday_date`, and
