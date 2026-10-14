@@ -423,6 +423,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.BrandingComponent),
           },
           {
+            // U4-T4: the built-in metrics store, drawn over time.
+            path: 'ops/metrics',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.OpsMetricsComponent),
+          },
+          {
             // AA1-T7: per-route latency on this node.
             path: 'license/latency',
             canActivate: [authGuard],

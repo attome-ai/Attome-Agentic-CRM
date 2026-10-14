@@ -162,6 +162,12 @@ export const xrmAr = {
       text: 'النص', text_dark: 'النص (داكن)', success: 'نجاح', warning: 'تحذير', danger: 'خطر', info: 'معلومة',
     },
   },
+  metricsPage: {
+    title: 'المقاييس', metric: 'المقياس', choose: 'اختر مقياسًا',
+    empty: 'لم يُسجَّل شيء خلال الساعة الأخيرة. يعمل مخزن المقاييس المدمج على النشر بخادم واحد (observability.builtin_store).',
+    noPoints: 'لا توجد عينات في هذه الفترة.',
+    range: { hour: 'ساعة', day: 'يوم', week: 'أسبوع', month: 'شهر' },
+  },
   latencyPage: {
     title: 'زمن الاستجابة', refresh: 'تحديث', filter: 'تصفية المسارات', route: 'المسار', count: 'الطلبات',
     disabled: 'المقاييس متوقفة على هذا الخادم (observability.metrics_port قيمته 0).',

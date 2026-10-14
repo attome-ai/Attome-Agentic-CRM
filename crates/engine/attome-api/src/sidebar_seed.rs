@@ -1382,6 +1382,19 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     )
     .await?;
 
+    // U4-T4: the built-in metrics store, drawn over time.
+    upsert_sidebar(
+        db,
+        "Metrics",
+        Some("/xrm/admin/ops/metrics"),
+        "las la-chart-line",
+        "#f59e0b",
+        Some(modules_group),
+        42,
+        None,
+    )
+    .await?;
+
     // AA1-T7: per-route latency on this node.
     upsert_sidebar(
         db,
