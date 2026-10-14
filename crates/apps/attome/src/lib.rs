@@ -11,6 +11,7 @@ extern crate self as attome;
 
 pub mod apikey_pepper_registry;
 pub mod auth;
+pub mod backup;
 pub mod boot;
 /// The other subcommands: `worker`, `migrate`, `healthcheck`,
 /// `audit-chainer`, `verify-audit-chain`, `preflight`, `changeset-replay`.

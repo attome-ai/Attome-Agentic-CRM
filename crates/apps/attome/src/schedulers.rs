@@ -22,6 +22,8 @@ use attome_server::AppState;
 /// process-lifetime `tokio::spawn` loop; nothing is awaited here.
 pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     let db = &base_state.db;
+    // U6-T1: the daily local backup (Solo only, on by default).
+    crate::backup::spawn_daily(std::sync::Arc::new(config.clone()));
     // Once/day — never varied per-deployment, not a config knob.
     // Audit 10/10 plan item 2.6 (D-539 ruling 6): hourly until every
     // organization's v1 cutover checkpoint exists, a no-op afterwards.

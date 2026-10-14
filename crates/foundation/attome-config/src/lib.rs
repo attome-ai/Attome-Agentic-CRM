@@ -46,8 +46,8 @@ mod net;
 
 pub use config::{
     AiEnablement, AiSurface, AnchorStoreSection, ApiKeyPepper, AppConfig, AppSection, AuthSection,
-    CacheBackend, CacheRole, CacheRoleOverride, CacheRoles, CacheSection, CaptchaConfig,
-    CaptchaProvider, ChangesetLayer, ChangesetMode, ChangesetsSection, ConfigError,
+    BackupSection, CacheBackend, CacheRole, CacheRoleOverride, CacheRoles, CacheSection,
+    CaptchaConfig, CaptchaProvider, ChangesetLayer, ChangesetMode, ChangesetsSection, ConfigError,
     DatabasePoolSize, DatabasePools, DatabaseSection, DocgenSection, EmailSection, EventsSection,
     FleetSection, GoogleAiSection, InferenceEndpoint, InferenceSection, IntegrationSection,
     KdfSection, MetadataSection, ModelPrice, NotificationSection, ObservabilitySection,

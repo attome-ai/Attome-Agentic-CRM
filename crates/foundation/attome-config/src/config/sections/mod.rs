@@ -7,6 +7,7 @@
 
 pub(crate) mod audit;
 pub(crate) mod auth;
+pub(crate) mod backup;
 pub(crate) mod cache;
 pub(crate) mod capability;
 pub(crate) mod database;

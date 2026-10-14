@@ -34,6 +34,8 @@ Usage:
   attome healthcheck            Exit 0 when the local server is healthy
   attome preflight              Check configuration and dependencies
   attome doctor                 The same checks, with what to do about each failure
+  attome backup now             Write a database backup now (pg_dump custom format;
+                                restore one with pg_restore into an empty database)
   attome status [--url <url>]...
                                 Each node's version, schema, and whether it has
                                 started and is ready
@@ -116,6 +118,7 @@ fn main() -> ExitCode {
         ["healthcheck", ..] => attome::cmd::healthcheck::run(),
         ["preflight", ..] => attome::cmd::preflight::run(),
         ["doctor", ..] => attome::cmd::preflight::run_doctor(),
+        ["backup", "now"] => attome::backup::run_now(),
         ["status", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             attome::cmd::status::run(&rest)

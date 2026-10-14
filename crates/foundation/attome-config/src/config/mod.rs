@@ -31,6 +31,7 @@ pub use sections::auth::{
     ApiKeyPepper, AuthSection, KdfSection, OidcProviderConfig, OidcSection, RateLimitSection,
     S2SSection, S2sSeededClient, S2sSeededPermission, cidr_contains,
 };
+pub use sections::backup::BackupSection;
 pub use sections::cache::{CacheBackend, CacheRole, CacheRoleOverride, CacheRoles, CacheSection};
 pub use sections::database::{AppSection, DatabasePoolSize, DatabasePools, DatabaseSection};
 pub use sections::docgen::DocgenSection;
@@ -211,6 +212,10 @@ pub struct AppConfig {
     /// refused on the production profile. See `FleetSection`'s doc comment.
     #[serde(default)]
     pub fleet: FleetSection,
+
+    /// U6-T1 — the daily local database backup. On by default.
+    #[serde(default)]
+    pub backup: BackupSection,
 
     /// BCF-5 (D-615) — the `${VAR}` names `from_file` left unresolved,
     /// recorded so the production profile can refuse boot even under
