@@ -1755,7 +1755,11 @@ pub async fn execute_stored_query_with_definition(
     // pre-phase-2 default (plain OFFSET, no total, no cursor) for one release
     // as a rollback switch.
     let cursor_default = state.base.config.query.cursor_default;
-    let use_cursor = body.after_id.is_some() || (!body.include_total && cursor_default);
+    // A report may be an aggregate with no `id` column to page by, so it never
+    // starts a fresh cursor page; it runs in offset mode unless the caller
+    // continues a cursor.
+    let use_cursor =
+        body.after_id.is_some() || (!body.include_total && cursor_default && !qrow.is_report);
 
     let (mut records, total, total_pages, next_cursor): (
         Vec<Value>,
