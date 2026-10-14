@@ -9,12 +9,15 @@
         <ul class="am-items">
           @for (item of group.items; track item.label) {
             <li class="am-item" [attr.data-item]="group.label + '/' + item.label">
-              @if (route(link(item)); as r) {
+              @let target = link(item);
+              @if (route(target); as r) {
                 <a [routerLink]="r">{{ item.label }}</a>
-              } @else if (href(link(item)); as h) {
-                <a [href]="h" target="_blank" rel="noopener noreferrer">{{ item.label }}</a>
               } @else {
-                <span class="am-pending">{{ item.label }}</span>
+                @if (href(target); as h) {
+                  <a [href]="h" target="_blank" rel="noopener noreferrer">{{ item.label }}</a>
+                } @else {
+                  <span class="am-pending">{{ item.label }}</span>
+                }
               }
               @if (item.badge) {
                 <span class="am-badge">{{ item.badge }}</span>
