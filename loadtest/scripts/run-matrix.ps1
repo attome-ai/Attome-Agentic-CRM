@@ -90,13 +90,13 @@ foreach ($n in $NodeCounts) {
             foreach ($kv in $k6EnvVars.GetEnumerator()) { $k6Env += @("-e", "$($kv.Key)=$($kv.Value)") }
             & docker run --rm -v "$($script:LoadtestDir):/work" @k6Env grafana/k6 run `
                 "/work/k6/$scenario.js" `
-                --summary-trend-stats "avg,min,med,p(50),p(90),p(99),max" `
+                --summary-trend-stats "avg,min,med,p(50),p(90),p(95),p(99),max" `
                 --summary-export "/work/results/$scenario-n$n$fileSuffix.json"
         } else {
             $k6Args = @()
             foreach ($kv in $k6EnvVars.GetEnumerator()) { $k6Args += @("-e", "$($kv.Key)=$($kv.Value)") }
             & k6 run @k6Args (Join-Path $script:LoadtestDir "k6/$scenario.js") `
-                --summary-trend-stats "avg,min,med,p(50),p(90),p(99),max" `
+                --summary-trend-stats "avg,min,med,p(50),p(90),p(95),p(99),max" `
                 --summary-export $resultPath
         }
 
@@ -159,6 +159,22 @@ foreach ($n in $NodeCounts) {
                 $row | Add-Member -NotePropertyName audit_ingest_backlog `
                     -NotePropertyValue ([int64]("$backlogRaw".Trim()))
             }
+            # Per SLO class (AA13-T6): each scenario tags its requests with
+            # `slo_class` and declares thresholds on that submetric, so the
+            # export carries `http_req_duration{slo_class:S<n>}` per class.
+            # `attome slo report` reads these; a class with no entry is
+            # reported as not measured, never as met.
+            $classes = [ordered]@{}
+            foreach ($prop in $summary.metrics.PSObject.Properties) {
+                if ($prop.Name -match '^http_req_duration\{slo_class:(S\d+)\}$') {
+                    $classes[$Matches[1]] = [PSCustomObject]@{
+                        p50_ms = [Math]::Round($prop.Value.'p(50)', 1)
+                        p95_ms = [Math]::Round($prop.Value.'p(95)', 1)
+                        p99_ms = [Math]::Round($prop.Value.'p(99)', 1)
+                    }
+                }
+            }
+            $row | Add-Member -NotePropertyName classes -NotePropertyValue ([PSCustomObject]$classes)
             $allResults += $row
             if ($row.failed_requests -gt 0) {
                 Write-Warning "$scenario (N=$n): $($row.failed_requests) failed request(s), rate $($row.failed_rate) — this run is not clean evidence."

@@ -6,10 +6,11 @@ use std::process::ExitCode;
 
 const USAGE: &str = "\
 usage:
-  attome-release --check [--web] [--override <step>=<reason>]... [--by <name>]
+  attome-release --check [--web] [--slo-evidence] [--override <step>=<reason>]... [--by <name>]
   attome-release import-report <path>
   attome-release tag <version>
-  attome-release slo generate [--check]";
+  attome-release slo generate [--check]
+  attome-release slo report <matrix-summary.json>";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();

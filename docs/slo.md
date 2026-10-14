@@ -13,6 +13,23 @@ Edit the catalogue, never the outputs. The numbers are the `solo` profile's; eve
 `target` until a dated load-test result moves it to `measured_reference`. A class with no p99
 (S8 search) has k6 thresholds but no burn-rate rules, which are built on the p99 bucket.
 
+## Release evidence
+
+`attome release --check --slo-evidence` also runs the load-test matrix at one node
+(`loadtest/scripts/run-matrix.ps1 -NodeCounts 1 -RunTag release`, which needs Docker, PowerShell
+and the load-test stack in `loadtest/README.md`) and writes `target/release-gate/slo-report.json`
+and the release-notes fragment `slo.md`. On its own, from an existing run:
+
+```sh
+attome slo report loadtest/results/matrix-summary-release.json
+```
+
+Each class is met, missed (naming the percentile over target) or not measured. A class without a
+measurement is never reported as met, and a missed class does not fail the gate: the notes simply
+cannot claim it. The report is unsigned until the release signing key exists (AC4-T9).
+
+## Targets
+
 <!-- BEGIN GENERATED slo-table -->
 | Class | Name | Route | p50 ms | p95 ms | p99 ms | Error objective | Status | k6 scenario |
 |---|---|---|---|---|---|---|---|---|

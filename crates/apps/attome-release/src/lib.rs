@@ -31,6 +31,7 @@
 mod contract;
 pub mod parity;
 pub mod slo;
+pub mod slo_report;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -46,6 +47,9 @@ type Step = fn(&Path) -> Result<(), String>;
 pub struct Options {
     /// Also build, lint and test the web app.
     pub web: bool,
+    /// Also run the load-test matrix and write the SLO report (AA13-T6);
+    /// needs Docker, PowerShell and the load-test stack.
+    pub slo_evidence: bool,
     /// Named overrides of failing steps.
     pub overrides: Vec<Override>,
     /// The person taking responsibility for the overrides.
@@ -128,6 +132,9 @@ pub fn check_with(options: &Options) -> ExitCode {
     ];
     if options.web {
         steps.push(("web", web as Step));
+    }
+    if options.slo_evidence {
+        steps.push(("slo_evidence", slo_evidence as Step));
     }
     let ids: Vec<&str> = steps.iter().map(|(id, _)| *id).collect();
     if let Err(error) = validate_overrides(options, &ids) {
@@ -298,6 +305,7 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
             Some([generate, check]) if generate == "generate" && check == "--check" => {
                 Some(slo_generate(true))
             }
+            Some([report, matrix]) if report == "report" => Some(slo_report(Path::new(matrix))),
             _ => None,
         },
         Some("--check") => {
@@ -306,6 +314,7 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
             while let Some(arg) = rest.next() {
                 match arg.as_str() {
                     "--web" => options.web = true,
+                    "--slo-evidence" => options.slo_evidence = true,
                     "--by" => options.by = Some(rest.next()?.clone()),
                     "--override" => match parse_override(rest.next()?) {
                         Ok(item) => options.overrides.push(item),
@@ -332,6 +341,72 @@ fn slo_generate(check: bool) -> ExitCode {
             ExitCode::from(2)
         }
     }
+}
+
+/// `attome slo report <matrix-summary.json>`: the SLO release report and its
+/// release-notes fragment, in `target/release-gate/`.
+fn slo_report(matrix: &Path) -> ExitCode {
+    let root = match workspace_root() {
+        Ok(root) => root,
+        Err(error) => {
+            eprintln!("attome slo report: {error}");
+            return ExitCode::from(2);
+        }
+    };
+    match write_slo_report(&root, matrix) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("attome slo report: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn write_slo_report(root: &Path, matrix: &Path) -> Result<(), String> {
+    let commit = command_output(root, "git", &["rev-parse", "HEAD"]);
+    let written = slo_report::write(
+        root,
+        matrix,
+        &gate_dir(root),
+        commit.as_deref(),
+        unix_seconds(),
+    )?;
+    for path in written {
+        say(&format!("    wrote {}", path.display()));
+    }
+    Ok(())
+}
+
+/// The load-test matrix at one node, then the SLO report (AA13-T6). A missed
+/// class does not fail the step; the report and the notes say so.
+fn slo_evidence(root: &Path) -> Result<(), String> {
+    let shell = if cfg!(windows)
+        && Command::new("pwsh")
+            .arg("-Version")
+            .output()
+            .is_err()
+    {
+        "powershell"
+    } else {
+        "pwsh"
+    };
+    run(
+        Command::new(shell).args([
+            "-NoProfile",
+            "-File",
+            "loadtest/scripts/run-matrix.ps1",
+            "-NodeCounts",
+            "1",
+            "-RunTag",
+            "release",
+        ]),
+        root,
+        "the load-test matrix",
+    )?;
+    write_slo_report(
+        root,
+        &root.join("loadtest/results/matrix-summary-release.json"),
+    )
 }
 
 /// The SLO outputs match the catalogue (AA13-T2).
@@ -681,6 +756,7 @@ mod tests {
     fn options_with(overrides: &[(&str, &str)], by: Option<&str>) -> Options {
         Options {
             web: false,
+            slo_evidence: false,
             overrides: overrides
                 .iter()
                 .map(|(step, reason)| Override {

@@ -22,7 +22,7 @@ Usage:
   attome audit-chainer          Run the audit hash chainer
   attome verify-audit-chain     Verify the audit hash chain
   attome changeset-replay       Replay changesets against a database
-  attome release --check [--web] [--override <step>=<reason> --by <name>]
+  attome release --check [--web] [--slo-evidence] [--override <step>=<reason> --by <name>]
                                 Run the release gate: format, clippy, tests, the
                                 API contract, SLO outputs, Prometheus rules (and
                                 the web app with --web)
@@ -32,6 +32,8 @@ Usage:
   attome slo generate [--check]
                                 Regenerate the SLO rules, k6 thresholds and table
                                 from observability/slo-catalogue.json
+  attome slo report <matrix-summary.json>
+                                Write the SLO release report from a load-test run
   attome version           Print the version
   attome help              Print this help
 ";
