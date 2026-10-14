@@ -1,0 +1,66 @@
+# Agents
+
+How agents are defined, what they may do, and how they are held to it. Decisions: V2-D486, V2-D487.
+
+## Defining an agent
+
+An agent is an `agent` metadata object (`crates/engine/attome-model/src/kinds/agent.rs`), edited like
+any other kind: as a draft through `POST /api/v1/admin/model/agent/{id}/commands`, published through
+`.../publish`, or in the designer at `/model/agents`.
+
+```json
+{ "role": "Support triage",
+  "instructions": "Read new cases and propose the queue and priority.",
+  "tools": ["record.get", "record.schema", "record.update"],
+  "identity": { "run_as": "caller" },
+  "limits": { "max_steps": 20, "max_tool_calls": 40, "max_tokens": 60000,
+              "daily": { "record_changes": 200, "deletes": 0 } },
+  "triggers": [{ "kind": "record_change", "entity": "<entity id>" }],
+  "channels": ["chat"],
+  "persona": { "language": "ar", "temperature": 0.2 } }
+```
+
+Saving checks the tools exist, the limits are within the platform ceilings and each trigger's entity
+exists at publish.
+
+## What an agent may do
+
+Effective authority is a conjunction, and nothing in a definition widens it: the person's own
+privileges, the session's ceiling and allow-list, the organisation's agent policy, and the agent's
+own tools. A session started with `agent` (`POST /api/v1/agents/{id}/sessions`) takes the published
+agent's tools as one more allow-list and its `limits.daily` as per-day caps.
+
+- **Writes need a person.** Every write action stops at confirmation for an agent; consequential
+  ones need a second person's approval.
+- **Daily limits** count an agent's steps by class (record changes, deletes, messages, outside
+  calls) across all its sessions; at the cap the step is refused.
+  `GET /api/v1/admin/ai/agents/{agent}/usage` shows today's use.
+- **Switches.** `PUT /api/v1/admin/ai/switches/{kind}/{key}` turns an agent, model, provider, tool or
+  channel off at once (screen: `/ai/switches`). Turning it back on takes a different administrator.
+
+## Tools agents get
+
+- Records: `record.get`, `search.records`, `query.execute`, `record.schema` (an entity's typed input),
+  `record.validate` (a dry run of a create), `record.create|update|delete|restore`, `record.assign`.
+- Communication: `email.draft` files a draft; sending stays a person's step.
+- Building: `model.<kind>.describe|list|edit` for every metadata kind, found over MCP with
+  `tools.search`; edits are drafts a person confirms.
+
+## Running
+
+- In chat: `POST /api/v1/ai/conversations/{id}/messages`.
+- In the background: `POST /api/v1/ai/conversations/{id}/runs` returns at once; follow
+  `GET /api/v1/ai/conversations/{id}/stream`.
+- What a session did: `GET /api/v1/admin/agents/sessions/{id}/trace` (the Steps button on the agent
+  sessions screen).
+
+## Safety around the model
+
+- Untrusted text (records, documents, tool results) is cleaned of hidden characters and hidden HTML
+  before the model sees it, and wrapped as data.
+- An answer never carries record data to another host: outside images and data-carrying links are
+  removed before it is stored.
+- Prompt overrides (`prompt_override` kind) change editable sections only; the locked safety text
+  stays as shipped, and text that tells the model to ignore its rules or looks like a secret is
+  refused.
+- Eval suites (`eval_suite` kind) hold test cases per agent; a failed safety case fails the suite.
