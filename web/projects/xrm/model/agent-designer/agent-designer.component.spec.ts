@@ -18,13 +18,20 @@ describe('agent drafts', () => {
     });
     expect(draft).toEqual({
       role: 'Triage', instructions: 'Route cases.', tools: ['records.read'], runAs: 'service',
-      maxSteps: 5, maxToolCalls: 9, maxTokens: 1000, channels: ['web'],
+      maxSteps: 5, maxToolCalls: 9, maxTokens: 1000, channels: ['web'], daily: {},
     });
     const commands = commandsFor(draft);
     expect(commands.map(c => c.op === 'set' ? c.path : '')).toEqual(
       ['/role', '/instructions', '/tools', '/identity', '/limits', '/channels'],
     );
     expect(commands[4]).toEqual({ op: 'set', path: '/limits', value: { max_steps: 5, max_tool_calls: 9, max_tokens: 1000 } });
+  });
+
+  it('keeps daily limits through a round trip', () => {
+    const draft = draftFromDoc({ limits: { max_steps: 1, max_tool_calls: 1, max_tokens: 1, daily: { deletes: 3 } } });
+    expect(draft.daily).toEqual({ deletes: 3 });
+    const limits = commandsFor(draft)[4];
+    expect(limits).toEqual({ op: 'set', path: '/limits', value: { max_steps: 1, max_tool_calls: 1, max_tokens: 1, daily: { deletes: 3 } } });
   });
 
   it('fills defaults for a missing document', () => {

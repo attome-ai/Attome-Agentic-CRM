@@ -69,6 +69,14 @@
             <input #tokens id="ad-tokens" type="number" min="1" [value]="draft().maxTokens"
                    (input)="update({ maxTokens: numberFrom(tokens.value) })" />
           </div>
+          <p class="ad-muted">{{ 'agentDesigner.dailyHint' | translate }}</p>
+          <div class="ad-limits">
+            @for (key of dailyClasses; track key) {
+              <label [for]="'ad-daily-' + key">{{ ('agentDesigner.daily.' + key) | translate }}</label>
+              <input #daily type="number" min="0" [id]="'ad-daily-' + key" [value]="draft().daily[key] ?? ''"
+                     (input)="setDaily(key, daily.value)" />
+            }
+          </div>
         </fieldset>
 
         <label for="ad-run-as">{{ 'agentDesigner.runAs' | translate }}</label>

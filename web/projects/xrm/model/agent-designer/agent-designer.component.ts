@@ -13,14 +13,19 @@ export interface AgentDraft {
   maxToolCalls: number;
   maxTokens:    number;
   channels:     string[];
+  /** Per-day caps by limit class; a missing class has no cap (V2-D487). */
+  daily:        Partial<Record<DailyClass, number>>;
 }
+
+export const DAILY_CLASSES = ['record_changes', 'deletes', 'messages', 'external_calls'] as const;
+export type DailyClass = typeof DAILY_CLASSES[number];
 
 export const AGENT_CHANNELS = ['chat', 'web', 'whatsapp', 'sms', 'email'] as const;
 
 export function emptyAgent(): AgentDraft {
   return {
     role: '', instructions: '', tools: [], runAs: 'caller',
-    maxSteps: 20, maxToolCalls: 40, maxTokens: 60000, channels: ['chat'],
+    maxSteps: 20, maxToolCalls: 40, maxTokens: 60000, channels: ['chat'], daily: {},
   };
 }
 
@@ -40,7 +45,17 @@ export function draftFromDoc(doc: unknown): AgentDraft {
     maxToolCalls: typeof limits['max_tool_calls'] === 'number' ? limits['max_tool_calls'] : base.maxToolCalls,
     maxTokens:    typeof limits['max_tokens'] === 'number' ? limits['max_tokens'] : base.maxTokens,
     channels:     d['channels'] === undefined ? base.channels : list(d['channels']),
+    daily:        dailyFrom(limits['daily']),
   };
+}
+
+function dailyFrom(value: unknown): Partial<Record<DailyClass, number>> {
+  const out: Partial<Record<DailyClass, number>> = {};
+  const raw = (value ?? {}) as Record<string, unknown>;
+  for (const key of DAILY_CLASSES) {
+    if (typeof raw[key] === 'number') out[key] = raw[key];
+  }
+  return out;
 }
 
 /**
@@ -55,6 +70,7 @@ export function commandsFor(draft: AgentDraft): ModelCommand[] {
     { op: 'set', path: '/identity', value: { run_as: draft.runAs } },
     { op: 'set', path: '/limits', value: {
       max_steps: draft.maxSteps, max_tool_calls: draft.maxToolCalls, max_tokens: draft.maxTokens,
+      ...(Object.keys(draft.daily).length > 0 ? { daily: { ...draft.daily } } : {}),
     } },
     { op: 'set', path: '/channels', value: [...draft.channels] },
   ];
@@ -184,6 +200,17 @@ export class AgentDesignerComponent implements OnInit {
       next: () => { this.saving.set(false); this.status.set('published'); this.loadAgents(); },
       error: (e: ApiError) => { this.error.set(e.message); this.saving.set(false); },
     });
+  }
+
+  readonly dailyClasses = DAILY_CLASSES;
+
+  /** Sets one daily cap; a blank input removes it. */
+  setDaily(key: DailyClass, value: string): void {
+    const daily = { ...this.draft().daily };
+    const n = Number.parseInt(value, 10);
+    if (value.trim() === '' || !Number.isFinite(n)) delete daily[key];
+    else daily[key] = Math.max(0, n);
+    this.update({ daily });
   }
 
   numberFrom(value: string): number {

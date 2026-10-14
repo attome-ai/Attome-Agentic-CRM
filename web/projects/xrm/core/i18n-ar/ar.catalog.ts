@@ -136,6 +136,8 @@ export const xrmAr = {
     runAs: 'يعمل بصفة', runAsCaller: 'الشخص الذي يستخدمه', runAsService: 'هوية الخدمة الخاصة به',
     channels: 'القنوات', save: 'حفظ المسودة', publish: 'نشر', saved: 'تم حفظ المسودة', published: 'تم النشر',
     channel: { chat: 'المحادثة', web: 'الويب', whatsapp: 'واتساب', sms: 'الرسائل النصية', email: 'البريد الإلكتروني' },
+    dailyHint: 'في اليوم، عبر جميع جلسات هذا الوكيل. اتركه فارغًا لعدم وجود حد.',
+    daily: { record_changes: 'السجلات المعدّلة', deletes: 'عمليات الحذف', messages: 'الرسائل المرسلة', external_calls: 'الاستدعاءات الخارجية' },
   },
   // Y1-T15 — مستكشف البيانات الوصفية، انظر en.catalog.ts
   metadataExplorer: {
