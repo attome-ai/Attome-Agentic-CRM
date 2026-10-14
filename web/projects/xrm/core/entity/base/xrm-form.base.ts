@@ -263,6 +263,25 @@ export abstract class EngineFormBase implements OnInit {
     });
   }
 
+  /** B7-T3: whether a copy is being made. */
+  readonly duplicating = signal(false);
+
+  /** B7-T3: copies this record and opens the copy. */
+  duplicate(): void {
+    const id = this.id();
+    if (!id || this.duplicating()) return;
+    this.duplicating.set(true);
+    this.svc.clone(this.entityLogicalName, id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: copy => {
+        this.duplicating.set(false);
+        if (copy.id) {
+          void this.router.navigate(entityFormRoute(this.entityLogicalName), { queryParams: { id: copy.id } });
+        }
+      },
+      error: () => this.duplicating.set(false),
+    });
+  }
+
   /**
    * A28-T2: a new record starts with its attributes' defaults
    * (`GET /api/v1/{entity}/new`), filling only controls still empty. A host

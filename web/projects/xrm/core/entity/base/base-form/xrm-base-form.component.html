@@ -35,6 +35,14 @@
         <!-- U4 (D-602) — a reminder about this record, for the signed-in user. -->
         @if (f.isEdit() && f.id(); as recordId) {
           <xrm-remind-me [entity]="f.name()" [recordId]="recordId" />
+          <!-- B7-T3 — a copy through the ordinary create. -->
+          @if (!readOnly()) {
+            <button type="button" class="xf-btn xf-btn-secondary" data-testid="entity-duplicate"
+                    [disabled]="f.duplicating()" (click)="f.duplicate()">
+              <i class="las la-copy" aria-hidden="true"></i>
+              {{ 'xrmForm.duplicate' | translate }}
+            </button>
+          }
           <!-- U7 Phase A — admin-only Assign / Share (renders nothing otherwise);
                a read-only form cannot be reassigned. -->
           @if (!readOnly()) {

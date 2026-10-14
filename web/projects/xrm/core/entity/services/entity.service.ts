@@ -191,6 +191,13 @@ export class EntityService {
     return this.api.delete(`/api/v1/${entityName}/${id}`);
   }
 
+  /** B7-T3: copies a record through the ordinary create; returns the copy's id. */
+  clone(entityName: string, id: string): Observable<{ id: string | null }> {
+    return this.api.post<{ id: string | null }>(
+      `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(id)}/clone`, {},
+    );
+  }
+
   /** A28-T2: the values a new record of `entityName` starts with, by field. */
   newDefaults(entityName: string): Observable<Record<string, unknown>> {
     return this.api.get<Record<string, unknown>>(`/api/v1/${encodeURIComponent(entityName)}/new`);

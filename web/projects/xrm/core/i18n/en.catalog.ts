@@ -93,6 +93,7 @@ export const xrmEn = {
   // Shared chrome of every `xf-*` record form (entity-form + the bespoke
   // document/note/organization/privilege/team/user forms).
   xrmForm: {
+    duplicate: 'Duplicate',
     loadingRecord: 'Loading record…', editRecord: 'Edit record', newRecord: 'New record',
     edit: 'Edit', new: 'New', back: 'Back', save: 'Save', cancel: 'Cancel',
     saving: 'Saving…', saved: 'Saved', update: 'Update', create: 'Create',

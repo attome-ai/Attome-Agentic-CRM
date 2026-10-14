@@ -11,6 +11,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- A Duplicate button on a saved record copies it and opens the copy.
 - `POST /api/v1/{entity}/{id}/clone` copies a record through the ordinary create (system,
   autonumbered, file, formula and engine-owned fields left out; `overrides` and `preview`).
 - Brand theme tokens with a WCAG 2.2 contrast check (`attome_core::theme_tokens`): text 4.5:1,

@@ -78,6 +78,7 @@ export const xrmAr = {
 
   // ── FE-2 (2026-08-25): انظر en.catalog.ts — نفس المفاتيح مفتاحاً بمفتاح ──
   xrmForm: {
+    duplicate: 'تكرار',
     loadingRecord: 'جاري تحميل السجل…', editRecord: 'تعديل السجل', newRecord: 'سجل جديد',
     edit: 'تعديل', new: 'جديد', back: 'رجوع', save: 'حفظ', cancel: 'إلغاء',
     saving: 'جاري الحفظ…', saved: 'تم الحفظ', update: 'تحديث', create: 'إنشاء',
