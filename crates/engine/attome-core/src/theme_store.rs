@@ -194,6 +194,86 @@ pub async fn publish(
     Ok((published, report))
 }
 
+/// Puts an earlier version of a scope's theme back: that version is
+/// published again (its colours still checked) and the current one retired.
+pub async fn rollback(
+    conn: &mut PgConnection,
+    scope_kind: &str,
+    scope_ref: &str,
+    version: i32,
+) -> Result<ThemeRow, AppError> {
+    check_scope(scope_kind, scope_ref)?;
+    let target: (Uuid, i64) = sqlx::query_as(
+        "SELECT id, row_version FROM theme \
+         WHERE scope_kind = $1 AND scope_ref = $2 AND version = $3 FOR UPDATE",
+    )
+    .bind(scope_kind)
+    .bind(scope_ref)
+    .bind(version)
+    .fetch_optional(&mut *conn)
+    .await
+    .map_err(attome_db::classify)?
+    .ok_or(AppError::NotFound)?;
+    publish(conn, target.0, target.1).await.map(|(row, _)| row)
+}
+
+/// One token that differs between a version and its scope's published one.
+#[derive(Debug, Clone, PartialEq, Serialize, ToSchema)]
+pub struct TokenChange {
+    pub field: String,
+    pub before: Option<serde_json::Value>,
+    pub after: Option<serde_json::Value>,
+}
+
+/// The tokens `after` changes against `before`, field by field.
+pub fn token_changes(before: &ThemeTokens, after: &ThemeTokens) -> Vec<TokenChange> {
+    let as_map = |t: &ThemeTokens| match serde_json::to_value(t) {
+        Ok(serde_json::Value::Object(map)) => map,
+        _ => serde_json::Map::new(),
+    };
+    let (b, a) = (as_map(before), as_map(after));
+    let mut fields: Vec<&String> = b.keys().chain(a.keys()).collect();
+    fields.sort();
+    fields.dedup();
+    fields
+        .into_iter()
+        .filter_map(|field| {
+            let present = |m: &serde_json::Map<String, serde_json::Value>| {
+                m.get(field).filter(|v| !v.is_null()).cloned()
+            };
+            let (old, new) = (present(&b), present(&a));
+            (old != new).then(|| TokenChange {
+                field: field.clone(),
+                before: old,
+                after: new,
+            })
+        })
+        .collect()
+}
+
+/// What a version changes against its scope's published version (all of it
+/// when nothing is published).
+pub async fn diff(db: &attome_db::DbPool, id: Uuid) -> Result<Vec<TokenChange>, AppError> {
+    let row: ThemeRow = sqlx::query_as(&format!("SELECT {COLUMNS} FROM theme WHERE id = $1"))
+        .bind(id)
+        .fetch_optional(db)
+        .await
+        .map_err(attome_db::classify)?
+        .ok_or(AppError::NotFound)?;
+    let published: Option<sqlx::types::Json<ThemeTokens>> = sqlx::query_scalar(
+        "SELECT tokens FROM theme WHERE scope_kind = $1 AND scope_ref = $2 \
+           AND status = 'published' AND id <> $3",
+    )
+    .bind(&row.scope_kind)
+    .bind(&row.scope_ref)
+    .bind(id)
+    .fetch_optional(db)
+    .await
+    .map_err(attome_db::classify)?;
+    let before = published.map(|p| p.0).unwrap_or_default();
+    Ok(token_changes(&before, &row.tokens))
+}
+
 /// The published theme of each scope a request falls under, merged from the
 /// deployment's outwards: deployment, then the domain (`host`), then the
 /// portal. A scope with no published theme adds nothing.
@@ -246,6 +326,27 @@ pub async fn list(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn token_changes_name_only_what_differs() {
+        use crate::theme_tokens::HexColor;
+        let before = ThemeTokens {
+            primary: Some(HexColor::parse("#111111").unwrap()),
+            radius_px: Some(4),
+            ..ThemeTokens::default()
+        };
+        let after = ThemeTokens {
+            primary: Some(HexColor::parse("#222222").unwrap()),
+            radius_px: Some(4),
+            hide_vendor_name: Some(true),
+            ..ThemeTokens::default()
+        };
+        let changes = token_changes(&before, &after);
+        let fields: Vec<&str> = changes.iter().map(|c| c.field.as_str()).collect();
+        assert_eq!(fields, vec!["hide_vendor_name", "primary"]);
+        assert_eq!(changes[1].before, Some(serde_json::json!("#111111")));
+        assert!(token_changes(&after, &after).is_empty());
+    }
 
     #[test]
     fn scopes_are_checked() {

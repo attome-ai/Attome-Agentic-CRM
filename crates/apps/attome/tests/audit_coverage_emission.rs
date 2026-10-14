@@ -3348,6 +3348,35 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 created["row_version"].as_i64().expect("row_version"),
             )
         }
+        "POST /api/v1/admin/themes/rollback" => {
+            let scope_ref = uniq("portal");
+            let created = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/themes",
+                Some(json!({"scope_kind": "portal", "scope_ref": scope_ref, "tokens": {}})),
+            )
+            .await;
+            call(
+                fx,
+                with_if_match(
+                    request(
+                        "POST",
+                        &format!("/api/v1/admin/themes/{}/publish", id_of(&created)),
+                        t,
+                        None,
+                    ),
+                    created["row_version"].as_i64().expect("row_version"),
+                ),
+            )
+            .await;
+            request(
+                "POST",
+                "/api/v1/admin/themes/rollback",
+                t,
+                Some(json!({"scope_kind": "portal", "scope_ref": scope_ref, "version": 1})),
+            )
+        }
         // ── tag groups (B4-T2) ──────────────────────────────────────────────
         "POST /api/v1/admin/tag-groups" => request(
             "POST",

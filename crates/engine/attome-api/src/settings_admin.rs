@@ -578,6 +578,78 @@ async fn publish_theme(
     Ok(Json(row))
 }
 
+/// `POST /api/v1/admin/themes/rollback`.
+#[derive(Deserialize, ToSchema)]
+struct ThemeRollbackBody {
+    scope_kind: String,
+    #[serde(default)]
+    scope_ref: String,
+    /// The version to publish again.
+    version: i32,
+}
+
+/// B13-T3: publishes an earlier version of a scope's theme again.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/themes/rollback",
+    tag = "settings",
+    request_body = ThemeRollbackBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The version now published", body = ThemeRow),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No such version", body = ErrorResponse),
+        (status = 422, description = "Invalid scope, or colours that fail the contrast check", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn rollback_theme(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(body): Json<ThemeRollbackBody>,
+) -> Result<Json<ThemeRow>, AppError> {
+    let event = theme_event(
+        AuditOperation::Update,
+        ctx.user_id,
+        Uuid::nil(),
+        "theme.rolled_back",
+    );
+    let mut stx = SecurityTx::begin(&state, event).await?;
+    let row = theme_store::rollback(
+        &mut stx,
+        &body.scope_kind,
+        body.scope_ref.trim(),
+        body.version,
+    )
+    .await?;
+    stx.event_mut().set_record_id(row.id);
+    stx.commit().await?;
+    Ok(Json(row))
+}
+
+/// B13-T3: what a version changes against its scope's published one.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/themes/{id}/diff",
+    tag = "settings",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "Each changed token, before and after", body = Vec<theme_store::TokenChange>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No such theme", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn diff_theme(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Vec<theme_store::TokenChange>>, AppError> {
+    Ok(Json(theme_store::diff(&state.base.db, id).await?))
+}
+
 /// B13-T4: checks colours without saving anything.
 #[utoipa::path(
     post,
@@ -656,6 +728,11 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/themes/{id}/publish",
             axum::routing::post(publish_theme),
         )
+        .route(
+            "/api/v1/admin/themes/rollback",
+            axum::routing::post(rollback_theme),
+        )
+        .route("/api/v1/admin/themes/{id}/diff", get(diff_theme))
         .route("/api/v1/branding/public", get(public_branding))
 }
 
@@ -670,6 +747,8 @@ pub fn routes() -> Router<EngineState> {
     update_theme,
     publish_theme,
     preview_theme,
+    rollback_theme,
+    diff_theme,
     public_branding
 ))]
 struct ApiDocFragment;
