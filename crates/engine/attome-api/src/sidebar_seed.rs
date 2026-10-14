@@ -2159,30 +2159,6 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     )
     .await?;
 
-    // ── Trading Engine (trade) ─────────────────────────────────────────────
-    let trade_group = upsert_sidebar(
-        db,
-        "Trading",
-        None,
-        "las la-chart-line",
-        "#10b981",
-        None,
-        50,
-        Some("trd"),
-    )
-    .await?;
-    upsert_sidebar(
-        db,
-        "Terminal & Lab",
-        Some("/xrm/trade"),
-        "las la-chart-bar",
-        "#10b981",
-        Some(trade_group),
-        10,
-        Some("trd"),
-    )
-    .await?;
-
     deactivate_subtree(db, "Coming Soon").await?;
     for (order, module_key, label) in [
         (401, "state", "State"),

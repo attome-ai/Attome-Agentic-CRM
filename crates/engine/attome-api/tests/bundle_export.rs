@@ -171,8 +171,8 @@ async fn export_is_deterministic_and_self_plan_is_all_noop() {
     assert_eq!(first.format, BUNDLE_FORMAT);
     assert!(first.requires.modules.iter().any(|m| m == "core"));
     assert!(
-        first.requires.schema_version >= 132,
-        "export must run against a database migrated through 0132 (is_customized); got {}",
+        first.requires.schema_version >= 10,
+        "export must run against a database with the v2 baseline migrated (0010); got {}",
         first.requires.schema_version
     );
     assert!(first.requires.platform_version.starts_with(">="));
