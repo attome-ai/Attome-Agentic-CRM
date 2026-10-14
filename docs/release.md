@@ -67,6 +67,11 @@ version` in `Cargo.toml`, moves `[Unreleased]` under `## [2.0.0] - <date>`, adds
 `docs/releases/stability.json`, commits `release: v2.0.0` and creates the annotated tag `v2.0.0`.
 It never pushes: push the branch and the tag yourself once you are satisfied.
 
+Pushing the tag starts `.github/workflows/release.yml`, which builds the web app and the `attome`
+binary for Linux and Windows, packs each with the web app as `attome-<os>-x86_64.(tar.gz|zip)` plus
+a `.sha256` file, and attaches them to the GitHub release of the tag. `scripts/install.sh` and
+`scripts/install.ps1` download the latest of these, or the one `--version`/`-Version` names.
+
 ## 5. After the release
 
 The stability ledger records what happened to each release:
