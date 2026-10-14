@@ -8,6 +8,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `document.extract`: invoice and receipt fields (VAT number, invoice number, date, total, VAT) from
+  text with a confidence each, the exact fields of a ZATCA QR code, and the fields to review.
+- Local OCR (`inference.ocr`, a vision model) and speech to text (`inference.speech`) in
+  `attome-inference`, both inside the deployment only.
+- `attome init --ai <profile>` verifies a local model pack's weights against its checksums.
+- Agents and prompts publish only while their eval suites' newest runs pass every safety case;
+  `PublishResponse.warnings` reports a score that fell.
+- `GET /api/v1/admin/knowledge/explain`: why a question retrieves the passages it does.
 - Chat answers show tool results as live tables, charts and record cards; "Do this every time" saves
   the request as a workflow draft that runs the same agent. Bulk changes above 20 records run only
   after their own preview (`preview_token`).

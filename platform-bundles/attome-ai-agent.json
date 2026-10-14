@@ -25,7 +25,7 @@
           "options": {
             "choices": [
               "agent.delegate", "agent.kill", "agent.pause", "agent.playground_complete", "agent.resume",
-              "approval.status", "article.draft", "bot.handoff", "email.draft", "graph.traverse",
+              "approval.status", "article.draft", "bot.handoff", "document.extract", "email.draft", "graph.traverse",
               "knowledge.answer", "mcp.call.consequential", "mcp.call.read", "mcp.call.reversible", "mcp.tools",
               "memory.forget", "memory.remember", "model.agent.describe", "model.agent.edit", "model.agent.list",
               "model.attribute.describe", "model.entity.describe", "model.eval_suite.describe",

@@ -22,6 +22,7 @@ pub mod claim_check;
 pub mod classify;
 pub mod draft_article;
 pub mod draft_email;
+pub mod extract_document;
 pub mod graph;
 pub mod knowledge;
 pub mod knowledge_answer;
@@ -62,6 +63,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(transition::descriptors());
     all.push(translate::descriptor());
     all.push(sentiment::descriptor());
+    all.push(extract_document::descriptor());
     all.push(ai_field::descriptor());
     all.extend(crate::mcp_client::descriptors());
     all.push(search_records::descriptor());
@@ -101,6 +103,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(transition::RecordTransition));
     all.push(Box::new(translate::TextTranslate));
     all.push(Box::new(sentiment::TextSentiment));
+    all.push(Box::new(extract_document::DocumentExtract));
     all.push(Box::new(ai_field::RecordAiField));
     all.extend(crate::mcp_client::executors());
     all.push(Box::new(search_records::SearchRecords));
