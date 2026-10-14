@@ -106,3 +106,30 @@ async fn openapi_json(
 pub fn routes() -> Router<AppState> {
     Router::new().route("/api/v1/openapi.json", get(openapi_json))
 }
+
+#[cfg(test)]
+mod tests {
+    /// Every operation has its own `operationId`. utoipa takes the handler's
+    /// function name, so two `start_run` handlers collide, and the generated
+    /// TypeScript then refuses to compile (duplicate identifier).
+    #[test]
+    fn operation_ids_are_unique() {
+        let doc = serde_json::to_value(&*super::document()).unwrap();
+        let mut seen = std::collections::BTreeMap::new();
+        let mut duplicates = Vec::new();
+        for (path, item) in doc["paths"].as_object().unwrap() {
+            for (method, operation) in item.as_object().unwrap() {
+                if let Some(id) = operation["operationId"].as_str() {
+                    let here = format!("{} {path}", method.to_uppercase());
+                    if let Some(first) = seen.insert(id.to_owned(), here.clone()) {
+                        duplicates.push(format!("{id}: {first} and {here}"));
+                    }
+                }
+            }
+        }
+        assert!(
+            duplicates.is_empty(),
+            "give each a distinct `operation_id = \"...\"` in its #[utoipa::path]: {duplicates:#?}"
+        );
+    }
+}

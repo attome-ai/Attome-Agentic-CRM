@@ -662,6 +662,7 @@ pub struct RunStarted {
 #[utoipa::path(
     post,
     path = "/api/v1/ai/conversations/{id}/runs",
+    operation_id = "start_conversation_run",
     tag = "action",
     extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
         attome_audit::security::ExemptReason::Delegated,

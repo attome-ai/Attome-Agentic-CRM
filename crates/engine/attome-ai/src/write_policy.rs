@@ -81,6 +81,7 @@ pub struct NewWritePolicy {
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/write-policies",
+    operation_id = "list_write_policies",
     tag = "action",
     responses(
         (status = 200, description = "Active per-write approval policies", body = PaginatedResponse<WritePolicy>),
@@ -115,6 +116,7 @@ async fn list_policies(
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/write-policies",
+    operation_id = "create_write_policy",
     tag = "action",
     request_body = NewWritePolicy,
     responses(

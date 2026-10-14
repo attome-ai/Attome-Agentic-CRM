@@ -325,6 +325,7 @@ async fn get_object(
 #[utoipa::path(
     get,
     path = "/api/v1/admin/model/{kind}/{id}/versions/{version}",
+    operation_id = "get_model_version",
     tag = "admin",
     params(
         ("kind" = String, Path, description = "Kind name"),
@@ -590,6 +591,7 @@ pub(crate) struct PublishResponse {
 #[utoipa::path(
     post,
     path = "/api/v1/admin/model/{kind}/{id}/publish",
+    operation_id = "publish_model_object",
     tag = "admin",
     params(("kind" = String, Path, description = "Kind name"), ("id" = Uuid, Path, description = "Object id")),
     responses(

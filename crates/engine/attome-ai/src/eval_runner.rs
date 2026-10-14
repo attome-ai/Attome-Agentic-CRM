@@ -203,6 +203,7 @@ async fn run_suite(
 #[utoipa::path(
     post,
     path = "/api/v1/admin/ai/eval-suites/{suite}/runs",
+    operation_id = "start_eval_run",
     tag = "action",
     params(("suite" = Uuid, Path, description = "The eval suite object (its newest version runs)")),
     responses(
@@ -353,6 +354,7 @@ pub(crate) async fn run_as_last_starter(
 #[utoipa::path(
     get,
     path = "/api/v1/admin/ai/eval-runs/{id}",
+    operation_id = "get_eval_run",
     tag = "action",
     params(("id" = Uuid, Path, description = "The eval run")),
     responses(
