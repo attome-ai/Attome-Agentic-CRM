@@ -5855,6 +5855,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/themes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** B13-T4: every theme version, by scope, newest first. */
+        get: operations["list_themes"];
+        put?: never;
+        /** B13-T4: saves a new draft version of a scope's theme. */
+        post: operations["create_theme"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/themes/preview-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** B13-T4: checks colours without saving anything. */
+        post: operations["preview_theme"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/themes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** B13-T4: replaces a draft's tokens. `If-Match: "<row_version>"` is required. */
+        patch: operations["update_theme"];
+        trace?: never;
+    };
+    "/api/v1/admin/themes/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B13-T3: publishes a version once its colours pass the contrast check; the
+         *     scope's previous version is retired. `If-Match: "<row_version>"` is
+         *     required. A failing theme is refused naming each pair and its ratio.
+         */
+        post: operations["publish_theme"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/usage": {
         parameters: {
             query?: never;
@@ -7767,6 +7840,27 @@ export interface paths {
          *     necessarily logged in when clicking the emailed link.
          */
         post: operations["verify_email_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/branding/public": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * B13-T5: the published brand for this host, for the sign-in page and the
+         *     app shell: CSS variables, fonts and whether to hide the vendor's name.
+         *     No session and no user data.
+         */
+        get: operations["public_branding"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -14388,6 +14482,24 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        /** @description One pair that reads too faintly, or two status colours too alike. */
+        ContrastFailure: {
+            /** @description `light`, `dark`, or `distinct` for two status colours. */
+            mode: string;
+            /** @description `text/surface`, `primary/surface`, `success/danger`, … */
+            pair: string;
+            /**
+             * Format: double
+             * @description The measured contrast ratio, or ΔE for `distinct`.
+             */
+            ratio: number;
+            /** Format: double */
+            required: number;
+        };
+        ContrastReport: {
+            failures: components["schemas"]["ContrastFailure"][];
+            passed: boolean;
+        };
         ConversationDetail: {
             conversation: components["schemas"]["ConversationView"];
             governance: components["schemas"]["GovernanceView"];
@@ -15375,6 +15487,11 @@ export interface components {
             status: string;
             subject: string;
         };
+        /**
+         * @description How tightly the product packs its content.
+         * @enum {string}
+         */
+        Density: "comfortable" | "compact";
         DescribeQueryBody: {
             sql_query: string;
         };
@@ -17010,6 +17127,11 @@ export interface components {
             /** @description Phase 3.5 — what is reported but never blocks. */
             warnings: components["schemas"]["GateIssue"][];
         };
+        /**
+         * @description A colour as `#RRGGBB`.
+         * @example #6d28d9
+         */
+        HexColor: string;
         /** @description `PUT /api/v1/admin/hijri-months/{year}/{month}`. */
         HijriCorrection: {
             /**
@@ -21375,6 +21497,32 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_ThemeRow: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: date-time */
+                published_at?: string | null;
+                /** Format: int64 */
+                row_version: number;
+                scope_kind: string;
+                scope_ref: string;
+                /** @description `draft`, `published` or `retired`. */
+                status: string;
+                tokens: components["schemas"]["ThemeTokens"];
+                /** Format: int32 */
+                version: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_TimelineEntry: {
             items: {
                 /**
@@ -22558,6 +22706,18 @@ export interface components {
              *     The caller reports the human's decision against it.
              */
             suggestion_id?: string | null;
+        };
+        /**
+         * @description What the browser applies: the CSS variables the theme sets, and whether
+         *     to hide the vendor's name.
+         */
+        PublicBranding: {
+            font_arabic?: string | null;
+            font_latin?: string | null;
+            hide_vendor_name: boolean;
+            variables: {
+                [key: string]: string;
+            };
         };
         PublicOffering: {
             category?: string | null;
@@ -25379,6 +25539,57 @@ export interface components {
             /** @description `hidden` or `disabled`. */
             effect: string;
             field: string;
+        };
+        /** @description `POST /api/v1/admin/themes`. */
+        ThemeDraftBody: {
+            /** @description `deployment`, `app`, `unit`, `domain` or `portal`. */
+            scope_kind: string;
+            /** @description The app, unit, domain (host name) or portal; empty for the deployment. */
+            scope_ref?: string;
+            tokens: components["schemas"]["ThemeTokens"];
+        };
+        /** @description One version of a scope's theme. */
+        ThemeRow: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            published_at?: string | null;
+            /** Format: int64 */
+            row_version: number;
+            scope_kind: string;
+            scope_ref: string;
+            /** @description `draft`, `published` or `retired`. */
+            status: string;
+            tokens: components["schemas"]["ThemeTokens"];
+            /** Format: int32 */
+            version: number;
+        };
+        /** @description A theme: every token optional, so a scope overrides only what it sets. */
+        ThemeTokens: {
+            accent?: null | components["schemas"]["HexColor"];
+            /** Format: float */
+            arabic_line_height?: number | null;
+            danger?: null | components["schemas"]["HexColor"];
+            density?: null | components["schemas"]["Density"];
+            font_arabic?: string | null;
+            font_latin?: string | null;
+            hide_vendor_name?: boolean | null;
+            info?: null | components["schemas"]["HexColor"];
+            primary?: null | components["schemas"]["HexColor"];
+            /** Format: int32 */
+            radius_px?: number | null;
+            success?: null | components["schemas"]["HexColor"];
+            surface?: null | components["schemas"]["HexColor"];
+            surface_dark?: null | components["schemas"]["HexColor"];
+            text?: null | components["schemas"]["HexColor"];
+            text_dark?: null | components["schemas"]["HexColor"];
+            warning?: null | components["schemas"]["HexColor"];
+        };
+        /** @description `PATCH /api/v1/admin/themes/{id}` and `POST .../preview-check`. */
+        ThemeTokensBody: {
+            tokens: components["schemas"]["ThemeTokens"];
         };
         /** @description One entry in a record's timeline. */
         TimelineEntry: {
@@ -47675,6 +47886,295 @@ export interface operations {
             };
         };
     };
+    list_themes: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of theme versions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ThemeRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_theme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThemeDraftBody"];
+            };
+        };
+        responses: {
+            /** @description The new draft */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThemeRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another save of this scope's theme is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid scope or token */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_theme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThemeTokensBody"];
+            };
+        };
+        responses: {
+            /** @description The contrast report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContrastReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_theme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThemeTokensBody"];
+            };
+        };
+        responses: {
+            /** @description The draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThemeRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such theme */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing If-Match, an invalid token, or not a draft */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    publish_theme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThemeRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such theme */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing If-Match, or colours that fail the contrast check */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     usage: {
         parameters: {
             query?: never;
@@ -53457,6 +53957,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    public_branding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The brand to apply */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBranding"];
                 };
             };
         };

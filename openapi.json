@@ -32290,6 +32290,435 @@
         }
       }
     },
+    "/api/v1/admin/themes": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T4: every theme version, by scope, newest first.",
+        "operationId": "list_themes",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of theme versions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ThemeRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T4: saves a new draft version of a scope's theme.",
+        "operationId": "create_theme",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThemeDraftBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The new draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThemeRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another save of this scope's theme is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid scope or token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/themes/preview-check": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T4: checks colours without saving anything.",
+        "operationId": "preview_theme",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThemeTokensBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The contrast report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContrastReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "measures colours and writes nothing",
+          "reason": "dry_run",
+          "via": null
+        }
+      }
+    },
+    "/api/v1/admin/themes/{id}": {
+      "patch": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T4: replaces a draft's tokens. `If-Match: \"<row_version>\"` is required.",
+        "operationId": "update_theme",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThemeTokensBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThemeRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such theme",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing If-Match, an invalid token, or not a draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/themes/{id}/publish": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T3: publishes a version once its colours pass the contrast check; the\nscope's previous version is retired. `If-Match: \"<row_version>\"` is\nrequired. A failing theme is refused naming each pair and its ratio.",
+        "operationId": "publish_theme",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Published",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThemeRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such theme",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale row_version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Missing If-Match, or colours that fail the contrast check",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
     "/api/v1/admin/usage": {
       "get": {
         "tags": [
@@ -41141,6 +41570,27 @@
             }
           ],
           "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/branding/public": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T5: the published brand for this host, for the sign-in page and the\napp shell: CSS variables, fonts and whether to hide the vendor's name.\nNo session and no user data.",
+        "operationId": "public_branding",
+        "responses": {
+          "200": {
+            "description": "The brand to apply",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBranding"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -66852,6 +67302,53 @@
           }
         }
       },
+      "ContrastFailure": {
+        "type": "object",
+        "description": "One pair that reads too faintly, or two status colours too alike.",
+        "required": [
+          "pair",
+          "mode",
+          "ratio",
+          "required"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "description": "`light`, `dark`, or `distinct` for two status colours."
+          },
+          "pair": {
+            "type": "string",
+            "description": "`text/surface`, `primary/surface`, `success/danger`, …"
+          },
+          "ratio": {
+            "type": "number",
+            "format": "double",
+            "description": "The measured contrast ratio, or ΔE for `distinct`."
+          },
+          "required": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "ContrastReport": {
+        "type": "object",
+        "required": [
+          "passed",
+          "failures"
+        ],
+        "properties": {
+          "failures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContrastFailure"
+            }
+          },
+          "passed": {
+            "type": "boolean"
+          }
+        }
+      },
       "ConversationDetail": {
         "type": "object",
         "required": [
@@ -69425,6 +69922,14 @@
             "type": "string"
           }
         }
+      },
+      "Density": {
+        "type": "string",
+        "description": "How tightly the product packs its content.",
+        "enum": [
+          "comfortable",
+          "compact"
+        ]
       },
       "DescribeQueryBody": {
         "type": "object",
@@ -73341,6 +73846,11 @@
             "description": "Phase 3.5 — what is reported but never blocks."
           }
         }
+      },
+      "HexColor": {
+        "type": "string",
+        "description": "A colour as `#RRGGBB`.",
+        "example": "#6d28d9"
       },
       "HijriCorrection": {
         "type": "object",
@@ -85535,6 +86045,85 @@
           }
         }
       },
+      "PaginatedResponse_ThemeRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One version of a scope's theme.",
+              "required": [
+                "id",
+                "scope_kind",
+                "scope_ref",
+                "version",
+                "status",
+                "tokens",
+                "created_at",
+                "row_version"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "published_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "scope_kind": {
+                  "type": "string"
+                },
+                "scope_ref": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`draft`, `published` or `retired`."
+                },
+                "tokens": {
+                  "$ref": "#/components/schemas/ThemeTokens"
+                },
+                "version": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_TimelineEntry": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -88384,6 +88973,40 @@
             ],
             "format": "uuid",
             "description": "The row in `ai_suggestion_outcome` this suggestion was logged as.\nThe caller reports the human's decision against it."
+          }
+        }
+      },
+      "PublicBranding": {
+        "type": "object",
+        "description": "What the browser applies: the CSS variables the theme sets, and whether\nto hide the vendor's name.",
+        "required": [
+          "variables",
+          "hide_vendor_name"
+        ],
+        "properties": {
+          "font_arabic": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "font_latin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hide_vendor_name": {
+            "type": "boolean"
+          },
+          "variables": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
           }
         }
       },
@@ -95424,6 +96047,240 @@
           },
           "field": {
             "type": "string"
+          }
+        }
+      },
+      "ThemeDraftBody": {
+        "type": "object",
+        "description": "`POST /api/v1/admin/themes`.",
+        "required": [
+          "scope_kind",
+          "tokens"
+        ],
+        "properties": {
+          "scope_kind": {
+            "type": "string",
+            "description": "`deployment`, `app`, `unit`, `domain` or `portal`."
+          },
+          "scope_ref": {
+            "type": "string",
+            "description": "The app, unit, domain (host name) or portal; empty for the deployment."
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/ThemeTokens"
+          }
+        }
+      },
+      "ThemeRow": {
+        "type": "object",
+        "description": "One version of a scope's theme.",
+        "required": [
+          "id",
+          "scope_kind",
+          "scope_ref",
+          "version",
+          "status",
+          "tokens",
+          "created_at",
+          "row_version"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "published_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "scope_kind": {
+            "type": "string"
+          },
+          "scope_ref": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "`draft`, `published` or `retired`."
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/ThemeTokens"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ThemeTokens": {
+        "type": "object",
+        "description": "A theme: every token optional, so a scope overrides only what it sets.",
+        "properties": {
+          "accent": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HexColor"
+              }
+            ]
+          },
+          "arabic_line_height": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "danger": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HexColor"
+              }
+            ]
+          },
+          "density": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Density"
+              }
+            ]
+          },
+          "font_arabic": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "font_latin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hide_vendor_name": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "info": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HexColor"
+              }
+            ]
+          },
+          "primary": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HexColor"
+              }
+            ]
+          },
+          "radius_px": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "success": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HexColor"
+              }
+            ]
+          },
+          "surface": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HexColor"
+              }
+            ]
+          },
+          "surface_dark": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HexColor"
+              }
+            ]
+          },
+          "text": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HexColor"
+              }
+            ]
+          },
+          "text_dark": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HexColor"
+              }
+            ]
+          },
+          "warning": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/HexColor"
+              }
+            ]
+          }
+        }
+      },
+      "ThemeTokensBody": {
+        "type": "object",
+        "description": "`PATCH /api/v1/admin/themes/{id}` and `POST .../preview-check`.",
+        "required": [
+          "tokens"
+        ],
+        "properties": {
+          "tokens": {
+            "$ref": "#/components/schemas/ThemeTokens"
           }
         }
       },
