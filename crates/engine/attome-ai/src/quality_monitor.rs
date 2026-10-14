@@ -231,6 +231,45 @@ async fn alert_significant_drop(
     }
 }
 
+/// Sends one alert to every administrator, best effort: a failure is logged
+/// and never fails the caller's job (the caller has already logged the fact).
+pub(crate) async fn alert_admins(
+    db: &DbPool,
+    notification_cfg: &NotificationSection,
+    subject: String,
+    body: String,
+    route: &str,
+) {
+    let recipients = match admin_recipients(db).await {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::error!(error = %e, "ai alert: failed to resolve admin recipients");
+            return;
+        }
+    };
+    for user_id in recipients {
+        let req = DispatchRequest {
+            template_key: None,
+            locale: "en".to_string(),
+            recipient_user_ref: Some(user_id),
+            is_global: false,
+            organization_ref: None,
+            channels: None,
+            subject: Some(subject.clone()),
+            body_html: None,
+            body_text: Some(body.clone()),
+            route: Some(route.to_string()),
+            variables: HashMap::new(),
+            priority: "high".to_string(),
+            escalate_after_minutes: None,
+            escalate_channels: None,
+        };
+        if let Err(e) = create_dispatch(db, notification_cfg, req).await {
+            tracing::error!(error = %e, user_id = %user_id, "ai alert: dispatch failed for one recipient");
+        }
+    }
+}
+
 pub struct QualityMonitorSummary {
     pub groups_checked: usize,
     pub groups_flagged: usize,

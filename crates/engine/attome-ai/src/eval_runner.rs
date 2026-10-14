@@ -220,6 +220,44 @@ async fn start_run(
     ctx: Authorized<Admin>,
     Path(suite): Path<Uuid>,
 ) -> Result<(StatusCode, Json<EvalRunStarted>), AppError> {
+    let planned = record_run(&state, suite, ctx.user_id).await?;
+    let count = planned.cases.len();
+    let run_id = planned.run_id;
+    let security = ctx.into_inner();
+    // Not awaited: an administrator follows the run with GET. A process that
+    // dies mid-run leaves the row `running`; the next run supersedes it.
+    drop(tokio::spawn(run_suite(
+        state.clone(),
+        security,
+        planned.run_id,
+        planned.doc,
+        planned.agent,
+        planned.cases,
+    )));
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(EvalRunStarted {
+            run_id,
+            cases: count,
+            status: "running".into(),
+        }),
+    ))
+}
+
+/// A run recorded and ready to execute.
+struct PlannedRun {
+    run_id: Uuid,
+    doc: Value,
+    agent: Uuid,
+    cases: Vec<Value>,
+}
+
+/// Reads the suite, records the run row and its Ai security event.
+async fn record_run(
+    state: &EngineState,
+    suite: Uuid,
+    started_by: Uuid,
+) -> Result<PlannedRun, AppError> {
     let version = attome_model::store::read(&state.base.db, suite, None).await?;
     if version.kind != attome_model::kinds::eval_suite::EVAL_SUITE.as_str() {
         return Err(AppError::NotFound);
@@ -233,7 +271,7 @@ async fn start_run(
     .bind(suite)
     .bind(&version.content_hash)
     .bind(agent)
-    .bind(ctx.user_id)
+    .bind(started_by)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -243,7 +281,7 @@ async fn start_run(
         SecurityEvent::new(
             MandatoryCategory::Ai,
             AuditOperation::Create,
-            ctx.user_id,
+            started_by,
             "ai_eval_run",
             Some(run_id),
         )
@@ -255,26 +293,60 @@ async fn start_run(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    let count = cases.len();
-    let security = ctx.into_inner();
-    // Not awaited: an administrator follows the run with GET. A process that
-    // dies mid-run leaves the row `running`; the next run supersedes it.
-    drop(tokio::spawn(run_suite(
+    Ok(PlannedRun {
+        run_id,
+        doc: version.doc,
+        agent,
+        cases,
+    })
+}
+
+/// Runs `suite` to the end as the administrator who last started it by hand
+/// and returns its score (the pinned-model drift check, N25-T2). `None` when
+/// nobody has run the suite yet, that person is no longer an active
+/// administrator, or the run ended in an error rather than a grade.
+pub(crate) async fn run_as_last_starter(
+    state: &EngineState,
+    suite: Uuid,
+) -> Result<Option<f64>, AppError> {
+    let starter: Option<Uuid> = sqlx::query_scalar(
+        "SELECT started_by FROM ai_eval_run WHERE suite_ref = $1 \
+         ORDER BY started_at DESC LIMIT 1",
+    )
+    .bind(suite)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(starter) = starter else {
+        return Ok(None);
+    };
+    let security = match state.base.security.resolve_strict(starter).await {
+        Ok(security) if security.is_admin => security,
+        Ok(_) | Err(AppError::NotFound | AppError::Forbidden | AppError::Unauthorized) => {
+            return Ok(None);
+        }
+        Err(error) => return Err(error),
+    };
+    let planned = record_run(state, suite, starter).await?;
+    let run_id = planned.run_id;
+    run_suite(
         state.clone(),
         security,
         run_id,
-        version.doc,
-        agent,
-        cases,
-    )));
-    Ok((
-        StatusCode::ACCEPTED,
-        Json(EvalRunStarted {
-            run_id,
-            cases: count,
-            status: "running".into(),
-        }),
-    ))
+        planned.doc,
+        planned.agent,
+        planned.cases,
+    )
+    .await;
+    let score: Option<f64> = sqlx::query_scalar(
+        "SELECT score FROM ai_eval_run WHERE id = $1 AND status IN ('passed', 'failed')",
+    )
+    .bind(run_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?
+    .flatten();
+    Ok(score)
 }
 
 /// `GET /api/v1/admin/ai/eval-runs/{id}`

@@ -109,3 +109,9 @@ answers and proposes any change through its own gate.
   stays as shipped, and text that tells the model to ignore its rules or looks like a secret is
   refused.
 - Eval suites (`eval_suite` kind) hold test cases per agent; a failed safety case fails the suite.
+- A fine-tuned or adapter model is pinned on its AI Model row: `pinned_version`, `base_model`, the
+  eval suite that judges it (`drift_suite_ref`), its expected score (`drift_baseline`) and how far it
+  may fall (`drift_tolerance`, default 0.05). Each night the suite re-runs, as the administrator who
+  last ran it by hand, and administrators are alerted when the score drifts below the baseline.
+- Masked personal values come back in an answer only for a viewer who may read the field they came
+  from; anyone else sees the token, and a forbidden value the answer repeats verbatim is replaced.

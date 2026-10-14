@@ -856,6 +856,18 @@ async fn dispatch_platform_job(
                     );
                 }
             }
+            // N25-T2: re-run each pinned model's eval suite and alert on drift.
+            match attome_ai::model_drift::check(&attome_state, &config.notification).await {
+                Ok(drift) => tracing::info!(
+                    checked = drift.checked,
+                    drifted = drift.drifted,
+                    skipped = drift.skipped,
+                    "ai quality monitor: pinned-model drift check complete"
+                ),
+                Err(error) => {
+                    tracing::error!(%error, "ai quality monitor: pinned-model drift check failed");
+                }
+            }
         }
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.

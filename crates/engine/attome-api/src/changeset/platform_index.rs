@@ -282,6 +282,11 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0048-attome-ai-bot-analytics-data.json"
         ),
     },
+    PlatformChangeset {
+        file: "0049-attome-ai-model-pinning.json",
+        name: "attome-ai-model-pinning",
+        json: include_str!("../../../../../changesets/platform/0049-attome-ai-model-pinning.json"),
+    },
 ];
 
 #[cfg(test)]

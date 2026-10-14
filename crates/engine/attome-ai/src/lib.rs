@@ -103,6 +103,7 @@ pub mod injection;
 /// is `dispatch`, and nothing is added to the closed catalogue (I-5).
 pub mod mcp;
 pub mod mcp_client;
+pub mod model_drift;
 pub mod model_registry;
 pub mod orchestrate;
 pub mod outcome;
