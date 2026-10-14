@@ -1221,6 +1221,7 @@ impl Ctx<'_> {
         let db = &self.state.base.db_migrator;
         let had_index: bool = sqlx::query_scalar(
             "SELECT COALESCE(is_sortable, false) OR COALESCE(is_filterable, false) \
+                    OR COALESCE(\"type\", 3) = 11 \
              FROM attribute_info \
              WHERE entity_ref = $1 AND logicalname = $2 AND COALESCE(is_active, true) = true",
         )
@@ -1255,7 +1256,10 @@ impl Ctx<'_> {
             };
             self.audit(entity, attr_id, operation, event).await?;
         }
-        let wanted = attr.is_sortable || attr.is_filterable;
+        // A7-T3: a lookup is always indexed.
+        let wanted = attr.is_sortable
+            || attr.is_filterable
+            || attr.field_type.eq_ignore_ascii_case("lookup");
         if wrote(outcome) && had_index != wanted {
             let db = &self.state.base.db_migrator;
             if provision::attribute_index_requires_async(

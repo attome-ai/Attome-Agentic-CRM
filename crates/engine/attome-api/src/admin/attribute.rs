@@ -550,7 +550,10 @@ pub(crate) async fn do_create_attribute_recorded(
     // outside this handler's own transaction — see the comment at the
     // ensure_attribute call site) so an oversized entity+field pair 422s with
     // no stranded metadata row.
-    if body.is_sortable || body.is_filterable {
+    // A7-T3: a lookup is always indexed (the FK checks and related lists
+    // read it), whatever its sort and filter flags say.
+    let is_lookup = body.field_type.trim().eq_ignore_ascii_case("lookup");
+    if body.is_sortable || body.is_filterable || is_lookup {
         provision::attribute_index_name(&entity_logicalname, &logicalname)?;
     }
     let display_name = body.name.trim().to_owned();
@@ -677,7 +680,7 @@ pub(crate) async fn do_create_attribute_recorded(
         provision::ChangeClassification::Expensive { .. }
     );
 
-    let wants_index = body.is_sortable || body.is_filterable;
+    let wants_index = body.is_sortable || body.is_filterable || is_lookup;
     let enqueue_index = wants_index
         && provision::attribute_index_requires_async(
             &state.base.db_migrator,
@@ -1231,8 +1234,11 @@ pub(crate) async fn do_update_attribute_recorded(
         provision::ChangeClassification::Expensive { .. }
     );
 
-    let wants_index = new_sortable || new_filterable;
-    let had_index = cur.is_sortable.unwrap_or(false) || cur.is_filterable.unwrap_or(false);
+    // A7-T3: a lookup keeps its index whatever its flags say.
+    let wants_index = new_sortable || new_filterable || new_ft_str == "lookup";
+    let had_index = cur.is_sortable.unwrap_or(false)
+        || cur.is_filterable.unwrap_or(false)
+        || current_ft == "lookup";
     let index_changed = wants_index != had_index;
     // P-provisioning-hardening item (a): same early check as create_attribute,
     // on the toggle-ON path (either flag going false->true) — before the

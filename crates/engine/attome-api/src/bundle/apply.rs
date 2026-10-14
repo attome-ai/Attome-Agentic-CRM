@@ -1443,8 +1443,12 @@ async fn apply_attribute(
                 .iter()
                 .find(|a| a.logicalname == attr.logicalname)
         })
-        .is_some_and(|a| a.is_sortable || a.is_filterable);
-    let wanted = attr.is_sortable || attr.is_filterable;
+        .is_some_and(|a| {
+            a.is_sortable || a.is_filterable || a.field_type.eq_ignore_ascii_case("lookup")
+        });
+    // A7-T3: a lookup is always indexed.
+    let wanted =
+        attr.is_sortable || attr.is_filterable || attr.field_type.eq_ignore_ascii_case("lookup");
     if wrote(outcome) && had_index != wanted {
         let async_build = provision::attribute_index_requires_async(
             db,
