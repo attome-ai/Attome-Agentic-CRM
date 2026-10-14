@@ -294,6 +294,18 @@ async fn seed_stepped_up_session_cookie(state: &attome_server::AppState) -> (Uui
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 
+/// A client address no other test in this run has used. The rate limiter keys
+/// on the client IP, and a counter outlives the test that moved it for the
+/// whole window, so tests sharing an address (the old pid-derived one) spend
+/// each other's budgets when they run one after another.
+fn unique_client_ip() -> String {
+    // Documentation prefix 2001:db8::/32 (RFC 3849), never a real client.
+    format!(
+        "2001:db8::{:x}",
+        uuid::Uuid::now_v7().as_u128() & 0xffff_ffff
+    )
+}
+
 #[tokio::test]
 async fn disallowed_origin_preflight_is_not_echoed() {
     let (app, _state) = skip_if_no_db!(test_app(test_config(1000, 1000)).await);
@@ -344,7 +356,7 @@ async fn allowed_origin_is_echoed_with_credentials() {
 #[tokio::test]
 async fn anonymous_login_is_rate_limited_by_ip() {
     let (app, _state) = skip_if_no_db!(test_app(test_config(3, 1000)).await);
-    let ip = format!("203.0.113.{}", std::process::id() % 250 + 1); // unique-ish per test run
+    let ip = unique_client_ip();
 
     let mut last_status = StatusCode::OK;
     for _ in 0..5 {
@@ -381,7 +393,7 @@ async fn anonymous_login_is_rate_limited_by_ip() {
 #[tokio::test]
 async fn consent_capture_is_rate_limited_before_the_body_is_read() {
     let (app, _state) = skip_if_no_db!(test_app(test_config(3, 1000)).await);
-    let ip = format!("203.0.113.{}", (std::process::id() % 250) + 1);
+    let ip = unique_client_ip();
 
     let mut last_status = StatusCode::OK;
     for _ in 0..5 {
@@ -414,10 +426,12 @@ async fn consent_capture_is_rate_limited_before_the_body_is_read() {
 #[tokio::test]
 async fn different_categories_from_the_same_ip_do_not_share_a_budget() {
     let (app, _state) = skip_if_no_db!(test_app(test_config(3, 1000)).await);
-    let ip = format!("203.0.113.{}", (std::process::id() + 1) % 250 + 1);
+    let ip = unique_client_ip();
+    let peer = unique_peer();
 
     for _ in 0..3 {
         let req = Request::builder()
+            .extension(axum::extract::ConnectInfo(peer))
             .method("POST")
             .uri("/api/v1/auth/login")
             .header("content-type", "application/json")
@@ -429,6 +443,7 @@ async fn different_categories_from_the_same_ip_do_not_share_a_budget() {
         app.clone().oneshot(req).await.expect("request");
     }
     let exhausted_req = Request::builder()
+        .extension(axum::extract::ConnectInfo(peer))
         .method("POST")
         .uri("/api/v1/auth/login")
         .header("content-type", "application/json")
@@ -448,6 +463,7 @@ async fn different_categories_from_the_same_ip_do_not_share_a_budget() {
     );
 
     let other_category_req = Request::builder()
+        .extension(axum::extract::ConnectInfo(peer))
         .method("GET")
         .uri("/api/v1/auth/register/config")
         .header("x-forwarded-for", &ip)
@@ -470,7 +486,7 @@ async fn different_categories_from_the_same_ip_do_not_share_a_budget() {
 #[tokio::test]
 async fn a_rejected_request_carries_real_rate_limit_headers() {
     let (app, _state) = skip_if_no_db!(test_app(test_config(1, 1000)).await);
-    let ip = format!("203.0.113.{}", (std::process::id() + 2) % 250 + 1);
+    let ip = unique_client_ip();
 
     let make_req = || {
         Request::builder()

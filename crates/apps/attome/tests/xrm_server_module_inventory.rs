@@ -57,6 +57,15 @@
 //! contains four is a materially smaller cost than standing up a new engine
 //! crate for one endpoint.
 //!
+//! # v2 re-baseline (2026-10-14)
+//!
+//! v1's `xrm-server` crate is `attome-api` in v2 and it absorbed the handler
+//! modules of several v1 engine crates when the workspace was laid out in
+//! three layers, so the module list is longer than the 33 frozen above. The
+//! baseline below is the v2 snapshot, taken as the new starting point for the
+//! same ratchet: it only ever shrinks as handlers move to their owning engine
+//! crate.
+//!
 //! # Scope and limits
 //!
 //! Reads `lib.rs` only, literally: `mod name;` with any visibility prefix,
@@ -81,37 +90,63 @@ use std::path::{Path, PathBuf};
 /// diff of a re-baseline reviewable.
 const BASELINE: &[&str] = &[
     "admin",
+    "admin_hooks",
     "api_usage_admin",
+    "app_admin",
     "approval_admin",
-    "bulk",
-    "bulk_graph",
+    "approval_policy_admin",
+    "audit_read",
+    "bootstrap_admin",
+    "bulk_transform",
     "bundle",
+    "business_rule_admin",
+    "business_rule_hooks",
+    "calendar_admin",
     "capability_probe",
-    "communication_seed",
+    "catalog_admin",
+    "changes_admin",
+    "changeset",
+    "communication",
     "content_public",
-    "document_seed",
-    "documents_tree",
+    "data_export",
+    "data_mapping_admin",
+    "data_profile_admin",
+    "duplicates_admin",
+    "duplicates_match",
     "email_admin",
-    "entity_crud",
-    "entity_mutation",
-    "files",
-    "files_scan",
+    "features_admin",
+    "field_changes",
+    "field_hooks",
     "jobs_admin",
     "license_admin",
-    "license_seed",
+    "metadata_label_admin",
     "metrics",
-    "note_seed",
+    "migration",
+    "my_work",
+    "my_work_approvals",
+    "my_work_decisions",
+    "my_work_project",
+    "my_work_service",
+    "my_work_workflow",
+    "omnichannel_metrics",
     "openapi",
     "profiler_admin",
-    "query_admin",
-    "query_exec",
+    "quality_admin",
+    "quality_score",
     "registry",
-    "rw_pin",
+    "relationship_admin",
+    "reminder_access",
+    "rule_admin",
     "schema",
+    "seed_support",
+    "service_public",
+    "settings_admin",
     "sidebar",
     "sidebar_seed",
+    "signoff",
     "system",
     "system_health",
+    "tag_seed",
     "view_admin",
     "webcrawl_admin",
 ];

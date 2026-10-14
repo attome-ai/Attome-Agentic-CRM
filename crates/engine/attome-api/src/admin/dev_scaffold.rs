@@ -43,9 +43,9 @@ fn dev_gate_open() -> bool {
     attome_config::is_debug_env() && std::env::var("ATTOME_DEV_SCAFFOLD").as_deref() == Ok("1")
 }
 
-/// `crates/engine/attome-api` -> repo root is three levels up.
+/// `crates/engine/attome-api` -> repo root is three levels up; the Angular workspace is `web/`.
 fn angular_root() -> PathBuf {
-    PathBuf::from(MANIFEST_DIR).join("../../../angular")
+    PathBuf::from(MANIFEST_DIR).join("../../../web")
 }
 
 /// Directory holding `provide-xrm-forms.ts`, `xrm-form.base.ts`, and

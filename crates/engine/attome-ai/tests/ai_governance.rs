@@ -210,6 +210,14 @@ async fn outcomes_without_provenance_is_zero_on_a_healthy_fixture() {
     let db = attome_testkit::skip_if_no_db!(test_db().await);
     seed_once(&db).await;
 
+    // The suite shares one database across its tests, and the bad-row test
+    // below leaves a provenance-less row behind. So this asserts that the
+    // healthy rows add none, not an absolute zero.
+    let before = attome_ai::compliance_report::build_report(&db)
+        .await
+        .expect("build_report")
+        .outcomes_without_provenance;
+
     // A healthy fixture: every row carries real provenance, the same shape
     // `telemetry::record_suggestion` always writes.
     let model_id = format!("healthy-model-{}", Uuid::now_v7());
@@ -242,8 +250,8 @@ async fn outcomes_without_provenance_is_zero_on_a_healthy_fixture() {
         .await
         .expect("build_report");
     assert_eq!(
-        report.outcomes_without_provenance, 0,
-        "a healthy fixture must report zero outcomes without provenance"
+        report.outcomes_without_provenance, before,
+        "healthy rows must add no outcome without provenance"
     );
 
     let row = report

@@ -112,7 +112,7 @@ pub const PLATFORM_BUNDLES: &[(&str, &str)] = &[
     ),
     (
         "xrm-core-api-key",
-        include_str!("../../../../../platform-bundles/xrm-core-api_key.json"),
+        include_str!("../../../../../platform-bundles/xrm-core-api-key.json"),
     ),
     (
         "xrm-core-authentication-type",

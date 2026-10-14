@@ -160,6 +160,13 @@ mod tests {
         }
         assert_eq!(Vote::parse("sideways"), None);
         let migration = include_str!("../../../apps/attome/migrations/0008_modules.sql");
-        assert!(migration.contains("CHECK (vote IN ('up', 'down'))"));
+        assert!(
+            migration.contains("ai_message_feedback_vote_known CHECK"),
+            "the baseline names the vote CHECK constraint"
+        );
+        assert!(
+            migration.contains("ARRAY['up'::text, 'down'::text]"),
+            "the vote CHECK allows exactly the two values Vote parses"
+        );
     }
 }

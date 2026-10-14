@@ -166,7 +166,7 @@ async fn test_app() -> Option<(EngineState, axum::Router)> {
     attome_api::bundle::apply_platform_bundle(
         system.state(),
         "api_key",
-        include_str!("../../../../platform-bundles/xrm-core-api_key.json"),
+        include_str!("../../../../platform-bundles/xrm-core-api-key.json"),
     )
     .await
     .expect("apply the api_key platform bundle");

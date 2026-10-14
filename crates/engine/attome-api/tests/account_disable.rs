@@ -282,8 +282,8 @@ async fn seed_refresh_token(db: &attome_db::DbPool, user_id: Uuid) -> Uuid {
     let token_id = Uuid::now_v7();
     sqlx::query(
         "INSERT INTO refresh_token \
-         (id, user_ref, public_id, secret_hash, family_id, expires_at) \
-         VALUES ($1, $2, $3, 'hmac256:v0$deadbeef', $4, NOW() + INTERVAL '30 days')",
+         (id, user_ref, public_id, secret_hash, family_id, family_started_at, expires_at) \
+         VALUES ($1, $2, $3, 'hmac256:v0$deadbeef', $4, NOW(), NOW() + INTERVAL '30 days')",
     )
     .bind(token_id)
     .bind(user_id)

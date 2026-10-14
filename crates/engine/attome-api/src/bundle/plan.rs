@@ -1566,7 +1566,9 @@ mod tests {
         assert!(keys.contains(&"format"), "{keys:?}");
         assert!(keys.contains(&"requires.schema_version"), "{keys:?}");
         assert!(keys.contains(&"requires.platform_version"), "{keys:?}");
-        assert!(keys.contains(&"requires.modules:core"), "{keys:?}"); // unlicensed
+        // There are no licences, so a module is never "unlicensed": only a
+        // name no module has is blocked.
+        assert!(!keys.contains(&"requires.modules:core"), "{keys:?}");
         assert!(keys.contains(&"requires.modules:nope"), "{keys:?}"); // unknown
         assert!(blocked.iter().all(|e| e.component == COMPONENT_BUNDLE));
         assert!(blocked.iter().all(|e| e.action == PlanAction::Blocked));

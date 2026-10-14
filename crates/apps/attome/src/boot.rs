@@ -867,7 +867,7 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     // XRM entity — see `crates/server/src/auth`). Used to be
     // `crate::apikey_seed::seed(&db_migrator)` right after the migrator pool
     // came up; D-478 (seeds-to-bundles, second pass) moved its content to
-    // `platform-bundles/xrm-core-api_key.json`, applied here because
+    // `platform-bundles/xrm-core-api-key.json`, applied here because
     // `apply_platform_bundle` needs `state`. Same `"api_key"` watermark key
     // the old seed used, so an existing deployment's history carries over.
     // No lookup onto anything provisioned inside `.build()` (`user_ref` is

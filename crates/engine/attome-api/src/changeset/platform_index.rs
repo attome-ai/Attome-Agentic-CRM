@@ -121,9 +121,9 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
         json: include_str!("../../../../../changesets/platform/0018-attome-ai-agent-data.json"),
     },
     PlatformChangeset {
-        file: "0019-xrm-core-api_key.json",
+        file: "0019-xrm-core-api-key.json",
         name: "xrm-core-api-key",
-        json: include_str!("../../../../../changesets/platform/0019-xrm-core-api_key.json"),
+        json: include_str!("../../../../../changesets/platform/0019-xrm-core-api-key.json"),
     },
     PlatformChangeset {
         file: "0020-attome-search-saved-search.json",

@@ -756,7 +756,7 @@ Requires: platform >=4.3.0; after project/acme/0001-acme-contracts.
 - 8 Phase 2 operation(s) — the target server must run a release with Phase 2 (older releases refuse them).
 - Breaking changes for API users (3): contract.renewal_date renamed to renewal_on; contract.contract_value now currency; contract.value_text removed.
 
-Checksum: `sha256:8d03d7364881ed933a3925e5d12e93a9c9b50fce5de931cdb3315f0673d7df77`
+Checksum: `sha256:0763674fc4a69e557f80188c5babab991670f106623490d6989bc85b5279b481`
 ";
 
     /// `node scripts/changesets/summarize.mjs <fixture>` output, verbatim.
@@ -781,7 +781,7 @@ Requires: platform >=4.2.0; after platform/platform/0001-service-desk-priority.
 
 - 1 contract operation(s) — removals; they run in the same apply, after the expand operations and the health check, so check nothing of ours still uses what they remove.
 
-Checksum: `sha256:3c4a3376a891685744625765a39dc9b5df216b81f2da76a7eaffa6c09779e526`
+Checksum: `sha256:d94fb2394f9fc6d208e93735488e2a45afda45716df78e3550fff477766ff44c`
 ";
 
     const PLATFORM_SUMMARY: &str = "# Service desk: ticket priority and triage view
@@ -799,7 +799,7 @@ Requires: platform >=4.2.0; modules service.
 3. Set what the role \"Service Desk Agent\" may do on \"service_ticket\": read=organization, write=user.
 4. Create or update the \"service_category\" record with code = \"HW\".
 
-Checksum: `sha256:6f221a380f8ec7ab3714b2210417be6b9055a4cfa1b5f912930d468853df9ba7`
+Checksum: `sha256:33bf590a327b275250efd035255ce0ae353c6b3f81e860e80b08f965a25b4623`
 ";
 
     #[test]

@@ -1082,9 +1082,9 @@ async fn apikey_platform_bundle_is_a_pure_noop_after_apply() {
         "api_key",
         &std::fs::read_to_string(
             std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../../platform-bundles/xrm-core-api_key.json"),
+                .join("../../../platform-bundles/xrm-core-api-key.json"),
         )
-        .expect("read xrm-core-api_key.json"),
+        .expect("read xrm-core-api-key.json"),
     )
     .await
     .expect("apply api_key");
