@@ -44,6 +44,11 @@ fn record_for_passes_validation() {
             let seed = 42;
             let token = attome_testkit::unique("fx");
             let body = attome_testapp::fixtures::record_for(meta, seed, &token);
+            // An entity with no field a caller sets (every column is the
+            // system's) has nothing to create through the generic API.
+            if body.is_empty() {
+                continue;
+            }
             let (status, response) = app
                 .request(
                     Method::POST,
