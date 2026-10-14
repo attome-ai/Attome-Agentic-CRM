@@ -1,0 +1,44 @@
+<section class="sp">
+  <h2>{{ 'aiSpend.title' | translate }}</h2>
+  @if (error(); as message) {
+    <p class="sp-error" role="alert">{{ message }}</p>
+  }
+  @if (report(); as r) {
+    <p class="sp-muted">
+      {{ 'aiSpend.intro' | translate }} <code dir="ltr">{{ r.model }}</code> · {{ r.window_days }} {{ 'aiSpend.days' | translate }}
+    </p>
+    @if (!r.priced) {
+      <p class="sp-muted" data-test="unpriced">{{ 'aiSpend.unpriced' | translate }}</p>
+    }
+    @if (r.lines.length === 0) {
+      <p class="sp-muted">{{ 'aiSpend.none' | translate }}</p>
+    } @else {
+      <ul class="sp-list">
+        @for (line of r.lines; track line.scope + '/' + line.key) {
+          @let state = stateOf(line, r.degrade_at_percent);
+          <li class="sp-line" [attr.data-line]="line.scope + '/' + line.key" [attr.data-state]="state">
+            <span class="sp-name">
+              {{ ('aiSpend.scopes.' + line.scope) | translate }}
+              @if (line.key) {
+                <code dir="ltr">{{ line.key }}</code>
+              }
+            </span>
+            <span class="sp-track" role="img" [attr.aria-label]="line.percent + '%'">
+              <span class="sp-fill" [class.sp-near]="state === 'near'" [class.sp-over]="state === 'over'" [style.inline-size.%]="width(line)"></span>
+            </span>
+            <span dir="ltr">{{ line.spent }} / {{ line.cap }}</span>
+            <span class="sp-muted">
+              {{ 'aiSpend.forecast' | translate }} <span dir="ltr">{{ line.forecast }}</span>
+              @if (forecastOver(line)) {
+                <strong class="sp-warn">{{ 'aiSpend.forecastOver' | translate }}</strong>
+              }
+            </span>
+            @if (state !== 'ok') {
+              <span class="sp-state">{{ ('aiSpend.states.' + state) | translate }}</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>

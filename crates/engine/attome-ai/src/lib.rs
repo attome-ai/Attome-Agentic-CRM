@@ -121,6 +121,7 @@ pub mod sanitize_input;
 pub mod scope_switch;
 pub mod session;
 pub mod session_admin;
+pub mod spend_report;
 pub mod telemetry;
 /// C2 (D-553, I-13) — the pending-proposal store. Holds the executable
 /// payload a confirmation dispatches, and a claim/lease that is deliberately
@@ -178,6 +179,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(analytics::openapi_fragment());
     doc.merge(runtime_switch::openapi_fragment());
     doc.merge(scope_switch::openapi_fragment());
+    doc.merge(spend_report::openapi_fragment());
     doc
 }
 

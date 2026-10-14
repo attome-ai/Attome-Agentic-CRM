@@ -534,6 +534,13 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiScopeSwitchesComponent),
           },
           {
+            // N24-T2: AI spend against the money caps (the API refuses
+            // non-administrators).
+            path: 'ai/spend',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/ai').then(m => m.AiSpendComponent),
+          },
+          {
             // C6 (D-556) — the live-session supervisor: the screen over
             // GET /api/v1/admin/agents/sessions, gated on
             // `ai_agent.supervise` (the same privilege the three actions

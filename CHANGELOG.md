@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `GET /api/v1/admin/ai/spend` and the AI spend screen (`/ai/spend`): this month's spend per
+  deployment, feature and agent against each cap, with the month forecast.
 - Money budgets for AI (`inference.spend`): prices per model and monthly caps per deployment, person,
   agent and feature; near a cap generations are shortened, at a cap refused (429) before any spend.
 - `record.summarize` sees the related records and the recent timeline (within a budget, every part

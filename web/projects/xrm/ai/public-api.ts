@@ -22,4 +22,5 @@ export { AiPlaygroundComponent } from './playground/ai-playground.component';
 // loads `registerAiEntityForms` and never needs a named import.
 export { AiAgentSessionsComponent } from './admin/agent-sessions/ai-agent-sessions.component';
 export { AiScopeSwitchesComponent, SCOPE_KINDS } from './admin/scope-switches/ai-scope-switches.component';
+export { AiSpendComponent, forecastOver, spendState, type SpendLine, type SpendReport } from './spend/spend.component';
 export type { ScopeSwitch } from './admin/scope-switches/ai-scope-switches.component';

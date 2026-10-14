@@ -159,6 +159,14 @@ export const xrmEn = {
     kinds: { agent: 'Agent', model: 'Model', provider: 'Provider', tool: 'Tool', channel: 'Channel' },
     causes: { manual: 'by an administrator', budget: 'budget overrun', quality: 'quality drop', injection: 'injection spike', departure: 'owner left' },
   },
+  // N24-T2 — AI spend.
+  aiSpend: {
+    title: 'AI spend', intro: 'This month against each cap, for', days: 'days',
+    unpriced: 'This model has no price, so nothing is counted against a money cap.',
+    none: 'No money caps are set.', forecast: 'Month forecast', forecastOver: 'over the cap',
+    scopes: { spend_deployment: 'Whole deployment', spend_feature: 'Feature', spend_agent: 'Agent' },
+    states: { near: 'Near the cap: answers are shortened', over: 'At the cap: requests are refused' },
+  },
   // A21-T2 — an app's menu.
   appMenu: { label: 'App menu' },
   // N9-T2 — the agent designer.
