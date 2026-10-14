@@ -1,0 +1,29 @@
+<section class="us">
+  <h2>{{ 'usagePage.title' | translate }}</h2>
+  @if (error(); as message) {
+    <p class="us-error" role="alert">{{ message }}</p>
+  }
+  @if (usage(); as u) {
+    <dl class="us-figures">
+      <div>
+        <dt>{{ 'usagePage.usersActive' | translate }}</dt>
+        <dd data-figure="active">{{ u.users_active }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'usagePage.usersRecent' | translate }}</dt>
+        <dd data-figure="recent">{{ u.users_signed_in_30d }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'usagePage.contract' | translate }}</dt>
+        <dd dir="auto">{{ u.contract_reference ?? ('usagePage.noContract' | translate) }}</dd>
+      </div>
+    </dl>
+    <h3>{{ 'usagePage.modules' | translate }} ({{ u.modules_on.length }})</h3>
+    <ul class="us-modules">
+      @for (m of u.modules_on; track m) {
+        <li><code dir="ltr">{{ m }}</code></li>
+      }
+    </ul>
+    <p class="us-muted">{{ 'usagePage.note' | translate }}</p>
+  }
+</section>

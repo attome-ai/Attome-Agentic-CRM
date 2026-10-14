@@ -91,6 +91,10 @@ pub struct AppSection {
     /// Where packs live. Unset: `packs` next to the executable.
     #[serde(default)]
     pub packs_root: Option<String>,
+    /// U11-T1: the operator's contract or purchase-order reference, shown on
+    /// the usage page. Free text; nothing is enforced by it.
+    #[serde(default)]
+    pub contract_reference: Option<String>,
 }
 
 fn default_deployment_profile() -> String {

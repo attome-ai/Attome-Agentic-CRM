@@ -27,10 +27,67 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 pub fn routes() -> Router<EngineState> {
-    Router::new().route(
-        "/api/v1/admin/license/modules",
-        get(get_module_configuration).put(update_module_configuration),
+    Router::new()
+        .route(
+            "/api/v1/admin/license/modules",
+            get(get_module_configuration).put(update_module_configuration),
+        )
+        .route("/api/v1/admin/usage", get(usage))
+}
+
+/// U11-T1: what this deployment runs and who uses it. There are no seats or
+/// expiry dates in v2 (D-778); this is information, not enforcement.
+#[derive(Serialize, ToSchema)]
+struct UsageResponse {
+    /// The modules this deployment runs.
+    modules_on: Vec<String>,
+    /// Accounts that can sign in.
+    users_active: i64,
+    /// Accounts that signed in during the last 30 days.
+    users_signed_in_30d: i64,
+    /// `app.contract_reference`, when the operator set one.
+    contract_reference: Option<String>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/usage",
+    tag = "admin",
+    responses(
+        (status = 200, description = "Modules on, active users and the contract reference", body = UsageResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn usage(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Result<Json<UsageResponse>, AppError> {
+    let (users_active, users_signed_in_30d): (i64, i64) = sqlx::query_as(
+        "SELECT COUNT(*) FILTER (WHERE is_active), \
+                COUNT(*) FILTER (WHERE is_active AND last_login > now() - interval '30 days') \
+         FROM user_account",
     )
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let modules_on = state.modules.load().names().map(str::to_owned).collect();
+    let contract_reference = state
+        .base
+        .config
+        .app
+        .contract_reference
+        .as_deref()
+        .map(str::trim)
+        .filter(|r| !r.is_empty())
+        .map(str::to_owned);
+    Ok(Json(UsageResponse {
+        modules_on,
+        users_active,
+        users_signed_in_30d,
+        contract_reference,
+    }))
 }
 
 #[derive(Serialize, ToSchema)]
@@ -286,7 +343,7 @@ async fn update_module_configuration(
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(get_module_configuration, update_module_configuration))]
+#[openapi(paths(get_module_configuration, update_module_configuration, usage))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

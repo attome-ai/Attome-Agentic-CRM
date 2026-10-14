@@ -177,6 +177,11 @@ export const xrmEn = {
     tryOn: 'Try on a record', entity: 'Entity', record: 'Record id', show: 'Show what the model receives',
   },
   // N30-T5/T9 — AI governance.
+  usagePage: {
+    title: 'Usage', usersActive: 'People who can sign in', usersRecent: 'Signed in during the last 30 days',
+    contract: 'Contract reference', noContract: 'Not set', modules: 'Modules on',
+    note: 'Information only: there are no seats or expiry dates.',
+  },
   aiGovernance: {
     title: 'AI governance', policies: 'Writes that need a second person',
     policiesIntro: 'Off by default. Name an action (and optionally an entity) and an agent’s confirmed write of it waits for another person’s approval.',

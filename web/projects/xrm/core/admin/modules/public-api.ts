@@ -7,3 +7,4 @@
 // wire types live in `@attome/xrm/core/admin/data`, per the `/data` shape.
 export { ModuleManagementComponent }  from './module-management/module-management.component';
 export { FeatureFlagsAdminComponent } from './feature-flags/feature-flags-admin.component';
+export { UsageComponent } from './usage/usage.component';

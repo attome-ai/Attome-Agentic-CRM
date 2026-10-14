@@ -417,6 +417,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.ModuleManagementComponent),
           },
           {
+            // U11-T1: modules on, users and the contract reference.
+            path: 'license/usage',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.UsageComponent),
+          },
+          {
             // M95/D-430 — Feature Flags, alongside Module Management.
             path: 'license/features',
             canActivate: [authGuard],

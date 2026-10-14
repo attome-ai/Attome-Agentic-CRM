@@ -8,6 +8,16 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `attome doctor` (the preflight checks, with what to do about each failure) and `attome status`
+  (each node's version, schema, start and readiness).
+- `/health/startup` (200 once boot is done); readiness answers from a two-second cache and records
+  `attome_readiness_check{check}`.
+- A usage page (`/xrm/admin/license/usage`, `GET /api/v1/admin/usage`): modules on, active users and
+  `app.contract_reference`.
+- Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
+
+### Changed
+- `/health/dependencies` needs an administrator and no longer lists the modules on.
 - `document.extract`: invoice and receipt fields (VAT number, invoice number, date, total, VAT) from
   text with a confidence each, the exact fields of a ZATCA QR code, and the fields to review.
 - Local OCR (`inference.ocr`, a vision model) and speech to text (`inference.speech`) in

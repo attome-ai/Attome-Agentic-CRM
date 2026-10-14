@@ -1369,6 +1369,19 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     )
     .await?;
 
+    // U11-T1: what the deployment runs and who uses it.
+    upsert_sidebar(
+        db,
+        "Usage",
+        Some("/xrm/admin/license/usage"),
+        "las la-chart-bar",
+        "#f59e0b",
+        Some(modules_group),
+        30,
+        None,
+    )
+    .await?;
+
     // ── Audit (attome-audit): fix the stale route migration 0007 seeded
     // directly into the DB before the current URL convention existed
     // (`/xrm/entity/audit_header`, no `/list` suffix, full logicalname —
