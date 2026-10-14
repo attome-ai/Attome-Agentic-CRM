@@ -30,6 +30,7 @@
 
 mod contract;
 pub mod parity;
+pub mod release;
 pub mod slo;
 pub mod slo_report;
 pub mod supply;
@@ -350,6 +351,19 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
             Some([report, matrix]) if report == "report" => Some(slo_report(Path::new(matrix))),
             _ => None,
         },
+        Some("stability") => Some(match workspace_root() {
+            Ok(root) => match release::stability(&root, &args[1..]) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(error) => {
+                    eprintln!("attome release stability: {error}");
+                    ExitCode::from(2)
+                }
+            },
+            Err(error) => {
+                eprintln!("attome release stability: {error}");
+                ExitCode::from(2)
+            }
+        }),
         Some("--check") => {
             let mut options = Options::default();
             let mut rest = args[1..].iter();
@@ -504,34 +518,93 @@ pub fn import_report(source: &Path) -> ExitCode {
 /// when its Windows and Linux gate reports are present and green; exit 3
 /// otherwise, naming what is missing.
 pub fn tag(version: &str) -> ExitCode {
-    let Ok(root) = workspace_root() else {
-        eprintln!("attome release tag: not inside the Attome workspace");
-        return ExitCode::from(2);
-    };
-    let Some(head) = command_output(&root, "git", &["rev-parse", "HEAD"]) else {
-        eprintln!("attome release tag: cannot read the current commit");
-        return ExitCode::from(2);
-    };
-    let problems = parity::check(&gate_dir(&root), &head);
-    if !problems.is_empty() {
-        for problem in &problems {
-            eprintln!("attome release tag: {problem}");
-        }
-        return ExitCode::from(3);
-    }
-    let name = format!("v{}", version.trim_start_matches('v'));
-    let mut command = Command::new("git");
-    command.args(["tag", "-a", &name, "-m", &format!("Attome {name}")]);
-    match run(&mut command, &root, "git tag") {
-        Ok(()) => {
-            say(&format!("tagged {name} at {head}"));
+    match tag_release(version) {
+        Ok(message) => {
+            say(&message);
             ExitCode::SUCCESS
         }
-        Err(error) => {
-            eprintln!("attome release tag: {error}");
-            ExitCode::FAILURE
+        Err((code, message)) => {
+            eprintln!("attome release tag: {message}");
+            ExitCode::from(code)
         }
     }
+}
+
+/// The release steps; `Err((exit code, message))` on the first refusal.
+fn tag_release(version: &str) -> Result<String, (u8, String)> {
+    let version = version.trim_start_matches('v');
+    let name = format!("v{version}");
+    let root = workspace_root().map_err(|error| (2u8, error))?;
+    let head = command_output(&root, "git", &["rev-parse", "HEAD"])
+        .ok_or((2u8, "cannot read the current commit".to_owned()))?;
+    let dirty = command_output(
+        &root,
+        "git",
+        &["status", "--porcelain", "--untracked-files=no"],
+    )
+    .unwrap_or_default();
+    if !dirty.is_empty() {
+        return Err((
+            2u8,
+            format!("the working tree has uncommitted changes:\n{dirty}"),
+        ));
+    }
+    if command_output(
+        &root,
+        "git",
+        &["rev-parse", "-q", "--verify", &format!("refs/tags/{name}")],
+    )
+    .is_some()
+    {
+        return Err((2u8, format!("tag {name} already exists")));
+    }
+    let problems = parity::check(&gate_dir(&root), &head);
+    if !problems.is_empty() {
+        let lines: Vec<String> = problems.iter().map(ToString::to_string).collect();
+        return Err((3u8, lines.join("\n")));
+    }
+
+    let today = test_flaky::date_from_unix(unix_seconds());
+    let read = |rel: &str| {
+        std::fs::read_to_string(root.join(rel)).map_err(|e| (2u8, format!("{rel}: {e}")))
+    };
+    let changelog = release::move_unreleased(&read("CHANGELOG.md")?, version, &today)
+        .map_err(|error| (2u8, error))?;
+    let cargo = release::bump_workspace_version(&read("Cargo.toml")?, version)
+        .map_err(|error| (2u8, error))?;
+    let ledger_text = std::fs::read_to_string(root.join(release::LEDGER)).ok();
+    let ledger = release::ledger_add_release(ledger_text.as_deref(), version, &today)
+        .map_err(|error| (2u8, error))?;
+
+    let write = |rel: &str, text: &str| {
+        let path = root.join(rel);
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| (1u8, format!("{rel}: {e}")))?;
+        }
+        std::fs::write(&path, text).map_err(|e| (1u8, format!("{rel}: {e}")))
+    };
+    write("CHANGELOG.md", &changelog)?;
+    write("Cargo.toml", &cargo)?;
+    write(release::LEDGER, &ledger)?;
+
+    let git = |args: &[&str], what: &str| {
+        run(Command::new("git").args(args), &root, what).map_err(|error| (1u8, error))
+    };
+    git(
+        &["add", "CHANGELOG.md", "Cargo.toml", release::LEDGER],
+        "git add",
+    )?;
+    git(
+        &["commit", "-q", "-m", &format!("release: {name}")],
+        "git commit",
+    )?;
+    git(
+        &["tag", "-a", &name, "-m", &format!("Attome {name}")],
+        "git tag",
+    )?;
+    Ok(format!(
+        "tagged {name} (release commit on top of the gated commit {head}); push the branch and the tag yourself"
+    ))
 }
 
 fn gate_dir(root: &Path) -> PathBuf {

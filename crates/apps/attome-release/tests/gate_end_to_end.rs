@@ -22,7 +22,16 @@ fn fixture(name: &str) -> Option<(PathBuf, String)> {
         std::env::temp_dir().join(format!("attome-release-e2e-{name}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
-    std::fs::write(dir.join("Cargo.toml"), "[workspace]\nmembers = []\n").unwrap();
+    std::fs::write(
+        dir.join("Cargo.toml"),
+        "[workspace]\nmembers = []\n\n[workspace.package]\nversion = \"0.0.0\"\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.join("CHANGELOG.md"),
+        "# Changelog\n\n## [Unreleased]\n\n### Added\n- The first thing.\n",
+    )
+    .unwrap();
     let git = |args: &[&str]| {
         let out = Command::new("git")
             .args([
@@ -46,7 +55,7 @@ fn fixture(name: &str) -> Option<(PathBuf, String)> {
     // `git tag -a` (what `attome-release tag` runs) needs an identity.
     git(&["config", "user.name", "test"]);
     git(&["config", "user.email", "test@example.invalid"]);
-    git(&["add", "Cargo.toml"]);
+    git(&["add", "Cargo.toml", "CHANGELOG.md"]);
     git(&["commit", "-q", "-m", "fixture"]);
     let head = git(&["rev-parse", "HEAD"]);
     Some((dir, head))
@@ -129,6 +138,13 @@ fn tag_is_refused_until_both_reports_are_green_then_allowed() {
         .output()
         .unwrap();
     assert!(String::from_utf8_lossy(&tags.stdout).contains("v0.0.1"));
+    // The release commit bumped the version, moved the changelog and opened
+    // the stability ledger.
+    let cargo = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap();
+    assert!(cargo.contains("version = \"0.0.1\""));
+    let changelog = std::fs::read_to_string(dir.join("CHANGELOG.md")).unwrap();
+    assert!(changelog.contains("## [0.0.1] - "));
+    assert!(dir.join("docs/releases/stability.json").is_file());
 
     let _ = std::fs::remove_dir_all(&dir);
 }

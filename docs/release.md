@@ -57,6 +57,18 @@ bump.
 cargo run -p attome-release -- tag 2.0.0
 ```
 
-It tags `v2.0.0` only when `gate-windows.json` and `gate-linux.json` are both present, both from
-this commit and both green (every step passed or overridden), and exits 3 naming what is missing
-otherwise. Push the tag yourself once you are satisfied.
+It refuses unless the tracked tree is clean, `v2.0.0` does not exist yet, `[Unreleased]` in
+`CHANGELOG.md` says something, and `gate-windows.json` and `gate-linux.json` are both present, both
+from this commit and both green (exit 3 names what is missing). Then it sets `[workspace.package]
+version` in `Cargo.toml`, moves `[Unreleased]` under `## [2.0.0] - <date>`, adds the release to
+`docs/releases/stability.json`, commits `release: v2.0.0` and creates the annotated tag `v2.0.0`.
+It never pushes: push the branch and the tag yourself once you are satisfied.
+
+## 5. After the release
+
+The stability ledger records what happened to each release:
+
+```sh
+cargo run -p attome-release -- stability add-defect 2.0.0 '#123'   # a defect that escaped into it
+cargo run -p attome-release -- stability rollback 2.0.0              # it was rolled back
+```
