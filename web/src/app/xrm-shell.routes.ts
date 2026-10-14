@@ -571,6 +571,20 @@ export const xrmShellRoutes: Routes = [
               import('@attome/xrm/dashboard/registration').then(m => m.PAGE_EDITOR_ROUTES),
           },
           {
+            // Y14 (first step): a published form drawn by the generic
+            // renderer; `formId` and `recordId` bind from the path.
+            path: 'model/forms/:formId/:recordId',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('@attome/xrm/model').then(m => m.FormRendererComponent),
+          },
+          {
+            path: 'model/forms/:formId',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('@attome/xrm/model').then(m => m.FormRendererComponent),
+          },
+          {
             // M26 (Dashboard) gap-fill — the template gallery: a card grid
             // over `attome_dashboard` rows with `is_template = true`, not a
             // generic entity list, so (like 'dashboard/view' above) it needs

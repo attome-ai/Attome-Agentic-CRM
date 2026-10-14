@@ -1,0 +1,58 @@
+@if (loading()) {
+  <p class="fr-status" data-testid="form-renderer-loading">{{ 'formRenderer.loading' | translate }}</p>
+} @else if (plan(); as plan) {
+  <form class="fr" data-testid="form-renderer" (submit)="$event.preventDefault(); save()">
+    <h2 class="fr-title">{{ plan.name }}</h2>
+    @for (section of plan.sections; track $index) {
+      <fieldset class="fr-section">
+        <legend>{{ section.label }}</legend>
+        @for (field of section.fields; track field.attribute) {
+          <label class="fr-field" [attr.data-attribute]="field.attribute">
+            <span class="fr-label">
+              {{ field.label }}
+              @if (field.required) {
+                <span class="fr-required" [attr.aria-label]="'formRenderer.required' | translate">*</span>
+              }
+            </span>
+            @switch (control(field)) {
+              @case ('checkbox') {
+                <input #box type="checkbox" [checked]="value(field) === true"
+                       (change)="set(field, box.checked)" />
+              }
+              @case ('number') {
+                <input #num type="number" [value]="text(field)" [required]="field.required"
+                       (input)="set(field, num.value)" />
+              }
+              @case ('date') {
+                <input #day type="date" [value]="text(field)" [required]="field.required"
+                       (input)="set(field, day.value)" />
+              }
+              @case ('readonly') {
+                <output class="fr-readonly">{{ text(field) }}</output>
+              }
+              @default {
+                <input #txt type="text" [value]="text(field)" [required]="field.required"
+                       (input)="set(field, txt.value)" />
+              }
+            }
+          </label>
+        }
+      </fieldset>
+    }
+    @if (error(); as error) {
+      <p class="fr-error" role="alert">{{ error }}</p>
+    }
+    @if (record()) {
+      <div class="fr-actions">
+        <button type="submit" [disabled]="saving() || changed().length === 0" data-testid="form-renderer-save">
+          {{ (saving() ? 'formRenderer.saving' : 'formRenderer.save') | translate }}
+        </button>
+        @if (saved()) {
+          <span class="fr-saved" role="status">{{ 'formRenderer.saved' | translate }}</span>
+        }
+      </div>
+    }
+  </form>
+} @else if (error(); as error) {
+  <p class="fr-error" role="alert">{{ error }}</p>
+}

@@ -147,6 +147,10 @@ export const xrmEn = {
     },
   },
   // Basic-units U2 (D-600) — the Activities record tab (<xrm-activities-panel>).
+  formRenderer: {
+    loading: 'Loading the form…', required: 'Required',
+    save: 'Save', saving: 'Saving…', saved: 'Saved',
+  },
   activitiesPanel: {
     type: 'Activity type', task: 'Task', phoneCall: 'Phone call',
     subject: 'Subject', dueAt: 'Due', direction: 'Direction',

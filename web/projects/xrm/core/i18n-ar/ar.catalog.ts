@@ -124,6 +124,10 @@ export const xrmAr = {
     },
   },
   // U2 (D-600) — تبويب الأنشطة، انظر en.catalog.ts
+  formRenderer: {
+    loading: 'جارٍ تحميل النموذج…', required: 'مطلوب',
+    save: 'حفظ', saving: 'جارٍ الحفظ…', saved: 'تم الحفظ',
+  },
   activitiesPanel: {
     type: 'نوع النشاط', task: 'مهمة', phoneCall: 'مكالمة هاتفية',
     subject: 'الموضوع', dueAt: 'الاستحقاق', direction: 'الاتجاه',
