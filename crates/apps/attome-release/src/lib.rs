@@ -135,6 +135,7 @@ pub fn check_with(options: &Options) -> ExitCode {
         ("contract", contract_step as Step),
         ("slo", slo_step as Step),
         ("rules", rules_step as Step),
+        ("install_timing", install_timing as Step),
     ];
     if options.web {
         steps.push(("web", web as Step));
@@ -654,6 +655,60 @@ fn clippy(root: &Path) -> Result<(), String> {
         "warnings",
     ]);
     run(&mut command, root, "cargo clippy")
+}
+
+/// The time budget for a Solo install (roadmap AF4: under ten minutes).
+const INSTALL_BUDGET: std::time::Duration = std::time::Duration::from_secs(600);
+
+/// AF4-T1: times `attome init` against the empty database named by
+/// `ATTOME_INSTALL_DATABASE_URL` (configuration, schema and roles; the build
+/// is not counted) and fails over [`INSTALL_BUDGET`]. Without the variable
+/// there is nothing to install into, and the step says so and passes.
+fn install_timing(root: &Path) -> Result<(), String> {
+    let Ok(url) = std::env::var("ATTOME_INSTALL_DATABASE_URL") else {
+        say("    install_timing: ATTOME_INSTALL_DATABASE_URL is not set; not measured");
+        return Ok(());
+    };
+    run(
+        Command::new("cargo").args(["build", "-p", "attome", "--bin", "attome"]),
+        root,
+        "cargo build -p attome",
+    )?;
+    let exe = root.join("target").join("debug").join(if cfg!(windows) {
+        "attome.exe"
+    } else {
+        "attome"
+    });
+    let dir = gate_dir(root).join("install");
+    std::fs::create_dir_all(&dir).map_err(|error| format!("{}: {error}", dir.display()))?;
+    let config = dir.join("config.json");
+    let started = Instant::now();
+    run(
+        Command::new(&exe).args([
+            "init",
+            "--database-url",
+            url.as_str(),
+            "--out",
+            &config.display().to_string(),
+            "--force",
+        ]),
+        root,
+        "attome init",
+    )?;
+    let took = started.elapsed();
+    say(&format!(
+        "    install_timing: attome init took {:.1} s (budget {} s)",
+        took.as_secs_f64(),
+        INSTALL_BUDGET.as_secs()
+    ));
+    if took > INSTALL_BUDGET {
+        return Err(format!(
+            "attome init took {:.0} s, over the {} s budget",
+            took.as_secs_f64(),
+            INSTALL_BUDGET.as_secs()
+        ));
+    }
+    Ok(())
 }
 
 fn tests(root: &Path) -> Result<(), String> {

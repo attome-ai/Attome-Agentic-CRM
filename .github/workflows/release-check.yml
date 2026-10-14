@@ -67,6 +67,8 @@ jobs:
       S3_ACCESS_KEY: attometest
       S3_SECRET_KEY: attometest-secret
       ATTOME_TEST_REQUIRE_S3: "1"
+      # AF4: the gate times `attome init` into this empty database.
+      ATTOME_INSTALL_DATABASE_URL: postgres://postgres:postgres@localhost:5432/attome_install
     steps:
       - uses: actions/checkout@v5
       # Installs the toolchain pinned in rust-toolchain.toml (with clippy and
@@ -87,6 +89,8 @@ jobs:
           done
           aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attomebase
           aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attome-test
+      - name: create the install-timing database
+        run: PGPASSWORD=postgres psql -h localhost -U postgres -c 'CREATE DATABASE attome_install'
       - name: install promtool
         shell: bash
         run: |
