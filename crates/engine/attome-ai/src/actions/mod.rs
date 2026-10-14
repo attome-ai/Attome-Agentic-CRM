@@ -23,6 +23,7 @@ pub mod knowledge_answer;
 pub mod memory;
 pub mod model_edit;
 pub mod read;
+pub mod record_schema;
 pub mod record_update_field;
 pub mod record_write;
 pub mod route_classify;
@@ -41,6 +42,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(knowledge_answer::descriptor());
     all.push(classify::descriptor());
     all.push(bot_handoff::descriptor());
+    all.push(record_schema::descriptor());
     all.push(record_update_field::descriptor());
     all.extend(record_write::descriptors());
     all.push(search_records::descriptor());
@@ -67,6 +69,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(knowledge_answer::KnowledgeAnswer));
     all.push(Box::new(classify::RecordClassify));
     all.push(Box::new(bot_handoff::BotHandoff));
+    all.push(Box::new(record_schema::RecordSchema));
     all.push(Box::new(record_update_field::RecordUpdateField));
     all.extend(record_write::executors());
     all.push(Box::new(search_records::SearchRecords));
