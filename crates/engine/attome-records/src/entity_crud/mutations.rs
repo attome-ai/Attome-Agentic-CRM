@@ -458,6 +458,109 @@ pub(super) async fn create_record(
     Ok((StatusCode::CREATED, Json(response)))
 }
 
+/// What a dry-run create found (A3-T3).
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub struct CreateCheck {
+    /// The create would succeed.
+    pub valid: bool,
+    /// Why it would not, as the create would say it.
+    pub error: Option<String>,
+    /// Business-rule warnings the create would raise.
+    pub warnings: Vec<CreateCheckWarning>,
+}
+
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub struct CreateCheckWarning {
+    pub rule: String,
+    pub field: Option<String>,
+    pub message: String,
+}
+
+/// Runs the whole create path for `values` and rolls it back: every check a
+/// create makes (normalisation, types, required fields, field grants, record
+/// validators, business rules, lookups), and nothing written. The caller must
+/// already hold the create privilege on `entity`, as for
+/// [`create_record_for`].
+pub async fn validate_create(
+    state: &EngineState,
+    security: &attome_server::security::SecurityContext,
+    entity: &str,
+    values: &serde_json::Map<String, Value>,
+) -> Result<CreateCheck, AppError> {
+    let (_, entity_name, attrs, _) = resolve_entity(state, entity).await?;
+    let actor = crate::mutation_ring::MutationActor::fetch(state, security.user_id).await;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let outcome = crate::entity_mutation::create_one(
+        &mut tx,
+        state,
+        security,
+        &entity_name,
+        &attrs,
+        values,
+        security.user_id,
+        actor.org_ref,
+        crate::entity_mutation::MutationMode::Strict,
+    )
+    .await;
+    // Always rolled back: a check never writes.
+    tx.rollback().await.map_err(AppError::internal)?;
+    match outcome {
+        Ok(result) => Ok(CreateCheck {
+            valid: true,
+            error: None,
+            warnings: result
+                .warnings
+                .iter()
+                .map(|w| CreateCheckWarning {
+                    rule: w.rule_name.clone(),
+                    field: w.field.clone(),
+                    message: w.message.clone(),
+                })
+                .collect(),
+        }),
+        Err(
+            error @ (AppError::Validation(_)
+            | AppError::Conflict(_)
+            | AppError::Forbidden
+            | AppError::NotFound),
+        ) => Ok(CreateCheck {
+            valid: false,
+            error: Some(error.to_string()),
+            warnings: Vec::new(),
+        }),
+        Err(other) => Err(other),
+    }
+}
+
+/// `POST /api/v1/{entity}/validate` (A3-T3): checks a record without saving it.
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/validate",
+    tag = "entity",
+    params(("entity" = String, Path)),
+    responses(
+        (status = 200, description = "Whether the create would succeed, why not, and its warnings; nothing is written", body = CreateCheck),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the create privilege", body = ErrorResponse),
+        (status = 422, description = "The body is not a JSON object", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::DryRun, None, "runs the create path and rolls it back; writes nothing")))),
+)]
+pub(super) async fn validate_record(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Create>>,
+    Path(entity_input): Path<String>,
+    Json(body): Json<Value>,
+) -> Result<Json<CreateCheck>, AppError> {
+    let values = body
+        .as_object()
+        .ok_or_else(|| AppError::Validation("request body must be a JSON object".into()))?;
+    Ok(Json(
+        validate_create(&state, &ctx, &entity_input, values).await?,
+    ))
+}
+
 /// Creates a record, given an **already-authorized** caller.
 ///
 /// Extracted from the handler (TODO-060) so a non-HTTP caller — an action —
@@ -1507,6 +1610,7 @@ pub(super) async fn restore_record(
 #[openapi(paths(
     get_record,
     create_record,
+    validate_record,
     update_record,
     delete_record,
     hard_delete_record,

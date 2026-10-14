@@ -90,9 +90,9 @@ pub(crate) use mutations::sync_file_field_documents;
 /// THIS path rather than growing a second one — the same reasoning that makes
 /// `entity_mutation` public for `attome-workflow`'s Create/Update nodes.
 pub use mutations::{
-    UpdateOutcome, create_record_for, delete_record_for, read_record, read_record_bulk,
-    restore_record_for, update_record_for, update_record_for_outcome,
-    update_record_for_with_comment,
+    CreateCheck, CreateCheckWarning, UpdateOutcome, create_record_for, delete_record_for,
+    read_record, read_record_bulk, restore_record_for, update_record_for,
+    update_record_for_outcome, update_record_for_with_comment, validate_create,
 };
 /// M07 Phase A: `POST /{entity}/{id}/transition` takes an optional `If-Match`
 /// (absent = the record's current version) with the same parsing rules as
@@ -146,6 +146,10 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/{entity}/upsert",
             axum::routing::post(upsert::upsert_record),
+        )
+        .route(
+            "/api/v1/{entity}/validate",
+            axum::routing::post(mutations::validate_record),
         )
         .route(
             "/api/v1/{entity}/{id}",

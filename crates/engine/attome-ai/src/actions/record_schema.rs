@@ -77,45 +77,21 @@ impl Action for RecordValidate {
                 .as_object()
                 .ok_or_else(|| AppError::Validation("values must be an object".into()))?;
             ctx.security.require(entity, "create")?;
-            let (_, entity_name, attrs, _) =
-                attome_records::entity_crud::resolve_entity(state, entity).await?;
-            let actor =
-                attome_records::mutation_ring::MutationActor::fetch(state, ctx.security.user_id)
-                    .await;
-            let mut tx = attome_db::tx::begin(&state.base.db).await?;
-            let outcome = attome_records::entity_mutation::create_one(
-                &mut tx,
-                state,
-                &ctx.security,
-                &entity_name,
-                &attrs,
-                values,
-                ctx.security.user_id,
-                actor.org_ref,
-                attome_records::entity_mutation::MutationMode::Strict,
-            )
-            .await;
-            // Always rolled back: a dry run never writes.
-            tx.rollback().await.map_err(AppError::internal)?;
-            Ok(ActionResult::plain(match outcome {
-                Ok(result) => json!({
+            // The same dry run `POST /api/v1/{entity}/validate` makes (A3-T3).
+            let check =
+                attome_records::entity_crud::validate_create(state, &ctx.security, entity, values)
+                    .await?;
+            Ok(ActionResult::plain(if check.valid {
+                json!({
                     "valid": true,
-                    "warnings": result
+                    "warnings": check
                         .warnings
                         .iter()
-                        .map(|w| json!({ "rule": w.rule_name, "field": w.field }))
+                        .map(|w| json!({ "rule": w.rule, "field": w.field }))
                         .collect::<Vec<_>>(),
-                }),
-                Err(
-                    error @ (AppError::Validation(_)
-                    | AppError::Conflict(_)
-                    | AppError::Forbidden
-                    | AppError::NotFound),
-                ) => json!({
-                    "valid": false,
-                    "error": error.to_string(),
-                }),
-                Err(other) => return Err(other),
+                })
+            } else {
+                json!({ "valid": false, "error": check.error })
             }))
         })
     }
