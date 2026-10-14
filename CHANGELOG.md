@@ -8,6 +8,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Solo backs up its database every day (`backup`, on by default; `attome backup now`); see
+  `docs/backup.md`. `POST /api/v1/{entity}/validate` checks a record without saving it.
+- `under` and `above` filter operators for lookups into a tree; choice-value usage counts
+  (`GET .../fields/{field_id}/choice-usage`); every lookup column is indexed.
+- `cache.metadata_poll_interval_secs` (default 5) and readiness that reports a node whose metadata
+  lags the change log.
 - Record values are normalised before validation: text trimmed, phone fields in E.164 shape,
   email fields lower-cased, Arabic digits made Western in masked fields and numbers sent as text.
 - Autonumber formats take `{LUHN}` and `{MOD11}` check digits; their dates and resets follow
