@@ -188,52 +188,77 @@ pub async fn run() -> ExitCode {
         Err(e) => results.push(fail("postgres", e.to_string())),
     }
 
-    match attome_cache::create_redis_pool(&config).await {
-        Ok(redis) => {
-            if attome_cache::redis_ping(&redis).await {
-                results.push(pass(
-                    "redis",
-                    format!("reachable at {}:{}", config.cache.host, config.cache.port),
-                ));
-            } else {
-                results.push(fail("redis", "ping failed"));
+    // Solo keeps its shared state in process memory (A5): there is no Redis to
+    // reach, and failing on one would fail every Solo install.
+    let memory_backend = config.cache.backend == attome_config::CacheBackend::Memory;
+    if memory_backend {
+        results.push(pass(
+            "redis",
+            "cache.backend = memory (Solo), no Redis needed",
+        ));
+    }
+    match (!memory_backend).then(|| attome_cache::create_redis_pool(&config)) {
+        None => {}
+        Some(pool) => match pool.await {
+            Ok(redis) => {
+                if attome_cache::redis_ping(&redis).await {
+                    results.push(pass(
+                        "redis",
+                        format!("reachable at {}:{}", config.cache.host, config.cache.port),
+                    ));
+                } else {
+                    results.push(fail("redis", "ping failed"));
+                }
             }
-        }
-        Err(e) => results.push(fail("redis", e.to_string())),
+            Err(e) => results.push(fail("redis", e.to_string())),
+        },
     }
 
-    match attome_storage::create_storage_client(&config).await {
-        Ok(client) => {
-            let health = attome_storage::health_check(&client).await;
-            if health.reachable {
-                results.push(pass(
-                    "storage",
-                    format!("reachable at {}", config.storage.s3_endpoint),
-                ));
-            } else {
-                // `detail` (never serialized) keeps the full backend error for
-                // the operator; `error` is only the public-safe category.
-                results.push(fail(
-                    "storage",
-                    health
-                        .detail
-                        .or(health.error)
-                        .unwrap_or_else(|| "unreachable".into()),
-                ));
+    // `attome init` writes `unset` credentials for a Solo install without an
+    // object store: file uploads are unavailable there, which is not a
+    // failure to start.
+    let storage_unconfigured = config.storage.s3_access_key == "unset";
+    if storage_unconfigured {
+        results.push(pass(
+            "storage",
+            "no object store configured (s3_access_key = \"unset\"); file uploads are unavailable",
+        ));
+    }
+    match (!storage_unconfigured).then(|| attome_storage::create_storage_client(&config)) {
+        None => {}
+        Some(client) => match client.await {
+            Ok(client) => {
+                let health = attome_storage::health_check(&client).await;
+                if health.reachable {
+                    results.push(pass(
+                        "storage",
+                        format!("reachable at {}", config.storage.s3_endpoint),
+                    ));
+                } else {
+                    // `detail` (never serialized) keeps the full backend error for
+                    // the operator; `error` is only the public-safe category.
+                    results.push(fail(
+                        "storage",
+                        health
+                            .detail
+                            .or(health.error)
+                            .unwrap_or_else(|| "unreachable".into()),
+                    ));
+                }
+                // BST-8: warn-only. From inside the container the browser-facing
+                // endpoint may legitimately not resolve, so this never fails preflight.
+                if let Some(public) = attome_storage::public_endpoint_health_check(&client).await
+                    && !public.reachable
+                {
+                    eprintln!(
+                        "WARN storage.s3_public_endpoint ({}): {}",
+                        config.storage.s3_public_endpoint,
+                        public.detail.or(public.error).unwrap_or_default()
+                    );
+                }
             }
-            // BST-8: warn-only. From inside the container the browser-facing
-            // endpoint may legitimately not resolve, so this never fails preflight.
-            if let Some(public) = attome_storage::public_endpoint_health_check(&client).await
-                && !public.reachable
-            {
-                eprintln!(
-                    "WARN storage.s3_public_endpoint ({}): {}",
-                    config.storage.s3_public_endpoint,
-                    public.detail.or(public.error).unwrap_or_default()
-                );
-            }
-        }
-        Err(e) => results.push(fail("storage", e.to_string())),
+            Err(e) => results.push(fail("storage", e.to_string())),
+        },
     }
 
     // ── Audit anchor store (D-352 / TODO-004) ────────────────────────────

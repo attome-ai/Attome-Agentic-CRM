@@ -141,6 +141,7 @@ pub fn check_with(options: &Options) -> ExitCode {
         ("slo", slo_step as Step),
         ("rules", rules_step as Step),
         ("install_timing", install_timing as Step),
+        ("smoke", smoke as Step),
     ];
     if options.web {
         steps.push(("web", web as Step));
@@ -744,6 +745,78 @@ fn clippy(root: &Path) -> Result<(), String> {
     run(&mut command, root, "cargo clippy")
 }
 
+/// The port the gate's installed server listens on, clear of a development
+/// server's 7865.
+const SMOKE_PORT: &str = "17865";
+
+/// AC4-T8 (D-764): the server the gate just installed boots. `attome
+/// preflight` must pass on its configuration, `attome serve` must answer
+/// `/health/ready` with 200 within two minutes, and the server is stopped on
+/// every path. Runs only after `install_timing` installed something.
+fn smoke(root: &Path) -> Result<(), String> {
+    let dir = gate_dir(root).join("install");
+    let config = dir.join("config.json");
+    if !config.is_file() {
+        say("    smoke: nothing was installed (ATTOME_INSTALL_DATABASE_URL unset); not run");
+        return Ok(());
+    }
+    let exe = root.join("target").join("debug").join(if cfg!(windows) {
+        "attome.exe"
+    } else {
+        "attome"
+    });
+    run(
+        Command::new(&exe)
+            .arg("preflight")
+            .env("CONFIG_FILE", &config),
+        root,
+        "attome preflight",
+    )?;
+    let log = std::fs::File::create(dir.join("serve.log"))
+        .map_err(|error| format!("serve.log: {error}"))?;
+    let err_log = log
+        .try_clone()
+        .map_err(|error| format!("serve.log: {error}"))?;
+    let mut server = Command::new(&exe)
+        .arg("serve")
+        .env("CONFIG_FILE", &config)
+        .current_dir(root)
+        .stdout(log)
+        .stderr(err_log)
+        .spawn()
+        .map_err(|error| format!("cannot start attome serve: {error}"))?;
+    let address = format!("127.0.0.1:{SMOKE_PORT}");
+    let deadline = Instant::now() + std::time::Duration::from_secs(120);
+    let mut ready = false;
+    while Instant::now() < deadline {
+        if let Ok(Some(status)) = server.try_wait() {
+            return Err(format!(
+                "attome serve exited during start-up ({status}); see {}",
+                dir.join("serve.log").display()
+            ));
+        }
+        let probe = Command::new(&exe)
+            .args(["healthcheck", address.as_str(), "/health/ready"])
+            .output();
+        if probe.is_ok_and(|out| out.status.success()) {
+            ready = true;
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_secs(2));
+    }
+    let _ = server.kill();
+    let _ = server.wait();
+    if ready {
+        say("    smoke: preflight passed and /health/ready answered 200");
+        Ok(())
+    } else {
+        Err(format!(
+            "/health/ready did not answer 200 within 120 s; see {}",
+            dir.join("serve.log").display()
+        ))
+    }
+}
+
 /// The time budget for a Solo install (roadmap AF4: under ten minutes).
 const INSTALL_BUDGET: std::time::Duration = std::time::Duration::from_secs(600);
 
@@ -777,6 +850,8 @@ fn install_timing(root: &Path) -> Result<(), String> {
             url.as_str(),
             "--out",
             &config.display().to_string(),
+            "--port",
+            SMOKE_PORT,
             "--force",
         ]),
         root,

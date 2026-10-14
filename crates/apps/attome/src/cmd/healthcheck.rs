@@ -12,7 +12,7 @@
 //! same "ship a small purpose-built binary in the image" pattern as
 //! `preflight`/`verify_audit_chain` already use.
 //!
-//! Usage: `healthcheck [host:port] [path]` — defaults to `127.0.0.1:8080` and
+//! Usage: `healthcheck [host:port] [path]` — defaults to `127.0.0.1:7865` and
 //! `/health/ready` (this image's own `SERVER_PORT`/health-route defaults).
 //! Exits 0 on any 2xx status line, exits 1 otherwise (connection failure,
 //! non-2xx status, or a response that doesn't even look like HTTP).
@@ -29,8 +29,9 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 pub fn run() -> ExitCode {
-    let mut args = env::args().skip(1);
-    let addr = args.next().unwrap_or_else(|| "127.0.0.1:8080".to_string());
+    // argv is `attome healthcheck [addr] [path]`.
+    let mut args = env::args().skip(2);
+    let addr = args.next().unwrap_or_else(|| "127.0.0.1:7865".to_string());
     let path = args.next().unwrap_or_else(|| "/health/ready".to_string());
 
     match probe(&addr, &path) {
