@@ -190,6 +190,10 @@ export const xrmEn = {
     usage: 'Used today', noLimit: 'no limit',
     dailyHint: 'Per day, across all of this agent\'s sessions. Leave blank for no limit.',
     daily: { record_changes: 'Records changed', deletes: 'Deletes', messages: 'Messages sent', external_calls: 'Outside calls' },
+    handoff: 'Delegated work', handoffOn: 'Other agents can delegate to this one',
+    handoffHint: 'The input this agent takes and the answer it gives, as JSON Schema objects. Delegated work only reads.',
+    handoffInput: 'Input contract', handoffOutput: 'Output contract',
+    handoffInvalid: { input: 'The input contract is not a JSON object.', output: 'The output contract is not a JSON object.' },
   },
   // Y1-T15 — the metadata explorer (kinds, objects, history, diff).
   metadataExplorer: {

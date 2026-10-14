@@ -15,7 +15,17 @@ export interface AgentDraft {
   channels:     string[];
   /** Per-day caps by limit class; a missing class has no cap (V2-D487). */
   daily:        Partial<Record<DailyClass, number>>;
+  /**
+   * The typed contract supervisors delegate through (N8-T1), as JSON text
+   * so it can be edited; `null` when the agent takes no delegated work.
+   */
+  handoff:      { input: string; output: string } | null;
+  /** Whether the stored document had a handoff, so clearing it removes it. */
+  hadHandoff:   boolean;
 }
+
+/** An empty object contract, the starting point when a handoff is added. */
+export const EMPTY_CONTRACT = '{\n  "type": "object",\n  "properties": {}\n}';
 
 export const DAILY_CLASSES = ['record_changes', 'deletes', 'messages', 'external_calls'] as const;
 export type DailyClass = typeof DAILY_CLASSES[number];
@@ -26,6 +36,7 @@ export function emptyAgent(): AgentDraft {
   return {
     role: '', instructions: '', tools: [], runAs: 'caller',
     maxSteps: 20, maxToolCalls: 40, maxTokens: 60000, channels: ['chat'], daily: {},
+    handoff: null, hadHandoff: false,
   };
 }
 
@@ -46,7 +57,34 @@ export function draftFromDoc(doc: unknown): AgentDraft {
     maxTokens:    typeof limits['max_tokens'] === 'number' ? limits['max_tokens'] : base.maxTokens,
     channels:     d['channels'] === undefined ? base.channels : list(d['channels']),
     daily:        dailyFrom(limits['daily']),
+    ...handoffFrom(d['handoff']),
   };
+}
+
+function handoffFrom(value: unknown): Pick<AgentDraft, 'handoff' | 'hadHandoff'> {
+  const h = value as Record<string, unknown> | null | undefined;
+  if (!h || typeof h !== 'object') return { handoff: null, hadHandoff: false };
+  return {
+    handoff: {
+      input:  JSON.stringify(h['input'] ?? {}, null, 2),
+      output: JSON.stringify(h['output'] ?? {}, null, 2),
+    },
+    hadHandoff: true,
+  };
+}
+
+/** What is wrong with the handoff text, or `null` when it is usable JSON. */
+export function handoffError(draft: AgentDraft): 'input' | 'output' | null {
+  if (!draft.handoff) return null;
+  for (const side of ['input', 'output'] as const) {
+    try {
+      const value: unknown = JSON.parse(draft.handoff[side]);
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return side;
+    } catch {
+      return side;
+    }
+  }
+  return null;
 }
 
 function dailyFrom(value: unknown): Partial<Record<DailyClass, number>> {
@@ -73,7 +111,20 @@ export function commandsFor(draft: AgentDraft): ModelCommand[] {
       ...(Object.keys(draft.daily).length > 0 ? { daily: { ...draft.daily } } : {}),
     } },
     { op: 'set', path: '/channels', value: [...draft.channels] },
+    ...handoffCommands(draft),
   ];
+}
+
+/** Sets the handoff when there is one, removes it when it was cleared. */
+function handoffCommands(draft: AgentDraft): ModelCommand[] {
+  if (draft.handoff && handoffError(draft) === null) {
+    return [{ op: 'set', path: '/handoff', value: {
+      input: JSON.parse(draft.handoff.input) as unknown,
+      output: JSON.parse(draft.handoff.output) as unknown,
+    } }];
+  }
+  if (!draft.handoff && draft.hadHandoff) return [{ op: 'remove', path: '/handoff' }];
+  return [];
 }
 
 /** A UUIDv7 (time-ordered, as the platform's own ids are) for a new agent. */
@@ -124,6 +175,7 @@ export class AgentDesignerComponent implements OnInit {
   readonly usage     = signal<AgentUsage[]>([]);
 
   readonly editing = computed(() => this.selected() !== null);
+  readonly handoffInvalid = computed(() => handoffError(this.draft()));
   readonly canPublish = computed(() => this.baseHash() !== '' && !this.saving());
 
   ngOnInit(): void {
@@ -226,6 +278,16 @@ export class AgentDesignerComponent implements OnInit {
     }
     if (!cleared) daily[key] = Math.max(0, n);
     this.update({ daily });
+  }
+
+  /** Adds an empty contract pair, or removes the handoff. */
+  setHandoff(on: boolean): void {
+    this.update({ handoff: on ? { input: EMPTY_CONTRACT, output: EMPTY_CONTRACT } : null });
+  }
+
+  setHandoffSide(side: 'input' | 'output', text: string): void {
+    const current = this.draft().handoff ?? { input: EMPTY_CONTRACT, output: EMPTY_CONTRACT };
+    this.update({ handoff: { ...current, [side]: text } });
   }
 
   numberFrom(value: string): number {

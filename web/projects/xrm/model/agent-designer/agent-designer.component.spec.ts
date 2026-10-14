@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ModelService } from '../model.service';
-import { AgentDesignerComponent, commandsFor, draftFromDoc, emptyAgent, newId } from './agent-designer.component';
+import { AgentDesignerComponent, commandsFor, draftFromDoc, emptyAgent, handoffError, newId } from './agent-designer.component';
 
 const page = <T>(items: T[]) => ({ items, total: items.length, page: 1, page_size: 50 });
 
@@ -19,6 +19,7 @@ describe('agent drafts', () => {
     expect(draft).toEqual({
       role: 'Triage', instructions: 'Route cases.', tools: ['records.read'], runAs: 'service',
       maxSteps: 5, maxToolCalls: 9, maxTokens: 1000, channels: ['web'], daily: {},
+      handoff: null, hadHandoff: false,
     });
     const commands = commandsFor(draft);
     expect(commands.map(c => c.op === 'set' ? c.path : '')).toEqual(
@@ -32,6 +33,20 @@ describe('agent drafts', () => {
     expect(draft.daily).toEqual({ deletes: 3 });
     const limits = commandsFor(draft)[4];
     expect(limits).toEqual({ op: 'set', path: '/limits', value: { max_steps: 1, max_tool_calls: 1, max_tokens: 1, daily: { deletes: 3 } } });
+  });
+
+  it('edits the handoff contract as JSON and removes it when cleared (N8-T1)', () => {
+    const draft = draftFromDoc({ handoff: { input: { type: 'object' }, output: { type: 'object', required: ['risk'] } } });
+    expect(draft.hadHandoff).toBe(true);
+    expect(JSON.parse(draft.handoff?.output ?? '{}')).toEqual({ type: 'object', required: ['risk'] });
+    expect(commandsFor(draft).at(-1)).toEqual({ op: 'set', path: '/handoff', value: {
+      input: { type: 'object' }, output: { type: 'object', required: ['risk'] },
+    } });
+    const broken = { ...draft, handoff: { input: '{', output: '{}' } };
+    expect(handoffError(broken)).toBe('input');
+    expect(commandsFor(broken).some(c => 'path' in c && c.path === '/handoff')).toBe(false);
+    const cleared = { ...draft, handoff: null };
+    expect(commandsFor(cleared).at(-1)).toEqual({ op: 'remove', path: '/handoff' });
   });
 
   it('fills defaults for a missing document', () => {

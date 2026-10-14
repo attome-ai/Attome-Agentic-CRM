@@ -164,6 +164,10 @@ export const xrmAr = {
     usage: 'المستخدم اليوم', noLimit: 'بلا حد',
     dailyHint: 'في اليوم، عبر جميع جلسات هذا الوكيل. اتركه فارغًا لعدم وجود حد.',
     daily: { record_changes: 'السجلات المعدّلة', deletes: 'عمليات الحذف', messages: 'الرسائل المرسلة', external_calls: 'الاستدعاءات الخارجية' },
+    handoff: 'العمل المفوَّض', handoffOn: 'يمكن للوكلاء الآخرين تفويض العمل لهذا الوكيل',
+    handoffHint: 'المدخلات التي يأخذها هذا الوكيل والإجابة التي يعيدها، ككائنات JSON Schema. العمل المفوَّض للقراءة فقط.',
+    handoffInput: 'عقد المدخلات', handoffOutput: 'عقد المخرجات',
+    handoffInvalid: { input: 'عقد المدخلات ليس كائن JSON.', output: 'عقد المخرجات ليس كائن JSON.' },
   },
   // Y1-T15 — مستكشف البيانات الوصفية، انظر en.catalog.ts
   metadataExplorer: {

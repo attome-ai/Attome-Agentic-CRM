@@ -85,6 +85,26 @@
           <option value="service" [selected]="draft().runAs === 'service'">{{ 'agentDesigner.runAsService' | translate }}</option>
         </select>
 
+        <fieldset class="ad-fieldset" data-test="handoff">
+          <legend>{{ 'agentDesigner.handoff' | translate }}</legend>
+          <p class="ad-muted">{{ 'agentDesigner.handoffHint' | translate }}</p>
+          <label class="ad-check">
+            <input #ho type="checkbox" [checked]="draft().handoff !== null" (change)="setHandoff(ho.checked)" />
+            {{ 'agentDesigner.handoffOn' | translate }}
+          </label>
+          @if (draft().handoff; as handoff) {
+            <label for="ad-handoff-input">{{ 'agentDesigner.handoffInput' | translate }}</label>
+            <textarea #hi id="ad-handoff-input" rows="6" dir="ltr" [value]="handoff.input"
+                      (input)="setHandoffSide('input', hi.value)"></textarea>
+            <label for="ad-handoff-output">{{ 'agentDesigner.handoffOutput' | translate }}</label>
+            <textarea #hout id="ad-handoff-output" rows="6" dir="ltr" [value]="handoff.output"
+                      (input)="setHandoffSide('output', hout.value)"></textarea>
+            @if (handoffInvalid(); as side) {
+              <p class="ad-error" role="alert">{{ ('agentDesigner.handoffInvalid.' + side) | translate }}</p>
+            }
+          }
+        </fieldset>
+
         <fieldset class="ad-fieldset">
           <legend>{{ 'agentDesigner.channels' | translate }}</legend>
           <div class="ad-channels">
@@ -119,7 +139,7 @@
         }
 
         <div class="ad-actions">
-          <button type="submit" [disabled]="saving()">{{ 'agentDesigner.save' | translate }}</button>
+          <button type="submit" [disabled]="saving() || handoffInvalid() !== null">{{ 'agentDesigner.save' | translate }}</button>
           <button type="button" [disabled]="!canPublish()" (click)="publish()">{{ 'agentDesigner.publish' | translate }}</button>
           @if (status() === 'saved') {
             <span class="ad-ok">{{ 'agentDesigner.saved' | translate }}</span>
