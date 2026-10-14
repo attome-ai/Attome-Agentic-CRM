@@ -39,6 +39,27 @@ through the same API and the same permissions.
 Dependencies point one way: foundation → engine → sdk → packs → apps. See
 [`docs/architecture.md`](docs/architecture.md).
 
+## Installing
+
+One command installs a release as a service. On Linux it also installs PostgreSQL 18 with pgvector
+when you give no database:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/attome-ai/Attome-Agentic-CRM/main/scripts/install.sh \
+  | sudo sh -s -- --admin you@example.com
+```
+
+On Windows (an elevated PowerShell), against an existing PostgreSQL 18 database with the `vector`,
+`pg_trgm` and `pgcrypto` extensions created:
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/attome-ai/Attome-Agentic-CRM/main/scripts/install.ps1))) `
+    -DatabaseUrl 'postgres://attome_owner:secret@127.0.0.1:5432/attome' -Admin you@example.com
+```
+
+Either way the server and the web app answer on `http://localhost:7865/`; sign in with the one-time
+password the install prints.
+
 ## Building and running
 
 Rust 1.97 (pinned in `rust-toolchain.toml`) on Windows or Linux, and PostgreSQL 18 with the `pgvector`
