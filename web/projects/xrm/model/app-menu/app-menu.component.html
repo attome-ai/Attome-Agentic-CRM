@@ -1,0 +1,28 @@
+<nav class="am" [attr.aria-label]="menu()?.name ?? ('appMenu.label' | translate)">
+  @if (error(); as message) {
+    <p class="am-error" role="alert">{{ message }}</p>
+  }
+  @if (menu(); as m) {
+    @for (group of m.groups; track group.label) {
+      <section class="am-group">
+        <h3 class="am-group-label">{{ group.label }}</h3>
+        <ul class="am-items">
+          @for (item of group.items; track item.label) {
+            <li class="am-item" [attr.data-item]="group.label + '/' + item.label">
+              @if (route(link(item)); as r) {
+                <a [routerLink]="r">{{ item.label }}</a>
+              } @else if (href(link(item)); as h) {
+                <a [href]="h" target="_blank" rel="noopener noreferrer">{{ item.label }}</a>
+              } @else {
+                <span class="am-pending">{{ item.label }}</span>
+              }
+              @if (item.badge) {
+                <span class="am-badge">{{ item.badge }}</span>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  }
+</nav>

@@ -151,6 +151,8 @@ export const xrmEn = {
     loading: 'Loading the form…', required: 'Required',
     save: 'Save', saving: 'Saving…', saved: 'Saved',
   },
+  // A21-T2 — an app's menu.
+  appMenu: { label: 'App menu' },
   // N9-T2 — the agent designer.
   agentDesigner: {
     title: 'Agents', agents: 'Agents', new: 'New agent', none: 'No agents yet.',

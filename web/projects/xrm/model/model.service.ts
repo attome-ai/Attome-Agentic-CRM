@@ -117,6 +117,25 @@ export interface AgentUsage {
   limit: number | null;
 }
 
+/** One menu item as the server sends it (A21-T2). */
+export interface MenuItem {
+  label:   string;
+  /** `view` | `form` | `dashboard` | `page` | `report` | `flow` | `url`. */
+  kind:    string;
+  target?: string;
+  url?:    string;
+  badge?:  string;
+}
+
+/** A published menu filtered for the caller (`GET /api/v1/model/navigation/{id}`). */
+export interface MenuView {
+  id:      string;
+  name:    string;
+  groups:  { label: string; items: MenuItem[] }[];
+  /** `<group>/<item>` of the caller's landing page. */
+  landing: string | null;
+}
+
 /** An action an agent may be given (`GET /api/v1/actions`). */
 export interface ActionSummary {
   id:          string;
@@ -236,6 +255,11 @@ export class ModelService {
     return this.api.get<{ items: AgentUsage[] }>(
       `/api/v1/admin/ai/agents/${encodeURIComponent(agent)}/usage`,
     );
+  }
+
+  /** A published menu as this user sees it (A21-T2). */
+  menu(id: string): Observable<MenuView> {
+    return this.api.get<MenuView>(`/api/v1/model/navigation/${encodeURIComponent(id)}`);
   }
 
   /** The actions the caller may invoke, which an agent may be given as tools. */

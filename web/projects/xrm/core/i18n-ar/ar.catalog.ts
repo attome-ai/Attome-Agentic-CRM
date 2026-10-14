@@ -128,6 +128,8 @@ export const xrmAr = {
     loading: 'جارٍ تحميل النموذج…', required: 'مطلوب',
     save: 'حفظ', saving: 'جارٍ الحفظ…', saved: 'تم الحفظ',
   },
+  // A21-T2 — قائمة التطبيق
+  appMenu: { label: 'قائمة التطبيق' },
   // N9-T2 — مصمم الوكلاء، انظر en.catalog.ts
   agentDesigner: {
     title: 'الوكلاء', agents: 'الوكلاء', new: 'وكيل جديد', none: 'لا يوجد وكلاء بعد.',
