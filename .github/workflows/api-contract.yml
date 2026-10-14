@@ -18,6 +18,9 @@ on:
 
 permissions:
   contents: write
+  # A push made with GITHUB_TOKEN starts no workflow, so the regenerated
+  # types would never reach web-check; dispatching it explicitly does.
+  actions: write
 
 concurrency:
   group: api-contract
@@ -54,6 +57,8 @@ jobs:
         shell: bash
         run: bash scripts/ci/summarize-failures.sh api-contract.log
       - name: commit when changed
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if git diff --quiet -- openapi.json web/projects/base/src/lib/generated web/projects/sdk/src/lib/generated; then
             echo "the API contract is current"
@@ -67,7 +72,10 @@ jobs:
           # own; set them aside so the rebase onto a newer main can run.
           git status --short
           for attempt in 1 2 3; do
-            git pull --rebase --autostash origin main && git push origin HEAD:main && exit 0
+            if git pull --rebase --autostash origin main && git push origin HEAD:main; then
+              gh workflow run web-check.yml --ref main
+              exit 0
+            fi
             sleep 10
           done
           exit 1
