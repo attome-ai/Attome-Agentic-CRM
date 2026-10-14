@@ -2355,6 +2355,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
             // the icons are in the committed Line Awesome subset.
             for (label, route, icon, order) in [
                 ("Agent Designer", "/xrm/model/agents", "las la-robot", 85),
+                ("Prompts", "/xrm/model/prompts", "las la-edit", 87),
                 ("AI Status", "/xrm/ai/status", "las la-tachometer-alt", 90),
                 ("AI Spend", "/xrm/ai/spend", "las la-chart-line", 100),
                 ("AI Switches", "/xrm/ai/switches", "las la-power-off", 110),

@@ -8,6 +8,7 @@ export { FormRendererComponent, controlFor } from './form-renderer/form-renderer
 export type { FieldControl } from './form-renderer/form-renderer.component';
 export { MetadataExplorerComponent } from './explorer/metadata-explorer.component';
 export { AgentDesignerComponent } from './agent-designer/agent-designer.component';
+export { PromptEditorComponent } from './prompt-editor/prompt-editor.component';
 export { LiveService } from './live.service';
 export { AppMenuComponent, linkFor } from './app-menu/app-menu.component';
 export type { MenuLink } from './app-menu/app-menu.component';

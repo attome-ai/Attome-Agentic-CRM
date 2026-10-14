@@ -166,6 +166,14 @@ export const xrmEn = {
   approvalCard: { field: 'Field', before: 'Now', after: 'After approval', agentSaid: 'The agent wrote (not checked by the platform):' },
   // N20-T2 — translate a note or reply.
   translateText: { translate: 'Translate', working: 'Translating…', hide: 'Hide translation', failed: 'Translation is not available.' },
+  // N10-T4 — the prompt editor.
+  promptEditor: {
+    title: 'Prompts', intro: 'Each prompt the platform ships. Your sections come after its locked text; a share below 100 tries them on part of your users first.',
+    customised: 'customised', locked: 'Locked text (from the platform)', yourSections: 'Your sections',
+    sectionName: 'Section name', sectionText: 'Section text', addSection: 'Add a section',
+    share: 'Share of users (1 to 100)', save: 'Save draft', publish: 'Publish', saved: 'Draft saved', published: 'Published',
+    tryOn: 'Try on a record', entity: 'Entity', record: 'Record id', show: 'Show what the model receives',
+  },
   // N31-T2 — the AI status page.
   aiStatus: {
     title: 'AI status', model: 'Model', approved: 'approved', notApproved: 'not approved: generation is refused',

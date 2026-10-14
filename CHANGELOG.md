@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- The prompt editor (`/model/prompts`): each shipped prompt, your override sections after its locked
+  text, a rollout share, and for record summaries a try-on showing exactly what the model receives.
 - Chat modes: `POST /api/v1/ai/conversations` takes `mode` — `develop` (metadata tools and reads, so
   changes are drafts) or `run` (everything but the metadata edit tools).
 - AI attributes: an attribute with `options.ai.prompt` gets suggestions from `record.ai_field`, the

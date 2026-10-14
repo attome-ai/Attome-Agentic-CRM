@@ -597,6 +597,13 @@ export const xrmShellRoutes: Routes = [
               import('@attome/xrm/model').then(m => m.AgentDesignerComponent),
           },
           {
+            // N10-T4: the prompt editor (overrides, rollout, try-on).
+            path: 'model/prompts',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('@attome/xrm/model').then(m => m.PromptEditorComponent),
+          },
+          {
             // Y1-T15: the metadata explorer (kinds, objects, history,
             // diff). The admin model API refuses non-administrators.
             path: 'model/explorer',

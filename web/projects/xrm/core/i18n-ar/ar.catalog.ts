@@ -133,6 +133,13 @@ export const xrmAr = {
   agentSessionsTree: { delegated: 'فُوِّض إلى' },
   approvalCard: { field: 'الحقل', before: 'الآن', after: 'بعد الموافقة', agentSaid: 'كتب الوكيل (لم تتحقق منه المنصة):' },
   translateText: { translate: 'ترجمة', working: 'جارٍ الترجمة…', hide: 'إخفاء الترجمة', failed: 'الترجمة غير متاحة.' },
+  promptEditor: {
+    title: 'التعليمات', intro: 'كل تعليمات تأتي مع المنصة. أقسامك تأتي بعد نصها المقفل؛ والنسبة الأقل من 100 تجربها على جزء من المستخدمين أولًا.',
+    customised: 'مخصّصة', locked: 'النص المقفل (من المنصة)', yourSections: 'أقسامك',
+    sectionName: 'اسم القسم', sectionText: 'نص القسم', addSection: 'إضافة قسم',
+    share: 'نسبة المستخدمين (من 1 إلى 100)', save: 'حفظ المسودة', publish: 'نشر', saved: 'حُفظت المسودة', published: 'نُشرت',
+    tryOn: 'جرّبها على سجل', entity: 'الكيان', record: 'معرّف السجل', show: 'اعرض ما يتلقاه النموذج',
+  },
   aiStatus: {
     title: 'حالة الذكاء الاصطناعي', model: 'النموذج', approved: 'معتمد', notApproved: 'غير معتمد: يُرفض التوليد',
     noModel: 'لم يُضبط نموذج توليد.', name: 'الاسم', contextWindow: 'نافذة السياق',

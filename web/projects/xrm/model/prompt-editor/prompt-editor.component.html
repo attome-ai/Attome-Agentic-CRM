@@ -1,0 +1,69 @@
+<section class="pe">
+  <h2>{{ 'promptEditor.title' | translate }}</h2>
+  <p class="pe-muted">{{ 'promptEditor.intro' | translate }}</p>
+  @if (error(); as message) {
+    <p class="pe-error" role="alert">{{ message }}</p>
+  }
+  <div class="pe-layout">
+    <ul class="pe-list">
+      @for (p of prompts(); track p.version) {
+        <li>
+          <button type="button" class="pe-item" [class.pe-active]="selected()?.version === p.version"
+                  [attr.data-prompt]="p.action_id" (click)="select(p)">
+            <code dir="ltr">{{ p.action_id }}</code>
+            <span class="pe-muted" dir="ltr">{{ p.version }}</span>
+            @if (overrides()[p.action_id]) {
+              <span class="pe-badge">{{ 'promptEditor.customised' | translate }}</span>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+
+    @if (selected(); as p) {
+      <div class="pe-detail">
+        <h3>{{ 'promptEditor.locked' | translate }}</h3>
+        <pre class="pe-code" dir="ltr">{{ p.text }}</pre>
+
+        <h3>{{ 'promptEditor.yourSections' | translate }}</h3>
+        @for (section of draft().sections; track $index; let i = $index) {
+          <div class="pe-section">
+            <input #nm type="text" dir="ltr" [value]="section.name" [attr.aria-label]="'promptEditor.sectionName' | translate"
+                   (input)="setSection(i, { name: nm.value })" />
+            <textarea #tx rows="4" [value]="section.text" [attr.aria-label]="'promptEditor.sectionText' | translate"
+                      (input)="setSection(i, { text: tx.value })"></textarea>
+          </div>
+        }
+        <button type="button" (click)="addSection()">{{ 'promptEditor.addSection' | translate }}</button>
+
+        <label for="pe-share">{{ 'promptEditor.share' | translate }}</label>
+        <input #sh id="pe-share" type="number" min="1" max="100" [value]="draft().share" (input)="setShare(sh.value)" />
+
+        <div class="pe-actions">
+          <button type="button" [disabled]="busy()" (click)="save()">{{ 'promptEditor.save' | translate }}</button>
+          <button type="button" [disabled]="busy() || !draft().id" (click)="publish()">{{ 'promptEditor.publish' | translate }}</button>
+          @if (status(); as s) {
+            <span role="status">{{ ('promptEditor.' + s) | translate }}</span>
+          }
+        </div>
+
+        @if (canPreview()) {
+          <h3>{{ 'promptEditor.tryOn' | translate }}</h3>
+          <div class="pe-try">
+            <input #en type="text" dir="ltr" [attr.aria-label]="'promptEditor.entity' | translate"
+                   [placeholder]="'promptEditor.entity' | translate" (input)="previewEntity.set(en.value)" />
+            <input #rc type="text" dir="ltr" [attr.aria-label]="'promptEditor.record' | translate"
+                   [placeholder]="'promptEditor.record' | translate" (input)="previewRecord.set(rc.value)" />
+            <button type="button" (click)="tryOn()">{{ 'promptEditor.show' | translate }}</button>
+          </div>
+          @for (m of preview(); track $index) {
+            <div class="pe-message" [attr.data-role]="m.role">
+              <strong>{{ m.role }}</strong>
+              <pre class="pe-code">{{ m.content }}</pre>
+            </div>
+          }
+        }
+      </div>
+    }
+  </div>
+</section>
