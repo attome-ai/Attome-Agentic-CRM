@@ -355,3 +355,80 @@ fn commands_create_a_form_and_report_a_missing_attribute() {
         assert_eq!(read["state"], "draft");
     });
 }
+
+#[test]
+fn a_published_form_has_a_render_plan() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, cookie) = seed_admin(&db).await;
+        let app = full_app(system);
+        let (entity_id, attribute_id, attribute_name): (Uuid, Uuid, String) = sqlx::query_as(
+            "SELECT e.id, a.id, a.logicalname FROM entity_info e \
+             JOIN attribute_info a ON a.entity_ref = e.id \
+             WHERE e.is_active IS NOT FALSE AND a.is_active IS NOT FALSE LIMIT 1",
+        )
+        .fetch_one(&db)
+        .await
+        .expect("a seeded entity with an attribute");
+        let form_id = Uuid::now_v7();
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/form/{form_id}/commands"),
+                &cookie,
+                serde_json::json!({
+                    "base_hash": "",
+                    "name": format!("plan form {form_id}"),
+                    "commands": [
+                        { "op": "set", "path": "/entity", "value": entity_id.to_string() },
+                        { "op": "set", "path": "/sections", "value": [
+                            { "label": "Main", "fields": [attribute_id.to_string()] }
+                        ]}
+                    ]
+                }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        // Not published yet: no plan.
+        let resp = app
+            .clone()
+            .oneshot(get_req(
+                &format!("/api/v1/model/forms/{form_id}/plan"),
+                &cookie,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND);
+
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/form/{form_id}/publish"),
+                &cookie,
+                serde_json::json!({}),
+            ))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let body = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+
+        let resp = app
+            .oneshot(get_req(
+                &format!("/api/v1/model/forms/{form_id}/plan"),
+                &cookie,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let plan = body_json(resp).await;
+        assert_eq!(plan["sections"][0]["label"], "Main");
+        assert_eq!(
+            plan["sections"][0]["fields"][0]["attribute"],
+            attribute_name
+        );
+    });
+}
