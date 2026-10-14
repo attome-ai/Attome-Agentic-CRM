@@ -287,7 +287,8 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         .add_bundle(auth_bundle)
         .add_bundle(auth_protected_bundle)
         .add_bundle(openapi_bundle)
-        .add_bundle(omnichannel_bundle);
+        .add_bundle(omnichannel_bundle)
+        .with_web_root(web_root(&config));
     // D-792 (FLEET-CONSOLE-DESIGN.md §2.2, §3.1) — the fleet console's routes
     // are a bundle of their own, through the same middleware stack, and exist
     // only when the gate is open: otherwise `/api/v1/fleet/**` is an unknown
@@ -641,7 +642,28 @@ fn bootstrap_admin_email_arg() -> Option<String> {
 /// the tool that resurrects a disabled account (same posture as
 /// `attome_auth::accounts::register`'s own disabled-email guard,
 /// P-account-state-enforcement).
-async fn run_bootstrap_admin(
+/// The built web app's directory: `app.web_root` when set, else `web` next
+/// to the executable when it exists. `None` serves the API only.
+fn web_root(config: &AppConfig) -> Option<std::path::PathBuf> {
+    let root = match &config.app.web_root {
+        Some(dir) => std::path::PathBuf::from(dir),
+        None => std::env::current_exe().ok()?.parent()?.join("web"),
+    };
+    if root.join("index.html").is_file() {
+        tracing::info!(root = %root.display(), "serving the web app");
+        Some(root)
+    } else {
+        if config.app.web_root.is_some() {
+            tracing::warn!(
+                root = %root.display(),
+                "app.web_root has no index.html; serving the API only"
+            );
+        }
+        None
+    }
+}
+
+pub(crate) async fn run_bootstrap_admin(
     config: &AppConfig,
     email: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {

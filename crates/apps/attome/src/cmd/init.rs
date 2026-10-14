@@ -11,6 +11,16 @@
 //! attome serve
 //! ```
 //!
+//! Or in one command, as a Windows service or a systemd unit (U1-T1):
+//!
+//! ```text
+//! attome init --database-url <url> --admin you@example.com --service
+//! ```
+//!
+//! which writes the configuration to the platform data directory, applies the
+//! schema, creates the first administrator (printing a one-time password),
+//! installs and starts the service and waits until it answers.
+//!
 //! The database must exist and the connecting role must be able to create
 //! roles and tables in it (the migrations create the three application roles).
 //! Before writing anything it checks the machine against the Solo minimums
@@ -33,7 +43,7 @@ attome init: install a Solo deployment (the binary and PostgreSQL, no Redis)
 
 Usage:
   attome init --database-url <url> [--out <file>] [--port <n>] [--force]
-              [--no-migrate] [--from-bundle <dir>]
+              [--no-migrate] [--from-bundle <dir>] [--admin <email>] [--service]
 
   --database-url  postgres://user:password@host:port/database, a database that
                   exists, reached as a role that can create roles and tables
@@ -44,6 +54,10 @@ Usage:
                   `attome migrate`
   --from-bundle   an offline bundle directory to verify first
                   (`attome bundle offline` makes one)
+  --admin         create the first administrator and print a one-time password
+  --service       install and start Attome as a Windows service or a systemd
+                  unit and wait until it answers; the configuration goes to
+                  %ProgramData%\\Attome or /var/lib/attome unless --out names it
 ";
 
 /// What the command was asked to do.
@@ -56,15 +70,21 @@ struct Args {
     migrate: bool,
     /// An offline bundle to verify before installing (U1-T4).
     from_bundle: Option<PathBuf>,
+    /// The first administrator's email.
+    admin: Option<String>,
+    /// Install and start the service (U1-T1).
+    service: bool,
 }
 
 fn parse_args(raw: &[String]) -> Result<Args, String> {
     let mut database_url = None;
-    let mut out = PathBuf::from("config.json");
+    let mut out = None;
     let mut port = 7865u16;
     let mut force = false;
     let mut migrate = true;
     let mut from_bundle = None;
+    let mut admin = None;
+    let mut service = false;
     let mut it = raw.iter();
     while let Some(arg) = it.next() {
         let mut value = |name: &str| -> Result<String, String> {
@@ -74,7 +94,7 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
         };
         match arg.as_str() {
             "--database-url" => database_url = Some(value("--database-url")?),
-            "--out" => out = PathBuf::from(value("--out")?),
+            "--out" => out = Some(PathBuf::from(value("--out")?)),
             "--port" => {
                 port = value("--port")?
                     .parse()
@@ -83,12 +103,24 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
             "--force" => force = true,
             "--no-migrate" => migrate = false,
             "--from-bundle" => from_bundle = Some(PathBuf::from(value("--from-bundle")?)),
+            "--admin" => admin = Some(value("--admin")?),
+            "--service" => service = true,
             "--help" | "-h" => return Err(USAGE.to_owned()),
             other => return Err(format!("unknown option `{other}`\n\n{USAGE}")),
         }
     }
     let database_url =
         database_url.ok_or_else(|| format!("--database-url is required\n\n{USAGE}"))?;
+    if (service || admin.is_some()) && !migrate {
+        return Err("--service and --admin need the schema; drop --no-migrate".to_owned());
+    }
+    let out = out.unwrap_or_else(|| {
+        if service {
+            super::service::default_dir().join("config.json")
+        } else {
+            PathBuf::from("config.json")
+        }
+    });
     Ok(Args {
         database_url,
         out,
@@ -96,6 +128,8 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
         force,
         migrate,
         from_bundle,
+        admin,
+        service,
     })
 }
 
@@ -272,6 +306,10 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         .into());
     }
     // Sizing (U1-T3): warn below the Solo minimums, refuse on a nearly full disk.
+    if let Some(parent) = args.out.parent().filter(|dir| !dir.as_os_str().is_empty()) {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("cannot create {}: {e}", parent.display()))?;
+    }
     let install_dir = args
         .out
         .parent()
@@ -309,13 +347,66 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         say("schema applied");
     }
 
+    if let Some(email) = &args.admin {
+        crate::serve::run_bootstrap_admin(&config, email).await?;
+    }
+
+    if args.service {
+        super::service::run(&[
+            "install".to_owned(),
+            "--dir".to_owned(),
+            install_dir.display().to_string(),
+        ])?;
+        wait_until_ready(args.port).await?;
+        say(&format!(
+            "\nAttome is running. Open http://localhost:{}/ and sign in{}.",
+            args.port,
+            if args.admin.is_some() {
+                " with the one-time password above"
+            } else {
+                ""
+            }
+        ));
+        return Ok(());
+    }
+
     let path = args.out.display();
+    let admin_step = if args.admin.is_some() {
+        String::new()
+    } else {
+        format!("CONFIG_FILE={path} attome serve --bootstrap-admin you@example.com\n  ")
+    };
     say(&format!(
-        "\nNext:\n  CONFIG_FILE={path} attome serve --bootstrap-admin you@example.com\n  \
-         CONFIG_FILE={path} attome serve\n\nThen open http://localhost:{}/",
+        "\nNext:\n  {admin_step}CONFIG_FILE={path} attome serve\n\nThen open http://localhost:{}/",
         args.port
     ));
     Ok(())
+}
+
+/// Polls `/health/ready` on this machine until the service answers, for at
+/// most three minutes.
+async fn wait_until_ready(port: u16) -> Result<(), String> {
+    say("waiting for the service to answer...");
+    let addr = format!("127.0.0.1:{port}");
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(180);
+    loop {
+        let probe_addr = addr.clone();
+        let ready = tokio::task::spawn_blocking(move || {
+            super::healthcheck::probe(&probe_addr, "/health/ready").unwrap_or(false)
+        })
+        .await
+        .unwrap_or(false);
+        if ready {
+            return Ok(());
+        }
+        if std::time::Instant::now() > deadline {
+            return Err(format!(
+                "the service did not answer on {addr} within 3 minutes; check its log \
+                 (Windows: Event Viewer, Linux: journalctl -u attome)"
+            ));
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    }
 }
 
 #[cfg(test)]
@@ -377,5 +468,27 @@ mod tests {
         .unwrap();
         assert_eq!(ok.port, 8080);
         assert!(!ok.migrate);
+        assert_eq!(ok.out, PathBuf::from("config.json"));
+    }
+
+    #[test]
+    fn service_installs_into_the_data_directory_and_needs_the_schema() {
+        let url = || vec!["--database-url".to_owned(), "postgres://u:p@h/d".to_owned()];
+        let mut args = url();
+        args.extend([
+            "--service".to_owned(),
+            "--admin".to_owned(),
+            "a@b.c".to_owned(),
+        ]);
+        let parsed = parse_args(&args).unwrap();
+        assert!(parsed.service);
+        assert_eq!(parsed.admin.as_deref(), Some("a@b.c"));
+        assert_eq!(
+            parsed.out,
+            super::super::service::default_dir().join("config.json")
+        );
+        let mut args = url();
+        args.extend(["--service".to_owned(), "--no-migrate".to_owned()]);
+        assert!(parse_args(&args).is_err(), "a service needs the schema");
     }
 }

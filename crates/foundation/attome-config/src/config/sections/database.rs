@@ -77,6 +77,12 @@ pub struct AppSection {
     /// requirements begin and end with what's checked in this file.
     #[serde(default = "default_deployment_profile")]
     pub deployment_profile: String,
+    /// The built web app's directory, served by `attome serve` for every
+    /// GET outside the API (`attome_server::web`). Unset: a `web` directory
+    /// next to the executable when one exists; otherwise the server serves
+    /// the API only and the web app is hosted separately.
+    #[serde(default)]
+    pub web_root: Option<String>,
 }
 
 fn default_deployment_profile() -> String {

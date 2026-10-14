@@ -67,6 +67,7 @@ pub struct ServerBuilder {
     router: Router,
     audience_router: Router,
     liveness_router: Router,
+    web_root: Option<std::path::PathBuf>,
 }
 
 impl std::fmt::Debug for ServerBuilder {
@@ -83,6 +84,7 @@ impl ServerBuilder {
             router: Router::new(),
             audience_router: Router::new(),
             liveness_router: Router::new(),
+            web_root: None,
         }
     }
 
@@ -144,6 +146,15 @@ impl ServerBuilder {
         self
     }
 
+    /// Serves the built web app from `root` for every `GET` outside the API
+    /// (`crate::web`), ahead of the rate limits and authentication (the
+    /// sign-in page must load without a session) and inside the outer
+    /// layers, so the security headers and request ids still apply.
+    pub fn with_web_root(mut self, root: Option<std::path::PathBuf>) -> Self {
+        self.web_root = root;
+        self
+    }
+
     pub fn build(self, s2s_layer: impl FnOnce(Router) -> Router) -> Router {
         // An explicit fallback on the staff router, set *before* its layers,
         // so an unmatched path still goes through staff authn (an
@@ -181,6 +192,13 @@ impl ServerBuilder {
         let with_mutation_gate = app::apply_mutation_gate(with_pre_auth_limit, self.state.clone());
         let with_authoring_gate = app::apply_authoring_gate(with_mutation_gate, self.state.clone());
         let with_liveness = with_authoring_gate.merge(self.liveness_router);
-        app::apply_outer_layers(with_liveness, &self.config)
+        let with_web = match self.web_root {
+            Some(root) => with_liveness.layer(middleware::from_fn_with_state(
+                crate::web::WebRoot(Arc::new(root)),
+                crate::web::serve_web,
+            )),
+            None => with_liveness,
+        };
+        app::apply_outer_layers(with_web, &self.config)
     }
 }

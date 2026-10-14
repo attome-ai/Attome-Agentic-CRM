@@ -47,7 +47,7 @@ pub fn run() -> ExitCode {
     }
 }
 
-fn probe(addr: &str, path: &str) -> std::io::Result<bool> {
+pub(crate) fn probe(addr: &str, path: &str) -> std::io::Result<bool> {
     let timeout = Duration::from_secs(5);
     let mut stream = TcpStream::connect(addr)?;
     stream.set_read_timeout(Some(timeout))?;

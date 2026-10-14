@@ -14,6 +14,7 @@ pub mod security;
 pub mod ssrf_guard;
 pub mod state;
 pub mod step_up;
+pub mod web;
 
 pub use app::{
     apply_inner_layers, apply_mutation_gate, apply_outer_layers, apply_pre_auth_rate_limit,
