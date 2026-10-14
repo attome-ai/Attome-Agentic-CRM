@@ -104,6 +104,9 @@ pub struct EngineState {
     /// The modules this deployment has on (attome-modules). Core only until
     /// boot reads the module configuration.
     pub modules: Arc<ArcSwap<ModuleSet>>,
+    /// AG1-T3 — the Umm al-Qura calendar with this deployment's moon-sighting
+    /// corrections; see `hijri_store`'s module doc for its refresh.
+    pub hijri: Arc<ArcSwap<attome_calendar::hijri::HijriCalendar>>,
     /// D-383 — entity logical name -> owning engine, so generic entity CRUD
     /// can apply the same module check that engine's own routes
     /// already get. Built once from the registered models by
@@ -288,6 +291,9 @@ impl EngineState {
             settings: MetadataCache::new(crate::setting_store::SettingsSnapshot::default()),
             labels: MetadataCache::new(crate::label_store::LabelSnapshot::default()),
             modules: Arc::new(ArcSwap::from_pointee(ModuleSet::core_only())),
+            hijri: Arc::new(ArcSwap::from_pointee(
+                attome_calendar::hijri::HijriCalendar::umm_al_qura().clone(),
+            )),
             entity_modules: Arc::new(EntityModuleMap::default()),
             engine_managed_fields: Arc::new(HashSet::new()),
             engine_managed_initial_values: Arc::new(std::collections::HashMap::new()),

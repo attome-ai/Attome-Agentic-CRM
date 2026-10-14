@@ -3296,6 +3296,15 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             let id = stored_query(fx).await;
             request("DELETE", &format!("/api/v1/admin/queries/{id}"), t, None)
         }
+        // ── Hijri sighting correction (AG1-T3) ──────────────────────────────
+        // 1447: Safar has 29 days and Rabi al-Awwal 30, so Rabi al-Awwal may
+        // start a day after its published 2025-08-24. Idempotent on reruns.
+        "PUT /api/v1/admin/hijri-months/{year}/{month}" => request(
+            "PUT",
+            "/api/v1/admin/hijri-months/1447/3",
+            t,
+            Some(json!({"gregorian_start": "2025-08-25", "reason": "audit emission"})),
+        ),
         // ── team favourites (B9-T2) ─────────────────────────────────────────
         "POST /api/v1/teams/{team_id}/favourites/lists" => {
             let team_id = team(fx).await;

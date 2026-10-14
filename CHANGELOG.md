@@ -8,6 +8,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Moon-sighting corrections to the Hijri calendar: `GET /api/v1/admin/hijri-months?year=` and
+  `PUT /api/v1/admin/hijri-months/{year}/{month}` (one day at most, audited); every node uses the
+  corrected calendar within 20 seconds.
 - The Umm al-Qura Hijri calendar, 1356 to 1500 AH: `attome_calendar::hijri` converts both ways and
   names the months in Arabic and English; migration 0021 adds the same table as `hijri_month` for
   grouping in SQL.

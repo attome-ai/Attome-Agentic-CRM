@@ -1509,6 +1509,113 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/calendars/{id}/exceptions/{exception_id}",
             axum::routing::delete(delete_exception),
         )
+        .route("/api/v1/admin/hijri-months", get(list_hijri_months))
+        .route(
+            "/api/v1/admin/hijri-months/{year}/{month}",
+            axum::routing::put(correct_hijri_month),
+        )
+}
+
+#[derive(Deserialize, utoipa::IntoParams)]
+struct HijriYearQuery {
+    /// The Hijri year, 1356 to 1500.
+    year: u16,
+}
+
+/// AG1-T3: one Hijri year's months as this deployment counts them, the
+/// published Umm al-Qura starts with any moon-sighting corrections.
+/// Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/hijri-months",
+    tag = "admin",
+    params(HijriYearQuery),
+    responses(
+        (status = 200, description = "The year's twelve months", body = PaginatedResponse<attome_core::hijri_store::HijriMonthRow>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 422, description = "Year outside 1356 to 1500", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_hijri_months(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(query): Query<HijriYearQuery>,
+) -> Result<Json<PaginatedResponse<attome_core::hijri_store::HijriMonthRow>>, AppError> {
+    let months = attome_core::hijri_store::year_months(&state.base.db, query.year).await?;
+    let total = i64::try_from(months.len()).unwrap_or(12);
+    Ok(Json(PaginatedResponse::new(months, total, 1, 12)))
+}
+
+/// `PUT /api/v1/admin/hijri-months/{year}/{month}`.
+#[derive(Deserialize, ToSchema)]
+struct HijriCorrection {
+    /// The Gregorian day the month starts on, as announced.
+    gregorian_start: NaiveDate,
+    /// Who announced it, or why; kept on the audit event.
+    reason: String,
+}
+
+/// AG1-T3: a moon-sighting correction. The month starts on
+/// `gregorian_start` (at most one day from the published table) and the
+/// month before it ends the day before; both stay 29 or 30 days. Every node
+/// uses the corrected calendar within 20 seconds, this one at once.
+/// Administrators only; not a promotable metadata change, so it works on the
+/// production profile.
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/hijri-months/{year}/{month}",
+    tag = "admin",
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+    params(
+        ("year" = u16, Path, description = "The Hijri year"),
+        ("month" = u8, Path, description = "The Hijri month, 1 to 12"),
+    ),
+    request_body = HijriCorrection,
+    responses(
+        (status = 200, description = "The year's months after the correction", body = PaginatedResponse<attome_core::hijri_store::HijriMonthRow>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 409, description = "Another correction is being saved", body = ErrorResponse),
+        (status = 422, description = "A move of more than one day, or a month outside 29-30 days", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn correct_hijri_month(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path((year, month)): Path<(u16, u8)>,
+    Json(body): Json<HijriCorrection>,
+) -> Result<Json<PaginatedResponse<attome_core::hijri_store::HijriMonthRow>>, AppError> {
+    let reason = body.reason.trim();
+    if reason.is_empty() || reason.chars().count() > 500 {
+        return Err(AppError::Validation(
+            "reason must be 1 to 500 characters".into(),
+        ));
+    }
+    let event = attome_audit::security::SecurityEvent::new(
+        attome_audit::security::MandatoryCategory::Configuration,
+        AuditOperation::Update,
+        ctx.user_id,
+        "hijri_month",
+        None,
+    )
+    .named(format!("hijri_month.sighting:{year}-{month:02}"))
+    .comment(reason.to_owned());
+    let mut stx = attome_audit::security::SecurityTx::begin(&state, event).await?;
+    let corrected = attome_core::hijri_store::correct_month_start_in(
+        &mut stx,
+        year,
+        month,
+        body.gregorian_start,
+    )
+    .await?;
+    stx.commit().await?;
+    state.hijri.store(std::sync::Arc::new(corrected));
+    let months = attome_core::hijri_store::year_months(&state.base.db, year).await?;
+    let total = i64::try_from(months.len()).unwrap_or(12);
+    Ok(Json(PaginatedResponse::new(months, total, 1, 12)))
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
@@ -1525,7 +1632,9 @@ pub fn routes() -> Router<EngineState> {
     delete_holiday,
     list_exceptions,
     create_exception,
-    delete_exception
+    delete_exception,
+    list_hijri_months,
+    correct_hijri_month
 ))]
 struct ApiDocFragment;
 

@@ -1333,6 +1333,59 @@ impl EngineSystemBuilder {
             });
         }
 
+        // ── Hijri sighting corrections (AG1-T3) ──
+        // Same poll-only shape as the settings block above; see
+        // `attome_core::hijri_store`'s module doc. The correcting node swaps
+        // at once (`calendar_admin::correct_hijri_month`); others within 20 s.
+        {
+            let db = state.base.db.clone();
+            match tokio::time::timeout(
+                Duration::from_secs(10),
+                attome_core::hijri_store::load_hijri(&db),
+            )
+            .await
+            {
+                Ok(Ok(calendar)) => state.hijri.store(Arc::new(calendar)),
+                Ok(Err(e)) => {
+                    tracing::warn!(error = %e, "Hijri corrections not loaded at boot; using the published table")
+                }
+                Err(_) => tracing::warn!(
+                    "Hijri corrections load timed out at boot; using the published table"
+                ),
+            }
+            let hijri = state.hijri.clone();
+            tokio::spawn(async move {
+                const HIJRI_POLL_INTERVAL_SECS: u64 = 20;
+                let mut seen = attome_core::hijri_store::hijri_watermark(&db)
+                    .await
+                    .ok()
+                    .flatten();
+                let mut interval =
+                    tokio::time::interval(Duration::from_secs(HIJRI_POLL_INTERVAL_SECS));
+                interval.tick().await;
+                loop {
+                    interval.tick().await;
+                    match attome_core::hijri_store::hijri_watermark(&db).await {
+                        Ok(now) if now != seen => {
+                            match attome_core::hijri_store::load_hijri(&db).await {
+                                Ok(calendar) => {
+                                    hijri.store(Arc::new(calendar));
+                                    seen = now;
+                                }
+                                Err(e) => {
+                                    tracing::warn!(error = %e, "Hijri corrections reload failed; will retry")
+                                }
+                            }
+                        }
+                        Ok(_) => {}
+                        Err(e) => {
+                            tracing::warn!(error = %e, "Hijri corrections poll failed; will retry")
+                        }
+                    }
+                }
+            });
+        }
+
         // ── Metadata-label cache pre-warm + poll (M05 Phase 1, D-426) ──
         // Poll-only, same trade-off and same shape as the settings block
         // right above (small admin-configured table, see
