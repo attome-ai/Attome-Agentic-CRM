@@ -1,3 +1,6 @@
+// Deep async call graphs (an agent turn runs actions that run turns)
+// overflow the default query depth.
+#![recursion_limit = "512"]
 mod admin;
 /// The changeset-recorder helpers the UI metadata admin files share (D-785).
 mod admin_hooks;

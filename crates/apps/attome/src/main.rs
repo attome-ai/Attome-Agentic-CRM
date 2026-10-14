@@ -4,6 +4,9 @@
 //! it, and the release gate (`attome release --check`). The install and
 //! cluster commands (`cluster`, `scale`, `build`, `pack`, `publish`) arrive
 //! with their roadmap tasks; `init` installs Solo.
+// Deep async call graphs (an agent turn runs actions that run turns)
+// overflow the default query depth.
+#![recursion_limit = "512"]
 
 use std::io::Write;
 use std::process::ExitCode;

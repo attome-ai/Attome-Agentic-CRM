@@ -1,6 +1,12 @@
 //! A pack installs through the changeset ledger, and installing it again
 //! changes nothing (the core CRM at first start, `attome init --pack crm`).
 
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    reason = "test helpers: a failed setup step should panic with its message"
+)]
+
 use attome_testapp::TestApp;
 
 /// Applies every changeset of `packs/<pack>` twice, as a repeated install

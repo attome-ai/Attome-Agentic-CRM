@@ -2,6 +2,9 @@
 //! (`tests/`) build the exact app the binary runs. No business logic belongs
 //! here: `auth` is route wiring only; credential flows live in `attome_auth`,
 //! account management in `attome_security`.
+// Deep async call graphs (an agent turn runs actions that run turns)
+// overflow the default query depth.
+#![recursion_limit = "512"]
 
 // The modules moved here from v1's `server` crate refer to it by name.
 extern crate self as attome;

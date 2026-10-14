@@ -23,6 +23,8 @@ sed -e 's/\x1b\[[0-9;]*m//g' "$log" > "$clean"
   grep -E -A1 '^error(\[E[0-9]+\])?: ' "$clean" \
     | grep -vE '^--$|could not compile|aborting due to|test failed, to rerun|^ +Running |targets failed|exit successfully' \
     | head -200
+  echo "== depth and recursion limits"
+  grep -E -A10 'overflow the depth limit|recursion limit' "$clean"     | grep -E 'error|help|note|-->' | head -20
   echo "== format"
   grep -E '^Diff in' "$clean" | head -50
 } | cut -c1-240 > failures.txt

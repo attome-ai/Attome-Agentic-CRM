@@ -36,6 +36,9 @@
 //! conversation state (`attome-ai`). Model transport (`attome-inference`). Approval
 //! workflow (`attome-approval`, D-195 — there is exactly one four-eyes
 //! primitive and this is not a second one).
+// Deep async call graphs (an agent turn runs actions that run turns)
+// overflow the default query depth.
+#![recursion_limit = "512"]
 
 /// This crate's advisory-lock namespace (D-351). Registered as id 25 in
 /// `crates/server/tests/advisory_lock_namespaces.rs`, which is the one place
