@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { LangService } from '@attome/base';
+import { ApiService, LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -43,6 +43,7 @@ describe('FormRendererComponent', () => {
       imports: [FormRendererComponent],
       providers: [
         { provide: ModelService, useValue: svc },
+        { provide: ApiService, useValue: { post: vi.fn().mockReturnValue(of({ status: 'completed', result: { suggestion: 'AI text' } })) } },
         { provide: LiveService, useValue: { connect: vi.fn() } },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],

@@ -13,6 +13,8 @@ export interface FormPlanField {
   /** The attribute's field type number (attome_core::FieldType). */
   field_type: number;
   required:   boolean;
+  /** An AI attribute: `record.ai_field` can suggest its value (N11-T1). */
+  ai?:        boolean;
 }
 
 export interface FormPlanSection {

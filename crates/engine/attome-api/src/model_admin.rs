@@ -678,6 +678,8 @@ pub(crate) struct FormPlanField {
     /// The attribute's field type number.
     field_type: i32,
     required: bool,
+    /// An AI attribute (N11-T1): `record.ai_field` can suggest its value.
+    ai: bool,
 }
 
 #[derive(sqlx::FromRow)]
@@ -687,6 +689,7 @@ struct AttributeRow {
     name: Option<String>,
     field_type: Option<i32>,
     required: Option<bool>,
+    ai: Option<bool>,
 }
 
 /// The render plan of a published form: its sections and, for each field,
@@ -747,7 +750,8 @@ async fn form_plan(
         .flat_map(|s| s.fields.iter().copied())
         .collect();
     let rows: Vec<AttributeRow> = sqlx::query_as(
-        "SELECT id, logicalname, name, type AS field_type, required \
+        "SELECT id, logicalname, name, type AS field_type, required, \
+                (options->'ai'->>'prompt') IS NOT NULL AS ai \
          FROM attribute_info WHERE id = ANY($1) AND is_active IS NOT FALSE",
     )
     .bind(&ids)
@@ -771,6 +775,7 @@ async fn form_plan(
                     label: row.name.clone().unwrap_or_else(|| row.logicalname.clone()),
                     field_type: row.field_type.unwrap_or(0),
                     required: row.required.unwrap_or(false),
+                    ai: row.ai.unwrap_or(false),
                 })
                 .collect(),
         })

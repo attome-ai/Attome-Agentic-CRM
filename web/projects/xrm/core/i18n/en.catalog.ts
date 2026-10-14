@@ -150,6 +150,7 @@ export const xrmEn = {
   formRenderer: {
     loading: 'Loading the form…', required: 'Required',
     save: 'Save', saving: 'Saving…', saved: 'Saved',
+    suggest: 'Suggest', suggesting: 'Suggesting…',
   },
   // N31-T2 — scoped AI switches.
   aiSwitches: {

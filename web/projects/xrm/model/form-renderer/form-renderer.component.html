@@ -35,6 +35,12 @@
                        [required]="field.required" (input)="set(field, txt.value)" />
               }
             }
+            @if (field.ai && record()) {
+              <button type="button" class="fr-suggest" [attr.data-suggest]="field.attribute"
+                      [disabled]="suggesting() !== null" (click)="suggest(field)">
+                {{ (suggesting() === field.attribute ? 'formRenderer.suggesting' : 'formRenderer.suggest') | translate }}
+              </button>
+            }
           </div>
         }
       </fieldset>
