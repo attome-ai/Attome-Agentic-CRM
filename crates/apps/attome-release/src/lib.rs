@@ -21,9 +21,15 @@
 //! Every run writes `target/release-gate/gate-<os>.json`: the commit, the
 //! operating system, the toolchain, and each step's outcome and duration
 //! (roadmap AC4). A release is tagged only from a commit whose reports from
-//! both Windows and Linux are green.
+//! both Windows and Linux are green (`attome release tag`, [`parity`]).
+//!
+//! A failed step can be **overridden** only by name and reason
+//! (`--override <step>=<reason> --by <person>`, AC4-T6): the step still runs,
+//! its failure is kept in the report as `overridden` with who and why, and
+//! `format` and `clippy` can never be overridden (they are always fixable).
 
 mod contract;
+pub mod parity;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -35,19 +41,75 @@ const FORMAT_BATCH: usize = 40;
 type Step = fn(&Path) -> Result<(), String>;
 
 /// What a gate run includes beyond the Rust steps.
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Options {
     /// Also build, lint and test the web app.
     pub web: bool,
+    /// Named overrides of failing steps.
+    pub overrides: Vec<Override>,
+    /// The person taking responsibility for the overrides.
+    pub by: Option<String>,
+}
+
+/// One override: the step and why its failure may be accepted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Override {
+    pub step: String,
+    pub reason: String,
+}
+
+/// Steps that can never be overridden: they are always fixable before a
+/// release.
+const NEVER_OVERRIDDEN: [&str; 2] = ["format", "clippy"];
+
+/// The shortest reason an override may give.
+const MIN_REASON_CHARS: usize = 20;
+
+/// Parses `<step>=<reason>`.
+pub fn parse_override(text: &str) -> Result<Override, String> {
+    let (step, reason) = text
+        .split_once('=')
+        .ok_or_else(|| format!("--override takes <step>=<reason>, got `{text}`"))?;
+    Ok(Override {
+        step: step.trim().to_owned(),
+        reason: reason.trim().to_owned(),
+    })
+}
+
+/// Checks overrides against the steps this run has.
+fn validate_overrides(options: &Options, steps: &[&str]) -> Result<(), String> {
+    if options.overrides.is_empty() {
+        return Ok(());
+    }
+    if options.by.as_deref().is_none_or(|by| by.trim().is_empty()) {
+        return Err(
+            "an override needs --by <name>: a person takes responsibility for it".to_owned(),
+        );
+    }
+    for item in &options.overrides {
+        if NEVER_OVERRIDDEN.contains(&item.step.as_str()) {
+            return Err(format!("`{}` cannot be overridden; fix it", item.step));
+        }
+        if !steps.contains(&item.step.as_str()) {
+            return Err(format!("`{}` is not a step of this run", item.step));
+        }
+        if item.reason.chars().count() < MIN_REASON_CHARS {
+            return Err(format!(
+                "the reason for overriding `{}` must be at least {MIN_REASON_CHARS} characters",
+                item.step
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// The gate with the default options (Rust steps and the contract check).
 pub fn check() -> ExitCode {
-    check_with(Options::default())
+    check_with(&Options::default())
 }
 
 /// The gate with `options`.
-pub fn check_with(options: Options) -> ExitCode {
+pub fn check_with(options: &Options) -> ExitCode {
     let root = match workspace_root() {
         Ok(root) => root,
         Err(error) => {
@@ -64,6 +126,11 @@ pub fn check_with(options: Options) -> ExitCode {
     if options.web {
         steps.push(("web", web as Step));
     }
+    let ids: Vec<&str> = steps.iter().map(|(id, _)| *id).collect();
+    if let Err(error) = validate_overrides(options, &ids) {
+        eprintln!("attome release --check: {error}");
+        return ExitCode::from(2);
+    }
     let started_at = unix_seconds();
     let mut failed = Vec::new();
     let mut outcomes = Vec::new();
@@ -72,19 +139,43 @@ pub fn check_with(options: Options) -> ExitCode {
         let clock = Instant::now();
         let result = step(&root);
         let duration_ms = u64::try_from(clock.elapsed().as_millis()).unwrap_or(u64::MAX);
-        match &result {
-            Ok(()) => say(&format!("    {name}: ok")),
-            Err(error) => {
+        let overridden = options.overrides.iter().find(|item| item.step == name);
+        let status = match (&result, overridden) {
+            (Ok(()), _) => {
+                say(&format!("    {name}: ok"));
+                Status::Passed
+            }
+            (Err(error), Some(item)) => {
+                eprintln!("    {name}: FAILED, overridden: {error}");
+                Status::Overridden {
+                    by: options.by.clone().unwrap_or_default(),
+                    reason: item.reason.clone(),
+                }
+            }
+            (Err(error), None) => {
                 eprintln!("    {name}: FAILED: {error}");
                 failed.push(name);
+                Status::Failed
             }
-        }
+        };
         outcomes.push(StepOutcome {
             id: name,
-            passed: result.is_ok(),
+            status,
             duration_ms,
             error: result.err(),
         });
+    }
+    let overridden: Vec<&StepOutcome> = outcomes
+        .iter()
+        .filter(|step| matches!(step.status, Status::Overridden { .. }))
+        .collect();
+    if !overridden.is_empty() {
+        say("overrides:");
+        for step in overridden {
+            if let Status::Overridden { by, reason } = &step.status {
+                say(&format!("    {} by {by}: {reason}", step.id));
+            }
+        }
     }
     match write_report(&root, started_at, &outcomes) {
         Ok(path) => say(&format!("report: {}", path.display())),
@@ -105,9 +196,26 @@ pub fn check_with(options: Options) -> ExitCode {
 #[derive(Debug)]
 struct StepOutcome {
     id: &'static str,
-    passed: bool,
+    status: Status,
     duration_ms: u64,
     error: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Status {
+    Passed,
+    Failed,
+    Overridden { by: String, reason: String },
+}
+
+impl Status {
+    fn label(&self) -> &'static str {
+        match self {
+            Self::Passed => "passed",
+            Self::Failed => "failed",
+            Self::Overridden { .. } => "overridden",
+        }
+    }
 }
 
 /// Writes `target/release-gate/gate-<os>.json` and returns its path.
@@ -115,12 +223,16 @@ fn write_report(root: &Path, started_at: u64, outcomes: &[StepOutcome]) -> Resul
     let steps: Vec<serde_json::Value> = outcomes
         .iter()
         .map(|step| {
-            serde_json::json!({
+            let mut entry = serde_json::json!({
                 "id": step.id,
-                "status": if step.passed { "passed" } else { "failed" },
+                "status": step.status.label(),
                 "duration_ms": step.duration_ms,
                 "error": step.error,
-            })
+            });
+            if let Status::Overridden { by, reason } = &step.status {
+                entry["override"] = serde_json::json!({ "by": by, "reason": reason });
+            }
+            entry
         })
         .collect();
     let report = serde_json::json!({
@@ -129,15 +241,17 @@ fn write_report(root: &Path, started_at: u64, outcomes: &[StepOutcome]) -> Resul
         "os": std::env::consts::OS,
         "arch": std::env::consts::ARCH,
         "rustc": command_output(root, "rustc", &["-V"]),
+        "node": command_output(root, &npm_program("node"), &["-v"])
+            .or_else(|| command_output(root, "node", &["-v"])),
         "started_at_unix": started_at,
         "finished_at_unix": unix_seconds(),
-        "passed": outcomes.iter().all(|step| step.passed),
+        "passed": outcomes.iter().all(|step| step.status != Status::Failed),
         "steps": steps,
     });
-    let dir = root.join("target").join("release-gate");
+    let dir = gate_dir(root);
     std::fs::create_dir_all(&dir)
         .map_err(|error| format!("cannot create {}: {error}", dir.display()))?;
-    let path = dir.join(format!("gate-{}.json", std::env::consts::OS));
+    let path = parity::report_path(&dir, std::env::consts::OS);
     let text = serde_json::to_string_pretty(&report)
         .map_err(|error| format!("cannot serialise the report: {error}"))?;
     std::fs::write(&path, text + "\n")
@@ -162,6 +276,102 @@ fn unix_seconds() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |elapsed| elapsed.as_secs())
+}
+
+/// Runs a gate command from its arguments (after `attome release`, or
+/// `attome-release`); `None` when they are not a gate command.
+pub fn dispatch(args: &[String]) -> Option<ExitCode> {
+    match args.first().map(String::as_str) {
+        Some("import-report") => match args.get(1..) {
+            Some([path]) => Some(import_report(Path::new(path))),
+            _ => None,
+        },
+        Some("tag") => match args.get(1..) {
+            Some([version]) => Some(tag(version)),
+            _ => None,
+        },
+        Some("--check") => {
+            let mut options = Options::default();
+            let mut rest = args[1..].iter();
+            while let Some(arg) = rest.next() {
+                match arg.as_str() {
+                    "--web" => options.web = true,
+                    "--by" => options.by = Some(rest.next()?.clone()),
+                    "--override" => match parse_override(rest.next()?) {
+                        Ok(item) => options.overrides.push(item),
+                        Err(error) => {
+                            eprintln!("attome release --check: {error}");
+                            return Some(ExitCode::from(2));
+                        }
+                    },
+                    _ => return None,
+                }
+            }
+            Some(check_with(&options))
+        }
+        _ => None,
+    }
+}
+
+/// `attome release import-report <path>`: brings the other OS's gate report
+/// into `target/release-gate/` after checking it was made from this commit.
+pub fn import_report(source: &Path) -> ExitCode {
+    let Ok(root) = workspace_root() else {
+        eprintln!("attome release import-report: not inside the Attome workspace");
+        return ExitCode::from(2);
+    };
+    let Some(head) = command_output(&root, "git", &["rev-parse", "HEAD"]) else {
+        eprintln!("attome release import-report: cannot read the current commit");
+        return ExitCode::from(2);
+    };
+    match parity::import(&gate_dir(&root), source, &head) {
+        Ok(path) => {
+            say(&format!("imported: {}", path.display()));
+            ExitCode::SUCCESS
+        }
+        Err(error) => {
+            eprintln!("attome release import-report: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// `attome release tag <version>`: tags the current commit `v<version>` only
+/// when its Windows and Linux gate reports are present and green; exit 3
+/// otherwise, naming what is missing.
+pub fn tag(version: &str) -> ExitCode {
+    let Ok(root) = workspace_root() else {
+        eprintln!("attome release tag: not inside the Attome workspace");
+        return ExitCode::from(2);
+    };
+    let Some(head) = command_output(&root, "git", &["rev-parse", "HEAD"]) else {
+        eprintln!("attome release tag: cannot read the current commit");
+        return ExitCode::from(2);
+    };
+    let problems = parity::check(&gate_dir(&root), &head);
+    if !problems.is_empty() {
+        for problem in &problems {
+            eprintln!("attome release tag: {problem}");
+        }
+        return ExitCode::from(3);
+    }
+    let name = format!("v{}", version.trim_start_matches('v'));
+    let mut command = Command::new("git");
+    command.args(["tag", "-a", &name, "-m", &format!("Attome {name}")]);
+    match run(&mut command, &root, "git tag") {
+        Ok(()) => {
+            say(&format!("tagged {name} at {head}"));
+            ExitCode::SUCCESS
+        }
+        Err(error) => {
+            eprintln!("attome release tag: {error}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn gate_dir(root: &Path) -> PathBuf {
+    root.join("target").join("release-gate")
 }
 
 /// The contract-diff step (see [`contract`]).
@@ -394,13 +604,13 @@ mod tests {
         let outcomes = [
             StepOutcome {
                 id: "format",
-                passed: true,
+                status: Status::Passed,
                 duration_ms: 5,
                 error: None,
             },
             StepOutcome {
                 id: "tests",
-                passed: false,
+                status: Status::Failed,
                 duration_ms: 9,
                 error: Some("cargo test exited with 101".to_owned()),
             },
@@ -413,6 +623,74 @@ mod tests {
         assert_eq!(report["steps"][0]["status"], "passed");
         assert_eq!(report["steps"][1]["status"], "failed");
         assert_eq!(report["steps"][1]["error"], "cargo test exited with 101");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn options_with(overrides: &[(&str, &str)], by: Option<&str>) -> Options {
+        Options {
+            web: false,
+            overrides: overrides
+                .iter()
+                .map(|(step, reason)| Override {
+                    step: (*step).to_owned(),
+                    reason: (*reason).to_owned(),
+                })
+                .collect(),
+            by: by.map(str::to_owned),
+        }
+    }
+
+    const STEPS: [&str; 4] = ["format", "clippy", "tests", "contract"];
+    const REASON: &str = "flaky upstream mirror, tracked in issue 42";
+
+    #[test]
+    fn override_without_by_errors() {
+        let options = options_with(&[("tests", REASON)], None);
+        assert!(validate_overrides(&options, &STEPS).is_err());
+    }
+
+    #[test]
+    fn override_short_reason_errors() {
+        let options = options_with(&[("tests", "flaky")], Some("Ahmed"));
+        assert!(validate_overrides(&options, &STEPS).is_err());
+    }
+
+    #[test]
+    fn override_of_fmt_is_refused() {
+        let options = options_with(&[("format", REASON)], Some("Ahmed"));
+        assert!(validate_overrides(&options, &STEPS).is_err());
+        let options = options_with(&[("clippy", REASON)], Some("Ahmed"));
+        assert!(validate_overrides(&options, &STEPS).is_err());
+    }
+
+    #[test]
+    fn valid_override_marks_step_overridden() {
+        let options = options_with(&[("tests", REASON)], Some("Ahmed"));
+        assert!(validate_overrides(&options, &STEPS).is_ok());
+        assert_eq!(
+            parse_override("tests=a reason long enough to count").unwrap(),
+            Override {
+                step: "tests".to_owned(),
+                reason: "a reason long enough to count".to_owned()
+            }
+        );
+        assert!(parse_override("no-equals-sign").is_err());
+        let dir = scratch("override");
+        let outcomes = [StepOutcome {
+            id: "tests",
+            status: Status::Overridden {
+                by: "Ahmed".to_owned(),
+                reason: REASON.to_owned(),
+            },
+            duration_ms: 1,
+            error: Some("cargo test exited with 101".to_owned()),
+        }];
+        let path = write_report(&dir, 1, &outcomes).unwrap();
+        let report: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(report["passed"], true);
+        assert_eq!(report["steps"][0]["status"], "overridden");
+        assert_eq!(report["steps"][0]["override"]["by"], "Ahmed");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

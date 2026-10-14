@@ -22,8 +22,12 @@ Usage:
   attome audit-chainer          Run the audit hash chainer
   attome verify-audit-chain     Verify the audit hash chain
   attome changeset-replay       Replay changesets against a database
-  attome release --check [--web] Run the release gate: format, clippy, tests,
-                                the API contract (and the web app with --web)
+  attome release --check [--web] [--override <step>=<reason> --by <name>]
+                                Run the release gate: format, clippy, tests, the
+                                API contract (and the web app with --web)
+  attome release import-report <path>
+                                Bring in the other OS's gate report
+  attome release tag <version>  Tag this commit when both OS reports are green
   attome version           Print the version
   attome help              Print this help
 ";
@@ -40,9 +44,12 @@ fn main() -> ExitCode {
             say(&format!("attome {}", env!("CARGO_PKG_VERSION")));
             ExitCode::SUCCESS
         }
-        ["release", "--check"] => attome_release::check(),
-        ["release", "--check", "--web"] => {
-            attome_release::check_with(attome_release::Options { web: true })
+        ["release", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome_release::dispatch(&rest).unwrap_or_else(|| {
+                eprintln!("attome release: unknown arguments\n\n{USAGE}");
+                ExitCode::from(2)
+            })
         }
         ["init", ..] => outcome(attome::cmd::init::run()),
         ["serve", ..] => outcome(attome::serve::run()),

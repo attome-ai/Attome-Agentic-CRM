@@ -1,24 +1,19 @@
-//! `attome-release --check`: the release gate on its own, so CI can run it
-//! before (and whether or not) the rest of the workspace compiles. `attome
-//! release --check` runs the same function.
+//! `attome-release`: the release gate on its own, so CI can run it before
+//! (and whether or not) the rest of the workspace compiles. `attome release`
+//! runs the same functions.
 
 use std::process::ExitCode;
 
+const USAGE: &str = "\
+usage:
+  attome-release --check [--web] [--override <step>=<reason>]... [--by <name>]
+  attome-release import-report <path>
+  attome-release tag <version>";
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    match args
-        .iter()
-        .map(String::as_str)
-        .collect::<Vec<_>>()
-        .as_slice()
-    {
-        ["--check"] => attome_release::check(),
-        ["--check", "--web"] | ["--web", "--check"] => {
-            attome_release::check_with(attome_release::Options { web: true })
-        }
-        _ => {
-            eprintln!("usage: attome-release --check [--web]");
-            ExitCode::from(2)
-        }
-    }
+    attome_release::dispatch(&args).unwrap_or_else(|| {
+        eprintln!("{USAGE}");
+        ExitCode::from(2)
+    })
 }
