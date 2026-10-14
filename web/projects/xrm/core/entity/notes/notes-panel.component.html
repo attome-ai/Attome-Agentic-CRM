@@ -351,6 +351,7 @@
                     <div class="xnp-card-body">
                       {{ activeNote.note_text }}
                     </div>
+                    <xrm-translate-text [text]="activeNote.note_text" />
 
                     <!-- Attachments -->
                     @if (activeNote.attachments && activeNote.attachments.length > 0) {
@@ -450,6 +451,7 @@
                         <div class="xnp-card-body">
                           {{ reply.note_text }}
                         </div>
+                        <xrm-translate-text [text]="reply.note_text" />
                       }
 
                       @if (reply.attachments && reply.attachments.length > 0) {

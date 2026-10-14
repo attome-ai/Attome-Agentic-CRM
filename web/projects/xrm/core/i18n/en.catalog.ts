@@ -159,6 +159,8 @@ export const xrmEn = {
     kinds: { agent: 'Agent', model: 'Model', provider: 'Provider', tool: 'Tool', channel: 'Channel' },
     causes: { manual: 'by an administrator', budget: 'budget overrun', quality: 'quality drop', injection: 'injection spike', departure: 'owner left' },
   },
+  // N20-T2 — translate a note or reply.
+  translateText: { translate: 'Translate', working: 'Translating…', hide: 'Hide translation', failed: 'Translation is not available.' },
   // N24-T2 — AI spend.
   aiSpend: {
     title: 'AI spend', intro: 'This month against each cap, for', days: 'days',

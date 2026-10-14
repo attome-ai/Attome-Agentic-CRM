@@ -10,6 +10,7 @@ import { DialogService } from '@attome/base/dialog';
 import { EntityService } from '../services/entity.service';
 import { FileUploadService } from '../field/file-upload.service';
 import { UploadPipeline } from '../field/upload-pipeline';
+import { TranslateTextComponent } from '../translate/translate-text.component';
 
 /**
  * `note`'s multi-`file` field (`platform-bundles/attome-api-note.json`).
@@ -86,7 +87,7 @@ const EXTENSION_ICONS: Record<string, string> = {
   selector: 'xrm-notes-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, TranslatePipe],
+  imports: [CommonModule, FormsModule, TranslatePipe, TranslateTextComponent],
   styleUrls: ['./notes-panel.component.css'],
   templateUrl: './notes-panel.component.html',
 })
