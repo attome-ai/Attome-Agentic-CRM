@@ -11,10 +11,11 @@ use axum::{
 };
 use tower::{BoxError, ServiceBuilder, timeout::TimeoutLayer};
 use tower_http::{
+    CompressionLevel,
     catch_panic::CatchPanicLayer,
     compression::{
         CompressionLayer,
-        predicate::{DefaultPredicate, Predicate},
+        predicate::{NotForContentType, Predicate, SizeAbove},
     },
     cors::{AllowHeaders, AllowMethods, AllowOrigin, CorsLayer},
     limit::RequestBodyLimitLayer,
@@ -337,10 +338,7 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
             .layer(RequestBodyLimitLayer::new(max_bytes))
             .layer(HandleErrorLayer::new(timeout_response))
             .layer(TimeoutLayer::new(config.request_timeout()))
-            .layer(
-                CompressionLayer::new()
-                    .compress_when(DefaultPredicate::new().and(compress_only_success)),
-            ),
+            .layer(compression_layer()),
     );
 
     let header_values = security_headers::SecurityHeaderValues::new(
@@ -354,6 +352,30 @@ pub fn apply_outer_layers(router: Router, config: &AppConfig) -> Router {
 }
 
 const X_REQUEST_ID: &str = "x-request-id";
+
+/// Bodies at or under this many bytes go out raw: compressing them costs
+/// more than it saves (AA7-T6).
+const COMPRESS_MIN_BYTES: u16 = 1024;
+
+/// AA7-T6: Brotli when the client accepts it (tower-http prefers `br` over
+/// `gzip` at equal q-values), gzip otherwise, both at the default level. A
+/// body under 1 KB, an already-compressed type (images, video, zip, PDF,
+/// octet-stream), gRPC, server-sent events and every non-2xx response go out
+/// raw.
+fn compression_layer() -> CompressionLayer<impl Predicate + Clone> {
+    let predicate = SizeAbove::new(COMPRESS_MIN_BYTES)
+        .and(NotForContentType::GRPC)
+        .and(NotForContentType::SSE)
+        .and(NotForContentType::IMAGES)
+        .and(NotForContentType::const_new("video/"))
+        .and(NotForContentType::const_new("application/zip"))
+        .and(NotForContentType::const_new("application/pdf"))
+        .and(NotForContentType::const_new("application/octet-stream"))
+        .and(compress_only_success);
+    CompressionLayer::new()
+        .quality(CompressionLevel::Default)
+        .compress_when(predicate)
+}
 
 /// Removes a client-supplied `x-request-id` unless it is exactly one value of
 /// 1–64 characters from `[A-Za-z0-9._-]`; `SetRequestIdLayer`, directly
@@ -643,6 +665,59 @@ mod tests {
         let body: serde_json::Value = serde_json::from_slice(&bytes).expect("JSON body");
         assert_eq!(body["error"], "payload_too_large");
         assert_eq!(body["request_id"], request_id);
+    }
+
+    /// AA7-T6: one GET through the outer stack for a body of `len` bytes of
+    /// `content_type`, accepting gzip and br; returns the `content-encoding`.
+    async fn encoding_for(content_type: &'static str, len: usize) -> Option<String> {
+        use tower::ServiceExt;
+
+        let body = "a".repeat(len);
+        let app = apply_outer_layers(
+            Router::new().route(
+                "/x",
+                get(move || {
+                    let body = body.clone();
+                    async move { ([(header::CONTENT_TYPE, content_type)], body).into_response() }
+                }),
+            ),
+            &outer_stack_config(),
+        );
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/x")
+                    .header(header::ACCEPT_ENCODING, "gzip, br")
+                    .header(header::ORIGIN, ALLOWED_ORIGIN)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .expect("router is infallible");
+        assert_eq!(response.status(), StatusCode::OK);
+        response
+            .headers()
+            .get(header::CONTENT_ENCODING)
+            .map(|v| v.to_str().unwrap().to_owned())
+    }
+
+    #[tokio::test]
+    async fn compression_skips_body_under_1kb() {
+        assert_eq!(encoding_for("application/json", 900).await, None);
+    }
+
+    #[tokio::test]
+    async fn compression_uses_br_for_large_json() {
+        assert_eq!(
+            encoding_for("application/json", 4096).await.as_deref(),
+            Some("br")
+        );
+    }
+
+    #[tokio::test]
+    async fn compression_skips_png() {
+        assert_eq!(encoding_for("image/png", 4096).await, None);
+        assert_eq!(encoding_for("application/pdf", 4096).await, None);
     }
 
     /// P0.1 / A1 (BSV-F01) — an error produced *inside* `CompressionLayer` must

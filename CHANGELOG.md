@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Responses prefer Brotli, fall back to gzip, and are sent raw when under 1 KB or already
+  compressed (images, video, zip, PDF, octet-stream).
 - A schema change blocked by a table lock retries after 1, 2, 4 and 8 seconds; a queued one then
   waits five minutes and tries again, up to 12 times, before failing with `lock_timeout`.
 - Solo backs up its database every day (`backup`, on by default; `attome backup now`); see
