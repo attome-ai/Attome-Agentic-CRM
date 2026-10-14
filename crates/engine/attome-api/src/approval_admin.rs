@@ -1499,6 +1499,130 @@ async fn decide_approval(
         .map(Json)
 }
 
+/// The most requests one batch decides.
+const MAX_BATCH: usize = 100;
+
+/// One request of a batch, at the version the administrator looked at.
+#[derive(Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+struct BatchItem {
+    id: Uuid,
+    row_version: i64,
+}
+
+#[derive(Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+struct BatchDecideBody {
+    /// `"approve"` or `"reject"`, for every request.
+    decision: String,
+    /// At most 100 requests, typically similar ones the administrator
+    /// reviewed a sample of (`GET /api/v1/admin/approvals?action_type=...`).
+    items: Vec<BatchItem>,
+    #[serde(default)]
+    #[schema(max_length = 2000)]
+    comment: Option<String>,
+}
+
+/// One request's outcome in a batch.
+#[derive(Serialize, ToSchema)]
+struct BatchOutcome {
+    id: Uuid,
+    /// The request's status after the decision, or `null` when it failed.
+    status: Option<String>,
+    /// Why this one was not decided (stale version, already decided, the
+    /// administrator's own request, ...); `null` on success.
+    error: Option<String>,
+}
+
+#[derive(Serialize, ToSchema)]
+struct BatchDecideResponse {
+    decided: usize,
+    failed: usize,
+    items: Vec<BatchOutcome>,
+}
+
+/// `POST /api/v1/admin/approvals/batch-decide` — decide many requests the
+/// same way (roadmap N30-T6). Each is decided on its own through the exact
+/// path a single decision takes ([`do_decide`]): its own row-version check,
+/// separation of duties, transaction, audit events and, for an approval
+/// that closes it, execution. One failing never stops the others; the
+/// response says what happened to each.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/approvals/batch-decide",
+    tag = "admin",
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Delegated,
+        Some("do_decide"),
+        "each request is decided through the single-decision path, which writes its own \
+         Approved/Rejected event and decision digest in its own transaction"
+    )))),
+    request_body = BatchDecideBody,
+    responses(
+        (status = 200, description = "Each request's outcome", body = BatchDecideResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Unknown decision, no items, more than 100, or a comment too long", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn batch_decide(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(body): Json<BatchDecideBody>,
+) -> Result<Json<BatchDecideResponse>, AppError> {
+    if !matches!(body.decision.as_str(), "approve" | "reject") {
+        return Err(AppError::Validation(format!(
+            "decision must be \"approve\" or \"reject\", got {:?}",
+            body.decision
+        )));
+    }
+    if body.items.is_empty() || body.items.len() > MAX_BATCH {
+        return Err(AppError::Validation(format!(
+            "a batch decides 1 to {MAX_BATCH} requests"
+        )));
+    }
+    let mut items = Vec::with_capacity(body.items.len());
+    for item in &body.items {
+        let decided = do_decide(
+            &state,
+            ctx.user_id,
+            item.id,
+            DecideBody {
+                decision: body.decision.clone(),
+                row_version: item.row_version,
+                comment: body.comment.clone(),
+            },
+            RequirePlan::EitherKind,
+        )
+        .await;
+        items.push(match decided {
+            Ok(response) => BatchOutcome {
+                id: item.id,
+                status: Some(response.status),
+                error: None,
+            },
+            Err(error) => BatchOutcome {
+                id: item.id,
+                status: None,
+                error: Some(match &error {
+                    AppError::Validation(m) => m.clone(),
+                    AppError::Conflict(m) => (*m).to_string(),
+                    AppError::Forbidden => "not allowed to decide this request".to_owned(),
+                    AppError::NotFound => "no such request".to_owned(),
+                    _ => "could not be decided".to_owned(),
+                }),
+            },
+        });
+    }
+    let failed = items.iter().filter(|i| i.error.is_some()).count();
+    Ok(Json(BatchDecideResponse {
+        decided: items.len() - failed,
+        failed,
+        items,
+    }))
+}
+
 /// Dashboard 10/10 Phase 6 prerequisite: whether the caller reached
 /// [`do_decide`] through the admin route (any request) or the non-admin one
 /// (plan-bearing only — a flat request has no eligible-approver concept
@@ -1936,6 +2060,7 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/admin/approvals", get(list_approvals))
         .route("/api/v1/admin/approvals/{id}", get(get_approval))
         .route("/api/v1/admin/approvals/{id}/decide", post(decide_approval))
+        .route("/api/v1/admin/approvals/batch-decide", post(batch_decide))
         .route("/api/v1/admin/approvals/{id}/cancel", post(cancel_approval))
         .route(
             "/api/v1/admin/approvals/{id}/retry-execution",
@@ -1956,15 +2081,19 @@ pub fn routes() -> Router<EngineState> {
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(
-    list_approvals,
-    get_approval,
-    cancel_approval,
-    decide_approval,
-    retry_execution,
-    delegate_approval,
-    decide_approval_eligible
-))]
+#[openapi(
+    paths(
+        list_approvals,
+        get_approval,
+        cancel_approval,
+        decide_approval,
+        batch_decide,
+        retry_execution,
+        delegate_approval,
+        decide_approval_eligible
+    ),
+    components(schemas(BatchItem, BatchDecideBody, BatchOutcome, BatchDecideResponse))
+)]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

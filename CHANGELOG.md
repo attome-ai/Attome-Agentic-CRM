@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `POST /api/v1/admin/approvals/batch-decide`: decide up to 100 similar requests at once, each through
+  the single-decision path, with each request's outcome returned.
 - The agent designer runs the agent's eval suites and shows each case's result.
 - The prompt editor (`/model/prompts`): each shipped prompt, your override sections after its locked
   text, a rollout share, and for record summaries a try-on showing exactly what the model receives.
