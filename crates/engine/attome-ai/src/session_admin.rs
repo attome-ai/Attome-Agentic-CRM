@@ -316,6 +316,67 @@ async fn session_trace(
     }))
 }
 
+/// One session a supervisor delegated to (N8-T1's run tree).
+#[derive(Debug, Serialize, ToSchema, sqlx::FromRow)]
+pub struct ChildSession {
+    pub id: Uuid,
+    /// The specialist agent object it ran as.
+    pub agent_object_ref: Option<Uuid>,
+    pub surface: String,
+    pub started_at: chrono::DateTime<chrono::Utc>,
+    pub revoked_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+/// Most child sessions one listing returns.
+const MAX_CHILDREN: i64 = 200;
+
+/// `GET /api/v1/admin/agents/sessions/{id}/children` — the sessions this one
+/// delegated to, oldest first (N8-T1): with each child's own trace, the
+/// whole run tree.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/agents/sessions/{id}/children",
+    tag = "action",
+    params(("id" = Uuid, Path, description = "The supervising agent session")),
+    responses(
+        (status = 200, description = "The delegated sessions, oldest first (at most 200)", body = PaginatedResponse<ChildSession>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks ai_agent.supervise", body = ErrorResponse),
+        (status = 404, description = "No such session", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn session_children(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<AgentSupervise>>,
+    axum::extract::Path(id): axum::extract::Path<Uuid>,
+) -> Result<Json<PaginatedResponse<ChildSession>>, AppError> {
+    let exists: bool =
+        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM agent_session WHERE id = $1)")
+            .bind(id)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    if !exists {
+        return Err(AppError::NotFound);
+    }
+    let items: Vec<ChildSession> = sqlx::query_as(
+        "SELECT id, agent_object_ref, surface, started_at, revoked_at          FROM agent_session WHERE parent_session_ref = $1          ORDER BY started_at, id LIMIT $2",
+    )
+    .bind(id)
+    .bind(MAX_CHILDREN)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse {
+        items,
+        total,
+        page: 1,
+        page_size: MAX_CHILDREN,
+    }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/agents/sessions", get(list_sessions))
@@ -323,10 +384,17 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/agents/sessions/{id}/trace",
             get(session_trace),
         )
+        .route(
+            "/api/v1/admin/agents/sessions/{id}/children",
+            get(session_children),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_sessions, session_trace), components(schemas(TraceStep)))]
+#[openapi(
+    paths(list_sessions, session_trace, session_children),
+    components(schemas(TraceStep, ChildSession))
+)]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
