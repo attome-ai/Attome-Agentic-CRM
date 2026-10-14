@@ -2210,6 +2210,110 @@ pub(super) async fn remove_attribute_choice(
     .await
 }
 
+/// One value of a choice field and the records holding it.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct ChoiceValueUsage {
+    pub value: String,
+    pub records: i64,
+    /// The value is one of the field's current choices; `false` for a value
+    /// still stored after it was removed.
+    pub defined: bool,
+}
+
+/// `GET .../fields/{field_id}/choice-usage`.
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct ChoiceUsage {
+    pub field: String,
+    /// `false` on a table too large to count inline; `values` then lists the
+    /// choices with no counts.
+    pub counted: bool,
+    pub values: Vec<ChoiceValueUsage>,
+}
+
+/// A5-T3: how many records hold each value of a choice field, including
+/// values no longer offered, so an administrator sees what removing or
+/// merging one would touch. Reads only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/entities/{entity_id}/fields/{field_id}/choice-usage",
+    tag = "admin",
+    params(("entity_id" = Uuid, Path), ("field_id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "Records per value, most used first", body = ChoiceUsage),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such field", body = ErrorResponse),
+        (status = 422, description = "Not a choice field", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn choice_usage(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path((entity_id, attr_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<ChoiceUsage>, AppError> {
+    use attome_metadata::provision::field_change as fc;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let row = fc::lock_field_in_tx(&mut tx, entity_id, attr_id).await?;
+    if row.field_type != "choice" {
+        return Err(AppError::Validation(format!(
+            "{} is not a choice field",
+            row.field
+        )));
+    }
+    let defined: Vec<String> = row
+        .options
+        .as_ref()
+        .and_then(|o| o.get("choices"))
+        .and_then(Value::as_array)
+        .map(|choices| {
+            choices
+                .iter()
+                .filter_map(|c| {
+                    c.as_str()
+                        .or_else(|| c.get("value").and_then(Value::as_str))
+                })
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default();
+    let large = fc::row_count_exceeds_in_tx(
+        &mut tx,
+        &row,
+        crate::field_changes::FIELD_CHANGE_INLINE_ROW_LIMIT,
+    )
+    .await?;
+    let stored = if large {
+        Vec::new()
+    } else {
+        fc::choice_usage(&mut tx, &row).await?
+    };
+    // Read only: release the field lock without writing.
+    tx.rollback().await.map_err(AppError::internal)?;
+    let mut values: Vec<ChoiceValueUsage> = stored
+        .into_iter()
+        .map(|(value, records)| ChoiceValueUsage {
+            defined: defined.contains(&value),
+            value,
+            records,
+        })
+        .collect();
+    for value in &defined {
+        if !values.iter().any(|v| &v.value == value) {
+            values.push(ChoiceValueUsage {
+                value: value.clone(),
+                records: 0,
+                defined: true,
+            });
+        }
+    }
+    Ok(Json(ChoiceUsage {
+        field: row.field,
+        counted: !large,
+        values,
+    }))
+}
+
 /// The answer of `POST .../fields/{field_id}/runs/{run_id}/abandon`.
 #[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct AbandonedFieldRun {
@@ -2421,6 +2525,7 @@ async fn do_abandon_field_run(
     change_attribute_type,
     add_attribute_choice,
     remove_attribute_choice,
+    choice_usage,
     abandon_field_run
 ))]
 struct ApiDocFragment;

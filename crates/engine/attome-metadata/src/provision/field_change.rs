@@ -1592,6 +1592,31 @@ pub async fn count_choice_in_use(
     .map_err(AppError::internal)
 }
 
+/// A5-T3: how many records hold each stored value of a choice field, most
+/// used first. One grouped scan; the caller applies the size gate.
+pub async fn choice_usage(
+    conn: &mut PgConnection,
+    row: &FieldRow,
+) -> Result<Vec<(String, i64)>, AppError> {
+    let sql = if row.is_multi() {
+        format!(
+            "SELECT v, COUNT(*) FROM {}, unnest({}) AS v GROUP BY v ORDER BY 2 DESC, 1",
+            row.table(),
+            row.column()
+        )
+    } else {
+        format!(
+            "SELECT {col}::text, COUNT(*) FROM {} WHERE {col} IS NOT NULL GROUP BY 1 ORDER BY 2 DESC, 1",
+            row.table(),
+            col = row.column()
+        )
+    };
+    sqlx::query_as(&sql)
+        .fetch_all(&mut *conn)
+        .await
+        .map_err(AppError::internal)
+}
+
 async fn write_options(
     conn: &mut PgConnection,
     row: &FieldRow,

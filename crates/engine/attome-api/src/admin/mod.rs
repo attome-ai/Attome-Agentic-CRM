@@ -35,8 +35,8 @@ use uuid::Uuid;
 
 use attribute::{
     abandon_field_run, add_attribute_choice, attribute_index_status,
-    attribute_schema_change_status, change_attribute_type, create_attribute, delete_attribute,
-    remove_attribute_choice, rename_attribute, update_attribute,
+    attribute_schema_change_status, change_attribute_type, choice_usage, create_attribute,
+    delete_attribute, remove_attribute_choice, rename_attribute, update_attribute,
 };
 #[cfg(debug_assertions)]
 use dev_scaffold::{dev_tools_available, scaffold_form_component};
@@ -201,6 +201,10 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/admin/entities/{entity_id}/fields/{field_id}/choices/{value}",
             axum::routing::delete(remove_attribute_choice),
+        )
+        .route(
+            "/api/v1/admin/entities/{entity_id}/fields/{field_id}/choice-usage",
+            get(choice_usage),
         )
         .route(
             "/api/v1/admin/entities/{entity_id}/fields/{field_id}/runs/{run_id}/abandon",
