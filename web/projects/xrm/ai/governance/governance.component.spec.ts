@@ -44,4 +44,32 @@ describe('AiGovernanceComponent (N30-T5, T9)', () => {
     fixture.componentInstance.addPolicy();
     expect(api.post).toHaveBeenCalledWith('/api/v1/admin/ai/write-policies', { action_id: 'record.delete' });
   });
+
+  it('exports every page of evidence as one file (N29-T2)', () => {
+    const get = vi.fn((url: string, params?: Record<string, string>) => {
+      if (url === '/api/v1/admin/ai/evidence') {
+        return params?.['cursor']
+          ? of({ items: [{ id: 'b' }], next_cursor: null })
+          : of({ items: [{ id: 'a' }], next_cursor: 'c1' });
+      }
+      if (url === '/api/v1/admin/approvals/metrics') {
+        return of({ days: 30, approvers: [], backlog: [], rejection_words: [] });
+      }
+      return of({ items: [] });
+    });
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+    TestBed.configureTestingModule({
+      imports: [AiGovernanceComponent],
+      providers: [
+        { provide: ApiService, useValue: { get, post: vi.fn(), delete: vi.fn() } },
+        { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(AiGovernanceComponent);
+    fixture.componentInstance.exportEvidence();
+    expect(get).toHaveBeenCalledWith('/api/v1/admin/ai/evidence', { kind: 'actions', cursor: 'c1' });
+    expect(fixture.componentInstance.exportedRows()).toBe(2);
+    expect(fixture.componentInstance.exporting()).toBe(false);
+  });
 });
