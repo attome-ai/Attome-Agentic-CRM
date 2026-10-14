@@ -10,11 +10,17 @@
 //!    (`--keep-going` so one broken crate does not hide the others' errors).
 //! 3. **tests**: `cargo test --workspace --no-fail-fast -- --test-threads=1`, so one run
 //!    reports every failing test.
+//! 4. **contract**: this commit's `openapi.json` against the previous release
+//!    tag's; a breaking change must be named under `### Breaking` in
+//!    `CHANGELOG.md`'s `[Unreleased]` section (roadmap AC4-T4). Skipped until
+//!    the first release is tagged.
 //!
 //! Every run writes `target/release-gate/gate-<os>.json`: the commit, the
 //! operating system, the toolchain, and each step's outcome and duration
 //! (roadmap AC4). A release is tagged only from a commit whose reports from
 //! both Windows and Linux are green.
+
+mod contract;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -33,7 +39,12 @@ pub fn check() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    let steps: [(&str, Step); 3] = [("format", format), ("clippy", clippy), ("tests", tests)];
+    let steps: [(&str, Step); 4] = [
+        ("format", format),
+        ("clippy", clippy),
+        ("tests", tests),
+        ("contract", contract_step),
+    ];
     let started_at = unix_seconds();
     let mut failed = Vec::new();
     let mut outcomes = Vec::new();
@@ -132,6 +143,49 @@ fn unix_seconds() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |elapsed| elapsed.as_secs())
+}
+
+/// The contract-diff step (see [`contract`]).
+fn contract_step(root: &Path) -> Result<(), String> {
+    let Some(tag) = command_output(root, "git", &["describe", "--tags", "--abbrev=0"]) else {
+        say("    contract: no previous release tag; skipped");
+        return Ok(());
+    };
+    let old_text = command_output(root, "git", &["show", &format!("{tag}:openapi.json")])
+        .ok_or_else(|| format!("cannot read openapi.json at {tag}"))?;
+    let new_text = std::fs::read_to_string(root.join("openapi.json"))
+        .map_err(|error| format!("cannot read openapi.json: {error}"))?;
+    let old: serde_json::Value = serde_json::from_str(&old_text)
+        .map_err(|error| format!("openapi.json at {tag} is not JSON: {error}"))?;
+    let new: serde_json::Value = serde_json::from_str(&new_text)
+        .map_err(|error| format!("openapi.json is not JSON: {error}"))?;
+    let changes = contract::breaking_changes(&old, &new);
+
+    let diff = serde_json::json!({
+        "base": tag,
+        "breaking": changes.iter().map(contract::Breaking::to_json).collect::<Vec<_>>(),
+    });
+    let dir = root.join("target").join("release-gate");
+    std::fs::create_dir_all(&dir)
+        .map_err(|error| format!("cannot create {}: {error}", dir.display()))?;
+    let text = serde_json::to_string_pretty(&diff)
+        .map_err(|error| format!("cannot serialise the contract diff: {error}"))?;
+    std::fs::write(dir.join("contract-diff.json"), text + "\n")
+        .map_err(|error| format!("cannot write the contract diff: {error}"))?;
+
+    let changelog = std::fs::read_to_string(root.join("CHANGELOG.md")).unwrap_or_default();
+    let silent = contract::unannounced(&changes, &changelog);
+    if silent.is_empty() {
+        return Ok(());
+    }
+    let list: Vec<String> = silent
+        .iter()
+        .map(|change| format!("{} {}: {}", change.method, change.path, change.what))
+        .collect();
+    Err(format!(
+        "breaking API changes since {tag} not named under `### Breaking` in CHANGELOG.md [Unreleased]: {}",
+        list.join("; ")
+    ))
 }
 
 fn format(root: &Path) -> Result<(), String> {
