@@ -44,6 +44,7 @@ uuid.workspace                = true
 
 [dev-dependencies]
 attome-jobs.workspace     = true
+attome-project.workspace  = true
 attome-service.workspace  = true
 attome-metadata.workspace = true
 attome-storage.workspace  = true
