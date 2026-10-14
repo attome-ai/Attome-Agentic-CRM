@@ -350,6 +350,7 @@ dependencies = [
  "attome-search",
  "attome-security",
  "attome-server",
+ "attome-service",
  "attome-storage",
  "attome-testkit",
  "attome-types",

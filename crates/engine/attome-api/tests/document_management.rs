@@ -63,12 +63,8 @@ fn s3_bucket() -> String {
 /// `file_upload_pipeline.rs`'s suite. Defaults to `localhost:3310`, the
 /// `docker compose --profile clamav up -d clamav` port.
 fn test_config() -> AppConfig {
-    let access_key = std::env::var("S3_ACCESS_KEY").expect(
-        "set S3_ACCESS_KEY to a real RustFS/MinIO credential to run document_management tests",
-    );
-    let secret_key = std::env::var("S3_SECRET_KEY").expect(
-        "set S3_SECRET_KEY to a real RustFS/MinIO credential to run document_management tests",
-    );
+    let access_key = attome_testkit::s3_env("S3_ACCESS_KEY");
+    let secret_key = attome_testkit::s3_env("S3_SECRET_KEY");
     let clamd_address =
         std::env::var("TEST_CLAMD_ADDRESS").unwrap_or_else(|_| "localhost:3310".into());
 
@@ -144,6 +140,7 @@ fn test_config() -> AppConfig {
 async fn test_system() -> Option<EngineSystem> {
     let _ = tracing_subscriber::fmt().with_test_writer().try_init();
     attome_testkit::migrated_db_url()?;
+    attome_testkit::s3_or_skip()?;
 
     let config = test_config();
     let db = attome_db::create_pool(&config)

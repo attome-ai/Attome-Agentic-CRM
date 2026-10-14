@@ -131,6 +131,10 @@ async fn seed_platform(db: &attome_db::DbPool) {
             attome_metadata::autovalue::seed_for_tests(db)
                 .await
                 .expect("seed autovalue entity + table");
+            // The bot-handoff tests create and count service work requests.
+            attome_service::seed::seed_for_tests(db)
+                .await
+                .expect("seed service entities");
         })
         .await;
 }

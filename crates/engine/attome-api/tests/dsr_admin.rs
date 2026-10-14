@@ -123,10 +123,8 @@ fn test_config(required_actions: &[&str]) -> AppConfig {
         // every real upload with a credential RustFS rejects (403
         // InvalidAccessKeyId). `S3_ACCESS_KEY`/`S3_SECRET_KEY` are what
         // `scripts/run-integration-tests.ps1` actually exports.
-        s3_access_key = std::env::var("S3_ACCESS_KEY")
-            .expect("set S3_ACCESS_KEY to a real RustFS/MinIO credential to run dsr_admin tests"),
-        s3_secret_key = std::env::var("S3_SECRET_KEY")
-            .expect("set S3_SECRET_KEY to a real RustFS/MinIO credential to run dsr_admin tests"),
+        s3_access_key = attome_testkit::s3_env("S3_ACCESS_KEY"),
+        s3_secret_key = attome_testkit::s3_env("S3_SECRET_KEY"),
         jwt_secret = THROWAWAY_JWT_SECRET,
     );
     serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
@@ -134,6 +132,7 @@ fn test_config(required_actions: &[&str]) -> AppConfig {
 
 async fn test_system(required_actions: &[&str]) -> Option<EngineSystem> {
     let throwaway_url = attome_testkit::migrated_db_url()?;
+    attome_testkit::s3_or_skip()?;
     let mut config = test_config(required_actions);
     point_config_at(&mut config, &throwaway_url);
     let db = attome_db::create_pool(&config)

@@ -158,7 +158,7 @@ pub async fn acquire_or_check(
         "INSERT INTO idempotency_record
             (principal_ref, http_method, operation, client_key, body_hash, state)
          VALUES ($1, $2, $3, $4, $5, 'pending')
-         ON CONFLICT ON CONSTRAINT core_idempotency_record_identity_unique DO NOTHING
+         ON CONFLICT ON CONSTRAINT idempotency_record_identity_unique DO NOTHING
          RETURNING id",
     )
     .bind(principal_ref)

@@ -91,10 +91,8 @@ fn test_config(entity_purge_grace_days: Option<u32>, disposition_action: &str) -
         }}"#,
         redis_host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "localhost".into()),
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
-        s3_access_key = std::env::var("S3_ACCESS_KEY")
-            .expect("set S3_ACCESS_KEY to a real RustFS/MinIO credential to run archive tests"),
-        s3_secret_key = std::env::var("S3_SECRET_KEY")
-            .expect("set S3_SECRET_KEY to a real RustFS/MinIO credential to run archive tests"),
+        s3_access_key = attome_testkit::s3_env("S3_ACCESS_KEY"),
+        s3_secret_key = attome_testkit::s3_env("S3_SECRET_KEY"),
         entity_purge_grace_days = entity_purge_grace_days
             .map(|v| v.to_string())
             .unwrap_or_else(|| "null".to_string()),
@@ -105,6 +103,7 @@ fn test_config(entity_purge_grace_days: Option<u32>, disposition_action: &str) -
 
 async fn test_system(mut config: AppConfig) -> Option<EngineSystem> {
     let throwaway_url = attome_testkit::migrated_db_url()?;
+    attome_testkit::s3_or_skip()?;
     point_config_at(&mut config, &throwaway_url);
     let db = attome_db::create_pool(&config)
         .await

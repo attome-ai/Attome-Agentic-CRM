@@ -637,3 +637,35 @@ mod tests {
         assert_eq!(run_id(), run_id());
     }
 }
+
+/// Environment switch that turns a missing object store into a failure, as
+/// [`REQUIRE_DB_ENV`] does for the database.
+pub const REQUIRE_S3_ENV: &str = "ATTOME_TEST_REQUIRE_S3";
+
+/// A test-store credential from the environment (`S3_ACCESS_KEY`,
+/// `S3_SECRET_KEY`). Without one it returns a placeholder, so the config the
+/// test builds is still well formed; [`s3_or_skip`] is what decides whether
+/// the test runs.
+pub fn s3_env(name: &str) -> String {
+    std::env::var(name).unwrap_or_else(|_| "unset".to_owned())
+}
+
+/// `Some(())` when an object store is configured (`S3_ACCESS_KEY` and
+/// `S3_SECRET_KEY`). Otherwise prints a `SKIP` line and returns `None`, or
+/// panics when [`REQUIRE_S3_ENV`] is set. For tests that need a live
+/// S3-compatible store (RustFS or MinIO) and a bucket named `attomebase`.
+pub fn s3_or_skip() -> Option<()> {
+    let configured =
+        std::env::var("S3_ACCESS_KEY").is_ok() && std::env::var("S3_SECRET_KEY").is_ok();
+    if configured {
+        return Some(());
+    }
+    assert!(
+        std::env::var_os(REQUIRE_S3_ENV).is_none(),
+        "S3_ACCESS_KEY/S3_SECRET_KEY are not set, and {REQUIRE_S3_ENV} requires an object store"
+    );
+    eprintln!(
+        "SKIP: set S3_ACCESS_KEY and S3_SECRET_KEY to a live RustFS/MinIO credential to run this test"
+    );
+    None
+}

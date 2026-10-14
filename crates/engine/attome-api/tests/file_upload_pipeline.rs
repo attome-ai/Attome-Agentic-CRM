@@ -76,12 +76,8 @@ fn s3_bucket() -> String {
 /// `audit_chainer` process drains `audit_ingest`, and nothing starts it
 /// here.
 fn test_config() -> AppConfig {
-    let access_key = std::env::var("S3_ACCESS_KEY").expect(
-        "set S3_ACCESS_KEY to a real RustFS/MinIO credential to run file_upload_pipeline tests",
-    );
-    let secret_key = std::env::var("S3_SECRET_KEY").expect(
-        "set S3_SECRET_KEY to a real RustFS/MinIO credential to run file_upload_pipeline tests",
-    );
+    let access_key = attome_testkit::s3_env("S3_ACCESS_KEY");
+    let secret_key = attome_testkit::s3_env("S3_SECRET_KEY");
 
     let json = format!(
         r#"{{
@@ -165,6 +161,7 @@ async fn test_system() -> Option<EngineSystem> {
 async fn test_system_with_config(config: AppConfig) -> Option<EngineSystem> {
     let _ = tracing_subscriber::fmt().with_test_writer().try_init();
     attome_testkit::migrated_db_url()?;
+    attome_testkit::s3_or_skip()?;
 
     let db = attome_db::create_pool(&config)
         .await

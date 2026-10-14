@@ -126,10 +126,8 @@ fn test_config(entity_purge_grace_days: Option<u32>, dry_run: bool, legal_hold: 
         // PUT with the same wrong credentials fails identically). `expect`
         // rather than a default: a wrong-but-plausible fallback is exactly
         // what hid this.
-        s3_access_key = std::env::var("S3_ACCESS_KEY")
-            .expect("set S3_ACCESS_KEY to a real RustFS/MinIO credential to run retention tests"),
-        s3_secret_key = std::env::var("S3_SECRET_KEY")
-            .expect("set S3_SECRET_KEY to a real RustFS/MinIO credential to run retention tests"),
+        s3_access_key = attome_testkit::s3_env("S3_ACCESS_KEY"),
+        s3_secret_key = attome_testkit::s3_env("S3_SECRET_KEY"),
         entity_purge_grace_days = entity_purge_grace_days
             .map(|v| v.to_string())
             .unwrap_or_else(|| "null".to_string()),
@@ -141,6 +139,7 @@ fn test_config(entity_purge_grace_days: Option<u32>, dry_run: bool, legal_hold: 
 
 async fn test_system(mut config: AppConfig) -> Option<EngineSystem> {
     let url = attome_testkit::migrated_db_url()?;
+    attome_testkit::s3_or_skip()?;
     point_config_at(&mut config, &url);
     let db = attome_db::create_pool(&config)
         .await
