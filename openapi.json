@@ -15212,6 +15212,190 @@
         ]
       }
     },
+    "/api/v1/admin/hijri-months": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "AG1-T3: one Hijri year's months as this deployment counts them, the\npublished Umm al-Qura starts with any moon-sighting corrections.\nAdministrators only.",
+        "operationId": "list_hijri_months",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "path",
+            "description": "The Hijri year, 1356 to 1500.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The year's twelve months",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_HijriMonthRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Year outside 1356 to 1500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/hijri-months/{year}/{month}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "AG1-T3: a moon-sighting correction. The month starts on\n`gregorian_start` (at most one day from the published table) and the\nmonth before it ends the day before; both stay 29 or 30 days. Every node\nuses the corrected calendar within 20 seconds, this one at once.\nAdministrators only; not a promotable metadata change, so it works on the\nproduction profile.",
+        "operationId": "correct_hijri_month",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "path",
+            "description": "The Hijri year",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "description": "The Hijri month, 1 to 12",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HijriCorrection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The year's months after the correction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_HijriMonthRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another correction is being saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A move of more than one day, or a month outside 29-30 days",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
     "/api/v1/admin/integrations/systems": {
       "post": {
         "tags": [
@@ -71874,6 +72058,59 @@
           }
         }
       },
+      "HijriCorrection": {
+        "type": "object",
+        "description": "`PUT /api/v1/admin/hijri-months/{year}/{month}`.",
+        "required": [
+          "gregorian_start",
+          "reason"
+        ],
+        "properties": {
+          "gregorian_start": {
+            "type": "string",
+            "format": "date",
+            "description": "The Gregorian day the month starts on, as announced."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Who announced it, or why; kept on the audit event."
+          }
+        }
+      },
+      "HijriMonthRow": {
+        "type": "object",
+        "description": "One month of `hijri_month`.",
+        "required": [
+          "hijri_year",
+          "hijri_month",
+          "gregorian_start",
+          "gregorian_end",
+          "source"
+        ],
+        "properties": {
+          "gregorian_end": {
+            "type": "string",
+            "format": "date",
+            "description": "The day after the month's last day."
+          },
+          "gregorian_start": {
+            "type": "string",
+            "format": "date"
+          },
+          "hijri_month": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "hijri_year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "source": {
+            "type": "string",
+            "description": "`umm_al_qura` (the published table) or `sighting` (corrected)."
+          }
+        }
+      },
       "HistoryEntry": {
         "type": "object",
         "required": [
@@ -79256,6 +79493,67 @@
                 "record_id": {
                   "type": "string",
                   "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_HijriMonthRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One month of `hijri_month`.",
+              "required": [
+                "hijri_year",
+                "hijri_month",
+                "gregorian_start",
+                "gregorian_end",
+                "source"
+              ],
+              "properties": {
+                "gregorian_end": {
+                  "type": "string",
+                  "format": "date",
+                  "description": "The day after the month's last day."
+                },
+                "gregorian_start": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "hijri_month": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "hijri_year": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "source": {
+                  "type": "string",
+                  "description": "`umm_al_qura` (the published table) or `sighting` (corrected)."
                 }
               }
             }

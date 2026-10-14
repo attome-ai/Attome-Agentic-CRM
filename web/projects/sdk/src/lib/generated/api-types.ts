@@ -2581,6 +2581,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/hijri-months": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AG1-T3: one Hijri year's months as this deployment counts them, the
+         *     published Umm al-Qura starts with any moon-sighting corrections.
+         *     Administrators only.
+         */
+        get: operations["list_hijri_months"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/hijri-months/{year}/{month}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * AG1-T3: a moon-sighting correction. The month starts on
+         *     `gregorian_start` (at most one day from the published table) and the
+         *     month before it ends the day before; both stay 29 or 30 days. Every node
+         *     uses the corrected calendar within 20 seconds, this one at once.
+         *     Administrators only; not a promotable metadata change, so it works on the
+         *     production profile.
+         */
+        put: operations["correct_hijri_month"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/integrations/systems": {
         parameters: {
             query?: never;
@@ -16693,6 +16738,32 @@ export interface components {
             /** @description Phase 3.5 — what is reported but never blocks. */
             warnings: components["schemas"]["GateIssue"][];
         };
+        /** @description `PUT /api/v1/admin/hijri-months/{year}/{month}`. */
+        HijriCorrection: {
+            /**
+             * Format: date
+             * @description The Gregorian day the month starts on, as announced.
+             */
+            gregorian_start: string;
+            /** @description Who announced it, or why; kept on the audit event. */
+            reason: string;
+        };
+        /** @description One month of `hijri_month`. */
+        HijriMonthRow: {
+            /**
+             * Format: date
+             * @description The day after the month's last day.
+             */
+            gregorian_end: string;
+            /** Format: date */
+            gregorian_start: string;
+            /** Format: int32 */
+            hijri_month: number;
+            /** Format: int32 */
+            hijri_year: number;
+            /** @description `umm_al_qura` (the published table) or `sighting` (corrected). */
+            source: string;
+        };
         HistoryEntry: {
             /** Format: int32 */
             category: number;
@@ -19419,6 +19490,30 @@ export interface components {
                 entity_logicalname: string;
                 /** Format: uuid */
                 record_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_HijriMonthRow: {
+            items: {
+                /**
+                 * Format: date
+                 * @description The day after the month's last day.
+                 */
+                gregorian_end: string;
+                /** Format: date */
+                gregorian_start: string;
+                /** Format: int32 */
+                hijri_month: number;
+                /** Format: int32 */
+                hijri_year: number;
+                /** @description `umm_al_qura` (the published table) or `sighting` (corrected). */
+                source: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -35840,6 +35935,121 @@ export interface operations {
             };
             /** @description Domain not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_hijri_months: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Hijri year, 1356 to 1500. */
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The year's twelve months */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_HijriMonthRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Year outside 1356 to 1500 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    correct_hijri_month: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Hijri year */
+                year: number;
+                /** @description The Hijri month, 1 to 12 */
+                month: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HijriCorrection"];
+            };
+        };
+        responses: {
+            /** @description The year's months after the correction */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_HijriMonthRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another correction is being saved */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A move of more than one day, or a month outside 29-30 days */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
