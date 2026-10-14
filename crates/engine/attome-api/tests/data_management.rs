@@ -78,7 +78,7 @@ fn test_config(db: &DbUrlParts) -> AppConfig {
             }},
             "storage": {{
                 "s3_endpoint": "http://localhost:9000", "s3_public_endpoint": "",
-                "s3_region": "us-east-1", "s3_access_key": "test", "s3_secret_key": "test",
+                "s3_region": "us-east-1", "s3_access_key": "{s3_access_key}", "s3_secret_key": "{s3_secret_key}",
                 "s3_bucket": "attome-test", "s3_use_path_style": true, "s3_verify_ssl": false
             }},
             "auth": {{
@@ -113,6 +113,8 @@ fn test_config(db: &DbUrlParts) -> AppConfig {
         db_name = db.dbname,
         db_user = db.user,
         db_password = db.password,
+        s3_access_key = attome_testkit::s3_env("S3_ACCESS_KEY"),
+        s3_secret_key = attome_testkit::s3_env("S3_SECRET_KEY"),
     );
 
     serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig")
