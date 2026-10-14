@@ -101,6 +101,7 @@ pub mod outcome;
 pub mod output_filter;
 pub mod pii_mask;
 pub mod prompt;
+pub mod prompt_preview;
 pub mod prompt_registry;
 /// The `ai_provider` record as this crate reads it, plus the API protocol
 /// a provider speaks. A catalog with enough connection detail to enumerate a
@@ -181,6 +182,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(runtime_switch::openapi_fragment());
     doc.merge(scope_switch::openapi_fragment());
     doc.merge(spend_report::openapi_fragment());
+    doc.merge(prompt_preview::openapi_fragment());
     doc
 }
 

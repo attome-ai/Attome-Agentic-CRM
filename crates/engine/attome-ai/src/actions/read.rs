@@ -301,7 +301,7 @@ pub(crate) fn summarize_system_prompt(language: &str) -> String {
 /// instructions" paragraph in this file, which is precisely the drift
 /// `prompt.rs` exists to prevent: two implementations of one trust boundary
 /// diverge, and the one that diverges is the one nobody is testing.
-fn summarize_messages(language: &str, entity: &str, facts: &str) -> Vec<ChatMessage> {
+pub(crate) fn summarize_messages(language: &str, entity: &str, facts: &str) -> Vec<ChatMessage> {
     crate::prompt::assemble(&[
         Segment::trusted(summarize_system_prompt(language)),
         Segment::untrusted(entity, facts),
@@ -325,13 +325,11 @@ impl Action for RecordSummarize {
             // Read through the same gated path first. A summary is a view of a
             // record, so a caller who cannot read the record cannot summarise
             // it — and that check is `read_record`'s, not a second one here.
-            let record = attome_records::entity_crud::read_record_bulk(
-                state,
-                &ctx.security,
-                &args.entity,
-                args.record_id,
-            )
-            .await?;
+            // N2-T1: the record, the records it points to and its recent
+            // timeline, each already filtered by the caller's grants.
+            let facts =
+                super::summary_context::gather(state, &ctx.security, &args.entity, args.record_id)
+                    .await?;
 
             let client =
                 crate::inference_client::generation_client(&state.base.config).map_err(|e| {
@@ -347,34 +345,6 @@ impl Action for RecordSummarize {
                 .language
                 .as_deref()
                 .unwrap_or("the record's own language");
-            // N2-T1: the record, the records it points to and its recent
-            // timeline, each already filtered by the caller's grants
-            // (`summary_context`'s module doc). The timeline is context, not
-            // the record: a failure to read it degrades to a summary of the
-            // record alone.
-            let timeline = attome_records::entity_crud::timeline::record_timeline(
-                state,
-                &ctx.security,
-                &args.entity,
-                args.record_id,
-                &attome_records::entity_crud::timeline::TimelineOptions {
-                    page_size: super::summary_context::TIMELINE_ENTRIES,
-                    ..Default::default()
-                },
-            )
-            .await
-            .map(|page| page.items)
-            .unwrap_or_else(|error| {
-                tracing::warn!(%error, "record.summarize: timeline unavailable; summarising the record alone");
-                Vec::new()
-            });
-            let related = super::summary_context::related_names(record.lookups());
-            let facts = super::summary_context::build_context(
-                record.data(),
-                &related,
-                &timeline,
-                super::summary_context::CONTEXT_BUDGET_CHARS,
-            );
             let cache_key = super::summary_context::cache_key(
                 SUMMARIZE_PROMPT_VERSION,
                 client.model_id(),

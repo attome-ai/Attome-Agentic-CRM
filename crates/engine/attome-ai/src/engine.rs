@@ -109,6 +109,8 @@ impl EngineModel for ActionModel {
             .merge(crate::scope_switch::routes())
             // N24-T2 — the AI spend report, admin-gated.
             .merge(crate::spend_report::routes())
+            // N28-T3 — what a model would receive, admin-only.
+            .merge(crate::prompt_preview::routes())
     }
 
     // D-435, simplified by D-491 — `ai_model` (the AI Model catalog,

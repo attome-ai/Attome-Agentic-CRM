@@ -29,6 +29,44 @@ use attome_records::entity_crud::timeline::TimelineEntry;
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
+/// The context for summarising one record as `ctx`: reads the record (a
+/// record the caller cannot read is `NotFound`, as on `GET /{entity}/{id}`),
+/// its visible related names and its recent timeline. The timeline is
+/// context, not the record: a failure to read it degrades to the record
+/// alone.
+pub async fn gather(
+    state: &attome_core::EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    entity: &str,
+    record_id: uuid::Uuid,
+) -> Result<String, attome_types::AppError> {
+    let record =
+        attome_records::entity_crud::read_record_bulk(state, ctx, entity, record_id).await?;
+    let timeline = attome_records::entity_crud::timeline::record_timeline(
+        state,
+        ctx,
+        entity,
+        record_id,
+        &attome_records::entity_crud::timeline::TimelineOptions {
+            page_size: TIMELINE_ENTRIES,
+            ..Default::default()
+        },
+    )
+    .await
+    .map(|page| page.items)
+    .unwrap_or_else(|error| {
+        tracing::warn!(%error, "record summary: timeline unavailable; using the record alone");
+        Vec::new()
+    });
+    let related = related_names(record.lookups());
+    Ok(build_context(
+        record.data(),
+        &related,
+        &timeline,
+        CONTEXT_BUDGET_CHARS,
+    ))
+}
+
 /// The longest context sent for one summary.
 pub const CONTEXT_BUDGET_CHARS: usize = 12_000;
 /// Timeline entries read for one summary.
