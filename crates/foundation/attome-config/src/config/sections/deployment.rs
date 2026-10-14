@@ -151,6 +151,8 @@ impl Default for DeploymentSection {
             bundle_signing_public_key: None,
             staff_hosts: Vec::new(),
             portal_hosts: Vec::new(),
+            sovereign: false,
+            sovereign_allowed_hosts: Vec::new(),
         }
     }
 }
