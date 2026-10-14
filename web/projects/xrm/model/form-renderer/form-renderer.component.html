@@ -7,35 +7,35 @@
       <fieldset class="fr-section">
         <legend>{{ section.label }}</legend>
         @for (field of section.fields; track field.attribute) {
-          <label class="fr-field" [attr.data-attribute]="field.attribute">
-            <span class="fr-label">
+          <div class="fr-field" [attr.data-attribute]="field.attribute">
+            <label class="fr-label" [for]="'fr-' + field.attribute">
               {{ field.label }}
               @if (field.required) {
                 <span class="fr-required" [attr.aria-label]="'formRenderer.required' | translate">*</span>
               }
-            </span>
+            </label>
             @switch (control(field)) {
               @case ('checkbox') {
-                <input #box type="checkbox" [checked]="value(field) === true"
+                <input #box type="checkbox" [id]="'fr-' + field.attribute" [checked]="value(field) === true"
                        (change)="set(field, box.checked)" />
               }
               @case ('number') {
-                <input #num type="number" [value]="text(field)" [required]="field.required"
-                       (input)="set(field, num.value)" />
+                <input #num type="number" [id]="'fr-' + field.attribute" [value]="text(field)"
+                       [required]="field.required" (input)="set(field, num.value)" />
               }
               @case ('date') {
-                <input #day type="date" [value]="text(field)" [required]="field.required"
-                       (input)="set(field, day.value)" />
+                <input #day type="date" [id]="'fr-' + field.attribute" [value]="text(field)"
+                       [required]="field.required" (input)="set(field, day.value)" />
               }
               @case ('readonly') {
-                <output class="fr-readonly">{{ text(field) }}</output>
+                <output class="fr-readonly" [id]="'fr-' + field.attribute">{{ text(field) }}</output>
               }
               @default {
-                <input #txt type="text" [value]="text(field)" [required]="field.required"
-                       (input)="set(field, txt.value)" />
+                <input #txt type="text" [id]="'fr-' + field.attribute" [value]="text(field)"
+                       [required]="field.required" (input)="set(field, txt.value)" />
               }
             }
-          </label>
+          </div>
         }
       </fieldset>
     }
