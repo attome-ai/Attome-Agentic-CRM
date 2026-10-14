@@ -206,6 +206,14 @@ pub fn routes() -> Router<EngineState> {
             axum::routing::post(mutations::validate_record),
         )
         .route("/api/v1/{entity}/deleted", get(recycle_bin::list_deleted))
+        .route(
+            "/api/v1/bin/restore",
+            axum::routing::post(recycle_bin::restore_selection),
+        )
+        .route(
+            "/api/v1/bin/operations/{operation_id}/restore",
+            axum::routing::post(recycle_bin::restore_operation),
+        )
         .route("/api/v1/{entity}/new", get(new_record::new_record_defaults))
         .route(
             "/api/v1/{entity}/{id}",
