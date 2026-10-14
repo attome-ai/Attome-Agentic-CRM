@@ -33,8 +33,11 @@ holding the current ETag gets `304`. The public answer may be cached for five mi
 | `hide_vendor_name` | Leave the Attome name out of the product |
 
 Colours are `#RRGGBB`. Today the web app applies the light-mode colours `primary`, `accent`,
-`surface`, `text`, `success` and `danger`; the other tokens are stored, checked and returned, and
-the web app picks them up as it learns to use them.
+`surface`, `text`, `success` and `danger`, and the fonts and Arabic line height in both modes. A
+font name may hold letters, digits, spaces and hyphens (at most 64 characters); the font itself
+must be installed on the viewer's machine or served by the page, or the product's font shows. The
+other tokens are stored, checked and returned, and the web app picks them up as it learns to use
+them.
 
 ## The contrast check
 
