@@ -32,6 +32,7 @@
 //! | `{SEQ}`, `{SEQ:4}`     | the same, named explicitly                 |
 //! | `{YY-MM-DD}`, `{YYYY}` | the current local date/time, by pattern    |
 //! | `{LUHN}`, `{MOD11}`    | a check digit over the sequence (A4-T4)    |
+//! | `{hyyyy}`, `{hmm}`, `{hdd}` | the Umm al-Qura Hijri year, month, day (AG1-T5) |
 //!
 //! The `D`-vs-day ambiguity in the motivating example `AVG-{DDDD}-{YY-MM-DD}`
 //! is resolved structurally, not by guessing: a token made of *nothing but*
@@ -270,10 +271,24 @@ fn render_token(token: &str, seq: i64, now: DateTime<FixedOffset>) -> String {
     match trimmed {
         "LUHN" | "luhn" => return luhn_digit(seq).to_string(),
         "MOD11" | "mod11" => return mod11_digit(seq).to_string(),
+        // AG1-T5: the Hijri date of the deployment-local day. They start with
+        // `h`, so they never read as a sequence or a Gregorian pattern.
+        "hyyyy" | "hmm" | "hdd" => return render_hijri(trimmed, now),
         _ => {}
     }
 
     render_datetime_pattern(trimmed, now)
+}
+
+/// One Hijri token for `now`'s local day. Past the Umm al-Qura table (after
+/// 2077) the token renders as zeros rather than a wrong date.
+fn render_hijri(token: &str, now: DateTime<FixedOffset>) -> String {
+    let date = attome_core::calendar::hijri::to_hijri(now.date_naive()).ok();
+    match token {
+        "hyyyy" => format!("{:04}", date.map_or(0, |d| d.year)),
+        "hmm" => format!("{:02}", date.map_or(0, |d| d.month)),
+        _ => format!("{:02}", date.map_or(0, |d| d.day)),
+    }
 }
 
 /// The decimal digits of `seq`, most significant first.
@@ -573,6 +588,21 @@ mod tests {
             render_format("{YYYY-MM-DD}", 1, utc_evening.fixed_offset()),
             "2026-12-31"
         );
+    }
+
+    #[test]
+    fn hijri_year_token_renders() {
+        assert_eq!(
+            render_format("INV-{hyyyy}-{####}", 7, at(2026, 2, 18)),
+            "INV-1447-0007"
+        );
+    }
+
+    #[test]
+    fn hijri_month_token_pads() {
+        // 2026-02-18 is 1 Ramadan 1447; the day before is 29 Shaban.
+        assert_eq!(render_format("{hmm}/{hdd}", 1, at(2026, 2, 18)), "09/01");
+        assert_eq!(render_format("{hmm}/{hdd}", 1, at(2026, 2, 17)), "08/29");
     }
 
     #[test]

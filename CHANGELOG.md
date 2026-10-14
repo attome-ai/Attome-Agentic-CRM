@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Autonumber formats take Hijri tokens: `{hyyyy}`, `{hmm}` and `{hdd}` (for example
+  `INV-{hyyyy}-{####}`).
 - Moon-sighting corrections to the Hijri calendar: `GET /api/v1/admin/hijri-months?year=` and
   `PUT /api/v1/admin/hijri-months/{year}/{month}` (one day at most, audited); every node uses the
   corrected calendar within 20 seconds.

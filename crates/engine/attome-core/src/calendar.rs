@@ -29,6 +29,10 @@
 //! This module owns loading only. Which calendar a record uses, and what an
 //! unresolved one means for that record, belong to the consuming engine.
 
+/// AG1: the Umm al-Qura Hijri calendar, for crates that reach the calendar
+/// through this one.
+pub use attome_calendar::hijri;
+
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use attome_calendar::{
