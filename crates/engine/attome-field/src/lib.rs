@@ -506,6 +506,22 @@ fn write_mask_cache() -> std::sync::RwLockWriteGuard<'static, HashMap<String, Ar
 /// runs `validate` against it. Every field type accepts an absent/empty
 /// options blob (no-op); only a *present* blob is shape-checked.
 pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), AppError> {
+    validate_default(field_type, options)?;
+    // The default is checked above; each type's own shape below.
+    let stripped;
+    let options = match options.as_object() {
+        Some(map) if map.contains_key("default") => {
+            let mut map = map.clone();
+            map.remove("default");
+            if map.is_empty() {
+                // A default alone: nothing else to check, for any field type.
+                return Ok(());
+            }
+            stripped = Value::Object(map);
+            &stripped
+        }
+        _ => options,
+    };
     match field_type {
         FieldType::Choice => {
             let opts = serde_json::from_value::<ChoiceOptions>(options.clone())
@@ -571,6 +587,31 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
         }
     }
     Ok(())
+}
+
+/// A28-T1: `options.default`, when present, is `{"kind": "fixed", "value":
+/// <a value of the field's type>}`, `{"kind": "today"}` or `{"kind": "now"}`
+/// (date fields), or `{"kind": "current_user"}` (lookup fields).
+fn validate_default(field_type: &FieldType, options: &Value) -> Result<(), AppError> {
+    let Some(default) = options.get("default") else {
+        return Ok(());
+    };
+    let kind = default.get("kind").and_then(Value::as_str).unwrap_or("");
+    match (kind, field_type) {
+        ("fixed", _) => {
+            let value = default
+                .get("value")
+                .ok_or_else(|| AppError::Validation("a fixed default needs a value".into()))?;
+            validate(field_type, value, None).map_err(|_| {
+                AppError::Validation(format!("the default value is not a valid {field_type}"))
+            })
+        }
+        ("today" | "now", FieldType::Date) => Ok(()),
+        ("current_user", FieldType::Lookup) => Ok(()),
+        _ => Err(AppError::Validation(format!(
+            "default kind '{kind}' does not apply to a {field_type} field"
+        ))),
+    }
 }
 
 fn type_err(expected: &str, got: &Value) -> AppError {
@@ -920,6 +961,51 @@ mod tests {
         assert!(
             validate_options(&FieldType::Text, &json!({ "pattern": "[0-9]{3}-[0-9]{4}" })).is_ok()
         );
+    }
+
+    #[test]
+    fn defaults_are_checked_against_the_field_type() {
+        assert!(
+            validate_options(
+                &FieldType::Number,
+                &json!({"default": {"kind": "fixed", "value": 5}})
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_options(
+                &FieldType::Number,
+                &json!({"default": {"kind": "fixed", "value": "x"}})
+            )
+            .is_err()
+        );
+        assert!(validate_options(&FieldType::Date, &json!({"default": {"kind": "today"}})).is_ok());
+        assert!(
+            validate_options(
+                &FieldType::Date,
+                &json!({"default": {"kind": "today"}, "display_calendar": "hijri"})
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_options(&FieldType::Text, &json!({"default": {"kind": "today"}})).is_err()
+        );
+        assert!(
+            validate_options(
+                &FieldType::Lookup,
+                &json!({"default": {"kind": "current_user"}})
+            )
+            .is_ok()
+        );
+        assert!(
+            validate_options(&FieldType::Text, &json!({"default": {"kind": "fixed"}})).is_err()
+        );
+    }
+
+    #[test]
+    fn a_default_alone_is_valid_for_any_field_type() {
+        let options = json!({"default": {"kind": "fixed", "value": true}});
+        assert!(validate_options(&FieldType::Bool, &options).is_ok());
     }
 
     #[test]

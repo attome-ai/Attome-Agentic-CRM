@@ -11,6 +11,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Attribute defaults: `options.default` is `{"kind": "fixed", "value": ...}`, `today`, `now` or
+  `current_user`, filled on every create path when the attribute is empty.
 - `GET /api/v1/{entity}/deleted` lists the deleted records the caller may see, newest first;
   agents get `record.deleted` to find them and `record.restore` to bring one back.
 - `GET /api/v1/{entity}/{id}/timeline/export?kinds=` downloads a record's timeline as CSV (up

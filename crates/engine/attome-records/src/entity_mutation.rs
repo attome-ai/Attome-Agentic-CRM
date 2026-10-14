@@ -194,6 +194,46 @@ pub fn normalize_body(
     out
 }
 
+/// A28-T1: the body with each empty attribute that declares a default
+/// (`options.default`) filled, or `None` when nothing changes. A default is
+/// `{"kind": "fixed", "value": ...}`, `{"kind": "today"}` (the deployment's
+/// local date), `{"kind": "now"}` or `{"kind": "current_user"}` (the creating
+/// person's id, for a lookup to `user_account`). A value the caller sent,
+/// even `false` or `0`, is never replaced; `null` and `""` are empty.
+pub fn apply_defaults(
+    attrs: &[AttrInfo],
+    obj: &serde_json::Map<String, Value>,
+    actor: Option<uuid::Uuid>,
+    now: chrono::DateTime<chrono::FixedOffset>,
+) -> Option<serde_json::Map<String, Value>> {
+    let mut out: Option<serde_json::Map<String, Value>> = None;
+    for attr in attrs {
+        let Some(default) = attr.options.as_ref().and_then(|o| o.get("default")) else {
+            continue;
+        };
+        let empty = match obj.get(&attr.logicalname) {
+            None | Some(Value::Null) => true,
+            Some(Value::String(s)) => s.is_empty(),
+            Some(_) => false,
+        };
+        if !empty {
+            continue;
+        }
+        let value = match default.get("kind").and_then(Value::as_str) {
+            Some("fixed") => default.get("value").cloned(),
+            Some("today") => Some(Value::String(now.date_naive().to_string())),
+            Some("now") => Some(Value::String(now.to_rfc3339())),
+            Some("current_user") => actor.map(|id| Value::String(id.to_string())),
+            _ => None,
+        };
+        if let Some(value) = value.filter(|v| !v.is_null()) {
+            out.get_or_insert_with(|| obj.clone())
+                .insert(attr.logicalname.clone(), value);
+        }
+    }
+    out
+}
+
 /// Runs semantic and schema validation before any SQL is built.
 ///
 /// `pub` (not `pub(crate)`) — R-07 (`document/module-master-plans/
@@ -1575,6 +1615,24 @@ pub async fn create_one_as(
         Some(map) => {
             normalized = map;
             &normalized
+        }
+        None => obj,
+    };
+    // A28-T1: each empty attribute's declared default, before validation.
+    let defaulted;
+    let actor = match principal {
+        Principal::Staff(ctx) => Some(ctx.user_id),
+        Principal::Portal(_) => None,
+    };
+    let obj = match apply_defaults(
+        attrs,
+        obj,
+        actor,
+        attome_core::calendar::deployment_now(state.base.config.app.time_zone.as_deref()),
+    ) {
+        Some(map) => {
+            defaulted = map;
+            &defaulted
         }
         None => obj,
     };
@@ -3721,6 +3779,36 @@ mod insert_bind_tests {
             data_classification: DataClassification::default(),
             options: None,
         }
+    }
+
+    /// A28-T1: declared defaults fill only empty attributes.
+    #[test]
+    fn defaults_fill_only_empty_attributes() {
+        let with_default = |name: &str, ft: i32, default: Value| AttrInfo {
+            options: Some(serde_json::json!({ "default": default })),
+            ..attr(name, ft)
+        };
+        let attrs = [
+            with_default(
+                "status",
+                0,
+                serde_json::json!({"kind": "fixed", "value": "open"}),
+            ),
+            with_default("opened_on", 3, serde_json::json!({"kind": "today"})),
+            with_default("owner", 11, serde_json::json!({"kind": "current_user"})),
+            with_default("count", 2, serde_json::json!({"kind": "fixed", "value": 0})),
+        ];
+        let actor = uuid::Uuid::now_v7();
+        let now = chrono::DateTime::parse_from_rfc3339("2026-10-14T23:30:00+03:00").unwrap();
+        let mut obj = serde_json::Map::new();
+        obj.insert("status".into(), serde_json::json!(""));
+        obj.insert("count".into(), serde_json::json!(7));
+        let out = apply_defaults(&attrs, &obj, Some(actor), now).unwrap();
+        assert_eq!(out["status"], "open", "an empty string is empty");
+        assert_eq!(out["opened_on"], "2026-10-14", "the deployment's local day");
+        assert_eq!(out["owner"], actor.to_string());
+        assert_eq!(out["count"], 7, "a sent value is never replaced");
+        assert!(apply_defaults(&attrs, &out, Some(actor), now).is_none());
     }
 
     /// `create_one`/`upsert_record` splice `organization_ref` in themselves, so
