@@ -19,9 +19,3 @@ Commit `openapi.json` and both `api-types.ts` files. Then run
 `cargo test -p attome --test audit_coverage_emission --test route_authz` so the new mutating route
 (`POST /api/v1/admin/model/{kind}/{id}/commands`) is covered by the audit and authorization suites,
 which read the committed `openapi.json`.
-
-## Tests still to write
-
-- `crates/engine/attome-api/tests/model_admin.rs`: `non_admin_gets_403_on_kinds` and
-  `commands_write_one_audit_event`, following `crates/engine/attome-api/tests/settings_admin.rs`'s
-  setup (Y1-T9 step 8).
