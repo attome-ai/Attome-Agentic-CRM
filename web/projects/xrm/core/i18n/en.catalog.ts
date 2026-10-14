@@ -177,6 +177,12 @@ export const xrmEn = {
     tryOn: 'Try on a record', entity: 'Entity', record: 'Record id', show: 'Show what the model receives',
   },
   // N30-T5/T9 — AI governance.
+  latencyPage: {
+    title: 'Latency', refresh: 'Refresh', filter: 'Filter routes', route: 'Route', count: 'Requests',
+    disabled: 'Metrics are off on this server (observability.metrics_port is 0).',
+    none: 'No route matches.',
+    note: 'This server only, since it last started. Highlighted rows have a p95 of 500 ms or more.',
+  },
   usagePage: {
     title: 'Usage', usersActive: 'People who can sign in', usersRecent: 'Signed in during the last 30 days',
     contract: 'Contract reference', noContract: 'Not set', modules: 'Modules on',

@@ -141,6 +141,12 @@ export const xrmAr = {
     share: 'نسبة المستخدمين (من 1 إلى 100)', save: 'حفظ المسودة', publish: 'نشر', saved: 'حُفظت المسودة', published: 'نُشرت',
     tryOn: 'جرّبها على سجل', entity: 'الكيان', record: 'معرّف السجل', show: 'اعرض ما يتلقاه النموذج',
   },
+  latencyPage: {
+    title: 'زمن الاستجابة', refresh: 'تحديث', filter: 'تصفية المسارات', route: 'المسار', count: 'الطلبات',
+    disabled: 'المقاييس متوقفة على هذا الخادم (observability.metrics_port قيمته 0).',
+    none: 'لا يوجد مسار مطابق.',
+    note: 'هذا الخادم فقط منذ آخر تشغيل. الصفوف المظللة زمنها p95 يبلغ 500 ملّي ثانية أو أكثر.',
+  },
   usagePage: {
     title: 'الاستخدام', usersActive: 'من يمكنهم تسجيل الدخول', usersRecent: 'سجّلوا الدخول خلال آخر 30 يومًا',
     contract: 'مرجع العقد', noContract: 'غير محدد', modules: 'الوحدات المفعّلة',

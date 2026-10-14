@@ -1,0 +1,47 @@
+<section class="lt">
+  <header class="lt-head">
+    <h2>{{ 'latencyPage.title' | translate }}</h2>
+    <button type="button" (click)="load()">{{ 'latencyPage.refresh' | translate }}</button>
+  </header>
+  @if (error(); as message) {
+    <p class="lt-error" role="alert">{{ message }}</p>
+  }
+  @if (report(); as r) {
+    @if (!r.enabled) {
+      <p class="lt-muted">{{ 'latencyPage.disabled' | translate }}</p>
+    } @else {
+      <label class="lt-filter">
+        <span>{{ 'latencyPage.filter' | translate }}</span>
+        <input #f type="search" dir="ltr" (input)="filter.set(f.value)" />
+      </label>
+      <div class="lt-scroll">
+        <table class="lt-table">
+          <thead>
+            <tr>
+              <th scope="col">{{ 'latencyPage.route' | translate }}</th>
+              <th scope="col">{{ 'latencyPage.count' | translate }}</th>
+              <th scope="col">p50 (ms)</th>
+              <th scope="col">p95 (ms)</th>
+              <th scope="col">p99 (ms)</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of routes(); track row.method + row.endpoint) {
+              <tr [class.lt-slow]="row.p95_ms >= slow" [attr.data-route]="row.method + ' ' + row.endpoint">
+                <td dir="ltr"><code>{{ row.method }} {{ row.endpoint }}</code></td>
+                <td>{{ row.count }}</td>
+                <td>{{ row.p50_ms }}</td>
+                <td>{{ row.p95_ms }}</td>
+                <td>{{ row.p99_ms }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (routes().length === 0) {
+        <p class="lt-muted">{{ 'latencyPage.none' | translate }}</p>
+      }
+      <p class="lt-muted">{{ 'latencyPage.note' | translate }}</p>
+    }
+  }
+</section>

@@ -1369,6 +1369,19 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     )
     .await?;
 
+    // AA1-T7: per-route latency on this node.
+    upsert_sidebar(
+        db,
+        "Latency",
+        Some("/xrm/admin/license/latency"),
+        "las la-tachometer-alt",
+        "#f59e0b",
+        Some(modules_group),
+        40,
+        None,
+    )
+    .await?;
+
     // U11-T1: what the deployment runs and who uses it.
     upsert_sidebar(
         db,

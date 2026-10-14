@@ -417,6 +417,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.ModuleManagementComponent),
           },
           {
+            // AA1-T7: per-route latency on this node.
+            path: 'license/latency',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.LatencyComponent),
+          },
+          {
             // U11-T1: modules on, users and the contract reference.
             path: 'license/usage',
             canActivate: [authGuard],
