@@ -32,6 +32,7 @@ pub mod record_update_field;
 pub mod record_write;
 pub mod route_classify;
 pub mod search_records;
+pub mod sentiment;
 pub mod summary_context;
 pub mod transition;
 pub mod translate;
@@ -58,6 +59,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(bulk::descriptors());
     all.extend(transition::descriptors());
     all.push(translate::descriptor());
+    all.push(sentiment::descriptor());
     all.push(search_records::descriptor());
     all.push(nl_query::descriptor());
     all.extend(workflow::descriptors());
@@ -94,6 +96,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(transition::RecordTransitions));
     all.push(Box::new(transition::RecordTransition));
     all.push(Box::new(translate::TextTranslate));
+    all.push(Box::new(sentiment::TextSentiment));
     all.push(Box::new(search_records::SearchRecords));
     all.push(Box::new(nl_query::QueryPlan));
     all.extend(workflow::executors());
