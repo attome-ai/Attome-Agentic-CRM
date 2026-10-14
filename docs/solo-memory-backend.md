@@ -1,5 +1,9 @@
 # Solo storage: Redis or in-process memory (A5)
 
+**Status: implemented.** `cache.backend = "memory"` boots Solo on PostgreSQL alone
+(`crates/apps/attome/tests/solo_memory_boot.rs`); `crates/foundation/attome-cache/tests/memory_backend.rs`
+runs each ported primitive against the in-process store. Redis remains the default.
+
 Solo runs on PostgreSQL alone. Everything the platform keeps in Redis is
 reconstructable or fails closed on loss (guidelines §5), so a single server can
 hold it in process memory. This document is the design; `attome-cache`'s
@@ -61,7 +65,26 @@ persistence does; nonces, windows and pins are all short-lived by design.
 Nothing the product needs. Operator-facing Redis features (`INFO` memory
 figures, persistence status) report `memory` / not-applicable in Solo.
 
-## Order of work
+## What ended up where
+
+- `attome_cache::Store` (`store.rs`): the handle, plus primitive key, counter,
+  set and pub/sub methods that have both backends (`set`, `set_nx`, `get`,
+  `getdel`, `del`, `exists`, `incr`, `incr_with_ttl`, `ttl`, `sadd`, `srem`,
+  `smembers`, `publish`, `ping`).
+- `attome_cache::Subscriber` (`subscriber.rs`): the doorbell listener, Redis or
+  in-process, so a Solo process hears its own invalidations. The AI delta
+  fan-out has the same two forms.
+- Native forms in `MemoryStore::transaction`: `rate_limit`, `token_window`,
+  `write_coalesce`, `sticky_primary`, s2s `rate_limit` and `concurrency`,
+  `api_usage`, `failed_login`, and the single-use MFA, step-up and OIDC steps.
+- Not available in Solo: Redis streams (the S2S access-log buffer answers
+  `CapabilityUnavailable("redis")`) and profiler statistics (the page reports no
+  samples).
+- Guards: `cache.backend = "memory"` is refused with
+  `jobs.run_worker_inline = false` and by `attome worker`; the in-process store
+  is private to one process.
+
+## Order of work (as planned)
 
 1. `Store` and the config switch in `attome-cache`; port the cache primitives
    (rate limit, token window, write coalesce, sticky primary, streams).

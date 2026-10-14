@@ -356,7 +356,7 @@ async fn start_conversation(
         allowed_action_ids: body.allowed_action_ids,
     })?;
     // C11 B3: have the delta fan-out connected before the first answer.
-    crate::delta_stream::warm(state.base.config.clone());
+    crate::delta_stream::warm(state.base.redis.clone(), state.base.config.clone());
     // A human directly starting a conversation is not "retrieved content".
     let session = crate::agent::start_session(
         &state,
@@ -1149,7 +1149,7 @@ async fn stream_conversation(
     let after = q.after.or(last_event_id).unwrap_or(0).max(0);
     // Subscribed only after the authorization above: a caller who may not see
     // the conversation never reaches the delta feed at all (I-20).
-    let deltas = crate::delta_stream::subscribe(&state.base.config).await;
+    let deltas = crate::delta_stream::subscribe(&state.base.redis, &state.base.config).await;
 
     let stream = futures_util::stream::unfold(
         StreamCursor {

@@ -203,16 +203,19 @@ const FAN_OUT_CAPACITY: usize = 1024;
 /// its first answer streams. Without it the first `/stream` a process serves
 /// builds the subscription itself, and a fast answer can be published before
 /// anyone is listening — lost, as a delta may be, but needlessly.
-pub fn warm(config: std::sync::Arc<attome_config::AppConfig>) {
+pub fn warm(store: attome_cache::Store, config: std::sync::Arc<attome_config::AppConfig>) {
     // Disposable work whose loss is harmless (coding-guidelines §10).
     tokio::spawn(async move {
-        let _ = subscribe(&config).await;
+        let _ = subscribe(&store, &config).await;
     });
 }
 
 /// A receiver of every delta this process sees, or `None` when Redis cannot
 /// be reached — in which case the caller streams durable events only.
-pub async fn subscribe(config: &attome_config::AppConfig) -> Option<broadcast::Receiver<Delta>> {
+pub async fn subscribe(
+    store: &attome_cache::Store,
+    config: &attome_config::AppConfig,
+) -> Option<broadcast::Receiver<Delta>> {
     let mut hub = HUB.lock().await;
     if let Some(live) = hub.as_ref().filter(|h| h.alive.strong_count() > 0) {
         return Some(live.tx.subscribe());
@@ -225,7 +228,7 @@ pub async fn subscribe(config: &attome_config::AppConfig) -> Option<broadcast::R
     {
         return None;
     }
-    match connect(config).await {
+    match connect(store, config).await {
         Ok(built) => {
             let receiver = built.tx.subscribe();
             *hub = Some(built);
@@ -244,7 +247,41 @@ pub async fn subscribe(config: &attome_config::AppConfig) -> Option<broadcast::R
     }
 }
 
-async fn connect(config: &attome_config::AppConfig) -> Result<Hub, &'static str> {
+/// The in-process fan-out: the store's own broadcast of every publish,
+/// filtered to this feature's channel family.
+fn connect_memory(memory: &std::sync::Arc<attome_cache::memory::MemoryStore>) -> Hub {
+    let (tx, _) = broadcast::channel(FAN_OUT_CAPACITY);
+    let fan_out = tx.clone();
+    let mut messages = memory.subscribe_all();
+    let token = std::sync::Arc::new(());
+    let alive = std::sync::Arc::downgrade(&token);
+    // Supervision of one in-process listener for the life of its runtime (§10).
+    tokio::spawn(async move {
+        let _token = token;
+        loop {
+            match messages.recv().await {
+                Ok((channel, raw)) => {
+                    if channel.starts_with(CHANNEL_PREFIX)
+                        && let Ok(delta) = serde_json::from_str::<Delta>(&raw)
+                    {
+                        let _ = fan_out.send(delta);
+                    }
+                }
+                Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                Err(broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
+    Hub { tx, alive }
+}
+
+async fn connect(
+    store: &attome_cache::Store,
+    config: &attome_config::AppConfig,
+) -> Result<Hub, &'static str> {
+    if let attome_cache::Store::Memory(memory) = store {
+        return Ok(connect_memory(memory));
+    }
     let client = tokio::time::timeout(
         CONNECT_TIMEOUT,
         attome_cache::create_subscriber_client(config),

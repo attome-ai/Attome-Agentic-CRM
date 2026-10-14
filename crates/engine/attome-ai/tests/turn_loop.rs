@@ -4443,7 +4443,7 @@ async fn stop_never_touches_a_pending_proposal_and_repeats_harmlessly() {
 #[tokio::test]
 async fn a_published_delta_reaches_the_fan_out() {
     let f = skip_if_no_db!(fixture(vec![]).await);
-    let mut rx = attome_ai::delta_stream::subscribe(&f.state.base.config)
+    let mut rx = attome_ai::delta_stream::subscribe(&f.state.base.redis, &f.state.base.config)
         .await
         .expect("the fan-out connects to the test Redis");
     let turn_id = Uuid::now_v7();

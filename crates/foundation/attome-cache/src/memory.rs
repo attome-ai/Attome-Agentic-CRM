@@ -420,15 +420,34 @@ fn glob_match(pattern: &str, text: &str) -> bool {
 }
 
 /// The in-process store: a locked keyspace and pub/sub channels.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct MemoryStore {
     keyspace: Mutex<Keyspace>,
     channels: Mutex<HashMap<String, broadcast::Sender<String>>>,
+    /// Every published `(channel, message)`, for a listener that wants a whole
+    /// channel family (Redis `PSUBSCRIBE`).
+    firehose: broadcast::Sender<(String, String)>,
+}
+
+impl Default for MemoryStore {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MemoryStore {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            keyspace: Mutex::new(Keyspace::default()),
+            channels: Mutex::new(HashMap::new()),
+            firehose: broadcast::channel(CHANNEL_CAPACITY).0,
+        }
+    }
+
+    /// Every message published on any channel from now on, as
+    /// `(channel, message)`: a listener filters by channel prefix itself.
+    pub fn subscribe_all(&self) -> broadcast::Receiver<(String, String)> {
+        self.firehose.subscribe()
     }
 
     fn lock(&self) -> MutexGuard<'_, Keyspace> {
@@ -452,6 +471,7 @@ impl MemoryStore {
     /// Delivers `message` to the channel's current subscribers; returns how
     /// many received it (Redis `PUBLISH`).
     pub fn publish(&self, channel: &str, message: &str) -> usize {
+        let _ = self.firehose.send((channel.to_owned(), message.to_owned()));
         let channels = self.channels.lock().unwrap_or_else(PoisonError::into_inner);
         channels
             .get(channel)

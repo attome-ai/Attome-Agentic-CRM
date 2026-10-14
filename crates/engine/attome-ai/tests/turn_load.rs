@@ -309,7 +309,7 @@ async fn the_loop_meets_its_load_targets() {
     for _ in 0..concurrency {
         seats2.push(seat(&state2).await);
     }
-    let mut rx = attome_ai::delta_stream::subscribe(&state2.base.config)
+    let mut rx = attome_ai::delta_stream::subscribe(&state2.base.redis, &state2.base.config)
         .await
         .expect("delta subscription (Redis must be reachable)");
     let first_seen = Arc::new(std::sync::Mutex::new(std::collections::HashMap::<
