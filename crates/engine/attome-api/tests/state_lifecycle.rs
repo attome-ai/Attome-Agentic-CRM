@@ -1449,8 +1449,8 @@ async fn real_ticket_creates_at_new_and_transitions_to_resolved() {
         "create at initial state: {body:?}"
     );
     assert_eq!(body["data"]["status"], "new");
-    let ticket_id = body["data"]["id"].as_str().unwrap().to_string();
-    let row_version: i64 = body["data"]["row_version"].as_i64().unwrap();
+    let ticket_id = body["id"].as_str().unwrap().to_string();
+    let row_version: i64 = body["row_version"].as_i64().unwrap();
 
     // A real transition real code performs: resolving a ticket. The seeded
     // model is fully connected, so new -> resolved is a configured edge.
