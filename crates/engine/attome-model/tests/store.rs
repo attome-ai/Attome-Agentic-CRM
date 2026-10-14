@@ -50,6 +50,14 @@ impl Kind for NoteKind {
     }
 }
 
+fn registry() -> attome_model::KindRegistry {
+    let mut registry = attome_model::KindRegistry::default();
+    registry
+        .register(std::sync::Arc::new(NoteKind))
+        .expect("register the note kind");
+    registry
+}
+
 async fn pool() -> Option<sqlx::PgPool> {
     let url = attome_testkit::migrated_db_url()?;
     Some(
@@ -73,7 +81,7 @@ fn spec() -> ObjectSpec {
 
 async fn save(pool: &sqlx::PgPool, object: &ObjectSpec, doc: Value) -> store::DraftSaved {
     let mut tx = pool.begin().await.expect("begin");
-    let saved = store::save_draft(&mut tx, &NoteKind, object, &doc, None)
+    let saved = store::save_draft(&mut tx, &registry(), &NoteKind, object, &doc, None)
         .await
         .expect("save draft");
     tx.commit().await.expect("commit");
@@ -99,8 +107,15 @@ async fn save_draft_twice_keeps_one_draft() {
     assert_eq!(read.state, "draft");
 
     let mut tx = pool.begin().await.unwrap();
-    let refused =
-        store::save_draft(&mut tx, &NoteKind, &object, &json!({ "no": "title" }), None).await;
+    let refused = store::save_draft(
+        &mut tx,
+        &registry(),
+        &NoteKind,
+        &object,
+        &json!({ "no": "title" }),
+        None,
+    )
+    .await;
     assert!(
         matches!(refused, Err(AppError::Validation(_))),
         "the shape is checked on save"
@@ -163,6 +178,7 @@ async fn concurrent_save_returns_conflict() {
     let mut holder = pool.begin().await.unwrap();
     store::save_draft(
         &mut holder,
+        &registry(),
         &NoteKind,
         &object,
         &json!({ "title": "held" }),
@@ -173,6 +189,7 @@ async fn concurrent_save_returns_conflict() {
     let mut second = pool.begin().await.unwrap();
     let refused = store::save_draft(
         &mut second,
+        &registry(),
         &NoteKind,
         &object,
         &json!({ "title": "late" }),

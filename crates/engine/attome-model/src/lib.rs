@@ -15,6 +15,7 @@
 pub mod canonical;
 pub mod identity;
 pub mod kind;
+pub mod references;
 pub mod store;
 
 use std::collections::BTreeMap;

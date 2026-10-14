@@ -35,13 +35,16 @@ pub struct ObjectSpec {
 }
 
 /// What [`save_draft`] did.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DraftSaved {
     pub object_id: Uuid,
     pub version_no: i64,
     pub content_hash: String,
     /// `true` when this save opened the draft, `false` when it replaced it.
     pub opened: bool,
+    /// References to objects that do not exist. They do not block the draft;
+    /// publishing refuses them.
+    pub issues: Vec<crate::kind::Issue>,
 }
 
 /// One version of one object.
@@ -81,6 +84,7 @@ pub struct JsonPatchOp {
 /// save. Runs inside the caller's transaction; the caller commits.
 pub async fn save_draft(
     tx: &mut Tx<'_>,
+    registry: &crate::KindRegistry,
     kind: &dyn Kind,
     object: &ObjectSpec,
     doc: &Value,
@@ -199,11 +203,20 @@ pub async fn save_draft(
             (version_no, true)
         }
     };
+    // The reference graph follows the draft, in the same transaction.
+    let refs = kind.references(doc);
+    let source = crate::identity::ObjectRef {
+        kind: kind.name(),
+        id: object.id,
+    };
+    crate::references::replace_references(tx, &source, &refs).await?;
+    let issues = crate::references::dangling(tx, registry, &refs).await?;
     Ok(DraftSaved {
         object_id: object.id.0,
         version_no,
         content_hash: hash,
         opened,
+        issues,
     })
 }
 

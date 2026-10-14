@@ -129,6 +129,13 @@ pub trait Kind: Send + Sync + 'static {
 
     /// One line an agent tool built from this kind uses to describe it.
     fn agent_tool_description(&self) -> &'static str;
+
+    /// For an adapter kind (entity, attribute, rule, ... over its existing
+    /// table), that table, where an object's `id` column is its id. `None`
+    /// for a kind stored in the metadata object store.
+    fn adapter_table(&self) -> Option<&'static str> {
+        None
+    }
 }
 
 #[cfg(test)]
