@@ -16,7 +16,7 @@ pub const REQUEST_SECONDS: &str = "attome_inference_request_seconds";
 pub const REQUESTS_TOTAL: &str = "attome_inference_requests_total";
 
 /// The `endpoint` label's values.
-pub const ENDPOINTS: &[&str] = &["generation", "embedding", "models", "speech"];
+pub const ENDPOINTS: &[&str] = &["generation", "embedding", "models", "speech", "ocr"];
 /// The `outcome` label's values.
 pub const OUTCOMES: &[&str] = &[
     "ok",

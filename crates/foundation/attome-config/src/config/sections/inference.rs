@@ -130,6 +130,7 @@ impl std::fmt::Debug for InferenceSection {
             .field("generation", &self.generation)
             .field("embedding", &self.embedding)
             .field("speech", &self.speech)
+            .field("ocr", &self.ocr)
             .field("embedding_query_prefix", &self.embedding_query_prefix)
             .field("embedding_document_prefix", &self.embedding_document_prefix)
             .field("allow_external_provider", &self.allow_external_provider)
@@ -172,6 +173,12 @@ pub struct InferenceSection {
     /// Empty `base_url` means transcription is off.
     #[serde(default)]
     pub speech: InferenceEndpoint,
+
+    /// Reading text from images (N21-T1): a vision-language model behind an
+    /// OpenAI-compatible chat endpoint. Documents are customer data, so it
+    /// must be inside the deployment. Empty `base_url` means OCR is off.
+    #[serde(default)]
+    pub ocr: InferenceEndpoint,
 
     /// Prefix prepended to every **query** text before it is embedded,
     /// overriding the model-family heuristic (BIN-D6/BIN-G5).
@@ -302,6 +309,7 @@ impl Default for InferenceSection {
             generation: InferenceEndpoint::default(),
             embedding: InferenceEndpoint::default(),
             speech: InferenceEndpoint::default(),
+            ocr: InferenceEndpoint::default(),
             embedding_query_prefix: None,
             embedding_document_prefix: None,
             allow_external_provider: false,

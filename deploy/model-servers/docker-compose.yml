@@ -72,6 +72,24 @@ services:
     volumes: ["speech-models:/home/ubuntu/.cache/huggingface/hub"]
     restart: unless-stopped
 
+  # Reading text from images (N21-T1): a vision-language model through vLLM's
+  # OpenAI-compatible server. Point inference.ocr.base_url at
+  # http://127.0.0.1:8091/v1 and inference.ocr.model at the model id.
+  ocr:
+    profiles: ["ocr"]
+    image: vllm/vllm-openai:v0.8.5
+    command: ["--model", "${OCR_MODEL:-Qwen/Qwen2.5-VL-7B-Instruct}", "--max-model-len", "16384"]
+    ports: ["127.0.0.1:8091:8000"]
+    volumes: ["vllm-cache:/root/.cache/huggingface"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
 volumes:
   tei-models:
   vllm-cache:
