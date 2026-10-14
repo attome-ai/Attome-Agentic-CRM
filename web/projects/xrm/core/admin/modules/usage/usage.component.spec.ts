@@ -36,6 +36,7 @@ describe('UsageComponent (U11-T1)', () => {
       enabled: true, runs_here: true, files: true, dir: '/srv/attome/backups', keep: 7, hour: 2,
       same_disk: true, archives: 3,
       latest: { name: 'attome-20200101-0200.dump', taken_at: '2020-01-01T02:00:00Z', size_bytes: 10, files: 4 },
+      last_drill: { at: '2020-01-01T02:05:00Z', archive: 'attome-20200101-0200.dump', seconds: 30, passed: false, detail: 'check people found nothing' },
     };
     const get = vi.fn((path: string) => of(path === '/api/v1/admin/backup' ? backup : usage));
     TestBed.configureTestingModule({
@@ -51,6 +52,7 @@ describe('UsageComponent (U11-T1)', () => {
     expect(el.querySelector('[data-backup="same-disk"]')).not.toBeNull();
     expect(el.querySelector('[data-backup="late"]')).not.toBeNull();
     expect(el.querySelector('[data-backup="latest"]')?.textContent).toContain('attome-20200101-0200.dump');
+    expect(el.querySelector('[data-backup="drill"]')?.textContent).toContain('usagePage.drillFailed');
     const fresh = { ...backup.latest, taken_at: new Date().toISOString() };
     expect(fixture.componentInstance.backupLate({ ...backup, latest: fresh })).toBe(false);
   });

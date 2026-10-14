@@ -204,7 +204,7 @@ export const xrmEn = {
     title: 'Usage', usersActive: 'People who can sign in', usersRecent: 'Signed in during the last 30 days',
     contract: 'Contract reference', noContract: 'Not set', modules: 'Modules on',
     note: 'Information only: there are no seats or expiry dates.',
-    backup: 'Backups', backupDir: 'Folder', backupLatest: 'Newest backup', backupKept: 'Kept', backupFiles: 'Files in it',
+    backup: 'Backups', backupDrill: 'Last restore drill', drillPassed: 'Passed', drillFailed: 'Failed', backupDir: 'Folder', backupLatest: 'Newest backup', backupKept: 'Kept', backupFiles: 'Files in it',
     backupElsewhere: 'This deployment has several servers: back it up with pgBackRest or the database host.',
     backupOff: 'The daily backup is off (backup.enabled = false).',
     backupSameDisk: 'Backups are on the same disk as the database. Set backup.dir to another disk or a network share to survive losing this one.',

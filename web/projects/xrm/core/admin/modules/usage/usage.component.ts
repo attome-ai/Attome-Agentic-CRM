@@ -20,6 +20,8 @@ export interface BackupStatus {
   same_disk: boolean;
   archives: number;
   latest: { name: string; taken_at: string | null; size_bytes: number; files: number | null } | null;
+  /** The newest restore drill (U6-T3). */
+  last_drill?: { at: string; archive: string; seconds: number; passed: boolean; detail: string } | null;
 }
 
 /** A backup older than this is reported as late. */

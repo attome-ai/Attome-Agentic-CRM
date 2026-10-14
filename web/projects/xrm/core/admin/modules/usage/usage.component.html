@@ -52,6 +52,15 @@
           <dt>{{ 'usagePage.backupKept' | translate }}</dt>
           <dd>{{ b.archives }} / {{ b.keep }}</dd>
         </div>
+        @if (b.last_drill; as drill) {
+          <div>
+            <dt>{{ 'usagePage.backupDrill' | translate }}</dt>
+            <dd [class.us-error]="!drill.passed" data-backup="drill">
+              {{ (drill.passed ? 'usagePage.drillPassed' : 'usagePage.drillFailed') | translate }}
+              <span class="us-muted" dir="ltr">{{ drill.at.slice(0, 10) }}</span>
+            </dd>
+          </div>
+        }
         @if (b.latest?.files !== null && b.latest?.files !== undefined) {
           <div>
             <dt>{{ 'usagePage.backupFiles' | translate }}</dt>

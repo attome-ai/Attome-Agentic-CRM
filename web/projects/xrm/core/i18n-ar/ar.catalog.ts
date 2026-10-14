@@ -168,7 +168,7 @@ export const xrmAr = {
     title: 'الاستخدام', usersActive: 'من يمكنهم تسجيل الدخول', usersRecent: 'سجّلوا الدخول خلال آخر 30 يومًا',
     contract: 'مرجع العقد', noContract: 'غير محدد', modules: 'الوحدات المفعّلة',
     note: 'للاطلاع فقط: لا توجد مقاعد ولا تواريخ انتهاء.',
-    backup: 'النسخ الاحتياطية', backupDir: 'المجلد', backupLatest: 'أحدث نسخة', backupKept: 'المحفوظة', backupFiles: 'الملفات فيها',
+    backup: 'النسخ الاحتياطية', backupDrill: 'آخر تجربة استعادة', drillPassed: 'نجحت', drillFailed: 'فشلت', backupDir: 'المجلد', backupLatest: 'أحدث نسخة', backupKept: 'المحفوظة', backupFiles: 'الملفات فيها',
     backupElsewhere: 'هذا النشر يعمل على عدة خوادم: انسخه احتياطيًا عبر pgBackRest أو مزوّد قاعدة البيانات.',
     backupOff: 'النسخ الاحتياطي اليومي متوقف (backup.enabled = false).',
     backupSameDisk: 'النسخ الاحتياطية على قرص قاعدة البيانات نفسه. اضبط backup.dir على قرص آخر أو مجلد شبكة لتنجو من فقدان هذا القرص.',
