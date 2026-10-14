@@ -2349,6 +2349,28 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
                 Some(module_key),
             )
             .await?;
+            // v2 AI admin screens: the agent designer (N9-T2), the status
+            // page (N31-T2), spend against the money caps (N24-T2) and the
+            // scoped switches (N31-T1). Each API refuses non-administrators;
+            // the icons are in the committed Line Awesome subset.
+            for (label, route, icon, order) in [
+                ("Agent Designer", "/xrm/model/agents", "las la-robot", 85),
+                ("AI Status", "/xrm/ai/status", "las la-tachometer-alt", 90),
+                ("AI Spend", "/xrm/ai/spend", "las la-chart-line", 100),
+                ("AI Switches", "/xrm/ai/switches", "las la-power-off", 110),
+            ] {
+                upsert_sidebar(
+                    db,
+                    label,
+                    Some(route),
+                    icon,
+                    "#8b5cf6",
+                    Some(module_group),
+                    order,
+                    Some(module_key),
+                )
+                .await?;
+            }
             // Removed 2026-09-11 (D-491): `ai_model_approval` no longer
             // exists — approval is now `ai_model.approval_status`,
             // reached from the "Models" entry above, at its unchanged
