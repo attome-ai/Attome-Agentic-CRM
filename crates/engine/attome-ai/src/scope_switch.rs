@@ -42,10 +42,13 @@ pub const KINDS: [&str; 5] = ["agent", "model", "provider", "tool", "channel"];
 pub const CAUSES: [&str; 5] = ["manual", "budget", "quality", "injection", "departure"];
 const MAX_REASON_CHARS: usize = 500;
 
-/// The scopes that are off, and when that was read.
-static SNAPSHOT: Mutex<Option<(Instant, HashSet<(String, String)>)>> = Mutex::new(None);
+/// The scopes that are off, as `(kind, key)`.
+type OffScopes = HashSet<(String, String)>;
 
-async fn read_off(db: &PgPool) -> Result<HashSet<(String, String)>, AppError> {
+/// The off scopes, and when they were read.
+static SNAPSHOT: Mutex<Option<(Instant, OffScopes)>> = Mutex::new(None);
+
+async fn read_off(db: &PgPool) -> Result<OffScopes, AppError> {
     let rows: Vec<(String, String)> =
         sqlx::query_as("SELECT scope_kind, scope_key FROM ai_scope_switch WHERE NOT enabled")
             .fetch_all(db)
@@ -56,7 +59,7 @@ async fn read_off(db: &PgPool) -> Result<HashSet<(String, String)>, AppError> {
 
 /// The off scopes, from a fresh-enough snapshot or the table. `Err` when
 /// neither is available: the caller refuses (fails closed).
-async fn off_scopes(db: &PgPool) -> Result<HashSet<(String, String)>, AppError> {
+async fn off_scopes(db: &PgPool) -> Result<OffScopes, AppError> {
     let cached = SNAPSHOT
         .lock()
         .ok()

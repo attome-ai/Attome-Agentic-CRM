@@ -538,7 +538,13 @@ pub async fn published_state(
     app: &str,
     name: &str,
 ) -> Result<Option<PublishedState>, AppError> {
-    let row: Option<(Uuid, Option<i64>, Option<String>)> = sqlx::query_as(
+    #[derive(sqlx::FromRow)]
+    struct Row {
+        id: Uuid,
+        version_no: Option<i64>,
+        content_hash: Option<String>,
+    }
+    let row: Option<Row> = sqlx::query_as(
         "SELECT o.id, v.version_no, v.content_hash          FROM metadata_object o          LEFT JOIN LATERAL (              SELECT version_no, content_hash FROM metadata_object_version              WHERE object_id = o.id AND state = 'published'              ORDER BY version_no DESC LIMIT 1          ) v ON true          WHERE o.kind = $1 AND o.app = $2 AND o.name = $3 AND o.is_active",
     )
     .bind(kind)
@@ -547,8 +553,8 @@ pub async fn published_state(
     .fetch_optional(pool)
     .await
     .map_err(AppError::internal)?;
-    Ok(row.map(|(id, version, hash)| PublishedState {
-        id,
-        published: version.zip(hash),
+    Ok(row.map(|row| PublishedState {
+        id: row.id,
+        published: row.version_no.zip(row.content_hash),
     }))
 }

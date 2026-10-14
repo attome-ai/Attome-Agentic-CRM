@@ -811,7 +811,7 @@ pub async fn reserve_session_write(
         .and_utc();
 
     let mut tx = attome_db::tx::begin(db).await?;
-    let row: Option<(Option<i32>, Option<Uuid>, Option<Value>)> = sqlx::query_as(
+    let row: Option<ReservationLimits> = sqlx::query_as(
         "SELECT max_writes_per_day, agent_object_ref, daily_class_limits \
          FROM agent_session WHERE id = $1 FOR UPDATE",
     )
@@ -819,7 +819,12 @@ pub async fn reserve_session_write(
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
-    let Some((limit, agent_object, daily)) = row else {
+    let Some(ReservationLimits {
+        max_writes_per_day: limit,
+        agent_object_ref: agent_object,
+        daily_class_limits: daily,
+    }) = row
+    else {
         tx.rollback().await.map_err(AppError::internal)?;
         return Ok(WriteReservation::Unlimited);
     };
@@ -949,6 +954,14 @@ pub async fn reserve_session_write(
     };
     tx.commit().await.map_err(AppError::internal)?;
     Ok(WriteReservation::Reserved(id))
+}
+
+/// What a write reservation reads from its session row.
+#[derive(sqlx::FromRow)]
+struct ReservationLimits {
+    max_writes_per_day: Option<i32>,
+    agent_object_ref: Option<Uuid>,
+    daily_class_limits: Option<Value>,
 }
 
 /// The agent definition's daily cap for `action_id`'s limit class, when it
