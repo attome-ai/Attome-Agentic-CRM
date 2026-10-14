@@ -815,7 +815,7 @@
           "action"
         ],
         "summary": "`GET /api/v1/admin/ai/eval-runs/{id}`",
-        "operationId": "get_run",
+        "operationId": "get_eval_run",
         "parameters": [
           {
             "name": "id",
@@ -996,7 +996,7 @@
           "action"
         ],
         "summary": "`POST /api/v1/admin/ai/eval-suites/{suite}/runs`",
-        "operationId": "start_run",
+        "operationId": "start_eval_run",
         "parameters": [
           {
             "name": "suite",
@@ -2099,7 +2099,7 @@
           "action"
         ],
         "summary": "`GET /api/v1/admin/ai/write-policies` — the active policies.",
-        "operationId": "list_policies",
+        "operationId": "list_write_policies",
         "responses": {
           "200": {
             "description": "Active per-write approval policies",
@@ -2146,7 +2146,7 @@
           "action"
         ],
         "summary": "`POST /api/v1/admin/ai/write-policies` — requires approval for an action.",
-        "operationId": "create_policy",
+        "operationId": "create_write_policy",
         "requestBody": {
           "content": {
             "application/json": {
@@ -21121,7 +21121,7 @@
           "admin"
         ],
         "summary": "Publishes an object's open draft once it passes the publish checks, and\nrefreshes the cooked metadata.",
-        "operationId": "publish",
+        "operationId": "publish_model_object",
         "parameters": [
           {
             "name": "kind",
@@ -21425,7 +21425,7 @@
           "admin"
         ],
         "summary": "Reads one version of an object.",
-        "operationId": "get_version",
+        "operationId": "get_model_version",
         "parameters": [
           {
             "name": "kind",
@@ -34976,7 +34976,7 @@
           "action"
         ],
         "summary": "`POST /api/v1/ai/conversations/{id}/runs` — gives the agent a task and\nreturns at once while it works through it in the background (N7-T1):\nthe same turn loop, gate and ledger as a chat message, bounded by\n`max_steps`, ending in one of the turn's terminal states (completed,\nawaiting confirmation or approval, a limit, a failure). Its steps and end\nstate are on the conversation's stream.",
-        "operationId": "start_run",
+        "operationId": "start_conversation_run",
         "parameters": [
           {
             "name": "id",

@@ -242,7 +242,7 @@ export interface paths {
             cookie?: never;
         };
         /** `GET /api/v1/admin/ai/eval-runs/{id}` */
-        get: operations["get_run"];
+        get: operations["get_eval_run"];
         put?: never;
         post?: never;
         delete?: never;
@@ -278,7 +278,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** `POST /api/v1/admin/ai/eval-suites/{suite}/runs` */
-        post: operations["start_run"];
+        post: operations["start_eval_run"];
         delete?: never;
         options?: never;
         head?: never;
@@ -543,10 +543,10 @@ export interface paths {
             cookie?: never;
         };
         /** `GET /api/v1/admin/ai/write-policies` — the active policies. */
-        get: operations["list_policies"];
+        get: operations["list_write_policies"];
         put?: never;
         /** `POST /api/v1/admin/ai/write-policies` — requires approval for an action. */
-        post: operations["create_policy"];
+        post: operations["create_write_policy"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3829,7 +3829,7 @@ export interface paths {
          * Publishes an object's open draft once it passes the publish checks, and
          *     refreshes the cooked metadata.
          */
-        post: operations["publish"];
+        post: operations["publish_model_object"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3878,7 +3878,7 @@ export interface paths {
             cookie?: never;
         };
         /** Reads one version of an object. */
-        get: operations["get_version"];
+        get: operations["get_model_version"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6150,7 +6150,7 @@ export interface paths {
          *     awaiting confirmation or approval, a limit, a failure). Its steps and end
          *     state are on the conversation's stream.
          */
-        post: operations["start_run"];
+        post: operations["start_conversation_run"];
         delete?: never;
         options?: never;
         head?: never;
@@ -26244,7 +26244,7 @@ export interface operations {
             };
         };
     };
-    get_run: {
+    get_eval_run: {
         parameters: {
             query?: never;
             header?: never;
@@ -26366,7 +26366,7 @@ export interface operations {
             };
         };
     };
-    start_run: {
+    start_eval_run: {
         parameters: {
             query?: never;
             header?: never;
@@ -27076,7 +27076,7 @@ export interface operations {
             };
         };
     };
-    list_policies: {
+    list_write_policies: {
         parameters: {
             query?: never;
             header?: never;
@@ -27114,7 +27114,7 @@ export interface operations {
             };
         };
     };
-    create_policy: {
+    create_write_policy: {
         parameters: {
             query?: never;
             header?: never;
@@ -39251,7 +39251,7 @@ export interface operations {
             };
         };
     };
-    publish: {
+    publish_model_object: {
         parameters: {
             query?: never;
             header?: never;
@@ -39440,7 +39440,7 @@ export interface operations {
             };
         };
     };
-    get_version: {
+    get_model_version: {
         parameters: {
             query?: never;
             header?: never;
@@ -48349,7 +48349,7 @@ export interface operations {
             };
         };
     };
-    start_run: {
+    start_conversation_run: {
         parameters: {
             query?: never;
             header?: never;
