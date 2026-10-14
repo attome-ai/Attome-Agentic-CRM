@@ -29,6 +29,7 @@
 //! `format` and `clippy` can never be overridden (they are always fixable).
 
 mod contract;
+pub mod intake;
 pub mod parity;
 pub mod release;
 pub mod sbom;
@@ -138,6 +139,7 @@ pub fn check_with(options: &Options) -> ExitCode {
         ("contract", contract_step as Step),
         ("waivers", waivers as Step),
         ("cargo_deny", cargo_deny as Step),
+        ("dependency_intake", dependency_intake as Step),
         ("npm_licences", supply::npm_licences_step as Step),
         ("sbom", sbom_step as Step),
         ("slo", slo_step as Step),
@@ -912,6 +914,13 @@ fn sbom_step(root: &Path) -> Result<(), String> {
     );
     let timestamp = format!("{}T00:00:00Z", test_flaky::date_from_unix(unix_seconds()));
     sbom::write_rust_sbom(root, &gate_dir(root), &serial, &timestamp)
+}
+
+/// AC7-T9: dependencies added since the previous release tag have intake
+/// entries (see [`intake`]).
+fn dependency_intake(root: &Path) -> Result<(), String> {
+    let tag = command_output(root, "git", &["describe", "--tags", "--abbrev=0"]);
+    intake::step(root, tag.as_deref())
 }
 
 /// AC7-T2: every waiver is owned and in date (see [`supply`]).
