@@ -87,6 +87,37 @@ pub(crate) fn note_acquire_timeout() {
     }
 }
 
+/// Z2-T12: per-role pool pressure. `role` is the pool's database user
+/// (`attome_runtime`, `attome_migrator`, `attome_readonly`, or the bootstrap
+/// user), so the series count stays as small as the set of pools.
+#[derive(Clone, Copy)]
+pub struct PoolPressureHooks {
+    /// How long one `tx::begin` waited for a connection.
+    pub wait: fn(role: &str, waited: std::time::Duration),
+    /// One `tx::begin` that gave up waiting.
+    pub timeout: fn(role: &str),
+}
+
+static POOL_PRESSURE_HOOKS: OnceLock<PoolPressureHooks> = OnceLock::new();
+
+/// Installs the per-role pool pressure callbacks. Set-once, like the hooks
+/// above; must be cheap and must not block.
+pub fn set_pool_pressure_hooks(hooks: PoolPressureHooks) -> bool {
+    POOL_PRESSURE_HOOKS.set(hooks).is_ok()
+}
+
+pub(crate) fn note_acquire_wait(role: &str, waited: std::time::Duration) {
+    if let Some(hooks) = POOL_PRESSURE_HOOKS.get() {
+        (hooks.wait)(role, waited);
+    }
+}
+
+pub(crate) fn note_role_acquire_timeout(role: &str) {
+    if let Some(hooks) = POOL_PRESSURE_HOOKS.get() {
+        (hooks.timeout)(role);
+    }
+}
+
 /// BDB-F6 / 3.1b — the process-wide callback run once per `57014`
 /// (`statement_timeout`) seen by [`classify`]. Same set-once, metrics-free
 /// shape as [`set_acquire_timeout_hook`]: `attome-server` installs one that

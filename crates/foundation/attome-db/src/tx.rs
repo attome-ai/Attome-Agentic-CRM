@@ -26,9 +26,17 @@ use crate::{DbPool, Tx};
     reason = "attome_db::tx::begin is the sanctioned wrapper, the one place Pool::begin is called"
 )]
 pub async fn begin(pool: &DbPool) -> Result<Tx<'_>, AppError> {
-    match pool.begin().await {
-        Ok(tx) => Ok(tx),
+    let started = std::time::Instant::now();
+    let result = pool.begin().await;
+    // Z2-T12: the wait, and a timeout, per pool role.
+    let role = pool.connect_options().get_username().to_owned();
+    match result {
+        Ok(tx) => {
+            crate::error::note_acquire_wait(&role, started.elapsed());
+            Ok(tx)
+        }
         Err(sqlx::Error::PoolTimedOut) => {
+            crate::error::note_role_acquire_timeout(&role);
             let acquire_timeout = pool.options().get_acquire_timeout();
             tracing::warn!(
                 event = "db.pool.acquire_timeout",

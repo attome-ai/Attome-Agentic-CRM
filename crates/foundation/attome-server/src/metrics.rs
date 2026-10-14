@@ -37,6 +37,11 @@ pub fn build_layer_and_handle() -> (PrometheusMetricLayer<'static>, PrometheusHa
     attome_db::set_acquire_timeout_hook(record_db_pool_acquire_timeout);
     // attome-db plan 3.1b — same set-once shape for `57014` (statement timeout).
     attome_db::set_statement_timeout_hook(record_db_statement_timeout);
+    // Z2-T12: per-role pool pressure.
+    attome_db::set_pool_pressure_hooks(attome_db::PoolPressureHooks {
+        wait: record_db_pool_acquire_wait,
+        timeout: record_db_pool_role_acquire_timeout,
+    });
     // AA1-T6: the latency screen reads the same registry `/metrics` renders.
     let _ = RENDER_HANDLE.set(pair.1.clone());
     pair
@@ -245,6 +250,18 @@ fn install_recorder() -> PrometheusHandle {
     metrics::set_global_recorder(recorder)
         .expect("build_layer_and_handle is called once per process");
     handle
+}
+
+/// `db_pool_acquire_wait_seconds{role}`: how long `tx::begin` waited.
+fn record_db_pool_acquire_wait(role: &str, waited: Duration) {
+    metrics::histogram!("db_pool_acquire_wait_seconds", "role" => role.to_owned())
+        .record(waited.as_secs_f64());
+}
+
+/// `db_pool_role_acquire_timeouts_total{role}`.
+fn record_db_pool_role_acquire_timeout(role: &str) {
+    metrics::counter!("db_pool_role_acquire_timeouts_total", "role" => role.to_owned())
+        .increment(1);
 }
 
 /// Counts one PostgreSQL statement timeout (`57014`) that reached
