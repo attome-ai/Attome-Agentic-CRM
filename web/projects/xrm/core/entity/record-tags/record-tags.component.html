@@ -1,0 +1,39 @@
+<div class="rt-row" role="group" [attr.aria-label]="'recordTags.label' | translate" data-testid="record-tags">
+  @for (tag of tags(); track tag.id) {
+    <span class="rt-chip" [class.rt-personal]="tag.personal"
+          [style.--rt-colour]="tag.colour ?? null" data-testid="record-tag">
+      @if (tag.personal) { <i class="las la-lock" aria-hidden="true"></i> }
+      {{ tag.name }}
+      <button type="button" class="rt-remove" [disabled]="busy()"
+              [attr.aria-label]="'recordTags.remove' | translate: { tag: tag.name }"
+              (click)="remove(tag)">
+        <i class="las la-times" aria-hidden="true"></i>
+      </button>
+    </span>
+  }
+  <span class="rt-add">
+    <input type="text" class="rt-input" maxlength="80"
+           [placeholder]="'recordTags.add' | translate"
+           [attr.aria-label]="'recordTags.add' | translate"
+           [value]="typed()" [disabled]="busy()"
+           (input)="onInput($any($event.target).value)" (keydown)="onKeydown($event)"
+           data-testid="record-tags-input" />
+    <label class="rt-personal-toggle">
+      <input type="checkbox" [checked]="personal()" (change)="personal.set($any($event.target).checked)" />
+      {{ 'recordTags.personal' | translate }}
+    </label>
+    @if (suggestions().length) {
+      <ul class="rt-suggestions" role="listbox">
+        @for (s of suggestions(); track s.id) {
+          <li role="option" aria-selected="false">
+            <button type="button" (click)="add(s)">
+              @if (s.personal) { <i class="las la-lock" aria-hidden="true"></i> }
+              {{ s.name }} <span class="rt-uses">{{ s.uses }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </span>
+  @if (error()) { <span class="rt-error" role="alert">{{ error() }}</span> }
+</div>

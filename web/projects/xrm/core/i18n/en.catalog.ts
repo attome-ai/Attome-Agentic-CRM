@@ -1404,6 +1404,9 @@ export const xrmEn = {
   },
 
   // ── U5 (basic-units-10-10 §4.5, D-602): the user's own notification preferences ──
+  recordTags: {
+    label: 'Tags', add: 'Add a tag…', personal: 'Only me', remove: 'Remove {tag}',
+  },
   settingsPage: {
     title: 'Settings',
     subtitle: 'How Attome looks and behaves for you. Each change applies at once.',

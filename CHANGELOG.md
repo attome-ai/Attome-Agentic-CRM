@@ -11,6 +11,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Tags under a record's title: suggestions while typing, a new tag on Enter, personal tags marked.
 - Tags on any record (migration 0022): shared or personal, matched ignoring case and Arabic
   diacritics; `GET/POST /api/v1/{entity}/{id}/tags`, `DELETE .../tags/{tag_id}`,
   `GET /api/v1/tags/suggest?q=`, `GET /api/v1/tags/{tag_id}/records` (across entities, readable

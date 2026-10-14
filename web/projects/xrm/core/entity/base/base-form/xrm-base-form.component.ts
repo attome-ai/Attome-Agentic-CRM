@@ -7,6 +7,7 @@ import { PredictionBannerComponent } from '../../prediction-banner/prediction-ba
 import { RecordAccessActionsComponent } from '../../record-access/record-access-actions.component';
 import { RecordTabPanelsComponent } from '../../record-tabs/record-tab-panels.component';
 import { RemindMeComponent } from '../../reminders/remind-me.component';
+import { RecordTagsComponent } from '../../record-tags/record-tags.component';
 import { EngineFormBase } from '../xrm-form.base';
 import { XrmTabDirective } from './xrm-tab.directive';
 
@@ -53,7 +54,7 @@ import { XrmTabDirective } from './xrm-tab.directive';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     NgTemplateOutlet, TranslatePipe, DuplicateBannerComponent, PredictionBannerComponent,
-    RecordAccessActionsComponent, RecordTabPanelsComponent, RemindMeComponent,
+    RecordAccessActionsComponent, RecordTabPanelsComponent, RemindMeComponent, RecordTagsComponent,
   ],
   styleUrls: ['../../../../styles/xrm-form.css', './xrm-base-form.component.css'],
   templateUrl: './xrm-base-form.component.html',

@@ -1327,6 +1327,9 @@ export const xrmAr = {
   },
 
   // ── U5 — تفضيلات الإشعارات الخاصة بالمستخدم (D-602) ──
+  recordTags: {
+    label: 'الوسوم', add: 'أضف وسماً…', personal: 'لي فقط', remove: 'إزالة {tag}',
+  },
   settingsPage: {
     title: 'الإعدادات',
     subtitle: 'كيف يظهر Attome ويعمل لك. يُطبَّق كل تغيير فوراً.',

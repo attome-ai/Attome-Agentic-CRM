@@ -25,6 +25,10 @@
           <h1 class="xf-title">{{ (f.isEdit() ? 'xrmForm.edit' : 'xrmForm.new') | translate }} {{ schema.name }}</h1>
         }
         <ng-content select="[xrmHeaderMeta]" />
+        <!-- B4-T4 — the record's tags (shared, and the person's own). -->
+        @if (f.isEdit() && f.id(); as tagRecordId) {
+          <xrm-record-tags [entity]="f.name()" [recordId]="tagRecordId" />
+        }
       </div>
       <div class="xf-actions">
         <ng-content select="[xrmHeaderActions]" />
