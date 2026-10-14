@@ -20,6 +20,10 @@ any other kind: as a draft through `POST /api/v1/admin/model/agent/{id}/commands
   "persona": { "language": "ar", "temperature": 0.2 } }
 ```
 
+To run sessions from the agent itself, give it `"policy": "<ai_agent_policy id>"` (its organisation
+ceiling) and `"persona": { "model": "<ai_model id>" }`, publish it, and start one with
+`POST /api/v1/model/agents/{agent}/sessions` (`{ "risk_ceiling": "reversible" }`).
+
 Saving checks the tools exist, the limits are within the platform ceilings and each trigger's entity
 exists at publish.
 

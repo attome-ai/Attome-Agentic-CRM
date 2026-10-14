@@ -856,11 +856,234 @@ async fn agent_usage(
     Ok(Json(AgentUsageResponse { items }))
 }
 
+/// The persona an agent object gives the model (V2-D487): its role and
+/// instructions, then its language. `None` when it sets none of them.
+pub fn object_persona(doc: &Value) -> Option<String> {
+    let text = |v: &Value| {
+        v.as_str()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+    };
+    let mut parts = Vec::new();
+    if let Some(role) = text(&doc["role"]) {
+        parts.push(format!("You are {role}."));
+    }
+    if let Some(instructions) = text(&doc["instructions"]) {
+        parts.push(instructions);
+    }
+    let language = match doc["persona"]["language"].as_str().map(str::trim) {
+        Some("ar") => Some("Arabic"),
+        Some("en") => Some("English"),
+        Some("fr") => Some("French"),
+        Some("ur") => Some("Urdu"),
+        Some("hi") => Some("Hindi"),
+        _ => None,
+    };
+    if let Some(language) = language {
+        parts.push(format!(
+            "Answer in {language} unless the person writes in another language."
+        ));
+    }
+    (!parts.is_empty()).then(|| parts.join("\n\n"))
+}
+
+/// Starts a session from a published `agent` metadata object (V2-D487 step
+/// 3), with no `ai_agent` definition: its `persona.model` must be a live AI
+/// model, its `policy` an agent policy the caller can read (the
+/// organisation's ceiling, with its packs, exactly as a definition's
+/// `policy_ref`), its tools one more allow-list and its `limits.daily` the
+/// per-day caps. Nothing in the object widens what the policy and the
+/// request allow.
+pub async fn start_session_from_object(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    agent: Uuid,
+    surface: &'static str,
+    constraints: SessionConstraints,
+    tainted: bool,
+) -> Result<AgentSession, AppError> {
+    let version = attome_model::store::read_published(&state.base.db, agent).await?;
+    if version.kind != attome_model::kinds::AGENT.as_str() {
+        return Err(AppError::Validation(
+            "`agent` must name an agent object".into(),
+        ));
+    }
+    let doc = &version.doc;
+    let model = doc["persona"]["model"]
+        .as_str()
+        .and_then(|m| Uuid::parse_str(m).ok())
+        .ok_or_else(|| {
+            AppError::Validation(
+                "this agent needs persona.model (a live AI model) before a session can start"
+                    .into(),
+            )
+        })?;
+    let model_is_live: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM ai_model WHERE id = $1 AND is_active = true)",
+    )
+    .bind(model)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if !model_is_live {
+        return Err(AppError::Validation(
+            "this agent's persona.model does not name a live AI model".into(),
+        ));
+    }
+    let policy_ref = doc["policy"]
+        .as_str()
+        .and_then(|p| Uuid::parse_str(p).ok())
+        .ok_or_else(|| {
+            AppError::Validation(
+                "this agent needs an agent policy (policy) before a session can start".into(),
+            )
+        })?;
+    let policy_record =
+        match attome_records::entity_crud::read_record(state, ctx, POLICY_ENTITY, policy_ref).await
+        {
+            Ok(record) => record,
+            Err(AppError::NotFound | AppError::Forbidden) => {
+                return Err(AppError::Validation(
+                    "this agent's policy does not name an active agent policy".into(),
+                ));
+            }
+            Err(e) => return Err(e),
+        };
+    let policy = parse_policy(policy_record.data(), |id| {
+        crate::engine::REGISTRY.resolve(id).is_some()
+    })?;
+    let packs =
+        crate::capability_pack::resolve(state, ctx, policy.capability_pack_refs.as_deref()).await?;
+    let tools: Vec<String> = doc["tools"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|t| t.as_str().map(str::to_owned))
+        .collect();
+    let narrowed = SessionConstraints {
+        risk_ceiling: constraints.risk_ceiling,
+        allowed_action_ids: Some(narrow_to_agent_tools(
+            constraints.allowed_action_ids,
+            &tools,
+        )),
+    };
+    let effective = combine_with_policy(narrowed, &policy, packs.action_ids);
+    let session = session::start(
+        &state.base.db,
+        &attome_audit::audit_service(state),
+        SessionStart {
+            owner_user_id: ctx.user_id,
+            risk_ceiling: effective.risk_ceiling,
+            allowed_action_ids: effective.allowed_action_ids,
+            surface,
+            agent_definition_ref: None,
+            integration_system_id: None,
+            tainted,
+            policy: PolicySnapshot {
+                policy_ref: Some(policy_ref),
+                policy_row_version: Some(policy_record.row_version()),
+                knowledge_source_refs: policy.knowledge_source_refs,
+                capability_pack_refs: packs.refs,
+                max_invocations_per_session: Some(policy.max_invocations_per_session),
+                max_writes_per_day: Some(policy.max_writes_per_day),
+                max_tokens_per_session: Some(policy.max_tokens_per_session),
+                max_session_duration_minutes: Some(policy.max_session_duration_minutes),
+                retrieval_mode: Default::default(),
+                persona: object_persona(doc),
+            },
+        },
+    )
+    .await?;
+    if let Err(error) = session::attach_agent_object(
+        &state.base.db,
+        session.id,
+        agent,
+        doc["limits"].get("daily").cloned(),
+    )
+    .await
+    {
+        // Never leave a session running without the agent's limits.
+        let _ = session::revoke(
+            &state.base.db,
+            session.id,
+            ctx.user_id,
+            "agent limits not attached",
+        )
+        .await;
+        return Err(error);
+    }
+    Ok(session)
+}
+
+/// Body of `POST /api/v1/model/agents/{agent}/sessions`.
+#[derive(Debug, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct StartObjectSessionRequest {
+    /// **Required.** `"read"` | `"reversible"` | `"consequential"`.
+    pub risk_ceiling: String,
+    /// Optional; narrows the agent's own tools further.
+    #[serde(default)]
+    pub allowed_action_ids: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ObjectSessionResponse {
+    pub id: Uuid,
+    /// The agent object the session runs as.
+    pub agent: Uuid,
+    pub risk_ceiling: String,
+    pub allowed_action_ids: Option<Vec<String>>,
+}
+
+/// `POST /api/v1/model/agents/{agent}/sessions` — opens a session from a
+/// published agent object (V2-D487).
+#[utoipa::path(
+    post,
+    path = "/api/v1/model/agents/{agent}/sessions",
+    tag = "action",
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Ai, attome_audit::AuditOperation::Create)])))),
+    params(("agent" = Uuid, Path, description = "The published agent object")),
+    request_body = StartObjectSessionRequest,
+    responses(
+        (status = 200, description = "Success", body = ObjectSessionResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks ai_agent.update", body = ErrorResponse),
+        (status = 404, description = "No published agent object with this id", body = ErrorResponse),
+        (status = 422, description = "risk_ceiling is unknown; the agent has no live persona.model or no readable, valid policy", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn start_session_from_agent_object(
+    State(state): State<EngineState>,
+    ctx: Authorized<Privilege<AgentUpdate>>,
+    Path(agent): Path<Uuid>,
+    Json(body): Json<StartObjectSessionRequest>,
+) -> Result<Json<ObjectSessionResponse>, AppError> {
+    let constraints = admin_session_constraints(&StartSessionRequest {
+        risk_ceiling: body.risk_ceiling,
+        allowed_action_ids: body.allowed_action_ids,
+        agent: None,
+    })?;
+    let session =
+        start_session_from_object(&state, &ctx, agent, "admin", constraints, false).await?;
+    Ok(Json(ObjectSessionResponse {
+        id: session.id,
+        agent,
+        risk_ceiling: risk_ceiling_wire(session.risk_ceiling).to_owned(),
+        allowed_action_ids: session.allowed_action_ids,
+    }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route(
             "/api/v1/agents/{id}/sessions",
             post(start_session_from_definition),
+        )
+        .route(
+            "/api/v1/model/agents/{agent}/sessions",
+            post(start_session_from_agent_object),
         )
         .route(
             "/api/v1/admin/ai/agents/{agent}/usage",
@@ -870,8 +1093,17 @@ pub fn routes() -> Router<EngineState> {
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(start_session_from_definition, agent_usage),
-    components(schemas(AgentUsageView, AgentUsageResponse))
+    paths(
+        start_session_from_definition,
+        start_session_from_agent_object,
+        agent_usage
+    ),
+    components(schemas(
+        AgentUsageView,
+        AgentUsageResponse,
+        StartObjectSessionRequest,
+        ObjectSessionResponse
+    ))
 )]
 struct ApiDocFragment;
 

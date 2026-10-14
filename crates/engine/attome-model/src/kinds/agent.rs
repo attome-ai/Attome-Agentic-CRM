@@ -57,7 +57,7 @@ pub const DAILY_CLASSES: [&str; 4] = ["record_changes", "deletes", "messages", "
 const RUN_AS: [&str; 2] = ["caller", "service"];
 const TRIGGER_KINDS: [&str; 3] = ["manual", "record_change", "schedule"];
 const CHANNELS: [&str; 5] = ["chat", "web", "whatsapp", "sms", "email"];
-const PROPERTIES: [&str; 10] = [
+const PROPERTIES: [&str; 11] = [
     "role",
     "instructions",
     "tools",
@@ -68,6 +68,7 @@ const PROPERTIES: [&str; 10] = [
     "channels",
     "persona",
     "handoff",
+    "policy",
 ];
 
 static KNOWN_TOOLS: OnceLock<BTreeSet<String>> = OnceLock::new();
@@ -160,6 +161,11 @@ impl Kind for AgentKind {
                     }
                 },
                 "channels": { "type": "array", "items": { "enum": CHANNELS } },
+                "policy": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "The ai_agent_policy record that is this agent's organisation ceiling; required to start sessions from the agent."
+                },
                 "handoff": {
                     "type": "object",
                     "required": ["input", "output"],
@@ -318,6 +324,15 @@ impl Kind for AgentKind {
                     }
                 }
             }
+        }
+        if let Some(policy) = doc.get("policy")
+            && !policy.as_str().is_some_and(|p| Uuid::parse_str(p).is_ok())
+        {
+            issues.push(Issue::new(
+                "/policy",
+                "invalid",
+                "policy is the id of an agent policy record",
+            ));
         }
         if let Some(handoff) = doc.get("handoff") {
             match handoff.as_object() {

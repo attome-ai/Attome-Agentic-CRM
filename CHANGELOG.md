@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `POST /api/v1/model/agents/{agent}/sessions`: a session starts from a published agent object (its
+  `policy`, `persona.model`, tools and daily limits), with no `ai_agent` definition (V2-D487 step 3).
 - Each chat or agent turn recalls the person's matching memories (at most 5, 4,000 characters) as
   untrusted context.
 - An agent's approval request records its target record's row version and the before and after of
