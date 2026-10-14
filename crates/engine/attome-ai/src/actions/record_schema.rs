@@ -24,6 +24,102 @@ use crate::descriptor::{ActionDescriptor, ActionId, Effect, RetryClass, RiskTier
 use crate::execute::{Action, ActionResult};
 
 pub const RECORD_SCHEMA: &str = "record.schema";
+pub const RECORD_VALIDATE: &str = "record.validate";
+
+const RECORD_VALIDATE_INPUT: &str = r#"{
+  "type": "object",
+  "properties": {
+    "entity": { "type": "string", "description": "Entity logical name." },
+    "values": { "type": "object", "description": "The values record.create would be given." }
+  },
+  "required": ["entity", "values"],
+  "additionalProperties": false
+}"#;
+
+/// `record.validate` (N6-T1's dry run): runs the engine's whole create
+/// pipeline (field rules, lookups, business rules, state model) inside a
+/// transaction that is always rolled back, and says whether `record.create`
+/// would accept the values. Writes nothing.
+pub fn validate_descriptor() -> ActionDescriptor {
+    ActionDescriptor::new(
+        RECORD_VALIDATE,
+        "Check values against everything record.create enforces, without creating \
+         anything: returns valid, or the error the create would give.",
+        RiskTier::Read,
+        Effect::Read,
+        RetryClass::Idempotent,
+        MODULE_AI,
+        &[],
+    )
+    .input_schema(RECORD_VALIDATE_INPUT)
+}
+
+pub(crate) struct RecordValidate;
+
+impl Action for RecordValidate {
+    fn id(&self) -> ActionId {
+        ActionId(RECORD_VALIDATE)
+    }
+
+    fn execute<'a>(
+        &'a self,
+        state: &'a EngineState,
+        ctx: &'a ActionContext,
+        args: &'a Value,
+    ) -> Pin<Box<dyn Future<Output = Result<ActionResult, AppError>> + Send + 'a>> {
+        Box::pin(async move {
+            let entity = args["entity"]
+                .as_str()
+                .map(str::trim)
+                .filter(|e| !e.is_empty())
+                .ok_or_else(|| AppError::Validation("entity is required".into()))?;
+            let values = args["values"]
+                .as_object()
+                .ok_or_else(|| AppError::Validation("values must be an object".into()))?;
+            ctx.security.require(entity, "create")?;
+            let (_, entity_name, attrs, _) =
+                attome_records::entity_crud::resolve_entity(state, entity).await?;
+            let actor =
+                attome_records::mutation_ring::MutationActor::fetch(state, ctx.security.user_id)
+                    .await;
+            let mut tx = attome_db::tx::begin(&state.base.db).await?;
+            let outcome = attome_records::entity_mutation::create_one(
+                &mut tx,
+                state,
+                &ctx.security,
+                &entity_name,
+                &attrs,
+                values,
+                ctx.security.user_id,
+                actor.org_ref,
+                attome_records::entity_mutation::MutationMode::Strict,
+            )
+            .await;
+            // Always rolled back: a dry run never writes.
+            tx.rollback().await.map_err(AppError::internal)?;
+            Ok(ActionResult::plain(match outcome {
+                Ok(result) => json!({
+                    "valid": true,
+                    "warnings": result
+                        .warnings
+                        .iter()
+                        .map(|w| json!({ "rule": w.rule_name, "field": w.field }))
+                        .collect::<Vec<_>>(),
+                }),
+                Err(
+                    error @ (AppError::Validation(_)
+                    | AppError::Conflict(_)
+                    | AppError::Forbidden
+                    | AppError::NotFound),
+                ) => json!({
+                    "valid": false,
+                    "error": error.to_string(),
+                }),
+                Err(other) => return Err(other),
+            }))
+        })
+    }
+}
 
 const RECORD_SCHEMA_INPUT: &str = r#"{
   "type": "object",
