@@ -113,6 +113,16 @@ pub fn all_versions() -> Vec<PromptEntry> {
             ),
         },
         PromptEntry {
+            action_id: crate::actions::ai_field::RECORD_AI_FIELD,
+            version: crate::actions::ai_field::AI_FIELD_PROMPT_VERSION,
+            // Rendered with a representative prompt; the real instruction is
+            // the attribute's own `options.ai.prompt`.
+            text: crate::actions::ai_field::instruction(
+                "summary",
+                "Summarise {{description}} in one line.",
+            ),
+        },
+        PromptEntry {
             // Not a registered action: the conversational turn itself
             // (`turn::run`). Its version keys C10-C's live-evaluation
             // baselines, so an admin comparing a quality change needs to see

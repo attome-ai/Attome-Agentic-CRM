@@ -1238,6 +1238,7 @@ mod tests {
                 include_str!("actions/route_classify.rs"),
             ),
             ("translate.rs", include_str!("actions/translate.rs")),
+            ("ai_field.rs", include_str!("actions/ai_field.rs")),
         ] {
             let code: String = source
                 .lines()

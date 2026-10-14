@@ -14,6 +14,7 @@
 
 pub mod agent_playground;
 pub mod agent_supervise;
+pub mod ai_field;
 pub mod bot_handoff;
 pub mod bulk;
 pub mod business;
@@ -61,6 +62,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(transition::descriptors());
     all.push(translate::descriptor());
     all.push(sentiment::descriptor());
+    all.push(ai_field::descriptor());
     all.push(search_records::descriptor());
     all.push(nl_query::descriptor());
     all.extend(workflow::descriptors());
@@ -98,6 +100,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(transition::RecordTransition));
     all.push(Box::new(translate::TextTranslate));
     all.push(Box::new(sentiment::TextSentiment));
+    all.push(Box::new(ai_field::RecordAiField));
     all.push(Box::new(search_records::SearchRecords));
     all.push(Box::new(nl_query::QueryPlan));
     all.extend(workflow::executors());

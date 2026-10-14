@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- AI attributes: an attribute with `options.ai.prompt` gets suggestions from `record.ai_field`, the
+  prompt as the instruction and the fields it names as data, with provenance stored.
 - `GET /api/v1/admin/model/health`: broken references, duplicate-looking attributes, entities and
   attributes nobody uses, and index proposals, from the registry and PostgreSQL statistics.
 - `knowledge.answer` checks each sentence against its cited passages (content words and every
