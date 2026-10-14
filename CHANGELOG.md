@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `GET /api/v1/admin/ai/evidence`: every agent action and model-written suggestion in a period, by
+  agent or model, keyset-paged, for audits.
 - Automatic trip: when an AI action's acceptance falls by 30 points or more, the nightly quality
   monitor switches it off (cause `quality`) until an administrator turns it back on.
 - `GET /api/v1/admin/approvals/metrics`: per-approver decisions, approval share and median time,

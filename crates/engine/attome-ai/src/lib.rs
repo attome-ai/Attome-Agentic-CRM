@@ -90,6 +90,7 @@ pub mod descriptor;
 pub mod engine;
 pub mod eval_capture;
 pub mod eval_runner;
+pub mod evidence;
 pub mod execute;
 /// C10-B — thumbs feedback on a turn's answer.
 pub mod feedback;
@@ -198,6 +199,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(ai_status::openapi_fragment());
     doc.merge(a2a::openapi_fragment());
     doc.merge(write_policy::openapi_fragment());
+    doc.merge(evidence::openapi_fragment());
     doc
 }
 

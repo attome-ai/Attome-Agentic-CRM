@@ -121,6 +121,8 @@ impl EngineModel for ActionModel {
             .merge(crate::a2a::routes())
             // N30-T5 — per-write approval policies, admin-only.
             .merge(crate::write_policy::routes())
+            // N29-T2 — AI evidence export, admin-only.
+            .merge(crate::evidence::routes())
     }
 
     // D-435, simplified by D-491 — `ai_model` (the AI Model catalog,
