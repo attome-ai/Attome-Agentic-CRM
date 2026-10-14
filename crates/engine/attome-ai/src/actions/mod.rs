@@ -18,6 +18,7 @@ pub mod bot_handoff;
 pub mod business;
 pub mod classify;
 pub mod draft_article;
+pub mod draft_email;
 pub mod graph;
 pub mod knowledge;
 pub mod knowledge_answer;
@@ -38,6 +39,7 @@ use crate::descriptor::ActionDescriptor;
 pub fn all() -> Vec<ActionDescriptor> {
     let mut all = read::descriptors();
     all.push(draft_article::descriptor());
+    all.push(draft_email::descriptor());
     all.extend(graph::descriptors());
     all.push(knowledge::descriptor());
     all.push(knowledge_answer::descriptor());
@@ -67,6 +69,7 @@ pub fn all() -> Vec<ActionDescriptor> {
 pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     let mut all = read::executors();
     all.push(Box::new(draft_article::ArticleDraft));
+    all.push(Box::new(draft_email::EmailDraft));
     all.extend(graph::executors());
     all.push(Box::new(knowledge::SearchKnowledge));
     all.push(Box::new(knowledge_answer::KnowledgeAnswer));
