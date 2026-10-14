@@ -175,11 +175,8 @@ async fn test_state(readonly: Option<DbPool>) -> Option<EngineState> {
 /// `scripts/run-integration-tests.ps1` already set for that suite.
 async fn readonly_db(db: &DbPool) -> Option<DbPool> {
     let url = attome_testkit::migrated_db_url()?;
-    let password = std::env::var("READONLY_DB_PASSWORD").expect(
-        "READONLY_DB_PASSWORD must be set to the attome_readonly role's password used only by \
-         this throwaway test database — see attome-api/tests/query_exec.rs's header for the \
-         established convention this helper reuses.",
-    );
+    let password = std::env::var("READONLY_DB_PASSWORD")
+        .unwrap_or_else(|_| "test-only-readonly-password".to_owned());
 
     let mut tx = db
         .begin()

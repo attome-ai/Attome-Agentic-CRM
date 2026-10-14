@@ -208,10 +208,8 @@ async fn synchronize_readonly_login(db: &attome_db::DbPool, password: &str) {
 
 async fn build_test_system() -> Option<EngineSystem> {
     let database = require_test_database()?;
-    let readonly_password = std::env::var("READONLY_DB_PASSWORD").expect(
-        "READONLY_DB_PASSWORD must be set to the attome_readonly role's password \
-         used only by this throwaway test database — see tests/query_exec.rs header.",
-    );
+    let readonly_password = std::env::var("READONLY_DB_PASSWORD")
+        .unwrap_or_else(|_| "test-only-readonly-password".to_owned());
 
     let config = test_config(&readonly_password, &database);
     let db = attome_db::create_pool(&config)

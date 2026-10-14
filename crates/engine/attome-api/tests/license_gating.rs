@@ -245,12 +245,34 @@ fn full_app(system: EngineSystem) -> axum::Router {
         .layer(axum::middleware::map_request(stamp_test_origin))
 }
 
+/// A fresh database has no `module_configuration` row, so every module is on.
+/// Writes the row with every module except `name` enabled.
+async fn narrow_configuration_excluding(db: &attome_db::DbPool, name: &str) {
+    let kept: Vec<String> = ModuleSet::all()
+        .names()
+        .filter(|module| *module != name)
+        .map(str::to_owned)
+        .collect();
+    sqlx::query(
+        "INSERT INTO module_configuration (singleton, enabled, enabled_modules)          VALUES (TRUE, TRUE, $1)          ON CONFLICT (singleton) DO UPDATE          SET enabled = TRUE, enabled_modules = EXCLUDED.enabled_modules",
+    )
+    .bind(&kept)
+    .execute(db)
+    .await
+    .expect("narrow runtime module configuration");
+}
+
 #[tokio::test]
 async fn imported_license_enables_module_without_restarting() {
     // A fresh test DB has no license row, so the system boots degraded.
     // The ArcSwap store below is the same live-state transition the Module
     // Management PUT performs (the licence import route was deleted, D-790).
     let system = skip_if_no_db!(test_system().await);
+    // A deployment boots with every module on; narrow to core first.
+    system
+        .state()
+        .modules
+        .store(Arc::new(ModuleSet::core_only()));
     assert!(
         !system.state().modules.load().has(ModuleId::new(254)),
         "sanity check: the test module must not be licensed",
@@ -336,14 +358,7 @@ async fn notification_dispatch_route_is_hidden_when_unlicensed() {
     let db = attome_db::create_pool(&config)
         .await
         .expect("connect DATABASE_URL");
-    sqlx::query(
-        "UPDATE module_configuration \
-         SET enabled_modules = array_remove(enabled_modules, 'notification') \
-         WHERE singleton = TRUE",
-    )
-    .execute(&db)
-    .await
-    .expect("narrow runtime module configuration to exclude notification");
+    narrow_configuration_excluding(&db, "notification").await;
 
     let system = skip_if_no_db!(test_system().await);
     assert!(
@@ -379,14 +394,7 @@ async fn workflow_definitions_route_is_hidden_when_unlicensed() {
     let db = attome_db::create_pool(&config)
         .await
         .expect("connect DATABASE_URL");
-    sqlx::query(
-        "UPDATE module_configuration \
-         SET enabled_modules = array_remove(enabled_modules, 'workflow') \
-         WHERE singleton = TRUE",
-    )
-    .execute(&db)
-    .await
-    .expect("narrow runtime module configuration to exclude workflow");
+    narrow_configuration_excluding(&db, "workflow").await;
 
     let system = skip_if_no_db!(test_system().await);
     assert!(
@@ -428,14 +436,7 @@ async fn project_summary_route_is_hidden_when_unlicensed() {
     let db = attome_db::create_pool(&config)
         .await
         .expect("connect DATABASE_URL");
-    sqlx::query(
-        "UPDATE module_configuration \
-         SET enabled_modules = array_remove(enabled_modules, 'project') \
-         WHERE singleton = TRUE",
-    )
-    .execute(&db)
-    .await
-    .expect("narrow runtime module configuration to exclude project");
+    narrow_configuration_excluding(&db, "project").await;
 
     let system = skip_if_no_db!(test_system().await);
     assert!(
@@ -470,14 +471,7 @@ async fn report_widget_types_route_is_hidden_when_unlicensed() {
     let db = attome_db::create_pool(&config)
         .await
         .expect("connect DATABASE_URL");
-    sqlx::query(
-        "UPDATE module_configuration \
-         SET enabled_modules = array_remove(enabled_modules, 'report') \
-         WHERE singleton = TRUE",
-    )
-    .execute(&db)
-    .await
-    .expect("narrow runtime module configuration to exclude report");
+    narrow_configuration_excluding(&db, "report").await;
 
     let system = skip_if_no_db!(test_system().await);
     assert!(
