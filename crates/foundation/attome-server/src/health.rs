@@ -82,20 +82,42 @@ pub async fn version(State(state): State<AppState>) -> Json<Value> {
 // ── Readiness (T4-5, review item 3.25) ─────────────────────────────────────────
 
 /// How long one node reuses its last readiness verdict before probing DB and
-/// Redis again. One second is below any sane probe interval (Kubernetes'
-/// default `periodSeconds` is 10, compose's `healthcheck.interval` default is
-/// 30 s), so a single checker never sees a stale answer, while N concurrent
-/// checkers — the LB, the orchestrator, the `healthcheck` binary, a human —
-/// cost one probe per second between them instead of one each.
+/// Redis again. Two seconds (U9-T3) is below any sane probe interval
+/// (Kubernetes' default `periodSeconds` is 10, compose's
+/// `healthcheck.interval` default is 30 s), so a single checker never sees a
+/// stale answer, while N concurrent checkers — the LB, the orchestrator, the
+/// `healthcheck` binary, a human — cost one probe per two seconds between
+/// them instead of one each.
 ///
 /// Failure semantics: a `not_ready` verdict is memoised for the same TTL as a
 /// `ready` one. That is deliberate — the alternative (retry immediately on a
 /// failure) is exactly the probe storm against an already-struggling
 /// dependency this cache exists to prevent, and a dependency that recovers
-/// is still reported within one second. The drain flag (`AppState::draining`)
+/// is still reported within two seconds. The drain flag (`AppState::draining`)
 /// is checked *before* the cache and is never memoised, so a shutdown is
 /// visible on the very next probe.
-pub const READY_VERDICT_TTL: Duration = Duration::from_secs(1);
+pub const READY_VERDICT_TTL: Duration = Duration::from_secs(2);
+
+/// U9-T3 — `attome_readiness_check{check}`: 1 when the check passed on the
+/// last probe, 0 when it failed. One series per check, so an operator sees
+/// which dependency made a node not ready without reading its logs.
+pub const READINESS_CHECK_GAUGE: &str = "attome_readiness_check";
+/// U9-T3 — `attome_readiness_probe_seconds`: how long one probe took.
+pub const READINESS_PROBE_SECONDS: &str = "attome_readiness_probe_seconds";
+
+/// Records one probe's verdict and duration.
+fn record_verdict(verdict: &ReadyVerdict, started: std::time::Instant) {
+    for (check, ok) in [
+        ("db", verdict.db),
+        ("redis", verdict.redis),
+        ("redis_coordination", verdict.redis_coordination),
+        ("registry", verdict.registry),
+        ("schema", verdict.schema),
+    ] {
+        metrics::gauge!(READINESS_CHECK_GAUGE, "check" => check).set(if ok { 1.0 } else { 0.0 });
+    }
+    metrics::histogram!(READINESS_PROBE_SECONDS).record(started.elapsed().as_secs_f64());
+}
 
 /// A3 (BSV-F07) — the overall deadline for one readiness probe. Each
 /// dependency probe is individually bounded (fred's command timeout, sqlx's
@@ -314,8 +336,11 @@ pub async fn health_ready(State(state): State<AppState>) -> (StatusCode, Json<Va
     }
     let verdict = state
         .readiness
-        .get_or_probe(READY_VERDICT_TTL, || {
-            bounded_verdict(READY_PROBE_DEADLINE, probe_readiness(&state))
+        .get_or_probe(READY_VERDICT_TTL, || async {
+            let started = std::time::Instant::now();
+            let verdict = bounded_verdict(READY_PROBE_DEADLINE, probe_readiness(&state)).await;
+            record_verdict(&verdict, started);
+            verdict
         })
         .await;
     ready_response(verdict)
