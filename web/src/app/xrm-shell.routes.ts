@@ -528,6 +528,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiPlaygroundComponent),
           },
           {
+            // N31-T2: scoped AI switches (the API refuses non-administrators).
+            path: 'ai/switches',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/ai').then(m => m.AiScopeSwitchesComponent),
+          },
+          {
             // C6 (D-556) — the live-session supervisor: the screen over
             // GET /api/v1/admin/agents/sessions, gated on
             // `ai_agent.supervise` (the same privilege the three actions

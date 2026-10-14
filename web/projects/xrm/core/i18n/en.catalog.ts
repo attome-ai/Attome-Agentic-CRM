@@ -151,6 +151,14 @@ export const xrmEn = {
     loading: 'Loading the form…', required: 'Required',
     save: 'Save', saving: 'Saving…', saved: 'Saved',
   },
+  // N31-T2 — scoped AI switches.
+  aiSwitches: {
+    title: 'AI switches', intro: 'Turn one agent, model, provider, tool or channel off. Turning it back on takes a different administrator.',
+    kind: 'Scope', key: 'Id or name', reason: 'Reason', turnOff: 'Turn off', turnOn: 'Turn on', on: 'On', off: 'Off',
+    none: 'Nothing has been switched.',
+    kinds: { agent: 'Agent', model: 'Model', provider: 'Provider', tool: 'Tool', channel: 'Channel' },
+    causes: { manual: 'by an administrator', budget: 'budget overrun', quality: 'quality drop', injection: 'injection spike', departure: 'owner left' },
+  },
   // A21-T2 — an app's menu.
   appMenu: { label: 'App menu' },
   // N9-T2 — the agent designer.

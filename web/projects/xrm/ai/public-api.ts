@@ -21,3 +21,5 @@ export { AiPlaygroundComponent } from './playground/ai-playground.component';
 // are not exported here — they are reached through the entity router, which
 // loads `registerAiEntityForms` and never needs a named import.
 export { AiAgentSessionsComponent } from './admin/agent-sessions/ai-agent-sessions.component';
+export { AiScopeSwitchesComponent, SCOPE_KINDS } from './admin/scope-switches/ai-scope-switches.component';
+export type { ScopeSwitch } from './admin/scope-switches/ai-scope-switches.component';

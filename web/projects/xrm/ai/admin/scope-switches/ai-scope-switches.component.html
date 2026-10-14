@@ -1,0 +1,41 @@
+<section class="ss">
+  <h2>{{ 'aiSwitches.title' | translate }}</h2>
+  <p class="ss-muted">{{ 'aiSwitches.intro' | translate }}</p>
+  @if (error(); as message) {
+    <p class="ss-error" role="alert">{{ message }}</p>
+  }
+
+  <form class="ss-form" (submit)="$event.preventDefault(); switchOff()">
+    <label for="ss-kind">{{ 'aiSwitches.kind' | translate }}</label>
+    <select #kind id="ss-kind" (change)="newKind.set(kind.value)">
+      @for (k of kinds; track k) {
+        <option [value]="k" [selected]="newKind() === k">{{ ('aiSwitches.kinds.' + k) | translate }}</option>
+      }
+    </select>
+    <label for="ss-key">{{ 'aiSwitches.key' | translate }}</label>
+    <input #key id="ss-key" type="text" required [value]="newKey()" (input)="newKey.set(key.value)" />
+    <label for="ss-reason">{{ 'aiSwitches.reason' | translate }}</label>
+    <input #reason id="ss-reason" type="text" [value]="newReason()" (input)="newReason.set(reason.value)" />
+    <button type="submit" [disabled]="busy() || !newKey().trim()">{{ 'aiSwitches.turnOff' | translate }}</button>
+  </form>
+
+  @if (switches().length === 0) {
+    <p class="ss-muted">{{ 'aiSwitches.none' | translate }}</p>
+  } @else {
+    <ul class="ss-list">
+      @for (s of switches(); track s.scope_kind + '/' + s.scope_key) {
+        <li class="ss-item" [class.ss-off]="!s.enabled" [attr.data-scope]="s.scope_kind + '/' + s.scope_key">
+          <span class="ss-scope">{{ ('aiSwitches.kinds.' + s.scope_kind) | translate }} <code dir="ltr">{{ s.scope_key }}</code></span>
+          <span>{{ (s.enabled ? 'aiSwitches.on' : 'aiSwitches.off') | translate }} · {{ ('aiSwitches.causes.' + s.cause) | translate }}</span>
+          @if (s.reason) {
+            <span class="ss-muted">{{ s.reason }}</span>
+          }
+          <span class="ss-muted">{{ s.changed_at | localDate }}</span>
+          <button type="button" [disabled]="busy()" (click)="set(s.scope_kind, s.scope_key, !s.enabled, null)">
+            {{ (s.enabled ? 'aiSwitches.turnOff' : 'aiSwitches.turnOn') | translate }}
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</section>
