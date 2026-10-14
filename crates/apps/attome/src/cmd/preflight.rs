@@ -39,8 +39,50 @@
     reason = "a command-line command reports to standard output"
 )]
 use std::process::ExitCode;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use attome_config::AppConfig;
+
+/// `attome doctor` (U9-T4): the same checks, reported for a person, with what
+/// to do about each failure.
+static READABLE: AtomicBool = AtomicBool::new(false);
+
+/// `attome doctor`: runs every preflight check and prints a readable report.
+pub fn run_doctor() -> ExitCode {
+    READABLE.store(true, Ordering::Relaxed);
+    run()
+}
+
+/// What to do about a failed check, by its name.
+pub fn advice(check: &str) -> &'static str {
+    let family = check.split('.').next().unwrap_or(check);
+    match (family, check) {
+        (_, "config.file") => {
+            "Write the configuration with `attome init`, or point CONFIG_FILE at it."
+        }
+        (_, "config.validate") => {
+            "Fix the setting named above in the configuration file; `attome init --force` writes a fresh one."
+        }
+        (_, "config.unknown_keys") => "Remove or correct the misspelt keys named above.",
+        ("postgres", _) | ("database", _) => {
+            "Start PostgreSQL and check database.host, port, user and password in the configuration."
+        }
+        ("redis", _) => {
+            "Start Redis or Dragonfly, or on one server set cache.backend to \"memory\" (Solo needs no Redis)."
+        }
+        ("storage", _) => "Check storage.s3_endpoint and its keys, and that the bucket exists.",
+        ("audit", _) => {
+            "Check the audit anchor store settings; the anchor writer must not be able to delete anchors."
+        }
+        ("smtp", _) => {
+            "Check email.smtp_host, port and credentials, or set email.enabled to false."
+        }
+        ("clamav", _) => {
+            "Start ClamAV, or clear storage.clamd_address to turn upload scanning off."
+        }
+        _ => "See the detail above.",
+    }
+}
 
 struct CheckResult {
     name: String,
@@ -550,6 +592,10 @@ fn check_file(results: &mut Vec<CheckResult>, field: impl Into<String>, path: Op
 }
 
 fn print_report(results: &[CheckResult]) {
+    if READABLE.load(Ordering::Relaxed) {
+        print_readable(results);
+        return;
+    }
     println!("preflight report:");
     for r in results {
         println!(
@@ -567,9 +613,53 @@ fn print_report(results: &[CheckResult]) {
     }
 }
 
+/// The doctor's report: every check on its own line, and under each failure
+/// what to do.
+fn print_readable(results: &[CheckResult]) {
+    println!("attome doctor\n");
+    for r in results {
+        if r.ok {
+            println!("  ok   {}: {}", r.name, r.detail);
+        } else {
+            println!("  fix  {}: {}", r.name, r.detail);
+            println!("       -> {}", advice(&r.name));
+        }
+    }
+    let failed = results.iter().filter(|r| !r.ok).count();
+    if failed == 0 {
+        println!(
+            "\nEverything checked is in order ({} checks).",
+            results.len()
+        );
+    } else {
+        println!(
+            "\n{failed} of {} checks need attention. Fix them and run `attome doctor` again.",
+            results.len()
+        );
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn every_known_check_has_specific_advice() {
+        for check in [
+            "config.file",
+            "config.validate",
+            "config.unknown_keys",
+            "postgres",
+            "redis",
+            "storage",
+            "audit.anchor_store",
+            "smtp",
+            "clamav",
+        ] {
+            assert_ne!(advice(check), "See the detail above.", "{check}");
+        }
+        assert_eq!(advice("something.new"), "See the detail above.");
+    }
 
     /// Every temp path is UUID-suffixed: these run in the same process, in
     /// parallel, under a shared system temp directory.

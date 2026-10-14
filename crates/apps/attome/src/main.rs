@@ -33,6 +33,7 @@ Usage:
   attome migrate                Apply database migrations and exit
   attome healthcheck            Exit 0 when the local server is healthy
   attome preflight              Check configuration and dependencies
+  attome doctor                 The same checks, with what to do about each failure
   attome audit-chainer          Run the audit hash chainer
   attome verify-audit-chain     Verify the audit hash chain
   attome changeset-replay       Replay changesets against a database
@@ -111,6 +112,7 @@ fn main() -> ExitCode {
         ["audit-chainer", ..] => outcome(attome::cmd::audit_chainer::run()),
         ["healthcheck", ..] => attome::cmd::healthcheck::run(),
         ["preflight", ..] => attome::cmd::preflight::run(),
+        ["doctor", ..] => attome::cmd::preflight::run_doctor(),
         ["changeset-replay", ..] => attome::cmd::changeset_replay::run(),
         ["verify-audit-chain", ..] => {
             attome::cmd::verify_audit_chain::run();
