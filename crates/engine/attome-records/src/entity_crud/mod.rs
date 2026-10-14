@@ -22,6 +22,7 @@ mod resolve;
 mod response;
 mod row_version;
 mod survivorship;
+pub mod tags;
 /// U3 (basic-units plan B-R4, D-601): `/{entity}/{id}/timeline`, the
 /// entity-generic record timeline. `pub` so `attome-service`'s ticket route is a
 /// thin caller of it.
@@ -136,6 +137,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(timeline::openapi_fragment());
     doc.merge(history::openapi_fragment());
     doc.merge(favourites::openapi_fragment());
+    doc.merge(tags::openapi_fragment());
     doc
 }
 
@@ -148,6 +150,23 @@ pub fn routes() -> Router<EngineState> {
                 .delete(favourites::delete_recent),
         )
         .route("/api/v1/me/favourites", get(favourites::list_favourites))
+        .route(
+            "/api/v1/{entity}/{id}/tags",
+            get(tags::list_record_tags).post(tags::add_record_tag),
+        )
+        .route(
+            "/api/v1/{entity}/{id}/tags/{tag_id}",
+            axum::routing::delete(tags::remove_record_tag),
+        )
+        .route("/api/v1/tags/suggest", get(tags::suggest_tags))
+        .route(
+            "/api/v1/tags/{tag_id}/records",
+            get(tags::list_tagged_records),
+        )
+        .route(
+            "/api/v1/admin/tag-groups",
+            get(tags::list_tag_groups).post(tags::create_tag_group),
+        )
         .route(
             "/api/v1/me/favourites/lists",
             axum::routing::post(favourites::create_my_list),

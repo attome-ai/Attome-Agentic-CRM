@@ -3305,6 +3305,13 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             t,
             Some(json!({"gregorian_start": "2025-08-25", "reason": "audit emission"})),
         ),
+        // ── tag groups (B4-T2) ──────────────────────────────────────────────
+        "POST /api/v1/admin/tag-groups" => request(
+            "POST",
+            "/api/v1/admin/tag-groups",
+            t,
+            Some(json!({"name": uniq("tags"), "create_policy": "anyone"})),
+        ),
         // ── team favourites (B9-T2) ─────────────────────────────────────────
         "POST /api/v1/teams/{team_id}/favourites/lists" => {
             let team_id = team(fx).await;

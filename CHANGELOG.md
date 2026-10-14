@@ -11,6 +11,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Tags on any record (migration 0022): shared or personal, matched ignoring case and Arabic
+  diacritics; `GET/POST /api/v1/{entity}/{id}/tags`, `DELETE .../tags/{tag_id}`,
+  `GET /api/v1/tags/suggest?q=`, `GET /api/v1/tags/{tag_id}/records` (across entities, readable
+  records only) and tag groups with a create policy (`/api/v1/admin/tag-groups`).
 - A history clock beside each field on a saved record lists that field's past values and puts one
   back into the form (saved through the normal update, with its row version);
   `GET /api/v1/{entity}/{id}/history?field=` returns one field's changes.
