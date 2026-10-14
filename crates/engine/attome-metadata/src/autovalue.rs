@@ -31,6 +31,7 @@
 //! | `{DDDD}`, `{####}`     | the sequence number, zero-padded to width  |
 //! | `{SEQ}`, `{SEQ:4}`     | the same, named explicitly                 |
 //! | `{YY-MM-DD}`, `{YYYY}` | the current local date/time, by pattern    |
+//! | `{LUHN}`, `{MOD11}`    | a check digit over the sequence (A4-T4)    |
 //!
 //! The `D`-vs-day ambiguity in the motivating example `AVG-{DDDD}-{YY-MM-DD}`
 //! is resolved structurally, not by guessing: a token made of *nothing but*
@@ -264,7 +265,58 @@ fn render_token(token: &str, seq: i64, now: DateTime<FixedOffset>) -> String {
         return pad(seq, width);
     }
 
+    // A4-T4: a check digit over the sequence number, so a mistyped
+    // reference is caught on entry.
+    match trimmed {
+        "LUHN" | "luhn" => return luhn_digit(seq).to_string(),
+        "MOD11" | "mod11" => return mod11_digit(seq).to_string(),
+        _ => {}
+    }
+
     render_datetime_pattern(trimmed, now)
+}
+
+/// The decimal digits of `seq`, most significant first.
+fn digits(seq: i64) -> Vec<u32> {
+    seq.unsigned_abs()
+        .to_string()
+        .chars()
+        .filter_map(|c| c.to_digit(10))
+        .collect()
+}
+
+/// The Luhn check digit for `seq` (the digit to append).
+pub fn luhn_digit(seq: i64) -> u32 {
+    let sum: u32 = digits(seq)
+        .iter()
+        .rev()
+        .enumerate()
+        .map(|(i, &d)| {
+            if i % 2 == 0 {
+                let doubled = d * 2;
+                if doubled > 9 { doubled - 9 } else { doubled }
+            } else {
+                d
+            }
+        })
+        .sum();
+    (10 - sum % 10) % 10
+}
+
+/// The mod 11 check character for `seq`: weights 2 to 7 from the right,
+/// `11 - sum % 11`, with 10 as `X` and 11 as `0`.
+pub fn mod11_digit(seq: i64) -> char {
+    let sum: u32 = digits(seq)
+        .iter()
+        .rev()
+        .enumerate()
+        .map(|(i, &d)| d * (2 + (i as u32 % 6)))
+        .sum();
+    match 11 - sum % 11 {
+        10 => 'X',
+        11 => '0',
+        n => char::from_digit(n, 10).unwrap_or('0'),
+    }
 }
 
 fn pad(seq: i64, width: usize) -> String {
@@ -482,6 +534,28 @@ mod tests {
             .with_ymd_and_hms(y, m, d, 13, 4, 5)
             .unwrap()
             .fixed_offset()
+    }
+
+    #[test]
+    fn check_digits_catch_a_mistyped_number() {
+        // 7992739871 → Luhn check digit 3 (the textbook example).
+        assert_eq!(luhn_digit(7_992_739_871), 3);
+        assert_eq!(luhn_digit(0), 0);
+        assert_eq!(
+            render_format("INV-{SEQ:6}{LUHN}", 42, at(2026, 1, 1)),
+            "INV-0000422"
+        );
+        // Mod 11: 123456 from the right with weights 2..7 sums to 77,
+        // 77 % 11 = 0, so 11 - 0 = 11, written 0.
+        assert_eq!(mod11_digit(123_456), '0');
+        assert_eq!(
+            render_format("{SEQ}-{MOD11}", 123_456, at(2026, 1, 1)),
+            "123456-0"
+        );
+        // 12345: 5*2 + 4*3 + 3*4 + 2*5 + 1*6 = 50, 50 % 11 = 6, 11 - 6 = 5.
+        assert_eq!(mod11_digit(12_345), '5');
+        // A swapped pair changes the Luhn digit.
+        assert_ne!(luhn_digit(1234), luhn_digit(1243));
     }
 
     /// A4-T1: the date tokens and the reset key read the local date. At
