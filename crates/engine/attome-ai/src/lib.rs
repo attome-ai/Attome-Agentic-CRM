@@ -98,6 +98,7 @@ pub mod outcome;
 /// C11 B5 (P-5) — the runtime AI switch's audited admin routes. The read side
 /// is `attome_core::ai_runtime_switch`.
 pub mod output_filter;
+pub mod pii_mask;
 pub mod prompt;
 pub mod prompt_registry;
 /// The `ai_provider` record as this crate reads it, plus the API protocol
