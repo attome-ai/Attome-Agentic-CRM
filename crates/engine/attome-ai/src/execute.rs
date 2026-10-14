@@ -840,7 +840,13 @@ pub async fn dispatch_confirmed_agent_action(
         ));
     }
 
-    if descriptor.risk == crate::descriptor::RiskTier::Consequential {
+    // N30-T4: a consequential action always goes to approval; a reversible
+    // write does too when an administrator's per-write policy names it.
+    let needs_approval = descriptor.risk == crate::descriptor::RiskTier::Consequential
+        || (descriptor.effect == Effect::Write
+            && crate::write_policy::requires_approval(&state.base.db, descriptor.id.0, args)
+                .await?);
+    if needs_approval {
         let claim = match claim_key(state, descriptor, ctx).await? {
             Some(Claim::Existing(prior)) => return from_prior(prior),
             Some(Claim::Acquired(id)) => Some(id),

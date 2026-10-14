@@ -119,6 +119,8 @@ impl EngineModel for ActionModel {
             .merge(crate::ai_status::routes())
             // N14-T1 — agent cards and tasks for trusted partners.
             .merge(crate::a2a::routes())
+            // N30-T5 — per-write approval policies, admin-only.
+            .merge(crate::write_policy::routes())
     }
 
     // D-435, simplified by D-491 — `ai_model` (the AI Model catalog,

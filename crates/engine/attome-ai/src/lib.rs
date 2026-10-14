@@ -149,6 +149,7 @@ pub mod turn_cancel;
 pub mod turn_metrics;
 pub mod webchat;
 pub mod write_guard;
+pub mod write_policy;
 
 pub use context::{ActionContext, Initiator};
 pub use decision::DecisionExecutionModel;
@@ -195,6 +196,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(eval_runner::openapi_fragment());
     doc.merge(ai_status::openapi_fragment());
     doc.merge(a2a::openapi_fragment());
+    doc.merge(write_policy::openapi_fragment());
     doc
 }
 

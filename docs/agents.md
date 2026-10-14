@@ -36,6 +36,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 
 - **Writes need a person.** Every write action stops at confirmation for an agent; consequential
   ones need a second person's approval.
+- **Per-write approval (off by default).** `POST /api/v1/admin/ai/write-policies`
+  (`{ "action_id": "record.update", "entity": "invoice" }`) makes that agent write wait for a second
+  person after it is confirmed; `DELETE .../{id}` turns it off.
 - **Daily limits** count an agent's steps by class (record changes, deletes, messages, outside
   calls) across all its sessions; at the cap the step is refused.
   `GET /api/v1/admin/ai/agents/{agent}/usage` shows today's use.

@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Per-write approval policies for agents (`/api/v1/admin/ai/write-policies`, migration 0018), off by
+  default: a matching confirmed agent write waits for a second person's approval.
 - Agent-to-agent: `GET /api/v1/a2a/agents` (agent cards with their contracts) and
   `POST /api/v1/a2a/agents/{agent}/tasks` (one read-only task through the contract).
 - An MCP connection can run as an agent: `initialize` with `params.agent` narrows the session to
