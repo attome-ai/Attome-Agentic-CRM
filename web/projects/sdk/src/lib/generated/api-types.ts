@@ -22848,6 +22848,8 @@ export interface components {
          *     to hide the vendor's name.
          */
         PublicBranding: {
+            /** @description The product name to show, when the theme sets one. */
+            app_name?: string | null;
             favicon_url?: string | null;
             font_arabic?: string | null;
             font_arabic_url?: string | null;
@@ -25721,6 +25723,11 @@ export interface components {
         /** @description A theme: every token optional, so a scope overrides only what it sets. */
         ThemeTokens: {
             accent?: null | components["schemas"]["HexColor"];
+            /**
+             * @description The product name shown in emails and the browser, such as "Acme CRM"
+             *     (at most 60 characters).
+             */
+            app_name?: string | null;
             /** Format: float */
             arabic_line_height?: number | null;
             danger?: null | components["schemas"]["HexColor"];

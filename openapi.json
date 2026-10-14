@@ -89553,6 +89553,13 @@
           "hide_vendor_name"
         ],
         "properties": {
+          "app_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The product name to show, when the theme sets one."
+          },
           "favicon_url": {
             "type": [
               "string",
@@ -96757,6 +96764,13 @@
                 "$ref": "#/components/schemas/HexColor"
               }
             ]
+          },
+          "app_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The product name shown in emails and the browser, such as \"Acme CRM\"\n(at most 60 characters)."
           },
           "arabic_line_height": {
             "type": [
