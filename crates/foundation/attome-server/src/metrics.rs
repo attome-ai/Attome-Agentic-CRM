@@ -21,22 +21,187 @@ use crate::state::AppState;
 /// `crates/server/src/main.rs` does this once, conditionally,
 /// when `observability.metrics_port != 0`.
 pub fn build_layer_and_handle() -> (PrometheusMetricLayer<'static>, PrometheusHandle) {
-    let pair = PrometheusMetricLayerBuilder::new()
-        .with_metrics_from_fn(install_recorder)
-        // A4 (BSV-F10) — axum sets `MatchedPath` only on real (non-fallback)
-        // routes, so the default `EndpointLabel::MatchedPath` falls back to the
-        // raw request URI for anything unmatched. With metrics enabled a
-        // scanner hitting random paths would grow the registry one series per
-        // path, without limit. One `unmatched` series instead.
-        .with_endpoint_label_type(EndpointLabel::MatchedPathWithFallbackFn(unmatched_endpoint))
-        .build_pair();
+    let pair: (PrometheusMetricLayer<'static>, PrometheusHandle) =
+        PrometheusMetricLayerBuilder::new()
+            .with_metrics_from_fn(install_recorder)
+            // A4 (BSV-F10) — axum sets `MatchedPath` only on real (non-fallback)
+            // routes, so the default `EndpointLabel::MatchedPath` falls back to the
+            // raw request URI for anything unmatched. With metrics enabled a
+            // scanner hitting random paths would grow the registry one series per
+            // path, without limit. One `unmatched` series instead.
+            .with_endpoint_label_type(EndpointLabel::MatchedPathWithFallbackFn(unmatched_endpoint))
+            .build_pair();
     // attome-db hardening 4.3 — attome-db is metrics-free, so it reports each pool
     // acquire timeout through a set-once hook instead. Installed here because
     // this is where the process gets its recorder; a second call is a no-op.
     attome_db::set_acquire_timeout_hook(record_db_pool_acquire_timeout);
     // attome-db plan 3.1b — same set-once shape for `57014` (statement timeout).
     attome_db::set_statement_timeout_hook(record_db_statement_timeout);
+    // AA1-T6: the latency screen reads the same registry `/metrics` renders.
+    let _ = RENDER_HANDLE.set(pair.1.clone());
     pair
+}
+
+/// The handle of this process's recorder, once metrics are on (AA1-T6).
+static RENDER_HANDLE: std::sync::OnceLock<PrometheusHandle> = std::sync::OnceLock::new();
+
+/// The current Prometheus text, or `None` when metrics are off
+/// (`observability.metrics_port = 0`).
+pub fn render_current() -> Option<String> {
+    RENDER_HANDLE.get().map(PrometheusHandle::render)
+}
+
+/// One route's request latency, from the request-duration histogram.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, utoipa::ToSchema)]
+pub struct RouteLatency {
+    pub method: String,
+    pub endpoint: String,
+    pub count: u64,
+    pub p50_ms: f64,
+    pub p95_ms: f64,
+    pub p99_ms: f64,
+}
+
+/// The `name="value"` labels of one exposition line, in order.
+fn labels_of(line: &str) -> Vec<(String, String)> {
+    let Some(start) = line.find('{') else {
+        return Vec::new();
+    };
+    let Some(end) = line.rfind('}') else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    let mut rest = &line[start + 1..end];
+    while let Some(eq) = rest.find("=\"") {
+        let key = rest[..eq].trim_start_matches(',').trim().to_owned();
+        let after = &rest[eq + 2..];
+        let Some(close) = after.find('"') else { break };
+        out.push((key, after[..close].to_owned()));
+        rest = &after[close + 1..];
+    }
+    out
+}
+
+/// The `q` quantile of a cumulative histogram (`(upper bound, count)` sorted,
+/// `+Inf` last), interpolated linearly inside its bucket, in seconds.
+pub fn quantile(buckets: &[(f64, u64)], q: f64) -> f64 {
+    let Some(&(_, total)) = buckets.last() else {
+        return 0.0;
+    };
+    if total == 0 {
+        return 0.0;
+    }
+    let rank = q * total as f64;
+    let mut lower = 0.0;
+    let mut below = 0u64;
+    for &(upper, count) in buckets {
+        if count as f64 >= rank {
+            if upper.is_infinite() {
+                return lower;
+            }
+            let inside = count.saturating_sub(below);
+            if inside == 0 {
+                return upper;
+            }
+            let fraction = (rank - below as f64) / inside as f64;
+            return lower + (upper - lower) * fraction.clamp(0.0, 1.0);
+        }
+        lower = upper;
+        below = count;
+    }
+    lower
+}
+
+/// Every route's p50, p95 and p99 from the Prometheus text, slowest p95 first.
+pub fn route_latencies(text: &str) -> Vec<RouteLatency> {
+    use std::collections::BTreeMap;
+    let bucket_name = format!("{AXUM_HTTP_REQUESTS_DURATION_SECONDS}_bucket{{");
+    let mut series: BTreeMap<(String, String), BTreeMap<String, u64>> = BTreeMap::new();
+    for line in text.lines().filter(|l| l.starts_with(&bucket_name)) {
+        let labels = labels_of(line);
+        let get = |k: &str| {
+            labels
+                .iter()
+                .find(|(key, _)| key == k)
+                .map(|(_, v)| v.clone())
+        };
+        let (Some(method), Some(endpoint), Some(le)) = (get("method"), get("endpoint"), get("le"))
+        else {
+            continue;
+        };
+        let Some(count) = line
+            .rsplit(' ')
+            .next()
+            .and_then(|v| v.trim().parse::<f64>().ok())
+        else {
+            continue;
+        };
+        // Across status codes, the same route's buckets add up.
+        let count = count as u64;
+        *series
+            .entry((method, endpoint))
+            .or_default()
+            .entry(le)
+            .or_default() += count;
+    }
+    let mut out: Vec<RouteLatency> = series
+        .into_iter()
+        .map(|((method, endpoint), by_le)| {
+            let mut buckets: Vec<(f64, u64)> = by_le
+                .into_iter()
+                .filter_map(|(le, c)| {
+                    let bound = if le == "+Inf" {
+                        f64::INFINITY
+                    } else {
+                        le.parse().ok()?
+                    };
+                    Some((bound, c))
+                })
+                .collect();
+            buckets.sort_by(|a, b| a.0.total_cmp(&b.0));
+            let ms = |q| (quantile(&buckets, q) * 1000.0 * 10.0).round() / 10.0;
+            RouteLatency {
+                count: buckets.last().map_or(0, |b| b.1),
+                p50_ms: ms(0.50),
+                p95_ms: ms(0.95),
+                p99_ms: ms(0.99),
+                method,
+                endpoint,
+            }
+        })
+        .filter(|r| r.count > 0)
+        .collect();
+    out.sort_by(|a, b| b.p95_ms.total_cmp(&a.p95_ms));
+    out
+}
+
+#[cfg(test)]
+mod latency_tests {
+    use super::*;
+
+    #[test]
+    fn percentiles_come_from_the_buckets() {
+        let text = format!(
+            "{n}_bucket{{method=\"GET\",status=\"200\",endpoint=\"/api/v1/x\",le=\"0.01\"}} 50\n\
+             {n}_bucket{{method=\"GET\",status=\"200\",endpoint=\"/api/v1/x\",le=\"0.1\"}} 90\n\
+             {n}_bucket{{method=\"GET\",status=\"200\",endpoint=\"/api/v1/x\",le=\"1\"}} 100\n\
+             {n}_bucket{{method=\"GET\",status=\"200\",endpoint=\"/api/v1/x\",le=\"+Inf\"}} 100\n\
+             {n}_bucket{{method=\"GET\",status=\"500\",endpoint=\"/api/v1/x\",le=\"+Inf\"}} 0\n\
+             other_metric 3\n",
+            n = AXUM_HTTP_REQUESTS_DURATION_SECONDS
+        );
+        let routes = route_latencies(&text);
+        assert_eq!(routes.len(), 1);
+        let r = &routes[0];
+        assert_eq!(
+            (r.method.as_str(), r.endpoint.as_str(), r.count),
+            ("GET", "/api/v1/x", 100)
+        );
+        assert!((r.p50_ms - 10.0).abs() < 0.01, "{r:?}");
+        // The 95th request is half-way through the 0.1 - 1 s bucket.
+        assert!((r.p95_ms - 550.0).abs() < 0.01, "{r:?}");
+        assert_eq!(quantile(&[], 0.5), 0.0);
+    }
 }
 
 /// M86 O1 — the request-duration histogram's buckets, in seconds. Every SLO

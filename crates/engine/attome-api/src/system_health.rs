@@ -119,7 +119,43 @@ async fn dependencies(State(state): State<EngineState>, _ctx: Authorized<Admin>)
 }
 
 pub fn routes() -> Router<EngineState> {
-    Router::new().route("/health/dependencies", get(dependencies))
+    Router::new()
+        .route("/health/dependencies", get(dependencies))
+        .route("/api/v1/admin/latency", get(latency))
+}
+
+/// `GET /api/v1/admin/latency`.
+#[derive(serde::Serialize, utoipa::ToSchema)]
+struct LatencyReport {
+    /// Metrics are on in this process (`observability.metrics_port` set).
+    enabled: bool,
+    /// Every route seen since this process started, slowest p95 first.
+    routes: Vec<attome_server::metrics::RouteLatency>,
+}
+
+/// AA1-T6: per-route p50, p95 and p99 latency on this node since it started,
+/// from the same request-duration histogram `/metrics` exposes. Administrators
+/// only. Empty, with `enabled: false`, when metrics are off.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/latency",
+    tag = "operations",
+    responses(
+        (status = 200, description = "Per-route latency on this node", body = LatencyReport),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn latency(_ctx: Authorized<Admin>) -> Json<LatencyReport> {
+    let text = attome_server::metrics::render_current();
+    Json(LatencyReport {
+        enabled: text.is_some(),
+        routes: text
+            .as_deref()
+            .map(attome_server::metrics::route_latencies)
+            .unwrap_or_default(),
+    })
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
@@ -127,7 +163,7 @@ pub fn routes() -> Router<EngineState> {
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(dependencies))]
+#[openapi(paths(dependencies, latency))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
