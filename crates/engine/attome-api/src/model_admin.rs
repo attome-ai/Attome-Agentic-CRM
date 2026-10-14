@@ -7,6 +7,10 @@
 //! `POST .../commands`, records one Configuration audit event in its own
 //! transaction; `POST .../validate` writes nothing.
 //!
+//! `GET /api/v1/model/forms/{id}/plan` is the one non-admin route: any
+//! signed-in user reads a published form's render plan, which the web
+//! renderer draws (Y14).
+//!
 //! The prefix is `/admin/model`, not `/admin/metadata`, because
 //! `/admin/metadata/...` already holds the bundle and sync routes, which a
 //! kind of the same name would otherwise be shadowed by.
@@ -19,7 +23,7 @@ use attome_core::EngineState;
 use attome_model::commands::{self, Command};
 use attome_model::store::{self, ObjectSpec};
 use attome_model::{Issue, Kind, KindRegistry, Layer, ObjectId, ObjectRef};
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Admin, Authorized, SelfService};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
@@ -54,6 +58,28 @@ pub fn kinds() -> &'static KindRegistry {
         }
         registry
     })
+}
+
+/// The cooked registry of the published metadata, one per process.
+pub fn cooked() -> &'static attome_model::runtime::CookedRegistry {
+    static COOKED: OnceLock<attome_model::runtime::CookedRegistry> = OnceLock::new();
+    COOKED.get_or_init(attome_model::runtime::CookedRegistry::default)
+}
+
+/// Rebuilds the cooked registry from the published store, reusing unchanged
+/// artefacts. Serialised so two publishes cannot interleave their swaps. On
+/// one server this keeps forms current; several servers switch versions with
+/// Y8.
+pub async fn refresh_cooked(state: &EngineState) -> Result<(), AppError> {
+    static REBUILD: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+    let _guard = REBUILD.lock().await;
+    let current = cooked().snapshot();
+    let manifest =
+        attome_model::publish::cook_published(&state.base.db, kinds(), Some(&current.manifest))
+            .await?;
+    cooked()
+        .load_version(&state.base.db, current.version + 1, manifest)
+        .await
 }
 
 fn kind(name: &str) -> Result<&'static Arc<dyn Kind>, AppError> {
@@ -584,6 +610,196 @@ async fn apply_commands(
     }))
 }
 
+#[derive(Serialize, ToSchema)]
+pub(crate) struct PublishResponse {
+    id: Uuid,
+    version_no: i64,
+}
+
+/// Publishes an object's open draft once it passes the publish checks, and
+/// refreshes the cooked metadata.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/model/{kind}/{id}/publish",
+    tag = "admin",
+    params(("kind" = String, Path, description = "Kind name"), ("id" = Uuid, Path, description = "Object id")),
+    responses(
+        (status = 200, description = "Published", body = PublishResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such kind, or no open draft", body = ErrorResponse),
+        (status = 409, description = "Another save is in progress", body = ErrorResponse),
+        (status = 422, description = "The draft fails the publish checks; the issues are listed", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
+async fn publish(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path((kind_name, id)): Path<(String, Uuid)>,
+) -> Result<Json<PublishResponse>, AppError> {
+    let kind = kind(&kind_name)?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let published = attome_model::publish::publish(
+        &mut tx,
+        kinds(),
+        &attome_model::validate::CrossChecks::default(),
+        kind.as_ref(),
+        id,
+    )
+    .await?;
+    write_security_event(
+        &mut tx,
+        &audit_service(&state),
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "metadata_object",
+            Some(id),
+        )
+        .named("model.publish")
+        .comment(format!(
+            "{} published v{}",
+            kind.name(),
+            published.version_no
+        )),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    refresh_cooked(&state).await?;
+    Ok(Json(PublishResponse {
+        id,
+        version_no: published.version_no,
+    }))
+}
+
+/// A form's cooked plan, as the cooker wrote it.
+#[derive(Deserialize)]
+struct CookedForm {
+    entity: Uuid,
+    name: String,
+    sections: Vec<CookedSection>,
+}
+
+#[derive(Deserialize)]
+struct CookedSection {
+    label: String,
+    fields: Vec<Uuid>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub(crate) struct FormPlan {
+    id: Uuid,
+    name: String,
+    /// The entity's logical name, as the record API addresses it.
+    entity: String,
+    sections: Vec<FormPlanSection>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub(crate) struct FormPlanSection {
+    label: String,
+    fields: Vec<FormPlanField>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub(crate) struct FormPlanField {
+    /// The attribute's logical name: the key of its value in a record.
+    attribute: String,
+    label: String,
+    /// The attribute's field type number.
+    field_type: i32,
+    required: bool,
+}
+
+#[derive(sqlx::FromRow)]
+struct AttributeRow {
+    id: Uuid,
+    logicalname: String,
+    name: Option<String>,
+    field_type: Option<i32>,
+    required: Option<bool>,
+}
+
+/// The render plan of a published form: its sections and, for each field,
+/// the attribute's logical name, label, type and whether it is required.
+/// The form comes from the cooked registry in memory; the attribute details
+/// from one bounded query (a form holds at most 400 fields).
+#[utoipa::path(
+    get,
+    path = "/api/v1/model/forms/{id}/plan",
+    tag = "model",
+    params(("id" = Uuid, Path, description = "Form id")),
+    responses(
+        (status = 200, description = "The form's render plan", body = FormPlan),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No published form with this id", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn form_plan(
+    State(state): State<EngineState>,
+    _ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<FormPlan>, AppError> {
+    if cooked().snapshot().version == 0 {
+        // Cold start: build the cooked registry from the published store.
+        refresh_cooked(&state).await?;
+    }
+    let key = format!("form:{id}");
+    let form = cooked()
+        .get::<CookedForm>("form", &key)
+        .ok_or(AppError::NotFound)?;
+    let entity = state
+        .entities
+        .load()
+        .get_by_id(form.entity)
+        .map(|meta| meta.logicalname.clone())
+        .ok_or(AppError::NotFound)?;
+    let ids: Vec<Uuid> = form
+        .sections
+        .iter()
+        .flat_map(|s| s.fields.iter().copied())
+        .collect();
+    let rows: Vec<AttributeRow> = sqlx::query_as(
+        "SELECT id, logicalname, name, type AS field_type, required \
+         FROM attribute_info WHERE id = ANY($1) AND is_active IS NOT FALSE",
+    )
+    .bind(&ids)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let by_id: std::collections::BTreeMap<Uuid, AttributeRow> =
+        rows.into_iter().map(|row| (row.id, row)).collect();
+    let sections = form
+        .sections
+        .iter()
+        .map(|section| FormPlanSection {
+            label: section.label.clone(),
+            // A field whose attribute has since been removed is left out.
+            fields: section
+                .fields
+                .iter()
+                .filter_map(|field| by_id.get(field))
+                .map(|row| FormPlanField {
+                    attribute: row.logicalname.clone(),
+                    label: row.name.clone().unwrap_or_else(|| row.logicalname.clone()),
+                    field_type: row.field_type.unwrap_or(0),
+                    required: row.required.unwrap_or(false),
+                })
+                .collect(),
+        })
+        .collect();
+    Ok(Json(FormPlan {
+        id,
+        name: form.name.clone(),
+        entity,
+        sections,
+    }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/model/kinds", get(list_kinds))
@@ -604,6 +820,8 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/model/{kind}/{id}/commands",
             post(apply_commands),
         )
+        .route("/api/v1/admin/model/{kind}/{id}/publish", post(publish))
+        .route("/api/v1/model/forms/{id}/plan", get(form_plan))
 }
 
 #[derive(utoipa::OpenApi)]
@@ -617,7 +835,9 @@ pub fn routes() -> Router<EngineState> {
         get_diff,
         get_references,
         validate,
-        apply_commands
+        apply_commands,
+        publish,
+        form_plan
     ),
     components(schemas(
         KindView,
@@ -630,7 +850,11 @@ pub fn routes() -> Router<EngineState> {
         ValidateRequest,
         ValidateResponse,
         CommandsRequest,
-        CommandsResponse
+        CommandsResponse,
+        PublishResponse,
+        FormPlan,
+        FormPlanSection,
+        FormPlanField
     ))
 )]
 struct ApiDocFragment;

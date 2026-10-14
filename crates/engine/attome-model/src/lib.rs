@@ -20,6 +20,7 @@ pub mod files;
 pub mod identity;
 pub mod kind;
 pub mod kinds;
+pub mod publish;
 pub mod references;
 pub mod runtime;
 pub mod store;

@@ -7,7 +7,8 @@ them. Each entry says what to run and what to commit. Delete an entry once it is
 ## Regenerate the API contract
 
 New or changed routes since the last regeneration: the metadata model admin API
-(`/api/v1/admin/model/...`, roadmap Y1-T9).
+(`/api/v1/admin/model/...`, roadmap Y1-T9, including `.../publish`) and the form render plan
+(`GET /api/v1/model/forms/{id}/plan`).
 
 ```sh
 cd web
