@@ -113,6 +113,15 @@ export interface DraftSaved {
 }
 
 /** One limit class's use today (`GET /api/v1/admin/ai/agents/{agent}/usage`). */
+/** `GET /api/v1/admin/ai/eval-runs/{id}` (`eval_runner::EvalRun`). */
+export interface EvalRun {
+  id:        string;
+  status:    'running' | 'passed' | 'failed' | 'error' | string;
+  score:     number | null;
+  outcome:   { cases: { name: string; passed: boolean; safety: boolean; failures: string[] }[] } | null;
+  error:     string | null;
+}
+
 export interface AgentUsage {
   class: string;
   used:  number;
@@ -253,6 +262,18 @@ export class ModelService {
   }
 
   /** What a published agent did today against its daily limits (AH4-T4). */
+  /** Starts a run of an eval suite against its agent (N23-T1). */
+  startEvalRun(suite: string): Observable<{ run_id: string; cases: number; status: string }> {
+    return this.api.post<{ run_id: string; cases: number; status: string }>(
+      `/api/v1/admin/ai/eval-suites/${encodeURIComponent(suite)}/runs`, {},
+    );
+  }
+
+  /** One eval run and, once finished, its graded cases. */
+  evalRun(id: string): Observable<EvalRun> {
+    return this.api.get<EvalRun>(`/api/v1/admin/ai/eval-runs/${encodeURIComponent(id)}`);
+  }
+
   agentUsage(agent: string): Observable<{ items: AgentUsage[] }> {
     return this.api.get<{ items: AgentUsage[] }>(
       `/api/v1/admin/ai/agents/${encodeURIComponent(agent)}/usage`,

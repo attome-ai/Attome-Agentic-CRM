@@ -176,6 +176,8 @@ export const xrmAr = {
     daily: { record_changes: 'السجلات المعدّلة', deletes: 'عمليات الحذف', messages: 'الرسائل المرسلة', external_calls: 'الاستدعاءات الخارجية' },
     policy: 'معرّف سياسة الوكيل', model: 'معرّف نموذج الذكاء الاصطناعي', language: 'لغة الإجابة', languageAny: 'لغة الشخص',
     runtimeHint: 'مع سياسة ونموذج، يمكن بدء الجلسات من هذا الوكيل نفسه بعد نشره.',
+    tests: 'الاختبارات', showTests: 'عرض الاختبارات', noSuites: 'لا توجد مجموعات تقييم تختبر هذا الوكيل بعد.', runTests: 'تشغيل', casePassed: 'نجح',
+    runStatus: { running: 'قيد التشغيل…', passed: 'نجح', failed: 'فشل', error: 'تعذّر التشغيل' },
     handoff: 'العمل المفوَّض', handoffOn: 'يمكن للوكلاء الآخرين تفويض العمل لهذا الوكيل',
     handoffHint: 'المدخلات التي يأخذها هذا الوكيل والإجابة التي يعيدها، ككائنات JSON Schema. العمل المفوَّض للقراءة فقط.',
     handoffInput: 'عقد المدخلات', handoffOutput: 'عقد المخرجات',

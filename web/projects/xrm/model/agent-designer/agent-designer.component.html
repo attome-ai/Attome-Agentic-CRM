@@ -142,6 +142,36 @@
           </section>
         }
 
+        <section class="ad-tests" [attr.aria-label]="'agentDesigner.tests' | translate">
+          <h4>{{ 'agentDesigner.tests' | translate }}</h4>
+          @if (suites(); as list) {
+            @if (list.length === 0) {
+              <p class="ad-muted">{{ 'agentDesigner.noSuites' | translate }}</p>
+            }
+            @for (suite of list; track suite.id) {
+              <div class="ad-suite" [attr.data-suite]="suite.id">
+                <span>{{ suite.name }}</span>
+                <button type="button" (click)="runSuite(suite.id)">{{ 'agentDesigner.runTests' | translate }}</button>
+                @if (runs()[suite.id]; as run) {
+                  <span [attr.data-run-status]="run.status">
+                    {{ ('agentDesigner.runStatus.' + run.status) | translate }}
+                    @if (run.score !== null) { · {{ run.score }} }
+                  </span>
+                  @if (run.outcome) {
+                    <ul class="ad-cases">
+                      @for (c of run.outcome.cases; track c.name) {
+                        <li [class.ad-case-failed]="!c.passed">{{ c.name }}: {{ c.passed ? ('agentDesigner.casePassed' | translate) : c.failures.join('; ') }}</li>
+                      }
+                    </ul>
+                  }
+                }
+              </div>
+            }
+          } @else {
+            <button type="button" (click)="loadSuites()">{{ 'agentDesigner.showTests' | translate }}</button>
+          }
+        </section>
+
         @if (issues().length > 0) {
           <ul class="ad-issues" role="status">
             @for (issue of issues(); track $index) {

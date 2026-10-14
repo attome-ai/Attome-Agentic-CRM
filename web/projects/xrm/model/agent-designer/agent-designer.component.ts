@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { forkJoin, switchMap, takeWhile, timer } from 'rxjs';
 import { ApiError, TranslatePipe } from '@attome/base';
 
-import { ActionSummary, AgentUsage, ModelCommand, ModelIssue, ModelService, ObjectSummary } from '../model.service';
+import { ActionSummary, AgentUsage, EvalRun, ModelCommand, ModelIssue, ModelService, ObjectSummary } from '../model.service';
 
 /** The editable parts of an agent document (`attome_model::kinds::agent`). */
 export interface AgentDraft {
@@ -194,6 +196,12 @@ export function newId(now = Date.now()): string {
 })
 export class AgentDesignerComponent implements OnInit {
   private readonly model = inject(ModelService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** The eval suites that test the open agent (N9-T2), once asked for. */
+  readonly suites = signal<{ id: string; name: string }[] | null>(null);
+  /** The latest run of each suite, by suite id. */
+  readonly runs = signal<Record<string, EvalRun>>({});
 
   readonly channels  = AGENT_CHANNELS;
   readonly agents    = signal<ObjectSummary[]>([]);
@@ -324,6 +332,37 @@ export class AgentDesignerComponent implements OnInit {
   setHandoffSide(side: 'input' | 'output', text: string): void {
     const current = this.draft().handoff ?? { input: EMPTY_CONTRACT, output: EMPTY_CONTRACT };
     this.update({ handoff: { ...current, [side]: text } });
+  }
+
+  /** Lists the eval suites whose `agent` is the open agent. */
+  loadSuites(): void {
+    const agent = this.selected();
+    if (!agent) return;
+    this.model.objects('eval_suite', 1).subscribe({
+      next: page => {
+        const items = page.items ?? [];
+        if (items.length === 0) { this.suites.set([]); return; }
+        forkJoin(items.map(s => this.model.object('eval_suite', s.id))).subscribe({
+          next: versions => this.suites.set(versions
+            .filter(v => (v.doc as Record<string, unknown> | null)?.['agent'] === agent)
+            .map(v => ({ id: v.id, name: v.name }))),
+          error: (e: ApiError) => this.error.set(e.message),
+        });
+      },
+      error: (e: ApiError) => this.error.set(e.message),
+    });
+  }
+
+  /** Runs a suite and follows the run until it finishes. */
+  runSuite(suite: string): void {
+    this.model.startEvalRun(suite).pipe(
+      switchMap(started => timer(0, 3000).pipe(switchMap(() => this.model.evalRun(started.run_id)))),
+      takeWhile(run => run.status === 'running', true),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
+      next: run => this.runs.set({ ...this.runs(), [suite]: run }),
+      error: (e: ApiError) => this.error.set(e.message),
+    });
   }
 
   numberFrom(value: string): number {

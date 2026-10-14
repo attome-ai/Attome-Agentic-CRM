@@ -205,6 +205,8 @@ export const xrmEn = {
     daily: { record_changes: 'Records changed', deletes: 'Deletes', messages: 'Messages sent', external_calls: 'Outside calls' },
     policy: 'Agent policy id', model: 'AI model id', language: 'Answer language', languageAny: 'The person\'s language',
     runtimeHint: 'With a policy and a model, sessions can start from this agent itself once it is published.',
+    tests: 'Tests', showTests: 'Show tests', noSuites: 'No eval suites test this agent yet.', runTests: 'Run', casePassed: 'passed',
+    runStatus: { running: 'Running…', passed: 'Passed', failed: 'Failed', error: 'Could not run' },
     handoff: 'Delegated work', handoffOn: 'Other agents can delegate to this one',
     handoffHint: 'The input this agent takes and the answer it gives, as JSON Schema objects. Delegated work only reads.',
     handoffInput: 'Input contract', handoffOutput: 'Output contract',
