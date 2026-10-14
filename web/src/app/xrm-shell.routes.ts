@@ -514,6 +514,13 @@ export const xrmShellRoutes: Routes = [
               import('@attome/xrm/core/approvals').then(m => m.MyApprovalsPageComponent),
           },
           {
+            // B4-T4 — every record carrying a tag, across entities. Literal
+            // segment, ahead of the entity wildcard below.
+            path: 'tags/:tagId',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/entity').then(m => m.TagPageComponent),
+          },
+          {
             // U5 (D-602) — the signed-in user's own notification
             // preferences, reached from the profile menu. Literal segments,
             // ahead of the entity wildcard below (same rule as above).

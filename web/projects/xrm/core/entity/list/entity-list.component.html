@@ -21,6 +21,9 @@
         <xrm-record-access-actions [entity]="entityName()" [recordIds]="selectedRecordIdList()"
           [allowShare]="false" [disabled]="bulkActionRunning()" (changed)="onRecordAccessChanged()" />
         <button type="button" class="btn btn-secondary" (click)="duplicateSelected()">{{ 'entityList.duplicate' | translate }}</button>
+        <!-- B4-T4: tag or untag the selection. -->
+        <xrm-bulk-tag [entity]="entityName()" [recordIds]="selectedRecordIdList()"
+          [disabled]="bulkActionRunning()" (changed)="onBulkTagged()" />
         @for (action of selectionActions(); track action.key) {
         <button type="button" [class]="'btn btn-' + (action.style || 'secondary')"
           [disabled]="!isSelectionActionEnabled(action)"
@@ -71,6 +74,12 @@
         @if (activeFilterCount() > 0) {
         <button type="button" class="summary-chip summary-chip-button" (click)="clearAllFilters()">
           {{ activeFilterSummary() }}
+        </button>
+        }
+        @if (tagFilter()) {
+        <button type="button" class="summary-chip summary-chip-button" data-tag-filter (click)="clearTagFilter()">
+          <i class="las la-tags" aria-hidden="true"></i> {{ 'recordTags.filtered' | translate }}
+          <i class="las la-times" aria-hidden="true"></i>
         </button>
         }
       </div>

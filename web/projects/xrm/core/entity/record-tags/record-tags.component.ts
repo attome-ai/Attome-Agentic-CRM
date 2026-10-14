@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, Injector, effect, inject, input, si
 import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
 import { Subject, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Router } from '@angular/router';
 
 /** A tag on a record (`TagView`). */
 export interface RecordTag {
@@ -89,6 +90,14 @@ export class RecordTagsComponent {
       next: page => this.suggestions.set(page.items.filter(s => !this.tags().some(t => t.id === s.id))),
       error: () => this.suggestions.set([]),
     });
+  }
+
+  /** B4-T4: the tag page, through the router when there is one. */
+  openTag(event: Event, tag: RecordTag): void {
+    const router = this.injector.get(Router, null);
+    if (!router) return;
+    event.preventDefault();
+    void router.navigate(['/xrm/tags', tag.id]);
   }
 
   private path(entity: string, id: string): string {

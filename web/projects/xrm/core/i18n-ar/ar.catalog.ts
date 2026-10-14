@@ -1346,6 +1346,9 @@ export const xrmAr = {
   // ── U5 — تفضيلات الإشعارات الخاصة بالمستخدم (D-602) ──
   recordTags: {
     label: 'الوسوم', add: 'أضف وسماً…', personal: 'لي فقط', remove: 'إزالة {tag}',
+    bulkTag: 'وسم', bulkAdd: 'أضف إلى المحدد', bulkRemove: 'إزالة "{tag}"',
+    bulkResult: 'تغيّر {changed}، وتعذّر تغيير {failed}',
+    filtered: 'السجلات الموسومة فقط', pageTitle: 'السجلات الموسومة', pageEmpty: 'لا يوجد سجل تراه يحمل هذا الوسم.',
   },
   settingsPage: {
     title: 'الإعدادات',

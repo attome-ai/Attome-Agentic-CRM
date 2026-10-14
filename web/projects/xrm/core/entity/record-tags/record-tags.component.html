@@ -3,7 +3,7 @@
     <span class="rt-chip" [class.rt-personal]="tag.personal"
           [style.--rt-colour]="tag.colour ?? null" data-testid="record-tag">
       @if (tag.personal) { <i class="las la-lock" aria-hidden="true"></i> }
-      {{ tag.name }}
+      <a class="rt-link" [attr.href]="'/xrm/tags/' + tag.id" (click)="openTag($event, tag)">{{ tag.name }}</a>
       <button type="button" class="rt-remove" [disabled]="busy()"
               [attr.aria-label]="'recordTags.remove' | translate: { tag: tag.name }"
               (click)="remove(tag)">

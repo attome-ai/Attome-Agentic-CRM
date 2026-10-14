@@ -11,6 +11,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Tags in lists: select records and add or remove a tag at once (`POST /api/v1/{entity}/tags/bulk`,
+  up to 500 records, each checked on its own); a tag chip opens a page of every record carrying it,
+  grouped by entity, and each group opens its list filtered by the tag (`?tag=`).
+- Brand assets and email branding: logo, favicon and fonts per theme version
+  (`/api/v1/admin/themes/{id}/assets`, public `GET /api/v1/branding/asset`); password-reset,
+  verification and invitation emails show the logo or `app_name` and use the brand colour.
 - `GET /api/v1/branding/me` gives a signed-in person the brand for their app and business unit;
   both branding routes send an ETag and answer `304` while no published theme changes. Admins
   roll a theme back (`POST /api/v1/admin/themes/rollback`), see what a version changes

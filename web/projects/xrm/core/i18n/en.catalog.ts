@@ -1423,6 +1423,9 @@ export const xrmEn = {
   // ── U5 (basic-units-10-10 §4.5, D-602): the user's own notification preferences ──
   recordTags: {
     label: 'Tags', add: 'Add a tag…', personal: 'Only me', remove: 'Remove {tag}',
+    bulkTag: 'Tag', bulkAdd: 'Add to selected', bulkRemove: 'Remove "{tag}"',
+    bulkResult: '{changed} changed, {failed} could not be changed',
+    filtered: 'Tagged records only', pageTitle: 'Tagged records', pageEmpty: 'No record you can see carries this tag.',
   },
   settingsPage: {
     title: 'Settings',

@@ -555,6 +555,126 @@ pub(super) async fn remove_record_tag(
     Ok(Json(page_of(tags)))
 }
 
+/// Records one bulk tag request may touch.
+pub const MAX_BULK_TAG_RECORDS: usize = 500;
+
+/// `POST /api/v1/{entity}/tags/bulk`: add one tag to, or take one tag off,
+/// the selected records.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct BulkTagRequest {
+    /// The selected records, at most 500.
+    pub ids: Vec<Uuid>,
+    /// The tag to add (an existing one, or a name to find or create).
+    pub add: Option<AddTag>,
+    /// The tag to take off.
+    pub remove_tag_id: Option<Uuid>,
+}
+
+/// One record a bulk tag request could not change.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BulkTagFailure {
+    pub id: Uuid,
+    /// `not_found`, `forbidden`, `invalid` or `failed`.
+    pub code: &'static str,
+}
+
+/// What a bulk tag request did.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BulkTagResult {
+    pub changed: usize,
+    pub failed: Vec<BulkTagFailure>,
+}
+
+/// B4-T4: tags or untags each selected record through [`add_tag`] or
+/// [`remove_tag`], so every record is checked on its own; a record the
+/// caller may not change is reported, not skipped silently.
+pub async fn bulk_tag(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    request: &BulkTagRequest,
+) -> Result<BulkTagResult, AppError> {
+    if request.ids.is_empty() || request.ids.len() > MAX_BULK_TAG_RECORDS {
+        return Err(AppError::Validation(format!(
+            "select 1 to {MAX_BULK_TAG_RECORDS} records"
+        )));
+    }
+    #[derive(Clone, Copy)]
+    enum Change<'a> {
+        Add(&'a AddTag),
+        Remove(Uuid),
+    }
+    let change = match (&request.add, request.remove_tag_id) {
+        (Some(add), None) => Change::Add(add),
+        (None, Some(tag_id)) => Change::Remove(tag_id),
+        _ => {
+            return Err(AppError::Validation(
+                "give exactly one of add or remove_tag_id".into(),
+            ));
+        }
+    };
+    let mut ids = request.ids.clone();
+    ids.sort_unstable();
+    ids.dedup();
+    let mut result = BulkTagResult {
+        changed: 0,
+        failed: Vec::new(),
+    };
+    for id in ids {
+        let outcome = match change {
+            Change::Add(add) => add_tag(state, ctx, entity_input, id, add).await,
+            Change::Remove(tag_id) => remove_tag(state, ctx, entity_input, id, tag_id).await,
+        };
+        match outcome {
+            Ok(_) => result.changed += 1,
+            Err(AppError::NotFound) => result.failed.push(BulkTagFailure {
+                id,
+                code: "not_found",
+            }),
+            Err(AppError::Forbidden) => result.failed.push(BulkTagFailure {
+                id,
+                code: "forbidden",
+            }),
+            Err(AppError::Validation(_)) => result.failed.push(BulkTagFailure {
+                id,
+                code: "invalid",
+            }),
+            Err(error) => {
+                tracing::warn!(%error, record_id = %id, "bulk tag could not change a record");
+                result.failed.push(BulkTagFailure { id, code: "failed" });
+            }
+        }
+    }
+    Ok(result)
+}
+
+/// B4-T4: adds a tag to, or takes one off, up to 500 selected records. Each
+/// record is checked as a single change would be; the ones that could not
+/// change are listed with a reason.
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/tags/bulk",
+    tag = "entity",
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    params(("entity" = String, Path)),
+    request_body = BulkTagRequest,
+    responses(
+        (status = 200, description = "How many records changed, and which could not", body = BulkTagResult),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "No read access to the entity", body = ErrorResponse),
+        (status = 422, description = "No records, too many, or not exactly one of add and remove", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn bulk_tag_records(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Read>>,
+    Path(entity): Path<String>,
+    Json(body): Json<BulkTagRequest>,
+) -> Result<Json<BulkTagResult>, AppError> {
+    Ok(Json(bulk_tag(&state, &ctx, &entity, &body).await?))
+}
+
 /// B4-T2: tags starting with what was typed, most used first.
 #[utoipa::path(
     get,
@@ -696,6 +816,7 @@ fn page_of<T>(items: Vec<T>) -> PaginatedResponse<T> {
     list_record_tags,
     add_record_tag,
     remove_record_tag,
+    bulk_tag_records,
     suggest_tags,
     list_tagged_records,
     list_tag_groups,

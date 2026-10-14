@@ -164,6 +164,10 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/{entity}/{id}/tags/{tag_id}",
             axum::routing::delete(tags::remove_record_tag),
         )
+        .route(
+            "/api/v1/{entity}/tags/bulk",
+            axum::routing::post(tags::bulk_tag_records),
+        )
         .route("/api/v1/tags/suggest", get(tags::suggest_tags))
         .route(
             "/api/v1/tags/{tag_id}/records",

@@ -26,6 +26,8 @@ import {
   draftValue, draftValueTo, fieldTypeToFilterKind, isColumnFilterDraftActive, isValuelessOperator,
   serializeColumnFilters,
 } from './column-filters';
+import { BulkTagComponent } from '../record-tags/bulk-tag.component';
+
 import { BulkJobRunner, isBulkTerminal } from './bulk-job-runner.service';
 // Deferred: the dialog's chunk loads the first time bulk edit is opened
 // (`@defer` in the template), which keeps it out of the shared entity chunk
@@ -40,6 +42,10 @@ import { viewFilters } from './advanced-find';
 // non-admin, and its dialog is itself deferred.
 import { RecordAccessActionsComponent } from '../record-access/record-access-actions.component';
 import { ImageThumbComponent } from '../field/image-thumb/image-thumb.component';
+
+/** A lowercase or uppercase hyphenated UUID. */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // `Col`/filter re-exports live in `column-filters.ts` now (C-28) — nothing
 // outside this file's own template needs the filter grammar through the
 // component barrel, so it is imported here, not re-exported. Bulk-edit's own
@@ -150,7 +156,7 @@ export function richTextToPlainText(html: string): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports:     [
     FormsModule, NgComponentOutlet, RouterLink, TranslatePipe, ChoicePillComponent, BulkEditDialogComponent,
-    AdvancedFindPanelComponent, RecordAccessActionsComponent, ImageThumbComponent,
+    AdvancedFindPanelComponent, RecordAccessActionsComponent, ImageThumbComponent, BulkTagComponent,
   ],
   host: { '(document:click)': 'handleDocumentClick($event)' },
   templateUrl: './entity-list.component.html',
@@ -239,6 +245,8 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   readonly activeFilters    = signal<Record<string, ColumnFilterDraft>>({});
   readonly openColumnFilter = signal<string | null>(null);
   readonly selectedRecordIds = signal<Set<string>>(new Set());
+  /** B4-T4: `?tag=<id>` from the tag page: only records carrying that tag. */
+  readonly tagFilter = signal<string | null>(null);
 
   /** U12 Phase A (D-607) — the advanced-find conditions in force, as wire
    * filters: set by the builder's Apply, or by opening a view that saved
@@ -382,6 +390,8 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
           : {};
         this.filterDrafts.set(urlFilters);
         this.activeFilters.set(urlFilters);
+        const tag = this.syncUrl() ? currentUrl.queryParamMap.get('tag') : null;
+        this.tagFilter.set(tag && UUID_PATTERN.test(tag) ? tag : null);
         this.advancedFilters.set([]);
         this.advancedFindOpen.set(false);
         this.searchDraft.set('');
@@ -637,7 +647,21 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
       filters.push(...columnFilterToQueryFilters(colName, draft, kind));
     }
     filters.push(...this.advancedFilters());
+    const tag = this.tagFilter();
+    if (tag) filters.push({ field: 'id', op: 'tagged', value: tag });
     return filters;
+  }
+
+  /** B4-T4: drops the tag filter the tag page set. */
+  clearTagFilter(): void {
+    this.tagFilter.set(null);
+    this.currentPage.set(1);
+    this.load();
+  }
+
+  /** B4-T4: after a bulk tag, the selection stays so it can be tagged again. */
+  onBulkTagged(): void {
+    this.load();
   }
 
   // ── Advanced find (U12 Phase A, D-607) ─────────────────────────────────────
