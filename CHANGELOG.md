@@ -8,6 +8,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Record values are normalised before validation: text trimmed, phone fields in E.164 shape,
+  email fields lower-cased, Arabic digits made Western in masked fields and numbers sent as text.
+- Autonumber formats take `{LUHN}` and `{MOD11}` check digits; their dates and resets follow
+  `app.time_zone`. A create may no longer supply an autonumbered value (except a data migration).
 - `attome doctor` (the preflight checks, with what to do about each failure) and `attome status`
   (each node's version, schema, start and readiness).
 - `/health/startup` (200 once boot is done); readiness answers from a two-second cache and records

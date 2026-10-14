@@ -111,6 +111,77 @@ static HEX_COLOR_RE: LazyLock<regex::Regex> =
 static ICON_CLASS_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r"^[a-zA-Z0-9 _-]{1,64}$").expect("static regex is valid"));
 
+// ── Normalisation (A3-T2) ─────────────────────────────────────────────────────
+
+/// Arabic-Indic (U+0660..9) and Eastern Arabic-Indic (U+06F0..9) digits as
+/// Western digits, and the Arabic decimal separator (U+066B) as `.`.
+pub fn western_digits(text: &str) -> String {
+    text.chars()
+        .map(|c| match c {
+            '\u{0660}'..='\u{0669}' => char::from(b'0' + (c as u32 - 0x0660) as u8),
+            '\u{06F0}'..='\u{06F9}' => char::from(b'0' + (c as u32 - 0x06F0) as u8),
+            '\u{066B}' => '.',
+            '\u{066C}' => ',',
+            c => c,
+        })
+        .collect()
+}
+
+/// A phone number in E.164's shape as far as the input allows: Western
+/// digits, separators (spaces, dashes, dots, brackets) dropped, a leading
+/// `00` written as `+`. A number without a country code keeps its digits;
+/// no country is guessed.
+pub fn phone_e164(text: &str) -> String {
+    let digits = western_digits(text);
+    let trimmed = digits.trim();
+    let plus = trimmed.starts_with('+');
+    let mut out: String = trimmed.chars().filter(char::is_ascii_digit).collect();
+    if plus {
+        out.insert(0, '+');
+    } else if let Some(rest) = out.strip_prefix("00") {
+        out = format!("+{rest}");
+    }
+    out
+}
+
+/// The value as it should be stored, before validation (A3-T2), or `None`
+/// when it is already in shape. Text is trimmed; a `tel` field becomes
+/// E.164-shaped; an `email` field is lower-cased; a masked field (an ID, an
+/// IBAN) and a number sent as text get Western digits. Free text keeps its
+/// own digits: rewriting what a person wrote is not normalisation.
+pub fn normalize(field_type: &FieldType, value: &Value, options: Option<&Value>) -> Option<Value> {
+    let text = value.as_str()?;
+    let changed = match field_type {
+        FieldType::Text => {
+            let opts = options
+                .and_then(|o| serde_json::from_value::<TextOptions>(o.clone()).ok())
+                .unwrap_or_default();
+            match opts.text_type.as_deref() {
+                Some("tel") => Value::String(phone_e164(text)),
+                Some("email") => Value::String(text.trim().to_lowercase()),
+                _ if opts.pattern.as_deref().is_some_and(|p| !p.is_empty()) => {
+                    Value::String(western_digits(text.trim()))
+                }
+                _ => Value::String(text.trim().to_owned()),
+            }
+        }
+        FieldType::Number | FieldType::Currency => {
+            let western = western_digits(text.trim()).replace(',', "");
+            match western
+                .parse::<f64>()
+                .ok()
+                .and_then(serde_json::Number::from_f64)
+            {
+                Some(n) => Value::Number(n),
+                None => return None,
+            }
+        }
+        FieldType::Choice => Value::String(text.trim().to_owned()),
+        _ => return None,
+    };
+    (changed != *value).then_some(changed)
+}
+
 // ── Validation ────────────────────────────────────────────────────────────────
 
 /// Validates that `value` is an acceptable JSON representation for `field_type`.
@@ -490,6 +561,61 @@ fn type_err(expected: &str, got: &Value) -> AppError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn normalize_trims_and_rewrites_digits_where_the_field_says_so() {
+        let tel = serde_json::json!({ "text_type": "tel" });
+        assert_eq!(
+            normalize(
+                &FieldType::Text,
+                &serde_json::json!(" ٠٠٩٦٦ ٥٠-١٢٣-٤٥٦٧ "),
+                Some(&tel)
+            ),
+            Some(serde_json::json!("+966501234567"))
+        );
+        assert_eq!(phone_e164("+966 (50) 123.4567"), "+966501234567");
+        assert_eq!(
+            phone_e164("0501234567"),
+            "0501234567",
+            "no country is guessed"
+        );
+        let email = serde_json::json!({ "text_type": "email" });
+        assert_eq!(
+            normalize(
+                &FieldType::Text,
+                &serde_json::json!(" Ada@Example.COM "),
+                Some(&email)
+            ),
+            Some(serde_json::json!("ada@example.com"))
+        );
+        let masked = serde_json::json!({ "pattern": "[0-9]{10}" });
+        assert_eq!(
+            normalize(
+                &FieldType::Text,
+                &serde_json::json!("١٠١٠٢٠٣٠٤٠"),
+                Some(&masked)
+            ),
+            Some(serde_json::json!("1010203040"))
+        );
+        // Free text keeps its own digits; only the ends are trimmed.
+        assert_eq!(
+            normalize(&FieldType::Text, &serde_json::json!(" الطابق ٣ "), None),
+            Some(serde_json::json!("الطابق ٣"))
+        );
+        assert_eq!(
+            normalize(&FieldType::Text, &serde_json::json!("ok"), None),
+            None
+        );
+        // A number sent as Arabic text becomes a number.
+        assert_eq!(
+            normalize(&FieldType::Number, &serde_json::json!("١٬٢٥٠٫٥"), None),
+            Some(serde_json::json!(1250.5))
+        );
+        assert_eq!(
+            normalize(&FieldType::Number, &serde_json::json!(3), None),
+            None
+        );
+    }
     use serde_json::json;
 
     #[test]

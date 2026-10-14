@@ -171,6 +171,29 @@ pub(crate) fn is_multi_valued(attr: &AttrInfo) -> bool {
     attr.options.as_ref().is_some_and(|o| ft.is_multi_valued(o))
 }
 
+/// A3-T2: the body with each value normalised for its field
+/// ([`attome_field::normalize`]: trimmed text, E.164-shaped phones,
+/// lower-case emails, Western digits where a field expects them), or `None`
+/// when nothing changes. Unknown fields are left for [`validate_body`].
+pub fn normalize_body(
+    attrs: &[AttrInfo],
+    obj: &serde_json::Map<String, Value>,
+) -> Option<serde_json::Map<String, Value>> {
+    let mut out: Option<serde_json::Map<String, Value>> = None;
+    for attr in attrs {
+        let Some(value) = obj.get(&attr.logicalname) else {
+            continue;
+        };
+        let field_type = attome_core::FieldType::from_int(attr.field_type_int)
+            .unwrap_or(attome_core::FieldType::Text);
+        if let Some(normal) = attome_field::normalize(&field_type, value, attr.options.as_ref()) {
+            out.get_or_insert_with(|| obj.clone())
+                .insert(attr.logicalname.clone(), normal);
+        }
+    }
+    out
+}
+
 /// Runs semantic and schema validation before any SQL is built.
 ///
 /// `pub` (not `pub(crate)`) — R-07 (`document/module-master-plans/
@@ -1546,6 +1569,15 @@ pub async fn create_one_as(
     stamp: CreateStamp,
     mode: MutationMode,
 ) -> Result<MutationResult, AppError> {
+    // A3-T2: values in the shape they are stored in, before anything judges them.
+    let normalized;
+    let obj = match normalize_body(attrs, obj) {
+        Some(map) => {
+            normalized = map;
+            &normalized
+        }
+        None => obj,
+    };
     // D-516 ruling 5 (audit 10/10 plan item 1.1): the audit ledger is written
     // only by `attome_audit`'s own writers, which use
     // `attome_core::crud::append_only_insert`/`append_only_insert_many`.
@@ -2504,6 +2536,15 @@ pub async fn update_one_as(
     expected_row_version: i64,
     mode: MutationMode,
 ) -> Result<MutationResult, AppError> {
+    // A3-T2: values in the shape they are stored in, before anything judges them.
+    let normalized;
+    let obj = match normalize_body(attrs, obj) {
+        Some(map) => {
+            normalized = map;
+            &normalized
+        }
+        None => obj,
+    };
     // D-535: before anything else, in every mode and whoever the caller is.
     validate_engine_owned_entity(state, entity_name)?;
     if let Principal::Staff(ctx) = principal {
