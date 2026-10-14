@@ -752,12 +752,24 @@ async fn form_plan(
     let form = cooked()
         .get::<CookedForm>("form", &key)
         .ok_or(AppError::NotFound)?;
-    let entity = state
+    let cached = state
         .entities
         .load()
         .get_by_id(form.entity)
-        .map(|meta| meta.logicalname.clone())
-        .ok_or(AppError::NotFound)?;
+        .map(|meta| meta.logicalname.clone());
+    let entity = match cached {
+        Some(name) => name,
+        // The registry is refreshed in the background; a just-created entity
+        // may not be in it yet.
+        None => sqlx::query_scalar::<_, String>(
+            "SELECT logicalname FROM entity_info WHERE id = $1 AND is_active IS NOT FALSE",
+        )
+        .bind(form.entity)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?
+        .ok_or(AppError::NotFound)?,
+    };
     let ids: Vec<Uuid> = form
         .sections
         .iter()
