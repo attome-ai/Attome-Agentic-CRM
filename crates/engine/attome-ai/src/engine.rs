@@ -364,6 +364,7 @@ async fn invoke_action(
     // the module comment. An unknown id resolves to NotFound below, and the
     // module lookup for it is irrelevant.
     let module = REGISTRY.resolve(&id).map(|d| d.module).unwrap_or(MODULE_AI);
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     let inputs = gate_inputs(&state, module);
     let action_ctx = ActionContext::user(ctx.into_inner());
 

@@ -349,6 +349,7 @@ pub async fn classify_dispatch_error(
         ctx = ctx.tainted();
     }
     ctx.idempotency_key = Some(tool_call_id.to_owned());
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     let inputs = crate::engine::gate_inputs(state, descriptor.module);
     if let Err(refusal) = crate::gate::admissible(descriptor, &ctx, &inputs) {
         return Ok(DispatchFailure::WorldChanged(terminal_for_gate_refusal(
@@ -1300,6 +1301,7 @@ async fn pre_retrieve(
         ctx = ctx.tainted();
     }
     ctx.idempotency_key = Some(tool_call_id.clone());
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     let gate_inputs = crate::engine::gate_inputs(
         state,
         registry
