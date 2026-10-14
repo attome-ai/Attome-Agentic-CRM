@@ -7925,6 +7925,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bin/operations/{operation_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A18-T7: undoes one delete operation: every record its ledger rows still
+         *     hold in the bin (at most 500), restored as [`restore_selection`] would.
+         */
+        post: operations["restore_operation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bin/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A18-T7: restores up to 500 deleted records, each checked as a single
+         *     restore would be; the ones that could not come back are listed.
+         */
+        post: operations["restore_selection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/branding/asset": {
         parameters: {
             query?: never;
@@ -13071,6 +13111,34 @@ export interface components {
             /** @description The request's status after the decision, or `null` when it failed. */
             status?: string | null;
         };
+        /** @description One record to restore. */
+        BinItem: {
+            entity: string;
+            /** Format: uuid */
+            id: string;
+        };
+        /** @description One record a restore could not bring back. */
+        BinRestoreFailure: {
+            /**
+             * @description `not_found`, `forbidden`, `conflict` (live already, or a value now
+             *     taken by another record), `invalid` (a lookup it points at is gone)
+             *     or `failed`.
+             */
+            code: string;
+            entity: string;
+            /** Format: uuid */
+            id: string;
+        };
+        /** @description `POST /api/v1/bin/restore`. */
+        BinRestoreRequest: {
+            /** @description At most 500. */
+            items: components["schemas"]["BinItem"][];
+        };
+        /** @description What a bin restore did. */
+        BinRestoreResult: {
+            failed: components["schemas"]["BinRestoreFailure"][];
+            restored: number;
+        };
         /**
          * @description One block on the canvas. `props` is validated against `kind`'s shape by
          *     `blocks::validate_blocks` before a draft save or publish is accepted —
@@ -15674,6 +15742,18 @@ export interface components {
             id: string;
             /** @description The record's primary name, when its entity declares one. */
             label?: string | null;
+            /**
+             * @description The operation it was removed in; restore it whole through
+             *     `POST /api/v1/bin/operations/{operation_id}/restore`.
+             */
+            operation_id?: string | null;
+            /**
+             * @description `request`, `agent`, `flow`, `bulk`, `import`, `merge`, `portal` or
+             *     `migration`.
+             */
+            operation_kind?: string | null;
+            /** @description Why, when a reason was given. */
+            reason?: string | null;
         };
         DeliveryListItem: {
             /** Format: int32 */
@@ -19748,6 +19828,18 @@ export interface components {
                 id: string;
                 /** @description The record's primary name, when its entity declares one. */
                 label?: string | null;
+                /**
+                 * @description The operation it was removed in; restore it whole through
+                 *     `POST /api/v1/bin/operations/{operation_id}/restore`.
+                 */
+                operation_id?: string | null;
+                /**
+                 * @description `request`, `agent`, `flow`, `bulk`, `import`, `merge`, `portal` or
+                 *     `migration`.
+                 */
+                operation_kind?: string | null;
+                /** @description Why, when a reason was given. */
+                reason?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -54549,6 +54641,88 @@ export interface operations {
                 content?: never;
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    restore_operation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                operation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description How many came back, and which could not */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BinRestoreResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Nothing from that operation is in the bin */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    restore_selection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BinRestoreRequest"];
+            };
+        };
+        responses: {
+            /** @description How many came back, and which could not */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BinRestoreResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No items, or more than 500 */
             422: {
                 headers: {
                     [name: string]: unknown;

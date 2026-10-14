@@ -42043,6 +42043,142 @@
         }
       }
     },
+    "/api/v1/bin/operations/{operation_id}/restore": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "A18-T7: undoes one delete operation: every record its ledger rows still\nhold in the bin (at most 500), restored as [`restore_selection`] would.",
+        "operationId": "restore_operation",
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "How many came back, and which could not",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BinRestoreResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nothing from that operation is in the bin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "restore"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/bin/restore": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "A18-T7: restores up to 500 deleted records, each checked as a single\nrestore would be; the ones that could not come back are listed.",
+        "operationId": "restore_selection",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BinRestoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "How many came back, and which could not",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BinRestoreResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No items, or more than 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "restore"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/branding/asset": {
       "get": {
         "tags": [
@@ -64093,6 +64229,81 @@
           }
         }
       },
+      "BinItem": {
+        "type": "object",
+        "description": "One record to restore.",
+        "required": [
+          "entity",
+          "id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "BinRestoreFailure": {
+        "type": "object",
+        "description": "One record a restore could not bring back.",
+        "required": [
+          "entity",
+          "id",
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "`not_found`, `forbidden`, `conflict` (live already, or a value now\ntaken by another record), `invalid` (a lookup it points at is gone)\nor `failed`."
+          },
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "BinRestoreRequest": {
+        "type": "object",
+        "description": "`POST /api/v1/bin/restore`.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BinItem"
+            },
+            "description": "At most 500."
+          }
+        }
+      },
+      "BinRestoreResult": {
+        "type": "object",
+        "description": "What a bin restore did.",
+        "required": [
+          "restored",
+          "failed"
+        ],
+        "properties": {
+          "failed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BinRestoreFailure"
+            }
+          },
+          "restored": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
       "Block": {
         "type": "object",
         "description": "One block on the canvas. `props` is validated against `kind`'s shape by\n`blocks::validate_blocks` before a draft save or publish is accepted —\nnever stored as trusted-opaque JSON (coding-guidelines §8).",
@@ -70697,6 +70908,27 @@
               "null"
             ],
             "description": "The record's primary name, when its entity declares one."
+          },
+          "operation_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The operation it was removed in; restore it whole through\n`POST /api/v1/bin/operations/{operation_id}/restore`."
+          },
+          "operation_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`request`, `agent`, `flow`, `bulk`, `import`, `merge`, `portal` or\n`migration`."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why, when a reason was given."
           }
         }
       },
@@ -81193,6 +81425,27 @@
                     "null"
                   ],
                   "description": "The record's primary name, when its entity declares one."
+                },
+                "operation_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The operation it was removed in; restore it whole through\n`POST /api/v1/bin/operations/{operation_id}/restore`."
+                },
+                "operation_kind": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "`request`, `agent`, `flow`, `bulk`, `import`, `merge`, `portal` or\n`migration`."
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Why, when a reason was given."
                 }
               }
             }
