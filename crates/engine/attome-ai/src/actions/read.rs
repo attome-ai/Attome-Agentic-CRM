@@ -17,7 +17,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use attome_core::EngineState;
-use attome_inference::{ChatMessage, GenerationRequest};
+use attome_inference::GenerationRequest;
 use attome_modules::{MODULE_AI, MODULE_CORE};
 use attome_types::AppError;
 use serde::Deserialize;
@@ -302,7 +302,11 @@ pub(crate) fn summarize_system_prompt(language: &str) -> String {
 /// `prompt.rs` exists to prevent: two implementations of one trust boundary
 /// diverge, and the one that diverges is the one nobody is testing.
 #[cfg(test)]
-pub(crate) fn summarize_messages(language: &str, entity: &str, facts: &str) -> Vec<ChatMessage> {
+pub(crate) fn summarize_messages(
+    language: &str,
+    entity: &str,
+    facts: &str,
+) -> Vec<attome_inference::ChatMessage> {
     crate::prompt::assemble(&[
         Segment::trusted(summarize_system_prompt(language)),
         Segment::untrusted(entity, facts),

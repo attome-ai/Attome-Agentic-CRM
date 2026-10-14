@@ -23,7 +23,7 @@ use std::pin::Pin;
 use std::time::Duration;
 
 use attome_core::EngineState;
-use attome_inference::{ChatMessage, GenerationRequest};
+use attome_inference::GenerationRequest;
 use attome_modules::MODULE_AI;
 use attome_types::AppError;
 use serde::Deserialize;
@@ -144,7 +144,7 @@ fn translate_messages(
     to: &str,
     glossary: &BTreeMap<String, String>,
     text: &str,
-) -> Vec<ChatMessage> {
+) -> Vec<attome_inference::ChatMessage> {
     crate::prompt::assemble(&[
         Segment::trusted(translate_system_prompt(from, to, glossary)),
         Segment::untrusted("text", text),
