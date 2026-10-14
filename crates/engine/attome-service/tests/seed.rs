@@ -35,7 +35,7 @@ const SERVICE_ENTITIES: &[&str] = &[
 ];
 
 #[tokio::test]
-async fn every_entity_gets_a_default_view_and_full_privilege_set() {
+async fn every_entity_gets_its_full_privilege_set() {
     let db = skip_if_no_db!(test_db().await);
     attome_security::seed::seed_for_tests(&db)
         .await
@@ -68,20 +68,9 @@ async fn every_entity_gets_a_default_view_and_full_privilege_set() {
         .expect("read entity_info");
         assert!(registered, "{logicalname} must be registered after seed()");
 
-        let has_view: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM sql_query q \
-               JOIN entity_info e ON e.id = q.entity_logical_name \
-              WHERE e.logicalname = $1 AND q.required_privilege IS NOT NULL \
-                AND (q.is_active IS NULL OR q.is_active = true))",
-        )
-        .bind(logicalname)
-        .fetch_one(&db)
-        .await
-        .expect("read default views");
-        assert!(
-            has_view,
-            "{logicalname} has no default view — its admin list would 404 (D-036)"
-        );
+        // The default list view comes from the platform bundle's `views`,
+        // which `seed_for_tests` skips; `fresh_bootstrap.rs` checks it for
+        // every entity on the real boot path.
 
         for action in ["read", "create", "update", "delete", "bulk"] {
             let key = format!("{logicalname}.{action}");
