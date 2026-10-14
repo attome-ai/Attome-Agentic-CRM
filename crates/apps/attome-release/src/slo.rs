@@ -260,23 +260,28 @@ pub fn render_k6(catalogue: &Catalogue) -> String {
             class.error_objective.unwrap_or(0.001)
         ));
     }
+    // A raw string, not `\` line continuations: a continuation also drops
+    // the next line's leading spaces, which unindented the generated code
+    // and made every check report drift.
     out.push_str(
-        "};\n\n\
-// k6 thresholds for one class, keyed on the `slo_class` request tag.\n\
-export function thresholdsFor(classId) {\n\
-  const c = CLASSES[classId];\n\
-  if (!c) {\n\
-    throw new Error(`unknown SLO class ${classId}`);\n\
-  }\n\
-  const latency = [`p(50)<${c.p50}`, `p(95)<${c.p95}`];\n\
-  if (c.p99 !== null) {\n\
-    latency.push(`p(99)<${c.p99}`);\n\
-  }\n\
-  return {\n\
-    [`http_req_duration{slo_class:${classId}}`]: latency,\n\
-    [`http_req_failed{slo_class:${classId}}`]: [`rate<${c.errorRate}`],\n\
-  };\n\
-}\n",
+        r#"};
+
+// k6 thresholds for one class, keyed on the `slo_class` request tag.
+export function thresholdsFor(classId) {
+  const c = CLASSES[classId];
+  if (!c) {
+    throw new Error(`unknown SLO class ${classId}`);
+  }
+  const latency = [`p(50)<${c.p50}`, `p(95)<${c.p95}`];
+  if (c.p99 !== null) {
+    latency.push(`p(99)<${c.p99}`);
+  }
+  return {
+    [`http_req_duration{slo_class:${classId}}`]: latency,
+    [`http_req_failed{slo_class:${classId}}`]: [`rate<${c.errorRate}`],
+  };
+}
+"#,
     );
     out
 }
