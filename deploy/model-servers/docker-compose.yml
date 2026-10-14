@@ -1,0 +1,65 @@
+# Optional local model servers for Attome (roadmap N26-T1). Nothing here is
+# needed to run Attome: without a generation server the AI features are off,
+# and without an embedding server search is keyword-only.
+#
+# Start one profile at a time, then point `inference` in config.json at it
+# (docs/model-servers.md):
+#
+#   docker compose -f deploy/model-servers/docker-compose.yml --profile tei up -d
+#   docker compose -f deploy/model-servers/docker-compose.yml --profile llamacpp up -d
+#   docker compose -f deploy/model-servers/docker-compose.yml --profile vllm up -d   # NVIDIA GPU
+#
+# Every server listens on 127.0.0.1 only: prompts and documents never leave
+# the machine, and boot accepts these endpoints without
+# `inference.allow_external_provider`. Pin the images by digest for
+# production; the tags below are the ones this file was written against.
+
+name: attome-model-servers
+
+services:
+  # Embeddings (bge-m3: multilingual, Arabic and English) for hybrid search.
+  tei:
+    profiles: ["tei"]
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.6
+    command: ["--model-id", "BAAI/bge-m3", "--auto-truncate", "--port", "80"]
+    ports: ["127.0.0.1:8088:80"]
+    volumes: ["tei-models:/data"]
+    restart: unless-stopped
+
+  # Generation on a CPU: a GGUF model served by llama.cpp's OpenAI-compatible
+  # server. Put the .gguf file in ./models and set MODEL_FILE.
+  llamacpp:
+    profiles: ["llamacpp"]
+    image: ghcr.io/ggml-org/llama.cpp:server
+    command:
+      - "--model"
+      - "/models/${MODEL_FILE:-qwen2.5-7b-instruct-q4_k_m.gguf}"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8080"
+      - "--ctx-size"
+      - "8192"
+    ports: ["127.0.0.1:8081:8080"]
+    volumes: ["./models:/models:ro"]
+    restart: unless-stopped
+
+  # Generation on an NVIDIA GPU with vLLM's OpenAI-compatible server.
+  vllm:
+    profiles: ["vllm"]
+    image: vllm/vllm-openai:v0.8.5
+    command: ["--model", "${VLLM_MODEL:-Qwen/Qwen2.5-7B-Instruct}", "--max-model-len", "8192"]
+    ports: ["127.0.0.1:8000:8000"]
+    volumes: ["vllm-cache:/root/.cache/huggingface"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  tei-models:
+  vllm-cache:

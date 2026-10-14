@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Optional local model servers: `deploy/model-servers/docker-compose.yml` (TEI embeddings, llama.cpp
+  on CPU, vLLM on GPU) and `docs/model-servers.md`.
 - `GET /api/v1/admin/agents/sessions/{id}/run`: a session's run as one tree (parent, children,
   turns with model and prompt version, each tool call with the gate decision and ledger outcome).
 - `GET /api/v1/admin/ai/evidence`: every agent action and model-written suggestion in a period, by

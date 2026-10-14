@@ -1,0 +1,2 @@
+# Put GGUF model files here for the llamacpp profile.
+*.gguf
