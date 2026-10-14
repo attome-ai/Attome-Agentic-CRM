@@ -79,6 +79,18 @@
           </div>
         </fieldset>
 
+        <label for="ad-policy">{{ 'agentDesigner.policy' | translate }}</label>
+        <input #pol id="ad-policy" type="text" dir="ltr" [value]="draft().policy" (input)="update({ policy: pol.value })" />
+        <label for="ad-model">{{ 'agentDesigner.model' | translate }}</label>
+        <input #mdl id="ad-model" type="text" dir="ltr" [value]="draft().model" (input)="update({ model: mdl.value })" />
+        <label for="ad-language">{{ 'agentDesigner.language' | translate }}</label>
+        <select #lng id="ad-language" (change)="update({ language: lng.value })">
+          <option value="" [selected]="draft().language === ''">{{ 'agentDesigner.languageAny' | translate }}</option>
+          <option value="ar" [selected]="draft().language === 'ar'">العربية</option>
+          <option value="en" [selected]="draft().language === 'en'">English</option>
+        </select>
+        <p class="ad-muted">{{ 'agentDesigner.runtimeHint' | translate }}</p>
+
         <label for="ad-run-as">{{ 'agentDesigner.runAs' | translate }}</label>
         <select #runAs id="ad-run-as" (change)="update({ runAs: runAs.value === 'service' ? 'service' : 'caller' })">
           <option value="caller" [selected]="draft().runAs === 'caller'">{{ 'agentDesigner.runAsCaller' | translate }}</option>

@@ -22,6 +22,14 @@ export interface AgentDraft {
   handoff:      { input: string; output: string } | null;
   /** Whether the stored document had a handoff, so clearing it removes it. */
   hadHandoff:   boolean;
+  /** The `ai_agent_policy` id sessions from this agent run under (V2-D487). */
+  policy:       string;
+  /** `persona.model`: the AI model id. */
+  model:        string;
+  /** `persona.language`: `ar`, `en`, ... or empty. */
+  language:     string;
+  /** Other persona settings (temperature, ...), kept as they are. */
+  personaRest:  Record<string, unknown>;
 }
 
 /** An empty object contract, the starting point when a handoff is added. */
@@ -37,6 +45,7 @@ export function emptyAgent(): AgentDraft {
     role: '', instructions: '', tools: [], runAs: 'caller',
     maxSteps: 20, maxToolCalls: 40, maxTokens: 60000, channels: ['chat'], daily: {},
     handoff: null, hadHandoff: false,
+    policy: '', model: '', language: '', personaRest: {},
   };
 }
 
@@ -58,6 +67,21 @@ export function draftFromDoc(doc: unknown): AgentDraft {
     channels:     d['channels'] === undefined ? base.channels : list(d['channels']),
     daily:        dailyFrom(limits['daily']),
     ...handoffFrom(d['handoff']),
+    ...personaFrom(d['persona']),
+    policy: typeof d['policy'] === 'string' ? d['policy'] : '',
+  };
+}
+
+function personaFrom(value: unknown): Pick<AgentDraft, 'model' | 'language' | 'personaRest'> {
+  const p = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>;
+  const personaRest: Record<string, unknown> = {};
+  for (const [key, v] of Object.entries(p)) {
+    if (key !== 'model' && key !== 'language') personaRest[key] = v;
+  }
+  return {
+    model:    typeof p['model'] === 'string' ? p['model'] : '',
+    language: typeof p['language'] === 'string' ? p['language'] : '',
+    personaRest,
   };
 }
 
@@ -112,7 +136,19 @@ export function commandsFor(draft: AgentDraft): ModelCommand[] {
     } },
     { op: 'set', path: '/channels', value: [...draft.channels] },
     ...handoffCommands(draft),
+    ...runtimeCommands(draft),
   ];
+}
+
+/** The policy and persona, set only when there is something to set. */
+function runtimeCommands(draft: AgentDraft): ModelCommand[] {
+  const out: ModelCommand[] = [];
+  if (draft.policy.trim()) out.push({ op: 'set', path: '/policy', value: draft.policy.trim() });
+  const persona: Record<string, unknown> = { ...draft.personaRest };
+  if (draft.model.trim()) persona['model'] = draft.model.trim();
+  if (draft.language.trim()) persona['language'] = draft.language.trim();
+  if (Object.keys(persona).length > 0) out.push({ op: 'set', path: '/persona', value: persona });
+  return out;
 }
 
 /** Sets the handoff when there is one, removes it when it was cleared. */

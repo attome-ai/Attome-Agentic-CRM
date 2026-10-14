@@ -192,6 +192,8 @@ export const xrmEn = {
     usage: 'Used today', noLimit: 'no limit',
     dailyHint: 'Per day, across all of this agent\'s sessions. Leave blank for no limit.',
     daily: { record_changes: 'Records changed', deletes: 'Deletes', messages: 'Messages sent', external_calls: 'Outside calls' },
+    policy: 'Agent policy id', model: 'AI model id', language: 'Answer language', languageAny: 'The person\'s language',
+    runtimeHint: 'With a policy and a model, sessions can start from this agent itself once it is published.',
     handoff: 'Delegated work', handoffOn: 'Other agents can delegate to this one',
     handoffHint: 'The input this agent takes and the answer it gives, as JSON Schema objects. Delegated work only reads.',
     handoffInput: 'Input contract', handoffOutput: 'Output contract',

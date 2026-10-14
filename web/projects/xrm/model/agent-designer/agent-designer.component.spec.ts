@@ -20,6 +20,7 @@ describe('agent drafts', () => {
       role: 'Triage', instructions: 'Route cases.', tools: ['records.read'], runAs: 'service',
       maxSteps: 5, maxToolCalls: 9, maxTokens: 1000, channels: ['web'], daily: {},
       handoff: null, hadHandoff: false,
+      policy: '', model: '', language: '', personaRest: {},
     });
     const commands = commandsFor(draft);
     expect(commands.map(c => c.op === 'set' ? c.path : '')).toEqual(
@@ -47,6 +48,16 @@ describe('agent drafts', () => {
     expect(commandsFor(broken).some(c => 'path' in c && c.path === '/handoff')).toBe(false);
     const cleared = { ...draft, handoff: null };
     expect(commandsFor(cleared).at(-1)).toEqual({ op: 'remove', path: '/handoff' });
+  });
+
+  it('writes the policy and persona, keeping other persona settings (V2-D487)', () => {
+    const draft = draftFromDoc({ policy: 'p1', persona: { model: 'm1', language: 'ar', temperature: 0.2 } });
+    expect(draft.policy).toBe('p1');
+    expect(draft.model).toBe('m1');
+    expect(draft.personaRest).toEqual({ temperature: 0.2 });
+    const commands = commandsFor(draft);
+    expect(commands).toContainEqual({ op: 'set', path: '/policy', value: 'p1' });
+    expect(commands).toContainEqual({ op: 'set', path: '/persona', value: { temperature: 0.2, model: 'm1', language: 'ar' } });
   });
 
   it('fills defaults for a missing document', () => {
