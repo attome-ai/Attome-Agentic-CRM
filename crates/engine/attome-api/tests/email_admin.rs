@@ -531,13 +531,12 @@ fn resend_of_a_still_queued_delivery_is_a_409() {
         let body = body_json(resp).await;
         assert_eq!(body["error"], "conflict", "{body}");
 
-        let rows: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM email_delivery WHERE recipient = $1",
-        )
-        .bind(attome_types::text::normalize_email(&email))
-        .fetch_one(&db)
-        .await
-        .unwrap();
+        let rows: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM email_delivery WHERE recipient = $1")
+                .bind(attome_types::text::normalize_email(&email))
+                .fetch_one(&db)
+                .await
+                .unwrap();
         assert_eq!(rows, 1, "a refused resend must not queue a second delivery");
         let row = delivery::get_by_id(&db, id).await.unwrap().unwrap();
         assert_eq!(row.status, "queued");

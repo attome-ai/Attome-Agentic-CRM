@@ -101,7 +101,10 @@ fn test_config() -> AppConfig {
         jwt_secret = THROWAWAY_JWT_SECRET,
     );
 
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 /// A seeded `EngineSystem` over this binary's throwaway database, with every

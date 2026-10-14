@@ -82,7 +82,10 @@ fn test_config() -> AppConfig {
         "security": { "bootstrap_admin_email": null },
         "idempotency": { "durable_retention_hours": 24 }
     }"#;
-    attome_testkit::with_test_database(serde_json::from_str(json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 /// The throwaway clone with the platform schema on the search path: the

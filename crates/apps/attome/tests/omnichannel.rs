@@ -708,10 +708,11 @@ fn assisted_config(model_url: &str, definition: Uuid, chat_on: bool) -> AppConfi
     // Set explicitly: the section is built in code, not from JSON, so the
     // serde default (60 s) never applied and the derived `Default` is 0.
     config.inference.generation.request_timeout_secs = 10;
-    attome_testkit::point_config_at(
-        &mut config,
-        &attome_testkit::migrated_db_url().expect("DATABASE_URL"),
-    );
+    // Without a test database the caller skips (`test_system_with` returns
+    // `None`), so there is nothing to point the configuration at.
+    if let Some(url) = attome_testkit::migrated_db_url() {
+        attome_testkit::point_config_at(&mut config, &url);
+    }
     config.webchat = attome_config::WebchatSection {
         enabled: true,
         agent_definition_id: Some(definition),

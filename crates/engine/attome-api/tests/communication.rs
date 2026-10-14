@@ -418,13 +418,11 @@ fn composing_to_a_suppressed_address_is_not_sent() {
         let (admin_id, admin_cookie) = seed_admin(&system).await;
         let db = system.state().base.db.clone();
         let suppressed_email = format!("suppressed-{}@example.test", Uuid::now_v7());
-        sqlx::query(
-        "INSERT INTO email_suppression (email, reason) VALUES ($1, 'admin_manual')",
-    )
-    .bind(&suppressed_email)
-    .execute(&db)
-    .await
-    .expect("seed a suppression row");
+        sqlx::query("INSERT INTO email_suppression (email, reason) VALUES ($1, 'admin_manual')")
+            .bind(&suppressed_email)
+            .execute(&db)
+            .await
+            .expect("seed a suppression row");
 
         let app = full_app(system);
         let idem_key = format!("comm-suppressed-{}", Uuid::now_v7());

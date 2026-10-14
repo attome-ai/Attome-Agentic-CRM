@@ -94,7 +94,10 @@ fn test_config() -> AppConfig {
         "security": { "bootstrap_admin_email": null },
         "change_feed": { "retention_days": 30 }
     }"#;
-    attome_testkit::with_test_database(serde_json::from_str(json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 async fn test_pool() -> Option<attome_db::DbPool> {

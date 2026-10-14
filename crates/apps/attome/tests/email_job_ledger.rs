@@ -83,8 +83,10 @@ fn test_config(port: u16) -> AppConfig {
         "s2s": { "enabled": false },
         "security": { "bootstrap_admin_email": null }
     }"#;
-    let mut config: AppConfig =
-        attome_testkit::with_test_database(serde_json::from_str(json).expect("test_config JSON must deserialize into AppConfig"), true);
+    let mut config: AppConfig = attome_testkit::with_test_database(
+        serde_json::from_str(json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    );
     config.email = EmailSection {
         enabled: true,
         smtp_host: "127.0.0.1".to_string(),
