@@ -485,7 +485,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Dashboards",
-        Some("/xrm/dashboard/list"),
+        Some("/xrm/entity/attome_dashboard/list"),
         "las la-th-large",
         "#8b5cf6",
         Some(dashboard_group),
@@ -507,7 +507,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Decisions",
-        Some("/xrm/decision/list"),
+        Some("/xrm/entity/dashboard_decision/list"),
         "las la-gavel",
         "#f59e0b",
         Some(dashboard_group),
@@ -560,7 +560,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Scenarios",
-        Some("/xrm/scenario/list"),
+        Some("/xrm/entity/dashboard_scenario/list"),
         "las la-code-branch",
         "#06b6d4",
         Some(dashboard_group),
@@ -578,7 +578,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Pages",
-        Some("/xrm/dashboard/page/list"),
+        Some("/xrm/entity/dashboard_page/list"),
         "las la-file-alt",
         "#14b8a6",
         Some(dashboard_group),
@@ -640,7 +640,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Users",
-        Some("/xrm/core/systemuser/list"),
+        Some("/xrm/entity/user_account/list"),
         "las la-user",
         "#64748b",
         Some(access_group),
@@ -652,7 +652,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Teams",
-        Some("/xrm/core/team/list"),
+        Some("/xrm/entity/team/list"),
         "las la-users",
         "#64748b",
         Some(access_group),
@@ -674,7 +674,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Organizations",
-        Some("/xrm/core/organization/list"),
+        Some("/xrm/entity/organization/list"),
         "las la-sitemap",
         "#64748b",
         Some(access_group),
@@ -688,7 +688,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "API Keys",
-        Some("/xrm/core/api_key/list"),
+        Some("/xrm/entity/api_key/list"),
         "las la-key",
         "#64748b",
         Some(access_group),
@@ -752,7 +752,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Privileges",
-        Some("/xrm/core/privilege/list"),
+        Some("/xrm/entity/privilege/list"),
         "las la-list-ul",
         "#a855f7",
         Some(security_group),
@@ -785,7 +785,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Roles",
-        Some("/xrm/core/role/list"),
+        Some("/xrm/entity/role/list"),
         "las la-users-cog",
         "#a855f7",
         Some(security_group),
@@ -881,7 +881,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     let user_teams = upsert_sidebar(
         db,
         "User Teams",
-        Some("/xrm/core/systemuser/mm/team/list"),
+        Some("/xrm/entity/user_account_mm_team/list"),
         "las la-users",
         "#0ea5e9",
         Some(relationships_group),
@@ -892,7 +892,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     let user_privileges = upsert_sidebar(
         db,
         "User Privileges",
-        Some("/xrm/core/systemuser/mm/privilege/list"),
+        Some("/xrm/entity/user_account_mm_privilege/list"),
         "las la-key",
         "#0ea5e9",
         Some(relationships_group),
@@ -990,7 +990,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Auto Value",
-        Some("/xrm/core/autovalue/list"),
+        Some("/xrm/entity/autovalue/list"),
         "las la-hashtag",
         "#0ea5e9",
         Some(management_group),
@@ -1261,7 +1261,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "S2S Clients (list)",
-        Some("/xrm/core/s2s/client/list"),
+        Some("/xrm/entity/s2s_client/list"),
         "las la-list",
         "#6366f1",
         Some(system_api_group),
@@ -1273,7 +1273,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "S2S Permissions",
-        Some("/xrm/core/s2s/permission/list"),
+        Some("/xrm/entity/s2s_permission/list"),
         "las la-key",
         "#6366f1",
         Some(system_api_group),
@@ -1285,7 +1285,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "S2S Access Log",
-        Some("/xrm/core/s2s/access/log/list"),
+        Some("/xrm/entity/s2s_access_log/list"),
         "las la-history",
         "#6366f1",
         Some(system_api_group),
@@ -1400,7 +1400,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Audit Log",
-        Some("/xrm/core/audit/header/list"),
+        Some("/xrm/entity/audit_header/list"),
         "las la-history",
         "#10b981",
         Some(audit_group),
@@ -1412,7 +1412,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Audit Config",
-        Some("/xrm/core/audit/config/list"),
+        Some("/xrm/entity/audit_config/list"),
         "las la-cog",
         "#10b981",
         Some(audit_group),
@@ -1424,7 +1424,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Audit Detail",
-        Some("/xrm/core/audit/detail/list"),
+        Some("/xrm/entity/audit_detail/list"),
         "las la-list-ul",
         "#10b981",
         Some(audit_group),
@@ -1436,7 +1436,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Audit Snapshot",
-        Some("/xrm/core/audit/snapshot/list"),
+        Some("/xrm/entity/audit_snapshot/list"),
         "las la-camera",
         "#10b981",
         Some(audit_group),
@@ -1487,7 +1487,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Templates",
-        Some("/xrm/notification/template/list"),
+        Some("/xrm/entity/notification_template/list"),
         "las la-envelope",
         "#eab308",
         Some(notification_group),
@@ -1558,7 +1558,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Findings",
-        Some("/xrm/profiler/finding/list"),
+        Some("/xrm/entity/profiler_finding/list"),
         "las la-chart-bar",
         "#0ea5e9",
         Some(profiler_group),
@@ -1611,7 +1611,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Definitions",
-        Some("/xrm/workflow/definition/list"),
+        Some("/xrm/entity/workflow_definition/list"),
         "las la-sitemap",
         "#6366f1",
         Some(workflow_group),
@@ -1654,7 +1654,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Projects",
-        Some("/xrm/project/list"),
+        Some("/xrm/entity/attome_project/list"),
         "las la-folder-open",
         "#8b5cf6",
         Some(project_group),
@@ -1664,30 +1664,8 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     .await?;
     upsert_sidebar(
         db,
-        "Customers",
-        Some("/xrm/project/customer/list"),
-        "las la-building",
-        "#8b5cf6",
-        Some(project_group),
-        20,
-        Some("project"),
-    )
-    .await?;
-    upsert_sidebar(
-        db,
-        "Contacts",
-        Some("/xrm/project/customer/contact/list"),
-        "las la-id-card",
-        "#8b5cf6",
-        Some(project_group),
-        30,
-        Some("project"),
-    )
-    .await?;
-    upsert_sidebar(
-        db,
         "Tasks",
-        Some("/xrm/project/work/item/list"),
+        Some("/xrm/entity/project_work_item/list"),
         "las la-tasks",
         "#8b5cf6",
         Some(project_group),
@@ -1698,7 +1676,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Deliverables",
-        Some("/xrm/project/deliverable/list"),
+        Some("/xrm/entity/project_deliverable/list"),
         "las la-cube",
         "#8b5cf6",
         Some(project_group),
@@ -1709,7 +1687,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Change Requests",
-        Some("/xrm/project/change/request/list"),
+        Some("/xrm/entity/project_change_request/list"),
         "las la-redo",
         "#8b5cf6",
         Some(project_group),
@@ -1720,7 +1698,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Issues & Risks",
-        Some("/xrm/project/issue/list"),
+        Some("/xrm/entity/project_issue/list"),
         "las la-exclamation-triangle",
         "#8b5cf6",
         Some(project_group),
@@ -1740,7 +1718,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Timesheets",
-        Some("/xrm/project/timesheet/list"),
+        Some("/xrm/entity/project_timesheet/list"),
         "las la-history",
         "#8b5cf6",
         Some(project_group),
@@ -1794,7 +1772,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Data Sources",
-        Some("/xrm/knowledge/data/source/list"),
+        Some("/xrm/entity/knowledge_data_source/list"),
         "las la-database",
         "#0ea5e9",
         Some(knowledge_base_group),
@@ -1805,7 +1783,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Data Items",
-        Some("/xrm/knowledge/data/item/list"),
+        Some("/xrm/entity/knowledge_data_item/list"),
         "las la-file-alt",
         "#0ea5e9",
         Some(knowledge_base_group),
@@ -1956,7 +1934,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Systems",
-        Some("/xrm/integration/system/list"),
+        Some("/xrm/entity/integration_system/list"),
         "las la-server",
         "#0ea5e9",
         Some(integration_group),
@@ -1988,7 +1966,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Regulations",
-        Some("/xrm/grc/regulation/list"),
+        Some("/xrm/entity/grc_regulation/list"),
         "las la-gavel",
         "#0d9488",
         Some(grc_group),
@@ -1999,7 +1977,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Requirements",
-        Some("/xrm/grc/requirement/list"),
+        Some("/xrm/entity/grc_requirement/list"),
         "las la-list-ol",
         "#0d9488",
         Some(grc_group),
@@ -2010,7 +1988,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Controls",
-        Some("/xrm/grc/control/list"),
+        Some("/xrm/entity/grc_control/list"),
         "las la-check-circle",
         "#0d9488",
         Some(grc_group),
@@ -2025,7 +2003,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Control Matrix",
-        Some("/xrm/grc/control/requirement/list"),
+        Some("/xrm/entity/grc_control_requirement/list"),
         "las la-th-large",
         "#0d9488",
         Some(grc_group),
@@ -2036,7 +2014,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Assessments",
-        Some("/xrm/grc/assessment/list"),
+        Some("/xrm/entity/grc_assessment/list"),
         "las la-clipboard-check",
         "#0d9488",
         Some(grc_group),
@@ -2047,7 +2025,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Findings",
-        Some("/xrm/grc/finding/list"),
+        Some("/xrm/entity/grc_finding/list"),
         "las la-search",
         "#0d9488",
         Some(grc_group),
@@ -2058,7 +2036,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Evidence",
-        Some("/xrm/grc/evidence/list"),
+        Some("/xrm/entity/grc_evidence/list"),
         "las la-folder-open",
         "#0d9488",
         Some(grc_group),
@@ -2069,7 +2047,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Risks",
-        Some("/xrm/grc/risk/list"),
+        Some("/xrm/entity/grc_risk/list"),
         "las la-exclamation-triangle",
         "#0d9488",
         Some(grc_group),
@@ -2083,7 +2061,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Policies",
-        Some("/xrm/grc/policy/list"),
+        Some("/xrm/entity/grc_policy/list"),
         "las la-file-alt",
         "#0d9488",
         Some(grc_group),
@@ -2112,7 +2090,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Authentication Types",
-        Some("/xrm/core/authentication/type/list"),
+        Some("/xrm/entity/authentication_type/list"),
         "las la-key",
         "#64748b",
         Some(master_list_group),
@@ -2134,7 +2112,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Tag Categories",
-        Some("/xrm/tag/category/list"),
+        Some("/xrm/entity/tag_category/list"),
         "las la-list-ul",
         "#f472b6",
         Some(tags_group),
@@ -2145,7 +2123,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     upsert_sidebar(
         db,
         "Tag Items",
-        Some("/xrm/tag/item/list"),
+        Some("/xrm/entity/tag_item/list"),
         // `la-tag` (singular) isn't in the committed Line Awesome subset and
         // has no other literal use in Angular source for
         // `generate:icons`'s scanner to pick up (unlike `la-tags`/`la-list-ul`
@@ -2281,7 +2259,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
             upsert_sidebar(
                 db,
                 "Agents",
-                Some("/xrm/ai/agent/list"),
+                Some("/xrm/entity/ai_agent/list"),
                 "las la-user-astronaut",
                 "#8b5cf6",
                 Some(module_group),
@@ -2292,7 +2270,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
             upsert_sidebar(
                 db,
                 "Models",
-                Some("/xrm/ai/model/list"),
+                Some("/xrm/entity/ai_model/list"),
                 "las la-brain",
                 "#8b5cf6",
                 Some(module_group),
@@ -2303,7 +2281,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
             upsert_sidebar(
                 db,
                 "Providers",
-                Some("/xrm/ai/provider/list"),
+                Some("/xrm/entity/ai_provider/list"),
                 "las la-server",
                 "#8b5cf6",
                 Some(module_group),
@@ -2314,7 +2292,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
             upsert_sidebar(
                 db,
                 "Personalities",
-                Some("/xrm/ai/personality/list"),
+                Some("/xrm/entity/ai_personality/list"),
                 "las la-user-friends",
                 "#8b5cf6",
                 Some(module_group),
@@ -2325,7 +2303,7 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
             upsert_sidebar(
                 db,
                 "Tones",
-                Some("/xrm/ai/tone/list"),
+                Some("/xrm/entity/ai_tone/list"),
                 "las la-comments",
                 "#8b5cf6",
                 Some(module_group),
