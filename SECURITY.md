@@ -13,3 +13,16 @@ you in the release notes unless you prefer otherwise.
 ## Supported versions
 
 Attome has no release yet. Until the first release, fixes go into the `main` branch only.
+
+Once there are releases, the supported ones are each long-term-support release and the latest
+release, as `docs/releases/stability.json` lists them.
+
+## Advisory sweep
+
+With every patch release, and at least monthly, the maintainers run `attome release advisories`,
+which checks every supported release against the Rust and npm advisory databases and writes
+`target/advisories/<date>.json`. A finding that affects a supported release is fixed within:
+
+- **critical**: 7 days;
+- **high**: 30 days;
+- **moderate**: the next patch release.

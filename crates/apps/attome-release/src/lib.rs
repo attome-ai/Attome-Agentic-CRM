@@ -28,6 +28,7 @@
 //! its failure is kept in the report as `overridden` with who and why, and
 //! `format` and `clippy` can never be overridden (they are always fixable).
 
+pub mod advisories;
 mod contract;
 pub mod intake;
 pub mod parity;
@@ -356,6 +357,17 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
             Some([report, matrix]) if report == "report" => Some(slo_report(Path::new(matrix))),
             _ => None,
         },
+        Some("advisories") => Some(
+            match workspace_root().and_then(|root| {
+                advisories::run(&root, &test_flaky::date_from_unix(unix_seconds()))
+            }) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(error) => {
+                    eprintln!("attome release advisories: {error}");
+                    ExitCode::FAILURE
+                }
+            },
+        ),
         Some("stability") => Some(match workspace_root() {
             Ok(root) => match release::stability(&root, &args[1..]) {
                 Ok(()) => ExitCode::SUCCESS,
