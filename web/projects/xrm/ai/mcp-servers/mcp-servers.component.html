@@ -1,0 +1,59 @@
+<section class="mc">
+  <h2>{{ 'aiMcp.title' | translate }}</h2>
+  <p class="mc-muted">{{ 'aiMcp.intro' | translate }}</p>
+  @if (error(); as message) {
+    <p class="mc-error" role="alert">{{ message }}</p>
+  }
+
+  <form class="mc-form" (submit)="$event.preventDefault(); register()">
+    <label for="mc-name">{{ 'aiMcp.name' | translate }}</label>
+    <input #nm id="mc-name" type="text" [value]="newName()" (input)="newName.set(nm.value)" />
+    <label for="mc-url">{{ 'aiMcp.url' | translate }}</label>
+    <input #ur id="mc-url" type="url" dir="ltr" [value]="newUrl()" (input)="newUrl.set(ur.value)" />
+    <label for="mc-token">{{ 'aiMcp.token' | translate }}</label>
+    <input #tk id="mc-token" type="password" autocomplete="off" [value]="newToken()" (input)="newToken.set(tk.value)" />
+    <label class="mc-check">
+      <input #ex type="checkbox" [checked]="newExternal()" (change)="newExternal.set(ex.checked)" />
+      {{ 'aiMcp.external' | translate }}
+    </label>
+    <button type="submit" [disabled]="busy() || !newName().trim() || !newUrl().trim()">{{ 'aiMcp.register' | translate }}</button>
+  </form>
+
+  @if (servers().length === 0) {
+    <p class="mc-muted">{{ 'aiMcp.none' | translate }}</p>
+  }
+  @for (server of servers(); track server.id) {
+    <article class="mc-server" [attr.data-server]="server.id">
+      <header>
+        <strong>{{ server.name }}</strong>
+        <code dir="ltr">{{ server.url }}</code>
+        <button type="button" [disabled]="busy()" (click)="importTools(server)">{{ 'aiMcp.import' | translate }}</button>
+        <button type="button" (click)="loadTools(server)">{{ 'aiMcp.showTools' | translate }}</button>
+      </header>
+      @if (tools()[server.id]; as list) {
+        <ul class="mc-tools">
+          @for (tool of list; track tool.id) {
+            <li [attr.data-tool]="tool.name" [class.mc-off]="!tool.is_enabled">
+              <code dir="ltr">{{ tool.name }}</code>
+              @if (tool.description) {
+                <blockquote class="mc-untrusted">
+                  <span class="mc-label">{{ 'aiMcp.serverSays' | translate }}</span>
+                  {{ tool.description }}
+                </blockquote>
+              }
+              <select #tier [attr.aria-label]="'aiMcp.tier' | translate" (change)="setTool(server, tool, tier.value, tool.is_enabled)">
+                @for (t of tiers; track t) {
+                  <option [value]="t" [selected]="tool.risk === t">{{ ('aiMcp.tiers.' + t) | translate }}</option>
+                }
+              </select>
+              <label class="mc-check">
+                <input #on type="checkbox" [checked]="tool.is_enabled" (change)="setTool(server, tool, tool.risk, on.checked)" />
+                {{ 'aiMcp.enabled' | translate }}
+              </label>
+            </li>
+          }
+        </ul>
+      }
+    </article>
+  }
+</section>

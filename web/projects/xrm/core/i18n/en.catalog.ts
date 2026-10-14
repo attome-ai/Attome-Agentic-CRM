@@ -176,6 +176,14 @@ export const xrmEn = {
     share: 'Share of users (1 to 100)', save: 'Save draft', publish: 'Publish', saved: 'Draft saved', published: 'Published',
     tryOn: 'Try on a record', entity: 'Entity', record: 'Record id', show: 'Show what the model receives',
   },
+  // N13-T1 — outside MCP servers.
+  aiMcp: {
+    title: 'Outside tools (MCP)', intro: 'Servers whose tools agents may use. Imported tools start off; read each description (it comes from the server), choose its tier and enable it.',
+    name: 'Name', url: 'Server URL', token: 'Access token (optional)', external: 'Outside this network', register: 'Register',
+    none: 'No servers yet.', import: 'Import tools', showTools: 'Show tools', serverSays: 'The server describes it as:',
+    tier: 'Tier', enabled: 'Enabled',
+    tiers: { read: 'Read: runs freely', reversible: 'Reversible: a person confirms', consequential: 'Consequential: a second person approves' },
+  },
   // N31-T2 — the AI status page.
   aiStatus: {
     title: 'AI status', model: 'Model', approved: 'approved', notApproved: 'not approved: generation is refused',

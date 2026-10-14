@@ -8,6 +8,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- The outside-tools screen (`/ai/mcp`): register MCP servers, import their tools, set each tier.
 - Outside MCP servers for agents (`/api/v1/admin/mcp-servers`, migration 0019): imported tools arrive
   disabled; an administrator sets each tier; agents list them with `mcp.tools` and call them with
   `mcp.call.read|reversible|consequential` through the dial guard.
