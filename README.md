@@ -63,6 +63,15 @@ password the install prints.
 Both install the `crm` pack (accounts, contacts, leads, opportunities and activities); choose others
 with `--packs crm,sales` (Linux) or `-Packs crm,sales` (Windows), or none with an empty list. A pack
 is applied at every start through the changeset ledger, so starting again changes nothing.
+`packs/README.md` lists the packs, including `library-core` (the MENA base entities).
+
+## Agents and AI
+
+AI is optional and local by default: run the model servers in
+[`docs/model-servers.md`](docs/model-servers.md), approve the model, and the assistant, record
+summaries, translation, AI fields and agents switch on. [`docs/agents.md`](docs/agents.md) covers
+defining agents, what they may do (writes always need a person; consequential ones a second person),
+their tools, delegation between agents, money budgets and the safety checks around the model.
 
 ## Building and running
 
