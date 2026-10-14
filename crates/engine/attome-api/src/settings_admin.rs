@@ -418,6 +418,8 @@ struct ThemeTokensBody {
 struct PublicBranding {
     variables: std::collections::BTreeMap<String, String>,
     hide_vendor_name: bool,
+    /// The product name to show, when the theme sets one.
+    app_name: Option<String>,
     /// `/api/v1/branding/asset?kind=logo&v=…` when a logo is published.
     logo_url: Option<String>,
     logo_dark_url: Option<String>,
@@ -983,6 +985,7 @@ fn branding_response(
     let body = PublicBranding {
         variables: attome_core::theme_tokens::to_css_variables(&tokens),
         hide_vendor_name: tokens.hide_vendor_name.unwrap_or(false),
+        app_name: tokens.app_name.clone(),
         logo_url: url("logo"),
         logo_dark_url: url("logo_dark"),
         favicon_url: url("favicon"),

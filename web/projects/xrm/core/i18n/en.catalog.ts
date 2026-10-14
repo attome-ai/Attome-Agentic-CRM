@@ -185,7 +185,7 @@ export const xrmEn = {
     note: 'This server only, since it last started. Highlighted rows have a p95 of 500 ms or more.',
   },
   brandingPage: {
-    title: 'Branding', colours: 'Colours', radius: 'Corner radius (px)',
+    title: 'Branding', colours: 'Colours', radius: 'Corner radius (px)', appName: 'Product name',
     hideVendor: 'Hide the Attome name', previewTitle: 'Preview',
     previewText: 'Body text on the surface colour.', previewButton: 'Primary button', previewLink: 'Accent link',
     contrastPass: 'Every colour pair reads clearly.',

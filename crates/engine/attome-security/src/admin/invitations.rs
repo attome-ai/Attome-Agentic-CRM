@@ -198,7 +198,13 @@ pub(super) async fn create_invitation(
     );
 
     if state.base.config.email.enabled {
-        let (subject, text_body, html_body) = attome_email::templates::invitation(&register_link);
+        let brand = attome_core::theme_store::email_brand(
+            &state.base.db,
+            &state.base.config.frontend_url(),
+        )
+        .await;
+        let (subject, text_body, html_body) =
+            attome_email::templates::invitation(&register_link, &brand);
         let delivery_id = Uuid::now_v7();
         attome_email::delivery::record_queued_in_tx(
             &mut tx,

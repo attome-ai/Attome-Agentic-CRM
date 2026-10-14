@@ -18,6 +18,10 @@
         </label>
       }
       <label class="br-colour">
+        <span>{{ 'brandingPage.appName' | translate }}</span>
+        <input #appName type="text" maxlength="60" [value]="tokens().app_name ?? ''" (change)="setAppName(appName.value)" />
+      </label>
+      <label class="br-colour">
         <span>{{ 'brandingPage.radius' | translate }}</span>
         <input #radius type="number" min="0" max="24" [value]="tokens().radius_px ?? ''" (change)="setRadius(radius.value)" />
       </label>

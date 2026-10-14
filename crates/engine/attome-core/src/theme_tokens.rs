@@ -90,6 +90,9 @@ pub struct ThemeTokens {
     pub radius_px: Option<u8>,
     pub density: Option<Density>,
     pub hide_vendor_name: Option<bool>,
+    /// The product name shown in emails and the browser, such as "Acme CRM"
+    /// (at most 60 characters).
+    pub app_name: Option<String>,
 }
 
 /// One pair that reads too faintly, or two status colours too alike.
@@ -209,6 +212,7 @@ pub fn merge(base: &ThemeTokens, over: &ThemeTokens) -> ThemeTokens {
         radius_px: over.radius_px.or(base.radius_px),
         density: over.density.or(base.density),
         hide_vendor_name: over.hide_vendor_name.or(base.hide_vendor_name),
+        app_name: pick(&over.app_name, &base.app_name),
     }
 }
 

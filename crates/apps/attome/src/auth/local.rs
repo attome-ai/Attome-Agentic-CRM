@@ -263,7 +263,10 @@ pub(super) async fn register(
             state.config.frontend_url(),
             issued.bearer
         );
-        let (subject, text_body, html_body) = attome_email::templates::email_verification(&link);
+        let brand =
+            attome_core::theme_store::email_brand(&state.db, &state.config.frontend_url()).await;
+        let (subject, text_body, html_body) =
+            attome_email::templates::email_verification(&link, &brand);
         let delivery_id = Uuid::now_v7();
         attome_email::delivery::record_queued_in_tx(
             &mut tx,
@@ -867,7 +870,10 @@ pub(super) async fn reset_request(
             state.config.frontend_url(),
             issued.bearer
         );
-        let (subject, text_body, html_body) = attome_email::templates::password_reset(&link);
+        let brand =
+            attome_core::theme_store::email_brand(&state.db, &state.config.frontend_url()).await;
+        let (subject, text_body, html_body) =
+            attome_email::templates::password_reset(&link, &brand);
         let delivery_id = Uuid::now_v7();
         attome_email::delivery::record_queued_in_tx(
             &mut tx,

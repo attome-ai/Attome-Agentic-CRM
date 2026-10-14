@@ -9,6 +9,7 @@ import { ThemeService } from './theme.service';
 export interface Branding {
   variables: Record<string, string>;
   hide_vendor_name: boolean;
+  app_name?: string | null;
   font_latin?: string | null;
   font_arabic?: string | null;
   logo_url?: string | null;

@@ -143,7 +143,7 @@ export const xrmAr = {
     tryOn: 'جرّبها على سجل', entity: 'الكيان', record: 'معرّف السجل', show: 'اعرض ما يتلقاه النموذج',
   },
   brandingPage: {
-    title: 'الهوية البصرية', colours: 'الألوان', radius: 'استدارة الزوايا (بكسل)',
+    title: 'الهوية البصرية', colours: 'الألوان', radius: 'استدارة الزوايا (بكسل)', appName: 'اسم المنتج',
     hideVendor: 'إخفاء اسم Attome', previewTitle: 'معاينة',
     previewText: 'نص على لون السطح.', previewButton: 'زر أساسي', previewLink: 'رابط مميز',
     contrastPass: 'كل أزواج الألوان مقروءة بوضوح.',

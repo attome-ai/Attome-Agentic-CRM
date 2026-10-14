@@ -18,6 +18,7 @@ export interface ThemeTokens extends Partial<Record<ColourToken, string>> {
   radius_px?: number;
   density?: 'comfortable' | 'compact';
   hide_vendor_name?: boolean;
+  app_name?: string;
 }
 
 /** `attome_core::theme_store::ThemeRow`. */
@@ -128,6 +129,13 @@ export class BrandingComponent implements OnInit {
     const n = Number(value);
     const next = { ...this.tokens() };
     if (value === '' || !Number.isInteger(n) || n < 0 || n > 24) delete next.radius_px; else next.radius_px = n;
+    this.setTokens(next);
+  }
+
+  setAppName(value: string): void {
+    const name = value.trim();
+    const next = { ...this.tokens() };
+    if (name === '') delete next.app_name; else next.app_name = name.slice(0, 60);
     this.setTokens(next);
   }
 

@@ -40,6 +40,56 @@ pub struct ThemeRow {
 const COLUMNS: &str =
     "id, scope_kind, scope_ref, version, status, tokens, created_at, published_at, row_version";
 
+/// A theme's text tokens: an app name of 1 to 60 characters with no
+/// control characters.
+fn check_text(tokens: &ThemeTokens) -> Result<(), AppError> {
+    if let Some(name) = &tokens.app_name {
+        let n = name.trim().chars().count();
+        if n == 0 || n > 60 || name.chars().any(char::is_control) {
+            return Err(AppError::Validation(
+                "app_name is 1 to 60 characters with no control characters".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// B13-T10: the deployment's published brand for an email: its app name,
+/// logo (an absolute URL under `base_url`) and primary colour. A failure to
+/// read it is logged and gives the plain email; branding never stops a
+/// password reset.
+pub async fn email_brand(
+    db: &attome_db::DbPool,
+    base_url: &str,
+) -> attome_email::templates::BrandContext {
+    let scope = BrandScope::default();
+    let tokens = match resolve(db, scope).await {
+        Ok((tokens, _)) => tokens,
+        Err(error) => {
+            tracing::warn!(%error, "brand for an email unavailable; sending it unbranded");
+            return attome_email::templates::BrandContext::default();
+        }
+    };
+    let logo = match published_assets(db, scope).await {
+        Ok(assets) => assets.into_iter().find(|a| a.kind == "logo"),
+        Err(error) => {
+            tracing::warn!(%error, "brand logo for an email unavailable; sending it without");
+            None
+        }
+    };
+    attome_email::templates::BrandContext {
+        app_name: tokens.app_name,
+        logo_url: logo.map(|a| {
+            let short = a.sha256.get(..12).unwrap_or(&a.sha256);
+            format!(
+                "{}/api/v1/branding/asset?kind=logo&v={short}",
+                base_url.trim_end_matches('/')
+            )
+        }),
+        primary: tokens.primary.map(|p| p.as_str().to_owned()),
+    }
+}
+
 fn check_scope(scope_kind: &str, scope_ref: &str) -> Result<(), AppError> {
     if !SCOPE_KINDS.contains(&scope_kind) {
         return Err(AppError::Validation(format!(
@@ -69,6 +119,7 @@ pub async fn save_draft(
     actor: Uuid,
 ) -> Result<ThemeRow, AppError> {
     check_scope(scope_kind, scope_ref)?;
+    check_text(tokens)?;
     let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
         .bind(crate::ADVISORY_LOCK_NAMESPACE)
         .bind(format!(
@@ -136,6 +187,7 @@ pub async fn update_draft(
     expected_row_version: i64,
     tokens: &ThemeTokens,
 ) -> Result<ThemeRow, AppError> {
+    check_text(tokens)?;
     let row: Option<ThemeRow> = sqlx::query_as(&format!(
         "UPDATE theme SET tokens = $3, row_version = row_version + 1 \
          WHERE id = $1 AND row_version = $2 AND status = 'draft' RETURNING {COLUMNS}"

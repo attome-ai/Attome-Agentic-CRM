@@ -251,8 +251,13 @@ async fn resend_delivery(
                 state.base.config.frontend_url(),
                 issued.bearer
             );
+            let brand = attome_core::theme_store::email_brand(
+                &state.base.db,
+                &state.base.config.frontend_url(),
+            )
+            .await;
             let (subject, text_body, html_body) =
-                attome_email::templates::email_verification(&link);
+                attome_email::templates::email_verification(&link, &brand);
             (subject, text_body, html_body, Some(user_id), None)
         }
         EmailDeliveryKind::PasswordReset => {
@@ -271,7 +276,13 @@ async fn resend_delivery(
                 state.base.config.frontend_url(),
                 issued.bearer
             );
-            let (subject, text_body, html_body) = attome_email::templates::password_reset(&link);
+            let brand = attome_core::theme_store::email_brand(
+                &state.base.db,
+                &state.base.config.frontend_url(),
+            )
+            .await;
+            let (subject, text_body, html_body) =
+                attome_email::templates::password_reset(&link, &brand);
             (subject, text_body, html_body, Some(issued.user_id), None)
         }
         EmailDeliveryKind::Invitation => {
@@ -288,7 +299,13 @@ async fn resend_delivery(
                 state.base.config.frontend_url(),
                 issued.bearer
             );
-            let (subject, text_body, html_body) = attome_email::templates::invitation(&link);
+            let brand = attome_core::theme_store::email_brand(
+                &state.base.db,
+                &state.base.config.frontend_url(),
+            )
+            .await;
+            let (subject, text_body, html_body) =
+                attome_email::templates::invitation(&link, &brand);
             (subject, text_body, html_body, None, row.created_by)
         }
         EmailDeliveryKind::Generic => {
