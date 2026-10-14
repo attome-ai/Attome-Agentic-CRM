@@ -772,8 +772,12 @@ pub async fn run(
     // `CapabilityUnavailable`, not a masked 500: a deployment that never
     // configured an inference endpoint is an operator-actionable state, and
     // the message must not carry the provider's own error text.
-    let client = crate::inference_client::generation_client(&state.base.config)
-        .map_err(|_| AppError::CapabilityUnavailable("inference"))?;
+    // N25-T1: the model `inference.task_models` routes chat and agent turns
+    // to, or the configured endpoint.
+    let client =
+        crate::inference_client::client_for(state, crate::budget_guard::AGENT_TURN_FEATURE)
+            .await
+            .map_err(|_| AppError::CapabilityUnavailable("inference"))?;
     outcome.model_id = Some(client.model_id().to_owned());
 
     // I-10 is one-way for the whole turn: once tool-obtained text has

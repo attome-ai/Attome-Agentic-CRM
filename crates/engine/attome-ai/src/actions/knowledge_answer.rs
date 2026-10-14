@@ -294,11 +294,7 @@ impl Action for KnowledgeAnswer {
             }
 
             // An unconfigured model is dark, as for `record.summarize`.
-            let client =
-                crate::inference_client::generation_client(&state.base.config).map_err(|e| {
-                    tracing::warn!(error = %e, "generation client unavailable");
-                    AppError::NotFound
-                })?;
+            let client = crate::inference_client::client_for(state, KNOWLEDGE_ANSWER).await?;
 
             // The one enforcement point, as the caller (D-498 ruling 1), bound
             // by the session's knowledge scope inside retrieval (D-512 §7).

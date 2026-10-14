@@ -168,11 +168,7 @@ impl Action for RecordAiField {
             let fields = referenced_fields(&prompt);
             let data = data_for(record.data(), &fields);
 
-            let client =
-                crate::inference_client::generation_client(&state.base.config).map_err(|e| {
-                    tracing::warn!(error = %e, "generation client unavailable");
-                    AppError::NotFound
-                })?;
+            let client = crate::inference_client::client_for(state, RECORD_AI_FIELD).await?;
             crate::model_registry::require_approved_model(
                 &state.base.db,
                 client.model_id(),

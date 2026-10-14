@@ -29,6 +29,86 @@ pub fn generation_client(config: &Arc<AppConfig>) -> Result<GenerationClient, In
     })
 }
 
+/// The generation client a task runs on (N25-T1): the catalogue model
+/// `inference.task_models` names for it, reached through that model's
+/// provider, or `inference.generation` when none is named.
+///
+/// A routed model must be live in the catalogue and its provider must speak
+/// `openai-completions` (one wire format, D-554); its endpoint passes the same
+/// reachability rules and dialler as model discovery
+/// (`provider_models::http_client_for`). Whether the model is approved is
+/// the caller's check, as for every generation
+/// (`model_registry::require_approved_model` on `client.model_id()`). Any
+/// failure is `NotFound`, the dark shape every unavailable model takes.
+pub async fn client_for(
+    state: &attome_core::EngineState,
+    task: &str,
+) -> Result<GenerationClient, attome_types::AppError> {
+    use attome_types::AppError;
+    let inference = &state.base.config.inference;
+    let Some(model) = inference.task_models.get(task).copied() else {
+        return generation_client(&state.base.config).map_err(|e| {
+            tracing::warn!(error = %e, task, "generation client unavailable");
+            AppError::NotFound
+        });
+    };
+    let row: Option<(Option<uuid::Uuid>, Option<String>)> = sqlx::query_as(
+        "SELECT provider_ref, provider_model_id FROM ai_model \
+         WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+    )
+    .bind(model)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let (Some(provider_id), Some(provider_model_id)) = row.unwrap_or((None, None)) else {
+        tracing::warn!(task, %model, "routed model is missing, inactive or has no provider");
+        return Err(AppError::NotFound);
+    };
+    let provider = crate::provider::load(&state.base.db, provider_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    crate::actions::agent_playground::require_chat_completions(provider.api_protocol.as_deref())?;
+    let base_url = provider
+        .endpoint_url
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or(AppError::NotFound)?
+        .to_owned();
+    let ring = state.base.secrets.load().ai_provider_credential_key.clone();
+    let api_key = crate::provider_credential::resolve(
+        &state.base.db,
+        &ring,
+        provider.credential_ref.as_deref(),
+    )
+    .await?;
+    let timeout_secs = match inference.generation.request_timeout_secs {
+        0 => 60,
+        configured => configured,
+    };
+    let http = crate::provider_models::http_client_for(
+        &base_url,
+        inference,
+        provider.allow_external_endpoint.unwrap_or(false),
+        timeout_secs,
+    )
+    .await?;
+    GenerationClient::for_endpoint(
+        attome_config::InferenceEndpoint {
+            base_url,
+            model: provider_model_id.trim().to_owned(),
+            api_key,
+            request_timeout_secs: timeout_secs,
+        },
+        inference.max_output_tokens,
+        http,
+    )
+    .map_err(|e| {
+        tracing::warn!(error = %e, task, "routed generation client unavailable");
+        AppError::NotFound
+    })
+}
+
 fn cached<K, C: Clone, E>(
     slot: &Slot<K, C>,
     key: &Arc<K>,

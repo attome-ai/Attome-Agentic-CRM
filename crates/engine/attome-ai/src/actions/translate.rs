@@ -219,11 +219,7 @@ impl Action for TextTranslate {
                 &args.glossary,
             );
 
-            let client =
-                crate::inference_client::generation_client(&state.base.config).map_err(|e| {
-                    tracing::warn!(error = %e, "generation client unavailable");
-                    AppError::NotFound
-                })?;
+            let client = crate::inference_client::client_for(state, TEXT_TRANSLATE).await?;
             // D-435: the model-registry check, before the cache too, so a
             // withdrawn model serves nothing.
             crate::model_registry::require_approved_model(

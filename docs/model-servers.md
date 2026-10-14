@@ -31,6 +31,16 @@ Before the first generation, add the model to the AI model catalogue (`ai_model`
 not approved. Give it an `input_cost` and `output_cost` per million tokens if money budgets
 (`inference.spend`) should count it.
 
+To run one task on another approved model (a small fast one for classification, a larger one
+for answers), name it per action id; `agent.turn` covers chat and agent turns:
+
+```json
+"inference": { "task_models": { "record.classify": "<ai_model id>", "agent.turn": "<ai_model id>" } }
+```
+
+The model's provider must use the `openai-completions` protocol; its Base URL and key come from the
+provider record.
+
 An endpoint outside this machine or its private network is refused at boot unless
 `inference.allow_external_provider` is true; an outside embedding endpoint is always refused.
 Pin the images by digest for production.

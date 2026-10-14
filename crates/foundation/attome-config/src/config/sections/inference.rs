@@ -145,6 +145,7 @@ impl std::fmt::Debug for InferenceSection {
             )
             .field("spend", &self.spend)
             .field("translation", &self.translation)
+            .field("task_models", &self.task_models)
             .finish()
     }
 }
@@ -269,6 +270,12 @@ pub struct InferenceSection {
     /// N20-T1 — the deployment's translation glossary.
     #[serde(default)]
     pub translation: TranslationSection,
+
+    /// N25-T1 — which approved catalogue model (`ai_model` id) a task runs
+    /// on, by action id (or `agent.turn` for chat and agent turns). A task
+    /// not listed runs on `generation`.
+    #[serde(default)]
+    pub task_models: std::collections::BTreeMap<String, uuid::Uuid>,
 }
 
 /// D-489 — the canonical KB article, so the case→draft loop runs unconfigured.
@@ -297,6 +304,7 @@ impl Default for InferenceSection {
             knowledge_article_data_source: None,
             spend: SpendSection::default(),
             translation: TranslationSection::default(),
+            task_models: std::collections::BTreeMap::new(),
         }
     }
 }

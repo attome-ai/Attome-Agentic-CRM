@@ -336,14 +336,7 @@ impl Action for RecordSummarize {
                 super::summary_context::gather(state, &ctx.security, &args.entity, args.record_id)
                     .await?;
 
-            let client =
-                crate::inference_client::generation_client(&state.base.config).map_err(|e| {
-                    tracing::warn!(error = %e, "generation client unavailable");
-                    // NotFound, not ServiceUnavailable: an unconfigured model is
-                    // indistinguishable from an unlicensed one to a caller, the
-                    // same dark shape the license and kill-switch gates use.
-                    AppError::NotFound
-                })?;
+            let client = crate::inference_client::client_for(state, RECORD_SUMMARIZE).await?;
 
             let started = std::time::Instant::now();
             let language = args

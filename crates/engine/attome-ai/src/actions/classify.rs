@@ -275,13 +275,7 @@ impl Action for RecordClassify {
             )
             .await?;
 
-            let client =
-                crate::inference_client::generation_client(&state.base.config).map_err(|e| {
-                    tracing::warn!(error = %e, "generation client unavailable");
-                    // NotFound, not ServiceUnavailable — same dark shape as
-                    // record.summarize's own client-construction failure.
-                    AppError::NotFound
-                })?;
+            let client = crate::inference_client::client_for(state, RECORD_CLASSIFY).await?;
 
             let started = std::time::Instant::now();
             let facts = serde_json::to_string(record.data())
