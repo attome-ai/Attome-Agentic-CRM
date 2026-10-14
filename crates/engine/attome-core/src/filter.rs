@@ -70,7 +70,9 @@ pub struct Filter {
     /// any of a non-empty string array by typed equality (not valid for a
     /// multi-select Choice). `is_null` takes no value and matches a stored
     /// NULL — the only way to express a NULL bucket (dashboard 10/10 Phase 0
-    /// spike S1).
+    /// spike S1). `under` and `above` (A17-T2) take a record id for a lookup
+    /// into a tree (an entity with one parent lookup to itself) and match
+    /// that record and everything below it, or above it, up to 32 levels.
     #[schema(example = "eq")]
     pub op: String,
     /// Scalar filters retain the v1 string contract. Multi-select Choice
@@ -198,7 +200,27 @@ pub trait FilterSchema {
         let _ = field;
         false
     }
+
+    /// A17-T2: the tree a lookup `field` points into, for `under` and
+    /// `above`: the target entity's logical name and its self-referencing
+    /// parent field. `None` (the default) refuses those operators.
+    fn hierarchy(&self, field: &str) -> Option<Hierarchy> {
+        let _ = field;
+        None
+    }
 }
+
+/// A tree of records: `table` (an entity's logical name) whose `parent`
+/// lookup points at the same table.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Hierarchy {
+    pub table: String,
+    pub parent: String,
+}
+
+/// How deep `under` and `above` walk a tree. A cycle in bad data stops here
+/// instead of looping.
+pub const MAX_HIERARCHY_DEPTH: u32 = 32;
 
 /// The `field_type_int` -> cast lookup for any [`FilterSchema`] whose
 /// whitelist is keyed by [`AttrInfo`] (every migrated caller except
@@ -268,6 +290,44 @@ pub fn compile(
 
     match filter.op.as_str() {
         "is_null" => Ok((format!("{field_sql} IS NULL"), Vec::new())),
+        // A17-T2: the record's lookup is the given node or below it (`under`),
+        // or the node or above it (`above`), in the target's own tree.
+        op @ ("under" | "above") => {
+            let tree = schema.hierarchy(&filter.field).ok_or_else(|| {
+                AppError::Validation(format!(
+                    "{op} needs a lookup to an entity with a parent field: {}",
+                    filter.field
+                ))
+            })?;
+            let value = scalar_filter_value(filter)?;
+            if uuid::Uuid::parse_str(value).is_err() {
+                return Err(AppError::Validation(format!(
+                    "{op} needs a record id for field: {}",
+                    filter.field
+                )));
+            }
+            let table = quote_ident(&tree.table);
+            let parent = quote_ident(&tree.parent);
+            let depth = MAX_HIERARCHY_DEPTH;
+            let walk = if op == "under" {
+                format!(
+                    "WITH RECURSIVE h(id, depth) AS ( \
+                       SELECT id, 0 FROM {table} WHERE id = ${n}::uuid \
+                       UNION ALL \
+                       SELECT c.id, h.depth + 1 FROM {table} c JOIN h ON c.{parent} = h.id \
+                       WHERE h.depth < {depth}) SELECT id FROM h"
+                )
+            } else {
+                format!(
+                    "WITH RECURSIVE h(id, up, depth) AS ( \
+                       SELECT id, {parent}, 0 FROM {table} WHERE id = ${n}::uuid \
+                       UNION ALL \
+                       SELECT p.id, p.{parent}, h.depth + 1 FROM {table} p JOIN h ON p.id = h.up \
+                       WHERE h.depth < {depth}) SELECT id FROM h"
+                )
+            };
+            Ok((format!("{field_sql} IN ({walk})"), vec![value.to_owned()]))
+        }
         "is_not_null" => Ok((format!("{field_sql} IS NOT NULL"), Vec::new())),
         "in" if is_multi_choice => Err(AppError::Validation(format!(
             "in is not valid for a multi-select Choice field: {}; use contains_any",
@@ -915,5 +975,58 @@ mod proptests {
             };
             prop_assert!(compile(&filter, &schema, 1).is_err());
         }
+    }
+
+    struct TreeSchema;
+
+    impl FilterSchema for TreeSchema {
+        fn cast(&self, field: &str) -> Result<&'static str, FieldCastError> {
+            match field {
+                "account_ref" | "name" => Ok(if field == "name" { "text" } else { "uuid" }),
+                _ => Err(FieldCastError::Unknown),
+            }
+        }
+
+        fn hierarchy(&self, field: &str) -> Option<Hierarchy> {
+            (field == "account_ref").then(|| Hierarchy {
+                table: "account".into(),
+                parent: "parent_account_ref".into(),
+            })
+        }
+    }
+
+    #[test]
+    fn under_and_above_walk_the_target_tree() {
+        let id = uuid::Uuid::nil().to_string();
+        let under = Filter {
+            field: "account_ref".into(),
+            op: "under".into(),
+            value: Some(Value::String(id.clone())),
+        };
+        let (sql, binds) = compile(&under, &TreeSchema, 3).unwrap();
+        assert!(
+            sql.starts_with("\"account_ref\" IN (WITH RECURSIVE"),
+            "{sql}"
+        );
+        assert!(sql.contains("c.\"parent_account_ref\" = h.id"), "{sql}");
+        assert!(sql.contains("$3::uuid"), "{sql}");
+        assert_eq!(binds.len(), 1);
+        let above = Filter {
+            op: "above".into(),
+            ..under.clone()
+        };
+        let (sql, _) = compile(&above, &TreeSchema, 1).unwrap();
+        assert!(sql.contains("p.id = h.up"), "{sql}");
+        // Not a tree, or not an id: refused.
+        let no_tree = Filter {
+            field: "name".into(),
+            ..under.clone()
+        };
+        assert!(compile(&no_tree, &TreeSchema, 1).is_err());
+        let not_id = Filter {
+            value: Some(Value::String("x".into())),
+            ..under
+        };
+        assert!(compile(&not_id, &TreeSchema, 1).is_err());
     }
 }

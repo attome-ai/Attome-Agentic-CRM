@@ -852,6 +852,40 @@ fn table_definition_names(td: &Value) -> Option<Vec<String>> {
 struct QueryExecFilterSchema<'a> {
     columns: &'a [ColumnDef],
     multi_choice: &'a std::collections::HashSet<String>,
+    /// A17-T2: the tree each lookup column points into, when its target has
+    /// exactly one self-referencing lookup.
+    hierarchies: std::collections::HashMap<String, attome_core::filter::Hierarchy>,
+}
+
+/// A17-T2: for each lookup column, the target entity's tree, when it has one
+/// self-referencing parent lookup.
+fn lookup_hierarchies(
+    columns: &[ColumnDef],
+    registry: &attome_core::EntityMetaRegistry,
+) -> std::collections::HashMap<String, attome_core::filter::Hierarchy> {
+    let mut out = std::collections::HashMap::new();
+    for column in columns {
+        let Some(target) = column.lookup_target_entity.as_deref() else {
+            continue;
+        };
+        let Some(meta) = registry.get(target) else {
+            continue;
+        };
+        let mut parents = meta
+            .attrs
+            .iter()
+            .filter(|a| a.field_type_int == 11 && a.lookup_entity_ref == Some(meta.entity_id));
+        if let (Some(parent), None) = (parents.next(), parents.next()) {
+            out.insert(
+                column.name.clone(),
+                attome_core::filter::Hierarchy {
+                    table: meta.logicalname.clone(),
+                    parent: parent.logicalname.clone(),
+                },
+            );
+        }
+    }
+    out
 }
 
 impl FilterSchema for QueryExecFilterSchema<'_> {
@@ -866,6 +900,10 @@ impl FilterSchema for QueryExecFilterSchema<'_> {
 
     fn is_multi_choice(&self, field: &str) -> bool {
         self.multi_choice.contains(field)
+    }
+
+    fn hierarchy(&self, field: &str) -> Option<attome_core::filter::Hierarchy> {
+        self.hierarchies.get(field).cloned()
     }
 }
 
@@ -1632,6 +1670,7 @@ pub async fn execute_stored_query_with_definition(
     let filter_schema = QueryExecFilterSchema {
         columns: &validation_columns,
         multi_choice: &multi_choice_fields,
+        hierarchies: lookup_hierarchies(&validation_columns, &state.entities.load()),
     };
     for f in &body.filters {
         if !whitelist.contains(&f.field) {
@@ -2281,6 +2320,7 @@ mod contract_tests {
         let schema = QueryExecFilterSchema {
             columns: &columns,
             multi_choice: &multi_choice,
+            hierarchies: std::collections::HashMap::new(),
         };
         assert_eq!(FilterSchema::cast(&schema, "amount"), Ok("numeric"));
         assert_eq!(FilterSchema::cast(&schema, "name"), Ok("text"));
@@ -2293,6 +2333,7 @@ mod contract_tests {
         let schema = QueryExecFilterSchema {
             columns: &columns,
             multi_choice: &multi_choice,
+            hierarchies: std::collections::HashMap::new(),
         };
         assert_eq!(
             FilterSchema::cast(&schema, "ssn"),
@@ -2307,6 +2348,7 @@ mod contract_tests {
         let schema = QueryExecFilterSchema {
             columns: &columns,
             multi_choice: &multi_choice,
+            hierarchies: std::collections::HashMap::new(),
         };
         assert!(FilterSchema::is_multi_choice(&schema, "tags"));
         assert!(!FilterSchema::is_multi_choice(&schema, "amount"));
@@ -2378,7 +2420,7 @@ mod proptests {
                 choice_styles: None,
             }];
             let multi_choice = std::collections::HashSet::new();
-            let schema = QueryExecFilterSchema { columns: &columns, multi_choice: &multi_choice };
+            let schema = QueryExecFilterSchema { columns: &columns, multi_choice: &multi_choice, hierarchies: Default::default() };
             prop_assert_eq!(
                 FilterSchema::cast(&schema, &field).is_ok(),
                 parameter_cast(&data_type).is_some()
@@ -2411,7 +2453,7 @@ mod proptests {
                 })
                 .collect();
             let multi_choice = std::collections::HashSet::new();
-            let schema = QueryExecFilterSchema { columns: &columns, multi_choice: &multi_choice };
+            let schema = QueryExecFilterSchema { columns: &columns, multi_choice: &multi_choice, hierarchies: Default::default() };
             prop_assert!(FilterSchema::cast(&schema, &probe).is_err());
         }
 
