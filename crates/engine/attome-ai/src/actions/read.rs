@@ -261,6 +261,14 @@ impl Action for RecordGet {
 
 struct RecordSummarize;
 
+/// A finished summary as the cache keeps it (`summary_context`'s module doc).
+#[derive(serde::Serialize, serde::Deserialize)]
+struct CachedSummary {
+    summary: String,
+    truncated: bool,
+    model_id: String,
+}
+
 /// Bumped whenever the prompt below changes in a way that could move output
 /// quality. Stamped on every suggestion and stored with its outcome, so
 /// "quality dropped after we changed the prompt" is a query rather than a
@@ -270,7 +278,8 @@ struct RecordSummarize;
 /// `pub(crate)`, not private: `crate::prompt_registry` (D-435's read-only
 /// `/admin/ai/prompts` surface) lists every shipped `prompt_version` and
 /// needs to name this one without a second copy of the string.
-pub(crate) const SUMMARIZE_PROMPT_VERSION: &str = "record.summarize/v1";
+/// v2 (N2-T1): the context carries related records and the timeline.
+pub(crate) const SUMMARIZE_PROMPT_VERSION: &str = "record.summarize/v2";
 
 /// The system instruction. A function, not an inline `format!`, so the
 /// untrusted-content boundary it declares can be asserted directly rather than
@@ -281,7 +290,7 @@ pub(crate) const SUMMARIZE_PROMPT_VERSION: &str = "record.summarize/v1";
 /// surface.
 pub(crate) fn summarize_system_prompt(language: &str) -> String {
     format!(
-        "You summarise CRM records for a business user. Write in {language}. Be factual and concise; state only what the record contains. If the record is empty or uninformative, say so rather than inventing detail."
+        "You summarise CRM records for a business user. Write in {language}. The record may come with the records it is related to and its timeline, newest first; say where it stands now and what happened recently. Be factual and concise; state only what the given content contains. If it is empty or uninformative, say so rather than inventing detail."
     )
 }
 
@@ -338,8 +347,78 @@ impl Action for RecordSummarize {
                 .language
                 .as_deref()
                 .unwrap_or("the record's own language");
-            let facts = serde_json::to_string(record.data())
-                .map_err(|e| AppError::internal(format!("record serialization failed: {e}")))?;
+            // N2-T1: the record, the records it points to and its recent
+            // timeline, each already filtered by the caller's grants
+            // (`summary_context`'s module doc). The timeline is context, not
+            // the record: a failure to read it degrades to a summary of the
+            // record alone.
+            let timeline = attome_records::entity_crud::timeline::record_timeline(
+                state,
+                &ctx.security,
+                &args.entity,
+                args.record_id,
+                &attome_records::entity_crud::timeline::TimelineOptions {
+                    page_size: super::summary_context::TIMELINE_ENTRIES,
+                    ..Default::default()
+                },
+            )
+            .await
+            .map(|page| page.items)
+            .unwrap_or_else(|error| {
+                tracing::warn!(%error, "record.summarize: timeline unavailable; summarising the record alone");
+                Vec::new()
+            });
+            let related = super::summary_context::related_names(record.lookups());
+            let facts = super::summary_context::build_context(
+                record.data(),
+                &related,
+                &timeline,
+                super::summary_context::CONTEXT_BUDGET_CHARS,
+            );
+            let cache_key = super::summary_context::cache_key(
+                SUMMARIZE_PROMPT_VERSION,
+                client.model_id(),
+                language,
+                &args.entity,
+                &facts,
+            );
+            // D-435: `attome-inference` stays XRM-agnostic (I-11), so the
+            // model registry check happens HERE (and before the summary cache,
+            // so a withdrawn model serves nothing) — in attome-ai, before the call
+            // reaches the transport — not inside `GenerationClient`. An
+            // unapproved model is refused before a single token is spent or a
+            // customer record's fields reach a model server. See
+            // `model_registry::require_approved_model`'s doc comment for why
+            // this returns `NotFound` rather than a more specific error.
+            crate::model_registry::require_approved_model(
+                &state.base.db,
+                client.model_id(),
+                RECORD_SUMMARIZE,
+            )
+            .await?;
+
+            // A summary of exactly these facts already made: no model call,
+            // no budget spent. A cache failure only means generating again.
+            match state.base.redis.get(&cache_key).await {
+                Ok(Some(hit)) => {
+                    if let Ok(cached) = serde_json::from_str::<CachedSummary>(&hit) {
+                        return Ok(ActionResult {
+                            value: serde_json::json!({
+                                "summary": cached.summary,
+                                "truncated": cached.truncated,
+                                "cached": true,
+                            }),
+                            provenance: Some(Provenance {
+                                model_id: cached.model_id,
+                                prompt_version: SUMMARIZE_PROMPT_VERSION.to_owned(),
+                                suggestion_id: None,
+                            }),
+                        });
+                    }
+                }
+                Ok(None) => {}
+                Err(error) => tracing::warn!(%error, "record.summarize: summary cache unavailable"),
+            }
 
             // The record's field values are UNTRUSTED CONTENT (I-10). They are
             // carried in a separate user message inside a labelled block, never
@@ -355,20 +434,6 @@ impl Action for RecordSummarize {
             // rather than merely avoided.
             let request =
                 GenerationRequest::new(summarize_messages(language, &args.entity, &facts));
-
-            // D-435: `attome-inference` stays XRM-agnostic (I-11), so the model
-            // registry check happens HERE — in attome-ai, before the call
-            // reaches the transport — not inside `GenerationClient`. An
-            // unapproved model is refused before a single token is spent or a
-            // customer record's fields reach a model server. See
-            // `model_registry::require_approved_model`'s doc comment for why
-            // this returns `NotFound` rather than a more specific error.
-            crate::model_registry::require_approved_model(
-                &state.base.db,
-                client.model_id(),
-                RECORD_SUMMARIZE,
-            )
-            .await?;
 
             // M101 slice 2 — the token budget, admitted BEFORE the call. Like
             // the model-registry check above it, this must precede
@@ -394,6 +459,19 @@ impl Action for RecordSummarize {
             grant.settle(state, &generated.usage).await;
 
             let latency_ms = i32::try_from(started.elapsed().as_millis()).unwrap_or(i32::MAX);
+
+            if let Ok(entry) = serde_json::to_string(&CachedSummary {
+                summary: generated.text.clone(),
+                truncated: generated.truncated,
+                model_id: generated.usage.model_id.clone(),
+            }) && let Err(error) = state
+                .base
+                .redis
+                .set(&cache_key, entry, Some(super::summary_context::CACHE_TTL))
+                .await
+            {
+                tracing::warn!(%error, "record.summarize: summary not cached");
+            }
 
             // Provenance is logged BEFORE the suggestion is returned, so a
             // suggestion can never reach a human without a row to record its

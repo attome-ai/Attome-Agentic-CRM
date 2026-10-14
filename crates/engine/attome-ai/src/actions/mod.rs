@@ -31,6 +31,7 @@ pub mod record_update_field;
 pub mod record_write;
 pub mod route_classify;
 pub mod search_records;
+pub mod summary_context;
 pub mod workflow;
 
 use crate::descriptor::ActionDescriptor;

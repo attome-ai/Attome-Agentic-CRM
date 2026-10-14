@@ -116,6 +116,13 @@ impl EntityRecordResponse {
     pub fn row_version(&self) -> i64 {
         self.row_version
     }
+
+    /// The lookup fields' target metadata (`exists`, `is_active`, `name`),
+    /// resolved under the caller's row security: a target the caller may not
+    /// see has no name. `record.summarize` names related records from it.
+    pub fn lookups(&self) -> Option<&serde_json::Map<String, Value>> {
+        self.lookups.as_ref()
+    }
 }
 
 /// The per-lookup-field value inside `EntityRecordResponse::lookups`. Declared
