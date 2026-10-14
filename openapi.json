@@ -13,6 +13,145 @@
     "version": "1.0.0"
   },
   "paths": {
+    "/api/v1/a2a/agents": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/a2a/agents`",
+        "operationId": "list_agents",
+        "responses": {
+          "200": {
+            "description": "Agents that take outside work, with their contracts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_AgentCard"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/a2a/agents/{agent}/tasks": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/a2a/agents/{agent}/tasks`",
+        "operationId": "create_task",
+        "parameters": [
+          {
+            "name": "agent",
+            "in": "path",
+            "description": "The agent object",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/A2aTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The task's result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/A2aTask"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No published agent with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The agent takes no outside work, or cannot start a session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "A budget or daily limit is used up",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "ai",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
     "/api/v1/actions": {
       "get": {
         "tags": [
@@ -247,6 +386,290 @@
         ]
       }
     },
+    "/api/v1/admin/agents/sessions/{id}/children": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/agents/sessions/{id}/children` — the sessions this one\ndelegated to, oldest first (N8-T1): with each child's own trace, the\nwhole run tree.",
+        "operationId": "session_children",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The supervising agent session",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The delegated sessions, oldest first (at most 200)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ChildSession"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ai_agent.supervise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/agents/sessions/{id}/run": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/agents/sessions/{id}/run` — the session's run as one\ntree (N29-T1): its parent and delegated children, every turn of its\nconversations with the model, prompt version and end state, and each\nturn's tool calls with the gate's decision and the ledger's outcome.",
+        "operationId": "session_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent session",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The run tree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunTree"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ai_agent.supervise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/agents/sessions/{id}/trace": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/agents/sessions/{id}/trace` — every action a session\ninvoked, oldest first (N29-T2): what it did, what came of it and who it\nacted as. Results are not included: they may hold record data, which the\nrecords' own routes govern.",
+        "operationId": "session_trace",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The agent session",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The session's steps, oldest first (at most 1000)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TraceStep"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ai_agent.supervise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/ai/agents/{agent}/usage": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/ai/agents/{agent}/usage` — what a published agent\nobject did today against its daily limits (AH4-T4, V2-D487).",
+        "operationId": "agent_usage",
+        "parameters": [
+          {
+            "name": "agent",
+            "in": "path",
+            "description": "The agent metadata object",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Used and limit per class, today (UTC)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentUsageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No published agent object with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/ai/bot-analytics": {
       "get": {
         "tags": [
@@ -386,6 +809,412 @@
         ]
       }
     },
+    "/api/v1/admin/ai/eval-runs/{id}": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/ai/eval-runs/{id}`",
+        "operationId": "get_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The eval run",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The run and, once finished, its graded cases",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvalRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such run",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/ai/eval-suites/{suite}/cases/from-message": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/admin/ai/eval-suites/{suite}/cases/from-message`",
+        "operationId": "case_from_message",
+        "parameters": [
+          {
+            "name": "suite",
+            "in": "path",
+            "description": "The eval suite object",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaseFromMessage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The case was added to the suite's draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseAdded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such suite or assistant message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The suite changed while the case was being added",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No question before the message, or an invalid case",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/ai/eval-suites/{suite}/runs": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/admin/ai/eval-suites/{suite}/runs`",
+        "operationId": "start_run",
+        "parameters": [
+          {
+            "name": "suite",
+            "in": "path",
+            "description": "The eval suite object (its newest version runs)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Running; read it with GET /api/v1/admin/ai/eval-runs/{id}",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvalRunStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such eval suite",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The suite names no agent, has no cases or too many",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "ai",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/ai/evidence": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/ai/evidence`",
+        "operationId": "evidence",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "`actions` (default) or `generations`.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "agent",
+            "in": "path",
+            "description": "Only this agent object's sessions (actions).",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "model",
+            "in": "path",
+            "description": "Only this model (generations).",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "path",
+            "description": "The last row's id from the previous page.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of evidence, oldest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPage_EvidenceRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown kind, or a period that ends before it starts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/ai/model-comparison": {
       "get": {
         "tags": [
@@ -472,6 +1301,80 @@
             "api_key": []
           }
         ]
+      }
+    },
+    "/api/v1/admin/ai/preview/summary": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/admin/ai/preview/summary`",
+        "operationId": "preview_summary",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SummaryPreviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What the model would receive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or the caller cannot read it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "builds the prompt a summary would send; generates, caches and writes nothing",
+          "reason": "read_only",
+          "via": null
+        }
       }
     },
     "/api/v1/admin/ai/prompts": {
@@ -914,6 +1817,452 @@
           },
           "422": {
             "description": "The reason is too long, or an unknown field was sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/ai/spend": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/ai/spend`",
+        "operationId": "spend_report",
+        "responses": {
+          "200": {
+            "description": "This month's AI spend against each cap",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SpendReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/ai/status": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/ai/status`",
+        "operationId": "ai_status",
+        "responses": {
+          "200": {
+            "description": "The AI status page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/ai/switches": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/ai/switches` — every scope that has been switched.",
+        "operationId": "list_switches",
+        "responses": {
+          "200": {
+            "description": "Every switched scope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ScopeSwitchView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/ai/switches/{kind}/{key}": {
+      "put": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`PUT /api/v1/admin/ai/switches/{kind}/{key}` — turns one scope off, or\nback on (by a different administrator from the one who turned it off).",
+        "operationId": "put_switch",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "agent | model | provider | tool | channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "description": "The scope's key: an id or a tool name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScopeSwitchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Switched"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The administrator who turned it off cannot turn it on",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown kind, empty key or reason too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/ai/write-policies": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/ai/write-policies` — the active policies.",
+        "operationId": "list_policies",
+        "responses": {
+          "200": {
+            "description": "Active per-write approval policies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_WritePolicy"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/admin/ai/write-policies` — requires approval for an action.",
+        "operationId": "create_policy",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewWritePolicy"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The policy is active",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WritePolicy"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a known write action, or text too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/ai/write-policies/{id}": {
+      "delete": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`DELETE /api/v1/admin/ai/write-policies/{id}` — deactivates a policy.",
+        "operationId": "deactivate_policy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The policy",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deactivated"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active policy with this id",
             "content": {
               "application/json": {
                 "schema": {
@@ -1571,6 +2920,144 @@
           },
           "422": {
             "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/approvals/batch-decide": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`POST /api/v1/admin/approvals/batch-decide` — decide many requests the\nsame way (roadmap N30-T6). Each is decided on its own through the exact\npath a single decision takes ([`do_decide`]): its own row-version check,\nseparation of duties, transaction, audit events and, for an approval\nthat closes it, execution. One failing never stops the others; the\nresponse says what happened to each.",
+        "operationId": "batch_decide",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchDecideBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Each request's outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchDecideResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown decision, no items, more than 100, or a comment too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "each request is decided through the single-decision path, which writes its own Approved/Rejected event and decision digest in its own transaction",
+          "reason": "delegated",
+          "via": "do_decide"
+        }
+      }
+    },
+    "/api/v1/admin/approvals/metrics": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`GET /api/v1/admin/approvals/metrics`",
+        "operationId": "approval_metrics",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "path",
+            "description": "Days back from now, 1 to 365; default 30.",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Approval figures and rubber-stamp warnings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalMetrics"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
             "content": {
               "application/json": {
                 "schema": {
@@ -14186,6 +15673,88 @@
         ]
       }
     },
+    "/api/v1/admin/knowledge/explain": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Why a question retrieves what it does (roadmap N15-T4): its terms, the\nwords dropped, and each passage's matched terms in rank order. Admin-only,\nretrieved under the administrator's own permissions, and never recorded as\ndemand or as a gap.",
+        "operationId": "explain_knowledge",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "path",
+            "description": "The question or topic. Held to the same byte/term caps as `/search`:\nGIN cost is roughly linear in term count, so a long paste must be\nrejected before it reaches PostgreSQL.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The question's terms and why each passage ranked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeExplanation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege, or Search is not licensed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Query outside the documented caps",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/knowledge/gaps": {
       "get": {
         "tags": [
@@ -14944,6 +16513,384 @@
           "events": [
             {
               "category": "license",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/mcp-servers": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/mcp-servers`",
+        "operationId": "list_servers",
+        "responses": {
+          "200": {
+            "description": "Registered MCP servers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_McpServerView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/admin/mcp-servers`",
+        "operationId": "create_server",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewMcpServer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/McpServerView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Name or URL invalid, or no key ring for the credential",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/mcp-servers/{id}/import": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/admin/mcp-servers/{id}/import` — reads the server's tools.",
+        "operationId": "import_tools",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The server",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The server's tools; new ones disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_McpToolView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The server could not be reached or refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/mcp-servers/{id}/tools": {
+      "get": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`GET /api/v1/admin/mcp-servers/{id}/tools`",
+        "operationId": "list_tools",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The server",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The server's imported tools",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_McpToolView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/mcp-servers/{id}/tools/{tool}": {
+      "put": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`PUT /api/v1/admin/mcp-servers/{id}/tools/{tool}` — a tool's tier and switch.",
+        "operationId": "set_tool",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The server",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tool",
+            "in": "path",
+            "description": "The tool's name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/McpToolSetting"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Saved"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such tool",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown tier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
               "operation": "update"
             }
           ],
@@ -18192,6 +20139,1374 @@
           "reason": "delegated",
           "via": "EngineJob::RollbackMigrationRun (rollback_one_item -> entity_mutation::update_one/delete_one)"
         }
+      }
+    },
+    "/api/v1/admin/model/blueprint/apply": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Applies a blueprint (N12-T3): every new or changed object is saved and\npublished in one transaction, so a blueprint lands whole or not at all.\nObjects already the same are left alone.",
+        "operationId": "blueprint_apply",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelFiles"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What was published, with the versions it replaced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlueprintApplied"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another save of one of the objects is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A file is invalid or an object fails the publish checks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/model/blueprint/plan": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "What applying a blueprint would change, without changing anything\n(N12-T3): each object new, changed or the same as what is published.",
+        "operationId": "blueprint_plan",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelFiles"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Each object's status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlueprintPlan"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A file is unreadable or invalid; the issues are listed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "plans a blueprint and writes nothing",
+          "reason": "read_only",
+          "via": null
+        }
+      }
+    },
+    "/api/v1/admin/model/blueprint/rollback": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Rolls a blueprint back (N12-T3): each object returns to the version it\nhad before, published again as a new version; an object the blueprint\ncreated is left as it is, for an administrator to retire.",
+        "operationId": "blueprint_rollback",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlueprintRollback"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What was republished",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlueprintApplied"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "An object or version is unknown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another save of one of the objects is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/model/export": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Exports the newest version (the draft, when there is one) of every object\nin the store, one file per object. Adapter kinds (entities, attributes)\nlive in their own tables and travel in bundles, not here.",
+        "operationId": "export_files",
+        "responses": {
+          "200": {
+            "description": "Every stored object as a file, by path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelFiles"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/model/health": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`GET /api/v1/admin/model/health`",
+        "operationId": "model_health",
+        "responses": {
+          "200": {
+            "description": "Model-health findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelHealth"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/model/import": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Imports object files as drafts: an object with the same kind, app and\nname gets a new draft, any other is created. Nothing is published. Every\nfile is read (and upgraded to its kind's current shape) before anything\nis saved, and all drafts save in one transaction, so a bad file saves\nnothing.",
+        "operationId": "import_files",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelFiles"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The drafts saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another save of one of the objects is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A file is unreadable or its document invalid; the issues are listed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/model/kinds": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Lists every registered kind.",
+        "operationId": "list_kinds",
+        "responses": {
+          "200": {
+            "description": "Every kind, by name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_KindView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/model/{kind}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Lists the objects of one kind.",
+        "operationId": "list_objects",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Kind name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The kind's objects, by name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ObjectSummaryView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such kind",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/model/{kind}/{id}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Reads an object's newest version (its draft, when it has one).",
+        "operationId": "get_object",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Kind name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Object id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The newest version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectVersionView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such kind or object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/model/{kind}/{id}/commands": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Applies edit commands to an object's draft (creating the object on its\nfirst edit) and saves it.",
+        "operationId": "apply_commands",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Kind name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Object id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The saved draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such kind, or no such object for a non-empty base hash",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The draft changed since base_hash, or another save is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A command or the resulting document is invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/model/{kind}/{id}/diff": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "The RFC 6902 operations from one version to another.",
+        "operationId": "get_diff",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Kind name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Object id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "The older version.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "The newer version.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The operations, in order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_PatchOpView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such kind, object or version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/model/{kind}/{id}/history": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Lists an object's versions, newest first.",
+        "operationId": "get_history",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Kind name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Object id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Versions, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_VersionSummaryView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such kind or object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/model/{kind}/{id}/publish": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Publishes an object's open draft once it passes the publish checks, and\nrefreshes the cooked metadata.",
+        "operationId": "publish",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Kind name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Object id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Published",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublishResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such kind, or no open draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Another save is in progress",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The draft fails the publish checks, or an eval suite's newest run fails a safety case; the issues are listed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/model/{kind}/{id}/references": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "The references an object makes.",
+        "operationId": "get_references",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Kind name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Object id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Outgoing references",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ReferenceView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such kind or object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/model/{kind}/{id}/validate": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Checks a document as it would be saved, without saving it.",
+        "operationId": "validate",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Kind name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Object id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Whether it is valid, and every issue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such kind",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "checks a document and writes nothing",
+          "reason": "read_only",
+          "via": null
+        }
+      }
+    },
+    "/api/v1/admin/model/{kind}/{id}/versions/{version}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Reads one version of an object.",
+        "operationId": "get_version",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "Kind name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Object id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "description": "Version number",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "That version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectVersionView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such kind, object or version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/api/v1/admin/omnichannel/metrics": {
@@ -31655,6 +34970,112 @@
         }
       }
     },
+    "/api/v1/ai/conversations/{id}/runs": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/ai/conversations/{id}/runs` — gives the agent a task and\nreturns at once while it works through it in the background (N7-T1):\nthe same turn loop, gate and ledger as a chat message, bounded by\n`max_steps`, ending in one of the turn's terminal states (completed,\nawaiting confirmation or approval, a limit, a failure). Its steps and end\nstate are on the conversation's stream.",
+        "operationId": "start_run",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The conversation",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Running; follow the conversation's stream",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such conversation for this caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The conversation has ended",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The task is empty or too long",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many turns for this user or conversation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "the run is detached; its first write, the person's message and its mandatory Ai event, happens in turn::run exactly as for POST .../messages, which the emission test drives",
+          "reason": "delegated",
+          "via": "turn::run"
+        }
+      }
+    },
     "/api/v1/ai/conversations/{id}/stream": {
       "get": {
         "tags": [
@@ -38268,6 +41689,41 @@
         }
       }
     },
+    "/api/v1/live": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "Opens the live channel.",
+        "operationId": "live",
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events: `hello` with the current model version, then `model-version` whenever published metadata changes; each `data` is `{model_version}`",
+            "content": {
+              "text/event-stream": {}
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/mcp": {
       "post": {
         "tags": [
@@ -38786,6 +42242,243 @@
           },
           "404": {
             "description": "No such metric",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/model/agents/{agent}/sessions": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "`POST /api/v1/model/agents/{agent}/sessions` — opens a session from a\npublished agent object (V2-D487).",
+        "operationId": "start_session_from_agent_object",
+        "parameters": [
+          {
+            "name": "agent",
+            "in": "path",
+            "description": "The published agent object",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartObjectSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectSessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks ai_agent.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No published agent object with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "risk_ceiling is unknown; the agent has no live persona.model or no readable, valid policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "ai",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/model/forms/{id}/plan": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "The render plan of a published form: its sections and, for each field,\nthe attribute's logical name, label, type and whether it is required.\nThe form comes from the cooked registry in memory; the attribute details\nfrom one bounded query (a form holds at most 400 fields).",
+        "operationId": "form_plan",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Form id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-None-Match",
+            "in": "header",
+            "description": "The ETag of a plan the client holds",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The form's render plan, with a content ETag",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormPlan"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Unchanged since the ETag in If-None-Match"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No published form with this id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/model/navigation/{id}": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "A published menu, filtered to what the caller may see (A21-T2).",
+        "operationId": "menu",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Menu (navigation object) id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The menu as this caller sees it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MenuView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No published menu with this id",
             "content": {
               "application/json": {
                 "schema": {
@@ -53867,6 +57560,50 @@
   },
   "components": {
     "schemas": {
+      "A2aTask": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "issues"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The task's id (its conversation)."
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "output": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "`completed` (output matches the contract), `failed` (it did not, or\nthe run ended early) or `rejected` (the input broke the contract)."
+          }
+        }
+      },
+      "A2aTaskRequest": {
+        "type": "object",
+        "required": [
+          "input"
+        ],
+        "properties": {
+          "input": {
+            "type": "object",
+            "description": "The task, matching the agent's input contract."
+          }
+        },
+        "additionalProperties": false
+      },
       "AbandonedFieldRun": {
         "type": "object",
         "description": "The answer of `POST .../fields/{field_id}/runs/{run_id}/abandon`.",
@@ -54686,6 +58423,37 @@
           }
         }
       },
+      "AgentCard": {
+        "type": "object",
+        "description": "One agent a partner can hand work to.",
+        "required": [
+          "id",
+          "name",
+          "input_schema",
+          "output_schema"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "input_schema": {
+            "type": "object"
+          },
+          "name": {
+            "type": "string"
+          },
+          "output_schema": {
+            "type": "object"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "AgentSessionResponse": {
         "type": "object",
         "required": [
@@ -54714,6 +58482,48 @@
           "risk_ceiling": {
             "type": "string",
             "description": "`\"read\"` | `\"reversible\"` | `\"consequential\"` — the ceiling this session\nwas started with. It does not change for the life of the session."
+          }
+        }
+      },
+      "AgentUsageResponse": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentUsageView"
+            }
+          }
+        }
+      },
+      "AgentUsageView": {
+        "type": "object",
+        "description": "One limit class's use today against the agent's cap.",
+        "required": [
+          "class",
+          "used"
+        ],
+        "properties": {
+          "class": {
+            "type": "string",
+            "description": "`record_changes` | `deletes` | `messages` | `external_calls`."
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The agent's published daily cap, or `null` for no cap.",
+            "minimum": 0
+          },
+          "used": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Steps of this class the agent ran today (UTC), across its sessions."
           }
         }
       },
@@ -54825,6 +58635,53 @@
           "truncated": {
             "type": "boolean",
             "description": "Honest-cap contract mirroring `attome-search::routes`'s `Total::AtLeast`\nreasoning: `true` means real groups exist past [`MAX_GROUP_BUCKETS`],\nnot that the count happens to equal the cap."
+          }
+        }
+      },
+      "AiStatus": {
+        "type": "object",
+        "required": [
+          "generation_model",
+          "model_approved",
+          "model_cards",
+          "switched_off",
+          "turns_last_day",
+          "timeline"
+        ],
+        "properties": {
+          "generation_model": {
+            "type": "string",
+            "description": "`inference.generation.model`; empty when none is configured."
+          },
+          "model_approved": {
+            "type": "boolean",
+            "description": "Whether a live catalogue entry approves it (generation refuses\notherwise)."
+          },
+          "model_cards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelCard"
+            },
+            "description": "The catalogue entries naming it."
+          },
+          "switched_off": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Scopes switched off now."
+          },
+          "timeline": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SwitchEvent"
+            },
+            "description": "The latest switch changes, newest first."
+          },
+          "turns_last_day": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TurnCount"
+            },
+            "description": "Turns over the last 24 hours, by how they ended."
           }
         }
       },
@@ -55300,6 +59157,39 @@
           "adopted"
         ]
       },
+      "ApprovalMetrics": {
+        "type": "object",
+        "required": [
+          "days",
+          "approvers",
+          "backlog",
+          "rejection_words"
+        ],
+        "properties": {
+          "approvers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApproverFigures"
+            }
+          },
+          "backlog": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Backlog"
+            }
+          },
+          "days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rejection_words": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RejectionWord"
+            }
+          }
+        }
+      },
       "ApprovalPlan": {
         "type": "object",
         "description": "D-421 / M10 (Approval & Governance) — an ordered set of approval steps,\npersisted on the request as `plan JSONB` (migration\n`0185_approval_request_plan_step.sql`). This is a **pure extension** of\nD-195's primitive, not a second one (guidelines §13): a plan-bearing\nrequest is still one `approval_request` row running through\n`submit`/`decide`/`sweep_expired`'s same lifecycle machinery — a plan just\ntells `decide_step` how many steps there are and what each one requires,\ninstead of the flat `required_approvals` count every pre-D-421 caller\nstill uses unchanged.\n\n`mode`/`approvers` (`any`/`all`/`n_of_m` over a list of opaque tokens) is\ngeneric dual-control sequencing — this crate owns it because it never has\nto interpret a token to run the math. **What it must never do** is turn a\ntoken like `\"role:finance_manager\"` or `\"position:manager_of_requester\"`\ninto an actual user id — that resolution is XRM metadata knowledge\n(roles, teams, org structure) this crate has none of (guidelines §1), so\nit stays in `xrm_audit::approval::resolve_step_approvers` (ARCH-5's same\nsplit: attome-approval runs the lifecycle, the engine layer resolves what\nits own tokens mean). Every function below that needs \"who may decide\nthis step\" therefore takes an already-resolved `&[Uuid]`/`usize` from the\ncaller — it never touches `approvers` itself.",
@@ -55535,6 +59425,41 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "ApproverFigures": {
+        "type": "object",
+        "required": [
+          "approver_id",
+          "decisions",
+          "approved",
+          "warning"
+        ],
+        "properties": {
+          "approved": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "approver_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "decisions": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "median_seconds": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "Median seconds from request to this approver's decision."
+          },
+          "warning": {
+            "type": "boolean",
+            "description": "The rubber-stamp warning (see the module doc)."
           }
         }
       },
@@ -56318,6 +60243,127 @@
           "view_metadata": {}
         }
       },
+      "Backlog": {
+        "type": "object",
+        "required": [
+          "action_type",
+          "pending"
+        ],
+        "properties": {
+          "action_type": {
+            "type": "string"
+          },
+          "oldest": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "pending": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "BatchDecideBody": {
+        "type": "object",
+        "required": [
+          "decision",
+          "items"
+        ],
+        "properties": {
+          "comment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "decision": {
+            "type": "string",
+            "description": "`\"approve\"` or `\"reject\"`, for every request."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchItem"
+            },
+            "description": "At most 100 requests, typically similar ones the administrator\nreviewed a sample of (`GET /api/v1/admin/approvals?action_type=...`)."
+          }
+        },
+        "additionalProperties": false
+      },
+      "BatchDecideResponse": {
+        "type": "object",
+        "required": [
+          "decided",
+          "failed",
+          "items"
+        ],
+        "properties": {
+          "decided": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BatchOutcome"
+            }
+          }
+        }
+      },
+      "BatchItem": {
+        "type": "object",
+        "description": "One request of a batch, at the version the administrator looked at.",
+        "required": [
+          "id",
+          "row_version"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "additionalProperties": false
+      },
+      "BatchOutcome": {
+        "type": "object",
+        "description": "One request's outcome in a batch.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why this one was not decided (stale version, already decided, the\nadministrator's own request, ...); `null` on success."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The request's status after the decision, or `null` when it failed."
+          }
+        }
+      },
       "Block": {
         "type": "object",
         "description": "One block on the canvas. `props` is validated against `kind`'s shape by\n`blocks::validate_blocks` before a draft save or publish is accepted —\nnever stored as trusted-opaque JSON (coding-guidelines §8).",
@@ -56353,6 +60399,119 @@
           "form",
           "component"
         ]
+      },
+      "BlueprintApplied": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BlueprintAppliedItem"
+            },
+            "description": "Every object the apply published, with the version it published and\nthe one it replaced (pass these to rollback to undo)."
+          }
+        }
+      },
+      "BlueprintAppliedItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "version_no"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "previous_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "`null` when the object was new."
+          },
+          "version_no": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "BlueprintItem": {
+        "type": "object",
+        "description": "One object of a blueprint and what applying it would do (N12-T3).",
+        "required": [
+          "path",
+          "kind",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The existing object's id; `null` for a new one."
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "published_version": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "The version that is published now, which a rollback returns to."
+          },
+          "status": {
+            "type": "string",
+            "description": "`new` | `changed` | `same`."
+          }
+        }
+      },
+      "BlueprintPlan": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BlueprintItem"
+            }
+          }
+        }
+      },
+      "BlueprintRollback": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BlueprintAppliedItem"
+            }
+          }
+        }
       },
       "BotAnalytics": {
         "type": "object",
@@ -57943,6 +62102,30 @@
           }
         }
       },
+      "CaseAdded": {
+        "type": "object",
+        "required": [
+          "suite_id",
+          "version_no",
+          "content_hash",
+          "case"
+        ],
+        "properties": {
+          "case": {},
+          "content_hash": {
+            "type": "string"
+          },
+          "suite_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version_no": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The suite's draft after the case was added."
+          }
+        }
+      },
       "CaseDefDetail": {
         "type": "object",
         "required": [
@@ -58048,6 +62231,34 @@
             "description": "`\"workflow:<definition_id>\"` or `\"entity:<logicalname>\"`."
           }
         }
+      },
+      "CaseFromMessage": {
+        "type": "object",
+        "required": [
+          "message_id"
+        ],
+        "properties": {
+          "expect": {
+            "type": "object",
+            "description": "What should have happened: `tools`, `text_matches`, `text_excludes`."
+          },
+          "message_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The assistant message that went wrong."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The case's name; defaults to one naming the message."
+          },
+          "safety": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
       },
       "CatalogEntityDetail": {
         "type": "object",
@@ -58647,6 +62858,43 @@
           }
         }
       },
+      "ChildSession": {
+        "type": "object",
+        "description": "One session a supervisor delegated to (N8-T1's run tree).",
+        "required": [
+          "id",
+          "surface",
+          "started_at"
+        ],
+        "properties": {
+          "agent_object_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The specialist agent object it ran as."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revoked_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "surface": {
+            "type": "string"
+          }
+        }
+      },
       "CitationView": {
         "type": "object",
         "description": "One citation, projected from `attome_search::KnowledgeCitation` — every field\nexcept `passage`, whose text is already in the turn's tool message. An\nexplicit shape, never the stored JSON passed through.",
@@ -59137,6 +63385,62 @@
           },
           "route_template": {
             "type": "string"
+          }
+        }
+      },
+      "CommandsRequest": {
+        "type": "object",
+        "required": [
+          "base_hash",
+          "commands"
+        ],
+        "properties": {
+          "base_hash": {
+            "type": "string",
+            "description": "The content hash of the document the commands were made against; empty\nfor an object that does not exist yet."
+          },
+          "commands": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "`add`, `remove`, `move` and `set` edits, applied in order."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The object's name; required when it does not exist yet."
+          }
+        }
+      },
+      "CommandsResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "version_no",
+          "content_hash",
+          "issues"
+        ],
+        "properties": {
+          "content_hash": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IssueView"
+            },
+            "description": "References to objects that do not exist; they do not block the draft."
+          },
+          "version_no": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -61463,6 +65767,104 @@
                 },
                 "reference": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Exact size of the whole window, when the route counts it (first page\nonly); absent otherwise."
+          }
+        }
+      },
+      "CursorPage_EvidenceRow": {
+        "type": "object",
+        "description": "The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "at",
+                "action_id",
+                "outcome"
+              ],
+              "properties": {
+                "action_id": {
+                  "type": "string"
+                },
+                "agent_object_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "agent_session_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "entity": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "model_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "outcome": {
+                  "type": "string",
+                  "description": "The action's outcome, or what a person did with a suggestion."
+                },
+                "prompt_version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "record_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "user_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
                 }
               }
             }
@@ -63986,6 +68388,95 @@
           "request_id": "018f0a1b-2c3d-7e4f-8a9b-0c1d2e3f4a5b"
         }
       },
+      "EvalRun": {
+        "type": "object",
+        "required": [
+          "id",
+          "suite_ref",
+          "suite_hash",
+          "agent_ref",
+          "status",
+          "started_by",
+          "started_at"
+        ],
+        "properties": {
+          "agent_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "finished_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "outcome": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "The graded cases (`SuiteOutcome`)."
+          },
+          "score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`running`, `passed`, `failed` or `error`."
+          },
+          "suite_hash": {
+            "type": "string"
+          },
+          "suite_ref": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "EvalRunStarted": {
+        "type": "object",
+        "required": [
+          "run_id",
+          "cases",
+          "status"
+        ],
+        "properties": {
+          "cases": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "EvaluateResponse": {
         "type": "object",
         "required": [
@@ -64001,6 +68492,78 @@
           },
           "scenario_id": {
             "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "EvidenceRow": {
+        "type": "object",
+        "required": [
+          "id",
+          "at",
+          "action_id",
+          "outcome"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "agent_object_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "agent_session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "entity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "model_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "outcome": {
+            "type": "string",
+            "description": "The action's outcome, or what a person did with a suggestion."
+          },
+          "prompt_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "record_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid"
           }
         }
@@ -64378,6 +68941,51 @@
                 "$ref": "#/components/schemas/MetricTarget"
               }
             ]
+          }
+        }
+      },
+      "ExplainedPassage": {
+        "type": "object",
+        "description": "One retrieved passage and the terms that brought it.",
+        "required": [
+          "rank",
+          "item_id",
+          "title",
+          "heading_path",
+          "matched_terms",
+          "unmatched_terms"
+        ],
+        "properties": {
+          "heading_path": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "item_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "matched_terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Terms found in the title, headings or passage."
+          },
+          "rank": {
+            "type": "integer",
+            "description": "1 is the strongest (ranked by `ts_rank_cd`).",
+            "minimum": 0
+          },
+          "title": {
+            "type": "string"
+          },
+          "unmatched_terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -65228,6 +69836,34 @@
           }
         }
       },
+      "Finding": {
+        "type": "object",
+        "description": "One finding.",
+        "required": [
+          "kind",
+          "entity",
+          "detail"
+        ],
+        "properties": {
+          "attribute": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The attribute, when the finding is about one."
+          },
+          "detail": {
+            "type": "string"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`broken_reference`, `duplicate_attribute`, `unused_entity`,\n`unused_attribute` or `index_proposal`."
+          }
+        }
+      },
       "FindingRemediateResponse": {
         "type": "object",
         "required": [
@@ -65271,6 +69907,83 @@
           "folder": {
             "type": "string",
             "description": "Full path from the record's root, e.g. `uploads/Contracts` — pass\nstraight back as the next request's `folder` param to drill in."
+          }
+        }
+      },
+      "FormPlan": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "entity",
+          "sections"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "The entity's logical name, as the record API addresses it."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FormPlanSection"
+            }
+          }
+        }
+      },
+      "FormPlanField": {
+        "type": "object",
+        "required": [
+          "attribute",
+          "label",
+          "field_type",
+          "required",
+          "ai"
+        ],
+        "properties": {
+          "ai": {
+            "type": "boolean",
+            "description": "An AI attribute (N11-T1): `record.ai_field` can suggest its value."
+          },
+          "attribute": {
+            "type": "string",
+            "description": "The attribute's logical name: the key of its value in a record."
+          },
+          "field_type": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The attribute's field type number."
+          },
+          "label": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FormPlanSection": {
+        "type": "object",
+        "required": [
+          "label",
+          "fields"
+        ],
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FormPlanField"
+            }
+          },
+          "label": {
+            "type": "string"
           }
         }
       },
@@ -66020,6 +70733,21 @@
           }
         }
       },
+      "ImportResponse": {
+        "type": "object",
+        "required": [
+          "drafts"
+        ],
+        "properties": {
+          "drafts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CommandsResponse"
+            },
+            "description": "The drafts saved, in file order."
+          }
+        }
+      },
       "ImportResult": {
         "type": "object",
         "required": [
@@ -66220,6 +70948,25 @@
           }
         }
       },
+      "IssueView": {
+        "type": "object",
+        "required": [
+          "path",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      },
       "ItemRestoreResult": {
         "type": "object",
         "description": "What an item Restore did.",
@@ -66376,6 +71123,32 @@
           }
         }
       },
+      "KindView": {
+        "type": "object",
+        "required": [
+          "name",
+          "schema_version",
+          "description",
+          "json_schema"
+        ],
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "json_schema": {
+            "type": "object",
+            "description": "The JSON Schema of the kind's documents."
+          },
+          "name": {
+            "type": "string"
+          },
+          "schema_version": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
       "KnowledgeCitation": {
         "type": "object",
         "description": "One passage returned from the knowledge corpus, with everything a citation\nneeds to resolve (`P-knowledge-base` §8, §11).\n\nEvery field is captured at projection time or computed here, never\nreconstructed from the article at render time: an item edited after the\nanswer was generated would otherwise produce a citation pointing at a\nheading that no longer exists.",
@@ -66428,6 +71201,44 @@
           "truncated": {
             "type": "boolean",
             "description": "The section exceeded the passage ceiling and was returned in part.\nReported so an answer can say so rather than presenting a fragment as\nthe whole."
+          }
+        }
+      },
+      "KnowledgeExplanation": {
+        "type": "object",
+        "description": "Why a retrieval returned what it did, for an administrator (roadmap\nN15-T4): the terms the question was reduced to, the words dropped as\nfunction words, and for each passage, in rank order, which terms it\nmatched. Retrieved under the administrator's own permissions, lexical\nmode, and never recorded as demand or as a gap: explaining a question is\nnot asking it.",
+        "required": [
+          "terms",
+          "dropped",
+          "passages"
+        ],
+        "properties": {
+          "dropped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Words dropped before matching (function words)."
+          },
+          "empty_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Set when nothing was found: `no_terms` (only function words),\n`no_readable_collection` or `no_match`."
+          },
+          "passages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExplainedPassage"
+            }
+          },
+          "terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The content terms, normalised and stemmed as the index stores them."
           }
         }
       },
@@ -67274,6 +72085,95 @@
           }
         }
       },
+      "McpServerView": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "url",
+          "allow_external",
+          "has_credential"
+        ],
+        "properties": {
+          "allow_external": {
+            "type": "boolean"
+          },
+          "has_credential": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tools_imported_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
+      "McpToolSetting": {
+        "type": "object",
+        "required": [
+          "risk",
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "risk": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "McpToolView": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "risk",
+          "is_enabled"
+        ],
+        "properties": {
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The server's own description: untrusted, shown as written."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "input_schema": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "is_enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "risk": {
+            "type": "string",
+            "description": "`read`, `reversible` or `consequential`."
+          }
+        }
+      },
       "Measure": {
         "type": "object",
         "required": [
@@ -67310,6 +72210,37 @@
           "max",
           "median"
         ]
+      },
+      "MenuView": {
+        "type": "object",
+        "description": "A menu as one caller sees it (A21-T2).",
+        "required": [
+          "id",
+          "name",
+          "groups"
+        ],
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "landing": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`<group>/<item>` of this caller's landing page, when the menu sets one."
+          },
+          "name": {
+            "type": "string"
+          }
+        }
       },
       "MergeCandidateBody": {
         "type": "object",
@@ -67918,6 +72849,122 @@
           }
         }
       },
+      "ModelCard": {
+        "type": "object",
+        "description": "The generation model's catalogue entry.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "approval_status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "context_window": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "knowledge_cutoff": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "max_output_tokens": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "provider_model_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ModelFile": {
+        "type": "object",
+        "description": "One object as a readable text file (Y1-T10).",
+        "required": [
+          "path",
+          "text"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "`<kind>/<app>/<name>.json`, always with `/` separators."
+          },
+          "text": {
+            "type": "string",
+            "description": "Pretty JSON with sorted keys and a trailing newline."
+          }
+        }
+      },
+      "ModelFiles": {
+        "type": "object",
+        "description": "A set of object files. Not a paginated list: an export is one artefact,\nwritten to a directory whole and read back whole.",
+        "required": [
+          "files"
+        ],
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelFile"
+            }
+          }
+        }
+      },
+      "ModelHealth": {
+        "type": "object",
+        "required": [
+          "entities",
+          "findings"
+        ],
+        "properties": {
+          "entities": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            }
+          }
+        }
+      },
       "ModelSummary": {
         "type": "object",
         "description": "The `/api/v1/admin/predict/models*` wire shape — deliberately omits\n`model_artifact` (internal fitted parameters, not a public contract) and\n`organization_ref`/`row_version`/`is_deleted` (no client needs them yet).",
@@ -68157,6 +73204,32 @@
           }
         }
       },
+      "NewMcpServer": {
+        "type": "object",
+        "required": [
+          "name",
+          "url"
+        ],
+        "properties": {
+          "allow_external": {
+            "type": "boolean"
+          },
+          "credential": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A bearer token; stored encrypted, never returned."
+          },
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
       "NewPageBody": {
         "type": "object",
         "description": "The page fields a caller may set when adding a page. `dashboard_id` is not\naccepted — it always comes from the path — and neither are sections, which\nthe page gets exactly one of (D-527).",
@@ -68281,6 +73354,32 @@
             "type": "string"
           }
         }
+      },
+      "NewWritePolicy": {
+        "type": "object",
+        "required": [
+          "action_id"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "description": "A write action id, such as `record.update`."
+          },
+          "entity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "One entity's logical name; omit for every entity."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
       },
       "NodeRefInput": {
         "type": "object",
@@ -68478,6 +73577,121 @@
               "$ref": "#/components/schemas/NotificationPreference"
             },
             "description": "The caller's stored rows. A (category, channel) with no row is enabled."
+          }
+        }
+      },
+      "ObjectSessionResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "agent",
+          "risk_ceiling"
+        ],
+        "properties": {
+          "agent": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The agent object the session runs as."
+          },
+          "allowed_action_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "risk_ceiling": {
+            "type": "string"
+          }
+        }
+      },
+      "ObjectSummaryView": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "app",
+          "owner_layer",
+          "version_no",
+          "state",
+          "content_hash"
+        ],
+        "properties": {
+          "app": {
+            "type": "string"
+          },
+          "content_hash": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner_layer": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "version_no": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ObjectVersionView": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "version_no",
+          "kind_schema_version",
+          "state",
+          "doc",
+          "content_hash",
+          "created_at"
+        ],
+        "properties": {
+          "content_hash": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "doc": {
+            "type": "object"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "kind_schema_version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "version_no": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -69321,6 +74535,64 @@
                 "subject_user_id": {
                   "type": "string",
                   "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_AgentCard": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One agent a partner can hand work to.",
+              "required": [
+                "id",
+                "name",
+                "input_schema",
+                "output_schema"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "input_schema": {
+                  "type": "object"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "output_schema": {
+                  "type": "object"
+                },
+                "role": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               }
             }
@@ -70651,6 +75923,70 @@
                   "description": "`open`, `closed` or `abandoned`."
                 },
                 "title": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_ChildSession": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One session a supervisor delegated to (N8-T1's run tree).",
+              "required": [
+                "id",
+                "surface",
+                "started_at"
+              ],
+              "properties": {
+                "agent_object_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "The specialist agent object it ran as."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "revoked_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "started_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "surface": {
                   "type": "string"
                 }
               }
@@ -72699,6 +78035,59 @@
           }
         }
       },
+      "PaginatedResponse_KindView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "name",
+                "schema_version",
+                "description",
+                "json_schema"
+              ],
+              "properties": {
+                "description": {
+                  "type": "string"
+                },
+                "json_schema": {
+                  "type": "object",
+                  "description": "The JSON Schema of the kind's documents."
+                },
+                "name": {
+                  "type": "string"
+                },
+                "schema_version": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_KnowledgeCitation": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -73044,6 +78433,133 @@
                 "updated_at": {
                   "type": "string",
                   "format": "date-time"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_McpServerView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "url",
+                "allow_external",
+                "has_credential"
+              ],
+              "properties": {
+                "allow_external": {
+                  "type": "boolean"
+                },
+                "has_credential": {
+                  "type": "boolean"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "tools_imported_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "url": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_McpToolView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "risk",
+                "is_enabled"
+              ],
+              "properties": {
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The server's own description: untrusted, shown as written."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "input_schema": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "is_enabled": {
+                  "type": "boolean"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "risk": {
+                  "type": "string",
+                  "description": "`read`, `reversible` or `consequential`."
                 }
               }
             }
@@ -73516,6 +79032,70 @@
           }
         }
       },
+      "PaginatedResponse_ObjectSummaryView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "app",
+                "owner_layer",
+                "version_no",
+                "state",
+                "content_hash"
+              ],
+              "properties": {
+                "app": {
+                  "type": "string"
+                },
+                "content_hash": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "owner_layer": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "version_no": {
+                  "type": "integer",
+                  "format": "int64"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_OrganizationItem": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -73779,6 +79359,54 @@
                 },
                 "url_path": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_PatchOpView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "op",
+                "path"
+              ],
+              "properties": {
+                "op": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
                 }
               }
             }
@@ -74717,6 +80345,62 @@
           }
         }
       },
+      "PaginatedResponse_ReferenceView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "from_kind",
+                "from_ref",
+                "to",
+                "mode",
+                "created_at"
+              ],
+              "properties": {
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "from_kind": {
+                  "type": "string"
+                },
+                "from_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "mode": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_RelationshipView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -75387,6 +81071,77 @@
                   "format": "uuid"
                 },
                 "user_name": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_ScopeSwitchView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One scope's state.",
+              "required": [
+                "scope_kind",
+                "scope_key",
+                "enabled",
+                "cause",
+                "changed_at"
+              ],
+              "properties": {
+                "cause": {
+                  "type": "string",
+                  "description": "`manual` | `budget` | `quality` | `injection` | `departure`."
+                },
+                "changed_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "changed_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "`null` for an automatic trip."
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "scope_key": {
+                  "type": "string"
+                },
+                "scope_kind": {
                   "type": "string"
                 }
               }
@@ -76414,6 +82169,72 @@
           }
         }
       },
+      "PaginatedResponse_TraceStep": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One step of a session's run, in order (N29-T2).",
+              "required": [
+                "id",
+                "action_id",
+                "outcome",
+                "acting_user_id",
+                "created_at"
+              ],
+              "properties": {
+                "acting_user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "action_id": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "outcome": {
+                  "type": "string",
+                  "description": "`completed`, `executed`, `claimed`, `approval_requested`, a refusal..."
+                },
+                "tool_call_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The tool call that asked for it, when an agent did."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_TriggerDeadLetter": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -76585,6 +82406,65 @@
                 "user_id": {
                   "type": "string",
                   "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_VersionSummaryView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "version_no",
+                "state",
+                "content_hash",
+                "created_at"
+              ],
+              "properties": {
+                "content_hash": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "created_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "state": {
+                  "type": "string"
+                },
+                "version_no": {
+                  "type": "integer",
+                  "format": "int64"
                 }
               }
             }
@@ -76831,6 +82711,72 @@
           }
         }
       },
+      "PaginatedResponse_WritePolicy": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "action_id",
+                "created_by",
+                "created_at"
+              ],
+              "properties": {
+                "action_id": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "created_by": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "entity": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "`null`: every entity."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PasswordChangeBody": {
         "type": "object",
         "required": [
@@ -76843,6 +82789,27 @@
           },
           "new_password": {
             "type": "string"
+          }
+        }
+      },
+      "PatchOpView": {
+        "type": "object",
+        "required": [
+          "op",
+          "path"
+        ],
+        "properties": {
+          "op": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "object",
+              "null"
+            ]
           }
         }
       },
@@ -78835,6 +84802,31 @@
           }
         }
       },
+      "PromptPreview": {
+        "type": "object",
+        "required": [
+          "prompt_version",
+          "messages",
+          "chars"
+        ],
+        "properties": {
+          "chars": {
+            "type": "integer",
+            "description": "Characters across all messages.",
+            "minimum": 0
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "The messages in order, as sent: `role` and `content`."
+          },
+          "prompt_version": {
+            "type": "string"
+          }
+        }
+      },
       "PromptSummary": {
         "type": "object",
         "required": [
@@ -79881,6 +85873,35 @@
           }
         }
       },
+      "ReferenceView": {
+        "type": "object",
+        "required": [
+          "from_kind",
+          "from_ref",
+          "to",
+          "mode",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "from_kind": {
+            "type": "string"
+          },
+          "from_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        }
+      },
       "RegisterRequest": {
         "type": "object",
         "required": [
@@ -79913,6 +85934,22 @@
           "mode": {
             "type": "string",
             "description": "One of `\"public\"`/`\"invite\"`/`\"disabled\"` — see `AuthSection::registration_mode`."
+          }
+        }
+      },
+      "RejectionWord": {
+        "type": "object",
+        "required": [
+          "word",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "word": {
+            "type": "string"
           }
         }
       },
@@ -81900,6 +87937,24 @@
           }
         }
       },
+      "RunStarted": {
+        "type": "object",
+        "description": "What a started run returns at once (N7-T1).",
+        "required": [
+          "conversation_id",
+          "status"
+        ],
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`running`: follow `GET /api/v1/ai/conversations/{id}/stream` for its\nsteps and its end state."
+          }
+        }
+      },
       "RunStatusResponse": {
         "type": "object",
         "required": [
@@ -81954,6 +88009,123 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "RunToolCall": {
+        "type": "object",
+        "description": "One tool call inside a turn of a run (N29-T1).",
+        "required": [
+          "tool_call_id",
+          "action_id",
+          "status"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "gate_decision": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "invocation_outcome": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The invocation ledger's outcome for it, when it reached the ledger."
+          },
+          "status": {
+            "type": "string",
+            "description": "The tool call's own status (`proposed`, `executed`, `rejected`, ...)."
+          },
+          "tool_call_id": {
+            "type": "string"
+          }
+        }
+      },
+      "RunTree": {
+        "type": "object",
+        "description": "A session's whole run as one tree (N29-T1).",
+        "required": [
+          "session_id",
+          "child_session_ids",
+          "turns"
+        ],
+        "properties": {
+          "child_session_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "parent_session_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "session_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "turns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunTurn"
+            }
+          }
+        }
+      },
+      "RunTurn": {
+        "type": "object",
+        "description": "One turn of a run.",
+        "required": [
+          "turn_id",
+          "conversation_id",
+          "started_at",
+          "tool_calls"
+        ],
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "model_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "prompt_version": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "terminal_state": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tool_calls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunToolCall"
+            }
+          },
+          "turn_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -82140,6 +88312,67 @@
           "withheld_for_legal_hold": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "ScopeSwitchRequest": {
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ScopeSwitchView": {
+        "type": "object",
+        "description": "One scope's state.",
+        "required": [
+          "scope_kind",
+          "scope_key",
+          "enabled",
+          "cause",
+          "changed_at"
+        ],
+        "properties": {
+          "cause": {
+            "type": "string",
+            "description": "`manual` | `budget` | `quality` | `injection` | `departure`."
+          },
+          "changed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "changed_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "`null` for an automatic trip."
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scope_key": {
+            "type": "string"
+          },
+          "scope_kind": {
+            "type": "string"
           }
         }
       },
@@ -83671,6 +89904,87 @@
           }
         }
       },
+      "SpendLine": {
+        "type": "object",
+        "description": "One money window's month so far.",
+        "required": [
+          "scope",
+          "key",
+          "spent",
+          "cap",
+          "percent",
+          "forecast"
+        ],
+        "properties": {
+          "cap": {
+            "type": "number",
+            "format": "double",
+            "description": "The cap, in the price unit."
+          },
+          "forecast": {
+            "type": "number",
+            "format": "double",
+            "description": "Where the window's spend is heading over a whole month."
+          },
+          "key": {
+            "type": "string",
+            "description": "The feature id or agent id; empty for the deployment."
+          },
+          "percent": {
+            "type": "number",
+            "format": "double",
+            "description": "`spent` as a percentage of `cap` (100 or more: refusing)."
+          },
+          "scope": {
+            "type": "string",
+            "description": "`spend_deployment`, `spend_feature` or `spend_agent`."
+          },
+          "spent": {
+            "type": "number",
+            "format": "double",
+            "description": "Spent inside the window, in the price unit."
+          }
+        }
+      },
+      "SpendReport": {
+        "type": "object",
+        "description": "The whole report.",
+        "required": [
+          "model",
+          "priced",
+          "degrade_at_percent",
+          "window_days",
+          "lines"
+        ],
+        "properties": {
+          "degrade_at_percent": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Percent of a cap at which generations are shortened.",
+            "minimum": 0
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SpendLine"
+            }
+          },
+          "model": {
+            "type": "string",
+            "description": "The generation model the prices apply to."
+          },
+          "priced": {
+            "type": "boolean",
+            "description": "Whether that model has a price; without one nothing is counted."
+          },
+          "window_days": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The window, in days.",
+            "minimum": 0
+          }
+        }
+      },
       "StagedImportResponse": {
         "type": "object",
         "required": [
@@ -83734,6 +90048,13 @@
             },
             "description": "Optional. Omitted or `null`: whatever the ceiling permits. `[]`: nothing."
           },
+          "mode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional (N1-T1): `\"develop\"` builds — the metadata tools and reads,\nso every change is a draft and no record is written; `\"run\"` acts —\neverything but the metadata edit tools. Omitted: no narrowing. It only\nnarrows `allowed_action_ids`, never widens it."
+          },
           "risk_ceiling": {
             "type": "string",
             "description": "**Required.** `\"read\"` | `\"reversible\"` | `\"consequential\"` — the same\nexplicit ceiling `POST /agents/{id}/sessions` takes. The agent policy\nstill bounds it; it never grants anything the caller does not hold."
@@ -83766,6 +90087,52 @@
           }
         }
       },
+      "StartObjectSessionRequest": {
+        "type": "object",
+        "description": "Body of `POST /api/v1/model/agents/{agent}/sessions`.",
+        "required": [
+          "risk_ceiling"
+        ],
+        "properties": {
+          "allowed_action_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional; narrows the agent's own tools further."
+          },
+          "risk_ceiling": {
+            "type": "string",
+            "description": "**Required.** `\"read\"` | `\"reversible\"` | `\"consequential\"`."
+          }
+        },
+        "additionalProperties": false
+      },
+      "StartRunRequest": {
+        "type": "object",
+        "description": "Body of `POST /api/v1/ai/conversations/{id}/runs` (N7-T1).",
+        "required": [
+          "task"
+        ],
+        "properties": {
+          "max_steps": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "The most tool steps the run may take (capped by the platform's own\nbound); omitted: the platform's bound.",
+            "minimum": 0
+          },
+          "task": {
+            "type": "string",
+            "description": "What the agent is to do."
+          }
+        },
+        "additionalProperties": false
+      },
       "StartSessionRequest": {
         "type": "object",
         "description": "Body of `POST /api/v1/agents/{id}/sessions` (D-503 §3).",
@@ -83773,6 +90140,14 @@
           "risk_ceiling"
         ],
         "properties": {
+          "agent": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Optional (V2-D487): a published `agent` metadata object whose tools\nbecome one more allow-list. It only narrows: with\n`allowed_action_ids` too, the session gets the actions in both."
+          },
           "allowed_action_ids": {
             "type": [
               "array",
@@ -84710,6 +91085,29 @@
           }
         }
       },
+      "SummaryPreviewRequest": {
+        "type": "object",
+        "required": [
+          "entity",
+          "record_id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false
+      },
       "SuppressionSummary": {
         "type": "object",
         "required": [
@@ -84849,6 +91247,41 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "SwitchEvent": {
+        "type": "object",
+        "description": "One switch change.",
+        "required": [
+          "scope_kind",
+          "scope_key",
+          "enabled",
+          "cause",
+          "changed_at"
+        ],
+        "properties": {
+          "cause": {
+            "type": "string"
+          },
+          "changed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scope_key": {
+            "type": "string"
+          },
+          "scope_kind": {
+            "type": "string"
           }
         }
       },
@@ -85471,6 +91904,45 @@
           }
         }
       },
+      "TraceStep": {
+        "type": "object",
+        "description": "One step of a session's run, in order (N29-T2).",
+        "required": [
+          "id",
+          "action_id",
+          "outcome",
+          "acting_user_id",
+          "created_at"
+        ],
+        "properties": {
+          "acting_user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "action_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "`completed`, `executed`, `claimed`, `approval_requested`, a refusal..."
+          },
+          "tool_call_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The tool call that asked for it, when an agent did."
+          }
+        }
+      },
       "TransitionBody": {
         "type": "object",
         "required": [
@@ -85988,6 +92460,23 @@
               "null"
             ],
             "description": "The account's username (case as stored), for `ok` and `created`."
+          }
+        }
+      },
+      "TurnCount": {
+        "type": "object",
+        "description": "How many turns ended one way in the last day.",
+        "required": [
+          "terminal_state",
+          "turns"
+        ],
+        "properties": {
+          "terminal_state": {
+            "type": "string"
+          },
+          "turns": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -87229,28 +93718,33 @@
           }
         }
       },
+      "ValidateRequest": {
+        "type": "object",
+        "required": [
+          "doc"
+        ],
+        "properties": {
+          "doc": {
+            "type": "object",
+            "description": "The document to check, as it would be saved."
+          }
+        }
+      },
       "ValidateResponse": {
         "type": "object",
         "required": [
           "valid",
-          "issues",
-          "warnings"
+          "issues"
         ],
         "properties": {
           "issues": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/RuleIssue"
+              "$ref": "#/components/schemas/IssueView"
             }
           },
           "valid": {
             "type": "boolean"
-          },
-          "warnings": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/RuleEditorWarning"
-            }
           }
         }
       },
@@ -87391,6 +93885,38 @@
           "version_number": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "VersionSummaryView": {
+        "type": "object",
+        "required": [
+          "version_no",
+          "state",
+          "content_hash",
+          "created_at"
+        ],
+        "properties": {
+          "content_hash": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string"
+          },
+          "version_no": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -88199,6 +94725,45 @@
               "null"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "WritePolicy": {
+        "type": "object",
+        "required": [
+          "id",
+          "action_id",
+          "created_by",
+          "created_at"
+        ],
+        "properties": {
+          "action_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`null`: every entity."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       }

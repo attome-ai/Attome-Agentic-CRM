@@ -8,6 +8,40 @@
  */
 
 export interface paths {
+    "/api/v1/a2a/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/a2a/agents` */
+        get: operations["list_agents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/a2a/agents/{agent}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** `POST /api/v1/a2a/agents/{agent}/tasks` */
+        post: operations["create_task"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/actions": {
         parameters: {
             query?: never;
@@ -72,6 +106,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/agents/sessions/{id}/children": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * `GET /api/v1/admin/agents/sessions/{id}/children` — the sessions this one
+         *     delegated to, oldest first (N8-T1): with each child's own trace, the
+         *     whole run tree.
+         */
+        get: operations["session_children"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/agents/sessions/{id}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * `GET /api/v1/admin/agents/sessions/{id}/run` — the session's run as one
+         *     tree (N29-T1): its parent and delegated children, every turn of its
+         *     conversations with the model, prompt version and end state, and each
+         *     turn's tool calls with the gate's decision and the ledger's outcome.
+         */
+        get: operations["session_run"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/agents/sessions/{id}/trace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * `GET /api/v1/admin/agents/sessions/{id}/trace` — every action a session
+         *     invoked, oldest first (N29-T2): what it did, what came of it and who it
+         *     acted as. Results are not included: they may hold record data, which the
+         *     records' own routes govern.
+         */
+        get: operations["session_trace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/agents/{agent}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * `GET /api/v1/admin/ai/agents/{agent}/usage` — what a published agent
+         *     object did today against its daily limits (AH4-T4, V2-D487).
+         */
+        get: operations["agent_usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/ai/bot-analytics": {
         parameters: {
             query?: never;
@@ -115,6 +234,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ai/eval-runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/ai/eval-runs/{id}` */
+        get: operations["get_run"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/eval-suites/{suite}/cases/from-message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** `POST /api/v1/admin/ai/eval-suites/{suite}/cases/from-message` */
+        post: operations["case_from_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/eval-suites/{suite}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** `POST /api/v1/admin/ai/eval-suites/{suite}/runs` */
+        post: operations["start_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/ai/evidence` */
+        get: operations["evidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/ai/model-comparison": {
         parameters: {
             query?: never;
@@ -135,6 +322,23 @@ export interface paths {
         get: operations["get_model_comparison"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/preview/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** `POST /api/v1/admin/ai/preview/summary` */
+        post: operations["preview_summary"];
         delete?: never;
         options?: never;
         head?: never;
@@ -260,6 +464,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ai/spend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/ai/spend` */
+        get: operations["spend_report"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/ai/status` */
+        get: operations["ai_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/switches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/ai/switches` — every scope that has been switched. */
+        get: operations["list_switches"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/switches/{kind}/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * `PUT /api/v1/admin/ai/switches/{kind}/{key}` — turns one scope off, or
+         *     back on (by a different administrator from the one who turned it off).
+         */
+        put: operations["put_switch"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/write-policies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/ai/write-policies` — the active policies. */
+        get: operations["list_policies"];
+        put?: never;
+        /** `POST /api/v1/admin/ai/write-policies` — requires approval for an action. */
+        post: operations["create_policy"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ai/write-policies/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** `DELETE /api/v1/admin/ai/write-policies/{id}` — deactivates a policy. */
+        delete: operations["deactivate_policy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/api-usage/summary": {
         parameters: {
             query?: never;
@@ -353,6 +663,47 @@ export interface paths {
          *     `status` values (default `pending`).
          */
         get: operations["list_approvals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/approvals/batch-decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/admin/approvals/batch-decide` — decide many requests the
+         *     same way (roadmap N30-T6). Each is decided on its own through the exact
+         *     path a single decision takes ([`do_decide`]): its own row-version check,
+         *     separation of duties, transaction, audit events and, for an approval
+         *     that closes it, execution. One failing never stops the others; the
+         *     response says what happened to each.
+         */
+        post: operations["batch_decide"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/approvals/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/approvals/metrics` */
+        get: operations["approval_metrics"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2336,6 +2687,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/knowledge/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Why a question retrieves what it does (roadmap N15-T4): its terms, the
+         *     words dropped, and each passage's matched terms in rank order. Admin-only,
+         *     retrieved under the administrator's own permissions, and never recorded as
+         *     demand or as a gap.
+         */
+        get: operations["explain_knowledge"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/knowledge/gaps": {
         parameters: {
             query?: never;
@@ -2478,6 +2851,75 @@ export interface paths {
         };
         get: operations["get_module_configuration"];
         put: operations["update_module_configuration"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/mcp-servers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/mcp-servers` */
+        get: operations["list_servers"];
+        put?: never;
+        /** `POST /api/v1/admin/mcp-servers` */
+        post: operations["create_server"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/mcp-servers/{id}/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** `POST /api/v1/admin/mcp-servers/{id}/import` — reads the server's tools. */
+        post: operations["import_tools"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/mcp-servers/{id}/tools": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/mcp-servers/{id}/tools` */
+        get: operations["list_tools"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/mcp-servers/{id}/tools/{tool}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** `PUT /api/v1/admin/mcp-servers/{id}/tools/{tool}` — a tool's tier and switch. */
+        put: operations["set_tool"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3140,6 +3582,305 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["rollback_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/blueprint/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Applies a blueprint (N12-T3): every new or changed object is saved and
+         *     published in one transaction, so a blueprint lands whole or not at all.
+         *     Objects already the same are left alone.
+         */
+        post: operations["blueprint_apply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/blueprint/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What applying a blueprint would change, without changing anything
+         *     (N12-T3): each object new, changed or the same as what is published.
+         */
+        post: operations["blueprint_plan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/blueprint/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rolls a blueprint back (N12-T3): each object returns to the version it
+         *     had before, published again as a new version; an object the blueprint
+         *     created is left as it is, for an administrator to retire.
+         */
+        post: operations["blueprint_rollback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exports the newest version (the draft, when there is one) of every object
+         *     in the store, one file per object. Adapter kinds (entities, attributes)
+         *     live in their own tables and travel in bundles, not here.
+         */
+        get: operations["export_files"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** `GET /api/v1/admin/model/health` */
+        get: operations["model_health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Imports object files as drafts: an object with the same kind, app and
+         *     name gets a new draft, any other is created. Nothing is published. Every
+         *     file is read (and upgraded to its kind's current shape) before anything
+         *     is saved, and all drafts save in one transaction, so a bad file saves
+         *     nothing.
+         */
+        post: operations["import_files"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists every registered kind. */
+        get: operations["list_kinds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists the objects of one kind. */
+        get: operations["list_objects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/{kind}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reads an object's newest version (its draft, when it has one). */
+        get: operations["get_object"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/{kind}/{id}/commands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Applies edit commands to an object's draft (creating the object on its
+         *     first edit) and saves it.
+         */
+        post: operations["apply_commands"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/{kind}/{id}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The RFC 6902 operations from one version to another. */
+        get: operations["get_diff"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/{kind}/{id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lists an object's versions, newest first. */
+        get: operations["get_history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/{kind}/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publishes an object's open draft once it passes the publish checks, and
+         *     refreshes the cooked metadata.
+         */
+        post: operations["publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/{kind}/{id}/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The references an object makes. */
+        get: operations["get_references"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/{kind}/{id}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Checks a document as it would be saved, without saving it. */
+        post: operations["validate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/model/{kind}/{id}/versions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reads one version of an object. */
+        get: operations["get_version"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5392,6 +6133,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/conversations/{id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/ai/conversations/{id}/runs` — gives the agent a task and
+         *     returns at once while it works through it in the background (N7-T1):
+         *     the same turn loop, gate and ledger as a chat message, bounded by
+         *     `max_steps`, ending in one of the turn's terminal states (completed,
+         *     awaiting confirmation or approval, a limit, a failure). Its steps and end
+         *     state are on the conversation's stream.
+         */
+        post: operations["start_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/conversations/{id}/stream": {
         parameters: {
             query?: never;
@@ -5571,6 +6336,428 @@ export interface paths {
         get: operations["list_available_apps"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/from-layout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Creates a dashboard and its entire page/section/widget tree from one
+         *     layout document — the single-call counterpart to building a dashboard
+         *     through a sequence of generic-entity-CRUD calls. Meant for a caller that
+         *     already has the whole layout decided (an AI-authoring flow, an import),
+         *     not for interactive editing — the visual Page Editor's own generic-CRUD
+         *     path remains how a human edits an existing dashboard.
+         */
+        post: operations["create_from_layout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/widget-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * `GET /api/v1/attome-dashboard/widget-types` — lists every registered widget
+         *     descriptor, so a builder UI can populate its widget palette without
+         *     hardcoding the catalog. `SelfService` (authenticated-only, same policy
+         *     `attome-server`'s own sidebar read uses): this is a static capability
+         *     list, not a data or configuration read, so no further privilege applies.
+         */
+        get: operations["list_widget_types"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/widget/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["duplicate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/widget/validate-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/attome-dashboard/widget/validate-config` — the "reject
+         *     malformed configs at write time, not render time" surface for
+         *     `declarative_widget` (see this module's doc comment). Generic entity CRUD
+         *     has no per-field business-validation hook (`widget_registry.rs`'s doc
+         *     comment: `config` is an unvalidated client-owned blob on every
+         *     widget-carrying entity), so — same shape as `query_admin.rs`'s
+         *     publish-time `EXPLAIN` lint being "the friendly error, the missing grant
+         *     is the actual guarantee" — this is the sanctioned pre-save check the
+         *     widget config editor calls before writing through
+         *     `/api/v1/dashboard_widget`. Same authorization as this crate's other
+         *     bespoke widget business actions (`widget_actions.rs`): a caller who may
+         *     update a widget may check whether a config they intend to save is valid.
+         */
+        post: operations["validate_config_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approve_dashboard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["archive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/clone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["clone_dashboard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/health-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["dashboard_health_check"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["create_dashboard_page"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/pages/{page_id}/data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["page_data"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/pages/{page_id}/root-section": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["repair_root_section"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * D-195: gated behind `approval.required_actions` (empty/off by default,
+         *     same as every other wired action_type — see `attome_audit::approval::gate`).
+         *     When gated, this submits an approval request instead of publishing and
+         *     returns `202` with `approval_pending: true` — the dashboard stays
+         *     `approved` until a second, different `system.admin` decides the request
+         *     (`attome-api`'s `approval_admin::decide_approval`, wired to
+         *     `do_publish_dashboard` via `ACTION_DASHBOARD_PUBLISH`).
+         */
+        post: operations["publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/published": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["published"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/resolve-variables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resolve_variables"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/start-revision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["start_revision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/submit-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["submit_for_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["draft_tree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/unpublish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["unpublish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/versions/{version_id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["activate_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/versions/{version_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["restore_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["widget_data"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["widget_explain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["widget_records"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6714,6 +7901,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Opens the live channel. */
+        get: operations["live"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mcp": {
         parameters: {
             query?: never;
@@ -6834,6 +8038,65 @@ export interface paths {
          *     (a restatement's whole history is visible, not just the current value).
          */
         get: operations["list_snapshots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model/agents/{agent}/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/model/agents/{agent}/sessions` — opens a session from a
+         *     published agent object (V2-D487).
+         */
+        post: operations["start_session_from_agent_object"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model/forms/{id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The render plan of a published form: its sections and, for each field,
+         *     the attribute's logical name, label, type and whether it is required.
+         *     The form comes from the cooked registry in memory; the attribute details
+         *     from one bounded query (a form holds at most 400 fields).
+         */
+        get: operations["form_plan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model/navigation/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A published menu, filtered to what the caller may see (A21-T2). */
+        get: operations["menu"];
         put?: never;
         post?: never;
         delete?: never;
@@ -8141,713 +9404,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/trd/calendar-events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/calendar-events` — creates one `trd_calendar_event`
-         *     record. The sanctioned way to populate a real economic-calendar event
-         *     until an importer/feed exists (see this file's module doc, Part B).
-         *     Admin-only: see this file's module doc for why this route deliberately
-         *     goes stricter than `version_admin.rs`'s `Authorized<Privilege<K>>`
-         *     precedent.
-         */
-        post: operations["create_calendar_event"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/connections": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * `GET /api/v1/trd/connections` — every `trd_connection` row, newest
-         *     `created_at` first. `Authorized<Privilege<ConnectionRead>>`, the one
-         *     broadly-held privilege in this file (see this file's header). No parent
-         *     record to anchor an `entity_crud::read_record` existence/RLS check
-         *     against first (unlike `version_admin.rs`'s strategy-scoped listings) —
-         *     authorization here is the extractor's table-level privilege check alone,
-         *     the same scope generic entity CRUD's own `GET /api/v1/trd_connection`
-         *     list would apply to this same table (`trd_connection` carries no
-         *     owner-scoped `entity_access` in `platform-bundles/trd-governance.json`,
-         *     so this is not a narrowing).
-         * @description See this file's header ("Not mounted yet") and `version_admin.rs`'s
-         *     identical header section for why this runs a small, explicit,
-         *     validated-identifier SQL statement (`entity_crud::resolve_entity` +
-         *     `attome_core::quote_ident`) rather than `entity_crud` (no generic list
-         *     function) or `query_exec::execute_stored_query` (admin-only by default
-         *     for a view with no `required_privilege` provisioned).
-         */
-        get: operations["list_connections"];
-        put?: never;
-        /**
-         * `POST /api/v1/trd/connections` — creates the `trd_connection` bookkeeping
-         *     record only: `status` starts `"pending"` (no live OAuth has happened —
-         *     this route does not call `ctrader_adapter.rs` or any broker endpoint) and
-         *     `scopes` starts empty (plan rule 2: start read-only, request a trading
-         *     scope separately, later, explicitly). `secret_ref` is left unset; nothing
-         *     here stores a credential (see this file's header, "Secret storage").
-         *     `Authorized<Privilege<ConnectionCreate>>` — see this file's header for why
-         *     that is Admin-tier in the shipped governance bundle.
-         */
-        post: operations["create_connection"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/connections/{id}/disconnect": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/connections/{id}/disconnect` — sets `status` to
-         *     `"disconnected"` and clears `scopes` back to empty. Does **not** call any
-         *     real broker token-revocation endpoint — no live connection exists to
-         *     revoke. A future version, once `ctrader_adapter.rs` exists, should call a
-         *     real revocation call *before* clearing local state here (so a failed
-         *     revocation is still visible as `status` staying whatever it was, not
-         *     silently downgraded to a local-only "disconnected" that leaves a live
-         *     broker session behind). `Authorized<Privilege<ConnectionUpdate>>` — see
-         *     this file's header for why that is Admin-tier in the shipped governance
-         *     bundle.
-         */
-        post: operations["disconnect_connection"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/connections/{id}/health-check": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/connections/{id}/health-check` — **placeholder**. No
-         *     live adapter exists yet (`ctrader_adapter.rs` is a separate, concurrent
-         *     task and this route does not call it even if it now exists), so this
-         *     route makes no network call and touches no broker credential: it
-         *     confirms the connection record exists and is visible to the caller
-         *     (`entity_crud::read_record`, full record-level authorization, so an
-         *     unknown or inaccessible `id` answers 404 the same as every other record
-         *     read), then returns a clear, honest "not connected" result. It never
-         *     reports `connected: true` — a future version replaces this body with a
-         *     real call to `ctrader_adapter.rs`'s own health check (if that adapter
-         *     builds one), resolving `secret_ref` via the pattern this file's header
-         *     documents ("Secret storage") to actually dial out, and persisting the
-         *     result onto `status`/`last_seen_at` through `entity_crud::update_record_for`
-         *     the way `attome-integration`'s `test_connection` persists its own probe
-         *     result. `Authorized<Privilege<ConnectionUpdate>>` — see this file's
-         *     header for why: even as a placeholder, this route occupies the same
-         *     Admin-tier slot its real implementation will need once it resolves a
-         *     credential.
-         */
-        post: operations["health_check_connection"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/emergency/disconnect/{connection_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/emergency/disconnect/{connection_id}` — see this file's
-         *     module doc ("The fifth action, `disconnect`, is different") for why this
-         *     writes `trd_connection` directly instead of `trd_emergency_control`, and
-         *     why this replicates rather than calls `connection_admin.rs`'s own
-         *     `disconnect_connection`.
-         */
-        post: operations["disconnect"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/emergency/execute-release/{approval_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/emergency/execute-release/{approval_id}` — see this
-         *     file's module doc for why this route exists (this task chose to wire one,
-         *     where the brief left it optional) and [`KillSwitchRelease`] for its
-         *     privilege tier. Safe to call speculatively/repeatedly: it only ever acts
-         *     when the named request currently reads `Approved`, and does nothing (not
-         *     an error) otherwise.
-         */
-        post: operations["execute_release"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/emergency/pause-ai": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/emergency/pause-ai` — engages `scope: "ai"`: blocks
-         *     whatever AI-assisted decision path Phase 5 eventually builds (copilot
-         *     filters/suggestions, AI-proposed strategy variants) from influencing
-         *     trading. Deterministic rule-based execution and manual trading are
-         *     unaffected by this scope alone — see [`stop_all`]/[`stop_new`] for those.
-         */
-        post: operations["pause_ai"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/emergency/pause-strategy/{strategy_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/emergency/pause-strategy/{strategy_id}` — engages
-         *     `scope: "strategy"` for exactly this `strategy_id`. Does not itself
-         *     validate `strategy_id` against `trd_strategy` beyond what
-         *     `entity_crud::create_record_for`'s own lookup-target validation already
-         *     enforces on the (rare) create path — a garbage id surfaces as a
-         *     `Validation` error from that check, not a bespoke 404 here.
-         */
-        post: operations["pause_strategy"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/emergency/request-release": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/emergency/request-release` — submits gate 3 of
-         *     `approval.rs`'s three dual-control gates
-         *     (`approval::request_kill_switch_release`). Nothing has taken effect yet:
-         *     this only returns the new approval request's id. Two distinct approvers
-         *     (neither this caller) must decide it `Approved` before
-         *     [`execute_release`]/[`execute_release_if_approved`] does anything.
-         */
-        post: operations["request_release"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/emergency/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * `GET /api/v1/trd/emergency/status` — every currently `engaged = true`
-         *     `trd_emergency_control` row, across all scopes, as a plain JSON list (not
-         *     `PaginatedResponse` — coding-guidelines.md §12 allows a different
-         *     envelope when the access pattern genuinely needs one; this is
-         *     deliberately unpaginated on the reasoning that "how many emergency
-         *     controls are active right now" is a bounded safety-banner check an
-         *     operator or a future execution pipeline needs whole, in one call, every
-         *     time, not a browsable list). No row means no engaged controls at all —
-         *     see `entities::execution_control`'s module doc, "no row means not
-         *     engaged".
-         */
-        get: operations["emergency_status"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/emergency/stop-all": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/emergency/stop-all` — engages `scope: "all"`: every
-         *     order of every kind, for every strategy, on every account. The most
-         *     severe of the five actions.
-         */
-        post: operations["stop_all"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/emergency/stop-new": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/emergency/stop-new` — engages `scope: "new_orders"`:
-         *     blocks new order submission platform-wide; existing open positions are
-         *     left untouched (they still need to be managed/closed through the
-         *     ordinary path — this action does not flatten anything).
-         */
-        post: operations["stop_new"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/experiments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * `GET /api/v1/trd/experiments` — paginated, newest first. See this file's
-         *     header for why this is a small validated-identifier SQL statement rather
-         *     than a call through `entity_crud`/`query_exec`, and for why that is not a
-         *     weaker authorization posture for this specific entity today.
-         */
-        get: operations["list_experiments"];
-        put?: never;
-        post: operations["create_experiment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/experiments/{id}/conclude": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * `PATCH /api/v1/trd/experiments/{id}/conclude` — sets `status` to the
-         *     caller-named terminal outcome and writes `conclusion`. Mandatory
-         *     `If-Match` (see `expected_row_version` above); the write itself goes
-         *     through `entity_crud::update_record_for`, the same primitive the generic
-         *     `PATCH /api/v1/{entity}/{id}` route uses, so record-level access,
-         *     field-write grants, audit, and the row_version compare-and-swap are one
-         *     implementation.
-         */
-        patch: operations["conclude_experiment"];
-        trace?: never;
-    };
-    "/api/v1/trd/experiments/{id}/export-pdf": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/experiments/{id}/export-pdf` — renders `hypothesis`/
-         *     `config`/`status`/`conclusion` to a PDF and stores it. See this file's
-         *     header for the real render primitive used
-         *     (`attome_docgen::render_client::render_pdf`) and why this is synchronous
-         *     rather than a durable job. `Authorized<Privilege<ExperimentRead>>`: this
-         *     is a read-shaped operation (produces a downloadable copy of data the
-         *     caller can already see via `read_record`, mutates nothing), the same
-         *     policy `attome_docgen::render::render_document` uses for its own
-         *     render-enqueue route.
-         */
-        post: operations["export_experiment_pdf"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/quotes/{symbol_id}/publish-test": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/quotes/{symbol_id}/publish-test` — publishes one
-         *     caller-supplied quote onto `symbol_id`'s channel via [`publish_quote`],
-         *     purely so [`quote_events`] can be exercised end to end (open the SSE
-         *     route in one client, call this in another, confirm the quote arrives)
-         *     before any real broker feed exists.
-         * @description **This route must never exist in a real broker-connected deployment.**
-         *     Once a broker adapter calls [`publish_quote`] with real market data (a
-         *     future task — no such caller exists anywhere in this workspace today),
-         *     this endpoint becomes a way for any admin to inject a fabricated quote
-         *     into a live feed, a data-integrity hazard for anything that trusts quote
-         *     data (execution, risk checks, journaling), not merely a theoretical one.
-         *     Gated `Admin` — the strictest tier `attome_server::authz` offers —
-         *     specifically so it never gets **mistaken** for an ordinary
-         *     lower-privileged operator action; the real fix, when the broker adapter
-         *     lands, is to delete this route entirely (or wire it behind a deployment
-         *     flag that is off whenever a real feed is configured), not to lower its
-         *     gate.
-         */
-        post: operations["publish_test_quote"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/quotes/{symbol_id}/stream": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * `GET /api/v1/trd/quotes/{symbol_id}/stream` — subscribes the caller's
-         *     browser to real-time quote updates for one symbol. See this module's doc
-         *     for the SSE-vs-WebSocket decision, the auth story, and cold-start/
-         *     failure behavior. Gated the same way `s2s_signals.rs`'s `ingest_signal`
-         *     gates a route with no `{entity}` path segment: bare
-         *     `Authorized<RecordScoped>` (a declaration only — see its own doc) plus
-         *     this handler's own `ctx.require("trd_symbol", "read")`, so viewing a
-         *     symbol's live quotes needs the same privilege generic CRUD already
-         *     requires to read that symbol's own record.
-         */
-        get: operations["quote_events"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/replay-sessions": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/replay-sessions` — creates a `trd_replay_session`
-         *     record. `user_id` is always the authenticated caller
-         *     (`ctx.user_id`, from `SecurityContext` — never a client-supplied body
-         *     field), the same "never trust a client-supplied ... ownership value"
-         *     rule coding-guidelines.md §7 states. `decisions` starts as an empty JSON
-         *     array; `score`/`completed_at` are left unset until `.../complete`.
-         */
-        post: operations["create_replay_session"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/replay-sessions/{id}/complete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/replay-sessions/{id}/complete` — scores every recorded
-         *     decision (`score_session`), writes the result to `score`, and sets
-         *     `completed_at`. Same `If-Match`/hand-written-`UPDATE` shape as `decide`
-         *     (this file's header explains why); loads only as many `trd_bar` rows as
-         *     the scoring window actually needs (`load_bars_from`'s `limit`), never an
-         *     unbounded scan of the symbol's whole history.
-         */
-        post: operations["complete"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/replay-sessions/{id}/decide": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/replay-sessions/{id}/decide` — records one
-         *     [`ReplayDecision`], appending it to the session's `decisions` JSON array.
-         *     Read-modify-write with `If-Match`/`row_version` (this platform's
-         *     established optimistic-concurrency contract, D-079) — see this file's
-         *     header for why the actual write is a hand-written, row-version-checked
-         *     `UPDATE` rather than `entity_crud::update_record_for` (`trd_replay_session`
-         *     is append-only). `decided_at` is set server-side (`Utc::now()`), never
-         *     trusted from the client, the same "server sets the timestamp" convention
-         *     `backtest_job.rs` uses for `started_at`/`finished_at`.
-         */
-        post: operations["decide"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/replay-sessions/{id}/next-bar": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * `GET /api/v1/trd/replay-sessions/{id}/next-bar` — the next bar to show
-         *     the trader, based on how many decisions have already been recorded
-         *     (`decisions.len()`, never a client-supplied index — the server is the
-         *     only source of truth for how far into the sequence the session is).
-         *     Walks `trd_bar` forward from the session's `start_ts`, the same bound-SQL
-         *     read `backtest_job.rs::load_bars` already establishes as this crate's
-         *     in-crate exemption for reading its own `trd_bar` table.
-         */
-        get: operations["next_bar"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/strategies/validate-rules": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/strategies/validate-rules` — parses `rules` (syntax)
-         *     and type-checks it against an empty `Schema` (structural types; see this
-         *     file's header for why no field schema is bound yet). No database access,
-         *     no side effects: any authenticated caller may call it while drafting an
-         *     expression, so `SelfService` gates it, the same policy
-         *     `features_admin::get_effective_features` and `dashboard`'s `widget-types`
-         *     route use for a route with "no further privilege to check" (see
-         *     `attome_server::authz::SelfService`'s own doc comment).
-         */
-        post: operations["validate_rules"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/strategies/{strategy_id}/deployment-history": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * `GET /api/v1/trd/strategies/{strategy_id}/deployment-history` — every
-         *     `trd_deployment` row across all of the strategy's versions, newest
-         *     `started_at` first. `Authorized<Privilege<DeploymentRead>>`, since this
-         *     reads `trd_deployment` rows, not `trd_strategy_version` ones.
-         */
-        get: operations["deployment_history"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/strategies/{strategy_id}/versions/{version_id_a}/diff/{version_id_b}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * `GET /api/v1/trd/strategies/{strategy_id}/versions/{version_id_a}/diff/{version_id_b}`
-         *     — read-only, so `Authorized<Privilege<StrategyVersionRead>>` rather than
-         *     a create/update key.
-         */
-        get: operations["diff_versions"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/strategies/{strategy_id}/versions/{version_id}/clone": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/strategies/{strategy_id}/versions/{version_id}/clone`
-         *     — creates a new `trd_strategy_version` under the same strategy, copying
-         *     `rules`/`parameters`/`sizing`/`filters` from `version_id` at the next
-         *     integer version number. `Authorized<Privilege<StrategyVersionCreate>>`:
-         *     the route's only write is a `trd_strategy_version` create, and
-         *     `create_record_for` needs the caller to already hold that exact
-         *     privilege (see this file's header).
-         */
-        post: operations["clone_version"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/strategies/{strategy_id}/versions/{version_id}/fork": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/strategies/{strategy_id}/versions/{version_id}/fork`
-         *     — clones both the strategy (`name` suffixed `" (fork)"`, same `mode`/
-         *     `owner`/`description`, `lifecycle_state` reset to `draft`) and the named
-         *     version (same copy as `clone`) under it. `Authorized<Privilege<StrategyCreate>>`
-         *     gates the route: the primary, higher-value new resource this creates is
-         *     the `trd_strategy` row. That satisfies `create_record_for`'s privilege
-         *     precondition for *that* create only — the nested `trd_strategy_version`
-         *     create is a second, distinct entity, so `fork_strategy` checks
-         *     `trd_strategy_version.create` explicitly before making it (see the
-         *     comment at that check). There is no precedent anywhere in this workspace
-         *     for stacking two `Authorized<P>` extractors on one handler, and adding
-         *     one here would be new pattern for a two-entity compound write outside
-         *     this task's scope to establish — the explicit in-handler check mirrors
-         *     the exact three-line form `attome_server::authz::RecordScoped::authorize`
-         *     itself uses.
-         */
-        post: operations["fork_strategy"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/trd/strategies/{strategy_id}/versions/{version_id}/rollback": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/trd/strategies/{strategy_id}/versions/{version_id}/rollback`
-         *     — see this file's header ("Rollback design") for why this clones
-         *     `version_id` forward as a new latest version rather than mutating
-         *     anything in place. Same policy as `clone`: the only write is a
-         *     `trd_strategy_version` create.
-         */
-        post: operations["rollback_version"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/views": {
         parameters: {
             query?: never;
@@ -9251,428 +9807,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["workflow_replay_trigger_dead_letter"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/from-layout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Creates a dashboard and its entire page/section/widget tree from one
-         *     layout document — the single-call counterpart to building a dashboard
-         *     through a sequence of generic-entity-CRUD calls. Meant for a caller that
-         *     already has the whole layout decided (an AI-authoring flow, an import),
-         *     not for interactive editing — the visual Page Editor's own generic-CRUD
-         *     path remains how a human edits an existing dashboard.
-         */
-        post: operations["create_from_layout"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/widget-types": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * `GET /api/v1/attome-dashboard/widget-types` — lists every registered widget
-         *     descriptor, so a builder UI can populate its widget palette without
-         *     hardcoding the catalog. `SelfService` (authenticated-only, same policy
-         *     `attome-server`'s own sidebar read uses): this is a static capability
-         *     list, not a data or configuration read, so no further privilege applies.
-         */
-        get: operations["list_widget_types"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/widget/duplicate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["duplicate"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/widget/validate-config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /api/v1/attome-dashboard/widget/validate-config` — the "reject
-         *     malformed configs at write time, not render time" surface for
-         *     `declarative_widget` (see this module's doc comment). Generic entity CRUD
-         *     has no per-field business-validation hook (`widget_registry.rs`'s doc
-         *     comment: `config` is an unvalidated client-owned blob on every
-         *     widget-carrying entity), so — same shape as `query_admin.rs`'s
-         *     publish-time `EXPLAIN` lint being "the friendly error, the missing grant
-         *     is the actual guarantee" — this is the sanctioned pre-save check the
-         *     widget config editor calls before writing through
-         *     `/api/v1/dashboard_widget`. Same authorization as this crate's other
-         *     bespoke widget business actions (`widget_actions.rs`): a caller who may
-         *     update a widget may check whether a config they intend to save is valid.
-         */
-        post: operations["validate_config_route"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["approve_dashboard"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/archive": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["archive"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/clone": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["clone_dashboard"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/health-check": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["dashboard_health_check"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/pages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["create_dashboard_page"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/pages/{page_id}/data": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["page_data"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/pages/{page_id}/root-section": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["repair_root_section"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/publish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * D-195: gated behind `approval.required_actions` (empty/off by default,
-         *     same as every other wired action_type — see `attome_audit::approval::gate`).
-         *     When gated, this submits an approval request instead of publishing and
-         *     returns `202` with `approval_pending: true` — the dashboard stays
-         *     `approved` until a second, different `system.admin` decides the request
-         *     (`attome-api`'s `approval_admin::decide_approval`, wired to
-         *     `do_publish_dashboard` via `ACTION_DASHBOARD_PUBLISH`).
-         */
-        post: operations["publish"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/published": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["published"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["reject"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/resolve-variables": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["resolve_variables"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/start-revision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["start_revision"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/submit-review": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["submit_for_review"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/tree": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["draft_tree"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/unpublish": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["unpublish"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/versions/{version_id}/activate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["activate_version"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/versions/{version_id}/restore": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["restore_version"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/data": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["widget_data"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/explain": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["widget_explain"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/attome-dashboard/{id}/widgets/{widget_id}/records": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["widget_records"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10371,30 +10505,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/signals": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * `POST /signals` — records an external system's proposed trading signal.
-         *     S2S callers only (see this file's module doc for why no session/api_key
-         *     path exists). Out of scope: deciding whether to route the signal through
-         *     risk checks and execute it — Phase 4 execution-pipeline work, not started
-         *     in this crate. The created record always has `routed = false` and no
-         *     `checks`/`rejected_reason`.
-         */
-        post: operations["ingest_signal"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/version": {
         parameters: {
             query?: never;
@@ -10418,17 +10528,17 @@ export interface paths {
          *     `configuration_version` (P-environment-promotion §5 step 20, amends the
          *     D-099/D-211-era "same as `application_version`" convention) is the sha256
          *     of this deployment's canonical metadata export
-         *     (`attome_api::bundle::canonical::bundle_hash`) — a real, deployment-
+         *     (`xrm_server::bundle::canonical::bundle_hash`) — a real, deployment-
          *     computed fact rather than the binary's own release version, because two
          *     nodes running the identical release can legitimately hold different
          *     metadata (mid-promotion, or a customization). `state.configuration_version`
-         *     is set once at the end of `EngineSystem::build()` and again after every
-         *     successful bundle apply (`attome_api::bundle::apply::run_apply_job`); this
+         *     is set once at the end of `XrmSystem::build()` and again after every
+         *     successful bundle apply (`xrm_server::bundle::apply::run_apply_job`); this
          *     is what makes `fleetctl sync`/`drift` (which already compare this field on
          *     every run) the scheduled drift check, with no scheduler inside the
          *     deployment. Falls back to `application_version` — the old value — whenever
          *     nothing has set it yet (attome-server tests, or a boot path that hasn't
-         *     reached `EngineSystem::build()`), so every existing call site keeps working.
+         *     reached `XrmSystem::build()`), so every existing call site keeps working.
          */
         get: operations["version"];
         put?: never;
@@ -10960,6 +11070,24 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        A2aTask: {
+            /**
+             * Format: uuid
+             * @description The task's id (its conversation).
+             */
+            id: string;
+            issues: string[];
+            output?: Record<string, never> | null;
+            /**
+             * @description `completed` (output matches the contract), `failed` (it did not, or
+             *     the run ended early) or `rejected` (the input broke the contract).
+             */
+            status: string;
+        };
+        A2aTaskRequest: {
+            /** @description The task, matching the agent's input contract. */
+            input: Record<string, never>;
+        };
         /** @description The answer of `POST .../fields/{field_id}/runs/{run_id}/abandon`. */
         AbandonedFieldRun: {
             /**
@@ -11266,6 +11394,15 @@ export interface components {
             checksum: string;
             ref: string;
         };
+        /** @description One agent a partner can hand work to. */
+        AgentCard: {
+            /** Format: uuid */
+            id: string;
+            input_schema: Record<string, never>;
+            name: string;
+            output_schema: Record<string, never>;
+            role?: string | null;
+        };
         AgentSessionResponse: {
             /** Format: uuid */
             agent_definition_ref: string;
@@ -11277,6 +11414,24 @@ export interface components {
              *     was started with. It does not change for the life of the session.
              */
             risk_ceiling: string;
+        };
+        AgentUsageResponse: {
+            items: components["schemas"]["AgentUsageView"][];
+        };
+        /** @description One limit class's use today against the agent's cap. */
+        AgentUsageView: {
+            /** @description `record_changes` | `deletes` | `messages` | `external_calls`. */
+            class: string;
+            /**
+             * Format: int64
+             * @description The agent's published daily cap, or `null` for no cap.
+             */
+            limit?: number | null;
+            /**
+             * Format: int64
+             * @description Steps of this class the agent ran today (UTC), across its sessions.
+             */
+            used: number;
         };
         AggregateBucket: {
             /**
@@ -11334,6 +11489,26 @@ export interface components {
              *     not that the count happens to equal the cap.
              */
             truncated: boolean;
+        };
+        AiStatus: {
+            /** @description `inference.generation.model`; empty when none is configured. */
+            generation_model: string;
+            /**
+             * @description Whether a live catalogue entry approves it (generation refuses
+             *     otherwise).
+             */
+            model_approved: boolean;
+            /** @description The catalogue entries naming it. */
+            model_cards: components["schemas"]["ModelCard"][];
+            /**
+             * Format: int64
+             * @description Scopes switched off now.
+             */
+            switched_off: number;
+            /** @description The latest switch changes, newest first. */
+            timeline: components["schemas"]["SwitchEvent"][];
+            /** @description Turns over the last 24 hours, by how they ended. */
+            turns_last_day: components["schemas"]["TurnCount"][];
         };
         AncestorRow: {
             /**
@@ -11536,6 +11711,13 @@ export interface components {
          * @enum {string}
          */
         ApplyStatus: "planned" | "queued" | "claimed" | "applying" | "succeeded" | "failed" | "adopted";
+        ApprovalMetrics: {
+            approvers: components["schemas"]["ApproverFigures"][];
+            backlog: components["schemas"]["Backlog"][];
+            /** Format: int32 */
+            days: number;
+            rejection_words: components["schemas"]["RejectionWord"][];
+        };
         /**
          * @description D-421 / M10 (Approval & Governance) — an ordered set of approval steps,
          *     persisted on the request as `plan JSONB` (migration
@@ -11553,7 +11735,7 @@ export interface components {
          *     token like `"role:finance_manager"` or `"position:manager_of_requester"`
          *     into an actual user id — that resolution is XRM metadata knowledge
          *     (roles, teams, org structure) this crate has none of (guidelines §1), so
-         *     it stays in `attome_audit::approval::resolve_step_approvers` (ARCH-5's same
+         *     it stays in `xrm_audit::approval::resolve_step_approvers` (ARCH-5's same
          *     split: attome-approval runs the lifecycle, the engine layer resolves what
          *     its own tokens mean). Every function below that needs "who may decide
          *     this step" therefore takes an already-resolved `&[Uuid]`/`usize` from the
@@ -11654,6 +11836,21 @@ export interface components {
             /** Format: int64 */
             row_version: number;
             status: string;
+        };
+        ApproverFigures: {
+            /** Format: int64 */
+            approved: number;
+            /** Format: uuid */
+            approver_id: string;
+            /** Format: int64 */
+            decisions: number;
+            /**
+             * Format: double
+             * @description Median seconds from request to this approver's decision.
+             */
+            median_seconds?: number | null;
+            /** @description The rubber-stamp warning (see the module doc). */
+            warning: boolean;
         };
         ArchiveRecordSummary: {
             archive_ref: string;
@@ -12017,6 +12214,47 @@ export interface components {
             scope: string;
             view_metadata: unknown;
         };
+        Backlog: {
+            action_type: string;
+            /** Format: date-time */
+            oldest?: string | null;
+            /** Format: int64 */
+            pending: number;
+        };
+        BatchDecideBody: {
+            comment?: string | null;
+            /** @description `"approve"` or `"reject"`, for every request. */
+            decision: string;
+            /**
+             * @description At most 100 requests, typically similar ones the administrator
+             *     reviewed a sample of (`GET /api/v1/admin/approvals?action_type=...`).
+             */
+            items: components["schemas"]["BatchItem"][];
+        };
+        BatchDecideResponse: {
+            decided: number;
+            failed: number;
+            items: components["schemas"]["BatchOutcome"][];
+        };
+        /** @description One request of a batch, at the version the administrator looked at. */
+        BatchItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            row_version: number;
+        };
+        /** @description One request's outcome in a batch. */
+        BatchOutcome: {
+            /**
+             * @description Why this one was not decided (stale version, already decided, the
+             *     administrator's own request, ...); `null` on success.
+             */
+            error?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description The request's status after the decision, or `null` when it failed. */
+            status?: string | null;
+        };
         /**
          * @description One block on the canvas. `props` is validated against `kind`'s shape by
          *     `blocks::validate_blocks` before a draft save or publish is accepted —
@@ -12035,6 +12273,49 @@ export interface components {
          * @enum {string}
          */
         BlockKind: "heading" | "rich_text" | "alert" | "image" | "columns" | "data_table" | "chart" | "form" | "component";
+        BlueprintApplied: {
+            /**
+             * @description Every object the apply published, with the version it published and
+             *     the one it replaced (pass these to rollback to undo).
+             */
+            items: components["schemas"]["BlueprintAppliedItem"][];
+        };
+        BlueprintAppliedItem: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /**
+             * Format: int64
+             * @description `null` when the object was new.
+             */
+            previous_version?: number | null;
+            /** Format: int64 */
+            version_no: number;
+        };
+        /** @description One object of a blueprint and what applying it would do (N12-T3). */
+        BlueprintItem: {
+            /**
+             * Format: uuid
+             * @description The existing object's id; `null` for a new one.
+             */
+            id?: string | null;
+            kind: string;
+            name: string;
+            path: string;
+            /**
+             * Format: int64
+             * @description The version that is published now, which a rollback returns to.
+             */
+            published_version?: number | null;
+            /** @description `new` | `changed` | `same`. */
+            status: string;
+        };
+        BlueprintPlan: {
+            items: components["schemas"]["BlueprintItem"][];
+        };
+        BlueprintRollback: {
+            items: components["schemas"]["BlueprintAppliedItem"][];
+        };
         BotAnalytics: {
             deflection: components["schemas"]["DeflectionStats"];
             feedback: components["schemas"]["FeedbackStats"];
@@ -12653,6 +12934,17 @@ export interface components {
             regarding_id?: string | null;
             subject_reference: string;
         };
+        CaseAdded: {
+            case: unknown;
+            content_hash: string;
+            /** Format: uuid */
+            suite_id: string;
+            /**
+             * Format: int64
+             * @description The suite's draft after the case was added.
+             */
+            version_no: number;
+        };
         CaseDefDetail: {
             /**
              * @description Interpretation depends on `source` — see `extraction.rs`'s doc
@@ -12700,6 +12992,18 @@ export interface components {
             row_version: number;
             /** @description `"workflow:<definition_id>"` or `"entity:<logicalname>"`. */
             source: string;
+        };
+        CaseFromMessage: {
+            /** @description What should have happened: `tools`, `text_matches`, `text_excludes`. */
+            expect?: Record<string, never>;
+            /**
+             * Format: uuid
+             * @description The assistant message that went wrong.
+             */
+            message_id: string;
+            /** @description The case's name; defaults to one naming the message. */
+            name?: string | null;
+            safety?: boolean;
         };
         CatalogEntityDetail: {
             category?: string | null;
@@ -12905,6 +13209,21 @@ export interface components {
             /** @description `inbound` (the visitor) or `outbound` (the bot, or a human agent). */
             direction: string;
         };
+        /** @description One session a supervisor delegated to (N8-T1's run tree). */
+        ChildSession: {
+            /**
+             * Format: uuid
+             * @description The specialist agent object it ran as.
+             */
+            agent_object_ref?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            revoked_at?: string | null;
+            /** Format: date-time */
+            started_at: string;
+            surface: string;
+        };
         /**
          * @description One citation, projected from `attome_search::KnowledgeCitation` — every field
          *     except `passage`, whose text is already in the turn's tool message. An
@@ -13007,10 +13326,6 @@ export interface components {
         CloneResponse: {
             /** Format: uuid */
             id: string;
-        };
-        CloneVersionResponse: {
-            /** Format: uuid */
-            new_version_id: string;
         };
         /** @description `POST /api/v1/admin/changesets/{id}/close`. */
         CloseResponse: {
@@ -13120,6 +13435,26 @@ export interface components {
             name: string;
             route_template: string;
         };
+        CommandsRequest: {
+            /**
+             * @description The content hash of the document the commands were made against; empty
+             *     for an object that does not exist yet.
+             */
+            base_hash: string;
+            /** @description `add`, `remove`, `move` and `set` edits, applied in order. */
+            commands: Record<string, never>[];
+            /** @description The object's name; required when it does not exist yet. */
+            name?: string | null;
+        };
+        CommandsResponse: {
+            content_hash: string;
+            /** Format: uuid */
+            id: string;
+            /** @description References to objects that do not exist; they do not block the draft. */
+            issues: components["schemas"]["IssueView"][];
+            /** Format: int64 */
+            version_no: number;
+        };
         CommunicationResponse: {
             channel: string;
             /** Format: uuid */
@@ -13214,18 +13549,6 @@ export interface components {
              *     success nor a failure yet.
              */
             total_decided: number;
-        };
-        CompleteReplaySessionRequest: {
-            /**
-             * @description Bars to look ahead per decision when scoring — defaults to
-             *     [`DEFAULT_LOOKAHEAD_BARS`] when omitted.
-             */
-            lookahead_bars?: number | null;
-        };
-        CompleteReplaySessionResponse: {
-            /** Format: int64 */
-            row_version: number;
-            score: components["schemas"]["SessionScore"];
         };
         ComplianceModelRow: {
             /**
@@ -13322,15 +13645,6 @@ export interface components {
              */
             skipped: boolean;
             snapshot: components["schemas"]["SnapshotRow"];
-        };
-        ConcludeExperimentBody: {
-            conclusion: string;
-            /**
-             * @description `"confirmed"` or `"rejected"` — the two terminal values of
-             *     `trd_experiment.status`'s choice options (`research.rs`); `"open"` is
-             *     the start state only and is not a valid outcome here.
-             */
-            outcome: string;
         };
         ConditionAll: {
             /**
@@ -13439,27 +13753,6 @@ export interface components {
          */
         ConfirmToolCallRequest: {
             arguments_hash: string;
-        };
-        ConnectionListEntry: {
-            broker: string;
-            created_at: string;
-            environment: string;
-            /** Format: uuid */
-            id: string;
-            /** @description UTC ISO-8601 (coding-guidelines.md §12). */
-            last_seen_at?: string | null;
-            /** Format: int64 */
-            row_version: number;
-            scopes?: string | null;
-            /**
-             * @description Whether `secret_ref` is set — NEVER the resolved secret value itself
-             *     (this is a security-sensitive listing: see this file's header,
-             *     "Secret storage"). A future route that actually resolves a broker
-             *     credential does so for one outbound call's use only, never to answer
-             *     a list request.
-             */
-            secret_configured: boolean;
-            status: string;
         };
         ConsentBody: {
             privacy_version?: string | null;
@@ -13618,27 +13911,6 @@ export interface components {
             expires_in_days?: number | null;
             name: string;
         };
-        CreateCalendarEventRequest: {
-            actual?: string | null;
-            /** @description Currency the event applies to, e.g. "USD". */
-            currency: string;
-            forecast?: string | null;
-            /**
-             * @description `trd_calendar_event.impact`'s choice vocabulary (`low`/`medium`/
-             *     `high`) — checked against the live metadata by `create_record_for`,
-             *     not here.
-             */
-            impact: string;
-            /** @description Event name, e.g. "US Non-Farm Payrolls". */
-            name: string;
-            previous?: string | null;
-            /** Format: date-time */
-            scheduled_at: string;
-        };
-        CreateCalendarEventResponse: {
-            /** Format: uuid */
-            id: string;
-        };
         CreateCaseDefBody: {
             activity_mapping?: unknown;
             is_active?: boolean;
@@ -13681,22 +13953,6 @@ export interface components {
             operator: number;
             value: unknown;
         };
-        CreateConnectionRequest: {
-            /**
-             * @description Free text — this crate's existing convention (`entities/broker.rs`):
-             *     no fixed broker enum.
-             */
-            broker: string;
-            /** @description "demo" or "live" — the entity's provisioned `choice` attribute. */
-            environment: string;
-        };
-        CreateConnectionResponse: {
-            broker: string;
-            environment: string;
-            /** Format: uuid */
-            id: string;
-            status: string;
-        };
         CreateDefinitionBody: {
             logicalname: string;
             name: string;
@@ -13724,24 +13980,6 @@ export interface components {
             entity: string;
             team_name?: string | null;
             user_email?: string | null;
-        };
-        CreateExperimentBody: {
-            /**
-             * @description Arbitrary JSON, encoded to `trd_experiment.config`'s text-typed
-             *     attribute on write — no `FieldType::Json` exists in this platform's
-             *     field-type vocabulary (see `entities/mod.rs::JSON_FIELD_TYPE`'s doc
-             *     comment); this is the same established convention `research.rs`'s own
-             *     `fill_model`/`metrics`/`config`/`result` fields already use.
-             */
-            config?: unknown;
-            hypothesis: string;
-            /**
-             * Format: uuid
-             * @description See this file's header ("Known metadata drift") for why this is
-             *     `Option` here even though the provisioned attribute is currently
-             *     `is_required = true`.
-             */
-            strategy_version_id?: string | null;
         };
         CreateFieldProfileAssignmentBody: {
             /** Format: uuid */
@@ -13902,18 +14140,6 @@ export interface components {
             name: string;
             role_a: string;
             role_b: string;
-        };
-        CreateReplaySessionRequest: {
-            /** Format: date-time */
-            start_ts: string;
-            /** Format: uuid */
-            symbol_id: string;
-            /**
-             * @description One of `"1m"`/`"5m"`/`"15m"`/`"1h"`/`"4h"`/`"1d"` — validated against
-             *     `trd_replay_session.timeframe`'s choice list by the generic entity
-             *     engine's own `validate_body`, same as every other choice attribute.
-             */
-            timeframe: string;
         };
         CreateReportBody: {
             /**
@@ -14158,6 +14384,36 @@ export interface components {
             total?: number | null;
         };
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
+        CursorPage_EvidenceRow: {
+            items: {
+                action_id: string;
+                /** Format: uuid */
+                agent_object_ref?: string | null;
+                /** Format: uuid */
+                agent_session_id?: string | null;
+                /** Format: date-time */
+                at: string;
+                entity?: string | null;
+                /** Format: uuid */
+                id: string;
+                model_id?: string | null;
+                /** @description The action's outcome, or what a person did with a suggestion. */
+                outcome: string;
+                prompt_version?: string | null;
+                /** Format: uuid */
+                record_id?: string | null;
+                /** Format: uuid */
+                user_id?: string | null;
+            }[];
+            next_cursor?: string | null;
+            /**
+             * Format: int64
+             * @description Exact size of the whole window, when the route counts it (first page
+             *     only); absent otherwise.
+             */
+            total?: number | null;
+        };
+        /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_MyWorkItem: {
             items: {
                 /**
@@ -14381,13 +14637,6 @@ export interface components {
             /** Format: int64 */
             row_version: number;
         };
-        DecideRequest: {
-            /** @description `"buy"`, `"sell"`, or `"hold"` (lowercase, exactly — validated below). */
-            action: string;
-            bar_index: number;
-            stop_loss?: string | null;
-            take_profit?: string | null;
-        };
         DecideResponse: {
             /**
              * @description Present only when this decision closed the request as `Approved` and
@@ -14397,58 +14646,6 @@ export interface components {
             /** Format: uuid */
             id: string;
             status: string;
-        };
-        /**
-         * @description The score for one [`ReplayDecision`], computed against what the market
-         *     actually did over the `lookahead_bars` bars following `bar_index`.
-         */
-        DecisionScore: {
-            action: string;
-            bar_index: number;
-            /**
-             * @description How many bars after `bar_index` were actually available/walked —
-             *     `<= lookahead_bars`; less than that only when the session was near
-             *     the end of the available bar history.
-             */
-            bars_walked: number;
-            /**
-             * @description Whether the decision was the right call — see [`score_decision`]'s
-             *     doc for the exact rule per action.
-             */
-            correct: boolean;
-            /**
-             * @description The decision price — `bars[bar_index].close`, the last price the
-             *     trader had actually seen.
-             */
-            entry_price: string;
-            /**
-             * @description For `"buy"`/`"sell"`: the stop-loss or take-profit price if one was
-             *     hit within the window, else the last walked bar's close. For
-             *     `"hold"`: the last walked bar's close (no position was ever taken).
-             */
-            exit_price: string;
-            /** @description Maximum adverse excursion, same units. Always >= 0. */
-            mae_pct: string;
-            /**
-             * @description Maximum favorable excursion over the walked window, as a percentage
-             *     of `entry_price` — the best the position (or, for `"hold"`, the best
-             *     upward move) reached before the window closed. Always >= 0.
-             */
-            mfe_pct: string;
-            /**
-             * @description Signed, direction-adjusted like a trade's P&L: `exit_price -
-             *     entry_price` for `"buy"`/`"hold"`, `entry_price - exit_price` for
-             *     `"sell"` (so a favorable move is always positive here, regardless of
-             *     side).
-             */
-            price_change: string;
-            /**
-             * @description `price_change / entry_price * 100`. Zero when `entry_price` is zero
-             *     (never divides by zero).
-             */
-            price_change_pct: string;
-            stop_loss_hit: boolean;
-            take_profit_hit: boolean;
         };
         DefinitionDetail: {
             /** Format: date-time */
@@ -14566,18 +14763,6 @@ export interface components {
             status: string;
             subject: string;
         };
-        DeploymentHistoryEntry: {
-            account_id: string;
-            ended_at?: string | null;
-            ended_reason?: string | null;
-            environment: string;
-            /** Format: uuid */
-            id: string;
-            /** @description UTC ISO-8601 (coding-guidelines.md §12). */
-            started_at: string;
-            /** Format: uuid */
-            strategy_version_id: string;
-        };
         DescribeQueryBody: {
             sql_query: string;
         };
@@ -14638,11 +14823,6 @@ export interface components {
         };
         /** @enum {string} */
         Direction: "outbound" | "inbound" | "both";
-        DisconnectResponse: {
-            /** Format: uuid */
-            id: string;
-            status: string;
-        };
         /**
          * @description One model as the provider reports it. Only the two fields an operator needs
          *     to choose from, deliberately: everything else in a provider's listing
@@ -14965,22 +15145,6 @@ export interface components {
              */
             record_id?: string | null;
         };
-        EmergencyControlEntry: {
-            engaged: boolean;
-            /** @description UTC ISO-8601 (coding-guidelines.md §12). */
-            engaged_at?: string | null;
-            /** Format: uuid */
-            id: string;
-            reason?: string | null;
-            released_at?: string | null;
-            scope: string;
-            /** Format: uuid */
-            strategy_id?: string | null;
-        };
-        EngageRequest: {
-            /** @description Required, non-empty — validated by [`validate_reason`]. */
-            reason: string;
-        };
         EnrollResponseBody: {
             otpauth_uri: string;
             secret_base32: string;
@@ -15272,7 +15436,7 @@ export interface components {
             /**
              * Format: uuid
              * @description Present on a `rule_violation` response (D-472): the id of the
-             *     `rule` whose failing expression produced this 422, so a
+             *     `xrm_core_rule` whose failing expression produced this 422, so a
              *     client can highlight or re-check the exact rule without parsing
              *     `message`. Omitted on every other code, and on any response that
              *     does not name a rule.
@@ -15286,10 +15450,58 @@ export interface components {
              */
             rule_name?: string | null;
         };
+        EvalRun: {
+            /** Format: uuid */
+            agent_ref: string;
+            error?: string | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description The graded cases (`SuiteOutcome`). */
+            outcome?: Record<string, never> | null;
+            /** Format: double */
+            score?: number | null;
+            /** Format: date-time */
+            started_at: string;
+            /** Format: uuid */
+            started_by: string;
+            /** @description `running`, `passed`, `failed` or `error`. */
+            status: string;
+            suite_hash: string;
+            /** Format: uuid */
+            suite_ref: string;
+        };
+        EvalRunStarted: {
+            cases: number;
+            /** Format: uuid */
+            run_id: string;
+            status: string;
+        };
         EvaluateResponse: {
             results: components["schemas"]["ScenarioResultRow"][];
             /** Format: uuid */
             scenario_id: string;
+        };
+        EvidenceRow: {
+            action_id: string;
+            /** Format: uuid */
+            agent_object_ref?: string | null;
+            /** Format: uuid */
+            agent_session_id?: string | null;
+            /** Format: date-time */
+            at: string;
+            entity?: string | null;
+            /** Format: uuid */
+            id: string;
+            model_id?: string | null;
+            /** @description The action's outcome, or what a person did with a suggestion. */
+            outcome: string;
+            prompt_version?: string | null;
+            /** Format: uuid */
+            record_id?: string | null;
+            /** Format: uuid */
+            user_id?: string | null;
         };
         ExecData: {
             columns: components["schemas"]["ColumnDef"][];
@@ -15431,15 +15643,6 @@ export interface components {
              */
             view_id?: string | null;
         };
-        ExecuteReleaseResponse: {
-            /** Format: uuid */
-            approval_id: string;
-            /**
-             * @description `true` only if this call actually performed the release — see
-             *     [`execute_release_if_approved`]'s doc for what `false` covers.
-             */
-            released: boolean;
-        };
         ExecuteResponse: {
             /** Format: uuid */
             id: string;
@@ -15447,28 +15650,6 @@ export interface components {
             /** Format: int64 */
             row_version: number;
             status: string;
-        };
-        ExperimentSummary: {
-            conclusion?: string | null;
-            /**
-             * @description Decoded back from `trd_experiment.config`'s stored text, when present
-             *     and valid JSON (it always is, since `create_experiment` is the only
-             *     writer and always round-trips through `serde_json::to_string`) — a
-             *     caller sends JSON in and gets JSON back, never the internal
-             *     text-attribute encoding.
-             */
-            config?: unknown;
-            /** @description UTC ISO-8601 (coding-guidelines.md §12). */
-            created_at?: string | null;
-            hypothesis: string;
-            /** Format: uuid */
-            id: string;
-            /** Format: int64 */
-            row_version: number;
-            status: string;
-            /** Format: uuid */
-            strategy_version_id?: string | null;
-            updated_at?: string | null;
         };
         ExplainedFilter: {
             field: string;
@@ -15499,6 +15680,18 @@ export interface components {
             source_kind?: string | null;
             target?: null | components["schemas"]["MetricTarget"];
         };
+        /** @description One retrieved passage and the terms that brought it. */
+        ExplainedPassage: {
+            heading_path: string[];
+            /** Format: uuid */
+            item_id: string;
+            /** @description Terms found in the title, headings or passage. */
+            matched_terms: string[];
+            /** @description 1 is the strongest (ranked by `ts_rank_cd`). */
+            rank: number;
+            title: string;
+            unmatched_terms: string[];
+        };
         ExportEnqueueResponse: {
             /** Format: uuid */
             id: string;
@@ -15510,20 +15703,6 @@ export interface components {
              */
             matching_rows: number;
             status: string;
-        };
-        ExportPdfResponse: {
-            checksum: string;
-            /**
-             * @description Presigned, time-boxed — same shape `attome_report::run::RunStatusResponse`/
-             *     `attome_docgen::render::RenderStatusResponse` already return for a
-             *     server-generated, `attome-storage`-held file.
-             */
-            download_url: string;
-            /** Format: int64 */
-            expires_in_secs: number;
-            object_key: string;
-            /** Format: int64 */
-            size_bytes: number;
         };
         ExportRequestBody: {
             /**
@@ -15888,6 +16067,18 @@ export interface components {
             session_id: string;
             status: string;
         };
+        /** @description One finding. */
+        Finding: {
+            /** @description The attribute, when the finding is about one. */
+            attribute?: string | null;
+            detail: string;
+            entity: string;
+            /**
+             * @description `broken_reference`, `duplicate_attribute`, `unused_entity`,
+             *     `unused_attribute` or `index_proposal`.
+             */
+            kind: string;
+        };
         FindingRemediateResponse: {
             /** Format: uuid */
             id: string;
@@ -15914,11 +16105,30 @@ export interface components {
              */
             folder: string;
         };
-        ForkStrategyResponse: {
+        FormPlan: {
+            /** @description The entity's logical name, as the record API addresses it. */
+            entity: string;
             /** Format: uuid */
-            new_strategy_id: string;
-            /** Format: uuid */
-            new_version_id: string;
+            id: string;
+            name: string;
+            sections: components["schemas"]["FormPlanSection"][];
+        };
+        FormPlanField: {
+            /** @description An AI attribute (N11-T1): `record.ai_field` can suggest its value. */
+            ai: boolean;
+            /** @description The attribute's logical name: the key of its value in a record. */
+            attribute: string;
+            /**
+             * Format: int32
+             * @description The attribute's field type number.
+             */
+            field_type: number;
+            label: string;
+            required: boolean;
+        };
+        FormPlanSection: {
+            fields: components["schemas"]["FormPlanField"][];
+            label: string;
         };
         FulfillErasureBody: {
             scopes: components["schemas"]["DsrScope"][];
@@ -16238,6 +16448,10 @@ export interface components {
             /** Format: uuid */
             plan_id?: string | null;
         };
+        ImportResponse: {
+            /** @description The drafts saved, in file order. */
+            drafts: components["schemas"]["CommandsResponse"][];
+        };
         ImportResult: {
             /** Format: uuid */
             data_source_ref: string;
@@ -16259,27 +16473,6 @@ export interface components {
              *     lexical-only by configuration.
              */
             embedding_model?: string | null;
-        };
-        IngestSignalRequest: {
-            confidence?: string | null;
-            /**
-             * @description `trd_signal.direction`'s choice vocabulary (`long`/`short`) — checked
-             *     against the live metadata by `create_record_for`, not here.
-             */
-            direction: string;
-            price: string;
-            /** @description Free-form JSON, stored verbatim in `trd_signal.reasoning`. */
-            reasoning?: unknown;
-            sl?: string | null;
-            /** Format: uuid */
-            strategy_version_id: string;
-            /** Format: uuid */
-            symbol_id: string;
-            tp?: string | null;
-        };
-        IngestSignalResponse: {
-            /** Format: uuid */
-            id: string;
         };
         InstanceDetail: {
             /** Format: date-time */
@@ -16342,6 +16535,11 @@ export interface components {
              */
             args?: unknown;
         };
+        IssueView: {
+            code: string;
+            message: string;
+            path: string;
+        };
         /** @description What an item Restore did. */
         ItemRestoreResult: {
             item: components["schemas"]["ReportItem"];
@@ -16392,6 +16590,14 @@ export interface components {
             slot: string;
             status: string;
         };
+        KindView: {
+            description: string;
+            /** @description The JSON Schema of the kind's documents. */
+            json_schema: Record<string, never>;
+            name: string;
+            /** Format: int32 */
+            schema_version: number;
+        };
         /**
          * @description One passage returned from the knowledge corpus, with everything a citation
          *     needs to resolve (`P-knowledge-base` §8, §11).
@@ -16437,6 +16643,26 @@ export interface components {
              *     the whole.
              */
             truncated: boolean;
+        };
+        /**
+         * @description Why a retrieval returned what it did, for an administrator (roadmap
+         *     N15-T4): the terms the question was reduced to, the words dropped as
+         *     function words, and for each passage, in rank order, which terms it
+         *     matched. Retrieved under the administrator's own permissions, lexical
+         *     mode, and never recorded as demand or as a gap: explaining a question is
+         *     not asking it.
+         */
+        KnowledgeExplanation: {
+            /** @description Words dropped before matching (function words). */
+            dropped: string[];
+            /**
+             * @description Set when nothing was found: `no_terms` (only function words),
+             *     `no_readable_collection` or `no_match`.
+             */
+            empty_reason?: string | null;
+            passages: components["schemas"]["ExplainedPassage"][];
+            /** @description The content terms, normalised and stemmed as the index stores them. */
+            terms: string[];
         };
         KpiData: {
             metrics: components["schemas"]["KpiMetric"][];
@@ -16762,6 +16988,31 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
         };
+        McpServerView: {
+            allow_external: boolean;
+            has_credential: boolean;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: date-time */
+            tools_imported_at?: string | null;
+            url: string;
+        };
+        McpToolSetting: {
+            enabled: boolean;
+            risk: string;
+        };
+        McpToolView: {
+            /** @description The server's own description: untrusted, shown as written. */
+            description?: string | null;
+            /** Format: uuid */
+            id: string;
+            input_schema?: Record<string, never> | null;
+            is_enabled: boolean;
+            name: string;
+            /** @description `read`, `reversible` or `consequential`. */
+            risk: string;
+        };
         Measure: {
             aggregation: components["schemas"]["MeasureFn"];
             /** @description Required unless `aggregation` is `count`. */
@@ -16770,6 +17021,15 @@ export interface components {
         };
         /** @enum {string} */
         MeasureFn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max" | "median";
+        /** @description A menu as one caller sees it (A21-T2). */
+        MenuView: {
+            groups: Record<string, never>[];
+            /** Format: uuid */
+            id: string;
+            /** @description `<group>/<item>` of this caller's landing page, when the menu sets one. */
+            landing?: string | null;
+            name: string;
+        };
         MergeCandidateBody: {
             /**
              * Format: uuid
@@ -16990,6 +17250,40 @@ export interface components {
             /** Format: int32 */
             total: number;
         };
+        /** @description The generation model's catalogue entry. */
+        ModelCard: {
+            approval_status?: string | null;
+            /** Format: double */
+            context_window?: number | null;
+            description?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            knowledge_cutoff?: string | null;
+            /** Format: double */
+            max_output_tokens?: number | null;
+            name?: string | null;
+            provider_model_id?: string | null;
+            version?: string | null;
+        };
+        /** @description One object as a readable text file (Y1-T10). */
+        ModelFile: {
+            /** @description `<kind>/<app>/<name>.json`, always with `/` separators. */
+            path: string;
+            /** @description Pretty JSON with sorted keys and a trailing newline. */
+            text: string;
+        };
+        /**
+         * @description A set of object files. Not a paginated list: an export is one artefact,
+         *     written to a directory whole and read back whole.
+         */
+        ModelFiles: {
+            files: components["schemas"]["ModelFile"][];
+        };
+        ModelHealth: {
+            entities: number;
+            findings: components["schemas"]["Finding"][];
+        };
         /**
          * @description The `/api/v1/admin/predict/models*` wire shape — deliberately omits
          *     `model_artifact` (internal fitted parameters, not a public contract) and
@@ -17120,6 +17414,13 @@ export interface components {
             name_ar?: string | null;
             visibility?: string | null;
         };
+        NewMcpServer: {
+            allow_external?: boolean;
+            /** @description A bearer token; stored encrypted, never returned. */
+            credential?: string | null;
+            name: string;
+            url: string;
+        };
         /**
          * @description The page fields a caller may set when adding a page. `dashboard_id` is not
          *     accepted — it always comes from the path — and neither are sections, which
@@ -17158,13 +17459,12 @@ export interface components {
         NewRole: {
             name: string;
         };
-        NextBarResponse: {
-            bar?: null | components["schemas"]["ReplayBarDto"];
-            /**
-             * @description The index this bar would occupy if decided on now — i.e. how many
-             *     decisions have been recorded so far.
-             */
-            bar_index: number;
+        NewWritePolicy: {
+            /** @description A write action id, such as `record.update`. */
+            action_id: string;
+            /** @description One entity's logical name; omit for every entity. */
+            entity?: string | null;
+            reason?: string | null;
         };
         NodeRefInput: {
             entity: string;
@@ -17248,6 +17548,43 @@ export interface components {
             /** @description The caller's stored rows. A (category, channel) with no row is enabled. */
             items: components["schemas"]["NotificationPreference"][];
         };
+        ObjectSessionResponse: {
+            /**
+             * Format: uuid
+             * @description The agent object the session runs as.
+             */
+            agent: string;
+            allowed_action_ids?: string[] | null;
+            /** Format: uuid */
+            id: string;
+            risk_ceiling: string;
+        };
+        ObjectSummaryView: {
+            app: string;
+            content_hash: string;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            owner_layer: string;
+            state: string;
+            /** Format: int64 */
+            version_no: number;
+        };
+        ObjectVersionView: {
+            content_hash: string;
+            /** Format: date-time */
+            created_at: string;
+            doc: Record<string, never>;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: int32 */
+            kind_schema_version: number;
+            name: string;
+            state: string;
+            /** Format: int64 */
+            version_no: number;
+        };
         OfferingSummary: {
             category?: string | null;
             default_priority: string;
@@ -17283,7 +17620,7 @@ export interface components {
          * @description What happens when a step's `sla_minutes` elapses with nobody having
          *     decided it yet — applied by `apply_step_timeout_with`, driven by the sweep
          *     that reuses M51's notification-escalation poller
-         *     (`attome_notification::poller`; see that crate's `approval_timeouts` module).
+         *     (`xrm_notification::poller`; see that crate's `approval_timeouts` module).
          * @enum {string}
          */
         OnTimeout: "escalate" | "auto_approve" | "auto_reject";
@@ -17542,6 +17879,23 @@ export interface components {
                 revoked_at?: string | null;
                 /** Format: uuid */
                 subject_user_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_AgentCard: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                input_schema: Record<string, never>;
+                name: string;
+                output_schema: Record<string, never>;
+                role?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -18021,6 +18375,29 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_ChildSession: {
+            items: {
+                /**
+                 * Format: uuid
+                 * @description The specialist agent object it ran as.
+                 */
+                agent_object_ref?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** Format: date-time */
+                revoked_at?: string | null;
+                /** Format: date-time */
+                started_at: string;
+                surface: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_ClientListItem: {
             items: {
                 client_id: string;
@@ -18086,36 +18463,6 @@ export interface components {
                  */
                 last_indexed_at?: string | null;
                 name?: string | null;
-            }[];
-            /** Format: int64 */
-            page: number;
-            /** Format: int64 */
-            page_size: number;
-            /** Format: int64 */
-            total: number;
-        };
-        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
-        PaginatedResponse_ConnectionListEntry: {
-            items: {
-                broker: string;
-                created_at: string;
-                environment: string;
-                /** Format: uuid */
-                id: string;
-                /** @description UTC ISO-8601 (coding-guidelines.md §12). */
-                last_seen_at?: string | null;
-                /** Format: int64 */
-                row_version: number;
-                scopes?: string | null;
-                /**
-                 * @description Whether `secret_ref` is set — NEVER the resolved secret value itself
-                 *     (this is a security-sensitive listing: see this file's header,
-                 *     "Secret storage"). A future route that actually resolves a broker
-                 *     credential does so for one outbound call's use only, never to answer
-                 *     a list request.
-                 */
-                secret_configured: boolean;
-                status: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -18333,27 +18680,6 @@ export interface components {
                 sent_at?: string | null;
                 status: string;
                 subject: string;
-            }[];
-            /** Format: int64 */
-            page: number;
-            /** Format: int64 */
-            page_size: number;
-            /** Format: int64 */
-            total: number;
-        };
-        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
-        PaginatedResponse_DeploymentHistoryEntry: {
-            items: {
-                account_id: string;
-                ended_at?: string | null;
-                ended_reason?: string | null;
-                environment: string;
-                /** Format: uuid */
-                id: string;
-                /** @description UTC ISO-8601 (coding-guidelines.md §12). */
-                started_at: string;
-                /** Format: uuid */
-                strategy_version_id: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -18588,37 +18914,6 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
-        PaginatedResponse_ExperimentSummary: {
-            items: {
-                conclusion?: string | null;
-                /**
-                 * @description Decoded back from `trd_experiment.config`'s stored text, when present
-                 *     and valid JSON (it always is, since `create_experiment` is the only
-                 *     writer and always round-trips through `serde_json::to_string`) — a
-                 *     caller sends JSON in and gets JSON back, never the internal
-                 *     text-attribute encoding.
-                 */
-                config?: unknown;
-                /** @description UTC ISO-8601 (coding-guidelines.md §12). */
-                created_at?: string | null;
-                hypothesis: string;
-                /** Format: uuid */
-                id: string;
-                /** Format: int64 */
-                row_version: number;
-                status: string;
-                /** Format: uuid */
-                strategy_version_id?: string | null;
-                updated_at?: string | null;
-            }[];
-            /** Format: int64 */
-            page: number;
-            /** Format: int64 */
-            page_size: number;
-            /** Format: int64 */
-            total: number;
-        };
-        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_FieldSecurityProfileFieldItem: {
             items: {
                 can_read: boolean;
@@ -18834,6 +19129,23 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_KindView: {
+            items: {
+                description: string;
+                /** @description The JSON Schema of the kind's documents. */
+                json_schema: Record<string, never>;
+                name: string;
+                /** Format: int32 */
+                schema_version: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_KnowledgeCitation: {
             items: {
                 /**
@@ -18959,6 +19271,45 @@ export interface components {
                 threshold: number;
                 /** Format: date-time */
                 updated_at: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_McpServerView: {
+            items: {
+                allow_external: boolean;
+                has_credential: boolean;
+                /** Format: uuid */
+                id: string;
+                name: string;
+                /** Format: date-time */
+                tools_imported_at?: string | null;
+                url: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_McpToolView: {
+            items: {
+                /** @description The server's own description: untrusted, shown as written. */
+                description?: string | null;
+                /** Format: uuid */
+                id: string;
+                input_schema?: Record<string, never> | null;
+                is_enabled: boolean;
+                name: string;
+                /** @description `read`, `reversible` or `consequential`. */
+                risk: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -19120,6 +19471,26 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_ObjectSummaryView: {
+            items: {
+                app: string;
+                content_hash: string;
+                /** Format: uuid */
+                id: string;
+                name: string;
+                owner_layer: string;
+                state: string;
+                /** Format: int64 */
+                version_no: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_OrganizationItem: {
             items: {
                 /** Format: uuid */
@@ -19198,6 +19569,20 @@ export interface components {
                 /** Format: date-time */
                 updated_at: string;
                 url_path: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_PatchOpView: {
+            items: {
+                op: string;
+                path: string;
+                value?: Record<string, never> | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -19507,6 +19892,24 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_ReferenceView: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                from_kind: string;
+                /** Format: uuid */
+                from_ref: string;
+                mode: string;
+                to: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_RelationshipView: {
             items: {
                 cascade: string;
@@ -19757,6 +20160,30 @@ export interface components {
                 /** Format: uuid */
                 user_id: string;
                 user_name: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_ScopeSwitchView: {
+            items: {
+                /** @description `manual` | `budget` | `quality` | `injection` | `departure`. */
+                cause: string;
+                /** Format: date-time */
+                changed_at: string;
+                /**
+                 * Format: uuid
+                 * @description `null` for an automatic trip.
+                 */
+                changed_by?: string | null;
+                enabled: boolean;
+                reason?: string | null;
+                scope_key: string;
+                scope_kind: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -20121,6 +20548,28 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_TraceStep: {
+            items: {
+                /** Format: uuid */
+                acting_user_id: string;
+                action_id: string;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                /** @description `completed`, `executed`, `claimed`, `approval_requested`, a refusal... */
+                outcome: string;
+                /** @description The tool call that asked for it, when an agent did. */
+                tool_call_id?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_TriggerDeadLetter: {
             items: {
                 /**
@@ -20180,6 +20629,25 @@ export interface components {
                 role_name: string;
                 /** Format: uuid */
                 user_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_VersionSummaryView: {
+            items: {
+                content_hash: string;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                created_by?: string | null;
+                state: string;
+                /** Format: int64 */
+                version_no: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -20306,9 +20774,35 @@ export interface components {
             /** Format: int64 */
             total: number;
         };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_WritePolicy: {
+            items: {
+                action_id: string;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                created_by: string;
+                /** @description `null`: every entity. */
+                entity?: string | null;
+                /** Format: uuid */
+                id: string;
+                reason?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
         PasswordChangeBody: {
             current_password: string;
             new_password: string;
+        };
+        PatchOpView: {
+            op: string;
+            path: string;
+            value?: Record<string, never> | null;
         };
         PauseClockRequest: {
             reason: components["schemas"]["PauseReason"];
@@ -21153,6 +21647,13 @@ export interface components {
         PromptListResponse: {
             items: components["schemas"]["PromptSummary"][];
         };
+        PromptPreview: {
+            /** @description Characters across all messages. */
+            chars: number;
+            /** @description The messages in order, as sent: `role` and `content`. */
+            messages: Record<string, never>[];
+            prompt_version: string;
+        };
         PromptSummary: {
             action_id: string;
             text: string;
@@ -21217,18 +21718,6 @@ export interface components {
             /** Format: date-time */
             published_at: string;
             status: string;
-        };
-        PublishTestQuoteRequest: {
-            ask: string;
-            bid: string;
-            /**
-             * Format: date-time
-             * @description Defaults to "now" when omitted.
-             */
-            ts?: string | null;
-        };
-        PublishTestQuoteResponse: {
-            published: components["schemas"]["QuoteUpdate"];
         };
         /** @description D-521 — what a viewer of `dashboard_id` sees. */
         PublishedDashboard: {
@@ -21405,20 +21894,6 @@ export interface components {
         QueryRef: {
             entity?: string | null;
             name: string;
-        };
-        /**
-         * @description One quote update — the exact JSON shape published to Redis
-         *     ([`publish_quote`]) and forwarded byte-for-byte as an SSE `data:`
-         *     payload ([`subscribe_stream`]). A single definition so the publish and
-         *     subscribe sides can never disagree about the wire shape.
-         */
-        QuoteUpdate: {
-            ask: string;
-            bid: string;
-            /** Format: uuid */
-            symbol_id: string;
-            /** Format: date-time */
-            ts: string;
         };
         ReadRequest: {
             /** Format: uuid */
@@ -21614,6 +22089,15 @@ export interface components {
         RecoveryCodesBody: {
             recovery_codes: string[];
         };
+        ReferenceView: {
+            /** Format: date-time */
+            created_at: string;
+            from_kind: string;
+            /** Format: uuid */
+            from_ref: string;
+            mode: string;
+            to: string;
+        };
         RegisterRequest: {
             email: string;
             /**
@@ -21635,6 +22119,11 @@ export interface components {
         RegistrationConfigInfo: {
             /** @description One of `"public"`/`"invite"`/`"disabled"` — see `AuthSection::registration_mode`. */
             mode: string;
+        };
+        RejectionWord: {
+            /** Format: int64 */
+            count: number;
+            word: string;
         };
         RelatedKnowledgeResponse: {
             /**
@@ -21837,23 +22326,8 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
-        ReplayBarDto: {
-            close: string;
-            high: string;
-            low: string;
-            open: string;
-            /** Format: date-time */
-            timestamp: string;
-            volume: string;
-        };
         ReplayResult: {
             replayed: boolean;
-        };
-        ReplaySessionCreatedResponse: {
-            /** Format: uuid */
-            id: string;
-            /** Format: int64 */
-            row_version: number;
         };
         ReplyRequest: {
             body: string;
@@ -21908,19 +22382,6 @@ export interface components {
             values?: Record<string, never> | null;
             /** @description The values exist but the caller may not read the field. */
             values_hidden: boolean;
-        };
-        RequestReleaseRequest: {
-            /**
-             * Format: uuid
-             * @description Captured on the submitted approval request's payload — see this
-             *     file's module doc ("Release is global, not per-scope") for why
-             *     [`execute_release_if_approved`] does not read it back.
-             */
-            account_id: string;
-        };
-        RequestReleaseResponse: {
-            /** Format: uuid */
-            approval_id: string;
         };
         /** @description What a bundle needs from the deployment it is applied to. */
         Requires: {
@@ -22299,10 +22760,6 @@ export interface components {
             rollback_error?: string | null;
             rollback_status: string;
         };
-        RollbackResponse: {
-            /** Format: uuid */
-            new_version_id: string;
-        };
         /**
          * @description The release report's open work (the fleet's notification rule reads
          *     `last_report_id` and `open_items`).
@@ -22539,6 +22996,16 @@ export interface components {
              */
             params?: components["schemas"]["Filter"][];
         };
+        /** @description What a started run returns at once (N7-T1). */
+        RunStarted: {
+            /** Format: uuid */
+            conversation_id: string;
+            /**
+             * @description `running`: follow `GET /api/v1/ai/conversations/{id}/stream` for its
+             *     steps and its end state.
+             */
+            status: string;
+        };
         RunStatusResponse: {
             download_url?: string | null;
             error?: string | null;
@@ -22554,6 +23021,38 @@ export interface components {
             /** Format: int64 */
             row_count?: number | null;
             status: string;
+        };
+        /** @description One tool call inside a turn of a run (N29-T1). */
+        RunToolCall: {
+            action_id: string;
+            gate_decision?: string | null;
+            /** @description The invocation ledger's outcome for it, when it reached the ledger. */
+            invocation_outcome?: string | null;
+            /** @description The tool call's own status (`proposed`, `executed`, `rejected`, ...). */
+            status: string;
+            tool_call_id: string;
+        };
+        /** @description A session's whole run as one tree (N29-T1). */
+        RunTree: {
+            child_session_ids: string[];
+            /** Format: uuid */
+            parent_session_ref?: string | null;
+            /** Format: uuid */
+            session_id: string;
+            turns: components["schemas"]["RunTurn"][];
+        };
+        /** @description One turn of a run. */
+        RunTurn: {
+            /** Format: uuid */
+            conversation_id: string;
+            model_id?: string | null;
+            prompt_version?: string | null;
+            /** Format: date-time */
+            started_at: string;
+            terminal_state?: string | null;
+            tool_calls: components["schemas"]["RunToolCall"][];
+            /** Format: uuid */
+            turn_id: string;
         };
         RuntimeSwitchView: {
             surfaces: components["schemas"]["SurfaceSwitchView"][];
@@ -22637,6 +23136,26 @@ export interface components {
             object_key: string;
             /** Format: int64 */
             withheld_for_legal_hold: number;
+        };
+        ScopeSwitchRequest: {
+            enabled: boolean;
+            reason?: string | null;
+        };
+        /** @description One scope's state. */
+        ScopeSwitchView: {
+            /** @description `manual` | `budget` | `quality` | `injection` | `departure`. */
+            cause: string;
+            /** Format: date-time */
+            changed_at: string;
+            /**
+             * Format: uuid
+             * @description `null` for an automatic trip.
+             */
+            changed_by?: string | null;
+            enabled: boolean;
+            reason?: string | null;
+            scope_key: string;
+            scope_kind: string;
         };
         SearchHit: {
             entity_logicalname: string;
@@ -22728,27 +23247,6 @@ export interface components {
             email: string;
             /** Format: uuid */
             user_id: string;
-        };
-        /** @description Aggregated score for a whole replay session. */
-        SessionScore: {
-            /**
-             * Format: double
-             * @description `correct_decisions / total_decisions * 100`. `0.0` for an empty
-             *     session (not vacuously 100 — there is nothing to be right about).
-             */
-            accuracy_pct: number;
-            /** @description Mean of every decision's `mae_pct`. */
-            avg_adverse_excursion_pct: string;
-            /** @description Mean of every decision's `mfe_pct`. */
-            avg_favorable_excursion_pct: string;
-            /**
-             * Format: double
-             * @description `0.0..=100.0` composite — see [`score_session`]'s doc for the formula.
-             */
-            composite_score: number;
-            correct_decisions: number;
-            decisions: components["schemas"]["DecisionScore"][];
-            total_decisions: number;
         };
         /** @enum {string} */
         SessionStatus: "active" | "paused" | "revoked" | "ended";
@@ -23235,6 +23733,51 @@ export interface components {
         SpaceTemplatesBody: {
             template_ids: string[];
         };
+        /** @description One money window's month so far. */
+        SpendLine: {
+            /**
+             * Format: double
+             * @description The cap, in the price unit.
+             */
+            cap: number;
+            /**
+             * Format: double
+             * @description Where the window's spend is heading over a whole month.
+             */
+            forecast: number;
+            /** @description The feature id or agent id; empty for the deployment. */
+            key: string;
+            /**
+             * Format: double
+             * @description `spent` as a percentage of `cap` (100 or more: refusing).
+             */
+            percent: number;
+            /** @description `spend_deployment`, `spend_feature` or `spend_agent`. */
+            scope: string;
+            /**
+             * Format: double
+             * @description Spent inside the window, in the price unit.
+             */
+            spent: number;
+        };
+        /** @description The whole report. */
+        SpendReport: {
+            /**
+             * Format: int32
+             * @description Percent of a cap at which generations are shortened.
+             */
+            degrade_at_percent: number;
+            lines: components["schemas"]["SpendLine"][];
+            /** @description The generation model the prices apply to. */
+            model: string;
+            /** @description Whether that model has a price; without one nothing is counted. */
+            priced: boolean;
+            /**
+             * Format: int64
+             * @description The window, in days.
+             */
+            window_days: number;
+        };
         StagedImportResponse: {
             /** Format: int32 */
             failed: number;
@@ -23259,6 +23802,13 @@ export interface components {
             /** @description Optional. Omitted or `null`: whatever the ceiling permits. `[]`: nothing. */
             allowed_action_ids?: string[] | null;
             /**
+             * @description Optional (N1-T1): `"develop"` builds — the metadata tools and reads,
+             *     so every change is a draft and no record is written; `"run"` acts —
+             *     everything but the metadata edit tools. Omitted: no narrowing. It only
+             *     narrows `allowed_action_ids`, never widens it.
+             */
+            mode?: string | null;
+            /**
              * @description **Required.** `"read"` | `"reversible"` | `"consequential"` — the same
              *     explicit ceiling `POST /agents/{id}/sessions` takes. The agent policy
              *     still bounds it; it never grants anything the caller does not hold.
@@ -23272,8 +23822,32 @@ export interface components {
             correlation_entity_id?: string | null;
             definition_logicalname: string;
         };
+        /** @description Body of `POST /api/v1/model/agents/{agent}/sessions`. */
+        StartObjectSessionRequest: {
+            /** @description Optional; narrows the agent's own tools further. */
+            allowed_action_ids?: string[] | null;
+            /** @description **Required.** `"read"` | `"reversible"` | `"consequential"`. */
+            risk_ceiling: string;
+        };
+        /** @description Body of `POST /api/v1/ai/conversations/{id}/runs` (N7-T1). */
+        StartRunRequest: {
+            /**
+             * @description The most tool steps the run may take (capped by the platform's own
+             *     bound); omitted: the platform's bound.
+             */
+            max_steps?: number | null;
+            /** @description What the agent is to do. */
+            task: string;
+        };
         /** @description Body of `POST /api/v1/agents/{id}/sessions` (D-503 §3). */
         StartSessionRequest: {
+            /**
+             * Format: uuid
+             * @description Optional (V2-D487): a published `agent` metadata object whose tools
+             *     become one more allow-list. It only narrows: with
+             *     `allowed_action_ids` too, the session gets the actions in both.
+             */
+            agent?: string | null;
             /**
              * @description Optional. Omitted or `null` means "whatever the ceiling permits"; `[]`
              *     means the session may invoke nothing.
@@ -23631,6 +24205,12 @@ export interface components {
              */
             recorded: boolean;
         };
+        SummaryPreviewRequest: {
+            entity: string;
+            language?: string | null;
+            /** Format: uuid */
+            record_id: string;
+        };
         SuppressionSummary: {
             /** Format: date-time */
             created_at: string;
@@ -23680,6 +24260,16 @@ export interface components {
             strategy: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        /** @description One switch change. */
+        SwitchEvent: {
+            cause: string;
+            /** Format: date-time */
+            changed_at: string;
+            enabled: boolean;
+            reason?: string | null;
+            scope_key: string;
+            scope_kind: string;
         };
         /**
          * @description The result of one [`sync`] call. `approval_pending` mirrors
@@ -23800,10 +24390,6 @@ export interface components {
             /** @description `hidden` or `disabled`. */
             effect: string;
             field: string;
-        };
-        TextFieldDiff: {
-            a?: string | null;
-            b?: string | null;
         };
         /** @description One entry in a record's timeline. */
         TimelineEntry: {
@@ -23938,6 +24524,20 @@ export interface components {
             total_ms: number;
             /** Format: int64 */
             ts: number;
+        };
+        /** @description One step of a session's run, in order (N29-T2). */
+        TraceStep: {
+            /** Format: uuid */
+            acting_user_id: string;
+            action_id: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            /** @description `completed`, `executed`, `claimed`, `approval_requested`, a refusal... */
+            outcome: string;
+            /** @description The tool call that asked for it, when an agent did. */
+            tool_call_id?: string | null;
         };
         TransitionBody: {
             /** Format: int64 */
@@ -24179,6 +24779,12 @@ export interface components {
             user_id?: string | null;
             /** @description The account's username (case as stored), for `ok` and `created`. */
             username?: string | null;
+        };
+        /** @description How many turns ended one way in the last day. */
+        TurnCount: {
+            terminal_state: string;
+            /** Format: int64 */
+            turns: number;
         };
         TurnResponse: {
             /** @description The turn's executed knowledge actions' citations (row A-56). */
@@ -24637,24 +25243,12 @@ export interface components {
             errors?: string[];
             valid: boolean;
         };
+        ValidateRequest: {
+            /** @description The document to check, as it would be saved. */
+            doc: Record<string, never>;
+        };
         ValidateResponse: {
-            issues: components["schemas"]["RuleIssue"][];
-            valid: boolean;
-            warnings: components["schemas"]["RuleEditorWarning"][];
-        };
-        ValidateRulesRequest: {
-            /**
-             * @description `attome-rules` DSL source text — the same text a `trd_strategy_version`
-             *     record stores in its `rules` field.
-             */
-            rules: string;
-        };
-        ValidateRulesResponse: {
-            /**
-             * @description Always `true` when present — a syntax or type error responds with the
-             *     established `AppError::Validation` 422 shape instead (coding-
-             *     guidelines.md §6), never `{ "valid": false }`.
-             */
+            issues: components["schemas"]["IssueView"][];
             valid: boolean;
         };
         /**
@@ -24705,28 +25299,6 @@ export interface components {
             /** Format: int32 */
             version_number: number;
         };
-        VersionDiffResponse: {
-            /**
-             * @description Attribute logical names whose value differs between the two
-             *     versions — a subset of `rules`/`parameters`/`sizing`/`filters`/
-             *     `notes`.
-             */
-            differs: string[];
-            filters_equal: boolean;
-            /** @description Raw text on each side (either may be `None` — `notes` is optional). */
-            notes: components["schemas"]["TextFieldDiff"];
-            /**
-             * @description `parameters`/`sizing`/`filters` are JSON encoded as plain text
-             *     (`entities/strategy.rs`'s `JSON_FIELD_TYPE = "text"`), so this is a
-             *     byte-equality check on that stored text, not a structural JSON diff
-             *     — a real structural diff (ignoring key order/whitespace) is out of
-             *     scope for this pass; no caller of this endpoint needs it yet.
-             */
-            parameters_equal: boolean;
-            /** @description Raw text on each side. */
-            rules: components["schemas"]["TextFieldDiff"];
-            sizing_equal: boolean;
-        };
         VersionSummary: {
             /** Format: uuid */
             id: string;
@@ -24737,6 +25309,16 @@ export interface components {
             status: string;
             /** Format: int32 */
             version_number: number;
+        };
+        VersionSummaryView: {
+            content_hash: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by?: string | null;
+            state: string;
+            /** Format: int64 */
+            version_no: number;
         };
         ViewBody: {
             /** Format: uuid */
@@ -24876,7 +25458,7 @@ export interface components {
             accepted: number;
         };
         /** @enum {string} */
-        WidgetCategory: "chart" | "text" | "operational" | "native" | "geospatial" | "custom" | "kpi";
+        WidgetCategory: "chart" | "text" | "operational" | "engine_native" | "geospatial" | "custom" | "kpi";
         /**
          * @description A citation as an anonymous visitor may see it (C11 B6, row A-86): the
          *     article's title and the section cited — never a record, collection or
@@ -25109,6 +25691,18 @@ export interface components {
             /** Format: int64 */
             total_float_days?: number | null;
         };
+        WritePolicy: {
+            action_id: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by: string;
+            /** @description `null`: every entity. */
+            entity?: string | null;
+            /** Format: uuid */
+            id: string;
+            reason?: string | null;
+        };
     };
     responses: never;
     parameters: never;
@@ -25118,6 +25712,98 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_agents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Agents that take outside work, with their contracts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_AgentCard"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent object */
+                agent: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["A2aTaskRequest"];
+            };
+        };
+        responses: {
+            /** @description The task's result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["A2aTask"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published agent with this id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The agent takes no outside work, or cannot start a session */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A budget or daily limit is used up */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_invocable_actions: {
         parameters: {
             query?: never;
@@ -25266,6 +25952,206 @@ export interface operations {
             };
         };
     };
+    session_children: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The supervising agent session */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The delegated sessions, oldest first (at most 200) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ChildSession"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ai_agent.supervise */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such session */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    session_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent session */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The run tree */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunTree"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ai_agent.supervise */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such session */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    session_trace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent session */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The session's steps, oldest first (at most 1000) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_TraceStep"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ai_agent.supervise */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such session */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    agent_usage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent metadata object */
+                agent: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Used and limit per class, today (UTC) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentUsageResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published agent object with this id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_bot_analytics: {
         parameters: {
             query?: {
@@ -25358,6 +26244,245 @@ export interface operations {
             };
         };
     };
+    get_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The eval run */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The run and, once finished, its graded cases */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalRun"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such run */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    case_from_message: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The eval suite object */
+                suite: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaseFromMessage"];
+            };
+        };
+        responses: {
+            /** @description The case was added to the suite's draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseAdded"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such suite or assistant message */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The suite changed while the case was being added */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No question before the message, or an invalid case */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The eval suite object (its newest version runs) */
+                suite: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Running; read it with GET /api/v1/admin/ai/eval-runs/{id} */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvalRunStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such eval suite */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The suite names no agent, has no cases or too many */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    evidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `actions` (default) or `generations`. */
+                kind: string | null;
+                /** @description Only this agent object's sessions (actions). */
+                agent: string | null;
+                /** @description Only this model (generations). */
+                model: string | null;
+                from: string | null;
+                to: string | null;
+                /** @description The last row's id from the previous page. */
+                cursor: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of evidence, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage_EvidenceRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown kind, or a period that ends before it starts */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_model_comparison: {
         parameters: {
             query?: never;
@@ -25394,6 +26519,57 @@ export interface operations {
             };
             /** @description Caller lacks system.admin */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SummaryPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description What the model would receive */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromptPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller cannot read it */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -25714,6 +26890,320 @@ export interface operations {
             };
             /** @description The reason is too long, or an unknown field was sent */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    spend_report: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description This month's AI spend against each cap */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpendReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ai_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The AI status page */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_switches: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every switched scope */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ScopeSwitchView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_switch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description agent | model | provider | tool | channel */
+                kind: string;
+                /** @description The scope's key: an id or a tool name */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScopeSwitchRequest"];
+            };
+        };
+        responses: {
+            /** @description Switched */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The administrator who turned it off cannot turn it on */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown kind, empty key or reason too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_policies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active per-write approval policies */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_WritePolicy"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_policy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewWritePolicy"];
+            };
+        };
+        responses: {
+            /** @description The policy is active */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WritePolicy"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a known write action, or text too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deactivate_policy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The policy */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deactivated */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No active policy with this id */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -26119,6 +27609,98 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    batch_decide: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BatchDecideBody"];
+            };
+        };
+        responses: {
+            /** @description Each request's outcome */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchDecideResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown decision, no items, more than 100, or a comment too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    approval_metrics: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Days back from now, 1 to 365; default 30. */
+                days: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Approval figures and rubber-stamp warnings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalMetrics"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -34059,6 +35641,61 @@ export interface operations {
             };
         };
     };
+    explain_knowledge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The question or topic. Held to the same byte/term caps as `/search`:
+                 *     GIN cost is roughly linear in term count, so a long paste must be
+                 *     rejected before it reaches PostgreSQL.
+                 */
+                q: string;
+                limit: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The question's terms and why each passage ranked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeExplanation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege, or Search is not licensed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Query outside the documented caps */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_gaps: {
         parameters: {
             query?: never;
@@ -34540,6 +36177,258 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_servers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Registered MCP servers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_McpServerView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_server: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewMcpServer"];
+            };
+        };
+        responses: {
+            /** @description Registered */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["McpServerView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Name or URL invalid, or no key ring for the credential */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    import_tools: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The server */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The server's tools; new ones disabled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_McpToolView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such server */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The server could not be reached or refused */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_tools: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The server */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The server's imported tools */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_McpToolView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    set_tool: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The server */
+                id: string;
+                /** @description The tool's name */
+                tool: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["McpToolSetting"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such tool */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown tier */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -36701,6 +38590,901 @@ export interface operations {
             };
             /** @description Run is not yet approved */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    blueprint_apply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelFiles"];
+            };
+        };
+        responses: {
+            /** @description What was published, with the versions it replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlueprintApplied"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another save of one of the objects is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A file is invalid or an object fails the publish checks */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    blueprint_plan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelFiles"];
+            };
+        };
+        responses: {
+            /** @description Each object's status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlueprintPlan"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A file is unreadable or invalid; the issues are listed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    blueprint_rollback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlueprintRollback"];
+            };
+        };
+        responses: {
+            /** @description What was republished */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BlueprintApplied"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An object or version is unknown */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another save of one of the objects is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    export_files: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every stored object as a file, by path */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelFiles"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    model_health: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Model-health findings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelHealth"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    import_files: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ModelFiles"];
+            };
+        };
+        responses: {
+            /** @description The drafts saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another save of one of the objects is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A file is unreadable or its document invalid; the issues are listed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_kinds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every kind, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_KindView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_objects: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Kind name */
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The kind's objects, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ObjectSummaryView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such kind */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_object: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Kind name */
+                kind: string;
+                /** @description Object id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The newest version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObjectVersionView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such kind or object */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    apply_commands: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Kind name */
+                kind: string;
+                /** @description Object id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommandsRequest"];
+            };
+        };
+        responses: {
+            /** @description The saved draft */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandsResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such kind, or no such object for a non-empty base hash */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The draft changed since base_hash, or another save is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A command or the resulting document is invalid */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_diff: {
+        parameters: {
+            query: {
+                /** @description The older version. */
+                from: number;
+                /** @description The newer version. */
+                to: number;
+            };
+            header?: never;
+            path: {
+                /** @description Kind name */
+                kind: string;
+                /** @description Object id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The operations, in order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_PatchOpView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such kind, object or version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_history: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Kind name */
+                kind: string;
+                /** @description Object id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Versions, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_VersionSummaryView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such kind or object */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    publish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Kind name */
+                kind: string;
+                /** @description Object id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Published */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublishResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such kind, or no open draft */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another save is in progress */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The draft fails the publish checks, or an eval suite's newest run fails a safety case; the issues are listed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_references: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Kind name */
+                kind: string;
+                /** @description Object id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Outgoing references */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ReferenceView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such kind or object */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    validate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Kind name */
+                kind: string;
+                /** @description Object id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateRequest"];
+            };
+        };
+        responses: {
+            /** @description Whether it is valid, and every issue */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidateResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such kind */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Kind name */
+                kind: string;
+                /** @description Object id */
+                id: string;
+                /** @description Version number */
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description That version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObjectVersionView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such kind, object or version */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -45565,6 +48349,78 @@ export interface operations {
             };
         };
     };
+    start_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The conversation */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Running; follow the conversation's stream */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such conversation for this caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The conversation has ended */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The task is empty or too long */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Too many turns for this user or conversation */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     stream_conversation: {
         parameters: {
             query?: {
@@ -45976,6 +48832,1381 @@ export interface operations {
             };
             /** @description Missing or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_from_layout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateFromLayoutBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateFromLayoutResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Malformed or out-of-bound layout document */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_widget_types: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description D-525 — include types the viewer cannot render (hidden by default so a
+                 *     palette only offers renderable widgets).
+                 */
+                include_unsupported: boolean;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetDescriptor"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    duplicate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DuplicateBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicateResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such widget */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    validate_config_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateConfigBody"];
+            };
+        };
+        responses: {
+            /** @description Validation result (see `valid`/`errors`) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidateConfigResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    approve_dashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not in review, or row_version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already archived, or row_version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    clone_dashboard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloneResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    dashboard_health_check: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthCheckResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_dashboard_page: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewPageBody"];
+            };
+        };
+        responses: {
+            /** @description Page created with its root section */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedPage"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another request is changing this dashboard */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid page fields */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    page_data: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WidgetInputs"];
+            };
+        };
+        responses: {
+            /** @description Every widget on the page, executed with at most four at a time; a widget that fails carries its own error */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PageDataResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard or page in the executed definition */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown parameter or a malformed value */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    repair_root_section: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                page_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Root section provisioned */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepairedRootSection"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard, or the page is not on it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The page already has a section, or the dashboard is busy */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    publish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublishResponse"];
+                };
+            };
+            /** @description Four-eyes approval required — request submitted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublishResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not approved, or row_version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    published: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What viewers of this dashboard see */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublishedDashboard"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not in review, or row_version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    resolve_variables: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveVariablesBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResolveVariablesResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_revision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionBody"];
+            };
+        };
+        responses: {
+            /** @description Working copy returned to draft; the live version is unchanged */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not published, or row_version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    submit_for_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not in draft, or row_version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    draft_tree: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The dashboard's whole draft tree */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftTree"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard, or the caller may not edit it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The tree exceeds the page, section or widget ceiling */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    unpublish: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransitionResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not published, or row_version is stale */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    activate_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransitionBody"];
+            };
+        };
+        responses: {
+            /** @description The version is now live */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivateResponse"];
+                };
+            };
+            /** @description Four-eyes approval required — request submitted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivateResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard, or the version does not belong to it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description row_version is stale, or the dashboard is busy */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    restore_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RestoreResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard, or the version does not belong to it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Another request is already changing this dashboard */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    widget_data: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                widget_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WidgetInputs"];
+            };
+        };
+        responses: {
+            /** @description The widget's data, executed server-side from the published definition (or the draft for a preview) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetDataResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard, nothing is published, the widget is not in the executed definition, or a preview without record Update */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown parameter, a malformed value, or a widget whose definition cannot execute */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    widget_explain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                widget_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WidgetInputs"];
+            };
+        };
+        responses: {
+            /** @description How the widget's number is calculated, from the same context the data route uses */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetExplanation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard, nothing is published, or the widget is not in the executed definition */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An unknown parameter, a malformed value, or a definition that cannot execute */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    widget_records: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                widget_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WidgetRecordsInputs"];
+            };
+        };
+        responses: {
+            /** @description The exact records behind the widget's value or bucket, with an exact total */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetRecordsResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dashboard, nothing is published, or the widget is not in the executed definition */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The widget is not exactly drillable, the key does not apply, or the count exceeds the cost ceiling */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -48523,6 +52754,35 @@ export interface operations {
             };
         };
     };
+    live: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Server-Sent Events: `hello` with the current model version, then `model-version` whenever published metadata changes; each `data` is `{model_version}` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     mcp_endpoint: {
         parameters: {
             query?: never;
@@ -48867,6 +53127,161 @@ export interface operations {
                 };
             };
             /** @description No such metric */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    start_session_from_agent_object: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The published agent object */
+                agent: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartObjectSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObjectSessionResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks ai_agent.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published agent object with this id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description risk_ceiling is unknown; the agent has no live persona.model or no readable, valid policy */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    form_plan: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The ETag of a plan the client holds */
+                "If-None-Match"?: string | null;
+            };
+            path: {
+                /** @description Form id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The form's render plan, with a content ETag */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormPlan"];
+                };
+            };
+            /** @description Unchanged since the ETag in If-None-Match */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published form with this id */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    menu: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Menu (navigation object) id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The menu as this caller sees it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MenuView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No published menu with this id */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -52826,1519 +57241,6 @@ export interface operations {
             };
         };
     };
-    create_calendar_event: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateCalendarEventRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreateCalendarEventResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller is not a platform admin */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    list_connections: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                page: number;
-                page_size: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedResponse_ConnectionListEntry"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    create_connection: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateConnectionRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreateConnectionResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    disconnect_connection: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DisconnectResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Connection not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    health_check_connection: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthCheckResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Connection not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    disconnect: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                connection_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DisconnectResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Connection not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    execute_release: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                approval_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExecuteReleaseResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Approval request not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    pause_ai: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EngageRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EmergencyControlEntry"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    pause_strategy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                strategy_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EngageRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EmergencyControlEntry"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    request_release: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RequestReleaseRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RequestReleaseResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    emergency_status: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EmergencyControlEntry"][];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    stop_all: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EngageRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EmergencyControlEntry"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    stop_new: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EngageRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EmergencyControlEntry"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    list_experiments: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                page: number;
-                page_size: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedResponse_ExperimentSummary"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    create_experiment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateExperimentBody"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    conclude_experiment: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Required row_version for optimistic concurrency (D-079). */
-                "If-Match": string;
-            };
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConcludeExperimentBody"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such experiment */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description If-Match row_version did not match the stored record */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    export_experiment_pdf: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExportPdfResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such experiment */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Rendered document failed the SSRF/size guard */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    publish_test_quote: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description trd_symbol record id */
-                symbol_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PublishTestQuoteRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublishTestQuoteResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller is not an admin */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Publishing to Redis failed */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    quote_events: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description trd_symbol record id */
-                symbol_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Server-Sent Events stream of quote updates for this symbol */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": unknown;
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks trd_symbol.read */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The quote subscriber could not reach Redis */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    create_replay_session: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateReplaySessionRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ReplaySessionCreatedResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    complete: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Required row_version for optimistic concurrency (D-079). */
-                "If-Match": string;
-            };
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompleteReplaySessionRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CompleteReplaySessionResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Session not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description If-Match row_version did not match the stored record */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    decide: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description Required row_version for optimistic concurrency (D-079). */
-                "If-Match": string;
-            };
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DecideRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DecideResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Session not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description If-Match row_version did not match the stored record */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    next_bar: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NextBarResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Session not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    validate_rules: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ValidateRulesRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ValidateRulesResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The rules text failed to parse or type-check */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    deployment_history: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                strategy_id: string;
-                page: number;
-                page_size: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedResponse_DeploymentHistoryEntry"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Strategy not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    diff_versions: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                strategy_id: string;
-                version_id_a: string;
-                version_id_b: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["VersionDiffResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Strategy or version not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    clone_version: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                strategy_id: string;
-                version_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloneVersionResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Strategy or version not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    fork_strategy: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                strategy_id: string;
-                version_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ForkStrategyResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Strategy or version not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    rollback_version: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                strategy_id: string;
-                version_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RollbackResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Strategy or version not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
     list_available_views: {
         parameters: {
             query?: never;
@@ -56077,1381 +58979,6 @@ export interface operations {
             };
             /** @description Dispatch is overloaded or a dependency is unavailable; the dead letter is kept */
             503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    create_from_layout: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateFromLayoutBody"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreateFromLayoutResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Malformed or out-of-bound layout document */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    list_widget_types: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /**
-                 * @description D-525 — include types the viewer cannot render (hidden by default so a
-                 *     palette only offers renderable widgets).
-                 */
-                include_unsupported: boolean;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WidgetDescriptor"][];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    duplicate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DuplicateBody"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DuplicateResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such widget */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    validate_config_route: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ValidateConfigBody"];
-            };
-        };
-        responses: {
-            /** @description Validation result (see `valid`/`errors`) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ValidateConfigResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    approve_dashboard: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TransitionBody"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TransitionResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not in review, or row_version is stale */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    archive: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TransitionBody"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TransitionResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Already archived, or row_version is stale */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    clone_dashboard: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CloneResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    dashboard_health_check: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthCheckResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    create_dashboard_page: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NewPageBody"];
-            };
-        };
-        responses: {
-            /** @description Page created with its root section */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CreatedPage"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Another request is changing this dashboard */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Invalid page fields */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    page_data: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                page_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WidgetInputs"];
-            };
-        };
-        responses: {
-            /** @description Every widget on the page, executed with at most four at a time; a widget that fails carries its own error */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PageDataResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard or page in the executed definition */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description An unknown parameter or a malformed value */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    repair_root_section: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                page_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Root section provisioned */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RepairedRootSection"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard, or the page is not on it */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The page already has a section, or the dashboard is busy */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    publish: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TransitionBody"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublishResponse"];
-                };
-            };
-            /** @description Four-eyes approval required — request submitted */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublishResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not approved, or row_version is stale */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    published: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description What viewers of this dashboard see */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PublishedDashboard"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    reject: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TransitionBody"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TransitionResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not in review, or row_version is stale */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    resolve_variables: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ResolveVariablesBody"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ResolveVariablesResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    start_revision: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TransitionBody"];
-            };
-        };
-        responses: {
-            /** @description Working copy returned to draft; the live version is unchanged */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TransitionResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not published, or row_version is stale */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    submit_for_review: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TransitionBody"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TransitionResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not in draft, or row_version is stale */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    draft_tree: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The dashboard's whole draft tree */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DraftTree"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard, or the caller may not edit it */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The tree exceeds the page, section or widget ceiling */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    unpublish: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TransitionBody"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TransitionResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not published, or row_version is stale */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    activate_version: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                version_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TransitionBody"];
-            };
-        };
-        responses: {
-            /** @description The version is now live */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActivateResponse"];
-                };
-            };
-            /** @description Four-eyes approval required — request submitted */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActivateResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard, or the version does not belong to it */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description row_version is stale, or the dashboard is busy */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    restore_version: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                version_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RestoreResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard, or the version does not belong to it */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Another request is already changing this dashboard */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    widget_data: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                widget_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WidgetInputs"];
-            };
-        };
-        responses: {
-            /** @description The widget's data, executed server-side from the published definition (or the draft for a preview) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WidgetDataResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard, nothing is published, the widget is not in the executed definition, or a preview without record Update */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description An unknown parameter, a malformed value, or a widget whose definition cannot execute */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    widget_explain: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                widget_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WidgetInputs"];
-            };
-        };
-        responses: {
-            /** @description How the widget's number is calculated, from the same context the data route uses */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WidgetExplanation"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard, nothing is published, or the widget is not in the executed definition */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description An unknown parameter, a malformed value, or a definition that cannot execute */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    widget_records: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                widget_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WidgetRecordsInputs"];
-            };
-        };
-        responses: {
-            /** @description The exact records behind the widget's value or bucket, with an exact total */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WidgetRecordsResponse"];
-                };
-            };
-            /** @description Missing or invalid credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Caller lacks the required privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description No such dashboard, nothing is published, or the widget is not in the executed definition */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The widget is not exactly drillable, the key does not apply, or the count exceeds the cost ceiling */
-            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -59604,57 +61131,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-        };
-    };
-    ingest_signal: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["IngestSignalRequest"];
-            };
-        };
-        responses: {
-            /** @description Success */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IngestSignalResponse"];
-                };
-            };
-            /** @description Missing or invalid S2S credentials */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description S2S client lacks trd_signal create privilege */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Request failed validation */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
