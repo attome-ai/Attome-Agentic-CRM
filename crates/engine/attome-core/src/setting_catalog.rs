@@ -23,6 +23,7 @@ use crate::setting_descriptor::{SettingDescriptor, SettingScope};
 
 pub(crate) fn all() -> Vec<SettingDescriptor> {
     let mut all = core_settings();
+    all.extend(personal_settings());
     all.extend(reserved_boot_time_examples());
     all.extend(feature_flag_settings());
     all.extend(action_settings());
@@ -78,6 +79,96 @@ fn core_settings() -> Vec<SettingDescriptor> {
              the fallback shown before they ever choose.",
             || json!({"type": "boolean"}),
             &[SettingScope::Deployment],
+            false,
+            || json!(false),
+        ),
+    ]
+}
+
+/// Every scope a personal setting may be stored at: the person's own choice
+/// wins, then their organization's, then the deployment's, then the code
+/// default (B11-T1). `SettingScope` has no role level; an organization is the
+/// group default.
+const PERSONAL: &[SettingScope] = &[
+    SettingScope::User,
+    SettingScope::Organization,
+    SettingScope::Deployment,
+];
+
+/// B11-T1 / AG1-T7: how one person sees the product. The web app applies them
+/// at once, and server rendering (exports, emails) reads the same values.
+/// `core.locale` above is the language.
+fn personal_settings() -> Vec<SettingDescriptor> {
+    vec![
+        SettingDescriptor::new(
+            "core.time_zone",
+            "IANA time zone dates and times are shown in, e.g. Asia/Riyadh.",
+            || {
+                json!({
+                    "type": "string",
+                    "pattern": "^[A-Za-z][A-Za-z0-9_+-]*(/[A-Za-z0-9_+-]+){0,2}$",
+                    "maxLength": 64,
+                })
+            },
+            PERSONAL,
+            false,
+            || json!("UTC"),
+        ),
+        SettingDescriptor::new(
+            "core.calendar",
+            "Calendar dates are shown in: gregorian, hijri (Umm al-Qura), or \
+             both. A date attribute's own display_calendar option wins.",
+            || json!({"type": "string", "enum": ["gregorian", "hijri", "both"]}),
+            PERSONAL,
+            false,
+            || json!("gregorian"),
+        ),
+        SettingDescriptor::new(
+            "core.digits",
+            "Digits numbers and dates are written with: latn (0-9) or arab \
+             (Arabic-Indic).",
+            || json!({"type": "string", "enum": ["latn", "arab"]}),
+            PERSONAL,
+            false,
+            || json!("latn"),
+        ),
+        SettingDescriptor::new(
+            "core.date_format",
+            "Order of day, month and year in a short date: dmy, mdy or ymd.",
+            || json!({"type": "string", "enum": ["dmy", "mdy", "ymd"]}),
+            PERSONAL,
+            false,
+            || json!("dmy"),
+        ),
+        SettingDescriptor::new(
+            "core.start_page",
+            "The page opened after signing in, as an app route starting with /.",
+            || json!({"type": "string", "pattern": "^/[^\\s]*$", "maxLength": 200}),
+            PERSONAL,
+            false,
+            || json!("/"),
+        ),
+        SettingDescriptor::new(
+            "core.theme",
+            "Colour theme: light, dark, or auto (follow the device).",
+            || json!({"type": "string", "enum": ["light", "dark", "auto"]}),
+            PERSONAL,
+            false,
+            || json!("auto"),
+        ),
+        SettingDescriptor::new(
+            "core.text_size",
+            "Text size: normal or large.",
+            || json!({"type": "string", "enum": ["normal", "large"]}),
+            PERSONAL,
+            false,
+            || json!("normal"),
+        ),
+        SettingDescriptor::new(
+            "core.reduced_motion",
+            "Turn off animations and transitions.",
+            || json!({"type": "boolean"}),
+            PERSONAL,
             false,
             || json!(false),
         ),
@@ -324,6 +415,30 @@ fn omnichannel_settings() -> Vec<SettingDescriptor> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// B11-T1: every personal setting is the person's to set, its default
+    /// passes its own schema, and a value outside it is refused.
+    #[test]
+    fn personal_settings_resolve_with_defaults() {
+        use crate::setting_store::validate_against_schema;
+        let personal = personal_settings();
+        assert!(personal.iter().any(|d| d.key == "core.calendar"));
+        for d in &personal {
+            assert!(d.allows_scope(SettingScope::User), "{}", d.key);
+            assert!(d.allows_scope(SettingScope::Deployment), "{}", d.key);
+            validate_against_schema(&(d.default)(), &(d.schema)())
+                .unwrap_or_else(|e| panic!("{}: default fails its schema: {e}", d.key));
+        }
+        let schema = |key: &str| (personal.iter().find(|d| d.key == key).unwrap().schema)();
+        assert!(validate_against_schema(&json!("hijri"), &schema("core.calendar")).is_ok());
+        assert!(validate_against_schema(&json!("julian"), &schema("core.calendar")).is_err());
+        assert!(validate_against_schema(&json!("Asia/Riyadh"), &schema("core.time_zone")).is_ok());
+        assert!(validate_against_schema(&json!("no zone"), &schema("core.time_zone")).is_err());
+        assert!(
+            validate_against_schema(&json!("/xrm/dashboard"), &schema("core.start_page")).is_ok()
+        );
+        assert!(validate_against_schema(&json!("https://x"), &schema("core.start_page")).is_err());
+    }
 
     /// MCP entity admission is default-deny (plan item M3.4): the code
     /// default admits nothing, and only an admin's deployment-scope row can

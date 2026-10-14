@@ -61,6 +61,18 @@ pub struct NumberOptions {
     pub max: Option<f64>,
 }
 
+/// AG1-T7 — how a `Date` field is shown: `gregorian`, `hijri` or `both`.
+/// Absent means the viewing person's own calendar preference. Display only:
+/// the stored value is always the Gregorian date.
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[serde(deny_unknown_fields)]
+pub struct DateOptions {
+    pub display_calendar: Option<String>,
+}
+
+/// The `display_calendar` values a `Date` field accepts.
+pub const DISPLAY_CALENDARS: &[&str] = &["gregorian", "hijri", "both"];
+
 /// F012 — format enforcement for `Text` fields (phone/ID/IBAN-style masks).
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct TextOptions {
@@ -529,6 +541,18 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
         FieldType::Formula => {
             attome_core::formula::parse_options(Some(options))?;
         }
+        FieldType::Date => {
+            let opts = serde_json::from_value::<DateOptions>(options.clone())
+                .map_err(|e| AppError::Validation(format!("invalid date options: {e}")))?;
+            if let Some(calendar) = opts.display_calendar.as_deref()
+                && !DISPLAY_CALENDARS.contains(&calendar)
+            {
+                return Err(AppError::Validation(format!(
+                    "display_calendar '{calendar}' is not one of {}",
+                    DISPLAY_CALENDARS.join("|")
+                )));
+            }
+        }
         FieldType::Number | FieldType::Currency => {
             let opts = serde_json::from_value::<NumberOptions>(options.clone())
                 .map_err(|e| AppError::Validation(format!("invalid number options: {e}")))?;
@@ -899,12 +923,32 @@ mod tests {
     }
 
     #[test]
+    fn date_display_calendar_option_accepts_hijri() {
+        for calendar in ["gregorian", "hijri", "both"] {
+            assert!(
+                validate_options(&FieldType::Date, &json!({ "display_calendar": calendar }))
+                    .is_ok(),
+                "{calendar}"
+            );
+        }
+        assert!(validate_options(&FieldType::Date, &json!({})).is_ok());
+    }
+
+    #[test]
+    fn date_display_calendar_rejects_unknown() {
+        assert!(
+            validate_options(&FieldType::Date, &json!({ "display_calendar": "julian" })).is_err()
+        );
+        assert!(validate_options(&FieldType::Date, &json!({ "pattern": "x" })).is_err());
+    }
+
+    #[test]
     fn validate_options_rejects_invalid_regex_and_wrong_field_types() {
         let err =
             validate_options(&FieldType::Text, &json!({ "pattern": "[unterminated" })).unwrap_err();
         assert!(matches!(err, AppError::Validation(_)));
 
-        // Date/Bool/File don't accept an options config at all today.
+        // Bool doesn't accept an options config at all today.
         assert!(validate_options(&FieldType::Bool, &json!({ "pattern": "x" })).is_err());
     }
 

@@ -220,9 +220,9 @@ proptest! {
 
     // ── validate_options: type-gating and never-panics ───────────────────────
 
-    /// Number/Date/Bool/File never accept an `options` configuration at all,
-    /// regardless of its shape — the unit test's one hand-picked
-    /// `{"pattern": "x"}`-against-`Number` case, generalized to any JSON
+    /// Number/Date/Bool/File reject any options blob that is not an object
+    /// (Bool rejects every blob) — the unit test's one hand-picked
+    /// `{"pattern": "x"}`-against-`Bool` case, generalized to any JSON leaf
     /// value as the (always-rejected) options blob.
     #[test]
     fn scalar_field_types_never_accept_any_options_blob(value in arb_json_leaf()) {
