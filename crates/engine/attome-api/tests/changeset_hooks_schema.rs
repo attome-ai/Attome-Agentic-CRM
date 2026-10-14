@@ -625,6 +625,13 @@ fn governance_domain_routes_record_and_append_the_change_log() {
         let (actor, cookie) = seed_admin(&system).await;
         let (_, body, entity) = create_entity(&system, &cookie, None).await;
         let entity_id = id_of(&body);
+        // The governance route resolves entities through the registry, which
+        // this suite never refreshes in the background.
+        system.state.entities.swap(
+            attome_core::build_registry(&system.state.base.db)
+                .await
+                .expect("rebuild the entity registry"),
+        );
         let mut seen = 1;
 
         let domain = new_name("dom");
