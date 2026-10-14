@@ -26,12 +26,8 @@ use fred::prelude::*;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use uuid::Uuid;
 
-async fn redis_pool() -> RedisPool {
-    let host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-    let port: u16 = std::env::var("TEST_REDIS_PORT")
-        .unwrap_or_else(|_| "6379".into())
-        .parse()
-        .expect("TEST_REDIS_PORT must be a valid port number");
+async fn redis_pool() -> Option<RedisPool> {
+    let (host, port) = attome_testkit::test_redis()?;
 
     let config = RedisConfig::from_url(&format!("redis://{host}:{port}"))
         .expect("build redis config from test host/port");
@@ -40,7 +36,7 @@ async fn redis_pool() -> RedisPool {
     pool.wait_for_connect()
         .await
         .expect("connect to local test Redis/Dragonfly");
-    pool
+    Some(pool)
 }
 
 /// A provider key no other test run shares, so cache and gate keys never
@@ -138,7 +134,7 @@ async fn jwks_endpoint(reply: Reply) -> (String, Arc<AtomicUsize>) {
 
 #[tokio::test]
 async fn a_cached_kid_resolves_without_a_fetch() {
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let provider = unique_provider();
     seed_cache(&redis, &provider, &jwks(&["current"])).await;
     let (uri, fetches) = jwks_endpoint(Reply::Body(jwks(&["current"]))).await;
@@ -158,7 +154,7 @@ async fn a_cached_kid_resolves_without_a_fetch() {
 
 #[tokio::test]
 async fn a_rotated_key_is_found_by_exactly_one_refetch() {
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let provider = unique_provider();
     seed_cache(&redis, &provider, &jwks(&["old"])).await;
     let (uri, fetches) = jwks_endpoint(Reply::Body(jwks(&["old", "rotated"]))).await;
@@ -209,7 +205,7 @@ async fn a_rotated_key_is_found_by_exactly_one_refetch() {
 
 #[tokio::test]
 async fn parallel_unknown_kids_cause_at_most_one_upstream_fetch() {
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let provider = unique_provider();
     seed_cache(&redis, &provider, &jwks(&["old"])).await;
     let (uri, fetches) = jwks_endpoint(Reply::Body(jwks(&["old"]))).await;
@@ -247,7 +243,7 @@ async fn parallel_unknown_kids_cause_at_most_one_upstream_fetch() {
 
 #[tokio::test]
 async fn a_malformed_refetch_is_rejected_and_keeps_the_cached_set() {
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let provider = unique_provider();
     seed_cache(&redis, &provider, &jwks(&["old"])).await;
     let original = cached(&redis, &provider).await;
@@ -284,7 +280,7 @@ async fn a_malformed_refetch_is_rejected_and_keeps_the_cached_set() {
 
 #[tokio::test]
 async fn an_upstream_stall_on_refetch_is_bounded_and_keeps_the_cached_set() {
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let provider = unique_provider();
     seed_cache(&redis, &provider, &jwks(&["old"])).await;
     let original = cached(&redis, &provider).await;

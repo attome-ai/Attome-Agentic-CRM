@@ -63,12 +63,8 @@ async fn pool() -> Option<DbPool> {
     Some(attome_testkit::connect(&attome_testkit::migrated_db_url()?, 3).await)
 }
 
-async fn redis_pool() -> attome_cache::Store {
-    let host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-    let port: u16 = std::env::var("TEST_REDIS_PORT")
-        .unwrap_or_else(|_| "6379".into())
-        .parse()
-        .expect("TEST_REDIS_PORT must be a valid port number");
+async fn redis_pool() -> Option<attome_cache::Store> {
+    let (host, port) = attome_testkit::test_redis()?;
 
     let config = RedisConfig::from_url(&format!("redis://{host}:{port}"))
         .expect("build redis config from test host/port");
@@ -77,7 +73,7 @@ async fn redis_pool() -> attome_cache::Store {
     pool.wait_for_connect()
         .await
         .expect("connect to local test Redis/Dragonfly");
-    attome_cache::Store::Redis(pool)
+    Some(attome_cache::Store::Redis(pool))
 }
 
 /// P-key-rotation-and-jwt (a): the MFA/JWT secrets are `KeyRing`s now, not
@@ -135,7 +131,7 @@ async fn enroll_and_confirm(db: &DbPool, ring: &KeyRing, user_id: Uuid) -> (Totp
 #[tokio::test]
 async fn login_returns_a_bare_session_when_policy_is_off_regardless_of_enrollment() {
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let ring = test_mfa_ring();
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;
@@ -160,7 +156,7 @@ async fn login_returns_a_bare_session_when_policy_is_off_regardless_of_enrollmen
 #[tokio::test]
 async fn login_requires_enrollment_when_policy_is_required_and_account_is_unenrolled() {
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let jwt_ring = test_jwt_ring();
     let (_, email) = create_test_user(&db).await;
 
@@ -183,7 +179,7 @@ async fn login_requires_enrollment_when_policy_is_required_and_account_is_unenro
 #[tokio::test]
 async fn login_stays_a_bare_session_when_policy_is_optional_and_account_is_unenrolled() {
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;
 
@@ -206,7 +202,7 @@ async fn login_stays_a_bare_session_when_policy_is_optional_and_account_is_unenr
 #[tokio::test]
 async fn login_challenges_an_enrolled_account_even_when_policy_is_only_optional() {
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let ring = test_mfa_ring();
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;
@@ -231,7 +227,7 @@ async fn login_challenges_an_enrolled_account_even_when_policy_is_only_optional(
 #[tokio::test]
 async fn complete_pending_login_succeeds_with_a_valid_code_and_the_correct_purpose() {
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let ring = test_mfa_ring();
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;
@@ -276,7 +272,7 @@ async fn complete_pending_login_succeeds_with_a_valid_code_and_the_correct_purpo
 #[tokio::test]
 async fn last_login_is_stamped_only_when_the_session_is_issued() {
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let ring = test_mfa_ring();
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;
@@ -352,7 +348,7 @@ async fn last_login_is_stamped_only_when_the_session_is_issued() {
 #[tokio::test]
 async fn a_dead_challenge_runs_no_verifier() {
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let ring = test_mfa_ring();
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;
@@ -489,7 +485,7 @@ async fn an_argon2_recovery_code_still_verifies() {
 async fn a_login_upgrades_a_hash_below_the_current_kdf_parameters() {
     use argon2::password_hash::{PasswordHasher, phc::PasswordHash};
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;
     let weak_params = argon2::Params::new(
@@ -562,7 +558,7 @@ async fn a_login_upgrades_a_hash_below_the_current_kdf_parameters() {
 #[tokio::test]
 async fn complete_pending_login_rejects_replayed_totp_code_with_a_fresh_pending_token() {
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let ring = test_mfa_ring();
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;
@@ -641,7 +637,7 @@ async fn complete_pending_login_rejects_replayed_totp_code_with_a_fresh_pending_
 #[tokio::test]
 async fn complete_pending_login_rejects_a_wrong_code() {
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let ring = test_mfa_ring();
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;
@@ -686,7 +682,7 @@ async fn an_enrollment_pending_token_cannot_be_used_to_complete_a_login_challeng
     // possession" path even though both are signed under the same ring.
     let user_id = Uuid::now_v7();
     let jwt_ring = test_jwt_ring();
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let token = mfa::start_challenge(
         &redis,
         user_id,
@@ -721,7 +717,7 @@ async fn an_enrollment_pending_token_cannot_be_used_to_complete_a_login_challeng
 #[tokio::test]
 async fn complete_pending_login_rejects_reuse_of_an_already_consumed_pending_token() {
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let ring = test_mfa_ring();
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;
@@ -792,7 +788,7 @@ async fn complete_pending_login_rejects_reuse_of_an_already_consumed_pending_tok
 async fn complete_pending_login_locks_out_after_max_attempts_wrong_codes() {
     const CEILING: u32 = 3;
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let ring = test_mfa_ring();
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;
@@ -885,7 +881,7 @@ async fn complete_pending_login_attempt_ceiling_is_exact_under_concurrent_wrong_
     const CONCURRENT_WRONG_ATTEMPTS: usize = (CEILING - 1) as usize;
 
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let ring = test_mfa_ring();
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;
@@ -988,7 +984,7 @@ async fn complete_pending_login_ceiling_reliably_trips_under_concurrent_wrong_co
     const CONCURRENT_WRONG_ATTEMPTS: usize = (2 * CEILING) as usize;
 
     let db = skip_if_no_db!(pool().await);
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let ring = test_mfa_ring();
     let jwt_ring = test_jwt_ring();
     let (user_id, email) = create_test_user(&db).await;

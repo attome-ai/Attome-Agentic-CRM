@@ -68,6 +68,9 @@ async fn test_storage_client() -> attome_storage::StorageClient {
 /// a Postgres round trip, an actual object-store put/get cycle.
 #[tokio::test]
 async fn anchor_root_then_fetch_returns_the_same_merkle_root() {
+    if attome_testkit::s3_or_skip().is_none() {
+        return;
+    }
     let store = test_storage_client().await;
     let org = Uuid::now_v7();
     let batch_id = Uuid::now_v7();
@@ -89,6 +92,9 @@ async fn anchor_root_then_fetch_returns_the_same_merkle_root() {
 /// distinguished from a best-effort anchoring failure" contract.
 #[tokio::test]
 async fn fetch_anchored_root_returns_none_for_an_unanchored_batch() {
+    if attome_testkit::s3_or_skip().is_none() {
+        return;
+    }
     let store = test_storage_client().await;
     let org = Uuid::now_v7();
     let batch_id = Uuid::now_v7();
@@ -106,6 +112,9 @@ async fn fetch_anchored_root_returns_none_for_an_unanchored_batch() {
 /// error — `anchor_root`'s own doc comment names this explicitly.
 #[tokio::test]
 async fn re_anchoring_the_same_batch_is_idempotent_not_an_error() {
+    if attome_testkit::s3_or_skip().is_none() {
+        return;
+    }
     let store = test_storage_client().await;
     let org = Uuid::now_v7();
     let batch_id = Uuid::now_v7();

@@ -35,19 +35,15 @@ use attome_inference::budget::{self, Budget, BudgetVerdict, CONFORMANCE};
 use fred::interfaces::{ClientLike, HashesInterface, KeysInterface};
 use fred::prelude::RedisConfig;
 
-async fn test_pool() -> RedisPool {
-    let host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-    let port: u16 = std::env::var("TEST_REDIS_PORT")
-        .unwrap_or_else(|_| "6379".into())
-        .parse()
-        .expect("TEST_REDIS_PORT must be a valid port number");
+async fn test_pool() -> Option<RedisPool> {
+    let (host, port) = attome_testkit::test_redis()?;
     let config = RedisConfig::from_url(&format!("redis://{host}:{port}")).expect("redis config");
     let pool = RedisPool::new(config, None, None, None, 2).expect("redis pool");
     pool.connect();
     pool.wait_for_connect()
         .await
         .expect("connect to the local test Redis/Dragonfly");
-    pool
+    Some(pool)
 }
 
 fn test_key() -> String {
@@ -79,7 +75,7 @@ async fn plant(pool: &RedisPool, key: &str, window: Duration, age_buckets: u64, 
 
 #[tokio::test]
 async fn the_atomic_admission_path_holds_every_conformance_row() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let mut driven = 0usize;
     let mut evicted = 0usize;
     for case in CONFORMANCE {
@@ -204,7 +200,7 @@ async fn the_atomic_admission_path_holds_every_conformance_row() {
 /// `admit`'s order) charges neither the session nor the caller window.
 #[tokio::test]
 async fn a_refusal_on_any_window_charges_none_of_them() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let hour = Duration::from_secs(3_600);
     let day = Duration::from_secs(86_400);
     let (session, caller, deployment) = (test_key(), test_key(), test_key());
@@ -283,7 +279,7 @@ async fn an_unreachable_store_refuses_the_admission() {
 /// admissions against a budget fitting 10 admit exactly 10.
 #[tokio::test]
 async fn fifty_concurrent_admissions_against_room_for_ten_admit_exactly_ten() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = test_key();
     let hour = Duration::from_secs(3_600);
     let estimate = 100u64;

@@ -113,7 +113,7 @@
           "category": 0,
           "operation": 1,
           "source": 1,
-          "entity_name": "contact",
+          "entity_name": "xrm_contact",
           "record_id": null,
           "version_before": null,
           "version_after": null,
@@ -250,7 +250,7 @@
           "category": 0,
           "operation": 1,
           "source": 1,
-          "entity_name": "contact",
+          "entity_name": "xrm_contact",
           "record_id": "01900000-0000-7000-8000-000000000003",
           "version_before": null,
           "version_after": 7,
@@ -464,7 +464,7 @@
           "category": 0,
           "operation": 1,
           "source": 1,
-          "entity_name": "contact",
+          "entity_name": "xrm_contact",
           "record_id": "01900000-0000-7000-8000-000000000003",
           "version_before": 4,
           "version_after": 5,
@@ -500,9 +500,9 @@
             "new_value": "********",
             "old_display_value": null,
             "new_display_value": null,
-            "old_lookup_entity": "user_account",
+            "old_lookup_entity": "xrm_core_systemuser",
             "old_lookup_name": "old",
-            "new_lookup_entity": "user_account",
+            "new_lookup_entity": "xrm_core_systemuser",
             "new_lookup_name": "new",
             "is_sensitive": true
           }
@@ -526,7 +526,7 @@
       "v1_prev": {
         "prev_hash": "",
         "operation": 1,
-        "entity_name": "contact",
+        "entity_name": "xrm_contact",
         "record_id": "01900000-0000-7000-8000-000000000003",
         "user_id": "01900000-0000-7000-8000-000000000002",
         "changed_on_millis": 1788999999000

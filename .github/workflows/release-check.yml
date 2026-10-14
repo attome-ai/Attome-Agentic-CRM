@@ -95,10 +95,7 @@ jobs:
       - name: summarize failures
         if: failure()
         shell: bash
-        run: |
-          sed -e 's/\x1b\[[0-9;]*m//g' release-check.log | grep -E '^(error|warning)(\[|:)|^ *--> |^---- .* stdout ----|panicked at|^test .* FAILED|^Diff in' | head -400 > failures.txt || true
-          body=$(sed -e 's/%/%25/g' failures.txt | awk '{printf "%s%%0A", $0}')
-          echo "::error title=release check failures::${body}"
+        run: bash scripts/ci/summarize-failures.sh release-check.log
 
   windows:
     name: release check (windows)
@@ -118,7 +115,4 @@ jobs:
       - name: summarize failures
         if: failure()
         shell: bash
-        run: |
-          sed -e 's/\x1b\[[0-9;]*m//g' release-check.log | grep -E '^(error|warning)(\[|:)|^ *--> |^---- .* stdout ----|panicked at|^test .* FAILED|^Diff in' | head -400 > failures.txt || true
-          body=$(sed -e 's/%/%25/g' failures.txt | awk '{printf "%s%%0A", $0}')
-          echo "::error title=release check failures::${body}"
+        run: bash scripts/ci/summarize-failures.sh release-check.log
