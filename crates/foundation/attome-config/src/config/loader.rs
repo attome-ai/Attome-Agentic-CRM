@@ -541,6 +541,17 @@ impl AppConfig {
         validate_kdf(&self.auth.kdf)?;
         // A3 (BSV-F07) — see `validate_cache_timeout_ms`.
         validate_cache_timeout_ms("cache.timeout", self.cache.timeout)?;
+        // The in-process store is private to one process: a split worker (its
+        // own process) would read an empty store where the server wrote its
+        // buffers, rate windows and revocations.
+        if self.cache.backend == crate::config::CacheBackend::Memory && !self.jobs.run_worker_inline
+        {
+            return Err(ConfigError::Invalid {
+                field: "cache.backend".into(),
+                reason: "\"memory\" needs jobs.run_worker_inline = true: the in-process store                          cannot be shared with a separate worker process. Use \"redis\" for a                          split or multi-node deployment."
+                    .into(),
+            });
+        }
         // BCA-14 — a role override is a fully separate endpoint with its own
         // timeout, so a `0` there is unbounded too. Checked here rather than
         // left to the role-specific production gate below, which only runs for

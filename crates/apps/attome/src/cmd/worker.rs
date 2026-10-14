@@ -47,6 +47,10 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // `init_tracing` wiring, not a second copy of the old bare-`fmt()` setup.
     let config = AppConfig::from_file()?;
     config.validate()?;
+    if config.cache.backend == attome_config::CacheBackend::Memory {
+        return Err("attome worker cannot run with cache.backend = \"memory\": the in-process                     store is private to the server process. Run the worker inline                     (jobs.run_worker_inline = true) or configure Redis."
+            .into());
+    }
     let tracing_guard =
         attome::observability::init_tracing(&config.observability, env!("CARGO_PKG_VERSION"));
     // BCF-10 — one WARN per unknown config key, never a boot failure (BCF-D4).
