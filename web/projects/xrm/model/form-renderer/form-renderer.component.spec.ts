@@ -3,6 +3,7 @@ import { LangService } from '@attome/base';
 import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { LiveService } from '../live.service';
 import { ModelService } from '../model.service';
 import { FormRendererComponent, controlFor } from './form-renderer.component';
 
@@ -42,6 +43,7 @@ describe('FormRendererComponent', () => {
       imports: [FormRendererComponent],
       providers: [
         { provide: ModelService, useValue: svc },
+        { provide: LiveService, useValue: { connect: vi.fn() } },
         { provide: LangService, useValue: { translate: (key: string) => key } },
       ],
     });

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { ApiError, TranslatePipe } from '@attome/base';
 
+import { LiveService } from '../live.service';
 import { FormPlan, FormPlanField, ModelService, RecordView } from '../model.service';
 
 /** How a field is edited, from its attribute's field type number. */
@@ -60,6 +61,8 @@ export class FormRendererComponent {
   });
 
   constructor() {
+    // Y14-T3: a published change drops the cached plans.
+    inject(LiveService).connect();
     effect(() => {
       const formId = this.formId();
       const recordId = this.recordId();

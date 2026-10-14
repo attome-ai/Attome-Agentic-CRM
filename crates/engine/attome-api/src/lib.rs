@@ -100,6 +100,10 @@ pub mod field_hooks;
 /// registration; see that module's doc.
 mod jobs_admin;
 mod license_admin;
+/// M02/D-412 — `/api/v1/admin/settings` + `/api/v1/settings/me`. `pub` only
+/// for `openapi_fragment` (mounted by `openapi.rs`) and `routes` (mounted by
+/// `system.rs`); handlers stay module-private.
+pub mod live;
 /// M05 Phase 1 (D-426) — `/api/v1/admin/entities/{entity_id}/labels` CRUD.
 /// `pub` only for `openapi_fragment` (mounted by `openapi.rs`) and `routes`
 /// (mounted by `system.rs`); handlers stay module-private, same shape as
@@ -112,6 +116,7 @@ pub mod metrics;
 /// calls; the route handlers stay module-private, same shape as
 /// `data_export`/`data_profile_admin`.
 pub mod migration;
+pub mod model_admin;
 /// Dashboard 10/10 Phase 6 — `GET /api/v1/my-work/*` aggregation route over
 /// every registered `MyWorkProvider`. `pub` only for `openapi_fragment`/
 /// `routes`, same shape as `omnichannel_metrics` below.
@@ -185,10 +190,6 @@ pub mod rule_admin;
 mod schema;
 mod seed_support;
 mod service_public;
-/// M02/D-412 — `/api/v1/admin/settings` + `/api/v1/settings/me`. `pub` only
-/// for `openapi_fragment` (mounted by `openapi.rs`) and `routes` (mounted by
-/// `system.rs`); handlers stay module-private.
-pub mod model_admin;
 pub mod settings_admin;
 /// `pub` for the service reconcile API (`reconcile_sidebar_item` & co.,
 /// P-environment-promotion §5 step 13) — the handlers stay module-private.
