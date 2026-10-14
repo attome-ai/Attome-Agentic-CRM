@@ -35,7 +35,7 @@ export class LiveService {
 
   /** Applies one frame's `{model_version}`. */
   receive(data: string): void {
-    let version: string | null = null;
+    let version: string | null;
     try {
       const parsed = JSON.parse(data) as { model_version?: unknown };
       version = typeof parsed.model_version === 'string' ? parsed.model_version : null;
