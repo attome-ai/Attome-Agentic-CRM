@@ -15,6 +15,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - The metadata model: forms and other metadata kinds are stored as versioned drafts, edited with
   `add`/`remove`/`move`/`set` commands (the same for people and agents), validated in three steps
   and cooked into content-hashed artefacts; administrators reach it under `/api/v1/admin/model`.
+- Metadata as files: `GET /api/v1/admin/model/export` and `POST /api/v1/admin/model/import`, with
+  `attome model export --out <dir>` and `attome model import --dir <dir>`, move objects as one
+  readable JSON file each; import saves drafts and never publishes.
 - Install and operations: `attome service install`, `attome bundle offline`, `attome sovereignty
   report`, a sizing check in `attome init`, and the `deployment.sovereign` preset.
 - Testing and release tooling: `attome test` (tiers, a Docker test stack, flaky-test reruns,

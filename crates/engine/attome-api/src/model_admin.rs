@@ -812,9 +812,200 @@ async fn form_plan(
     }))
 }
 
+/// One object as a readable text file (Y1-T10).
+#[derive(Serialize, Deserialize, ToSchema)]
+pub(crate) struct ModelFile {
+    /// `<kind>/<app>/<name>.json`, always with `/` separators.
+    path: String,
+    /// Pretty JSON with sorted keys and a trailing newline.
+    text: String,
+}
+
+/// A set of object files. Not a paginated list: an export is one artefact,
+/// written to a directory whole and read back whole.
+#[derive(Serialize, Deserialize, ToSchema)]
+pub(crate) struct ModelFiles {
+    files: Vec<ModelFile>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub(crate) struct ImportResponse {
+    /// The drafts saved, in file order.
+    drafts: Vec<CommandsResponse>,
+}
+
+/// The most files one import takes.
+const MAX_IMPORT_FILES: usize = 5_000;
+
+/// Exports the newest version (the draft, when there is one) of every object
+/// in the store, one file per object. Adapter kinds (entities, attributes)
+/// live in their own tables and travel in bundles, not here.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/model/export",
+    tag = "admin",
+    responses(
+        (status = 200, description = "Every stored object as a file, by path", body = ModelFiles),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn export_files(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Result<Json<ModelFiles>, AppError> {
+    let stored: Vec<String> = kinds()
+        .iter()
+        .filter(|kind| kind.adapter_table().is_none())
+        .map(|kind| kind.name().as_str().to_owned())
+        .collect();
+    let rows = store::export_newest(&state.base.db, &stored).await?;
+    let mut files = Vec::with_capacity(rows.len());
+    for row in rows {
+        let Some(kind) = kinds().get(&row.kind) else {
+            continue;
+        };
+        let object = attome_model::files::FileObject {
+            kind: kind.name(),
+            app: row.app,
+            name: row.name,
+            schema_version: u32::try_from(row.kind_schema_version).unwrap_or(0),
+            doc: row.doc,
+        };
+        let (path, text) = attome_model::files::to_file(&object);
+        let path: Vec<String> = path
+            .iter()
+            .map(|part| part.to_string_lossy().into_owned())
+            .collect();
+        files.push(ModelFile {
+            path: path.join("/"),
+            text,
+        });
+    }
+    Ok(Json(ModelFiles { files }))
+}
+
+/// Imports object files as drafts: an object with the same kind, app and
+/// name gets a new draft, any other is created. Nothing is published. Every
+/// file is read (and upgraded to its kind's current shape) before anything
+/// is saved, and all drafts save in one transaction, so a bad file saves
+/// nothing.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/model/import",
+    tag = "admin",
+    request_body = ModelFiles,
+    responses(
+        (status = 200, description = "The drafts saved", body = ImportResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 409, description = "Another save of one of the objects is in progress", body = ErrorResponse),
+        (status = 422, description = "A file is unreadable or its document invalid; the issues are listed", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
+async fn import_files(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(request): Json<ModelFiles>,
+) -> Result<Json<ImportResponse>, AppError> {
+    if request.files.len() > MAX_IMPORT_FILES {
+        return Err(AppError::Validation(format!(
+            "an import takes at most {MAX_IMPORT_FILES} files"
+        )));
+    }
+    let mut objects = Vec::with_capacity(request.files.len());
+    let mut issues = Vec::new();
+    for file in &request.files {
+        match attome_model::files::from_file(kinds(), std::path::Path::new(&file.path), &file.text)
+        {
+            Ok(object) => {
+                let Some(kind) = kinds().get(object.kind.as_str()) else {
+                    continue;
+                };
+                if kind.adapter_table().is_some() {
+                    issues.push(Issue::new(
+                        &file.path,
+                        "adapter_kind",
+                        format!("{} objects are not imported as files", object.kind),
+                    ));
+                    continue;
+                }
+                issues.extend(
+                    attome_model::validate::validate_edit(kind.as_ref(), &object.doc)
+                        .into_iter()
+                        .map(|issue| Issue {
+                            path: format!("{}{}", file.path, issue.path),
+                            ..issue
+                        }),
+                );
+                objects.push((kind, object));
+            }
+            Err(issue) => issues.push(issue),
+        }
+    }
+    if !issues.is_empty() {
+        return Err(attome_model::validate::publish_error(&issues));
+    }
+
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let mut drafts = Vec::with_capacity(objects.len());
+    for (kind, object) in &objects {
+        let kind_name = kind.name();
+        let id = store::find_by_name(&mut tx, kind_name.as_str(), &object.app, &object.name)
+            .await?
+            .unwrap_or_else(Uuid::now_v7);
+        let spec = ObjectSpec {
+            id: ObjectId(id),
+            name: object.name.clone(),
+            app: object.app.clone(),
+            layer: if object.app == "customer" {
+                Layer::Customer
+            } else {
+                Layer::App
+            },
+        };
+        let saved = store::save_draft(
+            &mut tx,
+            kinds(),
+            kind.as_ref(),
+            &spec,
+            &object.doc,
+            Some(ctx.user_id),
+        )
+        .await?;
+        drafts.push(CommandsResponse {
+            id,
+            version_no: saved.version_no,
+            content_hash: saved.content_hash,
+            issues: saved.issues.iter().map(IssueView::from).collect(),
+        });
+    }
+    write_security_event(
+        &mut tx,
+        &audit_service(&state),
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "metadata_object",
+            None,
+        )
+        .named("model.import")
+        .comment(format!("{} draft(s) imported from files", drafts.len())),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok(Json(ImportResponse { drafts }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/model/kinds", get(list_kinds))
+        .route("/api/v1/admin/model/export", get(export_files))
+        .route("/api/v1/admin/model/import", post(import_files))
         .route("/api/v1/admin/model/{kind}", get(list_objects))
         .route("/api/v1/admin/model/{kind}/{id}", get(get_object))
         .route(
@@ -849,6 +1040,8 @@ pub fn routes() -> Router<EngineState> {
         validate,
         apply_commands,
         publish,
+        export_files,
+        import_files,
         form_plan
     ),
     components(schemas(
@@ -864,6 +1057,9 @@ pub fn routes() -> Router<EngineState> {
         CommandsRequest,
         CommandsResponse,
         PublishResponse,
+        ModelFile,
+        ModelFiles,
+        ImportResponse,
         FormPlan,
         FormPlanSection,
         FormPlanField

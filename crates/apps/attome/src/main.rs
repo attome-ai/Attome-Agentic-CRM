@@ -15,6 +15,9 @@ Usage:
   attome init                   Install Solo: write a config, apply the schema
   attome bundle offline|verify  Make or check an offline bundle for an
                                 air-gapped install
+  attome model export --out <dir> | import --dir <dir> [--url <url>] [--api-key <key>]
+                                Move metadata objects as one text file each;
+                                import saves drafts and never publishes
   attome sovereignty report [--json]
                                 Where copies of data live and where data is
                                 sent, each marked inside or outside
@@ -86,6 +89,10 @@ fn main() -> ExitCode {
         ["bundle", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::bundle_offline::run(&rest).map_err(Into::into))
+        }
+        ["model", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::model_files::run(&rest).map_err(Into::into))
         }
         ["sovereignty", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();

@@ -6,6 +6,7 @@ pub mod changeset_replay;
 pub mod healthcheck;
 pub mod init;
 pub mod migrate;
+pub mod model_files;
 pub mod preflight;
 pub mod service;
 pub mod sizing;

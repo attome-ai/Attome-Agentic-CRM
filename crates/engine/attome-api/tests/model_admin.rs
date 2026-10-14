@@ -432,3 +432,92 @@ fn a_published_form_has_a_render_plan() {
         );
     });
 }
+
+/// Y1-T10's done-when: export, then import, gives drafts whose content
+/// hashes equal the exported objects' own.
+#[test]
+fn export_then_import_keeps_content_hashes() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, cookie) = seed_admin(&db).await;
+        let app = full_app(system);
+        let entity_id: Uuid =
+            sqlx::query_scalar("SELECT id FROM entity_info WHERE is_active IS NOT FALSE LIMIT 1")
+                .fetch_one(&db)
+                .await
+                .expect("a seeded entity");
+        let form_id = Uuid::now_v7();
+        let name = format!("export form {form_id}");
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/form/{form_id}/commands"),
+                &cookie,
+                serde_json::json!({
+                    "base_hash": "",
+                    "name": name,
+                    "commands": [
+                        { "op": "set", "path": "/entity", "value": entity_id.to_string() },
+                        { "op": "set", "path": "/sections", "value": [{ "label": "Main", "fields": [] }] }
+                    ]
+                }),
+            ))
+            .await
+            .unwrap();
+        let saved = body_json(resp).await;
+        let hash = saved["content_hash"].as_str().expect("hash").to_owned();
+
+        let resp = app
+            .clone()
+            .oneshot(get_req("/api/v1/admin/model/export", &cookie))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let export = body_json(resp).await;
+        let file = export["files"]
+            .as_array()
+            .expect("files")
+            .iter()
+            .find(|f| f["text"].as_str().is_some_and(|t| t.contains(&name)))
+            .cloned()
+            .expect("the form is exported");
+        let text = file["text"].as_str().expect("text");
+        assert!(
+            file["path"]
+                .as_str()
+                .expect("path")
+                .starts_with("form/customer/")
+        );
+        assert!(
+            text.ends_with('\n') && !text.contains('\r'),
+            "LF only, trailing newline"
+        );
+
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                "/api/v1/admin/model/import",
+                &cookie,
+                serde_json::json!({ "files": [file] }),
+            ))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let imported = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{imported}");
+        let draft = &imported["drafts"][0];
+        assert_eq!(draft["id"], form_id.to_string(), "same name → same object");
+        assert_eq!(draft["content_hash"], hash.as_str());
+
+        let resp = app
+            .oneshot(post_req(
+                "/api/v1/admin/model/import",
+                &cookie,
+                serde_json::json!({ "files": [{ "path": "form/x/y.json", "text": "{" }] }),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    });
+}

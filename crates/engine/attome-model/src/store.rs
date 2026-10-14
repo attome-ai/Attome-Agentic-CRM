@@ -454,3 +454,50 @@ mod tests {
         assert!(json_diff(&before, &before).is_empty());
     }
 }
+
+/// One object's newest version, as a file export writes it (Y1-T10).
+#[derive(Debug, Clone, PartialEq, sqlx::FromRow)]
+pub struct ExportRow {
+    pub kind: String,
+    pub app: String,
+    pub name: String,
+    pub kind_schema_version: i32,
+    pub doc: Value,
+}
+
+/// The newest version (the draft, when there is one) of every active object
+/// of `kinds`, ordered by kind, app and name. Bounded by each kind's object
+/// limit.
+pub async fn export_newest(pool: &DbPool, kinds: &[String]) -> Result<Vec<ExportRow>, AppError> {
+    let mut rows: Vec<ExportRow> = sqlx::query_as(
+        "SELECT DISTINCT ON (o.id) o.kind, o.app, o.name, v.kind_schema_version, v.doc \
+         FROM metadata_object o \
+         JOIN metadata_object_version v ON v.object_id = o.id \
+         WHERE o.is_active AND o.kind = ANY($1) \
+         ORDER BY o.id, v.version_no DESC",
+    )
+    .bind(kinds)
+    .fetch_all(pool)
+    .await
+    .map_err(AppError::internal)?;
+    rows.sort_by(|a, b| (&a.kind, &a.app, &a.name).cmp(&(&b.kind, &b.app, &b.name)));
+    Ok(rows)
+}
+
+/// The id of the active object of `kind` named `name` in `app`, if any.
+pub async fn find_by_name(
+    tx: &mut Tx<'_>,
+    kind: &str,
+    app: &str,
+    name: &str,
+) -> Result<Option<Uuid>, AppError> {
+    sqlx::query_scalar(
+        "SELECT id FROM metadata_object WHERE kind = $1 AND app = $2 AND name = $3 AND is_active",
+    )
+    .bind(kind)
+    .bind(app)
+    .bind(name)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(AppError::internal)
+}
