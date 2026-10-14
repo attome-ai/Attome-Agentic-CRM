@@ -6,6 +6,9 @@
     </div>
   }
   @case ('tool') {
+    @if (answer(); as view) {
+      <attome-ai-answer-view [view]="view" />
+    }
     <details class="msg msg--tool">
       <summary>{{ 'aiChat.message.toolResult' | translate }}</summary>
       <pre class="msg__raw" dir="auto">{{ message().content }}</pre>

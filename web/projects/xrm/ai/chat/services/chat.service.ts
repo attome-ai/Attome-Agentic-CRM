@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, map, switchMap } from 'rxjs';
 import { ATTOME_CONFIG, ApiService } from '@attome/base';
 import type { ApiComponents } from '@attome/base';
+import { flowDraft } from '../copilot-panel/copilot-components';
 
 type Schemas = ApiComponents['schemas'];
 
@@ -169,6 +170,29 @@ export class ChatService {
     return this.api
       .get<{ data: Record<string, unknown> }>(`/api/v1/${entity}/${recordId}`)
       .pipe(map((r) => r.data ?? {}));
+  }
+
+  /**
+   * "Do this every time" (N1-T3): saves the request as an unpublished
+   * workflow draft that runs the same agent on the same task. Returns the
+   * new definition's id; a person schedules and publishes it.
+   */
+  createFlowDraft(agentDefinitionId: string, task: string): Observable<string> {
+    const draft = flowDraft(agentDefinitionId, task, new Date());
+    return this.api
+      .post<Schemas['DefinitionDetail']>('/api/v1/workflow/definitions', {
+        logicalname: draft.logicalname,
+        name: draft.name,
+      })
+      .pipe(
+        switchMap((definition) =>
+          this.api
+            .post<unknown>(`/api/v1/workflow/definitions/${encodeURIComponent(definition.id)}/versions`, {
+              graph: draft.graph,
+            })
+            .pipe(map(() => definition.id)),
+        ),
+      );
   }
 
   /** Total pages of a transcript of `total` messages at this service's page size. */

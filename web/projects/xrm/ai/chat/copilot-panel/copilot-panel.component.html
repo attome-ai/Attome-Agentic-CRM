@@ -103,6 +103,11 @@
     } @else if (busy()) {
       <p class="copilot__hint" role="status">{{ 'aiChat.panel.thinking' | translate }}</p>
     }
+    @if (repeatableTask()) {
+      <button type="button" class="btn copilot__repeat" (click)="repeatAsFlow()" [disabled]="flowSaving()">
+        {{ 'aiChat.flow.repeat' | translate }}
+      </button>
+    }
   </div>
 
   @if (notice(); as key) {

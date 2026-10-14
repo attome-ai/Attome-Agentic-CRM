@@ -149,6 +149,34 @@ export class CopilotPanelComponent implements OnInit {
     return this.latency()[message.turn_id];
   }
 
+  /** The newest request, when the newest answer completed: what "do this every time" repeats. */
+  readonly repeatableTask = computed(() => {
+    const all = this.messages();
+    const last = all[all.length - 1];
+    if (!last || last.role !== 'assistant' || last.terminal_state !== 'completed' || this.busy()) return null;
+    const request = [...all].reverse().find((m) => m.role === 'user');
+    return request && request.content.trim() ? request.content : null;
+  });
+  readonly flowSaving = signal(false);
+
+  /** Saves the newest request as a workflow draft (N1-T3). */
+  repeatAsFlow(): void {
+    const task = this.repeatableTask();
+    const agent = this.selectedAgentId();
+    if (!task || !agent || this.flowSaving()) return;
+    this.flowSaving.set(true);
+    this.chat.createFlowDraft(agent, task).subscribe({
+      next: () => {
+        this.flowSaving.set(false);
+        this.notice.set('aiChat.flow.created');
+      },
+      error: (e: ApiError) => {
+        this.flowSaving.set(false);
+        this.errorText.set(e.message);
+      },
+    });
+  }
+
   isTurnFinal(message: MessageView): boolean {
     return message.role === 'assistant' && message.terminal_state != null;
   }

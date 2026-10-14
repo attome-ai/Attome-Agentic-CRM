@@ -1,0 +1,45 @@
+@if (table(); as v) {
+  @if (v.bars; as bars) {
+    <ul class="av-bars" [attr.aria-label]="'aiChat.answer.chart' | translate">
+      @for (b of bars; track $index) {
+        <li class="av-bar">
+          <span class="av-bar__label" dir="auto">{{ b.label }}</span>
+          <span class="av-bar__track"><span class="av-bar__fill" [style.inline-size.%]="b.share"></span></span>
+          <span class="av-bar__value">{{ b.value }}</span>
+        </li>
+      }
+    </ul>
+  }
+  @if (v.rows.length === 0) {
+    <p class="av-muted">{{ 'aiChat.answer.noRows' | translate }}</p>
+  } @else {
+    <div class="av-scroll">
+      <table class="av-table">
+        <thead>
+          <tr>
+            @for (c of v.columns; track c.name) {
+              <th scope="col" dir="auto">{{ c.label }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of v.rows; track $index) {
+            <tr>
+              @for (cell of row; track $index) {
+                <td dir="auto">{{ cell }}</td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}
+@if (record(); as v) {
+  <dl class="av-card" [attr.data-record]="v.id">
+    @for (f of v.fields; track f.name) {
+      <dt>{{ f.name }}</dt>
+      <dd dir="auto">{{ f.value }}</dd>
+    }
+  </dl>
+}

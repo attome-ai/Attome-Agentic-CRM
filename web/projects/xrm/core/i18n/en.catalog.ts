@@ -1017,6 +1017,14 @@ export const xrmEn = {
       promptVersion: 'Prompt',
       latency: 'Response time',
     },
+    answer: {
+      chart: 'Chart of the result',
+      noRows: 'No rows.',
+    },
+    flow: {
+      repeat: 'Do this every time',
+      created: 'Saved as a workflow draft. Schedule and publish it in Workflows.',
+    },
     grounding: {
       sourced: 'Sources',
       no_sources: 'Not grounded in knowledge: no source was found for this answer.',

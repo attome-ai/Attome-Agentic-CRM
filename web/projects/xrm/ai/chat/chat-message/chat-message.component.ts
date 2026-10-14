@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@attome/base';
 import type { CitationView, MessageView, Vote } from '../services/chat.service';
+import { AnswerViewComponent, answerView } from '../copilot-panel/copilot-components';
 
 /** The knowledge article entity a citation's `item_id` names. */
 const KNOWLEDGE_ITEM_FORM = '/xrm/knowledge/data/item/form';
@@ -17,7 +18,7 @@ const KNOWLEDGE_ITEM_FORM = '/xrm/knowledge/data/item/form';
 @Component({
   selector: 'attome-ai-chat-message',
   standalone: true,
-  imports: [RouterLink, TranslatePipe],
+  imports: [AnswerViewComponent, RouterLink, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./chat-message.component.css'],
   templateUrl: './chat-message.component.html',
@@ -30,6 +31,8 @@ export class ChatMessageComponent {
   readonly voted = output<Vote>();
 
   readonly role = computed(() => this.message().role);
+  /** A tool result shown as a table, chart or record card (N1-T3); `null` keeps the raw text. */
+  readonly answer = computed(() => (this.message().role === 'tool' ? answerView(this.message().content) : null));
   /** A turn's final assistant message: the one carrying grounding and provenance. */
   readonly isTurnFinal = computed(
     () => this.message().role === 'assistant' && this.message().terminal_state != null,

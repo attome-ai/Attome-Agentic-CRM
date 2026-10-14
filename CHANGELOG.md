@@ -8,6 +8,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Chat answers show tool results as live tables, charts and record cards; "Do this every time" saves
+  the request as a workflow draft that runs the same agent. Bulk changes above 20 records run only
+  after their own preview (`preview_token`).
 - Pinned AI models (platform changeset 0049): `pinned_version`, `base_model` and a drift eval suite on
   the AI Model catalogue; the nightly quality job re-runs the suite and alerts on drift.
 - An evidence export on the AI governance screen: one JSON file per period and kind.
