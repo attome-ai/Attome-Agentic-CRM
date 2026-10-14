@@ -55,6 +55,7 @@ pub struct SelectionBody {
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
+#[schema(as = CrawlImportBody)]
 pub struct ImportBody {
     pub page_ids: Vec<Uuid>,
 }

@@ -862,6 +862,7 @@ pub async fn do_clone(
 }
 
 #[derive(Serialize, utoipa::ToSchema)]
+#[schema(as = ScenarioCloneResponse)]
 struct CloneResponse {
     id: Uuid,
 }

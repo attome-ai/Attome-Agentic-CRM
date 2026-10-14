@@ -258,6 +258,7 @@ pub struct PollQuery {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
+#[schema(as = ChannelPollResponse)]
 pub struct PollResponse {
     pub messages: Vec<ChatMessageOut>,
     pub handed_off: bool,

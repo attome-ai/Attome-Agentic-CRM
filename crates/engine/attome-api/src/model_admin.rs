@@ -147,7 +147,7 @@ impl From<&Issue> for IssueView {
 }
 
 #[derive(Serialize, ToSchema)]
-pub(crate) struct ValidateResponse {
+pub(crate) struct ModelValidateResponse {
     valid: bool,
     issues: Vec<IssueView>,
 }
@@ -482,7 +482,7 @@ async fn get_references(
     params(("kind" = String, Path, description = "Kind name"), ("id" = Uuid, Path, description = "Object id")),
     request_body = ValidateRequest,
     responses(
-        (status = 200, description = "Whether it is valid, and every issue", body = ValidateResponse),
+        (status = 200, description = "Whether it is valid, and every issue", body = ModelValidateResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 404, description = "No such kind", body = ErrorResponse),
@@ -495,14 +495,14 @@ async fn validate(
     _ctx: Authorized<Admin>,
     Path((kind_name, _id)): Path<(String, Uuid)>,
     Json(request): Json<ValidateRequest>,
-) -> Result<Json<ValidateResponse>, AppError> {
+) -> Result<Json<ModelValidateResponse>, AppError> {
     let kind = kind(&kind_name)?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let issues =
         attome_model::validate::validate_save(&mut tx, kinds(), kind.as_ref(), &request.doc)
             .await?;
     tx.rollback().await.map_err(AppError::internal)?;
-    Ok(Json(ValidateResponse {
+    Ok(Json(ModelValidateResponse {
         valid: issues.is_empty(),
         issues: issues.iter().map(IssueView::from).collect(),
     }))
@@ -578,7 +578,7 @@ async fn apply_commands(
 }
 
 #[derive(Serialize, ToSchema)]
-pub(crate) struct PublishResponse {
+pub(crate) struct ModelPublishResponse {
     id: Uuid,
     version_no: i64,
     /// Reasons to look again that did not stop the publish, such as an eval
@@ -595,7 +595,7 @@ pub(crate) struct PublishResponse {
     tag = "admin",
     params(("kind" = String, Path, description = "Kind name"), ("id" = Uuid, Path, description = "Object id")),
     responses(
-        (status = 200, description = "Published", body = PublishResponse),
+        (status = 200, description = "Published", body = ModelPublishResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 404, description = "No such kind, or no open draft", body = ErrorResponse),
@@ -609,7 +609,7 @@ async fn publish(
     State(state): State<EngineState>,
     ctx: Authorized<Admin>,
     Path((kind_name, id)): Path<(String, Uuid)>,
-) -> Result<Json<PublishResponse>, AppError> {
+) -> Result<Json<ModelPublishResponse>, AppError> {
     let kind = kind(&kind_name)?;
     // N23-T2: an agent or prompt publishes only while its eval suites' newest
     // runs pass every safety case.
@@ -646,7 +646,7 @@ async fn publish(
     .await?;
     attome_db::tx::commit(tx).await?;
     refresh_cooked(&state).await?;
-    Ok(Json(PublishResponse {
+    Ok(Json(ModelPublishResponse {
         id,
         version_no: published.version_no,
         warnings: gate.warnings,
@@ -1510,10 +1510,10 @@ pub fn routes() -> Router<EngineState> {
         ReferenceView,
         IssueView,
         ValidateRequest,
-        ValidateResponse,
+        ModelValidateResponse,
         CommandsRequest,
         CommandsResponse,
-        PublishResponse,
+        ModelPublishResponse,
         ModelFile,
         ModelFiles,
         MenuView,

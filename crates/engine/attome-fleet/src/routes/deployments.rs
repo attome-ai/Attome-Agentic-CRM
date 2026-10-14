@@ -285,6 +285,7 @@ impl std::fmt::Debug for UpdateDeploymentBody {
 }
 
 #[derive(Deserialize, ToSchema)]
+#[schema(as = FleetSetCredentialBody)]
 pub struct SetCredentialBody {
     pub row_version: i64,
     #[serde(flatten)]

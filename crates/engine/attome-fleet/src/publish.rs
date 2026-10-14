@@ -207,6 +207,7 @@ pub fn decide_wave(plan: &mut ReleasePlan, unhealthy: usize) -> Result<Option<us
 
 /// The counts the console keeps of a customer's plan (never record values).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[schema(as = FleetPlanSummary)]
 pub struct PlanSummary {
     pub changesets: usize,
     pub already_applied: usize,
