@@ -42,7 +42,7 @@ async fn entity_id_by_logicalname(db: &DbPool, logicalname: &str) -> Result<Uuid
     .bind(logicalname)
     .fetch_one(db)
     .await
-    .map_err(AppError::internal)
+    .map_err(|e| AppError::internal(format!("entity `{logicalname}` is not provisioned: {e}")))
 }
 
 /// See this module's doc comment. Two passes, not one — every entity exists

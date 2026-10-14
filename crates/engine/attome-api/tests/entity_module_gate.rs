@@ -61,6 +61,17 @@ const UNGATED_BY_DESIGN: &[(&str, &str)] = &[
     ("api_key", "core platform (server apikey_seed)"),
     ("license", "core platform (attome-api license_seed)"),
     ("note", "core platform (attome-api note_seed)"),
+    ("activity", "core platform (attome-api activity bundle)"),
+    ("autovalue", "core platform (attome-metadata autovalue)"),
+    ("saved_search", "core platform (saved searches)"),
+    (
+        "webportal",
+        "attome-portal claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "webportal_user",
+        "attome-portal claims it through EngineModel::owned_entities at runtime",
+    ),
     (
         "profiler_finding",
         "attome-profiler has no EngineModel/licence gate (attome-api profiler_finding_seed) — \

@@ -122,7 +122,7 @@ fn test_config() -> AppConfig {
                 "jwt_secret": "{jwt_secret}", "jwt_issuer": "attome-test", "jwt_expiry_hours": 1,
                 "oauth_google_client_id": "", "oauth_google_client_secret": ""
             }},
-            "rate_limit": {{ "anonymous_rpm": 1000, "authenticated_rpm": 1000, "per_endpoint_limits": {{}} }},
+            "rate_limit": {{ "anonymous_rpm": 1000000, "authenticated_rpm": 1000000, "per_endpoint_limits": {{}} }},
             "observability": {{
                 "metrics_port": 0, "log_sampling_rate": 1.0, "trace_sampling_rate": 1.0,
                 "enable_distributed_tracing": false

@@ -344,7 +344,8 @@ fn req(method: &str, uri: &str, cookie: &str, body: Option<&Value>) -> Request<B
     let mut builder = Request::builder()
         .method(method)
         .uri(uri)
-        .header("cookie", cookie);
+        .header("cookie", cookie)
+        .header("sec-fetch-site", "same-origin");
     if body.is_some() {
         builder = builder.header("content-type", "application/json");
     }

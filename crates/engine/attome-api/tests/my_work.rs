@@ -12,6 +12,10 @@
 //! ```
 
 #![allow(
+    unsafe_code,
+    reason = "the test sets APP_ENV (std::env::set_var) once, before it builds the system"
+)]
+#![allow(
     clippy::expect_used,
     clippy::unwrap_used,
     reason = "test helpers: a failed setup step should panic with its message"
@@ -100,6 +104,11 @@ fn test_config() -> AppConfig {
 async fn build_test_system() -> Option<EngineSystem> {
     let url = attome_testkit::migrated_db_url()?;
 
+    // SAFETY: set before any pool is created, every test sets the same value.
+    unsafe {
+        std::env::set_var("APP_ENV", "debug");
+        std::env::set_var("DATABASE_URL", &url);
+    }
     let mut config = test_config();
     point_config_at(&mut config, &url);
     let db = attome_db::create_pool(&config)

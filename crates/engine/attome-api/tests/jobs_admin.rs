@@ -407,14 +407,16 @@ fn dead_letter_list_never_includes_the_raw_job_payload() {
         "attome_job",
         serde_json::json!({
             "version": 1,
-            "job": {
+            "variant": "SendEmail",
+            "payload": {
                 "SendEmail": {
                     "to": "user@example.test",
                     "subject": "Reset your password",
                     "text_body": format!("Click here: https://example.test/reset?token={secret_marker}"),
                     "html_body": null
                 }
-            }
+            },
+            "trace_context": null
         }),
         "smtp connection refused",
     )
