@@ -8,6 +8,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- The Umm al-Qura Hijri calendar, 1356 to 1500 AH: `attome_calendar::hijri` converts both ways and
+  names the months in Arabic and English; migration 0021 adds the same table as `hijri_month` for
+  grouping in SQL.
 - A star in the header keeps pages and records at hand: lists you reorder by dragging, up to nine
   pinned items opened with Ctrl+1..9, team lists, and the records you opened lately (also shown in
   quick search before you type).

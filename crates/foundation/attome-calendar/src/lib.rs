@@ -75,6 +75,8 @@
 //! detection, sync. This crate is the primitive those build on, not those
 //! features themselves.
 
+pub mod hijri;
+
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;
 
@@ -143,6 +145,9 @@ pub enum CalendarError {
     InvalidLocalTime,
     /// A negative duration was asked for; business time only moves forward.
     NegativeDuration,
+    /// A Hijri date, or a Gregorian day, outside the Umm al-Qura table
+    /// (1356 to 1500 AH).
+    OutOfHijriRange,
 }
 
 impl fmt::Display for CalendarError {
@@ -159,6 +164,9 @@ impl fmt::Display for CalendarError {
                 f.write_str("a working-hours bound does not resolve to a real instant")
             }
             Self::NegativeDuration => f.write_str("business durations cannot be negative"),
+            Self::OutOfHijriRange => f.write_str(
+                "the date is outside the Umm al-Qura calendar (1356 to 1500 AH, 1937 to 2077)",
+            ),
         }
     }
 }
