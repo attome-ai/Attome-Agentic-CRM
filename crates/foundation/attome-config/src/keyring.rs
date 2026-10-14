@@ -20,6 +20,12 @@
 //! wrapped into a single-entry ring under the fixed [`BARE_STRING_KEY_ID`] — or
 //! the full `{ keys: {...}, active_key_id: "..." }` shape a deployment uses
 //! once it wants more than one live key.
+//!
+//! Z1-T6: a ring can also come from one environment variable, where only a
+//! string fits: `ring:k2=secret-two;k1=secret-one` is a ring whose first key
+//! (`k2`) is active and whose others stay readable, so a rotation needs no
+//! JSON in the environment. A string without the `ring:` prefix is a bare
+//! key as before.
 
 use serde::{Deserialize, Deserializer};
 use std::collections::HashMap;
@@ -90,6 +96,9 @@ impl<'de> Deserialize<'de> for KeyRing {
     {
         match KeyRingRepr::deserialize(deserializer)? {
             KeyRingRepr::Bare(s) if s.is_empty() => Ok(KeyRing::default()),
+            KeyRingRepr::Bare(s) if s.starts_with(RING_PREFIX) => {
+                parse_compact(&s[RING_PREFIX.len()..]).map_err(serde::de::Error::custom)
+            }
             KeyRingRepr::Bare(s) => Ok(KeyRing::single(s)),
             KeyRingRepr::Full {
                 keys,
@@ -102,9 +111,55 @@ impl<'de> Deserialize<'de> for KeyRing {
     }
 }
 
+/// The prefix of a ring written as one string (Z1-T6).
+pub const RING_PREFIX: &str = "ring:";
+
+/// `k2=secret-two;k1=secret-one`: the first key is active. Every key needs an
+/// id and a value, and ids are unique.
+fn parse_compact(text: &str) -> Result<KeyRing, String> {
+    let mut ring = KeyRing::default();
+    for entry in text.split(';').map(str::trim).filter(|e| !e.is_empty()) {
+        let (id, secret) = entry.split_once('=').ok_or("a ring entry is `id=secret`")?;
+        let (id, secret) = (id.trim(), secret.trim());
+        if id.is_empty() || secret.is_empty() {
+            return Err("a ring entry needs an id and a secret".into());
+        }
+        if ring.keys.insert(id.to_owned(), secret.to_owned()).is_some() {
+            return Err(format!("the ring names key {id} twice"));
+        }
+        if ring.active_key_id.is_empty() {
+            ring.active_key_id = id.to_owned();
+        }
+    }
+    if ring.keys.is_empty() {
+        return Err("a `ring:` value names no key".into());
+    }
+    Ok(ring)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_ring_fits_in_one_environment_variable() {
+        let ring: KeyRing =
+            serde_json::from_str(r#""ring:k2=secret-two; k1=secret-one""#).expect("compact ring");
+        assert_eq!(ring.active_key_id, "k2");
+        assert_eq!(ring.active(), Some("secret-two"));
+        assert_eq!(ring.get("k1"), Some("secret-one"));
+        for bad in [
+            r#""ring:""#,
+            r#""ring:k1""#,
+            r#""ring:k1=a;k1=b""#,
+            r#""ring:=x""#,
+        ] {
+            assert!(serde_json::from_str::<KeyRing>(bad).is_err(), "{bad}");
+        }
+        // Without the prefix a value is one bare key, `=` and `;` included.
+        let bare: KeyRing = serde_json::from_str(r#""a=b;c""#).unwrap();
+        assert_eq!(bare.active(), Some("a=b;c"));
+    }
 
     #[test]
     fn bare_string_deserializes_into_a_single_entry() {
