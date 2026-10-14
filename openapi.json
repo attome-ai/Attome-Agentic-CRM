@@ -55247,6 +55247,27 @@
                 "null"
               ]
             }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "description": "Why the record is deleted (A18); required when the entity's bin setting says so, else 422 delete_reason_required.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Attome-Operation-Id",
+            "in": "header",
+            "description": "Groups deletes into one action the bin can restore at once; defaults to the request id.",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
           }
         ],
         "responses": {
@@ -63950,6 +63971,9 @@
             "type": "integer",
             "format": "int32",
             "minimum": 0
+          },
+          "last_drill": {
+            "description": "The newest restore drill (U6-T3), as `attome backup drill` and the\nmonthly run record it."
           },
           "latest": {
             "oneOf": [

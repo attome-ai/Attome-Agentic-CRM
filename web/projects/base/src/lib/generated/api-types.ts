@@ -13023,6 +13023,11 @@ export interface components {
             hour: number;
             /** Format: int32 */
             keep: number;
+            /**
+             * @description The newest restore drill (U6-T3), as `attome backup drill` and the
+             *     monthly run record it.
+             */
+            last_drill?: unknown;
             latest?: null | components["schemas"]["BackupArchive"];
             /** @description Whether this deployment runs the built-in backup (Solo only). */
             runs_here: boolean;
@@ -63176,10 +63181,15 @@ export interface operations {
     };
     delete_record: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Why the record is deleted (A18); required when the entity's bin setting says so, else 422 delete_reason_required. */
+                reason?: string;
+            };
             header?: {
                 /** @description Optional row_version for optimistic concurrency (DATA-7). Omitted, the delete is unguarded as before; supplied and stale, the response is 409. */
                 "If-Match"?: string | null;
+                /** @description Groups deletes into one action the bin can restore at once; defaults to the request id. */
+                "Attome-Operation-Id"?: string | null;
             };
             path: {
                 entity: string;
