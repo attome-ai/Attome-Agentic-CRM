@@ -278,7 +278,7 @@ async fn record_run(
     .map_err(AppError::internal)?;
     write_security_event(
         &mut tx,
-        &attome_audit::audit_service(&state),
+        &attome_audit::audit_service(state),
         SecurityEvent::new(
             MandatoryCategory::Ai,
             AuditOperation::Create,

@@ -314,5 +314,14 @@
     "poll_interval_secs": 900,
     "changesets_dir": "changesets",
     "request_timeout_secs": 10
+  },
+  "backup": {
+    "_comment": "Roadmap U6 (docs/backup.md): on Solo (cache.backend = memory) a daily pg_dump at `hour` (UTC) into `dir` (null: a backups folder next to this file), the newest `keep` kept, the file store's files copied beside it (`files`), and a restore drill on the first of each month. pg_dump: its path when not on the PATH.",
+    "enabled": true,
+    "dir": null,
+    "keep": 7,
+    "hour": 2,
+    "pg_dump": null,
+    "files": true
   }
 }

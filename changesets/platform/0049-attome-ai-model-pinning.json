@@ -1,10 +1,10 @@
 {
   "author": "attome",
-  "checksum": "sha256:fb4e09adc56d6004a6c42b3f8e52a699a5850232bfc4070cd59a913c2d932af0",
+  "checksum": "sha256:13c27afbd57a8fd9cb9a99348157061050885b38e420cc11b188dda0c19a63ec",
   "closed_at": "2026-10-14T00:00:00Z",
   "description": "Pinned fine-tuned or adapter models and their nightly drift check (roadmap N25-T2).",
   "format": "attome-changeset/v1",
-  "id": "cee3e27f-71a3-468f-925c-c1885bd8f4bb",
+  "id": "01a13b0f-46a0-73c7-b7a9-066ea1b02731",
   "layer": "platform",
   "name": "attome-ai-model-pinning",
   "opened_at": "2026-10-14T00:00:00Z",

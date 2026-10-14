@@ -196,18 +196,6 @@ fn lock_retry_backoff_ms(attempt: u32, sql_len: usize) -> u64 {
     1000 * (1u64 << attempt.saturating_sub(1).min(3)) + jitter_ms
 }
 
-#[cfg(test)]
-mod backoff_tests {
-    use super::lock_retry_backoff_ms;
-
-    #[test]
-    fn lock_retries_back_off_exponentially() {
-        let base: Vec<u64> = (1..=4).map(|a| lock_retry_backoff_ms(a, 0)).collect();
-        assert_eq!(base, vec![1000, 2000, 4000, 8000]);
-        assert!(lock_retry_backoff_ms(2, 31) < 2050);
-    }
-}
-
 pub(super) async fn exec_ddl_locked(
     db: &DbPool,
     pre_stmts: &[&str],
@@ -271,4 +259,16 @@ pub(super) async fn exec_ddl_locked(
     // is only reachable while `attempt < MAX_ATTEMPTS`, so the final
     // iteration always returns. Provable-by-construction, not a real gap.
     unreachable!("exec_ddl_locked: retry loop exited without returning")
+}
+
+#[cfg(test)]
+mod backoff_tests {
+    use super::lock_retry_backoff_ms;
+
+    #[test]
+    fn lock_retries_back_off_exponentially() {
+        let base: Vec<u64> = (1..=4).map(|a| lock_retry_backoff_ms(a, 0)).collect();
+        assert_eq!(base, vec![1000, 2000, 4000, 8000]);
+        assert!(lock_retry_backoff_ms(2, 31) < 2050);
+    }
 }
