@@ -13232,6 +13232,10 @@ export interface components {
             status: string;
             title: string;
         };
+        ChannelPollResponse: {
+            handed_off: boolean;
+            messages: components["schemas"]["ChatMessageOut"][];
+        };
         ChatMessageOut: {
             body: string;
             /**
@@ -13924,6 +13928,9 @@ export interface components {
             /** Format: uuid */
             ticket_id: string;
             ticket_number: string;
+        };
+        CrawlImportBody: {
+            page_ids: string[];
         };
         CreateAccessReviewBody: {
             /** Format: date-time */
@@ -17322,6 +17329,17 @@ export interface components {
             entities: number;
             findings: components["schemas"]["Finding"][];
         };
+        ModelPublishResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            version_no: number;
+            /**
+             * @description Reasons to look again that did not stop the publish, such as an eval
+             *     suite whose score fell (N23-T2). Empty when there are none.
+             */
+            warnings: string[];
+        };
         /**
          * @description The `/api/v1/admin/predict/models*` wire shape — deliberately omits
          *     `model_artifact` (internal fitted parameters, not a public contract) and
@@ -17343,6 +17361,10 @@ export interface components {
             trained_version: number;
             /** Format: date-time */
             updated_at: string;
+        };
+        ModelValidateResponse: {
+            issues: components["schemas"]["IssueView"][];
+            valid: boolean;
         };
         ModuleConfigurationResponse: {
             enabled: boolean;
@@ -23120,6 +23142,10 @@ export interface components {
             registry_note?: string | null;
             registry_updated: boolean;
         };
+        ScenarioCloneResponse: {
+            /** Format: uuid */
+            id: string;
+        };
         /**
          * @description `pub` (fields too) — same reason `attome_metric::metric::SnapshotRow` is: `do_evaluate`
          *     below returns these directly, and this crate's own `tests/scenario.rs`
@@ -25306,8 +25332,9 @@ export interface components {
             doc: Record<string, never>;
         };
         ValidateResponse: {
-            issues: components["schemas"]["IssueView"][];
+            issues: components["schemas"]["RuleIssue"][];
             valid: boolean;
+            warnings: components["schemas"]["RuleEditorWarning"][];
         };
         /**
          * @description `GET /api/v1/process/case-defs/{id}/variants` — the latest computed
@@ -39329,7 +39356,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PublishResponse"];
+                    "application/json": components["schemas"]["ModelPublishResponse"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -39466,7 +39493,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ValidateResponse"];
+                    "application/json": components["schemas"]["ModelValidateResponse"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -53769,7 +53796,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PollResponse"];
+                    "application/json": components["schemas"]["ChannelPollResponse"];
                 };
             };
             /** @description Not licensed, or an unrecognized session token — identical response for both */
@@ -55943,7 +55970,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CloneResponse"];
+                    "application/json": components["schemas"]["ScenarioCloneResponse"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -57753,7 +57780,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ImportBody"];
+                "application/json": components["schemas"]["CrawlImportBody"];
             };
         };
         responses: {

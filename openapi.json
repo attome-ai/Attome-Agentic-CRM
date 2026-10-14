@@ -21149,7 +21149,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PublishResponse"
+                  "$ref": "#/components/schemas/ModelPublishResponse"
                 }
               }
             }
@@ -21368,7 +21368,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidateResponse"
+                  "$ref": "#/components/schemas/ModelValidateResponse"
                 }
               }
             }
@@ -43112,7 +43112,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PollResponse"
+                  "$ref": "#/components/schemas/ChannelPollResponse"
                 }
               }
             }
@@ -46373,7 +46373,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CloneResponse"
+                  "$ref": "#/components/schemas/ScenarioCloneResponse"
                 }
               }
             }
@@ -49125,7 +49125,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ImportBody"
+                "$ref": "#/components/schemas/CrawlImportBody"
               }
             }
           },
@@ -62923,6 +62923,24 @@
           }
         }
       },
+      "ChannelPollResponse": {
+        "type": "object",
+        "required": [
+          "messages",
+          "handed_off"
+        ],
+        "properties": {
+          "handed_off": {
+            "type": "boolean"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageOut"
+            }
+          }
+        }
+      },
       "ChatMessageOut": {
         "type": "object",
         "required": [
@@ -64535,6 +64553,21 @@
           },
           "ticket_number": {
             "type": "string"
+          }
+        }
+      },
+      "CrawlImportBody": {
+        "type": "object",
+        "required": [
+          "page_ids"
+        ],
+        "properties": {
+          "page_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -73058,6 +73091,31 @@
           }
         }
       },
+      "ModelPublishResponse": {
+        "type": "object",
+        "required": [
+          "id",
+          "version_no",
+          "warnings"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version_no": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Reasons to look again that did not stop the publish, such as an eval\nsuite whose score fell (N23-T2). Empty when there are none."
+          }
+        }
+      },
       "ModelSummary": {
         "type": "object",
         "description": "The `/api/v1/admin/predict/models*` wire shape — deliberately omits\n`model_artifact` (internal fitted parameters, not a public contract) and\n`organization_ref`/`row_version`/`is_deleted` (no client needs them yet).",
@@ -73106,6 +73164,24 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "ModelValidateResponse": {
+        "type": "object",
+        "required": [
+          "valid",
+          "issues"
+        ],
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IssueView"
+            }
+          },
+          "valid": {
+            "type": "boolean"
           }
         }
       },
@@ -88286,6 +88362,18 @@
           }
         }
       },
+      "ScenarioCloneResponse": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "ScenarioResultRow": {
         "type": "object",
         "description": "`pub` (fields too) — same reason `attome_metric::metric::SnapshotRow` is: `do_evaluate`\nbelow returns these directly, and this crate's own `tests/scenario.rs`\nreads their fields straight off the result of a direct call, the same\n\"call the `pub` `do_*` function, skip the HTTP layer\" convention every\nother suite in this crate already uses.",
@@ -93862,17 +93950,24 @@
         "type": "object",
         "required": [
           "valid",
-          "issues"
+          "issues",
+          "warnings"
         ],
         "properties": {
           "issues": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/IssueView"
+              "$ref": "#/components/schemas/RuleIssue"
             }
           },
           "valid": {
             "type": "boolean"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleEditorWarning"
+            }
           }
         }
       },
