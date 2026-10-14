@@ -222,6 +222,10 @@ pub fn routes() -> Router<EngineState> {
             get(timeline::get_record_timeline),
         )
         .route(
+            "/api/v1/{entity}/{id}/timeline/export",
+            get(timeline::export_record_timeline),
+        )
+        .route(
             "/api/v1/{entity}/{id}/history",
             get(history::get_record_history),
         )

@@ -1037,8 +1037,119 @@ pub(super) async fn get_record_timeline(
     ))
 }
 
+/// The most entries one timeline export holds.
+pub const MAX_TIMELINE_EXPORT: usize = 2000;
+
+/// Query string for `GET /api/v1/{entity}/{id}/timeline/export`.
+#[derive(Debug, Default, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct TimelineExportQuery {
+    /// Comma-separated kinds to include, as for the timeline itself.
+    pub kinds: Option<String>,
+}
+
+/// One CSV cell: quoted when it holds a comma, quote or line break, and
+/// prefixed with an apostrophe when a spreadsheet would read it as a formula.
+fn csv_cell(value: &str) -> String {
+    let guarded = if value.starts_with(['=', '+', '-', '@']) {
+        format!("'{value}")
+    } else {
+        value.to_owned()
+    };
+    if guarded.contains([',', '"', '\n', '\r']) {
+        format!("\"{}\"", guarded.replace('"', "\"\""))
+    } else {
+        guarded
+    }
+}
+
+/// The timeline as CSV: when, what kind, the summary, and where it came from.
+pub fn timeline_csv(entries: &[TimelineEntry]) -> String {
+    let mut out = String::from("occurred_at,kind,summary,source_entity,source_id\r\n");
+    for entry in entries {
+        let kind = serde_json::to_value(entry.kind)
+            .ok()
+            .and_then(|v| v.as_str().map(str::to_owned))
+            .unwrap_or_default();
+        let row = [
+            entry.occurred_at.to_rfc3339(),
+            kind,
+            entry.summary.clone(),
+            entry.source_entity.clone(),
+            entry.source_id.to_string(),
+        ];
+        out.push_str(
+            &row.iter()
+                .map(|c| csv_cell(c))
+                .collect::<Vec<_>>()
+                .join(","),
+        );
+        out.push_str("\r\n");
+    }
+    out
+}
+
+/// B1-T4: the record's timeline, filtered by kind, as a CSV file: the same
+/// entries, under the same permissions, as the timeline itself, newest
+/// first, up to 2000.
+#[utoipa::path(
+    get,
+    path = "/api/v1/{entity}/{id}/timeline/export",
+    tag = "entity",
+    params(
+        ("entity" = String, Path),
+        ("id" = Uuid, Path),
+        TimelineExportQuery,
+    ),
+    responses(
+        (status = 200, description = "The timeline as CSV", body = String, content_type = "text/csv"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the entity's read privilege", body = ErrorResponse),
+        (status = 404, description = "No such record, or the caller cannot read it", body = ErrorResponse),
+        (status = 422, description = "Unknown kind", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn export_record_timeline(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Read>>,
+    Path((entity_input, record_id)): Path<(String, Uuid)>,
+    Query(query): Query<TimelineExportQuery>,
+) -> Result<axum::response::Response, AppError> {
+    use axum::response::IntoResponse;
+    let mut opts = TimelineOptions::from_query(&TimelineQuery {
+        cursor: None,
+        page_size: Some(MAX_PAGE_SIZE),
+        kinds: query.kinds,
+    })?;
+    let mut entries = Vec::new();
+    loop {
+        let page = record_timeline(&state, &ctx, &entity_input, record_id, &opts).await?;
+        entries.extend(page.items);
+        let Some(next) = page.next_cursor else { break };
+        if entries.len() >= MAX_TIMELINE_EXPORT {
+            break;
+        }
+        opts.cursor = Some(decode_timeline_cursor(&next)?);
+    }
+    entries.truncate(MAX_TIMELINE_EXPORT);
+    let file = format!("attachment; filename=\"timeline-{record_id}.csv\"");
+    Ok((
+        [
+            (
+                axum::http::header::CONTENT_TYPE,
+                "text/csv; charset=utf-8".to_owned(),
+            ),
+            (axum::http::header::CONTENT_DISPOSITION, file),
+        ],
+        // A byte-order mark so spreadsheet programs read Arabic as UTF-8.
+        format!("\u{feff}{}", timeline_csv(&entries)),
+    )
+        .into_response())
+}
+
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(get_record_timeline))]
+#[openapi(paths(get_record_timeline, export_record_timeline))]
 struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -1048,6 +1159,26 @@ pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn timeline_csv_quotes_and_guards_cells() {
+        assert_eq!(csv_cell("plain"), "plain");
+        assert_eq!(csv_cell("a, b"), "\"a, b\"");
+        assert_eq!(csv_cell("say \"hi\""), "\"say \"\"hi\"\"\"");
+        assert_eq!(csv_cell("=SUM(A1)"), "'=SUM(A1)");
+        let entry = TimelineEntry {
+            kind: TimelineEntryKind::Note,
+            occurred_at: "2026-10-14T10:00:00Z".parse().unwrap(),
+            source_entity: "note".into(),
+            source_id: Uuid::nil(),
+            summary: "ملاحظة, مهمة".into(),
+            detail: Value::Null,
+        };
+        let csv = timeline_csv(&[entry]);
+        let lines: Vec<&str> = csv.split("\r\n").collect();
+        assert_eq!(lines[0], "occurred_at,kind,summary,source_entity,source_id");
+        assert!(lines[1].starts_with("2026-10-14T10:00:00+00:00,note,\"ملاحظة, مهمة\",note,"));
+    }
 
     #[test]
     fn cursor_round_trips() {

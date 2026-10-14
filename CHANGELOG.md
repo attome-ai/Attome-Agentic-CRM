@@ -11,6 +11,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- `GET /api/v1/{entity}/{id}/timeline/export?kinds=` downloads a record's timeline as CSV (up
+  to 2000 entries, the same permissions as the timeline).
 - A `tagged` filter operator (`{"field": "id", "op": "tagged", "value": "<tag id>"}`) for
   `query/execute`: the records carrying a tag, personal tags only for their owner.
 - `attome restore <archive|latest> --yes` puts the database back to a backup, after writing a
