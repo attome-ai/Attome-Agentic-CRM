@@ -1516,6 +1516,119 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/views/{id}",
             get(get_view).patch(update_view).delete(delete_view),
         )
+        .route("/api/v1/admin/views/{id}/impact", get(view_impact))
+}
+
+/// What editing or removing a view would touch (A13-T6).
+#[derive(Debug, Serialize, ToSchema)]
+pub(crate) struct ViewImpact {
+    pub id: Uuid,
+    pub name: String,
+    /// `system`, `shared` or `personal`.
+    pub scope: String,
+    /// Every user's default list for this entity.
+    pub is_default: bool,
+    /// The layer that owns it; a `platform` view is built in.
+    pub owner_layer: String,
+    /// Dashboard widgets that show it, and the dashboards they are on.
+    pub dashboard_widgets: i64,
+    pub dashboards: i64,
+    /// Navigation entries whose route names it.
+    pub sidebar_items: i64,
+    /// What to tell the person about to change it.
+    pub warnings: Vec<String>,
+}
+
+/// A13-T6: who would notice a change to this view: the dashboards that show
+/// it, the navigation that links to it, and whether it is every user's
+/// default or a built-in one. Reads only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/views/{id}/impact",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "What depends on the view", body = ViewImpact),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such view", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn view_impact(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ViewImpact>, AppError> {
+    let db = &state.base.db;
+    let (name, scope, is_default, owner_layer): (String, String, bool, String) = sqlx::query_as(
+        "SELECT name, scope, is_default, owner_layer FROM view WHERE id = $1 AND is_active = true",
+    )
+    .bind(id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?
+    .ok_or(AppError::NotFound)?;
+    let (dashboard_widgets, dashboards): (i64, i64) = sqlx::query_as(
+        "SELECT COUNT(*), COUNT(DISTINCT p.dashboard_id) \
+         FROM dashboard_widget w \
+         JOIN dashboard_section s ON s.id = w.section_id \
+             AND (s.is_active IS NULL OR s.is_active = true) \
+         JOIN dashboard_page p ON p.id = s.page_id \
+             AND (p.is_active IS NULL OR p.is_active = true) \
+         WHERE w.view_id = $1 AND (w.is_active IS NULL OR w.is_active = true)",
+    )
+    .bind(id.to_string())
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    let sidebar_items: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM sidebar WHERE is_deleted = false AND route LIKE '%' || $1 || '%'",
+    )
+    .bind(id.to_string())
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(ViewImpact {
+        warnings: impact_warnings(&scope, is_default, &owner_layer, dashboards, sidebar_items),
+        id,
+        name,
+        scope,
+        is_default,
+        owner_layer,
+        dashboard_widgets,
+        dashboards,
+        sidebar_items,
+    }))
+}
+
+/// The warnings a view's impact gives, in the order a person should read them.
+fn impact_warnings(
+    scope: &str,
+    is_default: bool,
+    owner_layer: &str,
+    dashboards: i64,
+    sidebar_items: i64,
+) -> Vec<String> {
+    let mut out = Vec::new();
+    if is_default {
+        out.push("this is every user's default list for its entity".to_owned());
+    }
+    if scope == "shared" {
+        out.push("other people use this shared view".to_owned());
+    }
+    if owner_layer == "platform" {
+        out.push("this view is built in: a platform upgrade brings its own version".to_owned());
+    }
+    if dashboards > 0 {
+        out.push(format!("{dashboards} dashboard(s) show this view"));
+    }
+    if sidebar_items > 0 {
+        out.push(format!(
+            "{sidebar_items} navigation item(s) link to this view"
+        ));
+    }
+    out
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
@@ -1527,6 +1640,7 @@ pub fn routes() -> Router<EngineState> {
     list_views,
     list_available_views,
     get_view,
+    view_impact,
     create_view,
     update_view,
     delete_view,
@@ -1665,5 +1779,14 @@ mod changeset_hook_tests {
         for bad in ["", "2x", "Name", "a-b", "a b"] {
             assert!(!is_logical_name(bad), "{bad}");
         }
+    }
+
+    #[test]
+    fn impact_warnings_name_what_a_change_touches() {
+        assert!(impact_warnings("personal", false, "customer", 0, 0).is_empty());
+        let w = impact_warnings("system", true, "platform", 2, 1);
+        assert_eq!(w.len(), 4);
+        assert!(w[0].contains("default"));
+        assert!(w.iter().any(|m| m.contains("2 dashboard")));
     }
 }
