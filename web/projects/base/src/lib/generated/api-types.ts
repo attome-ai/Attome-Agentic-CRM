@@ -2128,6 +2128,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/entities/{entity_id}/fields/{field_id}/choice-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A5-T3: how many records hold each value of a choice field, including
+         *     values no longer offered, so an administrator sees what removing or
+         *     merging one would touch. Reads only.
+         */
+        get: operations["choice_usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/entities/{entity_id}/fields/{field_id}/choices": {
         parameters: {
             query?: never;
@@ -10032,6 +10053,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** `POST /api/v1/{entity}/validate` (A3-T3): checks a record without saving it. */
+        post: operations["validate_record"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/{id}": {
         parameters: {
             query?: never;
@@ -13266,6 +13304,27 @@ export interface components {
             started_at: string;
             surface: string;
         };
+        /** @description `GET .../fields/{field_id}/choice-usage`. */
+        ChoiceUsage: {
+            /**
+             * @description `false` on a table too large to count inline; `values` then lists the
+             *     choices with no counts.
+             */
+            counted: boolean;
+            field: string;
+            values: components["schemas"]["ChoiceValueUsage"][];
+        };
+        /** @description One value of a choice field and the records holding it. */
+        ChoiceValueUsage: {
+            /**
+             * @description The value is one of the field's current choices; `false` for a value
+             *     still stored after it was removed.
+             */
+            defined: boolean;
+            /** Format: int64 */
+            records: number;
+            value: string;
+        };
         /**
          * @description One citation, projected from `attome_search::KnowledgeCitation` — every field
          *     except `passage`, whose text is already in the turn's tool message. An
@@ -13963,6 +14022,20 @@ export interface components {
             resource_mapping?: unknown;
             source: string;
             visibility_privilege?: string | null;
+        };
+        /** @description What a dry-run create found (A3-T3). */
+        CreateCheck: {
+            /** @description Why it would not, as the create would say it. */
+            error?: string | null;
+            /** @description The create would succeed. */
+            valid: boolean;
+            /** @description Business-rule warnings the create would raise. */
+            warnings: components["schemas"]["CreateCheckWarning"][];
+        };
+        CreateCheckWarning: {
+            field?: string | null;
+            message: string;
+            rule: string;
         };
         CreateClientBody: {
             allowed_cidrs?: string[] | null;
@@ -33824,6 +33897,65 @@ export interface operations {
                 };
             };
             /** @description `conversion_not_defined` or invalid body */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    choice_usage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_id: string;
+                field_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Records per value, most used first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChoiceUsage"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such field */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a choice field */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -59669,6 +59801,55 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    validate_record: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether the create would succeed, why not, and its warnings; nothing is written */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreateCheck"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the create privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The body is not a JSON object */
             422: {
                 headers: {
                     [name: string]: unknown;

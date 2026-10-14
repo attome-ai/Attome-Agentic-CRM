@@ -12682,6 +12682,95 @@
         }
       }
     },
+    "/api/v1/admin/entities/{entity_id}/fields/{field_id}/choice-usage": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A5-T3: how many records hold each value of a choice field, including\nvalues no longer offered, so an administrator sees what removing or\nmerging one would touch. Reads only.",
+        "operationId": "choice_usage",
+        "parameters": [
+          {
+            "name": "entity_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "field_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Records per value, most used first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChoiceUsage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not a choice field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/entities/{entity_id}/fields/{field_id}/choices": {
       "post": {
         "tags": [
@@ -52165,6 +52254,80 @@
         }
       }
     },
+    "/api/v1/{entity}/validate": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "`POST /api/v1/{entity}/validate` (A3-T3): checks a record without saving it.",
+        "operationId": "validate_record",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Whether the create would succeed, why not, and its warnings; nothing is written",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateCheck"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the create privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The body is not a JSON object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "runs the create path and rolls it back; writes nothing",
+          "reason": "dry_run",
+          "via": null
+        }
+      }
+    },
     "/api/v1/{entity}/{id}": {
       "get": {
         "tags": [
@@ -63006,6 +63169,52 @@
           }
         }
       },
+      "ChoiceUsage": {
+        "type": "object",
+        "description": "`GET .../fields/{field_id}/choice-usage`.",
+        "required": [
+          "field",
+          "counted",
+          "values"
+        ],
+        "properties": {
+          "counted": {
+            "type": "boolean",
+            "description": "`false` on a table too large to count inline; `values` then lists the\nchoices with no counts."
+          },
+          "field": {
+            "type": "string"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChoiceValueUsage"
+            }
+          }
+        }
+      },
+      "ChoiceValueUsage": {
+        "type": "object",
+        "description": "One value of a choice field and the records holding it.",
+        "required": [
+          "value",
+          "records",
+          "defined"
+        ],
+        "properties": {
+          "defined": {
+            "type": "boolean",
+            "description": "The value is one of the field's current choices; `false` for a value\nstill stored after it was removed."
+          },
+          "records": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
       "CitationView": {
         "type": "object",
         "description": "One citation, projected from `attome_search::KnowledgeCitation` — every field\nexcept `passage`, whose text is already in the turn's tool message. An\nexplicit shape, never the stored JSON passed through.",
@@ -64655,6 +64864,55 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "CreateCheck": {
+        "type": "object",
+        "description": "What a dry-run create found (A3-T3).",
+        "required": [
+          "valid",
+          "warnings"
+        ],
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why it would not, as the create would say it."
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "The create would succeed."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateCheckWarning"
+            },
+            "description": "Business-rule warnings the create would raise."
+          }
+        }
+      },
+      "CreateCheckWarning": {
+        "type": "object",
+        "required": [
+          "rule",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "rule": {
+            "type": "string"
           }
         }
       },
