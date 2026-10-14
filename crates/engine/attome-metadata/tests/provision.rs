@@ -837,7 +837,8 @@ async fn timestamptz_backfill_converts_type_and_preserves_the_stored_value() {
 /// returned a bare 500 for every such entity.
 ///
 /// The fixture is `team`'s real shape from
-/// `0051_record_level_security.sql` — `created_at`/`updated_at`/`is_deleted`
+/// `0051_record_level_security.sql` (its creation column renamed so the table
+/// lacks `created_at`, as v1's `created_on` did) — `inserted_at`/`updated_at`/`is_deleted`
 /// instead of `created_at`/`modified_at`/`is_active` — which is exactly why that
 /// table (and `api_key`, `license`,
 /// `user_account_mm_team`) hit this while `organization`, which
@@ -857,7 +858,7 @@ async fn legacy_table_registration_backfills_createdon_and_createdby() {
                name             VARCHAR     NOT NULL,
                description      VARCHAR,
                organization_ref UUID,
-               created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+               inserted_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                row_version      BIGINT      NOT NULL DEFAULT 0,
                is_deleted       BOOLEAN     NOT NULL DEFAULT FALSE
