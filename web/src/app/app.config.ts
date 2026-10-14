@@ -1,7 +1,7 @@
 import { ApplicationConfig, inject, provideAppInitializer, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { ApiService, ThemeService, provideAttomeBase } from '@attome/base';
+import { BrandService, provideAttomeBase } from '@attome/base';
 import { environment } from '../environments/environment';
 import { routes } from './app.routes';
 import { provideHostI18n } from './i18n/provide-host-i18n';
@@ -29,13 +29,6 @@ export const appConfig: ApplicationConfig = {
     // B13-T8: the deployment's published brand colours, for the sign-in page
     // and everything after it. Not awaited: the product's own colours show
     // until it arrives, and a failure leaves them in place.
-    provideAppInitializer(() => {
-      const api = inject(ApiService);
-      const theme = inject(ThemeService);
-      api.get<{ variables: Record<string, string> }>('/api/v1/branding/public').subscribe({
-        next: brand => theme.setBrand(brand.variables),
-        error: () => undefined,
-      });
-    }),
+    provideAppInitializer(() => inject(BrandService).loadPublic()),
   ],
 };

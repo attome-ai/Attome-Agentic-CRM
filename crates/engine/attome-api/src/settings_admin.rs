@@ -677,25 +677,105 @@ async fn preview_theme(
 
 /// B13-T5: the published brand for this host, for the sign-in page and the
 /// app shell: CSS variables, fonts and whether to hide the vendor's name.
-/// No session and no user data.
+/// No session and no user data. Answers `304` to an `If-None-Match` naming
+/// the current published versions.
 #[utoipa::path(
     get,
     path = "/api/v1/branding/public",
     tag = "settings",
     responses(
         (status = 200, description = "The brand to apply", body = PublicBranding),
+        (status = 304, description = "Unchanged since the ETag the caller holds"),
     ),
 )]
 async fn public_branding(
     State(state): State<EngineState>,
     headers: axum::http::HeaderMap,
 ) -> Result<axum::response::Response, AppError> {
-    use axum::response::IntoResponse;
-    let host = headers
+    let host = request_host(&headers);
+    let scope = theme_store::BrandScope {
+        host: host.as_deref(),
+        ..theme_store::BrandScope::default()
+    };
+    let resolved = theme_store::resolve(&state.base.db, scope).await?;
+    branding_response(&headers, resolved, "public, max-age=300")
+}
+
+/// `GET /api/v1/branding/me`.
+#[derive(Deserialize, utoipa::IntoParams)]
+struct BrandingMeQuery {
+    /// The app being shown, when it has its own theme.
+    app: Option<String>,
+}
+
+/// B13-T5: the brand for the signed-in caller: the deployment's, then the
+/// app's (`app`), the caller's business unit's, the domain's.
+#[utoipa::path(
+    get,
+    path = "/api/v1/branding/me",
+    tag = "settings",
+    params(BrandingMeQuery),
+    responses(
+        (status = 200, description = "The brand to apply", body = PublicBranding),
+        (status = 304, description = "Unchanged since the ETag the caller holds"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn my_branding(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    headers: axum::http::HeaderMap,
+    axum::extract::Query(query): axum::extract::Query<BrandingMeQuery>,
+) -> Result<axum::response::Response, AppError> {
+    let (_user_ctx, unit) = fetch_audit_ctx(&state, ctx.user_id).await;
+    let unit = (!unit.is_nil()).then(|| unit.to_string());
+    let host = request_host(&headers);
+    let scope = theme_store::BrandScope {
+        app: query
+            .app
+            .as_deref()
+            .map(str::trim)
+            .filter(|a| !a.is_empty()),
+        unit: unit.as_deref(),
+        host: host.as_deref(),
+        portal: None,
+    };
+    let resolved = theme_store::resolve(&state.base.db, scope).await?;
+    branding_response(&headers, resolved, "private, max-age=60")
+}
+
+/// The request's host name, lower case and without a port.
+fn request_host(headers: &axum::http::HeaderMap) -> Option<String> {
+    headers
         .get(axum::http::header::HOST)
         .and_then(|h| h.to_str().ok())
-        .map(|h| h.split(':').next().unwrap_or(h).to_ascii_lowercase());
-    let tokens = theme_store::resolve(&state.base.db, host.as_deref(), None).await?;
+        .map(|h| h.split(':').next().unwrap_or(h).to_ascii_lowercase())
+}
+
+/// The brand as JSON with its ETag, or a bodyless `304` when the caller's
+/// `If-None-Match` already names it.
+fn branding_response(
+    headers: &axum::http::HeaderMap,
+    (tokens, tag): (ThemeTokens, String),
+    cache_control: &'static str,
+) -> Result<axum::response::Response, AppError> {
+    use axum::http::{HeaderValue, StatusCode, header};
+    use axum::response::IntoResponse;
+    let etag = format!("\"{tag}\"");
+    let unchanged = headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.split(',').any(|t| t.trim() == etag));
+    let etag = HeaderValue::from_str(&etag).map_err(AppError::internal)?;
+    let cache = HeaderValue::from_static(cache_control);
+    if unchanged {
+        return Ok((
+            StatusCode::NOT_MODIFIED,
+            [(header::ETAG, etag), (header::CACHE_CONTROL, cache)],
+        )
+            .into_response());
+    }
     let body = PublicBranding {
         variables: attome_core::theme_tokens::to_css_variables(&tokens),
         hide_vendor_name: tokens.hide_vendor_name.unwrap_or(false),
@@ -703,7 +783,7 @@ async fn public_branding(
         font_arabic: tokens.font_arabic.clone(),
     };
     Ok((
-        [(axum::http::header::CACHE_CONTROL, "public, max-age=300")],
+        [(header::ETAG, etag), (header::CACHE_CONTROL, cache)],
         Json(body),
     )
         .into_response())
@@ -734,6 +814,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/admin/themes/{id}/diff", get(diff_theme))
         .route("/api/v1/branding/public", get(public_branding))
+        .route("/api/v1/branding/me", get(my_branding))
 }
 
 #[derive(utoipa::OpenApi)]
@@ -749,7 +830,8 @@ pub fn routes() -> Router<EngineState> {
     preview_theme,
     rollback_theme,
     diff_theme,
-    public_branding
+    public_branding,
+    my_branding
 ))]
 struct ApiDocFragment;
 

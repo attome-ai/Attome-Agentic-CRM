@@ -11,6 +11,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- `GET /api/v1/branding/me` gives a signed-in person the brand for their app and business unit;
+  both branding routes send an ETag and answer `304` while no published theme changes. Admins
+  roll a theme back (`POST /api/v1/admin/themes/rollback`), see what a version changes
+  (`GET .../{id}/diff`) and edit the theme on the Branding page.
 - Brand themes (migration 0023): `/api/v1/admin/themes` drafts, edits (If-Match) and publishes
   them behind the contrast check, `POST .../preview-check` measures colours, and the public
   `GET /api/v1/branding/public` gives the sign-in page and the app their colours.

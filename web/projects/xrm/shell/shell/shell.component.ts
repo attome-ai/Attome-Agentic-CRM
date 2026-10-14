@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterOutlet } from '@angular/router';
-import { TranslatePipe } from '@attome/base';
+import { BrandService, TranslatePipe } from '@attome/base';
 import { AdminService, SidebarItem } from '@attome/xrm/core/admin/data';
 import { entityFormRoute, entityListRoute, urlPathToLogical } from '@attome/xrm/core/entity';
 import { OmniSearchComponent } from '@attome/xrm/search/omni';
@@ -111,6 +111,7 @@ export class ShellComponent implements OnInit {
   private readonly router = inject(Router);
   protected readonly favourites = inject(FavouritesService);
   private readonly personalSettings = inject(PersonalSettingsService);
+  private readonly brand = inject(BrandService);
 
   // ── Sidebar data (owned here because quick search searches the same tree) ──
   readonly sidebarItems   = signal<SidebarItem[]>([]);
@@ -220,6 +221,8 @@ export class ShellComponent implements OnInit {
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.favourites.start();
+    // B13-T8: the caller's brand adds their business unit's theme.
+    this.brand.loadMine();
     // B11-T2: the person's settings apply at once; a chosen start page opens
     // when they land on the app's front door.
     this.personalSettings.load().subscribe({

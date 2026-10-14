@@ -24,6 +24,8 @@ export { authInterceptor }                 from './lib/auth.interceptor';
 export { authGuard }                       from './lib/auth.guard';
 export { provideAttomeBase, provideAttomeI18n } from './lib/provide';
 export { ThemeService }                    from './lib/theme.service';
+export { BrandService }                    from './lib/brand.service';
+export type { Branding }                   from './lib/brand.service';
 export { CurrencyService }                 from './lib/currency.service';
 export type { CurrencyRate }               from './lib/currency.service';
 export { LangService }                     from './lib/lang.service';

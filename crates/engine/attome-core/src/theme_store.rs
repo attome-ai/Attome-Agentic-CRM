@@ -274,32 +274,62 @@ pub async fn diff(db: &attome_db::DbPool, id: Uuid) -> Result<Vec<TokenChange>, 
     Ok(token_changes(&before, &row.tokens))
 }
 
+/// Where a request sits: each scope a published theme can target. A `None`
+/// scope matches no theme.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct BrandScope<'a> {
+    /// An app's name.
+    pub app: Option<&'a str>,
+    /// The caller's business unit id.
+    pub unit: Option<&'a str>,
+    /// The request's host name, lower case and without a port.
+    pub host: Option<&'a str>,
+    pub portal: Option<&'a str>,
+}
+
+/// The order scopes merge in, the broadest first.
+const RESOLVE_ORDER: [&str; 5] = ["deployment", "app", "unit", "domain", "portal"];
+
 /// The published theme of each scope a request falls under, merged from the
-/// deployment's outwards: deployment, then the domain (`host`), then the
-/// portal. A scope with no published theme adds nothing.
+/// deployment's outwards: deployment, app, unit, domain (`host`), portal. A
+/// scope with no published theme adds nothing. The tag names the published
+/// versions merged, so it changes whenever one does (an ETag).
 pub async fn resolve(
     db: &attome_db::DbPool,
-    host: Option<&str>,
-    portal: Option<&str>,
-) -> Result<ThemeTokens, AppError> {
-    let rows: Vec<(String, sqlx::types::Json<ThemeTokens>)> = sqlx::query_as(
-        "SELECT scope_kind, tokens FROM theme WHERE status = 'published' AND ( \
+    scope: BrandScope<'_>,
+) -> Result<(ThemeTokens, String), AppError> {
+    type Row = (String, Uuid, i32, sqlx::types::Json<ThemeTokens>);
+    let rows: Vec<Row> = sqlx::query_as(
+        "SELECT scope_kind, id, version, tokens FROM theme WHERE status = 'published' AND ( \
              scope_kind = 'deployment' \
-             OR (scope_kind = 'domain' AND scope_ref = $1) \
-             OR (scope_kind = 'portal' AND scope_ref = $2))",
+             OR (scope_kind = 'app' AND scope_ref = $1) \
+             OR (scope_kind = 'unit' AND scope_ref = $2) \
+             OR (scope_kind = 'domain' AND scope_ref = $3) \
+             OR (scope_kind = 'portal' AND scope_ref = $4))",
     )
-    .bind(host.unwrap_or(""))
-    .bind(portal.unwrap_or(""))
+    .bind(scope.app.unwrap_or(""))
+    .bind(scope.unit.unwrap_or(""))
+    .bind(scope.host.unwrap_or(""))
+    .bind(scope.portal.unwrap_or(""))
     .fetch_all(db)
     .await
     .map_err(attome_db::classify)?;
     let mut theme = ThemeTokens::default();
-    for kind in ["deployment", "domain", "portal"] {
-        if let Some((_, tokens)) = rows.iter().find(|(k, _)| k == kind) {
+    let mut used = String::new();
+    for kind in RESOLVE_ORDER {
+        if let Some((_, id, version, tokens)) = rows.iter().find(|(k, ..)| k == kind) {
             theme = merge(&theme, tokens);
+            used.push_str(&format!("{id}:{version};"));
         }
     }
-    Ok(theme)
+    Ok((theme, version_tag(&used)))
+}
+
+/// A short, stable tag for the published versions a resolve merged.
+fn version_tag(used: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let digest = Sha256::digest(used.as_bytes());
+    hex::encode(&digest[..8])
 }
 
 /// A page of themes, newest version first.
@@ -346,6 +376,13 @@ mod tests {
         assert_eq!(fields, vec!["hide_vendor_name", "primary"]);
         assert_eq!(changes[1].before, Some(serde_json::json!("#111111")));
         assert!(token_changes(&after, &after).is_empty());
+    }
+
+    #[test]
+    fn version_tag_changes_with_the_versions() {
+        assert_eq!(version_tag("a:1;"), version_tag("a:1;"));
+        assert_ne!(version_tag("a:1;"), version_tag("a:2;"));
+        assert_eq!(version_tag("").len(), 16);
     }
 
     #[test]

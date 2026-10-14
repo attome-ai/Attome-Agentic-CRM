@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { ApiService, AuthService, LangService, ThemeService } from '@attome/base';
+import { ApiService, AuthService, BrandService, LangService, ThemeService } from '@attome/base';
 import { of, Subject } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminService } from '@attome/xrm/core/admin/data';
@@ -14,6 +14,7 @@ function createComponent() {
     providers: [
       { provide: AuthService, useValue: { userId: signal('user-id'), logout: () => of(undefined) } },
       { provide: ApiService, useValue: { post: () => of({}) } },
+      { provide: BrandService, useValue: { loadMine: vi.fn() } },
       { provide: AdminService, useValue: { getSidebar: () => of([]) } },
       {
         provide: Router,
