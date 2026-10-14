@@ -8042,6 +8042,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/favourites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * B9-T2: the caller's own lists, then their teams' shared lists, with the
+         *     items the caller may see.
+         */
+        get: operations["list_favourites"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/favourites/lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** B9-T2: creates one of the caller's own lists. */
+        post: operations["create_my_list"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/favourites/lists/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * B9-T2: renames one of the caller's own lists and replaces its items, in
+         *     order (drag to reorder, pin and unpin are all a save of the whole list).
+         */
+        put: operations["replace_my_list"];
+        post?: never;
+        /** B9-T2: deletes one of the caller's own lists. */
+        delete: operations["delete_my_list"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/notification-preferences": {
         parameters: {
             query?: never;
@@ -8061,6 +8119,28 @@ export interface paths {
         put: operations["put_my_preferences"];
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/recent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * B9-T2: the records the caller opened lately and may still see, newest
+         *     first; a deleted one carries `deleted: true`.
+         */
+        get: operations["list_recent"];
+        put?: never;
+        /** B9-T1: reports records the caller opened, up to 50 at a time. */
+        post: operations["report_recent"];
+        /** B9-T2: empties the caller's recent list. */
+        delete: operations["delete_recent"];
         options?: never;
         head?: never;
         patch?: never;
@@ -9404,6 +9484,41 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teams/{team_id}/favourites/lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** B9-T2: creates a list shared with a team the caller belongs to. */
+        post: operations["create_team_list"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/teams/{team_id}/favourites/lists/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** B9-T2: renames a team list and replaces its items, in order. */
+        put: operations["replace_team_list"];
+        post?: never;
+        /** B9-T2: deletes a team list. */
+        delete: operations["delete_team_list"];
         options?: never;
         head?: never;
         patch?: never;
@@ -15909,6 +16024,45 @@ export interface components {
             row_count?: number | null;
             status: string;
         };
+        /** @description One kept item, as the caller may see it now. */
+        FavouriteItem: {
+            /** @description A record deleted since it was kept. */
+            deleted: boolean;
+            entity?: string | null;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            label?: string | null;
+            pinned: boolean;
+            ref: string;
+        };
+        /** @description One item to keep in a list. */
+        FavouriteItemInput: {
+            /** @description The record's entity; required for a record. */
+            entity?: string | null;
+            /** @description `record`, `view` or `page`. */
+            kind: string;
+            /** @description What to show; a record's own name wins when it has one. */
+            label?: string | null;
+            pinned?: boolean;
+            /** @description The record id, the view id, or the page's route. */
+            ref: string;
+        };
+        /** @description One list: the caller's own (`team_id` null) or a team's. */
+        FavouriteList: {
+            /** Format: uuid */
+            id: string;
+            items: components["schemas"]["FavouriteItem"][];
+            name: string;
+            /** Format: uuid */
+            team_id?: string | null;
+        };
+        /** @description A list's whole content, as saved. */
+        FavouriteListInput: {
+            /** @description In display order. */
+            items?: components["schemas"]["FavouriteItemInput"][];
+            name: string;
+        };
         FeatureFlagListResponse: {
             items: components["schemas"]["FeatureFlagView"][];
         };
@@ -19120,6 +19274,23 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_FavouriteList: {
+            items: {
+                /** Format: uuid */
+                id: string;
+                items: components["schemas"]["FavouriteItem"][];
+                name: string;
+                /** Format: uuid */
+                team_id?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_FieldSecurityProfileFieldItem: {
             items: {
                 can_read: boolean;
@@ -20065,6 +20236,29 @@ export interface components {
                  */
                 owner_layer: string;
                 sql_preview: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_RecentItem: {
+            items: {
+                /** @description Deleted since it was opened: restore it rather than open it. */
+                deleted: boolean;
+                entity: string;
+                /** @description The record's primary name, when its entity declares one. */
+                label?: string | null;
+                /**
+                 * Format: date-time
+                 * @description UTC ISO-8601.
+                 */
+                opened_at: string;
+                /** Format: uuid */
+                record_id: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -22157,6 +22351,32 @@ export interface components {
              * @description Page size, 1-500 (default 500).
              */
             limit?: number | null;
+        };
+        /** @description One recent record, as the caller may see it now. */
+        RecentItem: {
+            /** @description Deleted since it was opened: restore it rather than open it. */
+            deleted: boolean;
+            entity: string;
+            /** @description The record's primary name, when its entity declares one. */
+            label?: string | null;
+            /**
+             * Format: date-time
+             * @description UTC ISO-8601.
+             */
+            opened_at: string;
+            /** Format: uuid */
+            record_id: string;
+        };
+        /** @description One record a person opened. */
+        RecentOpen: {
+            entity: string;
+            /** Format: uuid */
+            record_id: string;
+        };
+        /** @description `POST /api/v1/me/recent`. */
+        RecentReport: {
+            /** @description Up to 50 opens, newest last. */
+            items: components["schemas"]["RecentOpen"][];
         };
         RecordColumn: {
             /** @description The whitelisted data type (`number`, `date`, `choice`, `lookup`, ...). */
@@ -53343,6 +53563,170 @@ export interface operations {
             };
         };
     };
+    list_favourites: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every list the caller keeps or shares */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_FavouriteList"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_my_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FavouriteListInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavouriteList"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid name or items, or too many lists */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    replace_my_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FavouriteListInput"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavouriteList"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid name or items */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_my_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_my_preferences: {
         parameters: {
             query?: never;
@@ -53414,6 +53798,105 @@ export interface operations {
             };
             /** @description Unknown channel or category, a mandatory category, or a malformed body */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_recent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description How many, newest first; default 20, at most 200. */
+                limit: number | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recent records, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_RecentItem"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    report_recent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecentReport"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description More than 50 opens */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_recent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cleared */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -57426,6 +57909,157 @@ export interface operations {
                 };
             };
             /** @description No such decision */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_team_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The team */
+                team_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FavouriteListInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavouriteList"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not a team of the caller's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid name or items, or too many lists */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    replace_team_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The team */
+                team_id: string;
+                /** @description The list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FavouriteListInput"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FavouriteList"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list of the caller's teams */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid name or items */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_team_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The team */
+                team_id: string;
+                /** @description The list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list of the caller's teams */
             404: {
                 headers: {
                     [name: string]: unknown;

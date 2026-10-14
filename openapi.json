@@ -42126,6 +42126,252 @@
         }
       }
     },
+    "/api/v1/me/favourites": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B9-T2: the caller's own lists, then their teams' shared lists, with the\nitems the caller may see.",
+        "operationId": "list_favourites",
+        "responses": {
+          "200": {
+            "description": "Every list the caller keeps or shares",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_FavouriteList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/me/favourites/lists": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B9-T2: creates one of the caller's own lists.",
+        "operationId": "create_my_list",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FavouriteListInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavouriteList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid name or items, or too many lists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "a list only its owner sees",
+          "reason": "user_preference",
+          "via": null
+        }
+      }
+    },
+    "/api/v1/me/favourites/lists/{id}": {
+      "put": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B9-T2: renames one of the caller's own lists and replaces its items, in\norder (drag to reorder, pin and unpin are all a save of the whole list).",
+        "operationId": "replace_my_list",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FavouriteListInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavouriteList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid name or items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "a list only its owner sees",
+          "reason": "user_preference",
+          "via": null
+        }
+      },
+      "delete": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B9-T2: deletes one of the caller's own lists.",
+        "operationId": "delete_my_list",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "a list only its owner sees",
+          "reason": "user_preference",
+          "via": null
+        }
+      }
+    },
     "/api/v1/me/notification-preferences": {
       "get": {
         "tags": [
@@ -42238,6 +42484,150 @@
             }
           ],
           "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/me/recent": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B9-T2: the records the caller opened lately and may still see, newest\nfirst; a deleted one carries `deleted: true`.",
+        "operationId": "list_recent",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "path",
+            "description": "How many, newest first; default 20, at most 200.",
+            "required": true,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recent records, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_RecentItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B9-T1: reports records the caller opened, up to 50 at a time.",
+        "operationId": "report_recent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecentReport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "More than 50 opens",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "the caller's own recently-opened list; no security, sharing or business effect",
+          "reason": "user_preference",
+          "via": null
+        }
+      },
+      "delete": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B9-T2: empties the caller's recent list.",
+        "operationId": "delete_recent",
+        "responses": {
+          "204": {
+            "description": "Cleared"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "clears the caller's own recently-opened list",
+          "reason": "user_preference",
+          "via": null
         }
       }
     },
@@ -48302,6 +48692,267 @@
             "api_key": []
           }
         ]
+      }
+    },
+    "/api/v1/teams/{team_id}/favourites/lists": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B9-T2: creates a list shared with a team the caller belongs to.",
+        "operationId": "create_team_list",
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "description": "The team",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FavouriteListInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavouriteList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not a team of the caller's",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid name or items, or too many lists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/teams/{team_id}/favourites/lists/{id}": {
+      "put": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B9-T2: renames a team list and replaces its items, in order.",
+        "operationId": "replace_team_list",
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "description": "The team",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FavouriteListInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FavouriteList"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list of the caller's teams",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid name or items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      },
+      "delete": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B9-T2: deletes a team list.",
+        "operationId": "delete_team_list",
+        "parameters": [
+          {
+            "name": "team_id",
+            "in": "path",
+            "description": "The team",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list of the caller's teams",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "hard_delete"
+            }
+          ],
+          "policy": "mandatory"
+        }
       }
     },
     "/api/v1/ticket/sla/recalculate-unresolved": {
@@ -69669,6 +70320,133 @@
           }
         }
       },
+      "FavouriteItem": {
+        "type": "object",
+        "description": "One kept item, as the caller may see it now.",
+        "required": [
+          "id",
+          "kind",
+          "ref",
+          "pinned",
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "A record deleted since it was kept."
+          },
+          "entity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "ref": {
+            "type": "string"
+          }
+        }
+      },
+      "FavouriteItemInput": {
+        "type": "object",
+        "description": "One item to keep in a list.",
+        "required": [
+          "kind",
+          "ref"
+        ],
+        "properties": {
+          "entity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's entity; required for a record."
+          },
+          "kind": {
+            "type": "string",
+            "description": "`record`, `view` or `page`."
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What to show; a record's own name wins when it has one."
+          },
+          "pinned": {
+            "type": "boolean"
+          },
+          "ref": {
+            "type": "string",
+            "description": "The record id, the view id, or the page's route."
+          }
+        }
+      },
+      "FavouriteList": {
+        "type": "object",
+        "description": "One list: the caller's own (`team_id` null) or a team's.",
+        "required": [
+          "id",
+          "name",
+          "items"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FavouriteItem"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "team_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "FavouriteListInput": {
+        "type": "object",
+        "description": "A list's whole content, as saved.",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FavouriteItemInput"
+            },
+            "description": "In display order."
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
       "FeatureFlagListResponse": {
         "type": "object",
         "required": [
@@ -78040,6 +78818,64 @@
           }
         }
       },
+      "PaginatedResponse_FavouriteList": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One list: the caller's own (`team_id` null) or a team's.",
+              "required": [
+                "id",
+                "name",
+                "items"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FavouriteItem"
+                  }
+                },
+                "name": {
+                  "type": "string"
+                },
+                "team_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_FieldSecurityProfileFieldItem": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -80899,6 +81735,68 @@
                 },
                 "sql_preview": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_RecentItem": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One recent record, as the caller may see it now.",
+              "required": [
+                "entity",
+                "record_id",
+                "opened_at",
+                "deleted"
+              ],
+              "properties": {
+                "deleted": {
+                  "type": "boolean",
+                  "description": "Deleted since it was opened: restore it rather than open it."
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The record's primary name, when its entity declares one."
+                },
+                "opened_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "UTC ISO-8601."
+                },
+                "record_id": {
+                  "type": "string",
+                  "format": "uuid"
                 }
               }
             }
@@ -86215,6 +87113,74 @@
             ],
             "format": "int64",
             "description": "Page size, 1-500 (default 500)."
+          }
+        }
+      },
+      "RecentItem": {
+        "type": "object",
+        "description": "One recent record, as the caller may see it now.",
+        "required": [
+          "entity",
+          "record_id",
+          "opened_at",
+          "deleted"
+        ],
+        "properties": {
+          "deleted": {
+            "type": "boolean",
+            "description": "Deleted since it was opened: restore it rather than open it."
+          },
+          "entity": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's primary name, when its entity declares one."
+          },
+          "opened_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "UTC ISO-8601."
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "RecentOpen": {
+        "type": "object",
+        "description": "One record a person opened.",
+        "required": [
+          "entity",
+          "record_id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "RecentReport": {
+        "type": "object",
+        "description": "`POST /api/v1/me/recent`.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecentOpen"
+            },
+            "description": "Up to 50 opens, newest last."
           }
         }
       },
