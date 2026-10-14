@@ -58,7 +58,7 @@ describe('RecordHistoryPanelComponent', () => {
       providers: [
         { provide: RecordTimelineService, useValue: { history } },
         { provide: LangService, useValue: { translate: (k: string) => k, intlLocale: () => 'en-US' } },
-        { provide: UserPreferencesService, useValue: { timezone: () => null } },
+        { provide: UserPreferencesService, useValue: { timezone: () => null, calendar: () => null, digits: () => null } },
       ],
     });
   });

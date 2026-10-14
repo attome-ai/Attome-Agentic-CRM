@@ -36,6 +36,10 @@ export interface LookupOptions {
 // scalar TEXT column (field-input.component.ts's inline file case).
 export interface FileOptions { multi: boolean; }
 
+// Mirrors attome_field::DateOptions (AG1-T7): how a date field is shown and
+// entered; absent follows the person's own calendar setting.
+export interface DateOptions { display_calendar?: 'gregorian' | 'hijri' | 'both' | null; }
+
 // Mirrors attome_field::TextOptions (migration 0029's `options` JSONB — no new
 // column). `text_type` is C-29 (M01 §7)'s metadata-driven replacement for
 // `field-input.component.ts` guessing "email"/"tel"/"url" from the field's
@@ -54,7 +58,7 @@ export interface FieldSchema {
   name:         string;        // logicalname — used as form control key
   display_name: string;        // human-readable label
   field_type:   FieldType;
-  options:      ChoiceOptions | LookupOptions | FileOptions | TextOptions | FormulaOptions | null;
+  options:      ChoiceOptions | LookupOptions | FileOptions | TextOptions | FormulaOptions | DateOptions | null;
   sort_order:   number;
   is_required:  boolean;
 }

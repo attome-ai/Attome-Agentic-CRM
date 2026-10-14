@@ -8,9 +8,12 @@ import {
 } from '@angular/forms';
 import { Subscription } from 'rxjs';
 
-import { CurrencyService, LangService, TranslatePipe } from '@attome/base';
 import {
-  ChoiceOptions, FieldSchema, FileOptions, FormulaOptions, LookupOptions, TextOptions,
+  CurrencyService, HijriParts, LangService, TranslatePipe, UserPreferencesService,
+  fromHijri, hijriMonthName, toHijri,
+} from '@attome/base';
+import {
+  ChoiceOptions, DateOptions, FieldSchema, FileOptions, FormulaOptions, LookupOptions, TextOptions,
 } from '@attome/xrm';
 import { XRM_FIELD_POLICY, isEmptyFieldValue } from '../../business-rules/field-policy';
 import { EntityService } from '../../services/entity.service';
@@ -57,6 +60,42 @@ export class FieldInputComponent implements OnInit, OnDestroy {
   private readonly fileSvc  = inject(FileUploadService);
   private readonly currency = inject(CurrencyService);
   private readonly lang     = inject(LangService);
+  private readonly prefs    = inject(UserPreferencesService);
+
+  // ── Hijri entry (AG1-T8) ──────────────────────────────────────────────────
+  /** Hijri day, month and year inputs beside a date field, when the field's
+   *  own option or the person's calendar setting asks for Hijri. */
+  readonly hijriEntry = computed(() => {
+    if (this.field().field_type !== 'date') return false;
+    const own = (this.field().options as DateOptions | null)?.display_calendar;
+    const calendar = own ?? this.prefs.calendar();
+    return calendar === 'hijri' || calendar === 'both';
+  });
+  readonly hijriMonths = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  /** The Hijri date the control holds, if any. */
+  hijriValue(): HijriParts | null {
+    const value: unknown = this.ctrl.value;
+    return typeof value === 'string' && value ? toHijri(value) : null;
+  }
+
+  hijriMonthName(month: number): string {
+    return hijriMonthName(month, this.lang.current());
+  }
+
+  /** Writes the control from one changed Hijri part; a 30th that does not
+   *  exist in that month becomes the 29th. */
+  setHijriPart(part: keyof HijriParts, raw: string): void {
+    const value = Number(raw);
+    if (!Number.isInteger(value)) return;
+    const today = toHijri(new Date().toISOString().slice(0, 10));
+    const current = this.hijriValue() ?? today ?? { year: 1447, month: 1, day: 1 };
+    const next = { ...current, [part]: value };
+    const iso = fromHijri(next) ?? fromHijri({ ...next, day: Math.min(next.day, 29) });
+    if (!iso) return;
+    this.ctrl.setValue(iso);
+    this.ctrl.markAsDirty();
+  }
 
   // ── Business-rule policy (D-789 section 5) ────────────────────────────────
   // Provided by the enclosing `<xrm-base-form>`; absent outside one, where

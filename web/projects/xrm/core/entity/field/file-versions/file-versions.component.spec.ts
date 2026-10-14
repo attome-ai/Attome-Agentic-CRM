@@ -58,7 +58,7 @@ describe('FileVersionsComponent', () => {
             current: signal('en'),
           },
         },
-        { provide: UserPreferencesService, useValue: { timezone: signal(null) } },
+        { provide: UserPreferencesService, useValue: { timezone: signal(null), calendar: () => null, digits: () => null } },
       ],
     });
     TestBed.inject(RecordChangeNotifier).changes.subscribe(c => changes.push(c));

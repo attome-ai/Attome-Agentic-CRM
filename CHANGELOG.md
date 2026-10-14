@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Hijri dates in the browser use the same Umm al-Qura table as the server (not the browser's
+  own, which differs by a day outside 1420-1450 AH); a date field set to Hijri, or a person who chose
+  Hijri, gets Hijri day, month and year entry.
 - A Settings page (profile menu): language, time zone, calendar, digits, date order, start page,
   theme, text size and motion, applied at once. Dates show in Hijri (Umm al-Qura), Gregorian or both,
   with Western or Arabic-Indic digits.

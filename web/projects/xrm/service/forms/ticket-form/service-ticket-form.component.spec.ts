@@ -45,7 +45,7 @@ describe('ServiceTicketFormComponent', () => {
         { provide: Router, useValue: { navigate: vi.fn(), parseUrl: () => ({ queryParamMap: { get: () => null } }), url: '/' } },
         { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
         { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
-        { provide: UserPreferencesService, useValue: { timezone: signal<string | null>(null) } },
+        { provide: UserPreferencesService, useValue: { timezone: signal<string | null>(null), calendar: () => null, digits: () => null } },
       ],
     });
     // D-773: the record tabs are rendered by <xrm-base-form>, so the stub goes there.

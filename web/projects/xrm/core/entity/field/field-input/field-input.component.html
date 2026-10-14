@@ -62,6 +62,26 @@
     @case ('date') {
       <input [id]="field().name" type="date" class="xf-input"
              [formControlName]="field().name" />
+      @if (hijriEntry()) {
+        <div class="hijri-entry" role="group" [attr.aria-label]="'fieldInput.hijriDate' | translate"
+             data-testid="hijri-entry">
+          <input type="number" class="xf-input hijri-day" min="1" max="30"
+                 [attr.aria-label]="'fieldInput.hijriDay' | translate"
+                 [value]="hijriValue()?.day ?? ''"
+                 (change)="setHijriPart('day', $any($event.target).value)" />
+          <select class="xf-input hijri-month" [attr.aria-label]="'fieldInput.hijriMonth' | translate"
+                  (change)="setHijriPart('month', $any($event.target).value)">
+            @for (m of hijriMonths; track m) {
+              <option [value]="m" [selected]="hijriValue()?.month === m">{{ hijriMonthName(m) }}</option>
+            }
+          </select>
+          <input type="number" class="xf-input hijri-year" min="1356" max="1500"
+                 [attr.aria-label]="'fieldInput.hijriYear' | translate"
+                 [value]="hijriValue()?.year ?? ''"
+                 (change)="setHijriPart('year', $any($event.target).value)" />
+          <span class="hijri-suffix">{{ 'fieldInput.hijriSuffix' | translate }}</span>
+        </div>
+      }
     }
 
     @case ('bool') {

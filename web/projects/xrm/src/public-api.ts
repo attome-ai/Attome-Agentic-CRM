@@ -7,7 +7,7 @@
 // only need these framework-agnostic types.
 export type {
   FieldType, FieldSchema, EntitySchema, RelationshipSchema,
-  ChoiceOptions, ChoiceStyle, LookupOptions, FileOptions, TextOptions,
+  ChoiceOptions, ChoiceStyle, LookupOptions, FileOptions, TextOptions, DateOptions,
   // U9 (D-604) — formula field options.
   FormulaOptions, FormulaResultType,
   EntityRecord, LookupMeta,

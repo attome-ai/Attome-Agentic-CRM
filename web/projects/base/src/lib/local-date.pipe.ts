@@ -1,5 +1,6 @@
 import { inject, isDevMode, Pipe, PipeTransform } from '@angular/core';
 import { LangService } from './lang.service';
+import { formatHijri, toHijri } from './hijri';
 import { DisplayCalendar, DisplayDigits, UserPreferencesService } from './user-preferences.service';
 
 /**
@@ -27,8 +28,10 @@ import { DisplayCalendar, DisplayDigits, UserPreferencesService } from './user-p
  *
  * AG1-T8: the viewer's calendar (`gregorian`, `hijri` = Umm al-Qura, or
  * `both`, which shows the Gregorian date then the Hijri one) and digits
- * (`latn`, `arab`) ride on the locale as Unicode extensions. An attribute's
- * own `display_calendar` is the third argument and wins over the viewer's.
+ * (`latn`, `arab`). An attribute's own `display_calendar` is the third
+ * argument and wins over the viewer's. Hijri dates come from the same
+ * Umm al-Qura table the server uses (`hijri.ts`), the day being the one the
+ * viewer's time zone shows, with the time (when asked for) from `Intl`.
  * Unset, the language's default applies.
  */
 @Pipe({ name: 'localDate', pure: false, standalone: true })
@@ -55,9 +58,10 @@ export class LocalDatePipe implements PipeTransform {
     const digits = this.prefs.digits();
     const base = this.lang.intlLocale();
     try {
-      if (calendar === 'both') {
+      if (calendar === 'hijri' || calendar === 'both') {
+        const hijri = this.hijriText(date, base, digits, resolved);
+        if (calendar === 'hijri') return hijri;
         const gregorian = new Intl.DateTimeFormat(localeTag(base, 'gregorian', digits), resolved).format(date);
-        const hijri = new Intl.DateTimeFormat(localeTag(base, 'hijri', digits), resolved).format(date);
         return `${gregorian} (${hijri})`;
       }
       return new Intl.DateTimeFormat(localeTag(base, calendar, digits), resolved).format(date);
@@ -73,6 +77,28 @@ export class LocalDatePipe implements PipeTransform {
       return '';
     }
   }
+
+  /**
+   * The Hijri date (and the time, when `options` asks for one) from the
+   * Umm al-Qura table; `Intl`'s own Umm al-Qura calendar past its ends.
+   */
+  private hijriText(
+    date: Date,
+    base: string,
+    digits: DisplayDigits | null,
+    options: Intl.DateTimeFormatOptions | undefined,
+  ): string {
+    const hijri = toHijri(localDay(date, options?.timeZone));
+    if (!hijri) return new Intl.DateTimeFormat(localeTag(base, 'hijri', digits), options).format(date);
+    const text = formatHijri(hijri, this.lang.current(), digits);
+    const wantsTime = options?.hour !== undefined || options?.minute !== undefined || options?.timeStyle !== undefined;
+    if (!wantsTime) return text;
+    const { hour, minute, second, hour12, timeZone, timeStyle } = options ?? {};
+    const time = new Intl.DateTimeFormat(localeTag(base, null, digits), {
+      hour, minute, second, hour12, timeZone, timeStyle,
+    }).format(date);
+    return `${text} ${time}`;
+  }
 }
 
 /**
@@ -87,6 +113,18 @@ export function localeTag(locale: string, calendar: DisplayCalendar | null, digi
   if (digits) extensions.push(`nu-${digits}`);
   const plain = locale.split('-u-')[0];
   return extensions.length ? `${plain}-u-${extensions.join('-')}` : plain;
+}
+
+/**
+ * The Gregorian day `date` falls on in `timeZone` (the browser's when
+ * absent), as `yyyy-mm-dd`.
+ */
+export function localDay(date: Date, timeZone?: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(date);
+  const part = (type: string) => parts.find(p => p.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
 /** `null` for a missing or unparseable value; a `Date` otherwise. */

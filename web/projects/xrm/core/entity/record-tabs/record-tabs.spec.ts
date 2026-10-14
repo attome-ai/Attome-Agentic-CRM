@@ -120,7 +120,7 @@ describe('RecordTabPanelsComponent record activity', () => {
       imports: [SavedHostComponent],
       providers: [
         { provide: LangService, useValue: { translate: (key: string) => key, intlLocale: () => 'en-US' } },
-        { provide: UserPreferencesService, useValue: { timezone: () => null } },
+        { provide: UserPreferencesService, useValue: { timezone: () => null, calendar: () => null, digits: () => null } },
         { provide: RecordTimelineService, useValue: { timeline, history: vi.fn() } },
       ],
     });

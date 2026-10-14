@@ -449,6 +449,8 @@ export const xrmEn = {
   },
   fieldInput: {
     change: 'Change', clear: 'Clear', remove: 'Remove', searchPlaceholder: 'Search…',
+    hijriDate: 'Hijri date', hijriDay: 'Hijri day', hijriMonth: 'Hijri month', hijriYear: 'Hijri year',
+    hijriSuffix: 'AH',
     loading: 'Loading…', noResults: 'No results',
     removeAttachment: 'Remove attachment', removeImage: 'Remove image', removeNamed: 'Remove {label}',
     // U9 (D-604/D-605) — formula, rich text, image, address and rollup.

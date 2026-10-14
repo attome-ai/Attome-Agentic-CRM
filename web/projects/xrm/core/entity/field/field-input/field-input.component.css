@@ -164,3 +164,13 @@ input[type="file"] {
   margin: 6px 0 0; font-size: 12px; color: #f87171;
 }
 .xf-rule-message-warning { color: #fbbf24; }
+
+/* AG1-T8: Hijri day, month and year beside a date field. */
+.hijri-entry {
+  display: flex; align-items: center; gap: 6px;
+  margin-block-start: 6px;
+}
+.hijri-entry .hijri-day { inline-size: 4.5em; }
+.hijri-entry .hijri-year { inline-size: 6em; }
+.hijri-entry .hijri-month { flex: 1; min-inline-size: 8em; }
+.hijri-suffix { font-size: 12px; color: var(--color-text-secondary); }

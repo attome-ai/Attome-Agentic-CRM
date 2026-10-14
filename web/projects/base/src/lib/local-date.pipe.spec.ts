@@ -92,6 +92,13 @@ describe('LocalDatePipe', () => {
     expect(pipe.transform(ramadan, opts, 'gregorian')).not.toContain('1447');
   });
 
+  it('AG1-T8 uses the published Umm al-Qura table, not ICU, for an older date', () => {
+    const { pipe, prefs } = setUp();
+    prefs.setCalendar('hijri');
+    // 1 Muharram 1400 was 20 November 1979 (ICU says the 21st).
+    expect(pipe.transform('1979-11-20T12:00:00Z', { timeZone: 'UTC' })).toBe('1 Muharram 1400 AH');
+  });
+
   it('localeTag adds only the extensions the viewer chose', () => {
     expect(localeTag('en-US', null, null)).toBe('en-US');
     expect(localeTag('ar-SA', 'hijri', 'arab')).toBe('ar-SA-u-ca-islamic-umalqura-nu-arab');

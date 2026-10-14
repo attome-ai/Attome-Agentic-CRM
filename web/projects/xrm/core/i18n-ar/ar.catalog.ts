@@ -412,6 +412,8 @@ export const xrmAr = {
   },
   fieldInput: {
     change: 'تغيير', clear: 'مسح', remove: 'إزالة', searchPlaceholder: 'بحث…',
+    hijriDate: 'التاريخ الهجري', hijriDay: 'اليوم الهجري', hijriMonth: 'الشهر الهجري', hijriYear: 'السنة الهجرية',
+    hijriSuffix: 'هـ',
     loading: 'جاري التحميل…', noResults: 'لا توجد نتائج',
     removeAttachment: 'إزالة المرفق', removeImage: 'إزالة الصورة', removeNamed: 'إزالة {label}',
     // U9 — انظر en.catalog.ts

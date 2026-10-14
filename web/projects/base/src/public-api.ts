@@ -28,7 +28,12 @@ export { CurrencyService }                 from './lib/currency.service';
 export type { CurrencyRate }               from './lib/currency.service';
 export { LangService }                     from './lib/lang.service';
 export { TranslatePipe }                   from './lib/translate.pipe';
-export { LocalDatePipe, localeTag }        from './lib/local-date.pipe';
+export { LocalDatePipe, localeTag, localDay } from './lib/local-date.pipe';
+export {
+  HIJRI_FIRST_YEAR, HIJRI_LAST_YEAR, HIJRI_MONTHS_AR, HIJRI_MONTHS_EN,
+  formatHijri, fromHijri, hijriMonthName, toHijri,
+} from './lib/hijri';
+export type { HijriParts } from './lib/hijri';
 export { LocalNumberPipe }                 from './lib/local-number.pipe';
 export { UserPreferencesService, isValidTimeZone } from './lib/user-preferences.service';
 export type { DisplayCalendar, DisplayDigits } from './lib/user-preferences.service';

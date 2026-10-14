@@ -21,7 +21,7 @@ describe('SlaBadgeComponent', () => {
               params ? `${key} ${JSON.stringify(params)}` : key,
           },
         },
-        { provide: UserPreferencesService, useValue: { timezone: signal<string | null>('UTC') } },
+        { provide: UserPreferencesService, useValue: { timezone: signal<string | null>('UTC'), calendar: () => null, digits: () => null } },
       ],
     });
   });
