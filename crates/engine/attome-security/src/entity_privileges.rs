@@ -15,6 +15,14 @@ use crate::db::ensure_privilege;
 
 pub const ENTITY_ACTIONS: [&str; 4] = ["read", "create", "update", "delete"];
 pub const BULK_ACTION: &str = "bulk";
+/// A18-T6: permanently deleting a record (past the recycle bin) is its own
+/// privilege, beside `delete`.
+pub const HARD_DELETE_ACTION: &str = "hard_delete";
+/// The per-entity keys beside the CRUD four, with how each is described.
+pub const EXTRA_ACTIONS: [(&str, &str); 2] = [
+    (BULK_ACTION, "bulk mutations"),
+    (HARD_DELETE_ACTION, "permanent deletes"),
+];
 
 fn privilege_key(logicalname: &str, action: &str) -> String {
     format!("{logicalname}.{action}")
@@ -44,15 +52,17 @@ pub async fn ensure_entity_privileges(
         )
         .await?;
     }
-    let key = privilege_key(logicalname, BULK_ACTION);
-    ensure_privilege(
-        db,
-        &key,
-        &key,
-        &format!("Per-entity privilege: bulk mutations on {logicalname}"),
-        owner_layer,
-    )
-    .await?;
+    for (action, what) in EXTRA_ACTIONS {
+        let key = privilege_key(logicalname, action);
+        ensure_privilege(
+            db,
+            &key,
+            &key,
+            &format!("Per-entity privilege: {what} on {logicalname}"),
+            owner_layer,
+        )
+        .await?;
+    }
     Ok(())
 }
 
@@ -75,15 +85,17 @@ pub async fn rename_entity_privileges(
             .await
             .map_err(AppError::internal)?;
     }
-    let old_key = privilege_key(old_logicalname, BULK_ACTION);
-    let new_key = privilege_key(new_logicalname, BULK_ACTION);
-    sqlx::query("UPDATE privilege SET key = $1, name = $2 WHERE key = $3")
-        .bind(&new_key)
-        .bind(&new_key)
-        .bind(&old_key)
-        .execute(db)
-        .await
-        .map_err(AppError::internal)?;
+    for (action, _) in EXTRA_ACTIONS {
+        let old_key = privilege_key(old_logicalname, action);
+        let new_key = privilege_key(new_logicalname, action);
+        sqlx::query("UPDATE privilege SET key = $1, name = $2 WHERE key = $3")
+            .bind(&new_key)
+            .bind(&new_key)
+            .bind(&old_key)
+            .execute(db)
+            .await
+            .map_err(AppError::internal)?;
+    }
     Ok(())
 }
 
@@ -100,12 +112,14 @@ pub async fn deactivate_entity_privileges(db: &DbPool, logicalname: &str) -> Res
             .await
             .map_err(AppError::internal)?;
     }
-    let key = privilege_key(logicalname, BULK_ACTION);
-    sqlx::query("UPDATE privilege SET is_active = false WHERE key = $1")
-        .bind(&key)
-        .execute(db)
-        .await
-        .map_err(AppError::internal)?;
+    for (action, _) in EXTRA_ACTIONS {
+        let key = privilege_key(logicalname, action);
+        sqlx::query("UPDATE privilege SET is_active = false WHERE key = $1")
+            .bind(&key)
+            .execute(db)
+            .await
+            .map_err(AppError::internal)?;
+    }
     Ok(())
 }
 
@@ -136,7 +150,7 @@ pub async fn deactivate_entity_privileges(db: &DbPool, logicalname: &str) -> Res
 /// existing row keeps its layer (`ON CONFLICT DO NOTHING`).
 pub async fn seed_all(db: &DbPool) -> Result<(), AppError> {
     let mut actions: Vec<&str> = ENTITY_ACTIONS.to_vec();
-    actions.push(BULK_ACTION);
+    actions.extend(EXTRA_ACTIONS.iter().map(|(action, _)| *action));
 
     // `privilege.id` has no column default (legacy table), so the id
     // is generated here rather than by the column — `uuidv7()` is the same
@@ -152,6 +166,8 @@ pub async fn seed_all(db: &DbPool) -> Result<(), AppError> {
                 e.logicalname || '.' || a.action, \
                 CASE WHEN a.action = $2 \
                      THEN 'Per-entity privilege: bulk mutations on ' || e.logicalname \
+                     WHEN a.action = $3 \
+                     THEN 'Per-entity privilege: permanent deletes on ' || e.logicalname \
                      ELSE 'Per-entity privilege: ' || a.action || ' on ' || e.logicalname \
                 END, \
                 true, NOW(), e.owner_layer \
@@ -163,6 +179,7 @@ pub async fn seed_all(db: &DbPool) -> Result<(), AppError> {
     )
     .bind(&actions)
     .bind(BULK_ACTION)
+    .bind(HARD_DELETE_ACTION)
     .execute(db)
     .await
     .map_err(AppError::internal)?;

@@ -30,7 +30,7 @@ use attome_security::db::{
     resolve_privileges, users_holding_role,
 };
 use attome_security::entity_privileges::{
-    BULK_ACTION, ENTITY_ACTIONS, ensure_entity_privileges, rename_entity_privileges,
+    BULK_ACTION, ENTITY_ACTIONS, EXTRA_ACTIONS, ensure_entity_privileges, rename_entity_privileges,
 };
 use attome_server::security::AccessLevel;
 use attome_testkit::skip_if_no_db;
@@ -356,7 +356,7 @@ async fn ensure_entity_privileges_creates_operation_and_bulk_keys_idempotently()
         .fetch_one(&db)
         .await
         .expect("count privileges");
-    assert_eq!(count, ENTITY_ACTIONS.len() as i64 + 1);
+    assert_eq!(count, (ENTITY_ACTIONS.len() + EXTRA_ACTIONS.len()) as i64);
     let bulk_exists: bool =
         sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM privilege WHERE key = $1)")
             .bind(format!("{logicalname}.{BULK_ACTION}"))
@@ -374,7 +374,10 @@ async fn ensure_entity_privileges_creates_operation_and_bulk_keys_idempotently()
         .fetch_one(&db)
         .await
         .expect("count privileges again");
-    assert_eq!(count_again, ENTITY_ACTIONS.len() as i64 + 1);
+    assert_eq!(
+        count_again,
+        (ENTITY_ACTIONS.len() + EXTRA_ACTIONS.len()) as i64
+    );
 }
 
 #[tokio::test]

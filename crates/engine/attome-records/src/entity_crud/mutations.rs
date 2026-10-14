@@ -1285,7 +1285,7 @@ pub(super) async fn delete_record(
     responses(
         (status = 204, description = "Record permanently deleted"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
-        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the entity's hard_delete privilege", body = ErrorResponse),
         (status = 409, description = "Record is referenced, under legal hold, or the If-Match row_version did not match", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
@@ -1315,6 +1315,11 @@ pub(super) async fn hard_delete_record(
     )
     .await?;
     require_child_parent_access(&state, &ctx, &entity_name, record_id).await?;
+    // A18-T6: past the recycle bin is its own privilege, not `delete`.
+    ctx.require(
+        &entity_name,
+        attome_security::entity_privileges::HARD_DELETE_ACTION,
+    )?;
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     if attome_core::legal_hold::record_is_held(&mut *tx, &entity_name, record_id)
