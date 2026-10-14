@@ -31,12 +31,19 @@ const PORTAL_USER_ENTITY = 'webportal_user';
 
 /**
  * Entities the server refuses to expose to a portal
- * (`attome-portal/src/roles.rs::DENIED_ENTITY_PREFIXES`). Mirrored only to keep
- * them out of the picker; the server stays the authority.
+ * (`attome-portal/src/roles.rs::DENIED_ENTITY_PREFIXES` and
+ * `DENIED_CORE_ENTITIES`). Mirrored only to keep them out of the picker; the
+ * server stays the authority.
  */
 const DENIED_ENTITY_PREFIXES = [
-  '', 'attome_audit', 'ai_', 'attome_s2s', 'attome_notification', 'attome_integration', 'webportal',
+  'audit_', 'ai_', 's2s_', 'notification_', 'integration_', 'webportal',
 ];
+const DENIED_CORE_ENTITIES = new Set([
+  'organization', 'team', 'user_account', 'user_account_mm_team', 'user_account_mm_privilege',
+  'privilege', 'role', 'api_key', 'authentication_type', 'license', 'note', 'activity',
+  'communication', 'communication_event', 'follow', 'tag_category', 'tag_item', 'glossary_term',
+  'record_relationship', 'profiler_finding', 'autovalue', 'reminder', 'saved_search',
+]);
 
 /** How many conditions one grant takes (the grant API's limit, `roles.rs`). */
 export const MAX_GRANT_CONDITIONS = 3;
@@ -166,7 +173,8 @@ export class PortalAdminComponent {
   /** Entities a portal may expose, by display name. */
   readonly entities = computed(() =>
     this.allEntities()
-      .filter(e => e.is_active && !DENIED_ENTITY_PREFIXES.some(p => e.logicalname.startsWith(p)))
+      .filter(e => e.is_active && !DENIED_CORE_ENTITIES.has(e.logicalname)
+        && !DENIED_ENTITY_PREFIXES.some(p => e.logicalname.startsWith(p)))
       .sort((a, b) => a.name.localeCompare(b.name)));
   /** Lookups onto the portal user entity on the entity chosen in "Entity settings". */
   readonly portalUserFields = signal<AttributeMeta[]>([]);

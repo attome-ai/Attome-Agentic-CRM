@@ -32,28 +32,19 @@ import { registerCrmEntityForms } from '@attome/xrm/verticals/crm';
 import { registerCustomerServiceEntityForms } from '@attome/xrm/verticals/customer-service';
 import { registerEnterpriseArchitectureEntityForms } from '@attome/xrm/verticals/enterprise-architecture';
 import { registerFinanceEntityForms } from '@attome/xrm/verticals/finance';
-import { registerGameOpsEntityForms } from '@attome/xrm/verticals/game-ops';
 import { registerHumanResourcesEntityForms } from '@attome/xrm/verticals/human-resources';
 import { registerSalesEntityForms } from '@attome/xrm/verticals/sales';
 import { registerVendorSupplierEntityForms } from '@attome/xrm/verticals/vendor-supplier';
-import { registerTrdMarketEntityForms } from '@attome/xrm/trd/registration/market';
-import { registerTrdBrokerEntityForms } from '@attome/xrm/trd/registration/broker';
-import { registerTrdStrategyEntityForms } from '@attome/xrm/trd/registration/strategy';
-import { registerTrdResearchEntityForms } from '@attome/xrm/trd/registration/research';
-import { registerTrdJournalEntityForms } from '@attome/xrm/trd/registration/journal';
 
 /**
  * SYSTEM-CHANGES.md Topic 14 ("Forms"): every entity has its own form in code,
  * as three separate files (`.ts`, `.html`, `.css`) on the shared base form
  * (D-773). This spec is that rule's enforcement:
  *
- *  1. every entity declared in `platform-bundles/*.json` or
- *     `verticals/*\/bundle.json`, and every code-created `trd_*` entity
- *     (`TrdModel::owned_entities` in `crates/trd/trd-engine/src/model.rs`,
- *     Topic 15 #8), gets a `formComponent` from one of the module
- *     registration functions below;
+ *  1. every entity declared in `platform-bundles/*.json` gets a
+ *     `formComponent` from one of the module registration functions below;
  *  2. every such entity is named in the host app's loader table
- *     (`angular/src/app/attome-metadata-form-loaders.ts`) — `ensureLoaded` only runs
+ *     (`web/src/app/attome-metadata-form-loaders.ts`) — `ensureLoaded` only runs
  *     a module's registration for a logicalname listed there, so an entity
  *     missing from it gets the "no form registered" page (there is no
  *     generic form fallback);
@@ -72,10 +63,8 @@ const REGISTRATIONS: ((r: EntityRouteRegistry) => void)[] = [
   registerSearchEntityForms, registerServiceEntityForms, registerPortalEntityForms,
   registerAssetManagementEntityForms, registerContractManagementEntityForms, registerCrmEntityForms,
   registerCustomerServiceEntityForms, registerEnterpriseArchitectureEntityForms, registerFinanceEntityForms,
-  registerGameOpsEntityForms, registerHumanResourcesEntityForms, registerSalesEntityForms,
+  registerHumanResourcesEntityForms, registerSalesEntityForms,
   registerVendorSupplierEntityForms,
-  registerTrdMarketEntityForms, registerTrdBrokerEntityForms, registerTrdStrategyEntityForms,
-  registerTrdResearchEntityForms, registerTrdJournalEntityForms,
 ];
 
 /** The repository root: the nearest ancestor of the test's cwd holding `platform-bundles/`. */
@@ -95,30 +84,12 @@ function bundleEntities(root: string): BundleEntity[] {
   const files = readdirSync(join(root, 'platform-bundles'))
     .filter(f => f.endsWith('.json'))
     .map(f => join('platform-bundles', f));
-  for (const v of readdirSync(join(root, 'verticals'), { withFileTypes: true })) {
-    const file = join('verticals', v.name, 'bundle.json');
-    if (v.isDirectory() && existsSync(join(root, file))) files.push(file);
-  }
   const out: BundleEntity[] = [];
   for (const file of files) {
     const bundle = JSON.parse(readFileSync(join(root, file), 'utf8')) as { entities?: { logicalname: string }[] };
     for (const e of bundle.entities ?? []) out.push({ bundle: file, logicalname: e.logicalname });
   }
   return out;
-}
-
-/**
- * The code-created trading entities: the logical names in
- * `TrdModel::owned_entities()` (the list `entity_module_gate.rs` holds equal
- * to what `crates/trd/trd-engine/src/entities/*` provisions). Read from the
- * one `&[ "trd_…", … ]` array literal, not by parsing Rust generally.
- */
-function trdEntities(root: string): BundleEntity[] {
-  const file = join('crates', 'trd', 'trd-engine', 'src', 'model.rs');
-  const source = readFileSync(join(root, file), 'utf8');
-  const body = /fn owned_entities\(&self\)[^{]*\{\s*&\[([^\]]*)\]/.exec(source);
-  if (!body) throw new Error(`no owned_entities() array in ${file}`);
-  return [...body[1].matchAll(/"(trd_[a-z0-9_]+)"/g)].map(m => ({ bundle: file, logicalname: m[1] }));
 }
 
 function componentFiles(dir: string, out: string[] = []): string[] {
@@ -132,11 +103,10 @@ function componentFiles(dir: string, out: string[] = []): string[] {
 
 describe('entity form coverage (SYSTEM-CHANGES.md Topic 14)', () => {
   const root = repoRoot();
-  const entities = [...bundleEntities(root), ...trdEntities(root)];
+  const entities = bundleEntities(root);
 
-  it('reads the bundles and the trd entity list', () => {
+  it('reads the platform bundles', () => {
     expect(entities.length).toBeGreaterThan(100);
-    expect(entities.filter(e => e.logicalname.startsWith('trd_')).length).toBeGreaterThanOrEqual(30);
   });
 
   it('registers a form component for every entity', () => {
@@ -162,13 +132,13 @@ describe('entity form coverage (SYSTEM-CHANGES.md Topic 14)', () => {
   });
 
   it('lists every entity in the host app loader table', () => {
-    const loaders = readFileSync(join(root, 'angular', 'src', 'app', 'attome-metadata-form-loaders.ts'), 'utf8');
+    const loaders = readFileSync(join(root, 'web', 'src', 'app', 'attome-metadata-form-loaders.ts'), 'utf8');
     const missing = entities.filter(e => !loaders.includes(`'${e.logicalname}'`)).map(e => `${e.logicalname} (${e.bundle})`);
     expect(missing).toEqual([]);
   });
 
   it('gives every EngineFormBase component its own .ts, .html and .css', () => {
-    const xrmRoot = join(root, 'angular', 'projects', 'xrm');
+    const xrmRoot = join(root, 'web', 'projects', 'xrm');
     const forms = componentFiles(xrmRoot).filter(f => /\bextends EngineFormBase\b/.test(readFileSync(f, 'utf8')));
     expect(forms.length).toBeGreaterThan(100);
 

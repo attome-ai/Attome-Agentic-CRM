@@ -4,8 +4,8 @@ import { logicalToUrlPath } from '../services/entity-url.utils';
 
 describe('resolveRouteTemplate', () => {
   it('derives generic entity paths from linked logical names', () => {
-    expect(logicalToUrlPath('contact')).toBe('xrm/contact');
-    expect(logicalToUrlPath('user_account')).toBe('xrm/core/systemuser');
+    expect(logicalToUrlPath('contact')).toBe('xrm/entity/contact');
+    expect(logicalToUrlPath('user_account')).toBe('xrm/entity/user_account');
   });
 
   it('expands multiple named column placeholders and URL-encodes values', () => {

@@ -234,7 +234,7 @@ describe('EngineFormBase — submit button state', () => {
 
     expect(svc.create).toHaveBeenCalledOnce();
     expect(navigate).toHaveBeenCalledWith(
-      ['/xrm', 'core', 'systemuser', 'form'],
+      ['/xrm', 'entity', 'user_account', 'form'],
       { queryParams: { id: 'rec-1' } },
     );
   });

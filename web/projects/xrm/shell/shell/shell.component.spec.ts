@@ -29,8 +29,8 @@ function createComponent() {
   });
   const component = TestBed.runInInjectionContext(() => new ShellComponent());
   component.sidebarItems.set([
-    { id: 'accounts', name: 'Accounts', icon: 'las la-building', color: '', route: '/xrm/account/list', child: [] },
-    { id: 'contacts', name: 'Contacts', icon: 'las la-user', color: '', route: '/xrm/contact/list', child: [] },
+    { id: 'accounts', name: 'Accounts', icon: 'las la-building', color: '', route: '/xrm/entity/account/list', child: [] },
+    { id: 'contacts', name: 'Contacts', icon: 'las la-user', color: '', route: '/xrm/entity/contact/list', child: [] },
   ]);
   component.qsQuery.set('c');
   component.quickSearchOpen.set(true);
@@ -49,7 +49,7 @@ describe('ShellComponent quick search keyboard navigation', () => {
 
     expect(preventDefault).toHaveBeenCalled();
     expect(stopPropagation).toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith(['/xrm/contact/list']);
+    expect(navigate).toHaveBeenCalledWith(['/xrm/entity/contact/list']);
     expect(component.quickSearchOpen()).toBe(false);
   });
 
@@ -83,8 +83,8 @@ describe('ShellComponent app switcher filter', () => {
       {
         id: 'sales', name: 'Sales', icon: '', color: '', route: '',
         child: [
-          { id: 'accounts', name: 'Accounts', icon: '', color: '', route: '/xrm/account/list', child: [] },
-          { id: 'contacts', name: 'Contacts', icon: '', color: '', route: '/xrm/contact/list', child: [] },
+          { id: 'accounts', name: 'Accounts', icon: '', color: '', route: '/xrm/entity/account/list', child: [] },
+          { id: 'contacts', name: 'Contacts', icon: '', color: '', route: '/xrm/entity/contact/list', child: [] },
         ],
       },
       {
@@ -96,7 +96,7 @@ describe('ShellComponent app switcher filter', () => {
       {
         id: 'security', name: 'Security', icon: '', color: '', route: '',
         child: [
-          { id: 'roles', name: 'Roles', icon: '', color: '', route: '/xrm/core/role/list', child: [] },
+          { id: 'roles', name: 'Roles', icon: '', color: '', route: '/xrm/entity/role/list', child: [] },
         ],
       },
     ]);
@@ -134,7 +134,7 @@ describe('ShellComponent header record search (U13)', () => {
       impressionId: null,
     });
 
-    expect(navigate).toHaveBeenCalledWith(['/xrm', 'core', 'systemuser', 'form'], {
+    expect(navigate).toHaveBeenCalledWith(['/xrm', 'entity', 'user_account', 'form'], {
       queryParams: { id: '0190a1b2-0000-7000-8000-000000000001' },
     });
   });

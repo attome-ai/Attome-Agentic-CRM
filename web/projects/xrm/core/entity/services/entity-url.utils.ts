@@ -2,30 +2,16 @@
  * Entity logical name <-> URL path, relative to the site root, without the
  * trailing 'list'/'form' action.
  *
- * Logical names do not share one prefix: platform entities are
- * `xrm_{module}_{entity}`, the code-created trading entities are `trd_*`,
- * vertical bundle entities have none (`account`, `cost_center`), and project
- * entities carry a three-letter code (`bmd_*`, SYSTEM-CHANGES Topic 15 #10).
- * A single "underscore becomes slash" rule cannot tell `/xrm/activity` (the
- * platform `activity`) from the CRM vertical's `activity`, so there are
- * two canonical shapes, and together they are a lossless bijection:
+ * Logical names carry no module prefix (V2-D483): `user_account`, `contact`,
+ * `account`, `bmd_work_package`. The one canonical shape is
  *
- *   entity_info  ->  xrm/core/entity/info    (every `_` becomes `/`)
- *   contact           ->  xrm/contact
- *   trd_symbol            ->  xrm/entity/trd_symbol   (verbatim after `xrm/entity/`)
- *   account               ->  xrm/entity/account
- *   bmd_work_package      ->  xrm/entity/bmd_work_package
+ *   <logicalname>  ->  xrm/entity/<logicalname>   (verbatim)
  *
- * The `xrm/entity/{logicalname}` shape is the one the vertical bundles'
- * sidebar routes already use (`verticals/*\/bundle.json`,
- * `/xrm/entity/account/list`). An `entity_*` name would collide with it,
- * so it takes the verbatim shape too (none exists today).
+ * which is a lossless bijection, since a logical name never contains a slash.
+ * Shorter spellings, such as `/xrm/clause/list` in a sidebar route, still
+ * resolve through `urlPathCandidates`: every `/` after `xrm/` read as `_`.
  */
 const ENTITY_PREFIX = 'xrm/entity/';
-
-function usesSlashShape(logicalname: string): boolean {
-  return logicalname.startsWith('xrm_') && !logicalname.startsWith('entity_');
-}
 
 function trimSlashes(urlPath: string): string {
   return urlPath.replace(/^\/+/, '').replace(/\/+$/, '');
@@ -33,18 +19,16 @@ function trimSlashes(urlPath: string): string {
 
 /** Canonical URL path for a logical name (see the file comment). */
 export function logicalToUrlPath(logicalname: string): string {
-  return usesSlashShape(logicalname)
-    ? logicalname.replace(/_/g, '/')
-    : `${ENTITY_PREFIX}${logicalname}`;
+  return `${ENTITY_PREFIX}${logicalname}`;
 }
 
 /**
  * Exact inverse of `logicalToUrlPath` — no lookup, so it only knows the
  * canonical shapes:
- *   urlPathToLogical('xrm/core/entity/info')  -> 'entity_info'
- *   urlPathToLogical('xrm/entity/trd_symbol') -> 'trd_symbol'
- * A non-canonical path such as `xrm/trd/symbol` comes back as
- * `trd_symbol`; `resolveEntityUrlPath` is the registry-aware resolver
+ *   urlPathToLogical('xrm/entity/user_account') -> 'user_account'
+ * A non-canonical path such as `xrm/work/package` comes back as
+ * `xrm_work_package`'s bare reading `work_package` only through
+ * `urlPathCandidates`; `resolveEntityUrlPath` is the registry-aware resolver
  * the entity router uses for those.
  */
 export function urlPathToLogical(urlPath: string): string {
@@ -57,14 +41,12 @@ export function urlPathToLogical(urlPath: string): string {
 
 /**
  * Every logical name a URL path can mean, most-canonical first:
- *   'xrm/core/role'       -> ['role', 'core_role']
- *   'xrm/trd/symbol'      -> ['trd_symbol', 'trd_symbol']
- *   'xrm/clause'          -> ['clause', 'clause']
- *   'xrm/entity/account'  -> ['account']
- * The second candidate keeps working the prefix-less paths already in
- * links and bundles (`/xrm/clause/list` in the contract-management
- * vertical) and the natural `/xrm/{prefix}/{entity}` spelling of a `trd_` or
- * project-prefixed entity.
+ *   'xrm/entity/account'      -> ['account']
+ *   'xrm/clause'              -> ['xrm_clause', 'clause']
+ *   'xrm/bmd/work/package'    -> ['xrm_bmd_work_package', 'bmd_work_package']
+ * The second candidate keeps working the short paths already in links and
+ * pack sidebar routes (`/xrm/clause/list`) and the `/xrm/{prefix}/{entity}`
+ * spelling of a project-prefixed entity.
  */
 export function urlPathCandidates(urlPath: string): string[] {
   const path = trimSlashes(urlPath);
@@ -104,7 +86,7 @@ export function resolveEntityUrlPath(
 
 /**
  * Returns true when an entity's logical name corresponds to the given URL path.
- *   entityMatchesUrlPath('entity_info', 'xrm/core/entity/info') → true
+ *   entityMatchesUrlPath('entity_info', 'xrm/entity/entity_info') → true
  */
 export function entityMatchesUrlPath(logicalname: string, urlPath: string): boolean {
   return logicalname === urlPathToLogical(urlPath);
@@ -118,8 +100,7 @@ function entityRoute(logicalname: string, action: 'list' | 'form'): string[] {
 
 /**
  * Angular navigate() commands for the entity list page.
- *   entityListRoute('entity_info') → ['/xrm','core','entity','info','list']
- *   entityListRoute('trd_symbol')           → ['/xrm','entity','trd_symbol','list']
+ *   entityListRoute('user_account') → ['/xrm','entity','user_account','list']
  */
 export function entityListRoute(logicalname: string): string[] {
   return entityRoute(logicalname, 'list');
@@ -128,7 +109,7 @@ export function entityListRoute(logicalname: string): string[] {
 /**
  * Angular navigate() commands for the entity form page.
  * Pass { queryParams: { id: recordId } } for edit mode.
- *   entityFormRoute('entity_info') → ['/xrm','core','entity','info','form']
+ *   entityFormRoute('user_account') → ['/xrm','entity','user_account','form']
  */
 export function entityFormRoute(logicalname: string): string[] {
   return entityRoute(logicalname, 'form');

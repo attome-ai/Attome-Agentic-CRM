@@ -49,7 +49,7 @@ describe('CopilotPanelComponent', () => {
       imports: [CopilotPanelComponent],
       providers: [
         { provide: ChatService, useValue: chat },
-        { provide: Router, useValue: { url: `/xrm/contact/form?id=${RECORD}`, events: NEVER } },
+        { provide: Router, useValue: { url: `/xrm/entity/contact/form?id=${RECORD}`, events: NEVER } },
         { provide: LangService, useValue: { translate: (k: string) => k } },
         {
           provide: CHAT_EVENT_SOURCE,

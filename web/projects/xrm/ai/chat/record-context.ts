@@ -22,7 +22,10 @@ export function recordContextFromUrl(url: string): RecordContext | null {
   if (segments.length < 3 || segments[0] !== 'xrm' || segments[segments.length - 1] !== 'form') {
     return null;
   }
-  const entity = segments.slice(0, -1).join('_');
+  // The canonical shape is /xrm/entity/<logicalname>/form; a short pack route
+  // (/xrm/<a>/<b>/form) reads its segments as one underscored name.
+  const named = segments[1] === 'entity' && segments.length === 4;
+  const entity = named ? segments[2] : segments.slice(1, -1).join('_');
   const id = new URLSearchParams(query).get('id');
   if (!id || !UUID.test(id) || !LOGICAL_NAME.test(entity)) return null;
   return { entity, record_id: id.toLowerCase() };

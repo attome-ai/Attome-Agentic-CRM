@@ -27,7 +27,7 @@ describe('EntityListPageComponent', () => {
     navigate.mockReset();
     navigateByUrl.mockReset();
     events = new Subject();
-    url = '/xrm/contact/list';
+    url = '/xrm/entity/contact/list';
     listAvailable = vi.fn(() => of([] as AvailableView[]));
     loadChart = vi.fn(() => Promise.resolve(FakeChartView));
     const router = {
@@ -60,7 +60,7 @@ describe('EntityListPageComponent', () => {
 
     fixture.componentInstance.onCreate();
 
-    expect(navigate).toHaveBeenCalledWith(['/xrm', 'core', 'systemuser', 'form']);
+    expect(navigate).toHaveBeenCalledWith(['/xrm', 'entity', 'user_account', 'form']);
   });
 
   it('preserves the record id when opening the edit form', () => {
@@ -68,7 +68,7 @@ describe('EntityListPageComponent', () => {
 
     fixture.componentInstance.onEdit({ id: 'record-1' } as EntityRecord);
 
-    expect(navigate).toHaveBeenCalledWith(['/xrm', 'contact', 'form'], {
+    expect(navigate).toHaveBeenCalledWith(['/xrm', 'entity', 'contact', 'form'], {
       queryParams: { id: 'record-1' },
     });
   });
@@ -78,7 +78,7 @@ describe('EntityListPageComponent', () => {
 
     fixture.componentInstance.onEditId('card-7');
 
-    expect(navigate).toHaveBeenCalledWith(['/xrm', 'contact', 'form'], {
+    expect(navigate).toHaveBeenCalledWith(['/xrm', 'entity', 'contact', 'form'], {
       queryParams: { id: 'card-7' },
     });
   });
@@ -97,7 +97,7 @@ describe('EntityListPageComponent', () => {
   });
 
   it('picks the renderer from the ?view= parameter', () => {
-    url = '/xrm/contact/list?view=board';
+    url = '/xrm/entity/contact/list?view=board';
     listAvailable.mockReturnValue(of([view('all', 'list', true), view('board', 'kanban')]));
     const page = create().componentInstance;
 
@@ -106,7 +106,7 @@ describe('EntityListPageComponent', () => {
   });
 
   it('falls back to the default view when ?view= names an unknown view', () => {
-    url = '/xrm/contact/list?view=gone';
+    url = '/xrm/entity/contact/list?view=gone';
     listAvailable.mockReturnValue(of([view('board', 'kanban'), view('tl', 'timeline', true)]));
     const page = create().componentInstance;
 
@@ -143,7 +143,7 @@ describe('EntityListPageComponent', () => {
   });
 
   it('switching kind writes that kind\'s default view to the URL, keeping other params', () => {
-    url = '/xrm/contact/list?filters=abc';
+    url = '/xrm/entity/contact/list?filters=abc';
     listAvailable.mockReturnValue(of([
       view('all', 'list', true), view('b1', 'kanban'), view('b2', 'kanban', true),
     ]));
@@ -151,7 +151,7 @@ describe('EntityListPageComponent', () => {
 
     page.selectKind('kanban');
 
-    expect(navigateByUrl).toHaveBeenCalledWith('/xrm/contact/list?filters=abc&view=b2');
+    expect(navigateByUrl).toHaveBeenCalledWith('/xrm/entity/contact/list?filters=abc&view=b2');
     expect(page.activeKind()).toBe('kanban');
   });
 
@@ -169,14 +169,14 @@ describe('EntityListPageComponent', () => {
     const page = create().componentInstance;
     expect(page.activeKind()).toBe('list');
 
-    url = '/xrm/contact/list?view=cal';
+    url = '/xrm/entity/contact/list?view=cal';
     events.next(new NavigationEnd(1, url, url));
 
     expect(page.activeKind()).toBe('calendar');
   });
 
   it('lists only the active kind\'s views for its own picker', () => {
-    url = '/xrm/contact/list?view=b1';
+    url = '/xrm/entity/contact/list?view=b1';
     listAvailable.mockReturnValue(of([view('all', 'list', true), view('b1', 'kanban'), view('b2', 'kanban')]));
     const page = create().componentInstance;
 
