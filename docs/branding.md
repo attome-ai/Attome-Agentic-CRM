@@ -81,6 +81,35 @@ published one. `GET /api/v1/admin/themes` lists every version. Each change write
 The Branding page (`/xrm/admin/branding`) does the same: colour pickers, a live contrast check,
 a preview, save as draft, publish, and the version list with each version's changes.
 
+## Logo, favicon and fonts
+
+A draft takes one file per kind, sent as the raw request body with its `Content-Type`:
+
+```http
+POST /api/v1/admin/themes/{id}/assets?kind=logo
+Content-Type: image/svg+xml
+
+<svg ...>...</svg>
+```
+
+| Kind | Accepts |
+|---|---|
+| `logo`, `logo_dark` | PNG, SVG |
+| `favicon` | PNG, SVG, ICO |
+| `font_latin`, `font_arabic` | WOFF2 |
+| `guidelines_pdf` | PDF |
+
+A file is at most 2 MB and must start the way its type does. An SVG containing a script, an
+event handler, a `javascript:` link, a foreign object or a reference to another site is refused.
+A new draft keeps the previous version's files until it is given new ones; only a draft takes
+uploads. `GET /api/v1/admin/themes/{id}/assets` lists a version's files.
+
+Once published, the branding routes return `logo_url`, `logo_dark_url`, `favicon_url`,
+`font_latin_url` and `font_arabic_url`, each pointing at `GET /api/v1/branding/asset?kind=...`.
+That route needs no session, serves the most specific published file for the host, and sends
+`nosniff` and a `sandbox` content security policy, so an SVG opened on its own runs nothing. The
+guidelines PDF is never public. The web app sets the browser tab's icon from `favicon_url`.
+
 ## Hiding the vendor name
 
 `hide_vendor_name: true` is an ordinary token: any administrator may publish it (V2-D490). There
