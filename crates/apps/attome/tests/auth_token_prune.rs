@@ -8,6 +8,7 @@
 //! Requires a throwaway database (NEVER attome_dev); skips when unset.
 //! Run: `cargo test -p server --test auth_token_prune -- --test-threads=1`
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

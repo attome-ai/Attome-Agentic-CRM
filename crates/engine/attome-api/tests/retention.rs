@@ -35,6 +35,7 @@
 //! stream-export to the live store, re-verify, drop) run for real regardless
 //! of whether the partition would ever be proposed by age in production.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

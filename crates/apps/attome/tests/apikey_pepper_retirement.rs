@@ -5,6 +5,7 @@
 //! Requires a throwaway database (NEVER attome_dev); skips when unset.
 //! Run: `cargo test -p server --test apikey_pepper_retirement -- --test-threads=1`
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

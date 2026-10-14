@@ -17,6 +17,7 @@
 //! cargo test -p server --test middleware_pipeline -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

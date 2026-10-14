@@ -2,6 +2,7 @@
 //! they parse, carry a correct checksum, sit in the product layer under their
 //! own scope, and are numbered from 0001 without gaps. No database needed.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

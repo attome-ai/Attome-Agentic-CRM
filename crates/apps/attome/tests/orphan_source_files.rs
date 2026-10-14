@@ -65,6 +65,7 @@
 //! every `cargo test -p server`, the same way `advisory_lock_namespaces.rs`
 //! does.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

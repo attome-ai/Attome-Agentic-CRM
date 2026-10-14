@@ -17,6 +17,7 @@
 //! as core/ungated. A new engine that seeds an entity and forgets to declare
 //! it fails this test rather than shipping a silent licence hole.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

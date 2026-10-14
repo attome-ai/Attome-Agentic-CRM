@@ -29,6 +29,7 @@
 //! cargo test -p server --test job_retry_backoff -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

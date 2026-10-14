@@ -44,6 +44,7 @@
 //! specifically so that re-run can go well past this file's default of 50
 //! (already past the feedback's "N=20+" floor) without recompiling.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

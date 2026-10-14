@@ -38,6 +38,7 @@
 //! `Unknown` admitting — is unit-tested in `attome-server`'s own
 //! `capability.rs`.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

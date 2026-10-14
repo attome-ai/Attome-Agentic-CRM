@@ -20,6 +20,7 @@
 //! $env:TEST_REDIS_PORT="6380"; cargo test -p attome-ai --test budget_conformance
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

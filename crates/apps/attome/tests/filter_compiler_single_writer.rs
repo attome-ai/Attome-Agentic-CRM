@@ -26,6 +26,7 @@
 //! same "narrow, cheap, catches the known failure mode" scope in this same
 //! directory.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

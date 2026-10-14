@@ -12,6 +12,7 @@
 //! cargo test -p attome-ai --test agent_session
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

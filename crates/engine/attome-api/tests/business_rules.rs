@@ -36,6 +36,7 @@
 //! Fixture rows (users, roles, an API key, a legacy rule row, baseline rows)
 //! are written with SQL into the throwaway database, as the sibling suites do.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

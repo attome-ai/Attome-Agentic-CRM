@@ -31,6 +31,7 @@
 //! cargo test -p server --test audit_chainer_process_kill
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

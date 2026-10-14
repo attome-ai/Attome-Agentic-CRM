@@ -25,6 +25,7 @@
 //! cargo test -p server --test audit_coverage_emission -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,
@@ -64,6 +65,29 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// reason. Each must still be a mapped mandatory route (checked), so the list
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
+    (
+        "POST /api/v1/admin/model/import",
+        "imports a set of model files as drafts; attome-api's model_admin.rs \
+         export_then_import_keeps_content_hashes drives it end to end, and each draft \
+         it saves goes through the same model_edit path the commands driver below audits",
+    ),
+    (
+        "POST /api/v1/admin/model/blueprint/apply",
+        "needs a whole blueprint file set; attome-api's model_admin.rs \
+         a_blueprint_plans_applies_and_rolls_back drives apply and rollback end to end",
+    ),
+    (
+        "POST /api/v1/admin/model/blueprint/rollback",
+        "rolls back an applied blueprint; driven with apply by attome-api's model_admin.rs \
+         a_blueprint_plans_applies_and_rolls_back",
+    ),
+    (
+        "POST /api/v1/a2a/agents/{agent}/tasks",
+        "runs a model turn, and this harness has no inference endpoint, so the response \
+         depends on how the turn fails; the task's mandatory event is the session start \
+         `agent::start_session_from_object` writes, which the \
+         POST /api/v1/model/agents/{agent}/sessions driver audits",
+    ),
     (
         "POST /api/v1/s2s/webportals/{keyword}/login",
         "S2S-only: needs an HMAC-signed request from a client granted \
@@ -988,6 +1012,131 @@ async fn agent_definition(fx: &Fx) -> Uuid {
     .await
     .expect("insert ai_agent row");
     definition
+}
+
+/// The commands that make a startable agent object (V2-D487): a model, a
+/// policy, no tools and a handoff contract.
+fn agent_commands(model: Uuid, policy: Uuid) -> Value {
+    json!([
+        {"op": "set", "path": "/role", "value": "Emission tester"},
+        {"op": "set", "path": "/instructions", "value": "Answer briefly."},
+        {"op": "set", "path": "/tools", "value": []},
+        {"op": "set", "path": "/limits", "value": {"max_steps": 5, "max_tool_calls": 5, "max_tokens": 2000}},
+        {"op": "set", "path": "/persona", "value": {"model": model.to_string()}},
+        {"op": "set", "path": "/policy", "value": policy.to_string()},
+        {"op": "set", "path": "/handoff", "value": {"input": {"type": "object"}, "output": {"type": "object"}}},
+    ])
+}
+
+/// A published agent object with a live model and an open agent policy,
+/// built through the admin model API.
+async fn agent_object(fx: &Fx) -> Uuid {
+    let db = &fx.base.db;
+    let model = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO ai_model (id, name, created_at) VALUES ($1, 'emission object model', NOW())",
+    )
+    .bind(model)
+    .execute(db)
+    .await
+    .expect("insert ai_model row");
+    let policy = Uuid::now_v7();
+    sqlx::query(
+        "INSERT INTO ai_agent_policy \
+            (id, name, risk_ceiling, max_invocations_per_session, max_writes_per_day, \
+             max_tokens_per_session, max_session_duration_minutes, created_at) \
+         VALUES ($1, 'emission object policy', 'consequential', 1000, 1000, 200000, 600, NOW())",
+    )
+    .bind(policy)
+    .execute(db)
+    .await
+    .expect("insert ai_agent_policy row");
+    let id = Uuid::now_v7();
+    let t = Some(fx.admin_token.as_str());
+    call(
+        fx,
+        request(
+            "POST",
+            &format!("/api/v1/admin/model/agent/{id}/commands"),
+            t,
+            Some(json!({
+                "base_hash": "",
+                "name": format!("emission agent {id}"),
+                "commands": agent_commands(model, policy),
+            })),
+        ),
+    )
+    .await;
+    call(
+        fx,
+        request(
+            "POST",
+            &format!("/api/v1/admin/model/agent/{id}/publish"),
+            t,
+            None,
+        ),
+    )
+    .await;
+    id
+}
+
+/// An eval suite draft (N23) for a published agent object, with one case.
+async fn eval_suite(fx: &Fx) -> Uuid {
+    let agent = agent_object(fx).await;
+    let id = Uuid::now_v7();
+    call(
+        fx,
+        request(
+            "POST",
+            &format!("/api/v1/admin/model/eval_suite/{id}/commands"),
+            Some(fx.admin_token.as_str()),
+            Some(json!({
+                "base_hash": "",
+                "name": format!("emission suite {id}"),
+                "commands": [
+                    {"op": "set", "path": "/agent", "value": agent.to_string()},
+                    {"op": "set", "path": "/pass_threshold", "value": 1.0},
+                    {"op": "set", "path": "/cases", "value": [{"name": "greets", "input": "Hello", "expect": {}}]},
+                ],
+            })),
+        ),
+    )
+    .await;
+    id
+}
+
+/// An assistant message answering a person's question, in a chat
+/// conversation (N23-T3's source for an eval case).
+async fn answered_message(fx: &Fx) -> Uuid {
+    let conversation = chat_conversation(fx).await;
+    let turn_id = Uuid::now_v7();
+    let mut last = Uuid::nil();
+    for (role, content) in [
+        (attome_ai::conversation::Role::User, "What is my balance?"),
+        (
+            attome_ai::conversation::Role::Assistant,
+            "Your balance is 10.",
+        ),
+    ] {
+        last = attome_ai::conversation::append(
+            &fx.base.db,
+            attome_ai::conversation::NewMessage {
+                conversation_id: conversation,
+                role,
+                content: content.to_owned(),
+                turn_id,
+                terminal_state: None,
+                model_id: None,
+                prompt_version: None,
+                input_tokens: None,
+                output_tokens: None,
+            },
+        )
+        .await
+        .expect("append a message")
+        .id;
+    }
+    last
 }
 
 /// C4 — a conversation owned by the fixture's admin, on a fresh
@@ -3218,6 +3367,107 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"row_version": row_version})),
             )
         }
+        // ── v2 metadata model (Y1) ──────────────────────────────────────────
+        "POST /api/v1/admin/model/{kind}/{id}/commands" => {
+            let id = Uuid::now_v7();
+            request(
+                "POST",
+                &format!("/api/v1/admin/model/agent/{id}/commands"),
+                t,
+                Some(json!({
+                    "base_hash": "",
+                    "name": format!("emission draft {id}"),
+                    "commands": agent_commands(Uuid::now_v7(), Uuid::now_v7()),
+                })),
+            )
+        }
+        "POST /api/v1/admin/model/{kind}/{id}/publish" => {
+            let id = Uuid::now_v7();
+            call(
+                fx,
+                request(
+                    "POST",
+                    &format!("/api/v1/admin/model/agent/{id}/commands"),
+                    t,
+                    Some(json!({
+                        "base_hash": "",
+                        "name": format!("emission publish {id}"),
+                        "commands": agent_commands(Uuid::now_v7(), Uuid::now_v7()),
+                    })),
+                ),
+            )
+            .await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/model/agent/{id}/publish"),
+                t,
+                None,
+            )
+        }
+        // ── v2 agents (V2-D487, N23, N30, N31) ──────────────────────────────
+        "POST /api/v1/model/agents/{agent}/sessions" => {
+            let agent = agent_object(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/model/agents/{agent}/sessions"),
+                t,
+                Some(json!({"risk_ceiling": "read"})),
+            )
+        }
+        "POST /api/v1/admin/ai/eval-suites/{suite}/runs" => {
+            // The cases run in the background and fail without an inference
+            // endpoint; the run row and its event are written first.
+            let suite = eval_suite(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/ai/eval-suites/{suite}/runs"),
+                t,
+                None,
+            )
+        }
+        "POST /api/v1/admin/ai/eval-suites/{suite}/cases/from-message" => {
+            let suite = eval_suite(fx).await;
+            let message = answered_message(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/ai/eval-suites/{suite}/cases/from-message"),
+                t,
+                Some(json!({"message_id": message, "expect": {"text_matches": "balance"}})),
+            )
+        }
+        "POST /api/v1/admin/ai/write-policies" => request(
+            "POST",
+            "/api/v1/admin/ai/write-policies",
+            t,
+            Some(json!({"action_id": "record.update", "entity": fx.entity, "reason": "emission"})),
+        ),
+        "DELETE /api/v1/admin/ai/write-policies/{id}" => {
+            let created = call(
+                fx,
+                request(
+                    "POST",
+                    "/api/v1/admin/ai/write-policies",
+                    t,
+                    Some(json!({"action_id": "record.update", "entity": fx.entity})),
+                ),
+            )
+            .await;
+            let id = created["id"].as_str().unwrap_or_default().to_owned();
+            request(
+                "DELETE",
+                &format!("/api/v1/admin/ai/write-policies/{id}"),
+                t,
+                None,
+            )
+        }
+        "PUT /api/v1/admin/ai/switches/{kind}/{key}" => request(
+            // A channel no other driver uses, so switching it off changes
+            // nothing for the routes driven after it.
+            "PUT",
+            "/api/v1/admin/ai/switches/channel/emission",
+            t,
+            Some(json!({"enabled": false, "reason": "emission"})),
+        ),
         // ── AI sessions ─────────────────────────────────────────────────────
         "POST /api/v1/agents/{id}/sessions" => {
             let definition = agent_definition(fx).await;

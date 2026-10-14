@@ -27,6 +27,7 @@
 //! and `changeset_recording_order.rs`. No services needed:
 //! `cargo test -p server --test changeset_route_coverage`.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

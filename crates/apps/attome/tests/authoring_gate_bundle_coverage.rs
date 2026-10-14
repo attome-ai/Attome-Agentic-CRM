@@ -7,6 +7,7 @@
 //! metadata by hand. No services needed:
 //! `cargo test -p server --test authoring_gate_bundle_coverage`.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

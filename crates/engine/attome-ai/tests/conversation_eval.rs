@@ -35,6 +35,7 @@
 //! cargo test -p attome-ai --test conversation_eval -- --test-threads=1 --nocapture
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

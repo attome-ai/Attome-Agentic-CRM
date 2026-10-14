@@ -1,5 +1,7 @@
 //! The test app starts and answers as an administrator (roadmap Z15-T3).
 
+#![recursion_limit = "512"]
+
 use attome_testapp::TestApp;
 use axum::http::{Method, StatusCode};
 

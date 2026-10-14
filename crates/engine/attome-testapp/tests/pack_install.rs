@@ -1,6 +1,7 @@
 //! A pack installs through the changeset ledger, and installing it again
 //! changes nothing (the core CRM at first start, `attome init --pack crm`).
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

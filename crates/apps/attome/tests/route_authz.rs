@@ -65,6 +65,7 @@
 //! would skip exactly when someone runs the suite without infrastructure. This
 //! runs anywhere, in milliseconds, with no services.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

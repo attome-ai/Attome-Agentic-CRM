@@ -23,6 +23,7 @@
 //! cargo test -p attome-ai --test confirm -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     unsafe_code,
     reason = "the test sets process environment variables (std::env::set_var) before any thread reads them"

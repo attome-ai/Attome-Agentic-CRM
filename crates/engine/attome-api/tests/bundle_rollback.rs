@@ -29,6 +29,7 @@
 //! cargo test -p attome-api --test bundle_rollback -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

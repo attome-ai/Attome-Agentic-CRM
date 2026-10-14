@@ -35,6 +35,7 @@
 //! cargo test -p server --test admin_routes_forbid_non_admin -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

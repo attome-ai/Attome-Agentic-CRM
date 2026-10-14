@@ -11,6 +11,7 @@
 //! Run with the rest of the approval suites:
 //! `cargo test -p attome-api --test approval_execute_path`
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

@@ -6,6 +6,7 @@
 //! cargo test -p attome-api --test openapi_refs_resolve
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

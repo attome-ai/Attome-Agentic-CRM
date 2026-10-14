@@ -28,6 +28,7 @@
 //! all reused, already-proven platform machinery, not new logic invented for
 //! this file.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

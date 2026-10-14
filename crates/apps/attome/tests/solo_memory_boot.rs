@@ -7,6 +7,7 @@
 //! Needs only PostgreSQL (`DATABASE_URL`, a role with `CREATEDB`); skips
 //! loudly without it, except under `CI`.
 
+#![recursion_limit = "512"]
 #![allow(
     unsafe_code,
     reason = "the test sets process environment variables (std::env::set_var) before any thread reads them"

@@ -26,6 +26,7 @@
 //! cargo test -p attome-api --test subscriber_client_count
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

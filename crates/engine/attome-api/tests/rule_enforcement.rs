@@ -24,6 +24,7 @@
 //! before the create/update/publish HTTP response returns, so a rule is
 //! visible to the very next request with no reload delay to wait out.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

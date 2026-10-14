@@ -75,6 +75,7 @@
 //! (smaller) problem, and `orphan_source_files.rs` already guarantees every
 //! file is at least compiled. Nothing here needs a database.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

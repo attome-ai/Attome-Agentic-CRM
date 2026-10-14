@@ -11,6 +11,7 @@
 //! - Every governance field, and `ai_agent.policy_ref`, is write-restricted
 //!   (D-507) without being made read-sensitive.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

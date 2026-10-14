@@ -33,6 +33,7 @@
 //! first byte; zero failed turns; zero gaps. The report is printed as one JSON
 //! line and recorded in `document/chatbot/07-acceptance-matrix.md`.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

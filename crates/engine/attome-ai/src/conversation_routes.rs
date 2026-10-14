@@ -615,7 +615,13 @@ pub struct RunStarted {
     post,
     path = "/api/v1/ai/conversations/{id}/runs",
     tag = "action",
-    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Ai, attome_audit::AuditOperation::Create)])))),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Delegated,
+        Some("turn::run"),
+        "the run is detached; its first write, the person's message and its mandatory \
+         Ai event, happens in turn::run exactly as for POST .../messages, which the \
+         emission test drives"
+    )))),
     params(("id" = Uuid, Path, description = "The conversation")),
     request_body = StartRunRequest,
     responses(

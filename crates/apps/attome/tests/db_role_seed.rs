@@ -16,6 +16,7 @@
 //! cargo test -p server --test db_role_seed -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

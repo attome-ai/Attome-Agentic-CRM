@@ -39,6 +39,7 @@
 //! `search_path` can redirect, so per-schema isolation cannot contain a
 //! replay. Both guards drop their database `WITH (FORCE)` on scope exit.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

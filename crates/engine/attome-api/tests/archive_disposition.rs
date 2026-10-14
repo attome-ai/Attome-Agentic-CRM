@@ -11,6 +11,7 @@
 //! cargo test -p attome-api --test archive_disposition -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

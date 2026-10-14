@@ -45,6 +45,7 @@
 //! cargo test -p server --test concurrent_boot
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

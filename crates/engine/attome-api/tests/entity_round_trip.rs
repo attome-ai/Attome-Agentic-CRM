@@ -23,6 +23,7 @@
 //! a record through it — exactly this test's shape — races the rebuild and
 //! 404s with the registry on (same gap noted in tests/authz.rs).
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

@@ -23,6 +23,7 @@
 //! cargo test -p server --test changeset_platform_boot -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     unsafe_code,
     reason = "the test sets process environment variables (std::env::set_var) before any thread reads them"

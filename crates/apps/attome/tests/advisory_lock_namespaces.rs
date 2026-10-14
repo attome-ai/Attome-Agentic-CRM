@@ -80,6 +80,7 @@
 //! These are compile-time constants, so this file needs no database and runs
 //! in every `cargo test -p server`.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

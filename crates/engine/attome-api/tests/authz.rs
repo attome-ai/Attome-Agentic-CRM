@@ -27,6 +27,7 @@
 //! fixing it here — either tests should wait for propagation, or a
 //! synchronous test-mode refresh hook is worth adding.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

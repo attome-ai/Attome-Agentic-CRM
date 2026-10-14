@@ -21,6 +21,7 @@
 //! Uses a throwaway JWT secret and a throwaway S2S master key generated per
 //! test run — never a real secret (standing rule, `/testing`).
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

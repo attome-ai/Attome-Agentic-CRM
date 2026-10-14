@@ -11,6 +11,7 @@
 //! cargo test -p attome-api --test my_work -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     unsafe_code,
     reason = "the test sets APP_ENV (std::env::set_var) once, before it builds the system"

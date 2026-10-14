@@ -19,6 +19,7 @@
 //! cargo test -p attome-ai --test a22_consequential_dispatch -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

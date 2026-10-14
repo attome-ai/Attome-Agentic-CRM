@@ -24,6 +24,7 @@
 //! `/release-and-deploy`) rather than faked with test-only hooks that don't
 //! exist on `EngineSystem` today.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

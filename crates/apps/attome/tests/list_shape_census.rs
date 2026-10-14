@@ -22,6 +22,7 @@
 //! without a documented exemption means the count goes up and the test
 //! catches it before review does.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

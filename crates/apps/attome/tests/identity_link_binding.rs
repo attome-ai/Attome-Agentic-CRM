@@ -19,6 +19,7 @@
 //! `oneshot` instead of a socket. Needs `DATABASE_URL` (throwaway — NEVER
 //! `attome_dev`), `APP_ENV=debug`, and `TEST_REDIS_HOST`/`TEST_REDIS_PORT`.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

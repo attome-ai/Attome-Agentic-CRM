@@ -31,6 +31,7 @@
 //! real, per the command above, before relying on it as a passing regression
 //! test.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

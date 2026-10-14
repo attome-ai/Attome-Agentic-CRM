@@ -19,6 +19,7 @@
 //! (or run the built binary from `target/debug/deps` when the shared dev
 //! server holds `target/debug/server.exe`).
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

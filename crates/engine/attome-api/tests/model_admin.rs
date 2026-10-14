@@ -5,6 +5,7 @@
 //! Requires a live Postgres (`DATABASE_URL`) and Redis, same as
 //! `settings_admin.rs`, whose harness this copies.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

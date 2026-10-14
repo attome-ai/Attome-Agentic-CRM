@@ -26,6 +26,7 @@
 //! cargo test -p attome-ai --test mcp_admission -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

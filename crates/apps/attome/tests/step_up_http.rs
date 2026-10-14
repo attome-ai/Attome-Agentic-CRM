@@ -16,6 +16,7 @@
 //! cargo test -p server --test step_up_http -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

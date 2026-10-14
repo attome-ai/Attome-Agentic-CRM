@@ -28,6 +28,7 @@
 //! `gate.rs` rather than here — which is the correct place for it, because it
 //! does not depend on the model behaving.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

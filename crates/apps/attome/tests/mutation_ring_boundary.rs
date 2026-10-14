@@ -45,6 +45,7 @@
 //! `AuditService::new(` construction is gone from the file — it does not
 //! require every audit write in the file to go through `MutationRing`.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

@@ -69,6 +69,7 @@
 //! The `DATABASE_URL` role needs `CREATEDB` (the `postgres` superuser both
 //! `docker-compose.yml`'s test profile runs as already has it). This test never writes to the database that URL names.
 
+#![recursion_limit = "512"]
 #![allow(
     unsafe_code,
     reason = "the test sets process environment variables (std::env::set_var) before any thread reads them"

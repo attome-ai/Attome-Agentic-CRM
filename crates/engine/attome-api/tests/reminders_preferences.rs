@@ -16,6 +16,7 @@
 //! cargo test -p attome-api --test reminders_preferences -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

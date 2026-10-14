@@ -23,6 +23,7 @@
 //! - SQL: sqlx's own `sqlx::query` event (one per statement), captured
 //!   in-process only while a counting window is open.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

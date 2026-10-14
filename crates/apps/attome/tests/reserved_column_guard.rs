@@ -63,6 +63,7 @@
 //! infrastructure is missing is a guard that skips in exactly the environment
 //! where nobody notices.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

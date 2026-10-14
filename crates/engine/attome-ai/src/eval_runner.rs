@@ -17,6 +17,7 @@
 //! a case.
 
 use attome_audit::AuditOperation;
+use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_core::EngineState;
 use attome_server::authz::{Admin, Authorized};
 use attome_server::security::SecurityContext;
@@ -224,6 +225,7 @@ async fn start_run(
         return Err(AppError::NotFound);
     }
     let (agent, cases) = suite_plan(&version.doc)?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let run_id: Uuid = sqlx::query_scalar(
         "INSERT INTO ai_eval_run (suite_ref, suite_hash, agent_ref, status, started_by) \
          VALUES ($1, $2, $3, 'running', $4) RETURNING id",
@@ -232,9 +234,27 @@ async fn start_run(
     .bind(&version.content_hash)
     .bind(agent)
     .bind(ctx.user_id)
-    .fetch_one(&state.base.db)
+    .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+    write_security_event(
+        &mut tx,
+        &attome_audit::audit_service(&state),
+        SecurityEvent::new(
+            MandatoryCategory::Ai,
+            AuditOperation::Create,
+            ctx.user_id,
+            "ai_eval_run",
+            Some(run_id),
+        )
+        .named("ai.eval_run.start")
+        .comment(format!(
+            "eval suite {suite} against agent {agent}: {} case(s)",
+            cases.len()
+        )),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
     let count = cases.len();
     let security = ctx.into_inner();
     // Not awaited: an administrator follows the run with GET. A process that
