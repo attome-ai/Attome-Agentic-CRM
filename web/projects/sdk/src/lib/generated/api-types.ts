@@ -5914,7 +5914,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** B13-T4: one theme version. */
+        get: operations["get_theme"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10578,6 +10579,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/tags/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B4-T4: adds a tag to, or takes one off, up to 500 selected records. Each
+         *     record is checked as a single change would be; the ones that could not
+         *     change are listed with a reason.
+         */
+        post: operations["bulk_tag_records"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/upsert": {
         parameters: {
             query?: never;
@@ -13225,6 +13247,32 @@ export interface components {
             operation: string;
             records: components["schemas"]["BulkRecordEnvelope"][];
             strict?: boolean | null;
+        };
+        /** @description One record a bulk tag request could not change. */
+        BulkTagFailure: {
+            /** @description `not_found`, `forbidden`, `invalid` or `failed`. */
+            code: string;
+            /** Format: uuid */
+            id: string;
+        };
+        /**
+         * @description `POST /api/v1/{entity}/tags/bulk`: add one tag to, or take one tag off,
+         *     the selected records.
+         */
+        BulkTagRequest: {
+            add?: null | components["schemas"]["AddTag"];
+            /** @description The selected records, at most 500. */
+            ids: string[];
+            /**
+             * Format: uuid
+             * @description The tag to take off.
+             */
+            remove_tag_id?: string | null;
+        };
+        /** @description What a bulk tag request did. */
+        BulkTagResult: {
+            changed: number;
+            failed: components["schemas"]["BulkTagFailure"][];
         };
         BulkTransformEnqueueResponse: {
             /** Format: uuid */
@@ -48262,6 +48310,55 @@ export interface operations {
             };
         };
     };
+    get_theme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThemeRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such theme */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     update_theme: {
         parameters: {
             query?: never;
@@ -62772,6 +62869,59 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    bulk_tag_records: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkTagRequest"];
+            };
+        };
+        responses: {
+            /** @description How many records changed, and which could not */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkTagResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No read access to the entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No records, too many, or not exactly one of add and remove */
             422: {
                 headers: {
                     [name: string]: unknown;

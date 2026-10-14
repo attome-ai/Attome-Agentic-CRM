@@ -32600,6 +32600,74 @@
       }
     },
     "/api/v1/admin/themes/{id}": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T4: one theme version.",
+        "operationId": "get_theme",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThemeRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such theme",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      },
       "patch": {
         "tags": [
           "settings"
@@ -54782,6 +54850,94 @@
         }
       }
     },
+    "/api/v1/{entity}/tags/bulk": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B4-T4: adds a tag to, or takes one off, up to 500 selected records. Each\nrecord is checked as a single change would be; the ones that could not\nchange are listed with a reason.",
+        "operationId": "bulk_tag_records",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkTagRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "How many records changed, and which could not",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkTagResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No read access to the entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No records, too many, or not exactly one of add and remove",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/{entity}/upsert": {
       "post": {
         "tags": [
@@ -64421,6 +64577,80 @@
               "boolean",
               "null"
             ]
+          }
+        }
+      },
+      "BulkTagFailure": {
+        "type": "object",
+        "description": "One record a bulk tag request could not change.",
+        "required": [
+          "id",
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "`not_found`, `forbidden`, `invalid` or `failed`."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "BulkTagRequest": {
+        "type": "object",
+        "description": "`POST /api/v1/{entity}/tags/bulk`: add one tag to, or take one tag off,\nthe selected records.",
+        "required": [
+          "ids"
+        ],
+        "properties": {
+          "add": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AddTag",
+                "description": "The tag to add (an existing one, or a name to find or create)."
+              }
+            ]
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The selected records, at most 500."
+          },
+          "remove_tag_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The tag to take off."
+          }
+        }
+      },
+      "BulkTagResult": {
+        "type": "object",
+        "description": "What a bulk tag request did.",
+        "required": [
+          "changed",
+          "failed"
+        ],
+        "properties": {
+          "changed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkTagFailure"
+            }
           }
         }
       },
