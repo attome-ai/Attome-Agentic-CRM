@@ -1,0 +1,61 @@
+name: api-contract
+
+# Regenerates the API contract from the Rust handlers' `#[utoipa::path]`
+# annotations (`npm run generate:api`: `attome serve --print-openapi`, then
+# openapi-typescript) and commits `openapi.json` and both `api-types.ts` back
+# to main when they changed, so the committed contract never lags the code.
+# A push made with GITHUB_TOKEN starts no other workflow, so this cannot loop;
+# the next ordinary push runs the gate over the regenerated files.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/**"
+      - "web/scripts/generate-api-types.mjs"
+      - ".github/workflows/api-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: api-contract
+  cancel-in-progress: true
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: install web dependencies
+        working-directory: web
+        run: npm ci
+      - name: generate
+        working-directory: web
+        run: npm run generate:api
+      - name: commit when changed
+        run: |
+          if git diff --quiet -- openapi.json web/projects/base/src/lib/generated web/projects/sdk/src/lib/generated; then
+            echo "the API contract is current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add openapi.json web/projects/base/src/lib/generated web/projects/sdk/src/lib/generated
+          git commit -m "chore(api): regenerate openapi.json and api-types"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep 10
+          done
+          exit 1
