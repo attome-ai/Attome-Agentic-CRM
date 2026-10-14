@@ -32511,6 +32511,94 @@
         }
       }
     },
+    "/api/v1/admin/themes/rollback": {
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T3: publishes an earlier version of a scope's theme again.",
+        "operationId": "rollback_theme",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThemeRollbackBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The version now published",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThemeRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid scope, or colours that fail the contrast check",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
     "/api/v1/admin/themes/{id}": {
       "patch": {
         "tags": [
@@ -32618,6 +32706,79 @@
           ],
           "policy": "mandatory"
         }
+      }
+    },
+    "/api/v1/admin/themes/{id}/diff": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T3: what a version changes against its scope's published one.",
+        "operationId": "diff_theme",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Each changed token, before and after",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TokenChange"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such theme",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/api/v1/admin/themes/{id}/publish": {
@@ -96071,6 +96232,27 @@
           }
         }
       },
+      "ThemeRollbackBody": {
+        "type": "object",
+        "description": "`POST /api/v1/admin/themes/rollback`.",
+        "required": [
+          "scope_kind",
+          "version"
+        ],
+        "properties": {
+          "scope_kind": {
+            "type": "string"
+          },
+          "scope_ref": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The version to publish again."
+          }
+        }
+      },
       "ThemeRow": {
         "type": "object",
         "description": "One version of a scope's theme.",
@@ -96371,6 +96553,20 @@
           "user",
           "utc"
         ]
+      },
+      "TokenChange": {
+        "type": "object",
+        "description": "One token that differs between a version and its scope's published one.",
+        "required": [
+          "field"
+        ],
+        "properties": {
+          "after": {},
+          "before": {},
+          "field": {
+            "type": "string"
+          }
+        }
       },
       "TokenPasswordBody": {
         "type": "object",

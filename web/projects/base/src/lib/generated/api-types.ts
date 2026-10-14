@@ -5890,6 +5890,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/themes/rollback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** B13-T3: publishes an earlier version of a scope's theme again. */
+        post: operations["rollback_theme"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/themes/{id}": {
         parameters: {
             query?: never;
@@ -5905,6 +5922,23 @@ export interface paths {
         head?: never;
         /** B13-T4: replaces a draft's tokens. `If-Match: "<row_version>"` is required. */
         patch: operations["update_theme"];
+        trace?: never;
+    };
+    "/api/v1/admin/themes/{id}/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** B13-T3: what a version changes against its scope's published one. */
+        get: operations["diff_theme"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/admin/themes/{id}/publish": {
@@ -25548,6 +25582,16 @@ export interface components {
             scope_ref?: string;
             tokens: components["schemas"]["ThemeTokens"];
         };
+        /** @description `POST /api/v1/admin/themes/rollback`. */
+        ThemeRollbackBody: {
+            scope_kind: string;
+            scope_ref?: string;
+            /**
+             * Format: int32
+             * @description The version to publish again.
+             */
+            version: number;
+        };
         /** @description One version of a scope's theme. */
         ThemeRow: {
             /** Format: date-time */
@@ -25634,6 +25678,12 @@ export interface components {
         };
         /** @enum {string} */
         TimezoneSource: "page" | "user" | "utc";
+        /** @description One token that differs between a version and its scope's published one. */
+        TokenChange: {
+            after?: unknown;
+            before?: unknown;
+            field: string;
+        };
         TokenPasswordBody: {
             password: string;
             token: string;
@@ -48037,6 +48087,66 @@ export interface operations {
             };
         };
     };
+    rollback_theme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ThemeRollbackBody"];
+            };
+        };
+        responses: {
+            /** @description The version now published */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThemeRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such version */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid scope, or colours that fail the contrast check */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     update_theme: {
         parameters: {
             query?: never;
@@ -48099,6 +48209,55 @@ export interface operations {
             };
             /** @description Missing If-Match, an invalid token, or not a draft */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    diff_theme: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each changed token, before and after */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenChange"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such theme */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
