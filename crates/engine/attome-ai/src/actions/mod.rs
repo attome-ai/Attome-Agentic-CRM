@@ -63,6 +63,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(translate::descriptor());
     all.push(sentiment::descriptor());
     all.push(ai_field::descriptor());
+    all.extend(crate::mcp_client::descriptors());
     all.push(search_records::descriptor());
     all.push(nl_query::descriptor());
     all.extend(workflow::descriptors());
@@ -101,6 +102,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(translate::TextTranslate));
     all.push(Box::new(sentiment::TextSentiment));
     all.push(Box::new(ai_field::RecordAiField));
+    all.extend(crate::mcp_client::executors());
     all.push(Box::new(search_records::SearchRecords));
     all.push(Box::new(nl_query::QueryPlan));
     all.extend(workflow::executors());

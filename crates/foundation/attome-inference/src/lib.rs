@@ -113,6 +113,82 @@ impl DialClient {
     }
 }
 
+/// What [`DialClient::post_json`] received.
+#[derive(Debug)]
+pub struct DialResponse {
+    pub status: u16,
+    pub headers: reqwest::header::HeaderMap,
+    /// At most [`MAX_BODY_BYTES`].
+    pub body: Vec<u8>,
+}
+
+impl DialClient {
+    /// One JSON `POST` through the dial guard, for an outbound call that is
+    /// not a model call (roadmap N13-T1: an outside MCP server): the same
+    /// destination check and the same body cap. Errors name a fixed category,
+    /// never the remote body.
+    pub async fn post_json(
+        &self,
+        url: &str,
+        headers: &[(&str, String)],
+        body: &serde_json::Value,
+    ) -> Result<DialResponse, InferenceError> {
+        const LABEL: &str = "outbound";
+        let parsed = reqwest::Url::parse(url).map_err(|_| InferenceError::Transport {
+            endpoint: LABEL,
+            kind: "invalid URL",
+        })?;
+        let http = self.admit(&parsed, LABEL)?;
+        let mut request = http.post(parsed).json(body);
+        for (name, value) in headers {
+            request = request.header(*name, value);
+        }
+        let mut response = request.send().await.map_err(|e| {
+            if e.is_timeout() {
+                InferenceError::Timeout(LABEL)
+            } else {
+                InferenceError::Transport {
+                    endpoint: LABEL,
+                    kind: "request failed",
+                }
+            }
+        })?;
+        if response
+            .content_length()
+            .is_some_and(|n| n > MAX_BODY_BYTES as u64)
+        {
+            return Err(InferenceError::Transport {
+                endpoint: LABEL,
+                kind: "response too large",
+            });
+        }
+        let status = response.status().as_u16();
+        let headers = response.headers().clone();
+        let mut out = Vec::new();
+        while let Some(chunk) = response
+            .chunk()
+            .await
+            .map_err(|_| InferenceError::Transport {
+                endpoint: LABEL,
+                kind: "response interrupted",
+            })?
+        {
+            if out.len() + chunk.len() > MAX_BODY_BYTES {
+                return Err(InferenceError::Transport {
+                    endpoint: LABEL,
+                    kind: "response too large",
+                });
+            }
+            out.extend_from_slice(&chunk);
+        }
+        Ok(DialResponse {
+            status,
+            headers,
+            body: out,
+        })
+    }
+}
+
 /// The largest response body this crate will buffer (BIN-C2, `S1`).
 ///
 /// A model server is not trusted to bound its own answer, and `response.json()`

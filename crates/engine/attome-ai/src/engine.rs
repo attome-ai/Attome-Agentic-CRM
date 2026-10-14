@@ -123,6 +123,8 @@ impl EngineModel for ActionModel {
             .merge(crate::write_policy::routes())
             // N29-T2 — AI evidence export, admin-only.
             .merge(crate::evidence::routes())
+            // N13-T1 — outside MCP servers, admin-only.
+            .merge(crate::mcp_client::routes())
     }
 
     // D-435, simplified by D-491 — `ai_model` (the AI Model catalog,

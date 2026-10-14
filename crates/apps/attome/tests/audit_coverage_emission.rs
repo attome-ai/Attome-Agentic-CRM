@@ -66,6 +66,13 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/admin/mcp-servers/{id}/import",
+        "calls the registered MCP server's tools/list, and this harness runs no MCP \
+         server; the import's own event is written in the same transaction as the tool \
+         rows, after the call, through the same audit_event helper the create and \
+         set-tool drivers below audit",
+    ),
+    (
         "POST /api/v1/admin/model/import",
         "imports a set of model files as drafts; attome-api's model_admin.rs \
          export_then_import_keeps_content_hashes drives it end to end, and each draft \
@@ -3402,6 +3409,41 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 &format!("/api/v1/admin/model/agent/{id}/publish"),
                 t,
                 None,
+            )
+        }
+        // ── outside MCP servers (N13-T1) ────────────────────────────────────
+        "POST /api/v1/admin/mcp-servers" => request(
+            "POST",
+            "/api/v1/admin/mcp-servers",
+            t,
+            Some(
+                json!({"name": format!("emission {}", Uuid::now_v7()), "url": "http://127.0.0.1:9/mcp"}),
+            ),
+        ),
+        "PUT /api/v1/admin/mcp-servers/{id}/tools/{tool}" => {
+            let created = call(
+                fx,
+                request(
+                    "POST",
+                    "/api/v1/admin/mcp-servers",
+                    t,
+                    Some(json!({"name": format!("emission tools {}", Uuid::now_v7()), "url": "http://127.0.0.1:9/mcp"})),
+                ),
+            )
+            .await;
+            let id = created["id"].as_str().unwrap_or_default().to_owned();
+            sqlx::query(
+                "INSERT INTO mcp_server_tool (server_ref, name) VALUES ($1::uuid, 'lookup')",
+            )
+            .bind(&id)
+            .execute(&fx.base.db)
+            .await
+            .expect("insert an MCP tool");
+            request(
+                "PUT",
+                &format!("/api/v1/admin/mcp-servers/{id}/tools/lookup"),
+                t,
+                Some(json!({"risk": "read", "enabled": true})),
             )
         }
         // ── v2 agents (V2-D487, N23, N30, N31) ──────────────────────────────

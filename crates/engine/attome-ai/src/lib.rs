@@ -102,6 +102,7 @@ pub mod injection;
 /// registry. A transport adapter: `tools/list` is `visible_to`, `tools/call`
 /// is `dispatch`, and nothing is added to the closed catalogue (I-5).
 pub mod mcp;
+pub mod mcp_client;
 pub mod model_registry;
 pub mod orchestrate;
 pub mod outcome;
@@ -200,6 +201,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(a2a::openapi_fragment());
     doc.merge(write_policy::openapi_fragment());
     doc.merge(evidence::openapi_fragment());
+    doc.merge(mcp_client::openapi_fragment());
     doc
 }
 

@@ -8,6 +8,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Outside MCP servers for agents (`/api/v1/admin/mcp-servers`, migration 0019): imported tools arrive
+  disabled; an administrator sets each tier; agents list them with `mcp.tools` and call them with
+  `mcp.call.read|reversible|consequential` through the dial guard.
 - Per-task model routing: `inference.task_models` sends an action (or `agent.turn`) to an approved
   catalogue model through its provider; unlisted tasks keep `inference.generation`.
 - Optional local model servers: `deploy/model-servers/docker-compose.yml` (TEI embeddings, llama.cpp
