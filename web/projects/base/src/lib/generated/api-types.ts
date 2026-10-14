@@ -983,6 +983,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/bin-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A18-T7: every entity that has its own bin rules. */
+        get: operations["list_bin_settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bin-settings/{entity}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** A18-T7: sets an entity's bin rules. */
+        put: operations["put_bin_setting"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/business-rules": {
         parameters: {
             query?: never;
@@ -10528,6 +10562,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/delete-impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A18-T4: what deleting these records would cascade to, be blocked by or
+         *     leave pointing at them, and whether a reason is required; nothing is
+         *     changed.
+         */
+        post: operations["preview_delete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/deleted": {
         parameters: {
             query?: never;
@@ -13140,6 +13195,47 @@ export interface components {
             restored: number;
         };
         /**
+         * @description One entity's recycle-bin rules (`bin_setting`); an entity with no row
+         *     has the defaults.
+         */
+        BinSetting: {
+            /**
+             * Format: int32
+             * @description Deletions by one person within ten minutes that raise an alert.
+             */
+            alert_threshold: number;
+            entity: string;
+            /** @description A permanent delete waits for a second person's approval. */
+            hard_delete_needs_approval: boolean;
+            /** @description A person must give a reason to delete. */
+            require_reason: boolean;
+            /**
+             * Format: int32
+             * @description Days a deleted record stays in the bin before it is purged; `null`
+             *     follows the deployment's `retention.entity_purge_grace_days`.
+             */
+            retention_days?: number | null;
+            /** Format: int64 */
+            row_version: number;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description `PUT /api/v1/admin/bin-settings/{entity}`. */
+        BinSettingBody: {
+            /**
+             * Format: int32
+             * @description 1 to 100,000; default 100.
+             */
+            alert_threshold?: number | null;
+            hard_delete_needs_approval?: boolean;
+            require_reason?: boolean;
+            /**
+             * Format: int32
+             * @description 1 to 3,650, or `null`.
+             */
+            retention_days?: number | null;
+        };
+        /**
          * @description One block on the canvas. `props` is validated against `kind`'s shape by
          *     `blocks::validate_blocks` before a draft save or publish is accepted —
          *     never stored as trusted-opaque JSON (coding-guidelines §8).
@@ -15729,6 +15825,30 @@ export interface components {
             /** Format: uuid */
             delegation_id: string;
         };
+        /**
+         * @description What deleting the records would do (A18-T4), counted without changing
+         *     anything.
+         */
+        DeleteImpact: {
+            /** @description Records that stop the delete while they point here. */
+            blocked_by: components["schemas"]["DependentCount"][];
+            /** @description Removed with them (and restored with them). */
+            cascades: components["schemas"]["DependentCount"][];
+            /**
+             * @description Dependents in entities the caller cannot read exist; they are not
+             *     counted here.
+             */
+            hidden_dependents: boolean;
+            /** @description Left pointing at a deleted record. */
+            orphaned: components["schemas"]["DependentCount"][];
+            /** @description The entity's bin setting asks for a reason. */
+            reason_required: boolean;
+        };
+        /** @description `POST /api/v1/{entity}/delete-impact`. */
+        DeleteImpactRequest: {
+            /** @description The records about to be deleted, at most 500. */
+            ids: string[];
+        };
         /** @description One deleted record. */
         DeletedRecord: {
             /**
@@ -15797,6 +15917,16 @@ export interface components {
          * @enum {string}
          */
         Density: "comfortable" | "compact";
+        /**
+         * @description Live records of one entity that point at the records being deleted
+         *     through one lookup field.
+         */
+        DependentCount: {
+            /** Format: int64 */
+            count: number;
+            entity: string;
+            field: string;
+        };
         DescribeQueryBody: {
             sql_query: string;
         };
@@ -19311,6 +19441,37 @@ export interface components {
                 display_order: number;
                 name: string;
                 to_state: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_BinSetting: {
+            items: {
+                /**
+                 * Format: int32
+                 * @description Deletions by one person within ten minutes that raise an alert.
+                 */
+                alert_threshold: number;
+                entity: string;
+                /** @description A permanent delete waits for a second person's approval. */
+                hard_delete_needs_approval: boolean;
+                /** @description A person must give a reason to delete. */
+                require_reason: boolean;
+                /**
+                 * Format: int32
+                 * @description Days a deleted record stays in the bin before it is purged; `null`
+                 *     follows the deployment's `retention.entity_purge_grace_days`.
+                 */
+                retention_days?: number | null;
+                /** Format: int64 */
+                row_version: number;
+                /** Format: date-time */
+                updated_at: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -30155,6 +30316,106 @@ export interface operations {
             };
             /** @description Caller is not an administrator */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_bin_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Entities with their own bin rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_BinSetting"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_bin_setting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BinSettingBody"];
+            };
+        };
+        responses: {
+            /** @description The entity's bin rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BinSetting"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A value out of range */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -62837,6 +63098,59 @@ export interface operations {
             };
         };
     };
+    preview_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeleteImpactRequest"];
+            };
+        };
+        responses: {
+            /** @description What the delete would touch */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeleteImpact"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not delete this entity's records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No ids, or more than 500 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_deleted: {
         parameters: {
             query?: {
@@ -64204,7 +64518,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Caller lacks the required privilege */
+            /** @description Caller lacks the entity's hard_delete privilege */
             403: {
                 headers: {
                     [name: string]: unknown;

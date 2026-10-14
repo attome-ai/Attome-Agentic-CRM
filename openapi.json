@@ -4555,6 +4555,153 @@
         ]
       }
     },
+    "/api/v1/admin/bin-settings": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A18-T7: every entity that has its own bin rules.",
+        "operationId": "list_bin_settings",
+        "responses": {
+          "200": {
+            "description": "Entities with their own bin rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_BinSetting"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/bin-settings/{entity}": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A18-T7: sets an entity's bin rules.",
+        "operationId": "put_bin_setting",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BinSettingBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The entity's bin rules",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BinSetting"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A value out of range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
     "/api/v1/admin/business-rules": {
       "get": {
         "tags": [
@@ -54543,6 +54690,90 @@
         ]
       }
     },
+    "/api/v1/{entity}/delete-impact": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "A18-T4: what deleting these records would cascade to, be blocked by or\nleave pointing at them, and whether a reason is required; nothing is\nchanged.",
+        "operationId": "preview_delete",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteImpactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What the delete would touch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteImpact"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not delete this entity's records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No ids, or more than 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "counts dependent records and writes nothing",
+          "reason": "dry_run",
+          "via": null
+        }
+      }
+    },
     "/api/v1/{entity}/deleted": {
       "get": {
         "tags": [
@@ -56818,7 +57049,7 @@
             }
           },
           "403": {
-            "description": "Caller lacks the required privilege",
+            "description": "Caller lacks the entity's hard_delete privilege",
             "content": {
               "application/json": {
                 "schema": {
@@ -64304,6 +64535,80 @@
           }
         }
       },
+      "BinSetting": {
+        "type": "object",
+        "description": "One entity's recycle-bin rules (`bin_setting`); an entity with no row\nhas the defaults.",
+        "required": [
+          "entity",
+          "require_reason",
+          "alert_threshold",
+          "hard_delete_needs_approval",
+          "updated_at",
+          "row_version"
+        ],
+        "properties": {
+          "alert_threshold": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Deletions by one person within ten minutes that raise an alert."
+          },
+          "entity": {
+            "type": "string"
+          },
+          "hard_delete_needs_approval": {
+            "type": "boolean",
+            "description": "A permanent delete waits for a second person's approval."
+          },
+          "require_reason": {
+            "type": "boolean",
+            "description": "A person must give a reason to delete."
+          },
+          "retention_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Days a deleted record stays in the bin before it is purged; `null`\nfollows the deployment's `retention.entity_purge_grace_days`."
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "BinSettingBody": {
+        "type": "object",
+        "description": "`PUT /api/v1/admin/bin-settings/{entity}`.",
+        "properties": {
+          "alert_threshold": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "1 to 100,000; default 100."
+          },
+          "hard_delete_needs_approval": {
+            "type": "boolean"
+          },
+          "require_reason": {
+            "type": "boolean"
+          },
+          "retention_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "1 to 3,650, or `null`."
+          }
+        }
+      },
       "Block": {
         "type": "object",
         "description": "One block on the canvas. `props` is validated against `kind`'s shape by\n`blocks::validate_blocks` before a draft save or publish is accepted —\nnever stored as trusted-opaque JSON (coding-guidelines §8).",
@@ -70876,6 +71181,65 @@
           }
         }
       },
+      "DeleteImpact": {
+        "type": "object",
+        "description": "What deleting the records would do (A18-T4), counted without changing\nanything.",
+        "required": [
+          "cascades",
+          "blocked_by",
+          "orphaned",
+          "hidden_dependents",
+          "reason_required"
+        ],
+        "properties": {
+          "blocked_by": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DependentCount"
+            },
+            "description": "Records that stop the delete while they point here."
+          },
+          "cascades": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DependentCount"
+            },
+            "description": "Removed with them (and restored with them)."
+          },
+          "hidden_dependents": {
+            "type": "boolean",
+            "description": "Dependents in entities the caller cannot read exist; they are not\ncounted here."
+          },
+          "orphaned": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DependentCount"
+            },
+            "description": "Left pointing at a deleted record."
+          },
+          "reason_required": {
+            "type": "boolean",
+            "description": "The entity's bin setting asks for a reason."
+          }
+        }
+      },
+      "DeleteImpactRequest": {
+        "type": "object",
+        "description": "`POST /api/v1/{entity}/delete-impact`.",
+        "required": [
+          "ids"
+        ],
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The records about to be deleted, at most 500."
+          }
+        }
+      },
       "DeletedRecord": {
         "type": "object",
         "description": "One deleted record.",
@@ -71061,6 +71425,27 @@
           "comfortable",
           "compact"
         ]
+      },
+      "DependentCount": {
+        "type": "object",
+        "description": "Live records of one entity that point at the records being deleted\nthrough one lookup field.",
+        "required": [
+          "entity",
+          "field",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          }
+        }
       },
       "DescribeQueryBody": {
         "type": "object",
@@ -80036,6 +80421,79 @@
                 },
                 "to_state": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_BinSetting": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One entity's recycle-bin rules (`bin_setting`); an entity with no row\nhas the defaults.",
+              "required": [
+                "entity",
+                "require_reason",
+                "alert_threshold",
+                "hard_delete_needs_approval",
+                "updated_at",
+                "row_version"
+              ],
+              "properties": {
+                "alert_threshold": {
+                  "type": "integer",
+                  "format": "int32",
+                  "description": "Deletions by one person within ten minutes that raise an alert."
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "hard_delete_needs_approval": {
+                  "type": "boolean",
+                  "description": "A permanent delete waits for a second person's approval."
+                },
+                "require_reason": {
+                  "type": "boolean",
+                  "description": "A person must give a reason to delete."
+                },
+                "retention_days": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "description": "Days a deleted record stays in the bin before it is purged; `null`\nfollows the deployment's `retention.entity_purge_grace_days`."
+                },
+                "row_version": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
                 }
               }
             }
