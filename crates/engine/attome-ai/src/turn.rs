@@ -872,7 +872,14 @@ pub async fn run(
         grant.settle(state, &result.usage).await;
 
         match classify(&result) {
-            ModelStep::Answer => finish!(TerminalState::Completed, result.text),
+            // N27-T3: no answer carries record data to another host.
+            ModelStep::Answer => finish!(
+                TerminalState::Completed,
+                crate::output_filter::strip_exfiltration(
+                    &result.text,
+                    &crate::output_filter::own_hosts(&state.base.config)
+                )
+            ),
             ModelStep::Truncated => {
                 tracing::warn!(
                     turn_id = %turn_id,

@@ -95,6 +95,9 @@ pub mod inference_client;
 pub mod mcp;
 pub mod model_registry;
 pub mod outcome;
+/// C11 B5 (P-5) — the runtime AI switch's audited admin routes. The read side
+/// is `attome_core::ai_runtime_switch`.
+pub mod output_filter;
 pub mod prompt;
 pub mod prompt_registry;
 /// The `ai_provider` record as this crate reads it, plus the API protocol
@@ -112,8 +115,6 @@ pub mod provider_credential;
 pub mod provider_models;
 pub mod quality_monitor;
 pub mod registry;
-/// C11 B5 (P-5) — the runtime AI switch's audited admin routes. The read side
-/// is `attome_core::ai_runtime_switch`.
 pub mod runtime_switch;
 pub mod sanitize_input;
 pub mod session;
