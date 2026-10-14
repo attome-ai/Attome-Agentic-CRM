@@ -13,6 +13,9 @@ attome: the Attome command-line tool
 
 Usage:
   attome init                   Install Solo: write a config, apply the schema
+  attome sovereignty report [--json]
+                                Where copies of data live and where data is
+                                sent, each marked inside or outside
   attome service install|uninstall [--dir <dir>] [--dry-run]
                                 Run attome serve as a Windows service or a
                                 systemd unit, from the directory with config.json
@@ -77,6 +80,10 @@ fn main() -> ExitCode {
         ["service", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::service::run(&rest).map_err(Into::into))
+        }
+        ["sovereignty", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::sovereignty::run(&rest).map_err(Into::into))
         }
         ["service-run", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();

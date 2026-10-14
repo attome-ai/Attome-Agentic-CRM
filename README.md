@@ -65,6 +65,10 @@ attome service install --dir /var/lib/attome     # a Windows service, or a syste
 attome service install --dry-run                  # print the steps only
 ```
 
+`attome sovereignty report` lists where copies of the data live and every outside destination the
+configuration names; `deployment.sovereign = true` in `config.json` refuses any outside destination
+at boot.
+
 `attome help` lists the other commands (`worker`, `migrate`, `preflight`, `healthcheck`, and the
 audit tools).
 

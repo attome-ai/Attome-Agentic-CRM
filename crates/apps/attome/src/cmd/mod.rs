@@ -8,5 +8,6 @@ pub mod migrate;
 pub mod preflight;
 pub mod service;
 pub mod sizing;
+pub mod sovereignty;
 pub mod verify_audit_chain;
 pub mod worker;
