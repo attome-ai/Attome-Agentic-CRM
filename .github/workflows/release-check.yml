@@ -73,7 +73,7 @@ jobs:
       # rustfmt), caches the cargo registry and target directory, and turns
       # compiler and clippy messages into annotations on the run.
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-      # The object-store tests expect the `attomebase` bucket to exist.
+      # The object-store tests expect the `attomebase` and `attome-test` buckets.
       - name: create the object-store test bucket
         shell: bash
         env:
@@ -82,7 +82,8 @@ jobs:
           AWS_DEFAULT_REGION: us-east-1
         run: |
           for i in $(seq 1 30); do
-            aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attomebase && break
+            aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attomebase && \
+              aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attome-test && break
             sleep 2
           done
       - name: install promtool

@@ -827,11 +827,16 @@ async fn scan_job_rejects_a_checksum_mismatch_without_promoting() {
 /// $env:TEST_CLAMD_ADDRESS = "localhost:3310"  # docker compose --profile clamav up -d clamav
 /// cargo test -p attome-api --test file_upload_pipeline -- --test-threads=1 scan_job_promotes_a_clean_file
 /// ```
-fn test_config_with_clamd() -> AppConfig {
+/// `None` (after a SKIP line) when `TEST_CLAMD_ADDRESS` is not set: CI runs
+/// no ClamAV sidecar, so these tests run only where one is started on purpose.
+fn test_config_with_clamd() -> Option<AppConfig> {
+    let Ok(address) = std::env::var("TEST_CLAMD_ADDRESS") else {
+        eprintln!("SKIP: set TEST_CLAMD_ADDRESS to a running clamd to run this test");
+        return None;
+    };
     let mut config = test_config();
-    config.storage.clamd_address =
-        std::env::var("TEST_CLAMD_ADDRESS").unwrap_or_else(|_| "localhost:3310".into());
-    config
+    config.storage.clamd_address = address;
+    Some(config)
 }
 
 /// `test_config()` pointed at an explicit clamd address — for the tests below
@@ -904,7 +909,10 @@ where
 /// compiles.
 #[tokio::test]
 async fn scan_job_promotes_a_clean_file_after_a_real_clamd_scan() {
-    let system = skip_if_no_db!(test_system_with_config(test_config_with_clamd()).await);
+    let Some(config) = test_config_with_clamd() else {
+        return;
+    };
+    let system = skip_if_no_db!(test_system_with_config(config).await);
     let (_admin_id, admin_cookie) = seed_admin(&system).await;
     let attome_state = system.state().clone();
     let db = system.state().base.db.clone();
@@ -1000,7 +1008,10 @@ async fn scan_job_rejects_the_eicar_test_string_as_malware_after_a_real_clamd_sc
         "EICAR test string must be exactly 68 bytes"
     );
 
-    let system = skip_if_no_db!(test_system_with_config(test_config_with_clamd()).await);
+    let Some(config) = test_config_with_clamd() else {
+        return;
+    };
+    let system = skip_if_no_db!(test_system_with_config(config).await);
     let (_admin_id, admin_cookie) = seed_admin(&system).await;
     let attome_state = system.state().clone();
     let db = system.state().base.db.clone();
@@ -1684,7 +1695,10 @@ async fn upload_and_scan_clean_file(
 /// feature.
 #[tokio::test]
 async fn version_restore_is_audited() {
-    let system = skip_if_no_db!(test_system_with_config(test_config_with_clamd()).await);
+    let Some(config) = test_config_with_clamd() else {
+        return;
+    };
+    let system = skip_if_no_db!(test_system_with_config(config).await);
     let (_admin_id, admin_cookie) = seed_admin(&system).await;
     let attome_state = system.state().clone();
     let db = system.state().base.db.clone();

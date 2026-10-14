@@ -663,7 +663,7 @@ async fn a_reminder_is_delivered_exactly_once_across_two_concurrent_sweeps() {
     .expect("one in-app row");
     assert_eq!(
         route.as_deref(),
-        Some(format!("/{}/form?id={record}", entity.replace('_', "/")).as_str())
+        Some(format!("/xrm/entity/{entity}/form?id={record}").as_str())
     );
     assert_eq!(title.as_deref(), Some("Reminder"));
 }
