@@ -122,6 +122,131 @@ pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/health/dependencies", get(dependencies))
         .route("/api/v1/admin/latency", get(latency))
+        .route("/api/v1/admin/ops/metrics/names", get(metric_names))
+        .route("/api/v1/admin/ops/metrics/query", get(metric_query))
+}
+
+/// The most points one metric query returns.
+const MAX_POINTS: i64 = 2_000;
+
+/// `GET /api/v1/admin/ops/metrics/query`.
+#[derive(serde::Deserialize, utoipa::IntoParams)]
+struct MetricQuery {
+    /// A metric name, as `GET .../metrics/names` lists them.
+    name: String,
+    /// Start (UTC, ISO-8601); default an hour ago.
+    from: Option<chrono::DateTime<chrono::Utc>>,
+    /// End (UTC); default now.
+    to: Option<chrono::DateTime<chrono::Utc>>,
+    /// Seconds per point, 60 to 86,400; default 60.
+    step: Option<i64>,
+    /// Only series whose labels include these (a JSON object), for example
+    /// `{"endpoint":"/api/v1/{entity}"}`.
+    labels: Option<String>,
+}
+
+/// One point: the bucket's start and the average of the samples in it.
+#[derive(serde::Serialize, utoipa::ToSchema, sqlx::FromRow)]
+struct MetricPoint {
+    at: chrono::DateTime<chrono::Utc>,
+    value: f64,
+}
+
+/// U4-T4: a metric's values over time from the built-in metrics store
+/// (U4-T1), averaged per `step`. Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/ops/metrics/query",
+    tag = "operations",
+    params(MetricQuery),
+    responses(
+        (status = 200, description = "The points, oldest first", body = Vec<MetricPoint>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 422, description = "A bad range, step or labels filter", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn metric_query(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    axum::extract::Query(query): axum::extract::Query<MetricQuery>,
+) -> Result<Json<Vec<MetricPoint>>, attome_types::AppError> {
+    use attome_types::AppError;
+    let to = query.to.unwrap_or_else(chrono::Utc::now);
+    let from = query.from.unwrap_or(to - chrono::Duration::hours(1));
+    let step = query.step.unwrap_or(60);
+    if !(60..=86_400).contains(&step) {
+        return Err(AppError::Validation("step is 60 to 86400 seconds".into()));
+    }
+    if from >= to || to - from > chrono::Duration::days(31) {
+        return Err(AppError::Validation(
+            "from must be before to, at most 31 days apart".into(),
+        ));
+    }
+    if (to - from).num_seconds() / step > MAX_POINTS {
+        return Err(AppError::Validation(format!(
+            "at most {MAX_POINTS} points; use a larger step"
+        )));
+    }
+    let labels: Value = match query
+        .labels
+        .as_deref()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+    {
+        Some(text) => match serde_json::from_str::<Value>(text) {
+            Ok(value @ Value::Object(_)) => value,
+            _ => return Err(AppError::Validation("labels is a JSON object".into())),
+        },
+        None => json!({}),
+    };
+    let points: Vec<MetricPoint> = sqlx::query_as(
+        "SELECT date_bin(make_interval(secs => $4), ts, $2) AS at, avg(value) AS value \
+         FROM ops_metric_sample \
+         WHERE name = $1 AND ts >= $2 AND ts < $3 AND labels @> $5 \
+         GROUP BY 1 ORDER BY 1",
+    )
+    .bind(query.name.trim())
+    .bind(from)
+    .bind(to)
+    .bind(step as f64)
+    .bind(&labels)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    Ok(Json(points))
+}
+
+/// U4-T4: the metric names sampled in the last hour.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/ops/metrics/names",
+    tag = "operations",
+    responses(
+        (status = 200, description = "Metric names, sorted", body = attome_types::PaginatedResponse<String>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn metric_names(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Result<Json<attome_types::PaginatedResponse<String>>, attome_types::AppError> {
+    let names: Vec<String> = sqlx::query_scalar(
+        "SELECT DISTINCT name FROM ops_metric_sample WHERE ts >= now() - interval '1 hour' ORDER BY name",
+    )
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    let total = i64::try_from(names.len()).map_err(attome_types::AppError::internal)?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        names,
+        total,
+        1,
+        total.max(1),
+    )))
 }
 
 /// `GET /api/v1/admin/latency`.
@@ -163,7 +288,7 @@ async fn latency(_ctx: Authorized<Admin>) -> Json<LatencyReport> {
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(dependencies, latency))]
+#[openapi(paths(dependencies, latency, metric_query, metric_names))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
