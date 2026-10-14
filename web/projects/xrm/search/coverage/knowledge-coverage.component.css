@@ -1,0 +1,12 @@
+.kc-refresh, .kc-pager button {
+  border: 1px solid #d1d5db; background: #fff; color: #374151;
+  border-radius: .375rem; padding: .3rem .7rem; font-size: .8rem; cursor: pointer;
+}
+.kc-refresh:disabled, .kc-pager button:disabled { opacity: .5; cursor: default; }
+.kc-indexer { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 1rem 0; font-size: .85rem; }
+.kc-indexer dt { color: #6b7280; font-size: .75rem; }
+.kc-indexer dd { margin: .15rem 0 0; }
+.kc-caption { caption-side: top; text-align: start; color: #6b7280; font-size: .8rem; padding-bottom: .5rem; }
+.kc-muted { color: #9ca3af; }
+.kc-backlog { color: #b45309; font-weight: 600; }
+.kc-pager { display: flex; gap: .5rem; justify-content: flex-end; margin-top: .75rem; }

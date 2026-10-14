@@ -31,8 +31,8 @@ import type { EntitySchema, FieldSchema } from '@attome/xrm';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, TranslatePipe, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent],
-  styleUrls:  ['../../../../../styles/xrm-form.css', './core-api_key-form.component.css'],
-  templateUrl: './core-api_key-form.component.html',
+  styleUrls:  ['../../../../../styles/xrm-form.css', './core-apikey-form.component.css'],
+  templateUrl: './core-apikey-form.component.html',
 })
 export class CoreApikeyFormComponent extends EngineFormBase {
   /** Never saveable: `EngineFormBase.save()` returns early on this. */

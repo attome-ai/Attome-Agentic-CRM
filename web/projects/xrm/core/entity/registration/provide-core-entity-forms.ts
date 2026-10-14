@@ -1,7 +1,7 @@
 import { EntityRouteRegistry } from '@attome/xrm/core/entity';
 import { DocumentFormComponent } from './document/form/document-form/document-form.component';
 import { NoteFormComponent } from './note/form/note-form/note-form.component';
-import { CoreApikeyFormComponent } from './forms/core-api_key-form/core-api_key-form.component';
+import { CoreApikeyFormComponent } from './forms/core-apikey-form/core-apikey-form.component';
 import { CoreAuthenticationTypeFormComponent } from './forms/core-authentication-type-form/core-authentication-type-form.component';
 import { CoreAutovalueFormComponent } from './forms/core-autovalue-form/core-autovalue-form.component';
 import { DocgenTemplateFormComponent } from './forms/docgen-template-form/docgen-template-form.component';

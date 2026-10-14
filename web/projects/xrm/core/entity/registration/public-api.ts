@@ -1,6 +1,6 @@
 export { DocumentFormComponent } from './document/form/document-form/document-form.component';
 export { NoteFormComponent } from './note/form/note-form/note-form.component';
-export { CoreApikeyFormComponent } from './forms/core-api_key-form/core-api_key-form.component';
+export { CoreApikeyFormComponent } from './forms/core-apikey-form/core-apikey-form.component';
 export { CoreAuthenticationTypeFormComponent } from './forms/core-authentication-type-form/core-authentication-type-form.component';
 export { CoreAutovalueFormComponent } from './forms/core-autovalue-form/core-autovalue-form.component';
 export { DocgenTemplateFormComponent } from './forms/docgen-template-form/docgen-template-form.component';

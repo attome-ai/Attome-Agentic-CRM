@@ -1,0 +1,104 @@
+<section class="gap-page">
+  <header class="gap-header">
+    <div>
+      <h1>{{ 'knowledgeCoverage.title' | translate }}</h1>
+      <p class="gap-sub">{{ 'knowledgeCoverage.lede' | translate }}</p>
+    </div>
+    <button type="button" class="kc-refresh" [disabled]="loading()" (click)="load()">
+      {{ (loading() ? 'knowledgeCoverage.loading' : 'knowledgeCoverage.refresh') | translate }}
+    </button>
+  </header>
+
+  @if (indexer(); as status) {
+    <dl class="kc-indexer">
+      <div>
+        <dt>{{ 'knowledgeCoverage.drainLastAdvanced' | translate }}</dt>
+        <dd>
+          @if (status.drain_last_advanced_at) {
+            {{ status.drain_last_advanced_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}
+          } @else {
+            {{ 'knowledgeCoverage.drainNeverRan' | translate }}
+          }
+        </dd>
+      </div>
+      <div>
+        <dt>{{ 'knowledgeCoverage.embeddingModel' | translate }}</dt>
+        <dd>
+          @if (status.embedding_model) {
+            <code>{{ status.embedding_model }}</code>
+          } @else {
+            {{ 'knowledgeCoverage.lexicalOnly' | translate }}
+          }
+        </dd>
+      </div>
+    </dl>
+  }
+
+  @if (forbidden()) {
+    <div class="gap-error" role="alert">{{ 'knowledgeCoverage.forbidden' | translate }}</div>
+  } @else if (failed()) {
+    <div class="gap-error" role="alert">{{ error() ?? ('knowledgeCoverage.loadFailed' | translate) }}</div>
+  } @else if (!loading() && collections().length === 0) {
+    <div class="gap-empty">{{ 'knowledgeCoverage.empty' | translate }}</div>
+  }
+
+  @if (collections().length > 0) {
+    <table class="gap-table">
+      <caption class="kc-caption">
+        {{ 'knowledgeCoverage.caption' | translate: { total: total(), page: page(), pages: totalPages() } }}
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">{{ 'knowledgeCoverage.colCollection' | translate }}</th>
+          <th scope="col" class="gap-num">{{ 'knowledgeCoverage.colPublished' | translate }}</th>
+          <th scope="col" class="gap-num">{{ 'knowledgeCoverage.colDrafts' | translate }}</th>
+          <th scope="col" class="gap-num">{{ 'knowledgeCoverage.colExpired' | translate }}</th>
+          <th scope="col" class="gap-num">{{ 'knowledgeCoverage.colChunks' | translate }}</th>
+          <th scope="col">{{ 'knowledgeCoverage.colLastIndexed' | translate }}</th>
+          <th scope="col" class="gap-num">{{ 'knowledgeCoverage.colEmbedded' | translate }}</th>
+          <th scope="col" class="gap-num">{{ 'knowledgeCoverage.colBacklog' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of collections(); track c.collection_id) {
+          <tr>
+            <th scope="row" class="gap-phrase">{{ c.name || c.collection_id }}</th>
+            <td class="gap-num">{{ c.items_published }}</td>
+            <td class="gap-num">
+              @if (c.items_draft > 0) {
+                <a routerLink="/xrm/admin/knowledge/drafts">{{ c.items_draft }}</a>
+              } @else {
+                0
+              }
+            </td>
+            <td class="gap-num">{{ c.items_expired }}</td>
+            <td class="gap-num">{{ c.chunks }}</td>
+            <td>
+              @if (c.last_indexed_at) {
+                {{ c.last_indexed_at | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}
+              } @else {
+                <span class="kc-muted">{{ 'knowledgeCoverage.neverIndexed' | translate }}</span>
+              }
+            </td>
+            @if (c.embedding_backlog === null || c.embedding_backlog === undefined) {
+              <td class="gap-num kc-muted" colspan="2">{{ 'knowledgeCoverage.lexicalCell' | translate }}</td>
+            } @else {
+              <td class="gap-num">{{ c.chunks_embedded }}</td>
+              <td class="gap-num" [class.kc-backlog]="c.embedding_backlog > 0">{{ c.embedding_backlog }}</td>
+            }
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (totalPages() > 1) {
+      <div class="kc-pager">
+        <button type="button" [disabled]="page() <= 1 || loading()" (click)="previousPage()">
+          {{ 'knowledgeCoverage.previous' | translate }}
+        </button>
+        <button type="button" [disabled]="page() >= totalPages() || loading()" (click)="nextPage()">
+          {{ 'knowledgeCoverage.next' | translate }}
+        </button>
+      </div>
+    }
+  }
+</section>
