@@ -259,6 +259,13 @@ async fn provision_classified_entity(
     let entity_id = ensure_entity(db, &logicalname, "Governance Test Entity", None, false)
         .await
         .expect("ensure_entity");
+    // A seed-provisioned entity is platform-owned; an admin recording may not
+    // change it, so the test entity is project-owned like an admin-made one.
+    sqlx::query("UPDATE entity_info SET owner_layer = 'project' WHERE id = $1")
+        .bind(entity_id)
+        .execute(db)
+        .await
+        .expect("make the test entity project-owned");
     let attr_id = ensure_attribute(
         db, entity_id, "notes", "Notes", "text", false, false, false, true, None, None,
     )
