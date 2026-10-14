@@ -10,9 +10,15 @@
 //!    (`--keep-going` so one broken crate does not hide the others' errors).
 //! 3. **tests**: `cargo test --workspace --no-fail-fast -- --test-threads=1`, so one run
 //!    reports every failing test.
+//!
+//! Every run writes `target/release-gate/gate-<os>.json`: the commit, the
+//! operating system, the toolchain, and each step's outcome and duration
+//! (roadmap AC4). A release is tagged only from a commit whose reports from
+//! both Windows and Linux are green.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 /// Files handed to one `rustfmt` call. Small enough for any command line.
 const FORMAT_BATCH: usize = 40;
@@ -28,16 +34,33 @@ pub fn check() -> ExitCode {
         }
     };
     let steps: [(&str, Step); 3] = [("format", format), ("clippy", clippy), ("tests", tests)];
+    let started_at = unix_seconds();
     let mut failed = Vec::new();
+    let mut outcomes = Vec::new();
     for (name, step) in steps {
         say(&format!("==> {name}"));
-        match step(&root) {
+        let clock = Instant::now();
+        let result = step(&root);
+        let duration_ms = u64::try_from(clock.elapsed().as_millis()).unwrap_or(u64::MAX);
+        match &result {
             Ok(()) => say(&format!("    {name}: ok")),
             Err(error) => {
                 eprintln!("    {name}: FAILED: {error}");
                 failed.push(name);
             }
         }
+        outcomes.push(StepOutcome {
+            id: name,
+            passed: result.is_ok(),
+            duration_ms,
+            error: result.err(),
+        });
+    }
+    match write_report(&root, started_at, &outcomes) {
+        Ok(path) => say(&format!("report: {}", path.display())),
+        // The report is evidence, not a gate step: failing to write it is
+        // reported, and the gate's verdict stands.
+        Err(error) => eprintln!("could not write the gate report: {error}"),
     }
     if failed.is_empty() {
         say("release check: ok");
@@ -46,6 +69,69 @@ pub fn check() -> ExitCode {
         eprintln!("release check: failed ({})", failed.join(", "));
         ExitCode::FAILURE
     }
+}
+
+/// One step's outcome, as the report records it.
+#[derive(Debug)]
+struct StepOutcome {
+    id: &'static str,
+    passed: bool,
+    duration_ms: u64,
+    error: Option<String>,
+}
+
+/// Writes `target/release-gate/gate-<os>.json` and returns its path.
+fn write_report(root: &Path, started_at: u64, outcomes: &[StepOutcome]) -> Result<PathBuf, String> {
+    let steps: Vec<serde_json::Value> = outcomes
+        .iter()
+        .map(|step| {
+            serde_json::json!({
+                "id": step.id,
+                "status": if step.passed { "passed" } else { "failed" },
+                "duration_ms": step.duration_ms,
+                "error": step.error,
+            })
+        })
+        .collect();
+    let report = serde_json::json!({
+        "format": "attome-release-gate/v1",
+        "commit": command_output(root, "git", &["rev-parse", "HEAD"]),
+        "os": std::env::consts::OS,
+        "arch": std::env::consts::ARCH,
+        "rustc": command_output(root, "rustc", &["-V"]),
+        "started_at_unix": started_at,
+        "finished_at_unix": unix_seconds(),
+        "passed": outcomes.iter().all(|step| step.passed),
+        "steps": steps,
+    });
+    let dir = root.join("target").join("release-gate");
+    std::fs::create_dir_all(&dir)
+        .map_err(|error| format!("cannot create {}: {error}", dir.display()))?;
+    let path = dir.join(format!("gate-{}.json", std::env::consts::OS));
+    let text = serde_json::to_string_pretty(&report)
+        .map_err(|error| format!("cannot serialise the report: {error}"))?;
+    std::fs::write(&path, text + "\n")
+        .map_err(|error| format!("cannot write {}: {error}", path.display()))?;
+    Ok(path)
+}
+
+/// A command's trimmed standard output, or `None` when it cannot run or fails.
+fn command_output(root: &Path, program: &str, args: &[&str]) -> Option<String> {
+    let output = Command::new(program)
+        .args(args)
+        .current_dir(root)
+        .output()
+        .ok()?;
+    output
+        .status
+        .success()
+        .then(|| String::from_utf8_lossy(&output.stdout).trim().to_owned())
+}
+
+fn unix_seconds() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.as_secs())
 }
 
 fn format(root: &Path) -> Result<(), String> {
@@ -170,6 +256,34 @@ mod tests {
 
         let files = rust_files(&dir).unwrap();
         assert_eq!(files, vec![dir.join("a/src/lib.rs")]);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_report_records_every_step_and_the_verdict() {
+        let dir = scratch("report");
+        let outcomes = [
+            StepOutcome {
+                id: "format",
+                passed: true,
+                duration_ms: 5,
+                error: None,
+            },
+            StepOutcome {
+                id: "tests",
+                passed: false,
+                duration_ms: 9,
+                error: Some("cargo test exited with 101".to_owned()),
+            },
+        ];
+        let path = write_report(&dir, 1, &outcomes).unwrap();
+        let report: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        assert_eq!(report["passed"], false);
+        assert_eq!(report["os"], std::env::consts::OS);
+        assert_eq!(report["steps"][0]["status"], "passed");
+        assert_eq!(report["steps"][1]["status"], "failed");
+        assert_eq!(report["steps"][1]["error"], "cargo test exited with 101");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
