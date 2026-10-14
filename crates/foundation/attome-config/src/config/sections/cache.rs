@@ -47,6 +47,12 @@ pub struct CacheSection {
     /// query path instead of the arc-swap metadata registry.
     #[serde(default = "default_metadata_registry_enabled")]
     pub metadata_registry_enabled: bool,
+    /// Y8-T2: how often a node checks the metadata change log for a change
+    /// whose doorbell it missed (a crash between commit and publish, a Redis
+    /// blip). The check is one indexed `MAX(id)`; 5 seconds bounds how stale
+    /// a node can be after a lost doorbell. At least 1.
+    #[serde(default = "default_metadata_poll_interval_secs")]
+    pub metadata_poll_interval_secs: u64,
     /// P1.15 — optional per-role endpoint overrides. `None` (the default)
     /// means every role shares this base block, identical to pre-P1.15
     /// behavior. See `CacheRole`/`AppConfig::redis_url_for_role`.
@@ -96,6 +102,10 @@ impl std::fmt::Debug for CacheSection {
             .field("connection_pool_size", &self.connection_pool_size)
             .field("timeout", &self.timeout)
             .field("metadata_registry_enabled", &self.metadata_registry_enabled)
+            .field(
+                "metadata_poll_interval_secs",
+                &self.metadata_poll_interval_secs,
+            )
             .field("roles", &self.roles)
             .field("tls_enabled", &self.tls_enabled)
             .field("tls_ca_path", &self.tls_ca_path)
@@ -114,6 +124,10 @@ fn default_cache_timeout() -> u64 {
 
 fn default_metadata_registry_enabled() -> bool {
     true
+}
+
+fn default_metadata_poll_interval_secs() -> u64 {
+    5
 }
 
 /// Sentinel-mode connection details for a `CacheSection`/`CacheRoleOverride`

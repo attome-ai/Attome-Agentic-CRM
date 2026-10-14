@@ -1193,15 +1193,12 @@ impl EngineSystemBuilder {
             let db = state.base.db.clone();
             let redis = state.base.redis.clone();
             let watermark = last_applied.clone();
-            // P-metadata-sync-hardening Phase 1 (a) — a deliberate middle
-            // point between the originating design review's 30s/60s
-            // suggestions; the underlying query is a single indexed
-            // `MAX(id)` aggregate, negligible even at a tighter interval.
-            // Never varied per-deployment; not a config knob.
-            const METADATA_POLL_INTERVAL_SECS: u64 = 45;
+            // Y8-T2: the safety net under the doorbell, `cache.metadata_poll_
+            // interval_secs` (default 5). The query is a single indexed
+            // `MAX(id)` aggregate, negligible at this interval.
+            let poll_secs = state.base.config.cache.metadata_poll_interval_secs.max(1);
             tokio::spawn(async move {
-                let mut interval =
-                    tokio::time::interval(Duration::from_secs(METADATA_POLL_INTERVAL_SECS));
+                let mut interval = tokio::time::interval(Duration::from_secs(poll_secs));
                 interval.tick().await; // consume the immediate first tick — pre_warm_registry already caught up as of boot
                 loop {
                     interval.tick().await;
@@ -1293,8 +1290,7 @@ impl EngineSystemBuilder {
 
             let settings = state.settings.clone();
             let watermark = applied_watermark.clone();
-            // Never varied per-deployment; not a config knob — same posture
-            // as `METADATA_POLL_INTERVAL_SECS` above.
+            // Never varied per-deployment; not a config knob.
             const SETTINGS_POLL_INTERVAL_SECS: u64 = 20;
             tokio::spawn(async move {
                 let mut interval =
@@ -1456,8 +1452,8 @@ impl EngineSystemBuilder {
         // poll). `spawn_doorbell_reload` registers each type's doorbell on
         // this one shared `subscriber` and adds the periodic catch-up tick
         // every one of these was missing. Never varied per-deployment,
-        // not a config knob — same posture as `METADATA_POLL_INTERVAL_SECS`/
-        // `SETTINGS_POLL_INTERVAL_SECS`/`LABEL_POLL_INTERVAL_SECS` above.
+        // not a config knob — same posture as `SETTINGS_POLL_INTERVAL_SECS`/
+        // `LABEL_POLL_INTERVAL_SECS` above.
         const SNAPSHOT_CATCHUP_POLL_INTERVAL_SECS: u64 = 30;
         let snapshot_catchup_interval = Duration::from_secs(SNAPSHOT_CATCHUP_POLL_INTERVAL_SECS);
         attome_core::spawn_doorbell_reload::<attome_core::StateModelRegistry>(

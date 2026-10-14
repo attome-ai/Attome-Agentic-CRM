@@ -8,7 +8,7 @@
 //! | crash window                          | durable state left behind                      | recovery path under test          |
 //! |---------------------------------------|------------------------------------------------|-----------------------------------|
 //! | mid-transaction, before commit        | an orphaned session holding the write lock     | Postgres aborts it on socket loss |
-//! | after commit, before the doorbell     | a change-log row nobody was told about         | the 45s watermark poll            |
+//! | after commit, before the doorbell     | a change-log row nobody was told about         | the 5s watermark poll             |
 //! | a subscriber mid-catch-up             | a Redis snapshot behind the change log         | `pre_warm_registry`'s catch-up    |
 //! | Postgres restored under a live Redis  | a Redis snapshot *ahead of* the change log     | `pre_warm_registry`'s inversion   |
 //!
@@ -28,9 +28,9 @@
 //! # Runtime
 //!
 //! `committed_write_whose_doorbell_never_fired_is_recovered_by_the_watermark_poll`
-//! takes ~46s: `METADATA_POLL_INTERVAL_SECS` in `system.rs` is a deliberate
-//! constant (not a config knob — see its comment), so the test has to wait
-//! for a real tick. That is the cost of proving the poll and not a mock of it.
+//! takes ~5s: `cache.metadata_poll_interval_secs` defaults to 5 (Y8-T2), and
+//! the test waits for a real tick. That is the cost of proving the poll and
+//! not a mock of it.
 //!
 //! Requires a live Postgres (`DATABASE_URL`) and Redis (`TEST_REDIS_HOST`/
 //! `TEST_REDIS_PORT`); skips loudly without them, same as `metadata_cache.rs`:
@@ -513,23 +513,23 @@ async fn committed_write_whose_doorbell_never_fired_is_recovered_by_the_watermar
         "the committed write must have appended a change-log row for the poll to find"
     );
 
-    // 45s poll interval + 250ms debounce + slack. Anything shorter than the
-    // interval cannot prove the poll; anything much longer hides a real
-    // regression behind the deadline.
-    let elapsed = wait_until_registry_knows(&app_b, &cookie_b, &logicalname, Duration::from_secs(90))
+    // 5s poll interval (`cache.metadata_poll_interval_secs`) + 250ms debounce
+    // + slack. Anything much longer hides a real regression behind the
+    // deadline.
+    let elapsed = wait_until_registry_knows(&app_b, &cookie_b, &logicalname, Duration::from_secs(30))
         .await
         .unwrap_or_else(|| {
             panic!(
                 "node B never applied the doorbell-less write (change-log watermark {db_watermark}) \
-                 within 90s — the watermark poll did not recover a lost PUBLISH, so a crash between \
+                 within 30s — the watermark poll did not recover a lost PUBLISH, so a crash between \
                  COMMIT and the doorbell leaves every other node stale until an unrelated edit"
             )
         });
     eprintln!(
         "node B recovered the doorbell-less write after {elapsed:?} \
          ({})",
-        if elapsed >= Duration::from_secs(40) {
-            "consistent with the 45s watermark poll"
+        if elapsed >= Duration::from_secs(4) {
+            "consistent with the 5s watermark poll"
         } else {
             "faster than the poll interval — a doorbell from elsewhere on this Redis woke the subscriber; \
              recovery still came from the change log"
