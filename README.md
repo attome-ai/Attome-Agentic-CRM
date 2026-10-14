@@ -56,6 +56,15 @@ attome serve --bootstrap-admin you@example.com   # once: creates the first admin
 attome serve                                      # the server, on port 7865
 ```
 
+To start it with the machine, install it as a service from the directory that holds its
+`config.json` (an elevated prompt on Windows, root on Linux):
+
+```sh
+attome init --database-url postgres://postgres:secret@localhost:5432/attome --out /var/lib/attome/config.json
+attome service install --dir /var/lib/attome     # a Windows service, or a systemd unit on Linux
+attome service install --dry-run                  # print the steps only
+```
+
 `attome help` lists the other commands (`worker`, `migrate`, `preflight`, `healthcheck`, and the
 audit tools).
 

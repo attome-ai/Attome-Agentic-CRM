@@ -173,6 +173,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 url           = "2"
 utoipa        = { version = "5", features = ["macros", "uuid", "chrono"] }
 uuid          = { version = "1", features = ["v4", "v5", "v7", "serde"] }
+# Windows only: run `attome serve` as a Windows service (roadmap U1-T1).
+windows-service = "0.8.1"
 
 [workspace.lints.rust]
 unsafe_code       = "deny"

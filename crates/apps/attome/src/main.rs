@@ -13,6 +13,9 @@ attome: the Attome command-line tool
 
 Usage:
   attome init                   Install Solo: write a config, apply the schema
+  attome service install|uninstall [--dir <dir>] [--dry-run]
+                                Run attome serve as a Windows service or a
+                                systemd unit, from the directory with config.json
   attome serve                  Run the server (flags: --print-openapi,
                                 --bootstrap-admin <email>)
   attome worker                 Run the job worker only
@@ -71,6 +74,14 @@ fn main() -> ExitCode {
             })
         }
         ["init", ..] => outcome(attome::cmd::init::run()),
+        ["service", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::service::run(&rest).map_err(Into::into))
+        }
+        ["service-run", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::service::service_run(&rest).map_err(Into::into))
+        }
         ["serve", ..] => outcome(attome::serve::run()),
         ["worker", ..] => outcome(attome::cmd::worker::run()),
         ["migrate", ..] => outcome(attome::cmd::migrate::run()),

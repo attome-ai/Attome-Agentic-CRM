@@ -1055,6 +1055,19 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     clippy::expect_used,
     reason = "each expect() here guards an invariant its message states"
 )]
+/// A stop asked for from outside the process's signals: the Windows service
+/// control manager's Stop and Shutdown (roadmap U1-T1). It starts the same
+/// graceful drain as Ctrl+C or SIGTERM.
+static EXTERNAL_STOP: std::sync::LazyLock<tokio::sync::Notify> =
+    std::sync::LazyLock::new(tokio::sync::Notify::new);
+
+/// Asks a running `attome serve` in this process to shut down gracefully.
+/// Safe to call before the server is listening: the request is kept until
+/// [`wait_for_shutdown_signal`] picks it up.
+pub fn request_stop() {
+    EXTERNAL_STOP.notify_one();
+}
+
 pub async fn wait_for_shutdown_signal() {
     let ctrl_c = async {
         tokio::signal::ctrl_c()
@@ -1075,6 +1088,7 @@ pub async fn wait_for_shutdown_signal() {
     tokio::select! {
         _ = ctrl_c => {},
         _ = terminate => {},
+        _ = EXTERNAL_STOP.notified() => {},
     }
     tracing::info!("shutdown signal received");
 }

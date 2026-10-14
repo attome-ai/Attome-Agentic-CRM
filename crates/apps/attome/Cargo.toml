@@ -90,6 +90,9 @@ keycloak-tests = []
 # The developer-only fleet console (V2-D472); refused in release builds.
 fleet-console = ["dep:attome-fleet"]
 
+[target.'cfg(windows)'.dependencies]
+windows-service.workspace = true
+
 [[test]]
 name = "keycloak_oidc"
 required-features = ["keycloak-tests"]
