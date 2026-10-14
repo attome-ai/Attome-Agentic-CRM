@@ -1581,6 +1581,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "attome-testapp"
+version = "0.1.0"
+dependencies = [
+ "attome-api",
+ "attome-auth",
+ "attome-cache",
+ "attome-config",
+ "attome-core",
+ "attome-db",
+ "attome-modules",
+ "attome-security",
+ "attome-server",
+ "attome-storage",
+ "attome-testkit",
+ "axum",
+ "chrono",
+ "serde_json",
+ "sqlx",
+ "tokio",
+ "tower",
+ "uuid",
+]
+
+[[package]]
 name = "attome-testkit"
 version = "0.1.0"
 dependencies = [
