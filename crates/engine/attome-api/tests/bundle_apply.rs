@@ -101,7 +101,7 @@ fn test_config() -> AppConfig {
     // function deliberately returns the *pre-rewrite* URL the harness
     // configured (the template `test_db_url()` clones from), and this needs
     // the post-rewrite one pointing at this binary's own throwaway clone.
-    let db_url = std::env::var("DATABASE_URL").expect(
+    let db_url = attome_testkit::migrated_db_url().expect(
         "DATABASE_URL must be set (by attome_testkit::migrated_db_url(), called before \
          test_config in test_system) to build a working AppConfig",
     );

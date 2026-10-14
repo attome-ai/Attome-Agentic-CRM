@@ -399,30 +399,43 @@ async fn run_mutation_round(
         let logicalname = logicalname.to_owned();
         let admin_cookie = admin_cookie.to_owned();
         tasks.spawn(async move {
-            let req = Request::builder()
-                .method("PATCH")
-                .uri(format!("/api/v1/{logicalname}/{record_id}"))
-                .header("cookie", &admin_cookie)
-                .header("sec-fetch-site", "same-origin")
-                .header("content-type", "application/json")
-                // Every seed record above is freshly created (row_version 0,
-                // D-005 default), and this is each record's first mutation —
-                // If-Match is mandatory on every generic UPDATE (D-079).
-                .header("if-match", "\"0\"")
-                .body(Body::from(format!(
-                    r#"{{"title":"updated-{round}-{i}","amount":{},"due_on":"2026-08-15","status":"closed"}}"#,
-                    i * 2
-                )))
-                .unwrap();
             let start = Instant::now();
-            let res = app.oneshot(req).await.unwrap();
-            let elapsed = start.elapsed();
-            let status = res.status();
-            if status != StatusCode::OK {
+            // The synchronous audit path holds a per-organization advisory
+            // lock inside each mutation and answers 409 once its own retry
+            // budget runs out (D-316). That is the behaviour this file
+            // measures, so a 409 is retried by the caller, as the service's
+            // docs say, and the latency counts the retries.
+            let mut attempts = 0;
+            loop {
+                let req = Request::builder()
+                    .method("PATCH")
+                    .uri(format!("/api/v1/{logicalname}/{record_id}"))
+                    .header("cookie", &admin_cookie)
+                    .header("sec-fetch-site", "same-origin")
+                    .header("content-type", "application/json")
+                    // Every seed record above is freshly created (row_version
+                    // 0, D-005 default), and this is each record's first
+                    // mutation — If-Match is mandatory on every generic
+                    // UPDATE (D-079).
+                    .header("if-match", "\"0\"")
+                    .body(Body::from(format!(
+                        r#"{{"title":"updated-{round}-{i}","amount":{},"due_on":"2026-08-15","status":"closed"}}"#,
+                        i * 2
+                    )))
+                    .unwrap();
+                let res = app.clone().oneshot(req).await.unwrap();
+                let status = res.status();
+                if status == StatusCode::OK {
+                    break start.elapsed();
+                }
+                attempts += 1;
+                if status == StatusCode::CONFLICT && attempts < 200 {
+                    tokio::time::sleep(Duration::from_millis(25)).await;
+                    continue;
+                }
                 let body = body_json(res).await;
                 panic!("PATCH #{i} (round {round}) must succeed, got {status}: {body}");
             }
-            elapsed
         });
     }
 

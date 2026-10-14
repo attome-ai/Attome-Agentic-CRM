@@ -143,7 +143,7 @@ fn test_config() -> AppConfig {
     // binary's throwaway clone, so point the pool at exactly that URL. Without
     // this the suite only runs against a trust-auth Postgres — the same helper
     // `audit_coverage_emission.rs` carries for the same reason.
-    if let Ok(url) = std::env::var("DATABASE_URL") {
+    if let Some(url) = attome_testkit::migrated_db_url() {
         point_config_at(&mut config, &url);
     }
     config

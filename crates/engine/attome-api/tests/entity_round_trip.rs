@@ -87,7 +87,7 @@ fn test_config() -> AppConfig {
     // not a placeholder — `test_system` already rewrote `DATABASE_URL` to
     // that clone via `attome_testkit::migrated_db_url()` before calling this.
     let (db_user, db_password, db_host, db_port, db_name) =
-        parse_test_database_url(&std::env::var("DATABASE_URL").expect(
+        parse_test_database_url(&attome_testkit::migrated_db_url().expect(
             "DATABASE_URL must be set by attome_testkit::migrated_db_url() before test_config()",
         ));
     let json = format!(
