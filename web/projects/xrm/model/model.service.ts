@@ -1,6 +1,8 @@
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, defer, from, map, of, switchMap, tap } from 'rxjs';
 import { ApiService } from '@attome/base';
+
+import { StoredPlan, readPlan, writePlan } from './plan-store';
 
 // ── Wire types (mirror attome_api::model_admin's FormPlan exactly) ──
 
@@ -91,9 +93,39 @@ export interface PatchOp {
 export class ModelService {
   private readonly api = inject(ApiService);
 
-  /** A published form's render plan. */
+  /** Plans already current in this session, by form id. */
+  private readonly plans = new Map<string, StoredPlan<FormPlan>>();
+
+  /**
+   * A published form's render plan, fetched once per version (Y14-T2): a
+   * plan already checked this session is served from memory with no
+   * request; one stored by an earlier session is sent back as
+   * `If-None-Match`, so an unchanged plan costs a bodyless 304. The live
+   * channel calls `forgetPlans` when a new version is published.
+   */
   formPlan(formId: string): Observable<FormPlan> {
-    return this.api.get<FormPlan>(`/api/v1/model/forms/${encodeURIComponent(formId)}/plan`);
+    const current = this.plans.get(formId);
+    if (current) return of(current.plan);
+    const path = `/api/v1/model/forms/${encodeURIComponent(formId)}/plan`;
+    return defer(() => from(readPlan<FormPlan>(formId))).pipe(
+      switchMap(stored => this.api.getIfChanged<FormPlan>(path, stored?.etag ?? null).pipe(
+        map(({ body, etag }) => {
+          if (body === null && stored) return stored;
+          if (body === null) throw new Error('the server answered 304 for a plan this browser does not hold');
+          return { etag: etag ?? '', plan: body };
+        }),
+      )),
+      tap(fresh => {
+        this.plans.set(formId, fresh);
+        if (fresh.etag) void writePlan(formId, fresh);
+      }),
+      map(fresh => fresh.plan),
+    );
+  }
+
+  /** Drops the in-memory plans, so the next read revalidates each one. */
+  forgetPlans(): void {
+    this.plans.clear();
   }
 
   record(entity: string, id: string): Observable<RecordView> {

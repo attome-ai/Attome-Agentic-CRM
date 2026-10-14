@@ -32,6 +32,24 @@ describe('ApiService', () => {
     req.flush({});
   });
 
+  describe('getIfChanged (Y14-T2)', () => {
+    it('returns the body and its ETag, sending no If-None-Match without one', async () => {
+      const result = firstValueFrom(service.getIfChanged<{ a: number }>('/api/v1/plan', null));
+      const req = httpMock.expectOne('http://localhost:7865/api/v1/plan');
+      expect(req.request.headers.has('If-None-Match')).toBe(false);
+      req.flush({ a: 1 }, { headers: { ETag: '"v1"' } });
+      expect(await result).toEqual({ body: { a: 1 }, etag: '"v1"' });
+    });
+
+    it('answers a 304 as an unchanged, bodyless result', async () => {
+      const result = firstValueFrom(service.getIfChanged('/api/v1/plan', '"v1"'));
+      const req = httpMock.expectOne('http://localhost:7865/api/v1/plan');
+      expect(req.request.headers.get('If-None-Match')).toBe('"v1"');
+      req.flush(null, { status: 304, statusText: 'Not Modified' });
+      expect(await result).toEqual({ body: null, etag: '"v1"' });
+    });
+  });
+
   describe('patch / If-Match', () => {
     it('sends no If-Match header when no row_version is given', () => {
       service.patch('/api/v1/foo/1', { name: 'x' }).subscribe();

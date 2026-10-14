@@ -27,6 +27,8 @@ use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
     Json, Router,
     extract::{Path, Query, State},
+    http::{HeaderMap, HeaderValue, StatusCode, header},
+    response::{IntoResponse, Response},
     routing::{get, post},
 };
 use chrono::{DateTime, Utc};
@@ -695,9 +697,13 @@ struct AttributeRow {
     get,
     path = "/api/v1/model/forms/{id}/plan",
     tag = "model",
-    params(("id" = Uuid, Path, description = "Form id")),
+    params(
+        ("id" = Uuid, Path, description = "Form id"),
+        ("If-None-Match" = Option<String>, Header, description = "The ETag of a plan the client holds"),
+    ),
     responses(
-        (status = 200, description = "The form's render plan", body = FormPlan),
+        (status = 200, description = "The form's render plan, with a content ETag", body = FormPlan),
+        (status = 304, description = "Unchanged since the ETag in If-None-Match"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 404, description = "No published form with this id", body = ErrorResponse),
     ),
@@ -707,7 +713,8 @@ async fn form_plan(
     State(state): State<EngineState>,
     _ctx: Authorized<SelfService>,
     Path(id): Path<Uuid>,
-) -> Result<Json<FormPlan>, AppError> {
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
     if cooked().snapshot().version == 0 {
         // Cold start: build the cooked registry from the published store.
         refresh_cooked(&state).await?;
@@ -768,12 +775,27 @@ async fn form_plan(
                 .collect(),
         })
         .collect();
-    Ok(Json(FormPlan {
+    let plan = FormPlan {
         id,
         name: form.name.clone(),
         entity,
         sections,
-    }))
+    };
+    // Y14-T2: a content ETag, so a client that already holds this plan gets
+    // a bodyless 304 instead of downloading it again.
+    let etag = serde_json::to_value(&plan)
+        .map_err(AppError::internal)
+        .and_then(|value| attome_model::canonical::content_hash(&value).map_err(AppError::internal))
+        .map(|hash| format!("\"{hash}\""))?;
+    let unchanged = headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.split(',').any(|tag| tag.trim() == etag));
+    let etag_header = HeaderValue::from_str(&etag).map_err(AppError::internal)?;
+    if unchanged {
+        return Ok((StatusCode::NOT_MODIFIED, [(header::ETAG, etag_header)]).into_response());
+    }
+    Ok(([(header::ETAG, etag_header)], Json(plan)).into_response())
 }
 
 /// One object as a readable text file (Y1-T10).

@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { EMPTY, Observable, catchError, defer, expand, reduce, throwError } from 'rxjs';
+import { EMPTY, Observable, catchError, defer, expand, map, of, reduce, throwError } from 'rxjs';
 import { ATTOME_CONFIG } from './config';
 import { ApiError } from './types';
 
@@ -167,6 +167,23 @@ export class ApiService {
     }
     return this.http.get<T>(this.url(path), { params: httpParams, withCredentials: true })
       .pipe(catchError(this.handleError));
+  }
+
+  /**
+   * A conditional GET: sends `If-None-Match: etag` when one is given. A 304
+   * answers `{ body: null }` (the caller's copy is current); otherwise the
+   * body comes back with the response's own `ETag`, or `null` when it sent
+   * none.
+   */
+  getIfChanged<T>(path: string, etag: string | null): Observable<{ body: T | null; etag: string | null }> {
+    const headers: Record<string, string> = etag ? { 'If-None-Match': etag } : {};
+    return this.http.get<T>(this.url(path), { headers, observe: 'response', withCredentials: true }).pipe(
+      map(response => ({ body: response.body, etag: response.headers.get('ETag') })),
+      catchError((err: unknown) =>
+        err instanceof HttpErrorResponse && err.status === 304
+          ? of({ body: null, etag })
+          : this.handleError(err as HttpErrorResponse)),
+    );
   }
 
   /**

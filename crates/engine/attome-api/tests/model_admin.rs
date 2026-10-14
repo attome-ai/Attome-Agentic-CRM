@@ -436,6 +436,7 @@ fn a_published_form_has_a_render_plan() {
         assert_eq!(status, StatusCode::OK, "{body}");
 
         let resp = app
+            .clone()
             .oneshot(get_req(
                 &format!("/api/v1/model/forms/{form_id}/plan"),
                 &cookie,
@@ -443,12 +444,27 @@ fn a_published_form_has_a_render_plan() {
             .await
             .unwrap();
         assert_eq!(resp.status(), StatusCode::OK);
+        let etag = resp
+            .headers()
+            .get("etag")
+            .and_then(|v| v.to_str().ok())
+            .expect("the plan carries an ETag")
+            .to_owned();
         let plan = body_json(resp).await;
         assert_eq!(plan["sections"][0]["label"], "Main");
         assert_eq!(
             plan["sections"][0]["fields"][0]["attribute"],
             attribute_name
         );
+
+        // Y14-T2: a client holding this plan gets a bodyless 304.
+        let mut again = get_req(&format!("/api/v1/model/forms/{form_id}/plan"), &cookie);
+        again.headers_mut().insert(
+            "if-none-match",
+            etag.parse().expect("an ETag is a header value"),
+        );
+        let resp = app.oneshot(again).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::NOT_MODIFIED);
     });
 }
 
