@@ -153,9 +153,10 @@ pub fn machine() -> Value {
 }
 
 fn measured_json(m: Option<Measured>) -> Value {
-    m.map_or(Value::Null, |m| {
-        json!({ "p50_ms": m.p50_ms, "p95_ms": m.p95_ms, "p99_ms": m.p99_ms })
-    })
+    m.map_or(
+        Value::Null,
+        |m| json!({ "p50_ms": m.p50_ms, "p95_ms": m.p95_ms, "p99_ms": m.p99_ms }),
+    )
 }
 
 /// `slo-report.json`'s content.
@@ -314,6 +315,9 @@ mod tests {
         assert_eq!(s4.met, Some(true));
         let (body, _) = report(&catalogue, &matrix(), "m.json", Some("abc"), 1, json!({}));
         assert_eq!(body["signature"], Value::Null);
-        assert_eq!(body["classes"].as_array().unwrap().len(), catalogue.classes.len());
+        assert_eq!(
+            body["classes"].as_array().unwrap().len(),
+            catalogue.classes.len()
+        );
     }
 }

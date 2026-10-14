@@ -195,8 +195,7 @@ pub fn render_table(catalogue: &Catalogue) -> String {
     );
     for class in &catalogue.classes {
         let t = &class.targets.solo;
-        let route_text = route(class)
-            .map_or_else(|| "—".to_owned(), |(m, e)| format!("`{m} {e}`"));
+        let route_text = route(class).map_or_else(|| "—".to_owned(), |(m, e)| format!("`{m} {e}`"));
         out.push_str(&format!(
             "| {} | {} | {route_text} | {} | {} | {} | {} | {} | {} |\n",
             class.id,
@@ -240,12 +239,22 @@ pub fn render_all(root: &Path) -> Result<Vec<(PathBuf, String)>, String> {
     Ok(vec![
         (
             root.join(ALERTS),
-            splice(&read(ALERTS)?, RULES_BEGIN, RULES_END, &render_rules(&catalogue))?,
+            splice(
+                &read(ALERTS)?,
+                RULES_BEGIN,
+                RULES_END,
+                &render_rules(&catalogue),
+            )?,
         ),
         (root.join(K6), render_k6(&catalogue)),
         (
             root.join(TABLE),
-            splice(&read(TABLE)?, TABLE_BEGIN, TABLE_END, &render_table(&catalogue))?,
+            splice(
+                &read(TABLE)?,
+                TABLE_BEGIN,
+                TABLE_END,
+                &render_table(&catalogue),
+            )?,
         ),
     ])
 }

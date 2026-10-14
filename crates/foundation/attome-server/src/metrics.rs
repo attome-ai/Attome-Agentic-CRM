@@ -566,10 +566,9 @@ mod tests {
     /// one).
     #[test]
     fn every_catalogue_p99_has_a_histogram_bucket() {
-        let catalogue: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../../observability/slo-catalogue.json"
-        ))
-        .unwrap();
+        let catalogue: serde_json::Value =
+            serde_json::from_str(include_str!("../../../../observability/slo-catalogue.json"))
+                .unwrap();
         let classes = catalogue["classes"].as_array().unwrap();
         assert!(!classes.is_empty());
         for class in classes {

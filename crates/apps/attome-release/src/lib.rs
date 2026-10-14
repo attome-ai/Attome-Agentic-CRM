@@ -380,12 +380,7 @@ fn write_slo_report(root: &Path, matrix: &Path) -> Result<(), String> {
 /// The load-test matrix at one node, then the SLO report (AA13-T6). A missed
 /// class does not fail the step; the report and the notes say so.
 fn slo_evidence(root: &Path) -> Result<(), String> {
-    let shell = if cfg!(windows)
-        && Command::new("pwsh")
-            .arg("-Version")
-            .output()
-            .is_err()
-    {
+    let shell = if cfg!(windows) && Command::new("pwsh").arg("-Version").output().is_err() {
         "powershell"
     } else {
         "pwsh"
