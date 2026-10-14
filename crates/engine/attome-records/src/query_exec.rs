@@ -1822,34 +1822,35 @@ pub async fn execute_stored_query_with_definition(
         let sort_col = quote_ident(sort_col);
         let cursor_op = if dir == "DESC" { "<" } else { ">" };
 
-        // `after_id` present: continue an existing page, anchored via a CTE
-        // that looks the cursor's sort value up from the DB by id rather
+        // `after_id` present: continue an existing page, anchored via a
+        // subquery that looks the cursor's sort value up from the DB by id rather
         // than accepting it from the client — this predicate then compares
         // against `sort_col`'s own native type, the same basis `ORDER BY`
         // itself uses, without this endpoint needing to know base_sql's
         // arbitrary output types up front. A stale/deleted after_id (the
-        // referenced row no longer matches base_sql) makes cursor_row empty,
+        // referenced row no longer matches base_sql) makes that value NULL,
         // which makes the whole page empty too, rather than an explicit
         // error — acceptable for this mode's scope.
         //
         // `after_id` absent (cursor_default's fresh-start case): the same
-        // shape with no cursor_row/anchor predicate at all — just the first
+        // shape with no anchor predicate at all — just the first
         // page in sort order.
         let main_sql = if let Some(cursor_param) = body.after_id.is_some().then(|| params.len() + 1)
         {
+            // AA4-T1: the cursor's sort value is one scalar subquery, not a
+            // CTE cross-joined to every candidate row, so the planner can
+            // walk the sort index from the cursor and stop after the page. A
+            // cursor row that no longer matches makes the bound NULL and the
+            // page empty, as before.
             let mut cursor_conds = conds.clone();
             cursor_conds.push(format!(
-                "(t.{sort_col}, t.id) {cursor_op} (cr.__cursor_val, cr.__cursor_id)"
+                "(t.{sort_col}, t.id) {cursor_op} (                    (SELECT c.{sort_col} FROM ({base_sql}) AS c WHERE c.id = ${cursor_param}),                    ${cursor_param}::uuid)"
             ));
             let cursor_where = format!("WHERE {}", cursor_conds.join(" AND "));
             let limit_param = cursor_param + 1;
             format!(
-                "WITH cursor_row AS (
-                         SELECT t.{sort_col} AS __cursor_val, t.id AS __cursor_id
-                         FROM ({base_sql}) AS t WHERE t.id = ${cursor_param}
-                     )
-                     SELECT row_to_json(t.*) AS __row
-                     FROM ({base_sql}) AS t, cursor_row cr
+                "SELECT row_to_json(t.*) AS __row
+                     FROM ({base_sql}) AS t
                      {cursor_where}
                      ORDER BY t.{sort_col} {dir}, t.id {dir}
                      LIMIT ${limit_param}"
