@@ -5678,6 +5678,22 @@ export interface paths {
         patch: operations["update_transition"];
         trace?: never;
     };
+    "/api/v1/admin/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/views": {
         parameters: {
             query?: never;
@@ -25219,6 +25235,26 @@ export interface components {
             /** Format: int32 */
             write_access_level?: number;
             write_owner_visible?: boolean;
+        };
+        /**
+         * @description U11-T1: what this deployment runs and who uses it. There are no seats or
+         *     expiry dates in v2 (D-778); this is information, not enforcement.
+         */
+        UsageResponse: {
+            /** @description `app.contract_reference`, when the operator set one. */
+            contract_reference?: string | null;
+            /** @description The modules this deployment runs. */
+            modules_on: string[];
+            /**
+             * Format: int64
+             * @description Accounts that can sign in.
+             */
+            users_active: number;
+            /**
+             * Format: int64
+             * @description Accounts that signed in during the last 30 days.
+             */
+            users_signed_in_30d: number;
         };
         /** @description `POST .../use-mine`. */
         UseMineBody: {
@@ -46108,6 +46144,44 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    usage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Modules on, active users and the contract reference */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

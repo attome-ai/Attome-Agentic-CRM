@@ -31495,6 +31495,54 @@
         }
       }
     },
+    "/api/v1/admin/usage": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "usage",
+        "responses": {
+          "200": {
+            "description": "Modules on, active users and the contract reference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/views": {
       "get": {
         "tags": [
@@ -93639,6 +93687,41 @@
           },
           "write_owner_visible": {
             "type": "boolean"
+          }
+        }
+      },
+      "UsageResponse": {
+        "type": "object",
+        "description": "U11-T1: what this deployment runs and who uses it. There are no seats or\nexpiry dates in v2 (D-778); this is information, not enforcement.",
+        "required": [
+          "modules_on",
+          "users_active",
+          "users_signed_in_30d"
+        ],
+        "properties": {
+          "contract_reference": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`app.contract_reference`, when the operator set one."
+          },
+          "modules_on": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The modules this deployment runs."
+          },
+          "users_active": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Accounts that can sign in."
+          },
+          "users_signed_in_30d": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Accounts that signed in during the last 30 days."
           }
         }
       },
