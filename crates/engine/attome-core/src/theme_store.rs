@@ -54,10 +54,10 @@ fn check_text(tokens: &ThemeTokens) -> Result<(), AppError> {
     Ok(())
 }
 
-/// B13-T10: the deployment's published brand for an email: its app name,
-/// logo (an absolute URL under `base_url`) and primary colour. A failure to
-/// read it is logged and gives the plain email; branding never stops a
-/// password reset.
+/// B13-T10: the deployment's published brand for an email or a generated
+/// document: its app name, logo (an absolute URL under `base_url`) and
+/// primary colour. A failure to read it is logged and gives no brand;
+/// branding never stops a password reset or a document.
 pub async fn email_brand(
     db: &attome_db::DbPool,
     base_url: &str,

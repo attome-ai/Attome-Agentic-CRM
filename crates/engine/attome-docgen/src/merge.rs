@@ -92,10 +92,24 @@ pub async fn build_context(
     // D-589: document generation is a bulk surface.
     let record =
         attome_records::entity_crud::read_record_bulk(state, ctx, entity, record_id).await?;
-    let data = match record.data() {
+    let mut data = match record.data() {
         Value::Object(map) => map.clone(),
         _ => serde_json::Map::new(),
     };
+    // B13-T10: the deployment's brand, for `{{ brand_app_name }}`,
+    // `{{ brand_logo_url }}` and `{{ brand_primary }}`. A record field of
+    // the same name wins.
+    let brand =
+        attome_core::theme_store::email_brand(&state.base.db, &state.base.config.frontend_url())
+            .await;
+    for (key, value) in [
+        ("brand_app_name", brand.app_name),
+        ("brand_logo_url", brand.logo_url),
+        ("brand_primary", brand.primary),
+    ] {
+        data.entry(key)
+            .or_insert_with(|| value.map_or(Value::Null, Value::String));
+    }
     Ok(MergeContext {
         entity: entity.to_string(),
         record_id,

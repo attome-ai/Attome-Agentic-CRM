@@ -31,6 +31,7 @@ holding the current ETag gets `304`. The public answer may be cached for five mi
 | `radius_px` | Corner radius, 0 to 24 |
 | `density` | `comfortable` or `compact` |
 | `hide_vendor_name` | Leave the Attome name out of the product |
+| `app_name` | The product name in emails, documents and the browser, 1 to 60 characters |
 
 Colours are `#RRGGBB`. Today the web app applies the light-mode colours `primary`, `accent`,
 `surface`, `text`, `success` and `danger`, and the fonts and Arabic line height in both modes. A
@@ -109,6 +110,18 @@ Once published, the branding routes return `logo_url`, `logo_dark_url`, `favicon
 That route needs no session, serves the most specific published file for the host, and sends
 `nosniff` and a `sandbox` content security policy, so an SVG opened on its own runs nothing. The
 guidelines PDF is never public. The web app sets the browser tab's icon from `favicon_url`.
+
+## Emails and documents
+
+Password-reset, email-verification and invitation emails carry the deployment's published brand:
+the logo (or `app_name` when there is no logo) above the message, links in `primary`, and the
+plain-text body signed with `app_name`. They never name Attome. If the brand cannot be read, the
+email goes out plain and the server logs a warning.
+
+Document templates (docgen) can use `{{ brand_app_name }}`, `{{ brand_logo_url }}` and
+`{{ brand_primary }}`; a record field of the same name wins. The logo URL is under the
+deployment's `frontend` address, so a document renderer that refuses private addresses cannot
+fetch it on a local machine.
 
 ## Hiding the vendor name
 
