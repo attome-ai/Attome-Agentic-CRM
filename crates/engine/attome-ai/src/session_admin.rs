@@ -377,6 +377,155 @@ async fn session_children(
     }))
 }
 
+/// One tool call inside a turn of a run (N29-T1).
+#[derive(Debug, Serialize, ToSchema)]
+pub struct RunToolCall {
+    pub tool_call_id: String,
+    pub action_id: String,
+    /// The tool call's own status (`proposed`, `executed`, `rejected`, ...).
+    pub status: String,
+    pub gate_decision: Option<String>,
+    /// The invocation ledger's outcome for it, when it reached the ledger.
+    pub invocation_outcome: Option<String>,
+}
+
+/// One turn of a run.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct RunTurn {
+    pub turn_id: Uuid,
+    pub conversation_id: Uuid,
+    pub started_at: chrono::DateTime<chrono::Utc>,
+    pub model_id: Option<String>,
+    pub prompt_version: Option<String>,
+    pub terminal_state: Option<String>,
+    pub tool_calls: Vec<RunToolCall>,
+}
+
+/// A session's whole run as one tree (N29-T1).
+#[derive(Debug, Serialize, ToSchema)]
+pub struct RunTree {
+    pub session_id: Uuid,
+    pub parent_session_ref: Option<Uuid>,
+    pub child_session_ids: Vec<Uuid>,
+    pub turns: Vec<RunTurn>,
+}
+
+/// Most turns one tree returns.
+const MAX_RUN_TURNS: i64 = 500;
+
+/// `GET /api/v1/admin/agents/sessions/{id}/run` — the session's run as one
+/// tree (N29-T1): its parent and delegated children, every turn of its
+/// conversations with the model, prompt version and end state, and each
+/// turn's tool calls with the gate's decision and the ledger's outcome.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/agents/sessions/{id}/run",
+    tag = "action",
+    params(("id" = Uuid, Path, description = "The agent session")),
+    responses(
+        (status = 200, description = "The run tree", body = RunTree),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks ai_agent.supervise", body = ErrorResponse),
+        (status = 404, description = "No such session", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn session_run(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<AgentSupervise>>,
+    axum::extract::Path(id): axum::extract::Path<Uuid>,
+) -> Result<Json<RunTree>, AppError> {
+    let db = &state.base.db;
+    let parent: Option<Option<Uuid>> =
+        sqlx::query_scalar("SELECT parent_session_ref FROM agent_session WHERE id = $1")
+            .bind(id)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?;
+    let parent_session_ref = parent.ok_or(AppError::NotFound)?;
+    let child_session_ids: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM agent_session WHERE parent_session_ref = $1 ORDER BY started_at, id LIMIT 200",
+    )
+    .bind(id)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    type TurnRow = (
+        Uuid,
+        Uuid,
+        chrono::DateTime<chrono::Utc>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+    );
+    let turn_rows: Vec<TurnRow> = sqlx::query_as(
+        "SELECT m.turn_id, m.conversation_id, MIN(m.created_at), MAX(m.model_id), \
+                MAX(m.prompt_version), MAX(m.terminal_state) \
+         FROM ai_message m JOIN ai_conversation c ON c.id = m.conversation_id \
+         WHERE c.agent_session_id = $1 \
+         GROUP BY m.turn_id, m.conversation_id ORDER BY MIN(m.created_at) LIMIT $2",
+    )
+    .bind(id)
+    .bind(MAX_RUN_TURNS)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let calls: Vec<(Uuid, String, String, String, Option<String>)> = sqlx::query_as(
+        "SELECT t.turn_id, t.tool_call_id, t.action_id, t.status, t.gate_decision \
+         FROM ai_tool_call t JOIN ai_conversation c ON c.id = t.conversation_id \
+         WHERE c.agent_session_id = $1 ORDER BY t.created_at, t.id LIMIT 5000",
+    )
+    .bind(id)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let outcomes: std::collections::HashMap<String, String> =
+        sqlx::query_as::<_, (String, String)>(
+            "SELECT tool_call_id, outcome FROM action_invocation \
+         WHERE agent_session_id = $1 AND tool_call_id IS NOT NULL LIMIT 5000",
+        )
+        .bind(id)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?
+        .into_iter()
+        .collect();
+    let turns = turn_rows
+        .into_iter()
+        .map(
+            |(turn_id, conversation_id, started_at, model_id, prompt_version, terminal_state)| {
+                RunTurn {
+                    turn_id,
+                    conversation_id,
+                    started_at,
+                    model_id,
+                    prompt_version,
+                    terminal_state,
+                    tool_calls: calls
+                        .iter()
+                        .filter(|c| c.0 == turn_id)
+                        .map(
+                            |(_, tool_call_id, action_id, status, gate_decision)| RunToolCall {
+                                tool_call_id: tool_call_id.clone(),
+                                action_id: action_id.clone(),
+                                status: status.clone(),
+                                gate_decision: gate_decision.clone(),
+                                invocation_outcome: outcomes.get(tool_call_id).cloned(),
+                            },
+                        )
+                        .collect(),
+                }
+            },
+        )
+        .collect();
+    Ok(Json(RunTree {
+        session_id: id,
+        parent_session_ref,
+        child_session_ids,
+        turns,
+    }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/agents/sessions", get(list_sessions))
@@ -388,12 +537,13 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/agents/sessions/{id}/children",
             get(session_children),
         )
+        .route("/api/v1/admin/agents/sessions/{id}/run", get(session_run))
 }
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(list_sessions, session_trace, session_children),
-    components(schemas(TraceStep, ChildSession))
+    paths(list_sessions, session_trace, session_children, session_run),
+    components(schemas(TraceStep, ChildSession, RunTree, RunTurn, RunToolCall))
 )]
 struct ApiDocFragment;
 

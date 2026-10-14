@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `GET /api/v1/admin/agents/sessions/{id}/run`: a session's run as one tree (parent, children,
+  turns with model and prompt version, each tool call with the gate decision and ledger outcome).
 - `GET /api/v1/admin/ai/evidence`: every agent action and model-written suggestion in a period, by
   agent or model, keyset-paged, for audits.
 - Automatic trip: when an AI action's acceptance falls by 30 points or more, the nightly quality
