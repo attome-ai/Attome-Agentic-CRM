@@ -34,6 +34,9 @@ Usage:
   attome healthcheck            Exit 0 when the local server is healthy
   attome preflight              Check configuration and dependencies
   attome doctor                 The same checks, with what to do about each failure
+  attome status [--url <url>]...
+                                Each node's version, schema, and whether it has
+                                started and is ready
   attome audit-chainer          Run the audit hash chainer
   attome verify-audit-chain     Verify the audit hash chain
   attome changeset-replay       Replay changesets against a database
@@ -113,6 +116,10 @@ fn main() -> ExitCode {
         ["healthcheck", ..] => attome::cmd::healthcheck::run(),
         ["preflight", ..] => attome::cmd::preflight::run(),
         ["doctor", ..] => attome::cmd::preflight::run_doctor(),
+        ["status", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            attome::cmd::status::run(&rest)
+        }
         ["changeset-replay", ..] => attome::cmd::changeset_replay::run(),
         ["verify-audit-chain", ..] => {
             attome::cmd::verify_audit_chain::run();
