@@ -191,6 +191,11 @@ export class EntityService {
     return this.api.delete(`/api/v1/${entityName}/${id}`);
   }
 
+  /** A28-T2: the values a new record of `entityName` starts with, by field. */
+  newDefaults(entityName: string): Observable<Record<string, unknown>> {
+    return this.api.get<Record<string, unknown>>(`/api/v1/${encodeURIComponent(entityName)}/new`);
+  }
+
   /** B2-T3: one field's change history on a record, newest first. */
   fieldHistory(
     entityName: string,

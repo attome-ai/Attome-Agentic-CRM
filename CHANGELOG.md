@@ -11,6 +11,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- `GET /api/v1/{entity}/new` returns a new record's defaults, and the new-record form shows them.
 - Attribute defaults: `options.default` is `{"kind": "fixed", "value": ...}`, `today`, `now` or
   `current_user`, filled on every create path when the attribute is empty.
 - `GET /api/v1/{entity}/deleted` lists the deleted records the caller may see, newest first;

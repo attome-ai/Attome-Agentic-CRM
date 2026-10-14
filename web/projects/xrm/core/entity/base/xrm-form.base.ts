@@ -254,9 +254,32 @@ export abstract class EngineFormBase implements OnInit {
         this.syncRecordValue(fg);
         this.trackDirtyState(fg);
         if (this.id()) this.loadRecord();
-        else            this.loading.set(false);
+        else {
+          this.loading.set(false);
+          this.applyDefaults(fg);
+        }
       },
       error: () => this.loading.set(false),
+    });
+  }
+
+  /**
+   * A28-T2: a new record starts with its attributes' defaults
+   * (`GET /api/v1/{entity}/new`), filling only controls still empty. A host
+   * whose entity service cannot answer (a form test's stub) keeps the blanks.
+   */
+  private applyDefaults(fg: FormGroup): void {
+    if (typeof this.svc.newDefaults !== 'function') return;
+    this.svc.newDefaults(this.entityLogicalName).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: values => {
+        for (const [field, value] of Object.entries(values)) {
+          const control = fg.get(field);
+          if (control && (control.value === null || control.value === undefined || control.value === '')) {
+            control.setValue(value);
+          }
+        }
+      },
+      error: () => undefined,
     });
   }
 
