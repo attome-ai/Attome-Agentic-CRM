@@ -67,7 +67,10 @@ jobs:
         shell: bash
         working-directory: .
         run: |
+          # The ICU warning (and every stack frame) is noise that would fill
+          # the annotation budget before the real failures.
           sed -e 's/\x1b\[[0-9;]*m//g' web-check.log \
+            | grep -v -E 'ICU message formatting is unavailable|^[[:space:]]+at ' \
             | grep -E -A2 'error TS|ERROR|✘|FAIL|Error:|AssertionError|expected' \
             | head -360 > failures.txt || true
           total=$(wc -l < failures.txt); start=1; part=1
