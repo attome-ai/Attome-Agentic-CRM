@@ -12,6 +12,11 @@
 //! An archive is written under a temporary name and renamed when `pg_dump`
 //! succeeds, so a crash never leaves a half archive that looks complete.
 //!
+//! Right after the database, the object store's files are copied into
+//! `files/` in the same folder (only new or changed objects are read again),
+//! and `attome-YYYYMMDD-HHMM.files.json` lists each file the backup holds
+//! with its size and SHA-256, so a restore puts back exactly those.
+//!
 //! Same disk as the database by default: it protects against mistakes and
 //! corruption, not against losing the disk; point `backup.dir` at another
 //! disk or a network share for that. pgBackRest (incremental backups and
@@ -27,6 +32,225 @@ use chrono::{DateTime, Timelike, Utc};
 const BACKUP_TIMEOUT: Duration = Duration::from_secs(2 * 60 * 60);
 const PREFIX: &str = "attome-";
 const SUFFIX: &str = ".dump";
+/// Beside each archive: the files it holds.
+const FILES_SUFFIX: &str = ".files.json";
+/// The folder under `backup.dir` that holds file copies.
+const FILES_DIR: &str = "files";
+/// The mirror's record of what it holds, so unchanged objects are not
+/// read again.
+const INDEX_FILE: &str = ".index.json";
+
+/// One file a backup holds.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct FileCopy {
+    pub key: String,
+    pub size: u64,
+    pub sha256: String,
+    /// The store's entity tag when the copy was made.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub e_tag: Option<String>,
+}
+
+/// The manifest beside `archive` (`attome-….dump` → `attome-….files.json`).
+pub fn manifest_name(archive: &str) -> String {
+    format!("{}{FILES_SUFFIX}", archive.trim_end_matches(SUFFIX))
+}
+
+/// Where the copy of `key` lives under the mirror folder. Keys use `/`;
+/// anything that could leave the folder (`..`, a drive or root) is refused.
+pub fn mirror_path(mirror: &Path, key: &str) -> Option<PathBuf> {
+    let mut path = mirror.to_path_buf();
+    for part in key.split('/') {
+        if part.is_empty() || part == "." || part == ".." || part.contains(['\\', ':']) {
+            return None;
+        }
+        path.push(part);
+    }
+    Some(path)
+}
+
+/// Whether the mirror's copy can stand for `entry` without reading it again:
+/// same size and the same entity tag.
+fn unchanged(copy: Option<&FileCopy>, entry: &attome_storage::mirror::ObjectEntry) -> bool {
+    copy.is_some_and(|c| c.size == entry.size && c.e_tag.is_some() && c.e_tag == entry.e_tag)
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    hex::encode(Sha256::digest(bytes))
+}
+
+/// Copies the object store's files into `dir/files/` and writes the
+/// manifest beside `archive`. Returns how many files the backup holds.
+async fn backup_files(config: &AppConfig, dir: &Path, archive: &str) -> Result<usize, String> {
+    let client = attome_storage::create_storage_client(config)
+        .await
+        .map_err(|e| format!("cannot reach the file store: {e}"))?;
+    let entries = attome_storage::mirror::list_all(&client)
+        .await
+        .map_err(|e| format!("cannot list the file store: {e}"))?;
+    let mirror = dir.join(FILES_DIR);
+    tokio::fs::create_dir_all(&mirror)
+        .await
+        .map_err(|e| format!("cannot create {}: {e}", mirror.display()))?;
+    let index_path = mirror.join(INDEX_FILE);
+    let mut index: std::collections::BTreeMap<String, FileCopy> = tokio::fs::read(&index_path)
+        .await
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .unwrap_or_default();
+    let mut manifest = Vec::with_capacity(entries.len());
+    for entry in &entries {
+        let Some(target) = mirror_path(&mirror, &entry.key) else {
+            tracing::warn!(key = %entry.key, "backup: a file key cannot be copied to disk; skipped");
+            continue;
+        };
+        let have_copy = tokio::fs::metadata(&target).await.is_ok();
+        if !(have_copy && unchanged(index.get(&entry.key), entry)) {
+            let bytes = attome_storage::mirror::read_object(&client, &entry.key)
+                .await
+                .map_err(|e| format!("cannot read {}: {e}", entry.key))?;
+            if let Some(parent) = target.parent() {
+                tokio::fs::create_dir_all(parent)
+                    .await
+                    .map_err(|e| format!("cannot create {}: {e}", parent.display()))?;
+            }
+            let partial = target.with_extension("partial");
+            tokio::fs::write(&partial, &bytes)
+                .await
+                .map_err(|e| format!("cannot write {}: {e}", partial.display()))?;
+            tokio::fs::rename(&partial, &target)
+                .await
+                .map_err(|e| format!("cannot finish {}: {e}", target.display()))?;
+            index.insert(
+                entry.key.clone(),
+                FileCopy {
+                    key: entry.key.clone(),
+                    size: bytes.len() as u64,
+                    sha256: sha256_hex(&bytes),
+                    e_tag: entry.e_tag.clone(),
+                },
+            );
+        }
+        if let Some(copy) = index.get(&entry.key) {
+            manifest.push(copy.clone());
+        }
+    }
+    let index_json = serde_json::to_vec(&index).map_err(|e| e.to_string())?;
+    tokio::fs::write(&index_path, index_json)
+        .await
+        .map_err(|e| format!("cannot write {}: {e}", index_path.display()))?;
+    let manifest_path = dir.join(manifest_name(archive));
+    let manifest_json = serde_json::to_vec_pretty(&manifest).map_err(|e| e.to_string())?;
+    tokio::fs::write(&manifest_path, manifest_json)
+        .await
+        .map_err(|e| format!("cannot write {}: {e}", manifest_path.display()))?;
+    Ok(manifest.len())
+}
+
+/// Removes file copies no kept manifest lists any more.
+async fn prune_files(dir: &Path) {
+    let mirror = dir.join(FILES_DIR);
+    let index_path = mirror.join(INDEX_FILE);
+    let Ok(bytes) = tokio::fs::read(&index_path).await else {
+        return;
+    };
+    let Ok(mut index) =
+        serde_json::from_slice::<std::collections::BTreeMap<String, FileCopy>>(&bytes)
+    else {
+        return;
+    };
+    let mut kept = std::collections::BTreeSet::new();
+    let Ok(mut entries) = tokio::fs::read_dir(dir).await else {
+        return;
+    };
+    while let Ok(Some(entry)) = entries.next_entry().await {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !(name.starts_with(PREFIX) && name.ends_with(FILES_SUFFIX)) {
+            continue;
+        }
+        let Ok(bytes) = tokio::fs::read(entry.path()).await else {
+            // An unreadable manifest: keep every copy rather than guess.
+            return;
+        };
+        let Ok(files) = serde_json::from_slice::<Vec<FileCopy>>(&bytes) else {
+            return;
+        };
+        kept.extend(files.into_iter().map(|f| f.key));
+    }
+    let gone: Vec<String> = index
+        .keys()
+        .filter(|k| !kept.contains(*k))
+        .cloned()
+        .collect();
+    for key in gone {
+        if let Some(path) = mirror_path(&mirror, &key)
+            && let Err(error) = tokio::fs::remove_file(&path).await
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            tracing::warn!(%error, %key, "backup: an old file copy could not be removed");
+            continue;
+        }
+        index.remove(&key);
+    }
+    if let Ok(json) = serde_json::to_vec(&index)
+        && let Err(error) = tokio::fs::write(&index_path, json).await
+    {
+        tracing::warn!(%error, "backup: the file index could not be rewritten");
+    }
+}
+
+/// Puts back every file the manifest beside `archive` lists that the store
+/// is missing or holds at another size, after checking the copy's SHA-256.
+/// Returns how many files were written.
+async fn restore_files(config: &AppConfig, archive: &Path) -> Result<usize, String> {
+    let Some(dir) = archive.parent() else {
+        return Ok(0);
+    };
+    let name = archive
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let manifest_path = dir.join(manifest_name(&name));
+    let Ok(bytes) = tokio::fs::read(&manifest_path).await else {
+        return Ok(0);
+    };
+    let files: Vec<FileCopy> = serde_json::from_slice(&bytes)
+        .map_err(|e| format!("cannot read {}: {e}", manifest_path.display()))?;
+    let client = attome_storage::create_storage_client(config)
+        .await
+        .map_err(|e| format!("cannot reach the file store: {e}"))?;
+    let present: std::collections::BTreeMap<String, u64> =
+        attome_storage::mirror::list_all(&client)
+            .await
+            .map_err(|e| format!("cannot list the file store: {e}"))?
+            .into_iter()
+            .map(|e| (e.key, e.size))
+            .collect();
+    let mirror = dir.join(FILES_DIR);
+    let mut written = 0;
+    for file in files {
+        if present.get(&file.key) == Some(&file.size) {
+            continue;
+        }
+        let path = mirror_path(&mirror, &file.key)
+            .ok_or_else(|| format!("the manifest names an unsafe key: {}", file.key))?;
+        let bytes = tokio::fs::read(&path)
+            .await
+            .map_err(|e| format!("the copy of {} is missing: {e}", file.key))?;
+        if sha256_hex(&bytes) != file.sha256 {
+            return Err(format!(
+                "the copy of {} does not match its checksum",
+                file.key
+            ));
+        }
+        attome_storage::mirror::write_object(&client, &file.key, bytes)
+            .await
+            .map_err(|e| format!("cannot write {}: {e}", file.key))?;
+        written += 1;
+    }
+    Ok(written)
+}
 
 /// An archive's file name for `at`: sortable by name, newest last.
 pub fn archive_name(at: DateTime<Utc>) -> String {
@@ -61,23 +285,7 @@ pub fn until_next(now: DateTime<Utc>, hour: u32) -> Duration {
 
 /// Where archives go.
 pub fn backup_dir(config: &AppConfig) -> PathBuf {
-    match config
-        .backup
-        .dir
-        .as_deref()
-        .map(str::trim)
-        .filter(|d| !d.is_empty())
-    {
-        Some(dir) => PathBuf::from(dir),
-        None => {
-            let config_file = PathBuf::from(AppConfig::config_file_path());
-            config_file
-                .parent()
-                .filter(|p| !p.as_os_str().is_empty())
-                .unwrap_or(Path::new("."))
-                .join("backups")
-        }
-    }
+    config.backup.resolved_dir()
 }
 
 /// The `pg_dump` arguments: everything but the password.
@@ -131,7 +339,16 @@ pub async fn run_once(config: &AppConfig) -> Result<PathBuf, String> {
     tokio::fs::rename(&partial, &file)
         .await
         .map_err(|e| format!("cannot finish {}: {e}", file.display()))?;
+    if config.backup.files {
+        // The database backup stands on its own; a file store that cannot
+        // be copied is reported, and the next run tries again.
+        match backup_files(config, &dir, &name).await {
+            Ok(count) => tracing::info!(files = count, "backup: files copied"),
+            Err(error) => tracing::error!(%error, "backup: the files were not copied"),
+        }
+    }
     prune(&dir, config.backup.keep as usize).await;
+    prune_files(&dir).await;
     Ok(file)
 }
 
@@ -146,6 +363,12 @@ async fn prune(dir: &Path, keep: usize) {
     for name in to_prune(&names, keep) {
         if let Err(error) = tokio::fs::remove_file(dir.join(&name)).await {
             tracing::warn!(%error, archive = %name, "backup: an old archive could not be removed");
+        }
+        let manifest = manifest_name(&name);
+        if let Err(error) = tokio::fs::remove_file(dir.join(&manifest)).await
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            tracing::warn!(%error, %manifest, "backup: an old file list could not be removed");
         }
     }
 }
@@ -366,6 +589,14 @@ pub async fn run_restore(args: Vec<String>) -> std::process::ExitCode {
         archive.display(),
         config.database.dbname
     );
+    match restore_files(&config, &archive).await {
+        Ok(0) => {}
+        Ok(count) => println!("put back {count} files"),
+        Err(error) => {
+            eprintln!("attome restore: the database is restored but the files are not: {error}");
+            return std::process::ExitCode::FAILURE;
+        }
+    }
     std::process::ExitCode::SUCCESS
 }
 
@@ -426,6 +657,52 @@ mod tests {
         assert!(to_prune(&names, 5).is_empty());
         // Keep is at least one, whatever the setting says.
         assert_eq!(to_prune(&names, 0).len(), 2);
+    }
+
+    #[test]
+    fn file_copies_stay_inside_the_mirror_and_match_their_archive() {
+        let mirror = Path::new("backups").join("files");
+        assert_eq!(
+            mirror_path(&mirror, "branding/abc/logo-1"),
+            Some(mirror.join("branding").join("abc").join("logo-1"))
+        );
+        for bad in ["../etc/passwd", "a//b", "/abs", "a/./b", "c:/x", "a\\b"] {
+            assert_eq!(mirror_path(&mirror, bad), None, "{bad}");
+        }
+        assert_eq!(
+            manifest_name("attome-20261014-0200.dump"),
+            "attome-20261014-0200.files.json"
+        );
+        let entry = attome_storage::mirror::ObjectEntry {
+            key: "k".into(),
+            size: 3,
+            e_tag: Some("\"e1\"".into()),
+        };
+        let copy = FileCopy {
+            key: "k".into(),
+            size: 3,
+            sha256: sha256_hex(b"abc"),
+            e_tag: Some("\"e1\"".into()),
+        };
+        assert!(unchanged(Some(&copy), &entry));
+        let changed = attome_storage::mirror::ObjectEntry {
+            e_tag: Some("\"e2\"".into()),
+            ..entry.clone()
+        };
+        assert!(!unchanged(Some(&copy), &changed));
+        let untagged = FileCopy {
+            e_tag: None,
+            ..copy
+        };
+        assert!(
+            !unchanged(Some(&untagged), &entry),
+            "no tag means read it again"
+        );
+        assert!(!unchanged(None, &entry));
+        assert_eq!(
+            sha256_hex(b"abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
     }
 
     #[test]

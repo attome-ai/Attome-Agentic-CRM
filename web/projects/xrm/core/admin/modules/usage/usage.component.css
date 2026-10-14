@@ -9,3 +9,4 @@
 .us-modules { list-style: none; margin: 0; padding-inline-start: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .us-muted { color: var(--muted-color, #5b6472); font-size: 0.875rem; }
 .us-error { color: var(--danger-color, #b42318); }
+.us-warning { color: var(--warning-color, #b54708); }

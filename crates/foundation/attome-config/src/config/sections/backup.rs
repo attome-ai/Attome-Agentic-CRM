@@ -28,6 +28,9 @@ pub struct BackupSection {
     pub hour: u32,
     /// The `pg_dump` program. Unset: `pg_dump` on the PATH.
     pub pg_dump: Option<String>,
+    /// Copy the object store's files (attachments, brand assets) beside
+    /// each database backup. On by default.
+    pub files: bool,
 }
 
 impl Default for BackupSection {
@@ -38,11 +41,28 @@ impl Default for BackupSection {
             keep: DEFAULT_KEEP,
             hour: DEFAULT_HOUR,
             pg_dump: None,
+            files: true,
         }
     }
 }
 
 impl BackupSection {
+    /// Where backups go: `dir`, or a `backups` folder next to the
+    /// configuration file.
+    pub fn resolved_dir(&self) -> std::path::PathBuf {
+        match self.dir.as_deref().map(str::trim).filter(|d| !d.is_empty()) {
+            Some(dir) => std::path::PathBuf::from(dir),
+            None => {
+                let config_file = std::path::PathBuf::from(crate::AppConfig::config_file_path());
+                config_file
+                    .parent()
+                    .filter(|p| !p.as_os_str().is_empty())
+                    .unwrap_or(std::path::Path::new("."))
+                    .join("backups")
+            }
+        }
+    }
+
     /// Shape check run by `AppConfig::validate`.
     pub fn check(&self) -> Result<(), (String, String)> {
         if self.hour > 23 {
@@ -66,6 +86,7 @@ mod tests {
     fn defaults_are_on_daily_and_checked() {
         let section = BackupSection::default();
         assert!(section.enabled);
+        assert!(section.files);
         assert_eq!((section.keep, section.hour), (DEFAULT_KEEP, DEFAULT_HOUR));
         assert!(section.check().is_ok());
         let bad_hour = BackupSection {

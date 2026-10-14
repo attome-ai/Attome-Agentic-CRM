@@ -966,6 +966,110 @@ async fn public_brand_asset(
         .into_response())
 }
 
+/// The newest local backup.
+#[derive(Serialize, ToSchema)]
+struct BackupArchive {
+    name: String,
+    /// When it was taken, from its name.
+    taken_at: Option<chrono::DateTime<chrono::Utc>>,
+    size_bytes: u64,
+    /// Files listed beside it; `null` when it has no file list.
+    files: Option<usize>,
+}
+
+/// `GET /api/v1/admin/backup`.
+#[derive(Serialize, ToSchema)]
+struct BackupStatus {
+    /// `backup.enabled`.
+    enabled: bool,
+    /// Whether this deployment runs the built-in backup (Solo only).
+    runs_here: bool,
+    /// `backup.files`.
+    files: bool,
+    dir: String,
+    keep: u32,
+    /// The hour (UTC) it runs.
+    hour: u32,
+    /// True when `backup.dir` is not set, so backups share the database's
+    /// machine and disk.
+    same_disk: bool,
+    archives: usize,
+    latest: Option<BackupArchive>,
+}
+
+/// U6-T1: what the daily local backup does and the newest one it wrote, so
+/// the admin console can warn when backups stay on the same disk or have
+/// stopped.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/backup",
+    tag = "settings",
+    responses(
+        (status = 200, description = "The backup settings and the newest archive", body = BackupStatus),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn backup_status(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Result<Json<BackupStatus>, AppError> {
+    let config = &state.base.config;
+    let section = &config.backup;
+    let dir = section.resolved_dir();
+    let mut names = Vec::new();
+    if let Ok(mut entries) = tokio::fs::read_dir(&dir).await {
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.starts_with("attome-") && name.ends_with(".dump") {
+                names.push(name);
+            }
+        }
+    }
+    names.sort();
+    let latest = match names.last() {
+        Some(name) => {
+            let size_bytes = tokio::fs::metadata(dir.join(name))
+                .await
+                .map(|m| m.len())
+                .unwrap_or(0);
+            let stem = name.trim_start_matches("attome-").trim_end_matches(".dump");
+            let taken_at = chrono::NaiveDateTime::parse_from_str(stem, "%Y%m%d-%H%M")
+                .ok()
+                .map(|t| t.and_utc());
+            let manifest = dir.join(format!("{}.files.json", name.trim_end_matches(".dump")));
+            let files = tokio::fs::read(&manifest)
+                .await
+                .ok()
+                .and_then(|bytes| serde_json::from_slice::<Vec<serde_json::Value>>(&bytes).ok())
+                .map(|list| list.len());
+            Some(BackupArchive {
+                name: name.clone(),
+                taken_at,
+                size_bytes,
+                files,
+            })
+        }
+        None => None,
+    };
+    Ok(Json(BackupStatus {
+        enabled: section.enabled,
+        runs_here: config.cache.backend == attome_config::CacheBackend::Memory,
+        files: section.files,
+        dir: dir.display().to_string(),
+        keep: section.keep,
+        hour: section.hour,
+        same_disk: section
+            .dir
+            .as_deref()
+            .map(str::trim)
+            .is_none_or(str::is_empty),
+        archives: names.len(),
+        latest,
+    }))
+}
+
 /// The request's host name, lower case and without a port.
 fn request_host(headers: &axum::http::HeaderMap) -> Option<String> {
     headers
@@ -1050,6 +1154,7 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/branding/public", get(public_branding))
         .route("/api/v1/branding/me", get(my_branding))
         .route("/api/v1/branding/asset", get(public_brand_asset))
+        .route("/api/v1/admin/backup", get(backup_status))
         .route(
             "/api/v1/admin/themes/{id}/assets",
             get(list_theme_assets).post(upload_theme_asset),
@@ -1073,6 +1178,7 @@ pub fn routes() -> Router<EngineState> {
     public_branding,
     my_branding,
     public_brand_asset,
+    backup_status,
     upload_theme_asset,
     list_theme_assets
 ))]

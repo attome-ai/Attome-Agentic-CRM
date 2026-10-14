@@ -26,4 +26,39 @@
     </ul>
     <p class="us-muted">{{ 'usagePage.note' | translate }}</p>
   }
+  @if (backup(); as b) {
+    <h3>{{ 'usagePage.backup' | translate }}</h3>
+    @if (!b.runs_here) {
+      <p class="us-muted">{{ 'usagePage.backupElsewhere' | translate }}</p>
+    } @else if (!b.enabled) {
+      <p class="us-error" role="alert" data-backup="off">{{ 'usagePage.backupOff' | translate }}</p>
+    } @else {
+      @if (b.same_disk) {
+        <p class="us-warning" role="status" data-backup="same-disk">{{ 'usagePage.backupSameDisk' | translate }}</p>
+      }
+      @if (backupLate(b)) {
+        <p class="us-error" role="alert" data-backup="late">{{ 'usagePage.backupLate' | translate }}</p>
+      }
+      <dl class="us-figures">
+        <div>
+          <dt>{{ 'usagePage.backupDir' | translate }}</dt>
+          <dd dir="ltr"><code>{{ b.dir }}</code></dd>
+        </div>
+        <div>
+          <dt>{{ 'usagePage.backupLatest' | translate }}</dt>
+          <dd dir="ltr" data-backup="latest">{{ b.latest?.name ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ 'usagePage.backupKept' | translate }}</dt>
+          <dd>{{ b.archives }} / {{ b.keep }}</dd>
+        </div>
+        @if (b.latest?.files !== null && b.latest?.files !== undefined) {
+          <div>
+            <dt>{{ 'usagePage.backupFiles' | translate }}</dt>
+            <dd>{{ b.latest?.files }}</dd>
+          </div>
+        }
+      </dl>
+    }
+  }
 </section>

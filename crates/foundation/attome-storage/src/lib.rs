@@ -96,6 +96,7 @@
 mod client;
 mod error;
 pub mod health;
+pub mod mirror;
 mod presign;
 #[cfg(test)]
 mod test_support;
