@@ -60,6 +60,19 @@ services:
               capabilities: [gpu]
     restart: unless-stopped
 
+  # Speech to text (N22-T1): faster-whisper behind an OpenAI-compatible
+  # /v1/audio/transcriptions. Point inference.speech.base_url at
+  # http://127.0.0.1:8090/v1 and set inference.speech.model to the model id.
+  speech:
+    profiles: ["speech"]
+    image: ghcr.io/speaches-ai/speaches:latest-cpu
+    environment:
+      WHISPER__MODEL: "${WHISPER_MODEL:-Systran/faster-whisper-large-v3}"
+    ports: ["127.0.0.1:8090:8000"]
+    volumes: ["speech-models:/home/ubuntu/.cache/huggingface/hub"]
+    restart: unless-stopped
+
 volumes:
   tei-models:
   vllm-cache:
+  speech-models:

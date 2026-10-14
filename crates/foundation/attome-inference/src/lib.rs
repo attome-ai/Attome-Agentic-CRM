@@ -43,6 +43,7 @@ pub mod budget;
 pub mod embed;
 pub mod generate;
 pub mod models;
+pub mod speech;
 pub mod telemetry;
 #[cfg(feature = "test-support")]
 pub mod testing;
@@ -53,6 +54,7 @@ pub use generate::{
     GenerationResult, Role, ToolCall, ToolChoice, ToolDefinition,
 };
 pub use models::{MODELS_PATH, ModelListAuth, ModelListing, list_models, parse_model_listing};
+pub use speech::{Segment, SpeechClient, TRANSCRIPTIONS_PATH, Transcript};
 
 /// An HTTP client a caller built, plus the check that caller requires before
 /// every dial (attome-server plan B5).
@@ -703,6 +705,36 @@ impl Transport {
         body: &Req,
     ) -> Result<Res, InferenceError> {
         let response = self.send(self.request(path, body)).await?;
+        self.read_json(response).await
+    }
+
+    /// POSTs a raw body of `content_type` (a multipart upload) and
+    /// deserialises the response, with [`Transport::post`]'s authentication,
+    /// status handling and body cap.
+    pub(crate) async fn post_bytes<Res: for<'de> Deserialize<'de>>(
+        &self,
+        path: &str,
+        content_type: &str,
+        body: Vec<u8>,
+    ) -> Result<Res, InferenceError> {
+        let mut request = self
+            .http
+            .post(join_path(&self.base_url, path))
+            .header(reqwest::header::CONTENT_TYPE, content_type)
+            .body(body);
+        if let Some(key) = self.endpoint.api_key.as_deref().filter(|k| !k.is_empty()) {
+            request = request.bearer_auth(key);
+        }
+        let response = self.send(request).await?;
+        self.read_json(response).await
+    }
+
+    /// Refuses a redirect or a failure status, then reads and parses the body
+    /// under [`MAX_BODY_BYTES`].
+    async fn read_json<Res: for<'de> Deserialize<'de>>(
+        &self,
+        response: reqwest::Response,
+    ) -> Result<Res, InferenceError> {
         self.refuse_redirect(&response)?;
 
         // The status is logged; the body is NOT. A model server's error body
