@@ -32,6 +32,9 @@ Usage:
   attome slo generate [--check]
                                 Regenerate the SLO rules, k6 thresholds and table
                                 from observability/slo-catalogue.json
+  attome test [--tier unit|db|contract|security|browser|all] [--changed] [--release] [--dry-run]
+                                Run the tests a tier needs (--changed scopes them
+                                to the change; --release fails instead of skipping)
   attome slo report <matrix-summary.json>
                                 Write the SLO release report from a load-test run
   attome version           Print the version
@@ -57,10 +60,10 @@ fn main() -> ExitCode {
                 ExitCode::from(2)
             })
         }
-        ["slo", ..] => {
+        ["slo" | "test", ..] => {
             let all: Vec<String> = args.iter().map(|arg| (*arg).to_owned()).collect();
             attome_release::dispatch(&all).unwrap_or_else(|| {
-                eprintln!("attome slo: unknown arguments\n\n{USAGE}");
+                eprintln!("attome slo/test: unknown arguments\n\n{USAGE}");
                 ExitCode::from(2)
             })
         }

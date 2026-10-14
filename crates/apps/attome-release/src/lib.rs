@@ -32,6 +32,7 @@ mod contract;
 pub mod parity;
 pub mod slo;
 pub mod slo_report;
+pub mod test_cmd;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -300,6 +301,16 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
             Some([version]) => Some(tag(version)),
             _ => None,
         },
+        Some("test") => {
+            let parsed = test_cmd::parse_args(&args[1..])?;
+            Some(match workspace_root() {
+                Ok(root) => test_cmd::run(&parsed, &root, unix_seconds()),
+                Err(error) => {
+                    eprintln!("attome test: {error}");
+                    ExitCode::from(2)
+                }
+            })
+        }
         Some("slo") => match args.get(1..) {
             Some([generate]) if generate == "generate" => Some(slo_generate(false)),
             Some([generate, check]) if generate == "generate" && check == "--check" => {
