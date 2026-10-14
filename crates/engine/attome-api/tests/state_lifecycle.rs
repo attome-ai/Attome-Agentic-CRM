@@ -1437,6 +1437,7 @@ async fn real_ticket_creates_at_new_and_transitions_to_resolved() {
             "ticket_number": format!("T-{}", Uuid::now_v7().simple()),
             "title": "state model smoke test",
             "requester_id": admin_id,
+            "priority": "medium",
             "status": "new",
         }),
     )
