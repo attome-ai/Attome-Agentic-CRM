@@ -13,9 +13,9 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: release-check-${{ github.ref }}
-  cancel-in-progress: true
+# No concurrency group: every push gets its own complete run (free on this
+# public repository), so pushing often never cancels the report of the
+# previous push.
 
 env:
   CARGO_TERM_COLOR: always
