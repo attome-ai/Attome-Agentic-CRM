@@ -197,6 +197,10 @@ const ARTICLE_DRAFT_SCHEMA: &str = r#"{
       "type": "string",
       "format": "uuid",
       "description": "Knowledge Base Data Source to file the draft under. Omit when the deployment configures inference.knowledge_article_data_source."
+    },
+    "force": {
+      "type": "boolean",
+      "description": "Draft even when an article with the same title exists. An article already drafted from the same record is never drafted twice."
     }
   },
   "required": ["title", "body", "source_entity", "source_record_id"],
@@ -281,6 +285,31 @@ impl Action for ArticleDraft {
                 .and_then(Value::as_str)
                 .ok_or_else(|| AppError::Validation("source_entity is required".into()))?;
 
+            // N4-T1: never draft the same thing twice. An article already
+            // drafted from this record is returned instead of a second one;
+            // a live article with the same title (compared after
+            // `normalize_title`) is reported unless the caller insists.
+            // Only articles the caller can read count, so the check never
+            // discloses one they cannot see.
+            let force = args.get("force").and_then(Value::as_bool).unwrap_or(false);
+            if let Some(existing) = find_duplicate(
+                state,
+                ctx,
+                &article_entity,
+                title,
+                source_entity,
+                source_record_id,
+                force,
+            )
+            .await?
+            {
+                return Ok(ActionResult::plain(serde_json::json!({
+                    "duplicate_of": existing.id,
+                    "reason": existing.reason,
+                    "detail": "Nothing was drafted. Open the existing article, or pass force: true to draft anyway when only the title matches.",
+                })));
+            }
+
             // `lifecycle` is set here, not taken from `args`. A caller-supplied
             // lifecycle is a caller-supplied publish, and this action exists
             // precisely so that publishing stays human.
@@ -357,9 +386,124 @@ impl Action for ArticleDraft {
     }
 }
 
+/// A title as compared for duplicates: lower case, Arabic diacritics and
+/// tatweel removed, alef, yaa and taa marbuta forms unified, punctuation
+/// dropped, whitespace collapsed.
+pub fn normalize_title(title: &str) -> String {
+    let mut out = String::with_capacity(title.len());
+    for c in title.chars() {
+        let c = match c {
+            '\u{064B}'..='\u{0652}' | '\u{0670}' | '\u{0640}' => continue,
+            '\u{0622}' | '\u{0623}' | '\u{0625}' | '\u{0671}' => '\u{0627}',
+            '\u{0649}' => '\u{064A}',
+            '\u{0629}' => '\u{0647}',
+            c if c.is_alphanumeric() => c,
+            _ => ' ',
+        };
+        out.extend(c.to_lowercase());
+    }
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// An article a new draft would duplicate.
+#[derive(Debug)]
+struct Duplicate {
+    id: uuid::Uuid,
+    reason: &'static str,
+}
+
+/// The newest articles a title is compared with.
+const DUPLICATE_CANDIDATES: i64 = 500;
+
+async fn find_duplicate(
+    state: &EngineState,
+    ctx: &ActionContext,
+    entity: &str,
+    title: &str,
+    source_entity: &str,
+    source_record_id: uuid::Uuid,
+    force: bool,
+) -> Result<Option<Duplicate>, AppError> {
+    let table = attome_core::quote_ident(entity);
+    let live = attome_core::live_row_predicate("t", false)
+        .map(|p| format!("AND {p}"))
+        .unwrap_or_default();
+    let same_source: Vec<uuid::Uuid> = sqlx::query_scalar(&format!(
+        "SELECT t.id FROM {table} t \
+         WHERE t.source_entity = $1 AND t.source_record_id = $2 {live} \
+         ORDER BY t.id LIMIT 5"
+    ))
+    .bind(source_entity)
+    .bind(source_record_id)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    for id in same_source {
+        if readable(state, ctx, entity, id).await {
+            return Ok(Some(Duplicate {
+                id,
+                reason: "already drafted from this record",
+            }));
+        }
+    }
+    if force {
+        return Ok(None);
+    }
+    let wanted = normalize_title(title);
+    if wanted.is_empty() {
+        return Ok(None);
+    }
+    // Compared after normalising, which SQL cannot do for Arabic letter
+    // forms, so the newest titles are read and compared here.
+    let candidates: Vec<(uuid::Uuid, Option<String>)> = sqlx::query_as(&format!(
+        "SELECT t.id, t.title FROM {table} t WHERE true {live} ORDER BY t.id DESC LIMIT $1"
+    ))
+    .bind(DUPLICATE_CANDIDATES)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    for (id, existing) in candidates {
+        if existing.as_deref().map(normalize_title).as_deref() == Some(wanted.as_str())
+            && readable(state, ctx, entity, id).await
+        {
+            return Ok(Some(Duplicate {
+                id,
+                reason: "an article with the same title exists",
+            }));
+        }
+    }
+    Ok(None)
+}
+
+/// Whether the caller can read the article (its own record read decides).
+async fn readable(state: &EngineState, ctx: &ActionContext, entity: &str, id: uuid::Uuid) -> bool {
+    attome_records::entity_crud::read_record_bulk(state, &ctx.security, entity, id)
+        .await
+        .is_ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn titles_compare_after_normalising() {
+        assert_eq!(
+            normalize_title("  How to Reset a  Password! "),
+            "how to reset a password"
+        );
+        // Diacritics, tatweel and letter forms do not make a new title.
+        assert_eq!(
+            normalize_title("إعادة تعيين كلمة المرور"),
+            normalize_title("اعاده تعيين كلمـة المرور")
+        );
+        assert_eq!(normalize_title("مُستشفى"), normalize_title("مستشفي"));
+        assert_ne!(
+            normalize_title("Reset password"),
+            normalize_title("Reset passwords")
+        );
+        assert_eq!(normalize_title("!!!"), "");
+    }
 
     /// **The ordering that makes this safe.** The privilege check precedes the
     /// create call.
