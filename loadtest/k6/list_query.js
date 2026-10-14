@@ -3,10 +3,13 @@
 import http from 'k6/http';
 import { check } from 'k6';
 import { baseUrls, pickBaseUrl, login, jsonHeaders } from './lib/http.js';
+import { thresholdsFor } from './lib/slo.js';
 
 export const options = {
   vus: Number(__ENV.VUS || 20),
   duration: __ENV.DURATION || '30s',
+  // Generated from observability/slo-catalogue.json (attome slo generate).
+  thresholds: thresholdsFor('S5'),
 };
 
 const TEST_EMAIL = __ENV.TEST_EMAIL;
@@ -39,7 +42,7 @@ export default function (data) {
     // Cookie-authenticated POST — `csrf_protect` treats it as an unsafe method
     // regardless of it being a read, so jsonHeaders' Sec-Fetch-Site is what
     // keeps this measuring the query engine instead of a 403 (TODO-014).
-    { headers: jsonHeaders(data.cookie), tags: { name: 'list_query' } }
+    { headers: jsonHeaders(data.cookie), tags: { name: 'list_query', slo_class: 'S5' } }
   );
   check(res, { 'list query 200': (r) => r.status === 200 });
 }

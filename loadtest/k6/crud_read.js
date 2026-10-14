@@ -3,10 +3,13 @@
 import http from 'k6/http';
 import { check } from 'k6';
 import { baseUrls, pickBaseUrl, login, jsonHeaders } from './lib/http.js';
+import { thresholdsFor } from './lib/slo.js';
 
 export const options = {
   vus: Number(__ENV.VUS || 20),
   duration: __ENV.DURATION || '30s',
+  // Generated from observability/slo-catalogue.json (attome slo generate).
+  thresholds: thresholdsFor('S4'),
 };
 
 const TEST_EMAIL = __ENV.TEST_EMAIL;
@@ -44,7 +47,7 @@ export default function (data) {
   const id = data.ids[(__VU + __ITER) % data.ids.length];
   const res = http.get(`${baseUrl}/api/v1/${BULK_ENTITY}/${id}`, {
     headers: { Cookie: data.cookie },
-    tags: { name: 'crud_read' },
+    tags: { name: 'crud_read', slo_class: 'S4' },
   });
   check(res, { 'crud read 200': (r) => r.status === 200 });
 }

@@ -3,10 +3,13 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { pickBaseUrl } from './lib/http.js';
+import { thresholdsFor } from './lib/slo.js';
 
 export const options = {
   vus: Number(__ENV.VUS || 10),
   duration: __ENV.DURATION || '30s',
+  // Generated from observability/slo-catalogue.json (attome slo generate).
+  thresholds: { ...thresholdsFor('S2'), ...thresholdsFor('S1') },
 };
 
 const EMAIL = __ENV.TEST_EMAIL;
@@ -18,7 +21,7 @@ export default function () {
   const loginRes = http.post(
     `${baseUrl}/api/v1/auth/login`,
     JSON.stringify({ email: EMAIL, password: PASSWORD }),
-    { headers: { 'Content-Type': 'application/json' }, tags: { name: 'login' } }
+    { headers: { 'Content-Type': 'application/json' }, tags: { name: 'login', slo_class: 'S2' } }
   );
   check(loginRes, { 'login 200': (r) => r.status === 200 });
 
@@ -32,7 +35,7 @@ export default function () {
     // (JWT-denylist check) + the authz L1/L2 resolution path.
     const whoRes = http.get(`${baseUrl}/api/v1/admin/security/whoami`, {
       headers: { Cookie: match[0] },
-      tags: { name: 'whoami' },
+      tags: { name: 'whoami', slo_class: 'S1' },
     });
     check(whoRes, { 'whoami 200': (r) => r.status === 200 });
   }

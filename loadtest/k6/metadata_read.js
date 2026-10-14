@@ -13,10 +13,13 @@
 import http from 'k6/http';
 import { check } from 'k6';
 import { baseUrls, pickBaseUrl, login } from './lib/http.js';
+import { thresholdsFor } from './lib/slo.js';
 
 export const options = {
   vus: Number(__ENV.VUS || 20),
   duration: __ENV.DURATION || '30s',
+  // Generated from observability/slo-catalogue.json (attome slo generate).
+  thresholds: thresholdsFor('S3'),
 };
 
 const ADMIN_EMAIL = __ENV.ADMIN_EMAIL;
@@ -37,7 +40,7 @@ export default function (data) {
   const baseUrl = pickBaseUrl();
   const res = http.get(`${baseUrl}/api/v1/schema/${WIDE_ENTITY}`, {
     headers: { Cookie: data.cookie },
-    tags: { name: 'schema_read' },
+    tags: { name: 'schema_read', slo_class: 'S3' },
   });
   check(res, { 'schema 200': (r) => r.status === 200 });
 }

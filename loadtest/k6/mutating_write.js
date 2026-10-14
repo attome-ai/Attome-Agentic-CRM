@@ -15,10 +15,13 @@
 import http from 'k6/http';
 import { check } from 'k6';
 import { baseUrls, pickBaseUrl, login, jsonHeaders } from './lib/http.js';
+import { thresholdsFor } from './lib/slo.js';
 
 export const options = {
   vus: Number(__ENV.VUS || 10),
   duration: __ENV.DURATION || '30s',
+  // Generated from observability/slo-catalogue.json (attome slo generate).
+  thresholds: thresholdsFor('S6'),
 };
 
 const TEST_EMAIL = __ENV.TEST_EMAIL;
@@ -63,7 +66,7 @@ export default function (data) {
       // browser-supplied Sec-Fetch-Site) — it 403'd rather than measuring the
       // write path from P-cookie-csrf-hardening until TODO-014's pre-run pass.
       headers: jsonHeaders(data.cookie, { 'If-Match': String(rowVersion) }),
-      tags: { name: 'mutating_write' },
+      tags: { name: 'mutating_write', slo_class: 'S6' },
     }
   );
   const ok = check(res, { 'patch 200': (r) => r.status === 200 });

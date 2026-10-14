@@ -5,10 +5,13 @@
 import http from 'k6/http';
 import { check } from 'k6';
 import { baseUrls, pickBaseUrl, login } from './lib/http.js';
+import { thresholdsFor } from './lib/slo.js';
 
 export const options = {
   vus: Number(__ENV.VUS || 20),
   duration: __ENV.DURATION || '30s',
+  // Generated from observability/slo-catalogue.json (attome slo generate).
+  thresholds: thresholdsFor('S7'),
 };
 
 const TEST_EMAIL = __ENV.TEST_EMAIL;
@@ -29,7 +32,7 @@ export default function (data) {
   // header the scenario measures 403s. Fixed in TODO-014's pre-run pass.
   const res = http.post(`${baseUrl}/api/v1/notification/poll`, null, {
     headers: { Cookie: data.cookie, 'Sec-Fetch-Site': 'same-origin' },
-    tags: { name: 'notification_poll' },
+    tags: { name: 'notification_poll', slo_class: 'S7' },
   });
   check(res, { 'poll 200': (r) => r.status === 200 });
 }

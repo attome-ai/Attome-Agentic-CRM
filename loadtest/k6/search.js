@@ -47,6 +47,7 @@ import http from 'k6/http';
 import { check, fail } from 'k6';
 import { Rate } from 'k6/metrics';
 import { baseUrls, pickBaseUrl, login } from './lib/http.js';
+import { thresholdsFor } from './lib/slo.js';
 
 const TEST_EMAIL = __ENV.TEST_EMAIL;
 const TEST_PASSWORD = __ENV.TEST_PASSWORD;
@@ -96,7 +97,7 @@ export const options = {
       vus: Number(__ENV.VUS_LEXICAL || 10),
       duration: __ENV.DURATION || '60s',
       exec: 'lexical',
-      tags: { name: 'search_lexical' },
+      tags: { name: 'search_lexical', slo_class: 'S8' },
     },
     // Zero VUs when the variable is unset, which k6 accepts as "do not run"
     // — a skipped scenario, rather than a failed run, for a deployment that
@@ -110,6 +111,8 @@ export const options = {
     },
   },
   thresholds: {
+    // S8, generated from observability/slo-catalogue.json (attome slo generate).
+    ...thresholdsFor('S8'),
     // Same budget as `search_lexical`, on purpose. See the header.
     'http_req_duration{name:search_share_only}': [`p(50)<${p(60)}`, `p(95)<${p(150)}`],
     // P-search-and-retrieval §11, verbatim. `abortOnFail` on the empty-result
