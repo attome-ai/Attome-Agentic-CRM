@@ -51,5 +51,8 @@ fn every_pack_changeset_is_a_valid_product_changeset() {
             checked += 1;
         }
     }
-    assert!(checked >= 9, "expected the nine packs, found {checked} changesets");
+    assert!(
+        checked >= 9,
+        "expected the nine packs, found {checked} changesets"
+    );
 }
