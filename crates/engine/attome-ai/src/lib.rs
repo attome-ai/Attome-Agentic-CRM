@@ -88,6 +88,7 @@ pub mod delta_stream;
 pub mod descriptor;
 pub mod engine;
 pub mod eval_capture;
+pub mod eval_runner;
 pub mod execute;
 /// C10-B — thumbs feedback on a turn's answer.
 pub mod feedback;
@@ -190,6 +191,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(spend_report::openapi_fragment());
     doc.merge(prompt_preview::openapi_fragment());
     doc.merge(eval_capture::openapi_fragment());
+    doc.merge(eval_runner::openapi_fragment());
     doc.merge(ai_status::openapi_fragment());
     doc
 }

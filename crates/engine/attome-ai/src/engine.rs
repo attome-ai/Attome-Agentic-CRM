@@ -113,6 +113,8 @@ impl EngineModel for ActionModel {
             .merge(crate::prompt_preview::routes())
             // N23-T3 — a bad answer becomes an eval case.
             .merge(crate::eval_capture::routes())
+            // N23-T1 — run an eval suite against its agent.
+            .merge(crate::eval_runner::routes())
             // N31-T2 — the AI status page.
             .merge(crate::ai_status::routes())
     }

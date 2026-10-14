@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Eval suite runs: `POST /api/v1/admin/ai/eval-suites/{suite}/runs` runs each case as a turn of
+  the suite's agent and grades it; `GET /api/v1/admin/ai/eval-runs/{id}` reads it (migration 0017).
 - `POST /api/v1/model/agents/{agent}/sessions`: a session starts from a published agent object (its
   `policy`, `persona.model`, tools and daily limits), with no `ai_agent` definition (V2-D487 step 3).
 - Each chat or agent turn recalls the person's matching memories (at most 5, 4,000 characters) as
