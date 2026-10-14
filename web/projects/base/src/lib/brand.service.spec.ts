@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ApiService } from './api.service';
 import { BrandService } from './brand.service';
+import { ATTOME_CONFIG } from './config';
 import { ThemeService } from './theme.service';
 
 describe('BrandService (B13-T8)', () => {
@@ -13,6 +14,7 @@ describe('BrandService (B13-T8)', () => {
       providers: [
         { provide: ApiService, useValue: { get } },
         { provide: ThemeService, useValue: { setBrand } },
+        { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://api.test' } },
       ],
     });
     return { brand: TestBed.inject(BrandService), setBrand };
@@ -24,6 +26,17 @@ describe('BrandService (B13-T8)', () => {
     brand.loadPublic();
     expect(get).toHaveBeenCalledWith('/api/v1/branding/public');
     expect(setBrand).toHaveBeenCalledWith({ '--color-primary': '#123456' });
+  });
+
+  it('points the favicon at the published one', () => {
+    const get = vi.fn().mockReturnValue(of({
+      variables: {}, hide_vendor_name: false, favicon_url: '/api/v1/branding/asset?kind=favicon&v=abc',
+    }));
+    const { brand } = create(get);
+    brand.loadPublic();
+    const link = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    expect(link?.href).toBe('http://api.test/api/v1/branding/asset?kind=favicon&v=abc');
+    expect(brand.current()?.favicon_url).toContain('kind=favicon');
   });
 
   it('asks for the caller\'s brand with the app, and ignores a failure', () => {

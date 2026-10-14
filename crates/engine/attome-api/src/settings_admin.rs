@@ -418,6 +418,12 @@ struct ThemeTokensBody {
 struct PublicBranding {
     variables: std::collections::BTreeMap<String, String>,
     hide_vendor_name: bool,
+    /// `/api/v1/branding/asset?kind=logo&v=…` when a logo is published.
+    logo_url: Option<String>,
+    logo_dark_url: Option<String>,
+    favicon_url: Option<String>,
+    font_latin_url: Option<String>,
+    font_arabic_url: Option<String>,
     font_latin: Option<String>,
     font_arabic: Option<String>,
 }
@@ -698,7 +704,8 @@ async fn public_branding(
         ..theme_store::BrandScope::default()
     };
     let resolved = theme_store::resolve(&state.base.db, scope).await?;
-    branding_response(&headers, resolved, "public, max-age=300")
+    let assets = theme_store::published_assets(&state.base.db, scope).await?;
+    branding_response(&headers, resolved, &assets, "public, max-age=300")
 }
 
 /// `GET /api/v1/branding/me`.
@@ -742,7 +749,197 @@ async fn my_branding(
         portal: None,
     };
     let resolved = theme_store::resolve(&state.base.db, scope).await?;
-    branding_response(&headers, resolved, "private, max-age=60")
+    let assets = theme_store::published_assets(&state.base.db, scope).await?;
+    branding_response(&headers, resolved, &assets, "private, max-age=60")
+}
+
+/// `kind` of a brand asset.
+#[derive(Deserialize, utoipa::IntoParams)]
+struct AssetKindQuery {
+    /// `logo`, `logo_dark`, `favicon`, `font_arabic`, `font_latin` or
+    /// `guidelines_pdf`.
+    kind: String,
+}
+
+/// B13-T4: uploads one asset of a draft theme as the raw request body, with
+/// its `Content-Type`. At most 2 MB; PNG, SVG, ICO, WOFF2 or PDF as the kind
+/// allows. An SVG with a script, event handler, external reference or
+/// foreign object is refused. Replaces the draft's asset of that kind.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/themes/{id}/assets",
+    tag = "settings",
+    params(("id" = Uuid, Path), AssetKindQuery),
+    request_body(content = Vec<u8>, content_type = "application/octet-stream", description = "The file"),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The stored asset", body = theme_store::BrandAsset),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No such theme", body = ErrorResponse),
+        (status = 409, description = "The theme is not a draft", body = ErrorResponse),
+        (status = 413, description = "Larger than 2 MB", body = ErrorResponse),
+        (status = 422, description = "Unknown kind, wrong content type or unsafe SVG", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn upload_theme_asset(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    axum::extract::Query(query): axum::extract::Query<AssetKindQuery>,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<theme_store::BrandAsset>, AppError> {
+    use object_store::ObjectStoreExt;
+    use sha2::{Digest, Sha256};
+    let content_type = headers
+        .get(axum::http::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.split(';').next().unwrap_or(v).trim().to_ascii_lowercase())
+        // Browsers label .ico files with the registered name.
+        .map(|v| {
+            if v == "image/vnd.microsoft.icon" {
+                "image/x-icon".to_owned()
+            } else {
+                v
+            }
+        })
+        .unwrap_or_default();
+    theme_store::check_asset(&query.kind, &content_type, &body)?;
+    let sha256 = hex::encode(Sha256::digest(&body));
+    let key = theme_store::asset_storage_key(id, &query.kind, &sha256);
+    // The bytes go to the object store before the transaction opens; a
+    // failed commit leaves an unreferenced object, never a row without one.
+    let path = object_store::path::Path::parse(&key).map_err(AppError::internal)?;
+    let size = i64::try_from(body.len()).map_err(AppError::internal)?;
+    state
+        .base
+        .storage
+        .store()
+        .put(&path, body.into())
+        .await
+        .map_err(AppError::internal)?;
+    let event = theme_event(
+        AuditOperation::Update,
+        ctx.user_id,
+        id,
+        "theme.asset_uploaded",
+    );
+    let mut stx = SecurityTx::begin(&state, event).await?;
+    let asset = theme_store::put_asset(
+        &mut stx,
+        id,
+        &query.kind,
+        &key,
+        &content_type,
+        size,
+        &sha256,
+    )
+    .await?;
+    stx.commit().await?;
+    Ok(Json(asset))
+}
+
+/// B13-T4: a theme version's assets.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/themes/{id}/assets",
+    tag = "settings",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "The version's assets, one per kind", body = attome_types::PaginatedResponse<theme_store::BrandAsset>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_theme_assets(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<attome_types::PaginatedResponse<theme_store::BrandAsset>>, AppError> {
+    let items = theme_store::list_assets(&state.base.db, id).await?;
+    let total = i64::try_from(items.len()).map_err(AppError::internal)?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        items,
+        total,
+        1,
+        i64::try_from(theme_store::ASSET_KINDS.len()).map_err(AppError::internal)?,
+    )))
+}
+
+/// B13-T4: a published logo, favicon or font for this host, without a
+/// session (the sign-in page shows them). Served inert: `nosniff` and a
+/// `sandbox` content security policy, so an SVG opened directly runs
+/// nothing.
+#[utoipa::path(
+    get,
+    path = "/api/v1/branding/asset",
+    tag = "settings",
+    params(AssetKindQuery),
+    responses(
+        (status = 200, description = "The file", body = Vec<u8>, content_type = "application/octet-stream"),
+        (status = 304, description = "Unchanged since the ETag the caller holds"),
+        (status = 404, description = "No published asset of that kind", body = ErrorResponse),
+    ),
+)]
+async fn public_brand_asset(
+    State(state): State<EngineState>,
+    headers: axum::http::HeaderMap,
+    axum::extract::Query(query): axum::extract::Query<AssetKindQuery>,
+) -> Result<axum::response::Response, AppError> {
+    use axum::http::{HeaderValue, StatusCode, header};
+    use axum::response::IntoResponse;
+    use object_store::ObjectStoreExt;
+    if !theme_store::PUBLIC_ASSET_KINDS.contains(&query.kind.as_str()) {
+        return Err(AppError::NotFound);
+    }
+    let host = request_host(&headers);
+    let scope = theme_store::BrandScope {
+        host: host.as_deref(),
+        ..theme_store::BrandScope::default()
+    };
+    let assets = theme_store::published_assets(&state.base.db, scope).await?;
+    let asset = assets
+        .into_iter()
+        .find(|a| a.kind == query.kind)
+        .ok_or(AppError::NotFound)?;
+    let etag =
+        HeaderValue::from_str(&format!("\"{}\"", asset.sha256)).map_err(AppError::internal)?;
+    let fixed = [
+        (
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("public, max-age=300"),
+        ),
+        (
+            header::X_CONTENT_TYPE_OPTIONS,
+            HeaderValue::from_static("nosniff"),
+        ),
+        (
+            header::CONTENT_SECURITY_POLICY,
+            HeaderValue::from_static("sandbox; default-src 'none'; style-src 'unsafe-inline'"),
+        ),
+    ];
+    let unchanged = headers
+        .get(header::IF_NONE_MATCH)
+        .is_some_and(|value| value.as_bytes() == etag.as_bytes());
+    if unchanged {
+        return Ok((StatusCode::NOT_MODIFIED, [(header::ETAG, etag)], fixed).into_response());
+    }
+    let path = object_store::path::Path::parse(&asset.storage_key).map_err(AppError::internal)?;
+    let bytes = match state.base.storage.store().get(&path).await {
+        Ok(result) => result.bytes().await.map_err(AppError::internal)?,
+        Err(object_store::Error::NotFound { .. }) => return Err(AppError::NotFound),
+        Err(e) => return Err(AppError::internal(e)),
+    };
+    let content_type = HeaderValue::from_str(&asset.content_type).map_err(AppError::internal)?;
+    Ok((
+        [(header::CONTENT_TYPE, content_type), (header::ETAG, etag)],
+        fixed,
+        bytes,
+    )
+        .into_response())
 }
 
 /// The request's host name, lower case and without a port.
@@ -758,6 +955,7 @@ fn request_host(headers: &axum::http::HeaderMap) -> Option<String> {
 fn branding_response(
     headers: &axum::http::HeaderMap,
     (tokens, tag): (ThemeTokens, String),
+    assets: &[theme_store::PublishedAsset],
     cache_control: &'static str,
 ) -> Result<axum::response::Response, AppError> {
     use axum::http::{HeaderValue, StatusCode, header};
@@ -776,9 +974,20 @@ fn branding_response(
         )
             .into_response());
     }
+    let url = |kind: &str| {
+        assets.iter().find(|a| a.kind == kind).map(|a| {
+            let short = a.sha256.get(..12).unwrap_or(&a.sha256);
+            format!("/api/v1/branding/asset?kind={kind}&v={short}")
+        })
+    };
     let body = PublicBranding {
         variables: attome_core::theme_tokens::to_css_variables(&tokens),
         hide_vendor_name: tokens.hide_vendor_name.unwrap_or(false),
+        logo_url: url("logo"),
+        logo_dark_url: url("logo_dark"),
+        favicon_url: url("favicon"),
+        font_latin_url: url("font_latin"),
+        font_arabic_url: url("font_arabic"),
         font_latin: tokens.font_latin.clone(),
         font_arabic: tokens.font_arabic.clone(),
     };
@@ -815,6 +1024,11 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/admin/themes/{id}/diff", get(diff_theme))
         .route("/api/v1/branding/public", get(public_branding))
         .route("/api/v1/branding/me", get(my_branding))
+        .route("/api/v1/branding/asset", get(public_brand_asset))
+        .route(
+            "/api/v1/admin/themes/{id}/assets",
+            get(list_theme_assets).post(upload_theme_asset),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
@@ -831,7 +1045,10 @@ pub fn routes() -> Router<EngineState> {
     rollback_theme,
     diff_theme,
     public_branding,
-    my_branding
+    my_branding,
+    public_brand_asset,
+    upload_theme_asset,
+    list_theme_assets
 ))]
 struct ApiDocFragment;
 

@@ -147,6 +147,7 @@ export const xrmAr = {
     hideVendor: 'إخفاء اسم Attome', previewTitle: 'معاينة',
     previewText: 'نص على لون السطح.', previewButton: 'زر أساسي', previewLink: 'رابط مميز',
     contrastPass: 'كل أزواج الألوان مقروءة بوضوح.',
+    logo: 'الشعار (PNG أو SVG، حتى 2 ميجابايت)', favicon: 'أيقونة الموقع (PNG أو SVG أو ICO)', uploaded: 'رُفع إلى هذه المسودة.',
     saveDraft: 'حفظ كمسودة', publish: 'نشر', rollback: 'إعادة النشر', edit: 'تعديل', changes: 'التغييرات',
     versions: 'الإصدارات', version: 'الإصدار', status: 'الحالة', actions: 'الإجراءات',
     noVersions: 'لم يُحفظ أي سمة بعد؛ تُطبَّق ألوان المنتج.',

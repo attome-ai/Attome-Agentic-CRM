@@ -1,6 +1,8 @@
-import { Injectable, inject } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { Injectable, inject, signal } from '@angular/core';
 
 import { ApiService } from './api.service';
+import { ATTOME_CONFIG } from './config';
 import { ThemeService } from './theme.service';
 
 /** `settings_admin::PublicBranding`. */
@@ -9,6 +11,9 @@ export interface Branding {
   hide_vendor_name: boolean;
   font_latin?: string | null;
   font_arabic?: string | null;
+  logo_url?: string | null;
+  logo_dark_url?: string | null;
+  favicon_url?: string | null;
 }
 
 /**
@@ -22,6 +27,10 @@ export interface Branding {
 export class BrandService {
   private readonly api = inject(ApiService);
   private readonly theme = inject(ThemeService);
+  private readonly doc = inject(DOCUMENT);
+  private readonly config = inject(ATTOME_CONFIG);
+  /** The last brand applied, for the shell's logo. */
+  readonly current = signal<Branding | null>(null);
 
   loadPublic(): void {
     this.load('/api/v1/branding/public');
@@ -34,8 +43,22 @@ export class BrandService {
 
   private load(path: string): void {
     this.api.get<Branding>(path).subscribe({
-      next: brand => this.theme.setBrand(brand.variables),
+      next: brand => {
+        this.current.set(brand);
+        this.theme.setBrand(brand.variables);
+        if (brand.favicon_url) this.setFavicon(`${this.config.apiUrl}${brand.favicon_url}`);
+      },
       error: () => undefined,
     });
+  }
+
+  private setFavicon(href: string): void {
+    let link = this.doc.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!link) {
+      link = this.doc.createElement('link');
+      link.rel = 'icon';
+      this.doc.head.appendChild(link);
+    }
+    link.href = href;
   }
 }

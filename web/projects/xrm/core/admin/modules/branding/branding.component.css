@@ -13,6 +13,8 @@
 .br-preview-link { text-decoration: underline; }
 .br-pass { color: var(--success-color, #067647); }
 .br-fail { color: var(--danger-color, #b42318); margin-block: 0; padding-inline-start: 1.25rem; }
+.br-assets { display: flex; flex-direction: column; gap: 0.5rem; }
+.br-assets label { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .br-actions, .br-row-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .br-table { border-collapse: collapse; font-size: 0.875rem; }
 .br-table th, .br-table td { padding-block: 0.25rem; padding-inline: 0.5rem; text-align: start; border-block-end: 1px solid var(--border-color, #d0d5dd); }

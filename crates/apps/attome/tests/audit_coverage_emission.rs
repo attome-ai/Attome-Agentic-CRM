@@ -129,6 +129,12 @@ const UNDRIVABLE: &[(&str, &str)] = &[
          `auth::federated_session` tail the OIDC link and MFA drivers exercise",
     ),
     (
+        "POST /api/v1/admin/themes/{id}/assets",
+        "writes the file to the object store before the event is written; this \
+         harness's storage config is a placeholder with no live bucket \
+         (attome-core theme_store's check_asset tests cover what is refused first)",
+    ),
+    (
         "POST /api/v1/admin/archive/records/{id}/restore",
         "needs an archived record whose payload sits in the object store; this \
          harness's storage config is a placeholder with no live bucket \

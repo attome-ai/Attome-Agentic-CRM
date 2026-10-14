@@ -63,4 +63,16 @@ describe('BrandingComponent (B13-T9)', () => {
     expect(get).toHaveBeenCalledWith(`/api/v1/admin/themes/${published.id}/diff`);
     expect(fixture.nativeElement.querySelector('[data-changes]')?.textContent).toContain('primary');
   });
+
+  it('uploads a logo to the saved draft', () => {
+    const { fixture, post } = create();
+    const draft: ThemeRow = { ...published, status: 'draft', row_version: 1 };
+    fixture.componentInstance.saved.set(draft);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-assets]')).not.toBeNull();
+    const file = new File(['<svg/>'], 'logo.svg', { type: 'image/svg+xml' });
+    fixture.componentInstance.upload('logo', file);
+    expect(post).toHaveBeenCalledWith(`/api/v1/admin/themes/${draft.id}/assets?kind=logo`, file);
+    expect(fixture.componentInstance.uploaded()).toEqual(['logo']);
+  });
 });

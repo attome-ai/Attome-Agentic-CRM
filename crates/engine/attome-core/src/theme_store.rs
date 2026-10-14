@@ -82,7 +82,7 @@ pub async fn save_draft(
             "another save of this theme is in progress; retry",
         ));
     }
-    sqlx::query_as(&format!(
+    let row: ThemeRow = sqlx::query_as(&format!(
         "INSERT INTO theme (id, scope_kind, scope_ref, version, status, tokens, created_by) \
          SELECT $1, $2, $3, COALESCE(MAX(version), 0) + 1, 'draft', $4, $5 \
          FROM theme WHERE scope_kind = $2 AND scope_ref = $3 \
@@ -95,7 +95,37 @@ pub async fn save_draft(
     .bind(actor)
     .fetch_one(&mut *conn)
     .await
-    .map_err(attome_db::classify)
+    .map_err(attome_db::classify)?;
+    // A new version keeps the previous version's logo, favicon and fonts
+    // until it is given new ones.
+    let previous: Vec<(String, String, String, i64, String)> = sqlx::query_as(
+        "SELECT a.kind, a.storage_key, a.content_type, a.byte_size, a.sha256 \
+         FROM brand_asset a JOIN theme t ON t.id = a.theme_id \
+         WHERE t.scope_kind = $1 AND t.scope_ref = $2 AND t.version = $3",
+    )
+    .bind(scope_kind)
+    .bind(scope_ref)
+    .bind(row.version - 1)
+    .fetch_all(&mut *conn)
+    .await
+    .map_err(attome_db::classify)?;
+    for (kind, storage_key, content_type, byte_size, sha256) in previous {
+        sqlx::query(
+            "INSERT INTO brand_asset (id, theme_id, kind, storage_key, content_type, byte_size, sha256) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        )
+        .bind(Uuid::now_v7())
+        .bind(row.id)
+        .bind(kind)
+        .bind(storage_key)
+        .bind(content_type)
+        .bind(byte_size)
+        .bind(sha256)
+        .execute(&mut *conn)
+        .await
+        .map_err(attome_db::classify)?;
+    }
+    Ok(row)
 }
 
 /// Replaces a draft's tokens; a stale `row_version` is a conflict, and a
@@ -290,6 +320,249 @@ pub struct BrandScope<'a> {
 /// The order scopes merge in, the broadest first.
 const RESOLVE_ORDER: [&str; 5] = ["deployment", "app", "unit", "domain", "portal"];
 
+/// The themes a [`BrandScope`] falls under, for a query on `theme t` that
+/// binds app, unit, host and portal as `$1` to `$4`.
+const IN_SCOPE: &str = "(t.scope_kind = 'deployment' \
+     OR (t.scope_kind = 'app' AND t.scope_ref = $1) \
+     OR (t.scope_kind = 'unit' AND t.scope_ref = $2) \
+     OR (t.scope_kind = 'domain' AND t.scope_ref = $3) \
+     OR (t.scope_kind = 'portal' AND t.scope_ref = $4))";
+
+/// Each kind of brand asset and the content types it accepts.
+pub const ASSET_KINDS: [(&str, &[&str]); 6] = [
+    ("logo", &["image/png", "image/svg+xml"]),
+    ("logo_dark", &["image/png", "image/svg+xml"]),
+    ("favicon", &["image/png", "image/x-icon", "image/svg+xml"]),
+    ("font_arabic", &["font/woff2"]),
+    ("font_latin", &["font/woff2"]),
+    ("guidelines_pdf", &["application/pdf"]),
+];
+
+/// The largest brand asset accepted.
+pub const MAX_ASSET_BYTES: usize = 2 * 1024 * 1024;
+
+/// Asset kinds served without a session (the sign-in page needs them); the
+/// guidelines PDF is for administrators only.
+pub const PUBLIC_ASSET_KINDS: [&str; 5] =
+    ["logo", "logo_dark", "favicon", "font_arabic", "font_latin"];
+
+/// Checks an upload before it is stored: a known kind, a content type that
+/// kind accepts, at most [`MAX_ASSET_BYTES`], a file that starts the way its
+/// type does, and an SVG with nothing that could run (no script, event
+/// handler, `javascript:` link, foreign object or external reference).
+pub fn check_asset(kind: &str, content_type: &str, bytes: &[u8]) -> Result<(), AppError> {
+    let Some((_, types)) = ASSET_KINDS.iter().find(|(k, _)| *k == kind) else {
+        let kinds: Vec<&str> = ASSET_KINDS.iter().map(|(k, _)| *k).collect();
+        return Err(AppError::Validation(format!(
+            "kind must be one of {}",
+            kinds.join(", ")
+        )));
+    };
+    if !types.contains(&content_type) {
+        return Err(AppError::Validation(format!(
+            "a {kind} must be one of {}",
+            types.join(", ")
+        )));
+    }
+    if bytes.is_empty() {
+        return Err(AppError::Validation("the file is empty".into()));
+    }
+    if bytes.len() > MAX_ASSET_BYTES {
+        return Err(AppError::PayloadTooLarge);
+    }
+    let starts = |magic: &[u8]| bytes.starts_with(magic);
+    let shaped = match content_type {
+        "image/png" => starts(b"\x89PNG\r\n\x1a\n"),
+        "image/x-icon" => starts(&[0, 0, 1, 0]),
+        "font/woff2" => starts(b"wOF2"),
+        "application/pdf" => starts(b"%PDF-"),
+        "image/svg+xml" => svg_is_inert(bytes)?,
+        _ => false,
+    };
+    if !shaped {
+        return Err(AppError::Validation(format!(
+            "the file is not a {content_type} file"
+        )));
+    }
+    Ok(())
+}
+
+/// True for an SVG document with nothing that could run or fetch.
+fn svg_is_inert(bytes: &[u8]) -> Result<bool, AppError> {
+    let text = std::str::from_utf8(bytes)
+        .map_err(|_| AppError::Validation("an SVG must be UTF-8 text".into()))?
+        .to_ascii_lowercase();
+    if !text.contains("<svg") {
+        return Ok(false);
+    }
+    let forbidden = [
+        "<script",
+        "javascript:",
+        "<foreignobject",
+        "<iframe",
+        "<embed",
+        "<object",
+        "<!entity",
+        "xlink:href=\"http",
+        "href=\"http",
+        "@import",
+        "url(http",
+    ];
+    if let Some(found) = forbidden.iter().find(|f| text.contains(*f)) {
+        return Err(AppError::Validation(format!(
+            "an SVG may not contain {found}"
+        )));
+    }
+    let has_handler = text.match_indices(" on").any(|(i, _)| {
+        let rest = &text[i + 3..];
+        let name_len = rest.chars().take_while(|c| c.is_ascii_alphabetic()).count();
+        name_len > 0 && rest[name_len..].trim_start().starts_with('=')
+    });
+    if has_handler {
+        return Err(AppError::Validation(
+            "an SVG may not contain event handlers".into(),
+        ));
+    }
+    Ok(true)
+}
+
+/// A brand asset of one theme version.
+#[derive(Debug, Clone, Serialize, sqlx::FromRow, ToSchema)]
+pub struct BrandAsset {
+    pub id: Uuid,
+    pub theme_id: Uuid,
+    pub kind: String,
+    pub content_type: String,
+    pub byte_size: i64,
+    pub sha256: String,
+    pub created_at: DateTime<Utc>,
+}
+
+const ASSET_COLUMNS: &str = "id, theme_id, kind, content_type, byte_size, sha256, created_at";
+
+/// The object-store key for an asset's bytes.
+pub fn asset_storage_key(theme_id: Uuid, kind: &str, sha256: &str) -> String {
+    format!("branding/{theme_id}/{kind}-{sha256}")
+}
+
+/// Records a draft's asset of `kind` (replacing one it already has), once
+/// its bytes are in the object store under `storage_key`. Only a draft
+/// takes new assets.
+pub async fn put_asset(
+    conn: &mut PgConnection,
+    theme_id: Uuid,
+    kind: &str,
+    storage_key: &str,
+    content_type: &str,
+    byte_size: i64,
+    sha256: &str,
+) -> Result<BrandAsset, AppError> {
+    let status: String = sqlx::query_scalar("SELECT status FROM theme WHERE id = $1 FOR UPDATE")
+        .bind(theme_id)
+        .fetch_optional(&mut *conn)
+        .await
+        .map_err(attome_db::classify)?
+        .ok_or(AppError::NotFound)?;
+    if status != "draft" {
+        return Err(AppError::Conflict(
+            "only a draft takes new assets; save a new draft first",
+        ));
+    }
+    let updated: Option<BrandAsset> = sqlx::query_as(&format!(
+        "UPDATE brand_asset SET storage_key = $3, content_type = $4, byte_size = $5, \
+           sha256 = $6, created_at = now() \
+         WHERE theme_id = $1 AND kind = $2 RETURNING {ASSET_COLUMNS}"
+    ))
+    .bind(theme_id)
+    .bind(kind)
+    .bind(storage_key)
+    .bind(content_type)
+    .bind(byte_size)
+    .bind(sha256)
+    .fetch_optional(&mut *conn)
+    .await
+    .map_err(attome_db::classify)?;
+    if let Some(asset) = updated {
+        return Ok(asset);
+    }
+    sqlx::query_as(&format!(
+        "INSERT INTO brand_asset (id, theme_id, kind, storage_key, content_type, byte_size, sha256) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING {ASSET_COLUMNS}"
+    ))
+    .bind(Uuid::now_v7())
+    .bind(theme_id)
+    .bind(kind)
+    .bind(storage_key)
+    .bind(content_type)
+    .bind(byte_size)
+    .bind(sha256)
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(attome_db::classify)
+}
+
+/// A version's assets, by kind.
+pub async fn list_assets(
+    db: &attome_db::DbPool,
+    theme_id: Uuid,
+) -> Result<Vec<BrandAsset>, AppError> {
+    sqlx::query_as(&format!(
+        "SELECT {ASSET_COLUMNS} FROM brand_asset WHERE theme_id = $1 ORDER BY kind"
+    ))
+    .bind(theme_id)
+    .fetch_all(db)
+    .await
+    .map_err(attome_db::classify)
+}
+
+/// A published asset a request sees: the most specific published theme
+/// that has one of that kind wins.
+#[derive(Debug, Clone)]
+pub struct PublishedAsset {
+    pub kind: String,
+    pub storage_key: String,
+    pub content_type: String,
+    pub sha256: String,
+}
+
+/// The published assets for `scope`, one per kind.
+pub async fn published_assets(
+    db: &attome_db::DbPool,
+    scope: BrandScope<'_>,
+) -> Result<Vec<PublishedAsset>, AppError> {
+    let rows: Vec<(String, String, String, String, String)> = sqlx::query_as(&format!(
+        "SELECT t.scope_kind, a.kind, a.storage_key, a.content_type, a.sha256 \
+         FROM brand_asset a JOIN theme t ON t.id = a.theme_id \
+         WHERE t.status = 'published' AND {IN_SCOPE}"
+    ))
+    .bind(scope.app.unwrap_or(""))
+    .bind(scope.unit.unwrap_or(""))
+    .bind(scope.host.unwrap_or(""))
+    .bind(scope.portal.unwrap_or(""))
+    .fetch_all(db)
+    .await
+    .map_err(attome_db::classify)?;
+    let rank = |scope_kind: &str| RESOLVE_ORDER.iter().position(|k| *k == scope_kind);
+    let mut best: Vec<(usize, PublishedAsset)> = Vec::new();
+    for (scope_kind, kind, storage_key, content_type, sha256) in rows {
+        let Some(r) = rank(&scope_kind) else { continue };
+        let asset = PublishedAsset {
+            kind,
+            storage_key,
+            content_type,
+            sha256,
+        };
+        match best.iter_mut().find(|(_, a)| a.kind == asset.kind) {
+            Some(slot) if slot.0 < r => *slot = (r, asset),
+            Some(_) => {}
+            None => best.push((r, asset)),
+        }
+    }
+    let mut assets: Vec<PublishedAsset> = best.into_iter().map(|(_, a)| a).collect();
+    assets.sort_by(|a, b| a.kind.cmp(&b.kind));
+    Ok(assets)
+}
+
 /// The published theme of each scope a request falls under, merged from the
 /// deployment's outwards: deployment, app, unit, domain (`host`), portal. A
 /// scope with no published theme adds nothing. The tag names the published
@@ -299,14 +572,10 @@ pub async fn resolve(
     scope: BrandScope<'_>,
 ) -> Result<(ThemeTokens, String), AppError> {
     type Row = (String, Uuid, i32, sqlx::types::Json<ThemeTokens>);
-    let rows: Vec<Row> = sqlx::query_as(
-        "SELECT scope_kind, id, version, tokens FROM theme WHERE status = 'published' AND ( \
-             scope_kind = 'deployment' \
-             OR (scope_kind = 'app' AND scope_ref = $1) \
-             OR (scope_kind = 'unit' AND scope_ref = $2) \
-             OR (scope_kind = 'domain' AND scope_ref = $3) \
-             OR (scope_kind = 'portal' AND scope_ref = $4))",
-    )
+    let rows: Vec<Row> = sqlx::query_as(&format!(
+        "SELECT scope_kind, id, version, tokens FROM theme t \
+         WHERE status = 'published' AND {IN_SCOPE}"
+    ))
     .bind(scope.app.unwrap_or(""))
     .bind(scope.unit.unwrap_or(""))
     .bind(scope.host.unwrap_or(""))
@@ -376,6 +645,44 @@ mod tests {
         assert_eq!(fields, vec!["hide_vendor_name", "primary"]);
         assert_eq!(changes[1].before, Some(serde_json::json!("#111111")));
         assert!(token_changes(&after, &after).is_empty());
+    }
+
+    #[test]
+    fn assets_are_checked_before_they_are_stored() {
+        let png = b"\x89PNG\r\n\x1a\nrest";
+        assert!(check_asset("logo", "image/png", png).is_ok());
+        assert!(check_asset("banner", "image/png", png).is_err());
+        assert!(check_asset("font_latin", "image/png", png).is_err());
+        assert!(check_asset("logo", "image/png", b"GIF89a").is_err());
+        assert!(check_asset("logo", "image/png", b"").is_err());
+        let big = vec![0u8; MAX_ASSET_BYTES + 1];
+        assert!(matches!(
+            check_asset("guidelines_pdf", "application/pdf", &big),
+            Err(AppError::PayloadTooLarge)
+        ));
+        assert!(check_asset("font_arabic", "font/woff2", b"wOF2....").is_ok());
+        assert!(check_asset("favicon", "image/x-icon", &[0, 0, 1, 0, 1]).is_ok());
+    }
+
+    #[test]
+    fn only_inert_svg_is_accepted() {
+        let ok = br##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10" fill="#0b4f6c"/></svg>"##;
+        assert!(check_asset("logo", "image/svg+xml", ok).is_ok());
+        for bad in [
+            &br##"<svg><script>alert(1)</script></svg>"##[..],
+            br##"<svg><rect onload="alert(1)"/></svg>"##,
+            br##"<svg><rect ONCLICK = "x"/></svg>"##,
+            br##"<svg><a href="javascript:alert(1)"><rect/></a></svg>"##,
+            br##"<svg><foreignObject><div/></foreignObject></svg>"##,
+            br##"<svg><image href="https://tracker.example/x.png"/></svg>"##,
+            br##"<html>not svg</html>"##,
+        ] {
+            assert!(
+                check_asset("logo", "image/svg+xml", bad).is_err(),
+                "{}",
+                String::from_utf8_lossy(bad)
+            );
+        }
     }
 
     #[test]

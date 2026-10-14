@@ -75,6 +75,8 @@ export class BrandingComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly saved = signal<ThemeRow | null>(null);
   readonly busy = signal(false);
+  /** Asset kinds uploaded to the saved draft, for a confirmation. */
+  readonly uploaded = signal<string[]>([]);
 
   /** The deployment-wide versions, newest first. */
   readonly deploymentVersions = computed(() =>
@@ -136,6 +138,7 @@ export class BrandingComponent implements OnInit {
   private setTokens(tokens: ThemeTokens): void {
     this.tokens.set(tokens);
     this.saved.set(null);
+    this.uploaded.set([]);
     this.checks.next(tokens);
   }
 
@@ -144,6 +147,17 @@ export class BrandingComponent implements OnInit {
     this.busy.set(true);
     this.api.post<ThemeRow>('/api/v1/admin/themes', { scope_kind: 'deployment', scope_ref: '', tokens: this.tokens() }).subscribe({
       next: row => { this.busy.set(false); this.saved.set(row); this.load(); },
+      error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
+    });
+  }
+
+  /** Uploads a logo or favicon to the saved draft; the server checks type, size and SVG content. */
+  upload(kind: 'logo' | 'favicon', file: File | undefined): void {
+    const draft = this.saved();
+    if (!draft || !file) return;
+    this.busy.set(true);
+    this.api.post<unknown>(`/api/v1/admin/themes/${draft.id}/assets?kind=${kind}`, file).subscribe({
+      next: () => { this.busy.set(false); this.uploaded.update(kinds => [...kinds.filter(k => k !== kind), kind]); },
       error: (e: ApiError) => { this.busy.set(false); this.error.set(e.message); },
     });
   }

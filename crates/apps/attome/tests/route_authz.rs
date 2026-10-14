@@ -153,6 +153,11 @@ const MAX_BARE_RECORD_SCOPED: usize = 5;
 const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
         "GET",
+        "/api/v1/branding/asset",
+        "A published logo, favicon or font for the sign-in page, before anyone signs in. Bypass-listed; the guidelines PDF is refused, and nothing user-specific is served.",
+    ),
+    (
+        "GET",
         "/api/v1/branding/public",
         "The published brand (colours, fonts, whether to hide the vendor name) for the sign-in page, before anyone signs in. Bypass-listed; it returns no user or customer data.",
     ),

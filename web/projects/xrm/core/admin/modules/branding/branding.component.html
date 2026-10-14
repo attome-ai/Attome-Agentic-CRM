@@ -58,6 +58,21 @@
           </button>
         }
       </div>
+      @if (saved()) {
+        <div class="br-assets" data-assets>
+          <label>
+            <span>{{ 'brandingPage.logo' | translate }}</span>
+            <input #logo type="file" accept="image/png,image/svg+xml" [disabled]="busy()" (change)="upload('logo', logo.files?.[0])" />
+          </label>
+          <label>
+            <span>{{ 'brandingPage.favicon' | translate }}</span>
+            <input #favicon type="file" accept="image/png,image/svg+xml,image/x-icon,.ico" [disabled]="busy()" (change)="upload('favicon', favicon.files?.[0])" />
+          </label>
+          @if (uploaded().length > 0) {
+            <p class="br-pass" role="status">{{ 'brandingPage.uploaded' | translate }}</p>
+          }
+        </div>
+      }
     </div>
   </div>
 

@@ -189,6 +189,7 @@ export const xrmEn = {
     hideVendor: 'Hide the Attome name', previewTitle: 'Preview',
     previewText: 'Body text on the surface colour.', previewButton: 'Primary button', previewLink: 'Accent link',
     contrastPass: 'Every colour pair reads clearly.',
+    logo: 'Logo (PNG or SVG, 2 MB at most)', favicon: 'Favicon (PNG, SVG or ICO)', uploaded: 'Uploaded to this draft.',
     saveDraft: 'Save draft', publish: 'Publish', rollback: 'Publish again', edit: 'Edit', changes: 'Changes',
     versions: 'Versions', version: 'Version', status: 'Status', actions: 'Actions',
     noVersions: 'No theme saved yet; the product colours apply.',
