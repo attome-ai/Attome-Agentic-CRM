@@ -10,12 +10,19 @@
 //! hash (`record.summarize/v2+o:1a2b3c4d`), so provenance, quality
 //! comparisons and every cache keyed on the version tell a changed override
 //! apart. A failure to read overrides degrades to the code's prompt.
+//!
+//! **Staged rollout** (N10-T3): an override with `rollout.share` reaches that
+//! percentage of callers, chosen by a stable hash of the prompt, the
+//! override and the caller, so one person always sees the same version; the
+//! rest keep the code's prompt. Outcomes are recorded per version
+//! (`ai_suggestion_outcome.prompt_version`), which is the comparison.
 
 use std::collections::BTreeMap;
 
 use attome_db::DbPool;
 use attome_types::AppError;
 use serde_json::Value;
+use sha2::Digest;
 
 /// The most override objects read when looking one up.
 const MAX_OVERRIDES: i64 = 200;
@@ -86,13 +93,34 @@ async fn published_override(
     Ok(rows.into_iter().next())
 }
 
-/// The prompt `prompt_id` runs with now.
-pub async fn effective(db: &DbPool, prompt_id: &str, base_version: &str, locked: &str) -> Layered {
+/// Whether `caller` is in an override's rollout: always without a
+/// `rollout.share`, otherwise for that percentage of callers.
+pub fn in_rollout(prompt_id: &str, doc: &Value, hash: &str, caller: &str) -> bool {
+    let Some(share) = doc["rollout"]["share"].as_u64() else {
+        return true;
+    };
+    let digest = sha2::Sha256::digest(format!("{prompt_id}|{hash}|{caller}").as_bytes());
+    let bucket = u64::from(u16::from_be_bytes([digest[0], digest[1]])) % 100;
+    bucket < share.min(100)
+}
+
+/// The prompt `prompt_id` runs with now for `caller` (a stable id, such as
+/// the user's).
+pub async fn effective(
+    db: &DbPool,
+    prompt_id: &str,
+    base_version: &str,
+    locked: &str,
+    caller: &str,
+) -> Layered {
     match published_override(db, prompt_id).await {
         Ok(found) => layered(
             locked,
             base_version,
-            found.as_ref().map(|(doc, hash)| (doc, hash.as_str())),
+            found
+                .as_ref()
+                .filter(|(doc, hash)| in_rollout(prompt_id, doc, hash, caller))
+                .map(|(doc, hash)| (doc, hash.as_str())),
         ),
         Err(error) => {
             tracing::warn!(%error, prompt_id, "prompt overrides unavailable; using the code prompt");
@@ -124,6 +152,34 @@ mod tests {
         let none = layered("LOCKED RULES", "record.summarize/v2", None);
         assert_eq!(none.system, "LOCKED RULES");
         assert_eq!(none.version, "record.summarize/v2");
+    }
+
+    #[test]
+    fn a_rollout_reaches_about_its_share_and_is_stable() {
+        let doc = json!({ "rollout": { "share": 20 } });
+        let callers: Vec<String> = (0..2000).map(|i| format!("user-{i}")).collect();
+        let reached = callers
+            .iter()
+            .filter(|c| in_rollout("record.summarize", &doc, "h1", c))
+            .count();
+        assert!(
+            (300..=500).contains(&reached),
+            "{reached} of 2000 for a 20% share"
+        );
+        assert_eq!(
+            in_rollout("record.summarize", &doc, "h1", "user-7"),
+            in_rollout("record.summarize", &doc, "h1", "user-7")
+        );
+        assert!(
+            in_rollout("p", &json!({}), "h", "anyone"),
+            "no rollout: everyone"
+        );
+        assert!(in_rollout(
+            "p",
+            &json!({ "rollout": { "share": 100 } }),
+            "h",
+            "x"
+        ));
     }
 
     #[test]

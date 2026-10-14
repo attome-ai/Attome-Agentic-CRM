@@ -143,9 +143,15 @@ impl Kind for PromptOverrideKind {
                         "properties": {
                             "type": { "enum": SLOT_TYPES },
                             "values": { "type": "array", "items": { "type": "string" } },
+                            "default": { "type": "string" },
                             "trusted": { "type": "boolean" }
                         }
                     }
+                },
+                "rollout": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": { "share": { "type": "integer", "minimum": 1, "maximum": 100 } }
                 }
             }
         })
@@ -161,7 +167,7 @@ impl Kind for PromptOverrideKind {
         };
         let mut issues = Vec::new();
         for key in object.keys() {
-            if !matches!(key.as_str(), "prompt" | "sections" | "slots") {
+            if !matches!(key.as_str(), "prompt" | "sections" | "slots" | "rollout") {
                 issues.push(Issue::new(
                     format!("/{key}"),
                     "unknown_property",
@@ -194,6 +200,54 @@ impl Kind for PromptOverrideKind {
                     format!("/slots/{name}/values"),
                     "required",
                     "a choice slot lists its values",
+                ));
+            }
+            // A default is prompt text the model reads: the same checks as a
+            // section, and a choice's default is one of its values.
+            if let Some(default) = slot.get("default") {
+                match default.as_str() {
+                    None => issues.push(Issue::new(
+                        format!("/slots/{name}/default"),
+                        "invalid",
+                        "a default is text",
+                    )),
+                    Some(text) => {
+                        if let Some(why) = unsafe_text(text) {
+                            issues.push(Issue::new(
+                                format!("/slots/{name}/default"),
+                                "unsafe_text",
+                                format!("the default {why}"),
+                            ));
+                        }
+                        let listed = slot["values"]
+                            .as_array()
+                            .is_some_and(|v| v.iter().any(|x| x.as_str() == Some(text)));
+                        if kind == "choice" && !listed {
+                            issues.push(Issue::new(
+                                format!("/slots/{name}/default"),
+                                "invalid",
+                                "a choice's default is one of its values",
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        // N10-T3: a staged rollout sends `share` percent of callers to the
+        // override, the rest to the code prompt.
+        if let Some(rollout) = doc.get("rollout") {
+            let share_ok = rollout
+                .get("share")
+                .and_then(Value::as_u64)
+                .is_some_and(|s| (1..=100).contains(&s));
+            let only_share = rollout
+                .as_object()
+                .is_some_and(|o| o.keys().all(|k| k == "share"));
+            if !share_ok || !only_share {
+                issues.push(Issue::new(
+                    "/rollout",
+                    "invalid",
+                    "a rollout is { \"share\": 1 to 100 }",
                 ));
             }
         }

@@ -357,6 +357,7 @@ impl Action for RecordSummarize {
                 RECORD_SUMMARIZE,
                 SUMMARIZE_PROMPT_VERSION,
                 &summarize_system_prompt(language),
+                &ctx.security.user_id.to_string(),
             )
             .await;
             let cache_key = super::summary_context::cache_key(

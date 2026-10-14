@@ -71,6 +71,7 @@ async fn preview_summary(
         crate::actions::read::RECORD_SUMMARIZE,
         crate::actions::read::SUMMARIZE_PROMPT_VERSION,
         &crate::actions::read::summarize_system_prompt(language),
+        &ctx.user_id.to_string(),
     )
     .await;
     let messages = crate::prompt::assemble(&[

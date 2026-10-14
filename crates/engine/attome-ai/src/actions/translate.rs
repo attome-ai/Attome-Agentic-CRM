@@ -240,6 +240,7 @@ impl Action for TextTranslate {
                 TEXT_TRANSLATE,
                 TRANSLATE_PROMPT_VERSION,
                 &translate_system_prompt(from, to, &glossary),
+                &ctx.security.user_id.to_string(),
             )
             .await;
             let key = cache_key(&layer.version, client.model_id(), from, to, &glossary, text);
