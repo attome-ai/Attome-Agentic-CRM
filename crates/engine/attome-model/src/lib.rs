@@ -17,6 +17,7 @@ pub mod identity;
 pub mod kind;
 pub mod references;
 pub mod store;
+pub mod validate;
 
 use std::collections::BTreeMap;
 use std::sync::Arc;

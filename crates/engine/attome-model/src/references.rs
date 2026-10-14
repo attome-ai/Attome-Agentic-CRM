@@ -76,15 +76,15 @@ pub async fn replace_references(
     Ok(())
 }
 
-/// Issues for the references whose target does not exist. A target of an
-/// adapter kind is looked up in that kind's own table; any other target in
-/// the metadata object store. A target of an unknown kind is dangling too.
-pub async fn dangling(
+/// The targets of `refs` that do not exist. A target of an adapter kind is
+/// looked up in that kind's own table; any other target in the metadata
+/// object store. A target of an unknown kind does not exist.
+pub async fn missing_targets(
     tx: &mut Tx<'_>,
     registry: &KindRegistry,
     refs: &[Reference],
-) -> Result<Vec<Issue>, AppError> {
-    let mut issues = Vec::new();
+) -> Result<Vec<ObjectRef>, AppError> {
+    let mut missing = Vec::new();
     for reference in refs {
         let target = &reference.target;
         let exists = match registry.get(target.kind.as_str()) {
@@ -109,15 +109,33 @@ pub async fn dangling(
                 .map_err(AppError::internal)?,
             },
         };
-        if !exists {
-            issues.push(Issue::new(
-                "",
-                "dangling_reference",
-                format!("{} {} does not exist", target.kind, target.id),
-            ));
+        if !exists && !missing.contains(target) {
+            missing.push(*target);
         }
     }
-    Ok(issues)
+    Ok(missing)
+}
+
+/// The issue reported for a reference to an object that does not exist.
+pub fn dangling_issue(target: &ObjectRef) -> Issue {
+    Issue::new(
+        "",
+        "dangling_reference",
+        format!("{} {} does not exist", target.kind, target.id),
+    )
+}
+
+/// Issues for the references whose target does not exist.
+pub async fn dangling(
+    tx: &mut Tx<'_>,
+    registry: &KindRegistry,
+    refs: &[Reference],
+) -> Result<Vec<Issue>, AppError> {
+    Ok(missing_targets(tx, registry, refs)
+        .await?
+        .iter()
+        .map(dangling_issue)
+        .collect())
 }
 
 /// One stored reference.
