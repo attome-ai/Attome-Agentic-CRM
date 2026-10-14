@@ -35,6 +35,8 @@ pub mod slo_report;
 pub mod test_cmd;
 pub mod test_coverage;
 pub mod test_flaky;
+pub mod test_map;
+pub mod test_scan;
 pub mod test_stack;
 
 use std::path::{Path, PathBuf};
@@ -304,6 +306,27 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
             Some([version]) => Some(tag(version)),
             _ => None,
         },
+        Some("test") if args.get(1).map(String::as_str) == Some("map") => {
+            let scan_only = match args.get(2..) {
+                Some([]) => false,
+                Some([flag]) if flag == "--scan-only" => true,
+                _ => return None,
+            };
+            Some(
+                match workspace_root().and_then(|root| test_map::run(&root, scan_only)) {
+                    Ok(paths) => {
+                        for path in paths {
+                            say(&format!("wrote {}", path.display()));
+                        }
+                        ExitCode::SUCCESS
+                    }
+                    Err(error) => {
+                        eprintln!("attome test map: {error}");
+                        ExitCode::FAILURE
+                    }
+                },
+            )
+        }
         Some("test") => {
             let parsed = test_cmd::parse_args(&args[1..])?;
             Some(match workspace_root() {

@@ -35,6 +35,9 @@ Usage:
   attome test [--tier unit|db|contract|security|browser|all] [--changed] [--release] [--dry-run] [--no-stack] [--coverage]
                                 Run the tests a tier needs (--changed scopes them
                                 to the change; --release fails instead of skipping)
+  attome test map [--scan-only]
+                                Map tests to features and API operations
+                                (target/coverage-map/)
   attome slo report <matrix-summary.json>
                                 Write the SLO release report from a load-test run
   attome version           Print the version

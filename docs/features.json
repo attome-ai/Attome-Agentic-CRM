@@ -1,0 +1,1969 @@
+{
+ "source": "document_v2/feature-plan.md in the attome planning repository (### <id>. <name> headings)",
+ "features": [
+  {
+   "id": "A1",
+   "name": "Custom entities at runtime"
+  },
+  {
+   "id": "A2",
+   "name": "Attribute types"
+  },
+  {
+   "id": "A3",
+   "name": "Attribute validation"
+  },
+  {
+   "id": "A4",
+   "name": "Autonumber attributes"
+  },
+  {
+   "id": "A5",
+   "name": "Global option sets"
+  },
+  {
+   "id": "A6",
+   "name": "Dependent (cascading) picklists"
+  },
+  {
+   "id": "A7",
+   "name": "Relationships (N:1, N:N, cascade)"
+  },
+  {
+   "id": "A8",
+   "name": "Polymorphic lookups"
+  },
+  {
+   "id": "A9",
+   "name": "Computed attributes (formula)"
+  },
+  {
+   "id": "A10",
+   "name": "Rollup attributes"
+  },
+  {
+   "id": "A11",
+   "name": "Business and validation rules"
+  },
+  {
+   "id": "A12",
+   "name": "Form designer"
+  },
+  {
+   "id": "A13",
+   "name": "Views and list views"
+  },
+  {
+   "id": "A14",
+   "name": "Saved queries"
+  },
+  {
+   "id": "A15",
+   "name": "Duplicate detection and merge"
+  },
+  {
+   "id": "A16",
+   "name": "Optimistic concurrency"
+  },
+  {
+   "id": "A17",
+   "name": "Record hierarchy"
+  },
+  {
+   "id": "A18",
+   "name": "Soft delete and recycle bin"
+  },
+  {
+   "id": "A19",
+   "name": "Multi-currency"
+  },
+  {
+   "id": "A20",
+   "name": "Localization of metadata"
+  },
+  {
+   "id": "A21",
+   "name": "App and navigation builder"
+  },
+  {
+   "id": "A22",
+   "name": "Configuration promotion (ALM)"
+  },
+  {
+   "id": "A23",
+   "name": "Bulk import and export"
+  },
+  {
+   "id": "A24",
+   "name": "Data migration tooling"
+  },
+  {
+   "id": "A25",
+   "name": "Global search"
+  },
+  {
+   "id": "A26",
+   "name": "Derived entities"
+  },
+  {
+   "id": "A27",
+   "name": "Record types"
+  },
+  {
+   "id": "A28",
+   "name": "Default values"
+  },
+  {
+   "id": "A29",
+   "name": "External ids and upsert keys"
+  },
+  {
+   "id": "A30",
+   "name": "Environment settings"
+  },
+  {
+   "id": "A31",
+   "name": "Entity settings and ownership"
+  },
+  {
+   "id": "B1",
+   "name": "Record timeline"
+  },
+  {
+   "id": "B2",
+   "name": "Attribute history on records"
+  },
+  {
+   "id": "B3",
+   "name": "Notes and attachments"
+  },
+  {
+   "id": "B4",
+   "name": "Tags"
+  },
+  {
+   "id": "B5",
+   "name": "Bulk edit from lists"
+  },
+  {
+   "id": "B6",
+   "name": "Inline grid editing"
+  },
+  {
+   "id": "B7",
+   "name": "Record clone"
+  },
+  {
+   "id": "B8",
+   "name": "Record templates"
+  },
+  {
+   "id": "B9",
+   "name": "Favourites and recently viewed"
+  },
+  {
+   "id": "B10",
+   "name": "Quick search and keyboard shortcuts"
+  },
+  {
+   "id": "B11",
+   "name": "Personal settings"
+  },
+  {
+   "id": "B12",
+   "name": "Dark mode"
+  },
+  {
+   "id": "B13",
+   "name": "Branding and theming"
+  },
+  {
+   "id": "B14",
+   "name": "Guided tours and in-app help"
+  },
+  {
+   "id": "B15",
+   "name": "Maps and geolocation"
+  },
+  {
+   "id": "B16",
+   "name": "Barcode and QR scanning"
+  },
+  {
+   "id": "B17",
+   "name": "Native mobile app"
+  },
+  {
+   "id": "B18",
+   "name": "Offline mode"
+  },
+  {
+   "id": "B19",
+   "name": "Responsive web / PWA"
+  },
+  {
+   "id": "B20",
+   "name": "UI languages"
+  },
+  {
+   "id": "B21",
+   "name": "Right-to-left and Arabic quality"
+  },
+  {
+   "id": "B22",
+   "name": "Accessibility"
+  },
+  {
+   "id": "C1",
+   "name": "Record notes and replies"
+  },
+  {
+   "id": "C2",
+   "name": "Follow records"
+  },
+  {
+   "id": "C3",
+   "name": "Activity feed (Chatter-style)"
+  },
+  {
+   "id": "C4",
+   "name": "@mentions"
+  },
+  {
+   "id": "C5",
+   "name": "Microsoft Teams integration"
+  },
+  {
+   "id": "C6",
+   "name": "Slack integration"
+  },
+  {
+   "id": "C7",
+   "name": "Outlook and Gmail add-ins"
+  },
+  {
+   "id": "C8",
+   "name": "Shared team inbox"
+  },
+  {
+   "id": "C9",
+   "name": "Internal chat between users"
+  },
+  {
+   "id": "C10",
+   "name": "Glossary of business terms"
+  },
+  {
+   "id": "D1",
+   "name": "Accounts and contacts"
+  },
+  {
+   "id": "D2",
+   "name": "Account hierarchy"
+  },
+  {
+   "id": "D3",
+   "name": "Leads and lead conversion"
+  },
+  {
+   "id": "D4",
+   "name": "Lead assignment rules"
+  },
+  {
+   "id": "D5",
+   "name": "Opportunities and pipeline"
+  },
+  {
+   "id": "D6",
+   "name": "Opportunity products (line items)"
+  },
+  {
+   "id": "D7",
+   "name": "Opportunity teams and splits"
+  },
+  {
+   "id": "D8",
+   "name": "Products and price lists"
+  },
+  {
+   "id": "D9",
+   "name": "Quotes"
+  },
+  {
+   "id": "D10",
+   "name": "Orders"
+  },
+  {
+   "id": "D11",
+   "name": "Sales forecasting"
+  },
+  {
+   "id": "D12",
+   "name": "Quotas and attainment"
+  },
+  {
+   "id": "D13",
+   "name": "Territory management"
+  },
+  {
+   "id": "D14",
+   "name": "Sales activities"
+  },
+  {
+   "id": "D15",
+   "name": "Email and calendar sync"
+  },
+  {
+   "id": "D16",
+   "name": "Email open and click tracking"
+  },
+  {
+   "id": "D17",
+   "name": "Sequences and cadences"
+  },
+  {
+   "id": "D18",
+   "name": "Lead and opportunity scoring"
+  },
+  {
+   "id": "D19",
+   "name": "Deal insights and pipeline risk"
+  },
+  {
+   "id": "D20",
+   "name": "Meeting scheduler (booking links)"
+  },
+  {
+   "id": "D21",
+   "name": "Calling and power dialer"
+  },
+  {
+   "id": "D22",
+   "name": "Conversation intelligence (call analysis)"
+  },
+  {
+   "id": "D23",
+   "name": "Relationship mapping and org charts"
+  },
+  {
+   "id": "D24",
+   "name": "Contact and company data enrichment"
+  },
+  {
+   "id": "D25",
+   "name": "Competitor tracking and win/loss"
+  },
+  {
+   "id": "D26",
+   "name": "Sales playbooks and enablement"
+  },
+  {
+   "id": "D27",
+   "name": "Account planning"
+  },
+  {
+   "id": "D28",
+   "name": "Sales dashboards"
+  },
+  {
+   "id": "D29",
+   "name": "Business card scanning"
+  },
+  {
+   "id": "D30",
+   "name": "LinkedIn integration"
+  },
+  {
+   "id": "E1",
+   "name": "Campaign management"
+  },
+  {
+   "id": "E2",
+   "name": "Email designer"
+  },
+  {
+   "id": "E3",
+   "name": "Bulk email sending"
+  },
+  {
+   "id": "E4",
+   "name": "A/B and multivariate testing"
+  },
+  {
+   "id": "E5",
+   "name": "Send-time optimisation"
+  },
+  {
+   "id": "E6",
+   "name": "Deliverability and bounce handling"
+  },
+  {
+   "id": "E7",
+   "name": "Segments and lists"
+  },
+  {
+   "id": "E8",
+   "name": "Customer journeys"
+  },
+  {
+   "id": "E9",
+   "name": "Lead nurturing"
+  },
+  {
+   "id": "E10",
+   "name": "Web forms with form-to-lead"
+  },
+  {
+   "id": "E11",
+   "name": "Landing pages"
+  },
+  {
+   "id": "E12",
+   "name": "Website CMS"
+  },
+  {
+   "id": "E13",
+   "name": "SEO tools"
+  },
+  {
+   "id": "E14",
+   "name": "Web visitor tracking"
+  },
+  {
+   "id": "E15",
+   "name": "Marketing attribution"
+  },
+  {
+   "id": "E16",
+   "name": "SMS marketing"
+  },
+  {
+   "id": "E17",
+   "name": "Social media publishing"
+  },
+  {
+   "id": "E18",
+   "name": "Social listening"
+  },
+  {
+   "id": "E19",
+   "name": "Advertising integration"
+  },
+  {
+   "id": "E20",
+   "name": "Account-based marketing"
+  },
+  {
+   "id": "E21",
+   "name": "Event management"
+  },
+  {
+   "id": "E22",
+   "name": "Webinars"
+  },
+  {
+   "id": "E23",
+   "name": "Customer data platform (unified profile)"
+  },
+  {
+   "id": "E24",
+   "name": "Identity resolution"
+  },
+  {
+   "id": "E25",
+   "name": "Personalisation and dynamic content"
+  },
+  {
+   "id": "E26",
+   "name": "Preference centre"
+  },
+  {
+   "id": "E27",
+   "name": "Consent management"
+  },
+  {
+   "id": "E28",
+   "name": "Marketing analytics"
+  },
+  {
+   "id": "E29",
+   "name": "Marketing planning and budgets"
+  },
+  {
+   "id": "E30",
+   "name": "Loyalty programs"
+  },
+  {
+   "id": "E31",
+   "name": "Referral programs"
+  },
+  {
+   "id": "F1",
+   "name": "CPQ (configure, price, quote)"
+  },
+  {
+   "id": "F2",
+   "name": "Discount approvals"
+  },
+  {
+   "id": "F3",
+   "name": "Subscription management"
+  },
+  {
+   "id": "F4",
+   "name": "Invoicing"
+  },
+  {
+   "id": "F5",
+   "name": "Payments processing"
+  },
+  {
+   "id": "F6",
+   "name": "Order management"
+  },
+  {
+   "id": "F7",
+   "name": "B2B commerce storefront"
+  },
+  {
+   "id": "F8",
+   "name": "B2C commerce storefront"
+  },
+  {
+   "id": "F9",
+   "name": "Partner relationship management"
+  },
+  {
+   "id": "F10",
+   "name": "Sales commissions and incentives"
+  },
+  {
+   "id": "F11",
+   "name": "Revenue recognition"
+  },
+  {
+   "id": "G1",
+   "name": "Case and ticket management"
+  },
+  {
+   "id": "G2",
+   "name": "Work intake"
+  },
+  {
+   "id": "G3",
+   "name": "Service catalog"
+  },
+  {
+   "id": "G4",
+   "name": "Queues and routing"
+  },
+  {
+   "id": "G5",
+   "name": "Agent workspace"
+  },
+  {
+   "id": "G6",
+   "name": "Macros and canned responses"
+  },
+  {
+   "id": "G7",
+   "name": "Case merge"
+  },
+  {
+   "id": "G8",
+   "name": "Escalation rules"
+  },
+  {
+   "id": "G9",
+   "name": "SLA management"
+  },
+  {
+   "id": "G10",
+   "name": "Entitlements and service contracts"
+  },
+  {
+   "id": "G11",
+   "name": "Knowledge base"
+  },
+  {
+   "id": "G12",
+   "name": "Customer self-service portal"
+  },
+  {
+   "id": "G13",
+   "name": "Community forums"
+  },
+  {
+   "id": "G14",
+   "name": "Surveys (CSAT, NPS, CES)"
+  },
+  {
+   "id": "G15",
+   "name": "Customer 360 view"
+  },
+  {
+   "id": "G16",
+   "name": "Service analytics"
+  },
+  {
+   "id": "G17",
+   "name": "Workforce management"
+  },
+  {
+   "id": "H1",
+   "name": "Incident management"
+  },
+  {
+   "id": "H2",
+   "name": "Problem management"
+  },
+  {
+   "id": "H3",
+   "name": "Change management"
+  },
+  {
+   "id": "H4",
+   "name": "Release management"
+  },
+  {
+   "id": "H5",
+   "name": "CMDB"
+  },
+  {
+   "id": "H6",
+   "name": "IT asset management"
+  },
+  {
+   "id": "H7",
+   "name": "On-call scheduling"
+  },
+  {
+   "id": "H8",
+   "name": "Public status page"
+  },
+  {
+   "id": "I1",
+   "name": "Work orders"
+  },
+  {
+   "id": "I2",
+   "name": "Scheduling optimisation"
+  },
+  {
+   "id": "I3",
+   "name": "Dispatch board"
+  },
+  {
+   "id": "I4",
+   "name": "Technician mobile app"
+  },
+  {
+   "id": "I5",
+   "name": "Preventive maintenance"
+  },
+  {
+   "id": "I6",
+   "name": "Parts and inventory"
+  },
+  {
+   "id": "I7",
+   "name": "IoT-triggered service"
+  },
+  {
+   "id": "I8",
+   "name": "Asset management"
+  },
+  {
+   "id": "I9",
+   "name": "Installed base"
+  },
+  {
+   "id": "I10",
+   "name": "Warranty tracking"
+  },
+  {
+   "id": "I11",
+   "name": "Returns (RMA)"
+  },
+  {
+   "id": "J1",
+   "name": "Outbound email"
+  },
+  {
+   "id": "J2",
+   "name": "Inbound email processing"
+  },
+  {
+   "id": "J3",
+   "name": "Web chat"
+  },
+  {
+   "id": "J4",
+   "name": "SMS"
+  },
+  {
+   "id": "J5",
+   "name": "WhatsApp and messaging apps"
+  },
+  {
+   "id": "J6",
+   "name": "Voice and telephony (CTI)"
+  },
+  {
+   "id": "J7",
+   "name": "Video calls"
+  },
+  {
+   "id": "J8",
+   "name": "Social channels"
+  },
+  {
+   "id": "J9",
+   "name": "Co-browse"
+  },
+  {
+   "id": "J10",
+   "name": "Unified routing across channels"
+  },
+  {
+   "id": "J11",
+   "name": "In-app notifications"
+  },
+  {
+   "id": "J12",
+   "name": "Push notifications"
+  },
+  {
+   "id": "K1",
+   "name": "Document management"
+  },
+  {
+   "id": "K2",
+   "name": "Virus scanning of uploads"
+  },
+  {
+   "id": "K3",
+   "name": "Document generation"
+  },
+  {
+   "id": "K4",
+   "name": "E-signature"
+  },
+  {
+   "id": "K5",
+   "name": "Content management (CMS)"
+  },
+  {
+   "id": "K6",
+   "name": "Web crawling into knowledge"
+  },
+  {
+   "id": "K7",
+   "name": "Records management"
+  },
+  {
+   "id": "L1",
+   "name": "Master data and golden record"
+  },
+  {
+   "id": "L2",
+   "name": "Data quality scoring"
+  },
+  {
+   "id": "L3",
+   "name": "Data governance and stewardship"
+  },
+  {
+   "id": "L4",
+   "name": "Data catalog"
+  },
+  {
+   "id": "L5",
+   "name": "Data lineage"
+  },
+  {
+   "id": "L6",
+   "name": "Data profiling"
+  },
+  {
+   "id": "L7",
+   "name": "Change data capture"
+  },
+  {
+   "id": "L8",
+   "name": "External data (virtual entities)"
+  },
+  {
+   "id": "L9",
+   "name": "Data enrichment"
+  },
+  {
+   "id": "L10",
+   "name": "Data masking for test copies"
+  },
+  {
+   "id": "L11",
+   "name": "Data archiving"
+  },
+  {
+   "id": "M1",
+   "name": "Workflow engine"
+  },
+  {
+   "id": "M2",
+   "name": "Visual workflow designer"
+  },
+  {
+   "id": "M3",
+   "name": "Durable, resumable execution"
+  },
+  {
+   "id": "M4",
+   "name": "Workflow simulation and testing"
+  },
+  {
+   "id": "M5",
+   "name": "Dead-letter and replay"
+  },
+  {
+   "id": "M6",
+   "name": "Workflow templates"
+  },
+  {
+   "id": "M7",
+   "name": "Guided business process (BPF / Path / Blueprint)"
+  },
+  {
+   "id": "M8",
+   "name": "Record lifecycle state machine"
+  },
+  {
+   "id": "M9",
+   "name": "Approvals"
+  },
+  {
+   "id": "M10",
+   "name": "Escalation and timers"
+  },
+  {
+   "id": "M11",
+   "name": "Assignment rules"
+  },
+  {
+   "id": "M12",
+   "name": "Scheduled and background jobs"
+  },
+  {
+   "id": "M13",
+   "name": "Outbound webhooks and events"
+  },
+  {
+   "id": "M14",
+   "name": "Inbound webhooks"
+  },
+  {
+   "id": "M15",
+   "name": "Notification channels"
+  },
+  {
+   "id": "M16",
+   "name": "Robotic process automation"
+  },
+  {
+   "id": "M17",
+   "name": "Custom code extensibility"
+  },
+  {
+   "id": "N1",
+   "name": "Copilot chat"
+  },
+  {
+   "id": "N2",
+   "name": "AI record summary"
+  },
+  {
+   "id": "N3",
+   "name": "AI email and reply drafting"
+  },
+  {
+   "id": "N4",
+   "name": "AI knowledge article drafting and gaps"
+  },
+  {
+   "id": "N5",
+   "name": "Natural language to query or report"
+  },
+  {
+   "id": "N6",
+   "name": "AI actions on records"
+  },
+  {
+   "id": "N7",
+   "name": "Autonomous agents"
+  },
+  {
+   "id": "N8",
+   "name": "Multi-agent orchestration"
+  },
+  {
+   "id": "N9",
+   "name": "Agent builder"
+  },
+  {
+   "id": "N10",
+   "name": "Prompt management"
+  },
+  {
+   "id": "N11",
+   "name": "AI-generated attributes"
+  },
+  {
+   "id": "N12",
+   "name": "MCP server"
+  },
+  {
+   "id": "N13",
+   "name": "MCP client (use external tools)"
+  },
+  {
+   "id": "N14",
+   "name": "Agent-to-agent (A2A) protocol"
+  },
+  {
+   "id": "N15",
+   "name": "Knowledge grounding (RAG)"
+  },
+  {
+   "id": "N16",
+   "name": "Semantic search over records"
+  },
+  {
+   "id": "N17",
+   "name": "AI memory"
+  },
+  {
+   "id": "N18",
+   "name": "Conversational bot"
+  },
+  {
+   "id": "N19",
+   "name": "Sentiment analysis"
+  },
+  {
+   "id": "N20",
+   "name": "Auto-translation"
+  },
+  {
+   "id": "N21",
+   "name": "Document AI and OCR"
+  },
+  {
+   "id": "N22",
+   "name": "Speech transcription"
+  },
+  {
+   "id": "N23",
+   "name": "AI evaluation harness"
+  },
+  {
+   "id": "N24",
+   "name": "AI token budgets"
+  },
+  {
+   "id": "N25",
+   "name": "Bring your own model"
+  },
+  {
+   "id": "N26",
+   "name": "Self-hosted LLM (data never leaves)"
+  },
+  {
+   "id": "N27",
+   "name": "Prompt-injection guardrails"
+  },
+  {
+   "id": "N28",
+   "name": "PII masking in prompts"
+  },
+  {
+   "id": "N29",
+   "name": "AI audit logging"
+  },
+  {
+   "id": "N30",
+   "name": "Human approval of AI writes"
+  },
+  {
+   "id": "N31",
+   "name": "AI kill switch and model approval"
+  },
+  {
+   "id": "O1",
+   "name": "Predictive ML (general)"
+  },
+  {
+   "id": "O2",
+   "name": "SLA breach prediction"
+  },
+  {
+   "id": "O3",
+   "name": "Churn prediction"
+  },
+  {
+   "id": "O4",
+   "name": "Anomaly detection"
+  },
+  {
+   "id": "O5",
+   "name": "Recommendations and next best action"
+  },
+  {
+   "id": "O6",
+   "name": "Knowledge graph"
+  },
+  {
+   "id": "O7",
+   "name": "Relationship intelligence"
+  },
+  {
+   "id": "O8",
+   "name": "Process mining"
+  },
+  {
+   "id": "O9",
+   "name": "Scenario simulation (what-if)"
+  },
+  {
+   "id": "O10",
+   "name": "Decision records"
+  },
+  {
+   "id": "O11",
+   "name": "AI outcome tracking"
+  },
+  {
+   "id": "O12",
+   "name": "Causal analysis"
+  },
+  {
+   "id": "O13",
+   "name": "Digital workers"
+  },
+  {
+   "id": "P1",
+   "name": "Report builder"
+  },
+  {
+   "id": "P2",
+   "name": "SQL-level report authoring"
+  },
+  {
+   "id": "P3",
+   "name": "Scheduled report delivery"
+  },
+  {
+   "id": "P4",
+   "name": "Export formats"
+  },
+  {
+   "id": "P5",
+   "name": "Dashboard designer"
+  },
+  {
+   "id": "P6",
+   "name": "Chart types"
+  },
+  {
+   "id": "P7",
+   "name": "Drill-down and explain"
+  },
+  {
+   "id": "P8",
+   "name": "Embedded analytics"
+  },
+  {
+   "id": "P9",
+   "name": "KPI and metric management"
+  },
+  {
+   "id": "P10",
+   "name": "Metric lineage"
+  },
+  {
+   "id": "P11",
+   "name": "KPI threshold alerts"
+  },
+  {
+   "id": "P12",
+   "name": "Advanced BI"
+  },
+  {
+   "id": "P13",
+   "name": "Data warehouse export"
+  },
+  {
+   "id": "Q1",
+   "name": "Single sign-on (OIDC)"
+  },
+  {
+   "id": "Q2",
+   "name": "SAML"
+  },
+  {
+   "id": "Q3",
+   "name": "SCIM user provisioning"
+  },
+  {
+   "id": "Q4",
+   "name": "LDAP / Active Directory"
+  },
+  {
+   "id": "Q5",
+   "name": "Multi-factor authentication"
+  },
+  {
+   "id": "Q6",
+   "name": "Passkeys / WebAuthn"
+  },
+  {
+   "id": "Q7",
+   "name": "Password policy"
+  },
+  {
+   "id": "Q8",
+   "name": "Session management"
+  },
+  {
+   "id": "Q9",
+   "name": "Login hours and IP restrictions"
+  },
+  {
+   "id": "Q10",
+   "name": "Role-based access control"
+  },
+  {
+   "id": "Q11",
+   "name": "Access reviews"
+  },
+  {
+   "id": "Q12",
+   "name": "Delegated administration"
+  },
+  {
+   "id": "Q13",
+   "name": "Impersonation (login as)"
+  },
+  {
+   "id": "Q14",
+   "name": "Record-level sharing"
+  },
+  {
+   "id": "Q15",
+   "name": "Attribute-level security"
+  },
+  {
+   "id": "Q16",
+   "name": "Audit trail integrity"
+  },
+  {
+   "id": "Q17",
+   "name": "Audit search UI"
+  },
+  {
+   "id": "Q18",
+   "name": "Encryption of secrets"
+  },
+  {
+   "id": "Q19",
+   "name": "Attribute encryption and BYOK"
+  },
+  {
+   "id": "Q20",
+   "name": "Rate limiting and abuse protection"
+  },
+  {
+   "id": "Q21",
+   "name": "Web security hardening"
+  },
+  {
+   "id": "Q22",
+   "name": "Security event monitoring"
+  },
+  {
+   "id": "R1",
+   "name": "Data subject requests"
+  },
+  {
+   "id": "R2",
+   "name": "Crypto-shredding erasure"
+  },
+  {
+   "id": "R3",
+   "name": "Retention policies"
+  },
+  {
+   "id": "R4",
+   "name": "Legal hold"
+  },
+  {
+   "id": "R5",
+   "name": "Records of processing and DPIA"
+  },
+  {
+   "id": "R6",
+   "name": "Cookie consent"
+  },
+  {
+   "id": "R7",
+   "name": "Data residency"
+  },
+  {
+   "id": "R8",
+   "name": "Risk register"
+  },
+  {
+   "id": "R9",
+   "name": "Policy management"
+  },
+  {
+   "id": "R10",
+   "name": "Controls and assessments"
+  },
+  {
+   "id": "R11",
+   "name": "Control testing automation"
+  },
+  {
+   "id": "R12",
+   "name": "Regulatory change tracking"
+  },
+  {
+   "id": "R13",
+   "name": "Internal audit management"
+  },
+  {
+   "id": "R14",
+   "name": "Third-party risk"
+  },
+  {
+   "id": "R15",
+   "name": "Business continuity"
+  },
+  {
+   "id": "R16",
+   "name": "Compliance certifications"
+  },
+  {
+   "id": "S1",
+   "name": "REST API"
+  },
+  {
+   "id": "S2",
+   "name": "OpenAPI specification"
+  },
+  {
+   "id": "S3",
+   "name": "Official SDKs"
+  },
+  {
+   "id": "S4",
+   "name": "Query API"
+  },
+  {
+   "id": "S5",
+   "name": "Bulk API"
+  },
+  {
+   "id": "S6",
+   "name": "GraphQL"
+  },
+  {
+   "id": "S7",
+   "name": "OData"
+  },
+  {
+   "id": "S8",
+   "name": "API versioning and deprecation"
+  },
+  {
+   "id": "S9",
+   "name": "Idempotency keys"
+  },
+  {
+   "id": "S10",
+   "name": "API usage analytics and quotas"
+  },
+  {
+   "id": "S11",
+   "name": "Server-to-server authentication"
+  },
+  {
+   "id": "S12",
+   "name": "Prebuilt connectors"
+  },
+  {
+   "id": "S13",
+   "name": "App marketplace"
+  },
+  {
+   "id": "S14",
+   "name": "Integration platform (iPaaS)"
+  },
+  {
+   "id": "T1",
+   "name": "Low-code app building"
+  },
+  {
+   "id": "T2",
+   "name": "Page and UI builder"
+  },
+  {
+   "id": "T3",
+   "name": "Custom UI components"
+  },
+  {
+   "id": "T4",
+   "name": "Developer CLI"
+  },
+  {
+   "id": "T5",
+   "name": "Sandboxes and environment copies"
+  },
+  {
+   "id": "T6",
+   "name": "Feature flags"
+  },
+  {
+   "id": "T7",
+   "name": "Configuration testing"
+  },
+  {
+   "id": "T8",
+   "name": "Package and extension management"
+  },
+  {
+   "id": "U1",
+   "name": "Deployment choice and sovereignty"
+  },
+  {
+   "id": "U2",
+   "name": "Scale and high availability"
+  },
+  {
+   "id": "U3",
+   "name": "Horizontal scaling"
+  },
+  {
+   "id": "U4",
+   "name": "Operator observability"
+  },
+  {
+   "id": "U5",
+   "name": "Performance profiler"
+  },
+  {
+   "id": "U6",
+   "name": "Backup and restore"
+  },
+  {
+   "id": "U7",
+   "name": "Upgrades and release management"
+  },
+  {
+   "id": "U8",
+   "name": "Zero-downtime upgrades"
+  },
+  {
+   "id": "U9",
+   "name": "Health checks"
+  },
+  {
+   "id": "U10",
+   "name": "Admin settings console"
+  },
+  {
+   "id": "U11",
+   "name": "Licence and seat management"
+  },
+  {
+   "id": "U12",
+   "name": "Multiple organizations in one deployment"
+  },
+  {
+   "id": "V1",
+   "name": "Project and portfolio management"
+  },
+  {
+   "id": "V2",
+   "name": "Task management"
+  },
+  {
+   "id": "V3",
+   "name": "Timesheets"
+  },
+  {
+   "id": "V4",
+   "name": "Resource capacity"
+  },
+  {
+   "id": "V5",
+   "name": "Change requests (projects)"
+  },
+  {
+   "id": "V6",
+   "name": "Project risks and issues"
+  },
+  {
+   "id": "V7",
+   "name": "Queue management"
+  },
+  {
+   "id": "W1",
+   "name": "Contract lifecycle management"
+  },
+  {
+   "id": "W2",
+   "name": "Vendor management"
+  },
+  {
+   "id": "W3",
+   "name": "Procurement and purchase orders"
+  },
+  {
+   "id": "W4",
+   "name": "Budgets and expenses"
+  },
+  {
+   "id": "W5",
+   "name": "Accounting (general ledger)"
+  },
+  {
+   "id": "W6",
+   "name": "HR records"
+  },
+  {
+   "id": "W7",
+   "name": "Recruiting"
+  },
+  {
+   "id": "W8",
+   "name": "Employee service (HR case management)"
+  },
+  {
+   "id": "X1",
+   "name": "Vertical packaging mechanism"
+  },
+  {
+   "id": "X2",
+   "name": "Shipped vertical packs"
+  },
+  {
+   "id": "X3",
+   "name": "Financial services"
+  },
+  {
+   "id": "X4",
+   "name": "Healthcare and life sciences"
+  },
+  {
+   "id": "X5",
+   "name": "Public sector"
+  },
+  {
+   "id": "X6",
+   "name": "Manufacturing"
+  },
+  {
+   "id": "X7",
+   "name": "Nonprofit"
+  },
+  {
+   "id": "X8",
+   "name": "Education"
+  },
+  {
+   "id": "X9",
+   "name": "Retail and consumer goods"
+  },
+  {
+   "id": "X10",
+   "name": "Telecom, media and energy"
+  },
+  {
+   "id": "X11",
+   "name": "Enterprise architecture"
+  },
+  {
+   "id": "X12",
+   "name": "Arabic-first and MENA fit"
+  },
+  {
+   "id": "Y1",
+   "name": "Metadata-driven runtime"
+  },
+  {
+   "id": "Y2",
+   "name": "Native table per entity"
+  },
+  {
+   "id": "Y3",
+   "name": "Direct SQL and BI access"
+  },
+  {
+   "id": "Y4",
+   "name": "Modular, licensed engines"
+  },
+  {
+   "id": "Y5",
+   "name": "Customer data isolation model"
+  },
+  {
+   "id": "Y6",
+   "name": "Cloud-native elastic runtime"
+  },
+  {
+   "id": "Y7",
+   "name": "Transactional event backbone"
+  },
+  {
+   "id": "Y8",
+   "name": "Cross-node metadata propagation"
+  },
+  {
+   "id": "Y9",
+   "name": "API-first contract (OpenAPI and SDK)"
+  },
+  {
+   "id": "Y10",
+   "name": "Synchronous server-side extension hooks"
+  },
+  {
+   "id": "Y11",
+   "name": "Customisation layering and safe upgrades"
+  },
+  {
+   "id": "Y12",
+   "name": "Online schema evolution"
+  },
+  {
+   "id": "Y13",
+   "name": "Runtime efficiency and memory safety"
+  },
+  {
+   "id": "Y14",
+   "name": "Frontend architecture"
+  },
+  {
+   "id": "Z1",
+   "name": "Configuration and secret management"
+  },
+  {
+   "id": "Z2",
+   "name": "Database access layer"
+  },
+  {
+   "id": "Z3",
+   "name": "Caching services"
+  },
+  {
+   "id": "Z4",
+   "name": "Identity primitives"
+  },
+  {
+   "id": "Z5",
+   "name": "HTTP edge middleware"
+  },
+  {
+   "id": "Z6",
+   "name": "Object storage service"
+  },
+  {
+   "id": "Z7",
+   "name": "Job and scheduling primitives"
+  },
+  {
+   "id": "Z8",
+   "name": "Email delivery service"
+  },
+  {
+   "id": "Z9",
+   "name": "LLM gateway"
+  },
+  {
+   "id": "Z10",
+   "name": "Approval primitive"
+  },
+  {
+   "id": "Z11",
+   "name": "Expression language"
+  },
+  {
+   "id": "Z12",
+   "name": "Business calendar"
+  },
+  {
+   "id": "Z13",
+   "name": "Safe HTML and templating"
+  },
+  {
+   "id": "Z14",
+   "name": "Error and pagination contracts"
+  },
+  {
+   "id": "Z15",
+   "name": "Platform test harness"
+  },
+  {
+   "id": "AA1",
+   "name": "Measured API latency"
+  },
+  {
+   "id": "AA2",
+   "name": "Proven scale"
+  },
+  {
+   "id": "AA3",
+   "name": "Large data volumes"
+  },
+  {
+   "id": "AA4",
+   "name": "Query efficiency and deep paging"
+  },
+  {
+   "id": "AA5",
+   "name": "Bulk load throughput"
+  },
+  {
+   "id": "AA6",
+   "name": "Search latency"
+  },
+  {
+   "id": "AA7",
+   "name": "Response caching and compression"
+  },
+  {
+   "id": "AA8",
+   "name": "Database connection scale-out"
+  },
+  {
+   "id": "AA9",
+   "name": "No punitive governor limits"
+  },
+  {
+   "id": "AA10",
+   "name": "Heavy changes in the background"
+  },
+  {
+   "id": "AA11",
+   "name": "Analytics over large data"
+  },
+  {
+   "id": "AA12",
+   "name": "Frontend speed"
+  },
+  {
+   "id": "AA13",
+   "name": "Performance SLOs with evidence"
+  },
+  {
+   "id": "AA14",
+   "name": "Performance regression guarding"
+  },
+  {
+   "id": "AB1",
+   "name": "Uptime SLA"
+  },
+  {
+   "id": "AB2",
+   "name": "Automatic database failover"
+  },
+  {
+   "id": "AB3",
+   "name": "Disaster recovery (RPO/RTO)"
+  },
+  {
+   "id": "AB4",
+   "name": "Restore drill evidence"
+  },
+  {
+   "id": "AB5",
+   "name": "Graceful degradation"
+  },
+  {
+   "id": "AB6",
+   "name": "Timeouts, retries and circuit breakers"
+  },
+  {
+   "id": "AB7",
+   "name": "Connection draining on deploy"
+  },
+  {
+   "id": "AB8",
+   "name": "Upgrade integrity"
+  },
+  {
+   "id": "AB9",
+   "name": "Failure and chaos testing"
+  },
+  {
+   "id": "AB10",
+   "name": "Alerting and runbooks"
+  },
+  {
+   "id": "AB11",
+   "name": "Public status and incident communication"
+  },
+  {
+   "id": "AC1",
+   "name": "Security certifications (SOC 2, ISO 27001)"
+  },
+  {
+   "id": "AC2",
+   "name": "Regulated-industry attestations"
+  },
+  {
+   "id": "AC3",
+   "name": "External penetration testing"
+  },
+  {
+   "id": "AC4",
+   "name": "Automated quality gates"
+  },
+  {
+   "id": "AC5",
+   "name": "Automated test breadth"
+  },
+  {
+   "id": "AC6",
+   "name": "Release cadence and notes"
+  },
+  {
+   "id": "AC7",
+   "name": "Supply-chain security"
+  },
+  {
+   "id": "AC8",
+   "name": "Threat model and security programme"
+  },
+  {
+   "id": "AC9",
+   "name": "Customer-facing documentation"
+  },
+  {
+   "id": "AC10",
+   "name": "Training and certification programme"
+  },
+  {
+   "id": "AC11",
+   "name": "Partner and implementer ecosystem"
+  },
+  {
+   "id": "AD1",
+   "name": "Create entities and attributes from a description"
+  },
+  {
+   "id": "AD2",
+   "name": "Create forms and layouts from a description"
+  },
+  {
+   "id": "AD3",
+   "name": "Create flows and stage processes from a description"
+  },
+  {
+   "id": "AD4",
+   "name": "Build a whole app end to end from a description"
+  },
+  {
+   "id": "AD5",
+   "name": "Build from a spreadsheet or document"
+  },
+  {
+   "id": "AD6",
+   "name": "Explain and document an existing configuration"
+  },
+  {
+   "id": "AD7",
+   "name": "Data-model review"
+  },
+  {
+   "id": "AD8",
+   "name": "Change preview and impact analysis before apply"
+  },
+  {
+   "id": "AD9",
+   "name": "Write scripts and components from a description"
+  },
+  {
+   "id": "AD10",
+   "name": "Builder quality measured by an evaluation suite"
+  },
+  {
+   "id": "AD11",
+   "name": "Import a configuration from another CRM"
+  },
+  {
+   "id": "AE1",
+   "name": "Custom actions as API, flow step and AI tool at once"
+  },
+  {
+   "id": "AE2",
+   "name": "Script testing, debugging and logs"
+  },
+  {
+   "id": "AF1",
+   "name": "Source code available"
+  },
+  {
+   "id": "AF2",
+   "name": "No per-user fees"
+  },
+  {
+   "id": "AF3",
+   "name": "Self-host for free"
+  },
+  {
+   "id": "AF4",
+   "name": "Time to install a working system"
+  },
+  {
+   "id": "AF5",
+   "name": "Published cost at 50, 500 and 5,000 users"
+  },
+  {
+   "id": "AF6",
+   "name": "No paywalled add-ons for core CRM features"
+  },
+  {
+   "id": "AF7",
+   "name": "Community size and activity"
+  },
+  {
+   "id": "AG1",
+   "name": "Hijri calendar in dates, reports and SLAs"
+  },
+  {
+   "id": "AG2",
+   "name": "ZATCA e-invoicing (Saudi Arabia)"
+  },
+  {
+   "id": "AG3",
+   "name": "UAE and Egypt e-invoicing"
+  },
+  {
+   "id": "AG4",
+   "name": "Arabic AI quality"
+  },
+  {
+   "id": "AG5",
+   "name": "Saudi NCA ECC, SAMA and PDPL compliance packs"
+  },
+  {
+   "id": "AG6",
+   "name": "UAE and Egypt data-protection packs"
+  },
+  {
+   "id": "AH1",
+   "name": "Undo everything an agent run did"
+  },
+  {
+   "id": "AH2",
+   "name": "Roll back an agent's work since a point in time"
+  },
+  {
+   "id": "AH3",
+   "name": "Agents as their own identities with least privilege"
+  },
+  {
+   "id": "AH4",
+   "name": "Per-agent action limits"
+  },
+  {
+   "id": "AH5",
+   "name": "Behaviour monitoring with automatic stop"
+  },
+  {
+   "id": "AH6",
+   "name": "Trial mode before an agent goes live"
+  },
+  {
+   "id": "AH7",
+   "name": "Agent permission testing"
+  },
+  {
+   "id": "AI1",
+   "name": "Lead qualification agent"
+  },
+  {
+   "id": "AI2",
+   "name": "Service agent that resolves cases"
+  },
+  {
+   "id": "AI3",
+   "name": "Inbox-to-record agent"
+  },
+  {
+   "id": "AI4",
+   "name": "Follow-up agent"
+  },
+  {
+   "id": "AI5",
+   "name": "Collections and renewals agent"
+  },
+  {
+   "id": "AI6",
+   "name": "Meeting preparation and notes agent"
+  },
+  {
+   "id": "AI7",
+   "name": "Shared work queues and hand-off between agents and people"
+  },
+  {
+   "id": "AI8",
+   "name": "Agent performance and cost per task"
+  },
+  {
+   "id": "AJ1",
+   "name": "Nafath sign-in and approval"
+  },
+  {
+   "id": "AJ2",
+   "name": "UAE Pass sign-in and signing"
+  },
+  {
+   "id": "AJ3",
+   "name": "Identity verification against national registries"
+  },
+  {
+   "id": "AJ4",
+   "name": "Company verification"
+  },
+  {
+   "id": "AJ5",
+   "name": "National address verification"
+  },
+  {
+   "id": "AK1",
+   "name": "Time to a working CRM"
+  },
+  {
+   "id": "AK2",
+   "name": "Admin effort to keep it running"
+  },
+  {
+   "id": "AK3",
+   "name": "Share of daily work done by agents"
+  },
+  {
+   "id": "AK4",
+   "name": "Learning curve for a new user"
+  },
+  {
+   "id": "AK5",
+   "name": "Time and cost to leave"
+  },
+  {
+   "id": "AK6",
+   "name": "Only what you use is visible"
+  }
+ ]
+}

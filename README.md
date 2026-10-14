@@ -65,7 +65,8 @@ The release gate, the same one CI runs on Windows and Linux:
 cargo run -p attome-release -- --check   # format, clippy (warnings are errors), tests
 ```
 
-Tests that need PostgreSQL, Redis or an object store skip without them; point `DATABASE_URL` at a
+`attome test` runs the tests a change needs ([docs/testing.md](docs/testing.md)). Tests that need
+PostgreSQL, Redis or an object store skip without them; point `DATABASE_URL` at a
 throwaway PostgreSQL server (never a real database) to run them.
 
 The web application (Node 22):
