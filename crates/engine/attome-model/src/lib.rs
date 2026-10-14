@@ -12,6 +12,7 @@
 //! This crate holds the model only: engine-specific kinds register from the
 //! engine that owns them, and HTTP routes live in `attome-api`.
 
+pub mod agent;
 pub mod canonical;
 pub mod commands;
 pub mod cooker;
@@ -21,6 +22,7 @@ pub mod kinds;
 pub mod references;
 pub mod runtime;
 pub mod store;
+pub mod upgrade;
 pub mod validate;
 
 use std::collections::BTreeMap;
