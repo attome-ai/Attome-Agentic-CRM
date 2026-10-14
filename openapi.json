@@ -53232,6 +53232,95 @@
         ]
       }
     },
+    "/api/v1/{entity}/deleted": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "A18-T7: the entity's deleted records the caller may see, newest\ndeletion first. Restore one with `POST /api/v1/{entity}/{id}/restore`.",
+        "operationId": "list_deleted",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "One-based (D-347): page 1 is the first page. Values below 1 are\nclamped up to 1 rather than rejected, matching the legacy lists.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to\n`DEFAULT_PAGE_SIZE`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of deleted records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DeletedRecord"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the entity's read privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/{entity}/export": {
       "post": {
         "tags": [
@@ -56198,6 +56287,103 @@
           },
           "422": {
             "description": "Malformed cursor or unknown kind",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/{entity}/{id}/timeline/export": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B1-T4: the record's timeline, filtered by kind, as a CSV file: the same\nentries, under the same permissions, as the timeline itself, newest\nfirst, up to 2000.",
+        "operationId": "export_record_timeline",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kinds",
+            "in": "query",
+            "description": "Comma-separated kinds to include, as for the timeline itself.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The timeline as CSV",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the entity's read privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or the caller cannot read it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown kind",
             "content": {
               "application/json": {
                 "schema": {
@@ -68704,6 +68890,41 @@
           }
         }
       },
+      "DeletedRecord": {
+        "type": "object",
+        "description": "One deleted record.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "deleted_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When it was last changed, which for a deleted record is its deletion."
+          },
+          "deleted_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's primary name, when its entity declares one."
+          }
+        }
+      },
       "DeliveryListItem": {
         "type": "object",
         "required": [
@@ -71968,7 +72189,7 @@
           },
           "op": {
             "type": "string",
-            "description": "One of: `contains`, `starts_with`, `ends_with`, `contains_any`,\n`contains_all`, `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`,\n`is_null`, `is_not_null`. `starts_with`/`ends_with` are text-only,\nlike `contains`; `neq` excludes a stored NULL (SQL `<>`), exactly like\nevery other comparison — `is_null` is the only way to match one. The\nfour were added by D-607 (advanced find, B-R10 Phase A): the entity\ngrid had offered them since C-28 while the server refused them. For a\nmulti-select Choice:\n`contains` tests one option, `contains_any` matches any supplied\noption, and `contains_all` matches every supplied option. `in` matches\nany of a non-empty string array by typed equality (not valid for a\nmulti-select Choice). `is_null` takes no value and matches a stored\nNULL — the only way to express a NULL bucket (dashboard 10/10 Phase 0\nspike S1). `under` and `above` (A17-T2) take a record id for a lookup\ninto a tree (an entity with one parent lookup to itself) and match\nthat record and everything below it, or above it, up to 32 levels.",
+            "description": "One of: `contains`, `starts_with`, `ends_with`, `contains_any`,\n`contains_all`, `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`,\n`is_null`, `is_not_null`. `starts_with`/`ends_with` are text-only,\nlike `contains`; `neq` excludes a stored NULL (SQL `<>`), exactly like\nevery other comparison — `is_null` is the only way to match one. The\nfour were added by D-607 (advanced find, B-R10 Phase A): the entity\ngrid had offered them since C-28 while the server refused them. For a\nmulti-select Choice:\n`contains` tests one option, `contains_any` matches any supplied\noption, and `contains_all` matches every supplied option. `in` matches\nany of a non-empty string array by typed equality (not valid for a\nmulti-select Choice). `is_null` takes no value and matches a stored\nNULL — the only way to express a NULL bucket (dashboard 10/10 Phase 0\nspike S1). `under` and `above` (A17-T2) take a record id for a lookup\ninto a tree (an entity with one parent lookup to itself) and match\nthat record and everything below it, or above it, up to 32 levels.\n`tagged` (B4-T4) takes a tag id on the `id` field and matches the\nrecords carrying that tag (a personal tag only for its owner).",
             "example": "eq"
           },
           "value": {
@@ -79055,6 +79276,68 @@
                     "null"
                   ],
                   "format": "int32"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_DeletedRecord": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One deleted record.",
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "deleted_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "When it was last changed, which for a deleted record is its deletion."
+                },
+                "deleted_by": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The record's primary name, when its entity declares one."
                 }
               }
             }

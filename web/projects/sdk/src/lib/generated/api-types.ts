@@ -10247,6 +10247,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/deleted": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A18-T7: the entity's deleted records the caller may see, newest
+         *     deletion first. Restore one with `POST /api/v1/{entity}/{id}/restore`.
+         */
+        get: operations["list_deleted"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/export": {
         parameters: {
             query?: never;
@@ -10774,6 +10794,27 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_record_timeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/{id}/timeline/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * B1-T4: the record's timeline, filtered by kind, as a CSV file: the same
+         *     entries, under the same permissions, as the timeline itself, newest
+         *     first, up to 2000.
+         */
+        get: operations["export_record_timeline"];
         put?: never;
         post?: never;
         delete?: never;
@@ -15200,6 +15241,20 @@ export interface components {
             /** Format: uuid */
             delegation_id: string;
         };
+        /** @description One deleted record. */
+        DeletedRecord: {
+            /**
+             * Format: date-time
+             * @description When it was last changed, which for a deleted record is its deletion.
+             */
+            deleted_at?: string | null;
+            /** Format: uuid */
+            deleted_by?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description The record's primary name, when its entity declares one. */
+            label?: string | null;
+        };
         DeliveryListItem: {
             /** Format: int32 */
             attempts: number;
@@ -16547,6 +16602,8 @@ export interface components {
              *     spike S1). `under` and `above` (A17-T2) take a record id for a lookup
              *     into a tree (an entity with one parent lookup to itself) and match
              *     that record and everything below it, or above it, up to 32 levels.
+             *     `tagged` (B4-T4) takes a tag id on the `id` field and matches the
+             *     records carrying that tag (a personal tag only for its owner).
              * @example eq
              */
             op: string;
@@ -19217,6 +19274,28 @@ export interface components {
                 owner_layer: string;
                 /** Format: int32 */
                 published_version?: number | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_DeletedRecord: {
+            items: {
+                /**
+                 * Format: date-time
+                 * @description When it was last changed, which for a deleted record is its deletion.
+                 */
+                deleted_at?: string | null;
+                /** Format: uuid */
+                deleted_by?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** @description The record's primary name, when its entity declares one. */
+                label?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -61184,6 +61263,66 @@ export interface operations {
             };
         };
     };
+    list_deleted: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of deleted records */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DeletedRecord"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the entity's read privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     enqueue_export: {
         parameters: {
             query?: never;
@@ -62945,6 +63084,68 @@ export interface operations {
                 };
             };
             /** @description Malformed cursor or unknown kind */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    export_record_timeline: {
+        parameters: {
+            query?: {
+                /** @description Comma-separated kinds to include, as for the timeline itself. */
+                kinds?: string;
+            };
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The timeline as CSV */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": string;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the entity's read privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller cannot read it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown kind */
             422: {
                 headers: {
                     [name: string]: unknown;
