@@ -1,5 +1,6 @@
 //! One module per `attome` subcommand, each with a `run` entry point.
 
+pub mod ai_pack;
 pub mod audit_chainer;
 pub mod bundle_offline;
 pub mod changeset_replay;

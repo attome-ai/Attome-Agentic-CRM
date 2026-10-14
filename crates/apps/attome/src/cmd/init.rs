@@ -44,7 +44,7 @@ attome init: install a Solo deployment (the binary and PostgreSQL, no Redis)
 Usage:
   attome init --database-url <url> [--out <file>] [--port <n>] [--force]
               [--no-migrate] [--from-bundle <dir>] [--admin <email>] [--service]
-              [--pack <name>]...
+              [--pack <name>]... [--ai <profile> [--ai-dir <dir>]]
 
   --database-url  postgres://user:password@host:port/database, a database that
                   exists, reached as a role that can create roles and tables
@@ -58,6 +58,11 @@ Usage:
   --admin         create the first administrator and print a one-time password
   --pack          install a pack (repeatable), e.g. --pack crm; applied at every
                   boot through the changeset ledger
+  --ai            turn AI on with a local model pack (deploy/model-servers/
+                  ai-packs.json); its weights are checked against the pack's
+                  checksums before the configuration names them
+  --ai-dir        where the pack's weights are (default: the --from-bundle
+                  directory)
   --service       install and start Attome as a Windows service or a systemd
                   unit and wait until it answers; the configuration goes to
                   %ProgramData%\\Attome or /var/lib/attome unless --out names it
@@ -79,6 +84,9 @@ struct Args {
     service: bool,
     /// Packs to install, in order.
     packs: Vec<String>,
+    /// A local AI model pack profile (N26-T2), and where its weights are.
+    ai: Option<String>,
+    ai_dir: Option<PathBuf>,
 }
 
 fn parse_args(raw: &[String]) -> Result<Args, String> {
@@ -91,6 +99,8 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
     let mut admin = None;
     let mut service = false;
     let mut packs = Vec::new();
+    let mut ai = None;
+    let mut ai_dir = None;
     let mut it = raw.iter();
     while let Some(arg) = it.next() {
         let mut value = |name: &str| -> Result<String, String> {
@@ -112,12 +122,23 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
             "--admin" => admin = Some(value("--admin")?),
             "--service" => service = true,
             "--pack" => packs.push(value("--pack")?),
+            "--ai" => ai = Some(value("--ai")?),
+            "--ai-dir" => ai_dir = Some(PathBuf::from(value("--ai-dir")?)),
             "--help" | "-h" => return Err(USAGE.to_owned()),
             other => return Err(format!("unknown option `{other}`\n\n{USAGE}")),
         }
     }
     let database_url =
         database_url.ok_or_else(|| format!("--database-url is required\n\n{USAGE}"))?;
+    if ai_dir.is_some() && ai.is_none() {
+        return Err("--ai-dir needs --ai <profile>".to_owned());
+    }
+    let ai_dir = ai_dir.or_else(|| ai.as_ref().and(from_bundle.clone()));
+    if ai.is_some() && ai_dir.is_none() {
+        return Err(
+            "--ai needs the weights: pass --ai-dir <dir> or --from-bundle <dir>".to_owned(),
+        );
+    }
     if (service || admin.is_some()) && !migrate {
         return Err("--service and --admin need the schema; drop --no-migrate".to_owned());
     }
@@ -138,6 +159,8 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
         admin,
         service,
         packs,
+        ai,
+        ai_dir,
     })
 }
 
@@ -340,6 +363,24 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut text = render(&db, args.port, &password)?;
+    // N26-T2: a local AI pack, its weights checked before they are named.
+    if let (Some(profile), Some(dir)) = (&args.ai, &args.ai_dir) {
+        let profile = super::ai_pack::prepare(profile, dir)?;
+        let mut value: Value = serde_json::from_str(&text)?;
+        value["inference"] = super::ai_pack::inference_config(&profile);
+        text = serde_json::to_string_pretty(&value)?;
+        say(&format!(
+            "AI pack {} verified; start its model servers with:
+  docker compose -f deploy/model-servers/docker-compose.yml {} up -d",
+            profile.name,
+            profile
+                .compose_profiles
+                .iter()
+                .map(|p| format!("--profile {p}"))
+                .collect::<Vec<_>>()
+                .join(" ")
+        ));
+    }
     if !args.packs.is_empty() {
         let mut value: Value = serde_json::from_str(&text)?;
         value["app"]["packs"] = json!(args.packs);
@@ -515,5 +556,16 @@ mod tests {
             "sales".to_owned(),
         ]);
         assert_eq!(parse_args(&args).unwrap().packs, ["crm", "sales"]);
+        let ai = |extra: &[&str]| {
+            let mut args = vec!["--database-url".to_owned(), "postgres://u:p@h/d".to_owned()];
+            args.extend(extra.iter().map(|s| (*s).to_owned()));
+            parse_args(&args)
+        };
+        assert!(ai(&["--ai", "cpu"]).is_err(), "--ai needs the weights");
+        assert!(ai(&["--ai-dir", "w"]).is_err(), "--ai-dir needs --ai");
+        let parsed = ai(&["--ai", "cpu", "--from-bundle", "b"]).unwrap();
+        assert_eq!(parsed.ai_dir, Some(PathBuf::from("b")));
+        let parsed = ai(&["--ai", "cpu", "--ai-dir", "w", "--from-bundle", "b"]).unwrap();
+        assert_eq!(parsed.ai_dir, Some(PathBuf::from("w")));
     }
 }

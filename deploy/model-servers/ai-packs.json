@@ -1,0 +1,65 @@
+{
+  "format": "attome-ai-packs/v1",
+  "_comment": "Model packs for `attome init --ai <profile>` (roadmap N26-T2). A profile is offered only once `approved` is true, which needs every file's sha256 and size filled from weights that were downloaded, tested on the listed tasks and scored. Until then a profile is listed and refused. Weights are never committed; an offline bundle carries them next to this file.",
+  "profiles": [
+    {
+      "name": "cpu",
+      "description": "One machine, no GPU: generation through llama.cpp, embeddings through text-embeddings-inference.",
+      "approved": false,
+      "compose_profiles": ["llamacpp", "tei"],
+      "models": [
+        {
+          "id": "qwen2.5-7b-instruct-q4_k_m",
+          "role": "generation",
+          "base_url": "http://127.0.0.1:8081/v1",
+          "licence": "Apache-2.0",
+          "tested_tasks": [],
+          "scores": {},
+          "files": [
+            {
+              "path": "models/qwen2.5-7b-instruct-q4_k_m.gguf",
+              "url": "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF",
+              "sha256": null,
+              "bytes": null
+            }
+          ]
+        },
+        {
+          "id": "BAAI/bge-m3",
+          "role": "embedding",
+          "base_url": "http://127.0.0.1:8088",
+          "licence": "MIT",
+          "tested_tasks": [],
+          "scores": {},
+          "files": []
+        }
+      ]
+    },
+    {
+      "name": "gpu",
+      "description": "An NVIDIA GPU: generation through vLLM, embeddings through text-embeddings-inference.",
+      "approved": false,
+      "compose_profiles": ["vllm", "tei"],
+      "models": [
+        {
+          "id": "Qwen/Qwen2.5-7B-Instruct",
+          "role": "generation",
+          "base_url": "http://127.0.0.1:8000/v1",
+          "licence": "Apache-2.0",
+          "tested_tasks": [],
+          "scores": {},
+          "files": []
+        },
+        {
+          "id": "BAAI/bge-m3",
+          "role": "embedding",
+          "base_url": "http://127.0.0.1:8088",
+          "licence": "MIT",
+          "tested_tasks": [],
+          "scores": {},
+          "files": []
+        }
+      ]
+    }
+  ]
+}
