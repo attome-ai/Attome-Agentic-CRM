@@ -143,6 +143,8 @@ impl EngineSystem {
             .merge(attome_records::query_exec::routes())
             .merge(attome_records::query_admin::routes())
             .merge(crate::view_admin::routes())
+            // Y1-T9: the metadata model's admin API (admin-gated in each handler).
+            .merge(crate::model_admin::routes())
             .merge(crate::calendar_admin::routes())
             // M65 Phase 1 — Application Builder: same "core, always-on,
             // Admin-privilege-gated" posture as `view_admin`/`calendar_admin`

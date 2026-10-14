@@ -188,6 +188,7 @@ mod service_public;
 /// M02/D-412 — `/api/v1/admin/settings` + `/api/v1/settings/me`. `pub` only
 /// for `openapi_fragment` (mounted by `openapi.rs`) and `routes` (mounted by
 /// `system.rs`); handlers stay module-private.
+pub mod model_admin;
 pub mod settings_admin;
 /// `pub` for the service reconcile API (`reconcile_sidebar_item` & co.,
 /// P-environment-promotion §5 step 13) — the handlers stay module-private.

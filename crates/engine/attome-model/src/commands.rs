@@ -179,8 +179,9 @@ fn issues_error(issues: &[Issue]) -> AppError {
     crate::validate::publish_error(issues)
 }
 
-/// Loads the object's current document (its draft, else its newest version),
-/// refuses when its content hash is not `base_hash`, applies `commands`,
+/// Loads the object's current document (its draft, else its newest version;
+/// an empty document for a new object, whose first edit names an empty
+/// `base_hash`), refuses when its content hash is not `base_hash`, applies `commands`,
 /// checks the shape and saves the draft. Runs in the caller's transaction.
 pub async fn apply_commands(
     tx: &mut Tx<'_>,
@@ -199,7 +200,13 @@ pub async fn apply_commands(
     .fetch_optional(&mut **tx)
     .await
     .map_err(AppError::internal)?;
-    let (doc, hash) = current.ok_or(AppError::NotFound)?;
+    // A new object starts from an empty document, and its first edit names
+    // the empty base hash.
+    let (doc, hash) = match current {
+        Some(found) => found,
+        None if base_hash.is_empty() => (Value::Object(serde_json::Map::new()), String::new()),
+        None => return Err(AppError::NotFound),
+    };
     if hash != base_hash {
         return Err(AppError::VersionConflict);
     }

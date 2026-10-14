@@ -244,6 +244,55 @@ pub async fn read(
     row.ok_or(AppError::NotFound)
 }
 
+/// One object in a kind's listing: its newest version.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, sqlx::FromRow)]
+pub struct ObjectSummary {
+    pub id: Uuid,
+    pub name: String,
+    pub app: String,
+    pub owner_layer: String,
+    pub version_no: i64,
+    pub state: String,
+    pub content_hash: String,
+}
+
+/// The active objects of one kind, by name.
+pub async fn list_objects(
+    pool: &DbPool,
+    kind: &str,
+    page: &OnePageQuery,
+) -> Result<PaginatedResponse<ObjectSummary>, AppError> {
+    let window = page.window();
+    let total: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM metadata_object WHERE kind = $1 AND is_active")
+            .bind(kind)
+            .fetch_one(pool)
+            .await
+            .map_err(AppError::internal)?;
+    let items: Vec<ObjectSummary> = sqlx::query_as(
+        "SELECT o.id, o.name, o.app, o.owner_layer, v.version_no, v.state, v.content_hash \
+         FROM metadata_object o \
+         JOIN LATERAL ( \
+             SELECT version_no, state, content_hash FROM metadata_object_version \
+             WHERE object_id = o.id ORDER BY version_no DESC LIMIT 1 \
+         ) v ON TRUE \
+         WHERE o.kind = $1 AND o.is_active \
+         ORDER BY o.name, o.id LIMIT $2 OFFSET $3",
+    )
+    .bind(kind)
+    .bind(window.page_size)
+    .bind(window.offset)
+    .fetch_all(pool)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(PaginatedResponse {
+        items,
+        total,
+        page: window.page,
+        page_size: window.page_size,
+    })
+}
+
 /// The object's versions, newest first.
 pub async fn history(
     pool: &DbPool,

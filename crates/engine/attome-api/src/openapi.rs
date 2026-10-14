@@ -31,6 +31,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         attome_records::query_exec::openapi_fragment(),
         attome_records::query_admin::openapi_fragment(),
         crate::view_admin::openapi_fragment(),
+        crate::model_admin::openapi_fragment(),
         crate::calendar_admin::openapi_fragment(),
         crate::app_admin::openapi_fragment(),
         crate::metadata_label_admin::openapi_fragment(),
