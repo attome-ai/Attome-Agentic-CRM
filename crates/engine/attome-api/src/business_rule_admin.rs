@@ -576,6 +576,108 @@ async fn test_rule(
     Ok(Json(test_business(&rule, &attrs, &req, now)?))
 }
 
+/// One rule's outcome on a stored record (A11-T5).
+#[derive(Serialize, ToSchema)]
+struct RuleExplanation {
+    rule_id: Uuid,
+    name: String,
+    kind: String,
+    #[serde(flatten)]
+    outcome: RuleTestResponse,
+}
+
+/// `GET /api/v1/admin/business-rules/explain`.
+#[derive(Serialize, ToSchema)]
+struct RulesExplained {
+    entity: String,
+    record_id: Uuid,
+    rules: Vec<RuleExplanation>,
+}
+
+#[derive(Deserialize, IntoParams)]
+struct ExplainQuery {
+    /// The entity's logical name.
+    entity: String,
+    /// The record.
+    id: Uuid,
+}
+
+/// A11-T5: why a record looks the way it does: every active rule on its
+/// entity evaluated against the stored record, as `.../{id}/test` evaluates
+/// one: whether it applies, its condition, the policies that fire, the
+/// values it would set, its errors and locks, and the trace. Writes nothing.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/business-rules/explain",
+    tag = "admin",
+    params(ExplainQuery),
+    responses(
+        (status = 200, description = "Each active rule's outcome on the record", body = RulesExplained),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such entity or record", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn explain_rules(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Query(query): Query<ExplainQuery>,
+) -> Result<Json<RulesExplained>, AppError> {
+    let record =
+        attome_records::entity_crud::read_record(&state, &ctx, &query.entity, query.id).await?;
+    let data = record.data().as_object().cloned().unwrap_or_default();
+    let attrs = store::attrs_for_entity(&state, &query.entity).ok_or(AppError::NotFound)?;
+    let ids: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM rule WHERE entity_logicalname = $1 AND is_deleted = false \
+           AND is_active = true ORDER BY display_order, name",
+    )
+    .bind(&query.entity)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let now = Utc::now();
+    let request = RuleTestRequest {
+        record: data,
+        audience: None,
+    };
+    let mut rules = Vec::with_capacity(ids.len());
+    let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
+    for id in ids {
+        let Some(rule) = store::read_rule(&mut conn, id).await? else {
+            continue;
+        };
+        let outcome = if rule.kind == BUSINESS_KIND {
+            test_business(&rule, &attrs, &request, now)
+        } else {
+            test_legacy(&rule, &attrs, &request.record, now)
+        };
+        // A rule that no longer compiles is reported, not a failed explain.
+        let outcome = outcome.unwrap_or_else(|error| RuleTestResponse {
+            applies: false,
+            condition: "unknown".into(),
+            policies_fired: Vec::new(),
+            set_values: Map::new(),
+            errors: Vec::new(),
+            locks: Vec::new(),
+            trace: Vec::new(),
+            result: None,
+            error: Some(error.to_string()),
+        });
+        rules.push(RuleExplanation {
+            rule_id: rule.id,
+            name: rule.name.clone(),
+            kind: rule.kind.clone(),
+            outcome,
+        });
+    }
+    Ok(Json(RulesExplained {
+        entity: query.entity,
+        record_id: query.id,
+        rules,
+    }))
+}
+
 fn trace_wire(trace: &attome_rules::Trace) -> Vec<RuleTraceEntryWire> {
     trace
         .entries()
@@ -841,6 +943,7 @@ pub fn routes() -> Router<EngineState> {
             get(list_rules).post(create_rule),
         )
         .route("/api/v1/admin/business-rules/validate", post(validate_rule))
+        .route("/api/v1/admin/business-rules/explain", get(explain_rules))
         .route(
             "/api/v1/admin/business-rules/{id}",
             get(get_rule).patch(update_rule).delete(delete_rule),
@@ -862,7 +965,8 @@ pub fn routes() -> Router<EngineState> {
     delete_rule,
     validate_rule,
     test_rule,
-    publish_rule
+    publish_rule,
+    explain_rules
 ))]
 struct ApiDocFragment;
 
