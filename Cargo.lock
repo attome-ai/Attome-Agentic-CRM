@@ -279,6 +279,7 @@ dependencies = [
  "attome-jobs",
  "attome-metadata",
  "attome-metric",
+ "attome-model",
  "attome-modules",
  "attome-notification",
  "attome-portal",
@@ -399,6 +400,7 @@ dependencies = [
  "attome-jobs",
  "attome-metadata",
  "attome-metric",
+ "attome-model",
  "attome-modules",
  "attome-notification",
  "attome-profiler",
@@ -1061,10 +1063,14 @@ dependencies = [
 name = "attome-model"
 version = "0.1.0"
 dependencies = [
+ "attome-db",
  "attome-testkit",
  "attome-types",
+ "chrono",
+ "hex",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "sqlx",
  "tokio",
  "uuid",

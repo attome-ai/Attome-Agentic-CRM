@@ -12,14 +12,20 @@
 //! This crate holds the model only: engine-specific kinds register from the
 //! engine that owns them, and HTTP routes live in `attome-api`.
 
+pub mod canonical;
 pub mod identity;
 pub mod kind;
+pub mod store;
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
 pub use identity::{KindName, Layer, ObjectId, ObjectRef};
 pub use kind::{Artefact, CookInput, Issue, Kind, KindLimits, RefMode, Reference, ValidationCtx};
+
+/// The advisory-lock namespace for `attome-model/` keys (D-351, registry in
+/// `crates/apps/attome/tests/advisory_lock_namespaces.rs`).
+pub const ADVISORY_LOCK_NAMESPACE: i32 = 30;
 
 /// Every registered kind, by name.
 #[derive(Default, Clone)]

@@ -30,6 +30,7 @@ attome-field.workspace        = true
 attome-grc.workspace          = true
 attome-jobs.workspace         = true
 attome-metadata.workspace     = true
+attome-model.workspace        = true
 attome-metric.workspace       = true
 attome-modules.workspace      = true
 attome-notification.workspace = true
