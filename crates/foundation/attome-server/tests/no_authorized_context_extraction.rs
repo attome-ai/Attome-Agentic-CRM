@@ -17,10 +17,14 @@
 use std::path::{Path, PathBuf};
 
 const ALLOWED: &[&str] = &[
-    "crates/base/attome-server/src/authz.rs",
-    "crates/base/attome-server/src/middleware/auth.rs",
-    "crates/xrm/xrm-security/src/strict_authz.rs",
-    "crates/base/attome-server/tests/no_authorized_context_extraction.rs",
+    "crates/foundation/attome-server/src/authz.rs",
+    "crates/foundation/attome-server/src/middleware/auth.rs",
+    "crates/engine/attome-security/src/strict_authz.rs",
+    "crates/foundation/attome-server/tests/no_authorized_context_extraction.rs",
+    // `RecordingCtx` reads the caller's id only to stamp the changeset it
+    // records into. It decides nothing: every route that takes it also takes an
+    // `Authorized<P>` extractor, which is where the policy runs.
+    "crates/engine/attome-core/src/changeset/extract.rs",
 ];
 
 /// A line reads the context outside a policy when it names the type as an

@@ -14,6 +14,9 @@ use crate::store::Store;
 use crate::timeouts::REQUEST_PATH;
 
 const WINDOW_MS: i64 = 60_000;
+/// How long an idle window key lives: the window plus a second (the Redis
+/// script sets `PEXPIRE 61000`).
+const WINDOW_KEY_TTL_SECS: u64 = 61;
 
 /// The key `check` actually stores `key` under: `key` itself, except during a
 /// test run that set [`TEST_NAMESPACE_ENV`]. A test that reads the counter back
@@ -233,7 +236,7 @@ fn window_step(
     }
     let oldest = zset.first().map_or(now_ms, |(score, _)| score as i64);
     if admitted {
-        ks.expire(key, std::time::Duration::from_millis(61_000));
+        ks.expire(key, std::time::Duration::from_secs(WINDOW_KEY_TTL_SECS));
     }
     Ok((admitted, count, oldest))
 }

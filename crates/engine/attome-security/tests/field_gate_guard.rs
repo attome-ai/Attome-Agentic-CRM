@@ -48,18 +48,6 @@ const INTERACTIVE: &[(&str, &str)] = &[
         "crates/engine/attome-records/src/rule_engine.rs",
         "rule evaluation on a record the caller is writing, not a read surface",
     ),
-    (
-        "crates/trd/trd-engine/src/health_monitor.rs",
-        "trading module's own record reads, interactive",
-    ),
-    (
-        "crates/trd/trd-engine/src/lifecycle.rs",
-        "trading module's own record reads, interactive",
-    ),
-    (
-        "crates/trd/trd-engine/src/promotion.rs",
-        "trading module's own record reads, interactive",
-    ),
 ];
 
 /// D-589's bulk surfaces: each must call the gate.
@@ -102,10 +90,16 @@ fn rust_sources(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// Code lines only: `//` comments and everything after `#[cfg(test)]` are
-/// ignored, since a unit test module may build contexts however it likes.
+/// Code lines only: `//` comments and everything from the unit-test module
+/// (`#[cfg(test)]` followed by `mod`) are ignored, since a unit test module may
+/// build contexts however it likes. A `#[cfg(test)]` on some other item (a
+/// helper, a `use`) does not end the production code.
 fn code_lines(text: &str) -> impl Iterator<Item = &str> {
-    let end = text.find("#[cfg(test)]").unwrap_or(text.len());
+    let end = text
+        .match_indices("#[cfg(test)]")
+        .map(|(at, marker)| at + marker.len())
+        .find(|after| text[*after..].trim_start().starts_with("mod "))
+        .map_or(text.len(), |after| after - "#[cfg(test)]".len());
     text[..end]
         .lines()
         .filter(|l| !l.trim_start().starts_with("//"))
