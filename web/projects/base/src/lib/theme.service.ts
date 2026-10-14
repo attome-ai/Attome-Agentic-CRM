@@ -69,6 +69,8 @@ export class ThemeService {
 
   private readonly modeSignal   = signal<ThemeMode>('auto');
   private readonly isDarkSignal = signal(false);
+  /** B13-T8: the deployment's published brand colours (light mode), by CSS variable. */
+  private brand: Record<string, string> = {};
 
   readonly mode   = this.modeSignal.asReadonly();
   readonly isDark = this.isDarkSignal.asReadonly();
@@ -91,6 +93,18 @@ export class ThemeService {
     const modes: ThemeMode[] = ['light', 'dark', 'auto'];
     const next = (modes.indexOf(this.modeSignal()) + 1) % modes.length;
     this.setMode(modes[next]);
+  }
+
+  /**
+   * B13-T8: the published brand (`/api/v1/branding/public`'s `variables`):
+   * `--color-*` values laid over the light scheme. The dark scheme keeps the
+   * product's own colours until a theme declares dark ones.
+   */
+  setBrand(variables: Record<string, string> | null): void {
+    this.brand = Object.fromEntries(
+      Object.entries(variables ?? {}).filter(([name, value]) => /^--color-[a-z-]+$/.test(name) && /^#[0-9a-fA-F]{6}$/.test(value)),
+    );
+    if (isPlatformBrowser(this.platformId)) this.apply();
   }
 
   /** Back to the OS preference. The palette reset went with the palette API (OD-7). */
@@ -154,6 +168,9 @@ export class ThemeService {
     root.style.setProperty('--color-on-accent',      colors.onAccent);
     root.style.setProperty('--color-danger',         colors.danger);
     root.style.setProperty('--color-success',        colors.success);
+    if (!isDark) {
+      for (const [name, value] of Object.entries(this.brand)) root.style.setProperty(name, value);
+    }
 
     if (isDark) {
       if (!root.classList.replace('light', 'dark')) root.classList.add('dark');

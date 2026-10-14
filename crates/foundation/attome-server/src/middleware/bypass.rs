@@ -1,6 +1,8 @@
 /// Compile-time exact bypass list — paths that skip AuthnLayer and AuthzLayer.
 /// New public endpoints MUST be explicitly added here; never make this runtime config.
 pub const EXACT_BYPASS_PATHS: &[&str] = &[
+    // B13-T5: the published brand, for the sign-in page; no user data.
+    "/api/v1/branding/public",
     "/api/v1/auth/register",
     "/api/v1/auth/register/config",
     "/api/v1/auth/login",

@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterOutlet } from '@angular/router';
-import { TranslatePipe } from '@attome/base';
+import { ApiService, ThemeService, TranslatePipe } from '@attome/base';
 import { AdminService, SidebarItem } from '@attome/xrm/core/admin/data';
 import { entityFormRoute, entityListRoute, urlPathToLogical } from '@attome/xrm/core/entity';
 import { OmniSearchComponent } from '@attome/xrm/search/omni';
@@ -108,6 +108,8 @@ type QsItem =
 })
 export class ShellComponent implements OnInit {
   private readonly admin  = inject(AdminService);
+  private readonly api    = inject(ApiService);
+  private readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
   protected readonly favourites = inject(FavouritesService);
   private readonly personalSettings = inject(PersonalSettingsService);
@@ -220,6 +222,11 @@ export class ShellComponent implements OnInit {
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.favourites.start();
+    // B13-T8: the deployment's published brand colours.
+    this.api.get<{ variables: Record<string, string> }>('/api/v1/branding/public').subscribe({
+      next: brand => this.themeService.setBrand(brand.variables),
+      error: () => undefined,
+    });
     // B11-T2: the person's settings apply at once; a chosen start page opens
     // when they land on the app's front door.
     this.personalSettings.load().subscribe({

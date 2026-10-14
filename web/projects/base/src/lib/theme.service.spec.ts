@@ -31,6 +31,18 @@ describe('ThemeService', () => {
     });
   }
 
+  it('B13-T8 lays the published brand over the light scheme only', () => {
+    const theme = setUp();
+    theme.setMode('light');
+    theme.setBrand({ '--color-accent': '#112233', '--evil': '#000000', '--color-primary': 'red' });
+    const root = document.documentElement.style;
+    expect(root.getPropertyValue('--color-accent')).toBe('#112233');
+    expect(root.getPropertyValue('--evil')).toBe('');
+    expect(root.getPropertyValue('--color-primary')).not.toBe('red');
+    theme.setMode('dark');
+    expect(root.getPropertyValue('--color-accent')).not.toBe('#112233');
+  });
+
   // NGB-P.1, flipped by NGB-1.6: `load()` goes through a guarded read now, so a
   // blocked store leaves the defaults in place instead of throwing out of the
   // constructor.

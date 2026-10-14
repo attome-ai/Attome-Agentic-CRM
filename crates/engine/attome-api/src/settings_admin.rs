@@ -389,12 +389,274 @@ async fn put_my_setting(
     Ok(Json(view))
 }
 
+// ── Brand themes (B13-T3/T4/T5) ──────────────────────────────────────────────
+
+use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
+use attome_core::theme_store::{self, ThemeRow};
+use attome_core::theme_tokens::{ContrastReport, ThemeTokens};
+
+/// `POST /api/v1/admin/themes`.
+#[derive(Deserialize, ToSchema)]
+struct ThemeDraftBody {
+    /// `deployment`, `app`, `unit`, `domain` or `portal`.
+    scope_kind: String,
+    /// The app, unit, domain (host name) or portal; empty for the deployment.
+    #[serde(default)]
+    scope_ref: String,
+    tokens: ThemeTokens,
+}
+
+/// `PATCH /api/v1/admin/themes/{id}` and `POST .../preview-check`.
+#[derive(Deserialize, ToSchema)]
+struct ThemeTokensBody {
+    tokens: ThemeTokens,
+}
+
+/// What the browser applies: the CSS variables the theme sets, and whether
+/// to hide the vendor's name.
+#[derive(Serialize, ToSchema)]
+struct PublicBranding {
+    variables: std::collections::BTreeMap<String, String>,
+    hide_vendor_name: bool,
+    font_latin: Option<String>,
+    font_arabic: Option<String>,
+}
+
+fn required_row_version(headers: &axum::http::HeaderMap) -> Result<i64, AppError> {
+    attome_records::entity_crud::optional_expected_row_version(headers)?
+        .ok_or_else(|| AppError::Validation("If-Match: \"<row_version>\" is required".into()))
+}
+
+fn theme_event(operation: AuditOperation, actor: Uuid, id: Uuid, name: &str) -> SecurityEvent {
+    SecurityEvent::new(
+        MandatoryCategory::Configuration,
+        operation,
+        actor,
+        "theme",
+        Some(id),
+    )
+    .named(name)
+}
+
+/// B13-T4: every theme version, by scope, newest first.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/themes",
+    tag = "settings",
+    params(attome_types::OnePageQuery),
+    responses(
+        (status = 200, description = "A page of theme versions", body = attome_types::PaginatedResponse<ThemeRow>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_themes(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    axum::extract::Query(page): axum::extract::Query<attome_types::OnePageQuery>,
+) -> Result<Json<attome_types::PaginatedResponse<ThemeRow>>, AppError> {
+    let window = page.window();
+    let (rows, total) = theme_store::list(&state.base.db, window.page_size, window.offset).await?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        rows,
+        total,
+        window.page,
+        window.page_size,
+    )))
+}
+
+/// B13-T4: saves a new draft version of a scope's theme.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/themes",
+    tag = "settings",
+    request_body = ThemeDraftBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Create)])))),
+    responses(
+        (status = 201, description = "The new draft", body = ThemeRow),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 409, description = "Another save of this scope's theme is in progress", body = ErrorResponse),
+        (status = 422, description = "Invalid scope or token", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn create_theme(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(body): Json<ThemeDraftBody>,
+) -> Result<(axum::http::StatusCode, Json<ThemeRow>), AppError> {
+    let event = theme_event(
+        AuditOperation::Create,
+        ctx.user_id,
+        Uuid::nil(),
+        "theme.draft_saved",
+    );
+    let mut stx = SecurityTx::begin(&state, event).await?;
+    let row = theme_store::save_draft(
+        &mut stx,
+        &body.scope_kind,
+        body.scope_ref.trim(),
+        &body.tokens,
+        ctx.user_id,
+    )
+    .await?;
+    stx.event_mut().set_record_id(row.id);
+    stx.commit().await?;
+    Ok((axum::http::StatusCode::CREATED, Json(row)))
+}
+
+/// B13-T4: replaces a draft's tokens. `If-Match: "<row_version>"` is required.
+#[utoipa::path(
+    patch,
+    path = "/api/v1/admin/themes/{id}",
+    tag = "settings",
+    params(("id" = Uuid, Path)),
+    request_body = ThemeTokensBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The draft", body = ThemeRow),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No such theme", body = ErrorResponse),
+        (status = 409, description = "Stale row_version", body = ErrorResponse),
+        (status = 422, description = "Missing If-Match, an invalid token, or not a draft", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn update_theme(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    headers: axum::http::HeaderMap,
+    Json(body): Json<ThemeTokensBody>,
+) -> Result<Json<ThemeRow>, AppError> {
+    let expected = required_row_version(&headers)?;
+    let event = theme_event(
+        AuditOperation::Update,
+        ctx.user_id,
+        id,
+        "theme.draft_updated",
+    );
+    let mut stx = SecurityTx::begin(&state, event).await?;
+    let row = theme_store::update_draft(&mut stx, id, expected, &body.tokens).await?;
+    stx.commit().await?;
+    Ok(Json(row))
+}
+
+/// B13-T3: publishes a version once its colours pass the contrast check; the
+/// scope's previous version is retired. `If-Match: "<row_version>"` is
+/// required. A failing theme is refused naming each pair and its ratio.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/themes/{id}/publish",
+    tag = "settings",
+    params(("id" = Uuid, Path)),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "Published", body = ThemeRow),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No such theme", body = ErrorResponse),
+        (status = 409, description = "Stale row_version", body = ErrorResponse),
+        (status = 422, description = "Missing If-Match, or colours that fail the contrast check", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn publish_theme(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<ThemeRow>, AppError> {
+    let expected = required_row_version(&headers)?;
+    let event = theme_event(AuditOperation::Update, ctx.user_id, id, "theme.published");
+    let mut stx = SecurityTx::begin(&state, event).await?;
+    let (row, _) = theme_store::publish(&mut stx, id, expected).await?;
+    stx.commit().await?;
+    Ok(Json(row))
+}
+
+/// B13-T4: checks colours without saving anything.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/themes/preview-check",
+    tag = "settings",
+    request_body = ThemeTokensBody,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "measures colours and writes nothing"
+    )))),
+    responses(
+        (status = 200, description = "The contrast report", body = ContrastReport),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn preview_theme(
+    _ctx: Authorized<Admin>,
+    Json(body): Json<ThemeTokensBody>,
+) -> Json<ContrastReport> {
+    Json(attome_core::theme_tokens::check(&body.tokens))
+}
+
+/// B13-T5: the published brand for this host, for the sign-in page and the
+/// app shell: CSS variables, fonts and whether to hide the vendor's name.
+/// No session and no user data.
+#[utoipa::path(
+    get,
+    path = "/api/v1/branding/public",
+    tag = "settings",
+    responses(
+        (status = 200, description = "The brand to apply", body = PublicBranding),
+    ),
+)]
+async fn public_branding(
+    State(state): State<EngineState>,
+    headers: axum::http::HeaderMap,
+) -> Result<axum::response::Response, AppError> {
+    use axum::response::IntoResponse;
+    let host = headers
+        .get(axum::http::header::HOST)
+        .and_then(|h| h.to_str().ok())
+        .map(|h| h.split(':').next().unwrap_or(h).to_ascii_lowercase());
+    let tokens = theme_store::resolve(&state.base.db, host.as_deref(), None).await?;
+    let body = PublicBranding {
+        variables: attome_core::theme_tokens::to_css_variables(&tokens),
+        hide_vendor_name: tokens.hide_vendor_name.unwrap_or(false),
+        font_latin: tokens.font_latin.clone(),
+        font_arabic: tokens.font_arabic.clone(),
+    };
+    Ok((
+        [(axum::http::header::CACHE_CONTROL, "public, max-age=300")],
+        Json(body),
+    )
+        .into_response())
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/settings", get(list_admin_settings))
         .route("/api/v1/admin/settings/{key}", put(put_admin_setting))
         .route("/api/v1/settings/me", get(get_my_settings))
         .route("/api/v1/settings/me/{key}", put(put_my_setting))
+        .route("/api/v1/admin/themes", get(list_themes).post(create_theme))
+        .route(
+            "/api/v1/admin/themes/preview-check",
+            axum::routing::post(preview_theme),
+        )
+        .route(
+            "/api/v1/admin/themes/{id}",
+            axum::routing::patch(update_theme),
+        )
+        .route(
+            "/api/v1/admin/themes/{id}/publish",
+            axum::routing::post(publish_theme),
+        )
+        .route("/api/v1/branding/public", get(public_branding))
 }
 
 #[derive(utoipa::OpenApi)]
@@ -402,7 +664,13 @@ pub fn routes() -> Router<EngineState> {
     list_admin_settings,
     put_admin_setting,
     get_my_settings,
-    put_my_setting
+    put_my_setting,
+    list_themes,
+    create_theme,
+    update_theme,
+    publish_theme,
+    preview_theme,
+    public_branding
 ))]
 struct ApiDocFragment;
 

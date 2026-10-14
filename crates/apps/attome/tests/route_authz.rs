@@ -152,6 +152,11 @@ const MAX_BARE_RECORD_SCOPED: usize = 5;
 /// route silently pre-authorizes whatever later claims that path.
 const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     (
+        "GET",
+        "/api/v1/branding/public",
+        "The published brand (colours, fonts, whether to hide the vendor name) for the sign-in page, before anyone signs in. Bypass-listed; it returns no user or customer data.",
+    ),
+    (
         "POST",
         "/api/v1/consents/capture",
         "Public consent-form submission: no session exists for a data subject. Bypass-listed and rate-limited (consent_capture); the purpose key and subject are validated inside the handler.",

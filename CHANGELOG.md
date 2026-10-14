@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Brand themes (migration 0023): `/api/v1/admin/themes` drafts, edits (If-Match) and publishes
+  them behind the contrast check, `POST .../preview-check` measures colours, and the public
+  `GET /api/v1/branding/public` gives the sign-in page and the app their colours.
 - A Duplicate button on a saved record copies it and opens the copy.
 - `POST /api/v1/{entity}/{id}/clone` copies a record through the ordinary create (system,
   autonumbered, file, formula and engine-owned fields left out; `overrides` and `preview`).

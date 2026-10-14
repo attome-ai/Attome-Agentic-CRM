@@ -3305,6 +3305,49 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             t,
             Some(json!({"gregorian_start": "2025-08-25", "reason": "audit emission"})),
         ),
+        // ── brand themes (B13-T4) ───────────────────────────────────────────
+        "POST /api/v1/admin/themes" => request(
+            "POST",
+            "/api/v1/admin/themes",
+            t,
+            Some(json!({"scope_kind": "portal", "scope_ref": uniq("portal"), "tokens": {}})),
+        ),
+        "PATCH /api/v1/admin/themes/{id}" => {
+            let created = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/themes",
+                Some(json!({"scope_kind": "portal", "scope_ref": uniq("portal"), "tokens": {}})),
+            )
+            .await;
+            with_if_match(
+                request(
+                    "PATCH",
+                    &format!("/api/v1/admin/themes/{}", id_of(&created)),
+                    t,
+                    Some(json!({"tokens": {"primary": "#111111"}})),
+                ),
+                created["row_version"].as_i64().expect("row_version"),
+            )
+        }
+        "POST /api/v1/admin/themes/{id}/publish" => {
+            let created = admin(
+                fx,
+                "POST",
+                "/api/v1/admin/themes",
+                Some(json!({"scope_kind": "portal", "scope_ref": uniq("portal"), "tokens": {}})),
+            )
+            .await;
+            with_if_match(
+                request(
+                    "POST",
+                    &format!("/api/v1/admin/themes/{}/publish", id_of(&created)),
+                    t,
+                    None,
+                ),
+                created["row_version"].as_i64().expect("row_version"),
+            )
+        }
         // ── tag groups (B4-T2) ──────────────────────────────────────────────
         "POST /api/v1/admin/tag-groups" => request(
             "POST",

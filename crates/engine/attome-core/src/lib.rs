@@ -147,6 +147,7 @@ pub mod state;
 /// M07 Phase 1 (D-406) — the state-lifecycle registry snapshot and the
 /// enforcement checks `attome-server::entity_mutation` and `attome-state` share.
 pub mod state_registry;
+pub mod theme_store;
 pub mod theme_tokens;
 pub mod transfer_gate;
 /// C5 (chatbot plan) — the `WorkflowStarter` seam `attome-ai`'s `workflow.start`
