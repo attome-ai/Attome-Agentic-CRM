@@ -134,6 +134,21 @@ pub async fn save_draft(
         }
         Some(_) => {}
         None => {
+            // Y1-T11: the kind's object limit, checked when one is created.
+            let count: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM metadata_object WHERE kind = $1 AND is_active",
+            )
+            .bind(kind.name().as_str())
+            .fetch_one(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+            if usize::try_from(count).unwrap_or(usize::MAX) >= limits.max_objects {
+                return Err(AppError::Validation(format!(
+                    "a deployment may hold at most {} {} objects",
+                    limits.max_objects,
+                    kind.name()
+                )));
+            }
             sqlx::query(
                 "INSERT INTO metadata_object (id, kind, name, app, owner_layer) \
                  VALUES ($1, $2, $3, $4, $5)",
