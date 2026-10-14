@@ -44,6 +44,7 @@ attome init: install a Solo deployment (the binary and PostgreSQL, no Redis)
 Usage:
   attome init --database-url <url> [--out <file>] [--port <n>] [--force]
               [--no-migrate] [--from-bundle <dir>] [--admin <email>] [--service]
+              [--pack <name>]...
 
   --database-url  postgres://user:password@host:port/database, a database that
                   exists, reached as a role that can create roles and tables
@@ -55,6 +56,8 @@ Usage:
   --from-bundle   an offline bundle directory to verify first
                   (`attome bundle offline` makes one)
   --admin         create the first administrator and print a one-time password
+  --pack          install a pack (repeatable), e.g. --pack crm; applied at every
+                  boot through the changeset ledger
   --service       install and start Attome as a Windows service or a systemd
                   unit and wait until it answers; the configuration goes to
                   %ProgramData%\\Attome or /var/lib/attome unless --out names it
@@ -74,6 +77,8 @@ struct Args {
     admin: Option<String>,
     /// Install and start the service (U1-T1).
     service: bool,
+    /// Packs to install, in order.
+    packs: Vec<String>,
 }
 
 fn parse_args(raw: &[String]) -> Result<Args, String> {
@@ -85,6 +90,7 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
     let mut from_bundle = None;
     let mut admin = None;
     let mut service = false;
+    let mut packs = Vec::new();
     let mut it = raw.iter();
     while let Some(arg) = it.next() {
         let mut value = |name: &str| -> Result<String, String> {
@@ -105,6 +111,7 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
             "--from-bundle" => from_bundle = Some(PathBuf::from(value("--from-bundle")?)),
             "--admin" => admin = Some(value("--admin")?),
             "--service" => service = true,
+            "--pack" => packs.push(value("--pack")?),
             "--help" | "-h" => return Err(USAGE.to_owned()),
             other => return Err(format!("unknown option `{other}`\n\n{USAGE}")),
         }
@@ -130,6 +137,7 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
         from_bundle,
         admin,
         service,
+        packs,
     })
 }
 
@@ -331,7 +339,16 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Err(format!("attome init: {}", refused.join("; ")).into());
     }
 
-    let text = render(&db, args.port, &password)?;
+    let mut text = render(&db, args.port, &password)?;
+    if !args.packs.is_empty() {
+        let mut value: Value = serde_json::from_str(&text)?;
+        value["app"]["packs"] = json!(args.packs);
+        text = serde_json::to_string_pretty(&value)?;
+        say(&format!(
+            "packs to install at the first start: {}",
+            args.packs.join(", ")
+        ));
+    }
     // Parse and validate what we are about to write, so a bad value is found
     // here and not at the first boot.
     let config: AppConfig = serde_json::from_str(&text)?;
@@ -490,5 +507,13 @@ mod tests {
         let mut args = url();
         args.extend(["--service".to_owned(), "--no-migrate".to_owned()]);
         assert!(parse_args(&args).is_err(), "a service needs the schema");
+        let mut args = url();
+        args.extend([
+            "--pack".to_owned(),
+            "crm".to_owned(),
+            "--pack".to_owned(),
+            "sales".to_owned(),
+        ]);
+        assert_eq!(parse_args(&args).unwrap().packs, ["crm", "sales"]);
     }
 }

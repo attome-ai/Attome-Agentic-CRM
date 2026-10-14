@@ -83,6 +83,14 @@ pub struct AppSection {
     /// the API only and the web app is hosted separately.
     #[serde(default)]
     pub web_root: Option<String>,
+    /// Packs applied at every boot, in order (`attome init --pack crm`): each
+    /// pack's changesets from `<packs_root>/<name>/changesets/`, through the
+    /// changeset ledger, so a second boot changes nothing.
+    #[serde(default)]
+    pub packs: Vec<String>,
+    /// Where packs live. Unset: `packs` next to the executable.
+    #[serde(default)]
+    pub packs_root: Option<String>,
 }
 
 fn default_deployment_profile() -> String {

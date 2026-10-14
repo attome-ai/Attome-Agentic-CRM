@@ -210,6 +210,29 @@ async fn apply_phase(
     }
 }
 
+/// Applies one pack changeset document (`packs/<name>/changesets/*.json`)
+/// through the same ledger path as a platform changeset: idempotent, a
+/// changed checksum after apply is an error, expand always and contract only
+/// once due. The operator chose the pack at install (`attome init --pack`),
+/// so it is trusted like the platform's own definitions.
+pub async fn apply_pack_document(state: &EngineState, value: &Value) -> Result<(), AppError> {
+    static IN_PROCESS: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+    let _serialized = IN_PROCESS.lock().await;
+    let doc = plan::parse_document(value).map_err(|errs| {
+        AppError::Validation(format!(
+            "pack changeset does not check: {}",
+            errs.join("; ")
+        ))
+    })?;
+    for phase in doc.phases() {
+        if phase == ApplyPhase::Contract && !contract_due(&doc) {
+            continue;
+        }
+        apply_phase(state, &doc, phase).await?;
+    }
+    Ok(())
+}
+
 // ── Owner-layer stamp: the imperative seeds' keys ───────────────────────────
 
 /// `attome_project::utilization::seed`'s one stored query.

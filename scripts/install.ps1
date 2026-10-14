@@ -20,7 +20,8 @@ param(
   [string] $Admin = '',
   [string] $Version = 'latest',
   [int] $Port = 7865,
-  [string] $Prefix = (Join-Path $env:ProgramFiles 'Attome')
+  [string] $Prefix = (Join-Path $env:ProgramFiles 'Attome'),
+  [string[]] $Packs = @('crm')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,5 +66,6 @@ if (($machinePath -split ';') -notcontains $Prefix) {
 
 $initArgs = @('init', '--database-url', $DatabaseUrl, '--port', "$Port", '--service')
 if ($Admin) { $initArgs += @('--admin', $Admin) }
+foreach ($pack in $Packs) { if ($pack) { $initArgs += @('--pack', $pack) } }
 & $exe @initArgs
 if ($LASTEXITCODE -ne 0) { throw "install.ps1: attome init failed ($LASTEXITCODE)" }

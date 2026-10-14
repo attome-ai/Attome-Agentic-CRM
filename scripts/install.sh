@@ -18,6 +18,7 @@
 #   --version <tag>         a release tag such as v2.0.0 (default: the latest)
 #   --port <n>              the HTTP port (default 7865)
 #   --prefix <dir>          where the binary goes (default /opt/attome)
+#   --packs <a,b>           packs to install (default crm; empty for none)
 set -eu
 
 REPO="attome-ai/Attome-Agentic-CRM"
@@ -26,6 +27,7 @@ PREFIX="/opt/attome"
 PORT="7865"
 ADMIN=""
 DATABASE_URL=""
+PACKS="crm"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -34,6 +36,7 @@ while [ $# -gt 0 ]; do
     --version) VERSION="$2"; shift 2 ;;
     --port) PORT="$2"; shift 2 ;;
     --prefix) PREFIX="$2"; shift 2 ;;
+    --packs) PACKS="$2"; shift 2 ;;
     -h|--help) echo "options: --admin <email> --database-url <url> --version <tag> --port <n> --prefix <dir>"; exit 0 ;;
     *) echo "install.sh: unknown option $1" >&2; exit 2 ;;
   esac
@@ -129,6 +132,7 @@ ln -sf "$PREFIX/attome" /usr/local/bin/attome
 # ── Install and start ─────────────────────────────────────────────────────
 set -- init --database-url "$DATABASE_URL" --port "$PORT" --service
 [ -n "$ADMIN" ] && set -- "$@" --admin "$ADMIN"
+for pack in $(echo "$PACKS" | tr ',' ' '); do set -- "$@" --pack "$pack"; done
 mkdir -p /var/lib/attome
 # The service serves the web app from app.web_root; the archive's copy is
 # next to the binary, which `attome serve` finds by itself.

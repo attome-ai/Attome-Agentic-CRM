@@ -68,6 +68,7 @@ jobs:
         run: |
           cp target/release/attome package/
           cp LICENSE NOTICE README.md config.example.json package/
+          cp -r packs package/packs
           tar -czf attome-linux-x86_64.tar.gz -C package .
           sha256sum attome-linux-x86_64.tar.gz > attome-linux-x86_64.tar.gz.sha256
       - name: package (Windows)
@@ -76,6 +77,7 @@ jobs:
         run: |
           Copy-Item target/release/attome.exe package/
           Copy-Item LICENSE, NOTICE, README.md, config.example.json package/
+          Copy-Item -Recurse packs package/packs
           Compress-Archive -Path package/* -DestinationPath attome-windows-x86_64.zip
           $hash = (Get-FileHash attome-windows-x86_64.zip -Algorithm SHA256).Hash.ToLower()
           "$hash  attome-windows-x86_64.zip" | Out-File -Encoding ascii attome-windows-x86_64.zip.sha256
