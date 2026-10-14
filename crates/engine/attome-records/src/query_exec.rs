@@ -855,6 +855,8 @@ struct QueryExecFilterSchema<'a> {
     /// A17-T2: the tree each lookup column points into, when its target has
     /// exactly one self-referencing lookup.
     hierarchies: std::collections::HashMap<String, attome_core::filter::Hierarchy>,
+    /// B4-T4: the base entity and caller, for `tagged`.
+    tag_scope: Option<attome_core::filter::TagScope>,
 }
 
 /// A17-T2: for each lookup column, the target entity's tree, when it has one
@@ -904,6 +906,10 @@ impl FilterSchema for QueryExecFilterSchema<'_> {
 
     fn hierarchy(&self, field: &str) -> Option<attome_core::filter::Hierarchy> {
         self.hierarchies.get(field).cloned()
+    }
+
+    fn tag_scope(&self) -> Option<attome_core::filter::TagScope> {
+        self.tag_scope.clone()
     }
 }
 
@@ -1671,6 +1677,16 @@ pub async fn execute_stored_query_with_definition(
         columns: &validation_columns,
         multi_choice: &multi_choice_fields,
         hierarchies: lookup_hierarchies(&validation_columns, &state.entities.load()),
+        tag_scope: qrow.entity_logical_name.and_then(|id| {
+            state
+                .entities
+                .load()
+                .get_by_id(id)
+                .map(|e| attome_core::filter::TagScope {
+                    entity: e.logicalname.clone(),
+                    user_id: ctx.user_id,
+                })
+        }),
     };
     for f in &body.filters {
         if !whitelist.contains(&f.field) {
@@ -2330,6 +2346,7 @@ mod contract_tests {
             columns: &columns,
             multi_choice: &multi_choice,
             hierarchies: std::collections::HashMap::new(),
+            tag_scope: None,
         };
         assert_eq!(FilterSchema::cast(&schema, "amount"), Ok("numeric"));
         assert_eq!(FilterSchema::cast(&schema, "name"), Ok("text"));
@@ -2343,6 +2360,7 @@ mod contract_tests {
             columns: &columns,
             multi_choice: &multi_choice,
             hierarchies: std::collections::HashMap::new(),
+            tag_scope: None,
         };
         assert_eq!(
             FilterSchema::cast(&schema, "ssn"),
@@ -2358,6 +2376,7 @@ mod contract_tests {
             columns: &columns,
             multi_choice: &multi_choice,
             hierarchies: std::collections::HashMap::new(),
+            tag_scope: None,
         };
         assert!(FilterSchema::is_multi_choice(&schema, "tags"));
         assert!(!FilterSchema::is_multi_choice(&schema, "amount"));
@@ -2429,7 +2448,7 @@ mod proptests {
                 choice_styles: None,
             }];
             let multi_choice = std::collections::HashSet::new();
-            let schema = QueryExecFilterSchema { columns: &columns, multi_choice: &multi_choice, hierarchies: Default::default() };
+            let schema = QueryExecFilterSchema { columns: &columns, multi_choice: &multi_choice, hierarchies: Default::default(), tag_scope: None };
             prop_assert_eq!(
                 FilterSchema::cast(&schema, &field).is_ok(),
                 parameter_cast(&data_type).is_some()
@@ -2462,7 +2481,7 @@ mod proptests {
                 })
                 .collect();
             let multi_choice = std::collections::HashSet::new();
-            let schema = QueryExecFilterSchema { columns: &columns, multi_choice: &multi_choice, hierarchies: Default::default() };
+            let schema = QueryExecFilterSchema { columns: &columns, multi_choice: &multi_choice, hierarchies: Default::default(), tag_scope: None };
             prop_assert!(FilterSchema::cast(&schema, &probe).is_err());
         }
 

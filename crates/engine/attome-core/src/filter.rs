@@ -73,6 +73,8 @@ pub struct Filter {
     /// spike S1). `under` and `above` (A17-T2) take a record id for a lookup
     /// into a tree (an entity with one parent lookup to itself) and match
     /// that record and everything below it, or above it, up to 32 levels.
+    /// `tagged` (B4-T4) takes a tag id on the `id` field and matches the
+    /// records carrying that tag (a personal tag only for its owner).
     #[schema(example = "eq")]
     pub op: String,
     /// Scalar filters retain the v1 string contract. Multi-select Choice
@@ -208,6 +210,19 @@ pub trait FilterSchema {
         let _ = field;
         None
     }
+
+    /// B4-T4: the entity and caller the `tagged` operator reads tag links
+    /// for. `None` (the default) refuses the operator.
+    fn tag_scope(&self) -> Option<TagScope> {
+        None
+    }
+}
+
+/// Whose tags, on which entity's records, `tagged` reads.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TagScope {
+    pub entity: String,
+    pub user_id: uuid::Uuid,
 }
 
 /// A tree of records: `table` (an entity's logical name) whose `parent`
@@ -327,6 +342,32 @@ pub fn compile(
                 )
             };
             Ok((format!("{field_sql} IN ({walk})"), vec![value.to_owned()]))
+        }
+        // B4-T4: records carrying a tag; a personal tag counts only for its
+        // owner, and an expired link not at all.
+        "tagged" => {
+            let scope = schema.tag_scope().ok_or_else(|| {
+                AppError::Validation("tagged is not available for this query".into())
+            })?;
+            if filter.field != "id" {
+                return Err(AppError::Validation(
+                    "tagged filters on the id field".into(),
+                ));
+            }
+            let value = scalar_filter_value(filter)?;
+            if uuid::Uuid::parse_str(value).is_err() {
+                return Err(AppError::Validation("tagged needs a tag id".into()));
+            }
+            let (tag, user) = (n + 1, n + 2);
+            Ok((
+                format!(
+                    "{field_sql} IN (SELECT l.record_id FROM tag_link l JOIN tag g ON g.id = l.tag_id \
+                     WHERE l.entity = ${n} AND l.tag_id = ${tag}::uuid \
+                       AND (l.expires_at IS NULL OR l.expires_at > now()) \
+                       AND (g.owner_user IS NULL OR g.owner_user = ${user}::uuid))"
+                ),
+                vec![scope.entity, value.to_owned(), scope.user_id.to_string()],
+            ))
         }
         "is_not_null" => Ok((format!("{field_sql} IS NOT NULL"), Vec::new())),
         "in" if is_multi_choice => Err(AppError::Validation(format!(
@@ -993,6 +1034,56 @@ mod proptests {
                 parent: "parent_account_ref".into(),
             })
         }
+    }
+
+    #[test]
+    fn tagged_reads_tag_links_for_the_scope() {
+        struct Tagged;
+        impl FilterSchema for Tagged {
+            fn cast(&self, field: &str) -> Result<&'static str, FieldCastError> {
+                if field == "id" {
+                    Ok("uuid")
+                } else {
+                    Err(FieldCastError::Unknown)
+                }
+            }
+            fn tag_scope(&self) -> Option<TagScope> {
+                Some(TagScope {
+                    entity: "account".into(),
+                    user_id: uuid::Uuid::nil(),
+                })
+            }
+        }
+        let tag = uuid::Uuid::now_v7().to_string();
+        let filter = Filter {
+            field: "id".into(),
+            op: "tagged".into(),
+            value: Some(Value::String(tag.clone())),
+        };
+        let (sql, binds) = compile(&filter, &Tagged, 4).unwrap();
+        assert!(
+            sql.starts_with("\"id\" IN (SELECT l.record_id FROM tag_link l"),
+            "{sql}"
+        );
+        assert!(
+            sql.contains("l.entity = $4 AND l.tag_id = $5::uuid"),
+            "{sql}"
+        );
+        assert!(sql.contains("g.owner_user = $6::uuid"), "{sql}");
+        assert_eq!(
+            binds,
+            vec!["account".to_owned(), tag, uuid::Uuid::nil().to_string()]
+        );
+
+        let bad = Filter {
+            value: Some(Value::String("x".into())),
+            ..filter.clone()
+        };
+        assert!(compile(&bad, &Tagged, 1).is_err());
+        assert!(
+            compile(&filter, &TreeSchema, 1).is_err(),
+            "no scope, no operator"
+        );
     }
 
     #[test]

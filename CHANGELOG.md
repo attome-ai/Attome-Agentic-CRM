@@ -11,6 +11,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- A `tagged` filter operator (`{"field": "id", "op": "tagged", "value": "<tag id>"}`) for
+  `query/execute`: the records carrying a tag, personal tags only for their owner.
 - `attome restore <archive|latest> --yes` puts the database back to a backup, after writing a
   backup of the current one, in one transaction.
 - Tags under a record's title: suggestions while typing, a new tag on Enter, personal tags marked.
