@@ -84,7 +84,7 @@ describe('AiAgentSessionsComponent — retrieval mode', () => {
     expect(text()).toContain('agentSessions.modeDiffers');
   });
 
-  it('shows a session's steps on request and hides them again (N29-T2)', async () => {
+  it('shows the steps of a session on request and hides them again (N29-T2)', async () => {
     await render([session({})]);
     const cmp = fixture.componentInstance;
     cmp.toggleTrace(cmp.sessions()[0]);

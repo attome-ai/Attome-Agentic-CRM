@@ -20,7 +20,7 @@ impl Seeded {
         Self(seed)
     }
 
-    pub fn next(&mut self) -> u64 {
+    pub fn next_u64(&mut self) -> u64 {
         self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
         let mut z = self.0;
         z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
@@ -32,7 +32,7 @@ impl Seeded {
 /// A value of `attr`'s field type, or `None` for a type a fixture cannot
 /// invent (a lookup, a file, a formula).
 pub fn value_for(attr: &AttrInfo, seed: u64, rng: &mut Seeded, token: &str) -> Option<Value> {
-    let n = rng.next();
+    let n = rng.next_u64();
     Some(match attr.field_type_int {
         1 | 4 | 9 | 10 => json!(n % 1000),
         2 => json!((n % 100_000) as f64 / 100.0),
@@ -40,7 +40,7 @@ pub fn value_for(attr: &AttrInfo, seed: u64, rng: &mut Seeded, token: &str) -> O
             let day = (seed + n % 28) % 28 + 1;
             json!(format!("2026-01-{day:02}"))
         }
-        6 => json!(n % 2 == 0),
+        6 => json!(n.is_multiple_of(2)),
         7 | 8 => {
             let choices = attr
                 .options
