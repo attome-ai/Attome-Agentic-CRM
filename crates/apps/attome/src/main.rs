@@ -22,7 +22,8 @@ Usage:
   attome audit-chainer          Run the audit hash chainer
   attome verify-audit-chain     Verify the audit hash chain
   attome changeset-replay       Replay changesets against a database
-  attome release --check        Run the release gate: format, clippy, tests
+  attome release --check [--web] Run the release gate: format, clippy, tests,
+                                the API contract (and the web app with --web)
   attome version           Print the version
   attome help              Print this help
 ";
@@ -40,6 +41,9 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         ["release", "--check"] => attome_release::check(),
+        ["release", "--check", "--web"] => {
+            attome_release::check_with(attome_release::Options { web: true })
+        }
         ["init", ..] => outcome(attome::cmd::init::run()),
         ["serve", ..] => outcome(attome::serve::run()),
         ["worker", ..] => outcome(attome::cmd::worker::run()),

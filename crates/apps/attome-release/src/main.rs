@@ -13,8 +13,11 @@ fn main() -> ExitCode {
         .as_slice()
     {
         ["--check"] => attome_release::check(),
+        ["--check", "--web"] | ["--web", "--check"] => {
+            attome_release::check_with(attome_release::Options { web: true })
+        }
         _ => {
-            eprintln!("usage: attome-release --check");
+            eprintln!("usage: attome-release --check [--web]");
             ExitCode::from(2)
         }
     }

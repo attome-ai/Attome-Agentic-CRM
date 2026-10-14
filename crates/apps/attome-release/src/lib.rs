@@ -14,6 +14,9 @@
 //!    tag's; a breaking change must be named under `### Breaking` in
 //!    `CHANGELOG.md`'s `[Unreleased]` section (roadmap AC4-T4). Skipped until
 //!    the first release is tagged.
+//! 5. **web** (with `--web`): the web app's builds, lints and unit tests, in
+//!    dependency order, under `web/` (roadmap AC4-T3). `npm ci` is the
+//!    caller's: the step uses the installed `node_modules`.
 //!
 //! Every run writes `target/release-gate/gate-<os>.json`: the commit, the
 //! operating system, the toolchain, and each step's outcome and duration
@@ -31,7 +34,20 @@ const FORMAT_BATCH: usize = 40;
 
 type Step = fn(&Path) -> Result<(), String>;
 
+/// What a gate run includes beyond the Rust steps.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Options {
+    /// Also build, lint and test the web app.
+    pub web: bool,
+}
+
+/// The gate with the default options (Rust steps and the contract check).
 pub fn check() -> ExitCode {
+    check_with(Options::default())
+}
+
+/// The gate with `options`.
+pub fn check_with(options: Options) -> ExitCode {
     let root = match workspace_root() {
         Ok(root) => root,
         Err(error) => {
@@ -39,12 +55,15 @@ pub fn check() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    let steps: [(&str, Step); 4] = [
-        ("format", format),
-        ("clippy", clippy),
-        ("tests", tests),
-        ("contract", contract_step),
+    let mut steps: Vec<(&str, Step)> = vec![
+        ("format", format as Step),
+        ("clippy", clippy as Step),
+        ("tests", tests as Step),
+        ("contract", contract_step as Step),
     ];
+    if options.web {
+        steps.push(("web", web as Step));
+    }
     let started_at = unix_seconds();
     let mut failed = Vec::new();
     let mut outcomes = Vec::new();
@@ -186,6 +205,62 @@ fn contract_step(root: &Path) -> Result<(), String> {
         "breaking API changes since {tag} not named under `### Breaking` in CHANGELOG.md [Unreleased]: {}",
         list.join("; ")
     ))
+}
+
+/// The web app's gate: every build, lint and unit-test script, in order.
+/// Every script runs, so one run reports every failure.
+fn web(root: &Path) -> Result<(), String> {
+    let web = root.join("web");
+    if !web.join("node_modules").is_dir() {
+        return Err("web/node_modules is missing: run `npm ci` in web/ first".to_owned());
+    }
+    let mut failed = Vec::new();
+    for script in WEB_SCRIPTS {
+        let mut command = Command::new(npm_program("npm"));
+        command.args(["run", script]);
+        if run(&mut command, &web, &format!("npm run {script}")).is_err() {
+            failed.push((*script).to_owned());
+        }
+    }
+    let mut host_lint = Command::new(npm_program("npx"));
+    host_lint.args(["ng", "lint", "attome-website"]);
+    if run(&mut host_lint, &web, "ng lint attome-website").is_err() {
+        failed.push("ng lint attome-website".to_owned());
+    }
+    let mut host_tests = Command::new(npm_program("npm"));
+    host_tests.arg("test");
+    if run(&mut host_tests, &web, "npm test").is_err() {
+        failed.push("test".to_owned());
+    }
+    if failed.is_empty() {
+        Ok(())
+    } else {
+        Err(format!("web scripts failed: {}", failed.join(", ")))
+    }
+}
+
+/// The web scripts the gate runs, libraries before the app that uses them.
+const WEB_SCRIPTS: [&str; 10] = [
+    "build:base",
+    "build:xrm",
+    "build:sdk",
+    "build",
+    "lint:base",
+    "lint:xrm",
+    "lint:sdk",
+    "test:base",
+    "test:xrm",
+    "test:sdk",
+];
+
+/// `npm`/`npx` are `.cmd` shims on Windows, which `Command` does not resolve
+/// by itself.
+fn npm_program(name: &str) -> String {
+    if cfg!(windows) {
+        format!("{name}.cmd")
+    } else {
+        name.to_owned()
+    }
 }
 
 fn format(root: &Path) -> Result<(), String> {
