@@ -33,6 +33,23 @@
     </ul>
   }
 
+  <h3>{{ 'aiGovernance.evidence' | translate }}</h3>
+  <form class="gv-form" (submit)="$event.preventDefault(); exportEvidence()">
+    <select #kd [attr.aria-label]="'aiGovernance.evidenceKind' | translate"
+            (change)="evidenceKind.set(kd.value === 'generations' ? 'generations' : 'actions')">
+      <option value="actions">{{ 'aiGovernance.kinds.actions' | translate }}</option>
+      <option value="generations">{{ 'aiGovernance.kinds.generations' | translate }}</option>
+    </select>
+    <label for="gv-from">{{ 'aiGovernance.from' | translate }}</label>
+    <input #fr id="gv-from" type="date" (input)="evidenceFrom.set(fr.value)" />
+    <label for="gv-to">{{ 'aiGovernance.to' | translate }}</label>
+    <input #to id="gv-to" type="date" (input)="evidenceTo.set(to.value)" />
+    <button type="submit" [disabled]="exporting()">{{ 'aiGovernance.export' | translate }}</button>
+    @if (exportedRows() !== null) {
+      <span role="status">{{ exportedRows() }} {{ 'aiGovernance.rows' | translate }}</span>
+    }
+  </form>
+
   @if (metrics(); as m) {
     <h3>{{ 'aiGovernance.approvals' | translate }} ({{ m.days }} {{ 'aiGovernance.days' | translate }})</h3>
     <ul class="gv-list">

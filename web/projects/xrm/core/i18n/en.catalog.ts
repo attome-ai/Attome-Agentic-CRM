@@ -184,6 +184,9 @@ export const xrmEn = {
     noPolicies: 'No policies: confirmed reversible writes run once the person confirms them.',
     approvals: 'Approvals', days: 'days', median: 'median', rubberStamp: 'Approves nearly everything within seconds: check these are read',
     backlog: 'Waiting', rejectionWords: 'Common words in rejections',
+    evidence: 'Evidence for an audit', evidenceKind: 'What to export', from: 'From', to: 'To',
+    export: 'Export as JSON', rows: 'rows exported',
+    kinds: { actions: 'Agent actions', generations: 'Model-written suggestions' },
   },
   // N13-T1 — outside MCP servers.
   aiMcp: {
