@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `knowledge.answer` checks each sentence against its cited passages (content words and every
+  number) and returns `claims` with the unsupported sentences flagged and a checked answer.
 - A local prompt-injection classifier (English, Arabic, Arabizi) marks untrusted text that reads like
   instructions with a warning before the model sees it; strict channels can withhold it.
 - Per-write approval policies for agents (`/api/v1/admin/ai/write-policies`, migration 0018), off by

@@ -381,10 +381,17 @@ impl Action for KnowledgeAnswer {
                 Verdict::Answered { answer, cited } => {
                     let citations: Vec<&KnowledgeCitation> =
                         cited.iter().map(|i| &evidence[*i]).collect();
+                    // N15-T3: each sentence checked against the passages it
+                    // cites; unsupported ones are flagged, and dropped from
+                    // `claims.supported_answer`.
+                    let passages: Vec<&str> =
+                        citations.iter().map(|c| c.passage.as_str()).collect();
+                    let claims = super::claim_check::check(&answer, &passages);
                     serde_json::json!({
                         "status": "answered",
                         "answer": answer,
                         "citations": citations,
+                        "claims": claims,
                     })
                 }
                 Verdict::Declined(reason) => declined(reason),

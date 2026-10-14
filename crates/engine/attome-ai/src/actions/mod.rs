@@ -17,6 +17,7 @@ pub mod agent_supervise;
 pub mod bot_handoff;
 pub mod bulk;
 pub mod business;
+pub mod claim_check;
 pub mod classify;
 pub mod draft_article;
 pub mod draft_email;
