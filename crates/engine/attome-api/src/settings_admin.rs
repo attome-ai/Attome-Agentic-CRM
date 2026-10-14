@@ -201,7 +201,8 @@ pub(crate) async fn write_setting(
     Ok(SettingValueView {
         key: descriptor.key.to_owned(),
         area: attome_core::setting_descriptor::area(descriptor.key).to_owned(),
-        description_ar: attome_core::setting_descriptor::description_ar(descriptor.key).map(str::to_owned),
+        description_ar: attome_core::setting_descriptor::description_ar(descriptor.key)
+            .map(str::to_owned),
         description: descriptor.description.to_owned(),
         schema,
         allowed_scopes: descriptor
@@ -261,7 +262,8 @@ async fn list_admin_settings(
             SettingValueView {
                 key: d.key.to_owned(),
                 area: attome_core::setting_descriptor::area(d.key).to_owned(),
-                description_ar: attome_core::setting_descriptor::description_ar(d.key).map(str::to_owned),
+                description_ar: attome_core::setting_descriptor::description_ar(d.key)
+                    .map(str::to_owned),
                 description: d.description.to_owned(),
                 schema: (d.schema)(),
                 allowed_scopes: d
@@ -345,7 +347,8 @@ async fn get_my_settings(
             SettingValueView {
                 key: d.key.to_owned(),
                 area: attome_core::setting_descriptor::area(d.key).to_owned(),
-                description_ar: attome_core::setting_descriptor::description_ar(d.key).map(str::to_owned),
+                description_ar: attome_core::setting_descriptor::description_ar(d.key)
+                    .map(str::to_owned),
                 description: d.description.to_owned(),
                 schema: (d.schema)(),
                 allowed_scopes: d

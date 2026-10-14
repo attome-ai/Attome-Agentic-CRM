@@ -239,11 +239,19 @@ pub fn area(key: &str) -> &'static str {
 /// U10-T1: each setting's description in Arabic, for the admin console.
 pub fn description_ar(key: &str) -> Option<&'static str> {
     Some(match key {
-        "core.locale" => "اللغة والمنطقة المفضلة لتنسيق التواريخ والأرقام؛ يغلب اختيار المستخدم ثم مؤسسته ثم الإعداد العام.",
-        "core.list_page_size" => "عدد العناصر الافتراضي في صفحات القوائم الإدارية، على مستوى النشر أو المؤسسة.",
-        "core.dark_mode_default" => "هل يبدأ المستخدمون الجدد بالوضع الداكن؛ يغلب اختيار المستخدم إن وُجد.",
+        "core.locale" => {
+            "اللغة والمنطقة المفضلة لتنسيق التواريخ والأرقام؛ يغلب اختيار المستخدم ثم مؤسسته ثم الإعداد العام."
+        }
+        "core.list_page_size" => {
+            "عدد العناصر الافتراضي في صفحات القوائم الإدارية، على مستوى النشر أو المؤسسة."
+        }
+        "core.dark_mode_default" => {
+            "هل يبدأ المستخدمون الجدد بالوضع الداكن؛ يغلب اختيار المستخدم إن وُجد."
+        }
         "core.time_zone" => "المنطقة الزمنية التي تُعرض بها التواريخ والأوقات، مثل Asia/Riyadh.",
-        "core.calendar" => "التقويم الذي تُعرض به التواريخ: ميلادي أو هجري (أم القرى) أو كلاهما؛ يغلب خيار عرض الحقل نفسه.",
+        "core.calendar" => {
+            "التقويم الذي تُعرض به التواريخ: ميلادي أو هجري (أم القرى) أو كلاهما؛ يغلب خيار عرض الحقل نفسه."
+        }
         "core.digits" => "الأرقام المستخدمة في كتابة الأعداد والتواريخ: لاتينية (0-9) أو عربية هندية.",
         "core.date_format" => "ترتيب اليوم والشهر والسنة في التاريخ المختصر: dmy أو mdy أو ymd.",
         "core.start_page" => "الصفحة التي تُفتح بعد تسجيل الدخول، مسار يبدأ بـ /.",
@@ -252,14 +260,28 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         "core.reduced_motion" => "إيقاف الحركات والانتقالات.",
         "auth.session_ttl_minutes" => "توضيحي فقط: مدة الجلسة تُضبط في ملف الإعداد عند الإقلاع.",
         "feature.core.beta_ui" => "سياسة ميزة الواجهة التجريبية: قيمة عامة واستثناءات لكل مستخدم.",
-        "feature.core.beta_ui_advanced_panels" => "سياسة ميزة اللوحات المتقدمة التجريبية، بنفس شكل الواجهة التجريبية.",
+        "feature.core.beta_ui_advanced_panels" => {
+            "سياسة ميزة اللوحات المتقدمة التجريبية، بنفس شكل الواجهة التجريبية."
+        }
         "feature.project.gantt_v2_preview" => "سياسة معاينة مخطط جانت الجديد؛ تتطلب وحدة المشاريع.",
-        "ai.record_update_field_allowlist" => "أزواج الكيان والحقل التي يجوز لإجراء الذكاء الاصطناعي تعديلها.",
-        "ai.mcp_entity_admission" => "الكيانات التي يصل إليها وكيل MCP خارجي عبر أدوات السجلات، والأفعال المسموحة لكل منها.",
-        "ai.memory_retention_days" => "عدد الأيام التي تُحفظ فيها ذاكرة الذكاء الاصطناعي قبل اقتراح حذفها.",
-        "omnichannel.web_chat_default_queue_ref" => "قائمة العمل التي تُوجَّه إليها محادثات الويب المحوّلة إلى موظف؛ فارغ يعني بلا قائمة افتراضية.",
-        "omnichannel.web_chat_offline_message" => "الرد التلقائي لزائر محادثة الويب خارج ساعات العمل.",
-        "omnichannel.web_chat_calendar_ref" => "تقويم ساعات العمل الذي يحكم نافذة محادثة الويب؛ فارغ يعني أنها مفتوحة دائمًا.",
+        "ai.record_update_field_allowlist" => {
+            "أزواج الكيان والحقل التي يجوز لإجراء الذكاء الاصطناعي تعديلها."
+        }
+        "ai.mcp_entity_admission" => {
+            "الكيانات التي يصل إليها وكيل MCP خارجي عبر أدوات السجلات، والأفعال المسموحة لكل منها."
+        }
+        "ai.memory_retention_days" => {
+            "عدد الأيام التي تُحفظ فيها ذاكرة الذكاء الاصطناعي قبل اقتراح حذفها."
+        }
+        "omnichannel.web_chat_default_queue_ref" => {
+            "قائمة العمل التي تُوجَّه إليها محادثات الويب المحوّلة إلى موظف؛ فارغ يعني بلا قائمة افتراضية."
+        }
+        "omnichannel.web_chat_offline_message" => {
+            "الرد التلقائي لزائر محادثة الويب خارج ساعات العمل."
+        }
+        "omnichannel.web_chat_calendar_ref" => {
+            "تقويم ساعات العمل الذي يحكم نافذة محادثة الويب؛ فارغ يعني أنها مفتوحة دائمًا."
+        }
         _ => return None,
     })
 }
@@ -275,7 +297,12 @@ mod tests {
     #[test]
     fn every_setting_has_an_area_and_an_arabic_description() {
         for descriptor in super::registry().iter() {
-            assert_ne!(super::area(descriptor.key), "other", "{} has no console area", descriptor.key);
+            assert_ne!(
+                super::area(descriptor.key),
+                "other",
+                "{} has no console area",
+                descriptor.key
+            );
             assert!(
                 super::description_ar(descriptor.key).is_some(),
                 "{} has no Arabic description",
