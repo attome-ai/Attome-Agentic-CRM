@@ -250,12 +250,83 @@ fn configured_mode_wire(value: Option<serde_json::Value>) -> &'static str {
     crate::agent::definition_retrieval_mode(&data).map_or("unrecognised", |m| m.as_str())
 }
 
+/// One step of a session's run, in order (N29-T2).
+#[derive(Debug, Serialize, ToSchema, sqlx::FromRow)]
+pub struct TraceStep {
+    pub id: Uuid,
+    pub action_id: String,
+    /// `completed`, `executed`, `claimed`, `approval_requested`, a refusal...
+    pub outcome: String,
+    /// The tool call that asked for it, when an agent did.
+    pub tool_call_id: Option<String>,
+    pub acting_user_id: Uuid,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+/// Most steps one trace returns.
+const MAX_TRACE_STEPS: i64 = 1_000;
+
+/// `GET /api/v1/admin/agents/sessions/{id}/trace` — every action a session
+/// invoked, oldest first (N29-T2): what it did, what came of it and who it
+/// acted as. Results are not included: they may hold record data, which the
+/// records' own routes govern.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/agents/sessions/{id}/trace",
+    tag = "action",
+    params(("id" = Uuid, Path, description = "The agent session")),
+    responses(
+        (status = 200, description = "The session's steps, oldest first (at most 1000)", body = PaginatedResponse<TraceStep>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks ai_agent.supervise", body = ErrorResponse),
+        (status = 404, description = "No such session", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn session_trace(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Privilege<AgentSupervise>>,
+    axum::extract::Path(id): axum::extract::Path<Uuid>,
+) -> Result<Json<PaginatedResponse<TraceStep>>, AppError> {
+    let exists: bool =
+        sqlx::query_scalar("SELECT EXISTS (SELECT 1 FROM agent_session WHERE id = $1)")
+            .bind(id)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    if !exists {
+        return Err(AppError::NotFound);
+    }
+    let items: Vec<TraceStep> = sqlx::query_as(
+        "SELECT id, action_id, outcome, tool_call_id, acting_user_id, created_at \
+         FROM action_invocation WHERE agent_session_id = $1 \
+         ORDER BY created_at, id LIMIT $2",
+    )
+    .bind(id)
+    .bind(MAX_TRACE_STEPS)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total = i64::try_from(items.len()).unwrap_or(i64::MAX);
+    Ok(Json(PaginatedResponse {
+        items,
+        total,
+        page: 1,
+        page_size: MAX_TRACE_STEPS,
+    }))
+}
+
 pub fn routes() -> Router<EngineState> {
-    Router::new().route("/api/v1/admin/agents/sessions", get(list_sessions))
+    Router::new()
+        .route("/api/v1/admin/agents/sessions", get(list_sessions))
+        .route(
+            "/api/v1/admin/agents/sessions/{id}/trace",
+            get(session_trace),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_sessions))]
+#[openapi(paths(list_sessions, session_trace), components(schemas(TraceStep)))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

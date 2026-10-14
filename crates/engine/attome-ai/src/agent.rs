@@ -790,7 +790,7 @@ async fn start_session_from_definition(
 }
 
 /// One limit class's use today against the agent's cap.
-#[derive(Serialize, ToSchema)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct AgentUsageView {
     /// `record_changes` | `deletes` | `messages` | `external_calls`.
     pub class: String,
@@ -800,7 +800,7 @@ pub struct AgentUsageView {
     pub limit: Option<u64>,
 }
 
-#[derive(Serialize, ToSchema)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct AgentUsageResponse {
     pub items: Vec<AgentUsageView>,
 }
