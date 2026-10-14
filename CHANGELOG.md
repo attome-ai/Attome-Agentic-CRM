@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Chat modes: `POST /api/v1/ai/conversations` takes `mode` — `develop` (metadata tools and reads, so
+  changes are drafts) or `run` (everything but the metadata edit tools).
 - AI attributes: an attribute with `options.ai.prompt` gets suggestions from `record.ai_field`, the
   prompt as the instruction and the fields it names as data, with provenance stored.
 - `GET /api/v1/admin/model/health`: broken references, duplicate-looking attributes, entities and

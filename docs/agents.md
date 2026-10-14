@@ -89,7 +89,8 @@ answers and proposes any change through its own gate.
 - Over MCP: `initialize` with `"params": { "agent": "<agent object id>" }` runs the connection as
   that agent (its tools and daily limits, under the connecting person's own privileges).
 
-- In chat: `POST /api/v1/ai/conversations/{id}/messages`.
+- In chat: `POST /api/v1/ai/conversations/{id}/messages`. Start the conversation with
+  `"mode": "develop"` to build (metadata drafts only) or `"run"` to act on records.
 - In the background: `POST /api/v1/ai/conversations/{id}/runs` returns at once; follow
   `GET /api/v1/ai/conversations/{id}/stream`.
 - What a session did: `GET /api/v1/admin/agents/sessions/{id}/trace` (the Steps button on the agent

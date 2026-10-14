@@ -73,6 +73,39 @@ pub struct StartConversationRequest {
     pub allowed_action_ids: Option<Vec<String>>,
     #[serde(default)]
     pub title: Option<String>,
+    /// Optional (N1-T1): `"develop"` builds — the metadata tools and reads,
+    /// so every change is a draft and no record is written; `"run"` acts —
+    /// everything but the metadata edit tools. Omitted: no narrowing. It only
+    /// narrows `allowed_action_ids`, never widens it.
+    #[serde(default)]
+    pub mode: Option<String>,
+}
+
+/// The actions a conversation mode allows (N1-T1), from every registered
+/// `(id, is_write)`; `None` for no mode.
+pub fn mode_actions(
+    mode: Option<&str>,
+    actions: impl Iterator<Item = (String, bool)>,
+) -> Result<Option<Vec<String>>, AppError> {
+    let is_model_edit = |id: &str| id.starts_with("model.") && id.ends_with(".edit");
+    match mode.map(str::trim) {
+        None | Some("") => Ok(None),
+        Some("develop") => Ok(Some(
+            actions
+                .filter(|(id, write)| !write || id.starts_with("model."))
+                .map(|(id, _)| id)
+                .collect(),
+        )),
+        Some("run") => Ok(Some(
+            actions
+                .filter(|(id, _)| !is_model_edit(id))
+                .map(|(id, _)| id)
+                .collect(),
+        )),
+        Some(other) => Err(AppError::Validation(format!(
+            "mode must be \"develop\" or \"run\", not {other:?}"
+        ))),
+    }
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -351,11 +384,26 @@ async fn start_conversation(
     // caller later, or reads across entities by role), so a capped caller
     // is refused until the ceiling is carried through.
     ctx.refuse_if_capped()?;
-    let constraints = crate::agent::admin_session_constraints(&StartSessionRequest {
+    let mode = mode_actions(
+        body.mode.as_deref(),
+        crate::engine::REGISTRY.all().map(|d| {
+            (
+                d.id.as_str().to_owned(),
+                d.effect == crate::descriptor::Effect::Write,
+            )
+        }),
+    )?;
+    let mut constraints = crate::agent::admin_session_constraints(&StartSessionRequest {
         risk_ceiling: body.risk_ceiling,
         allowed_action_ids: body.allowed_action_ids,
         agent: None,
     })?;
+    if let Some(mode) = mode {
+        constraints.allowed_action_ids = Some(crate::agent::narrow_to_agent_tools(
+            constraints.allowed_action_ids.take(),
+            &mode,
+        ));
+    }
     // C11 B3: have the delta fan-out connected before the first answer.
     crate::delta_stream::warm(state.base.redis.clone(), state.base.config.clone());
     // A human directly starting a conversation is not "retrieved content".
@@ -1558,4 +1606,34 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod mode_tests {
+    use super::*;
+
+    fn actions() -> impl Iterator<Item = (String, bool)> {
+        [
+            ("record.get", false),
+            ("record.update", true),
+            ("model.form.edit", true),
+            ("model.form.describe", false),
+        ]
+        .into_iter()
+        .map(|(id, write)| (id.to_owned(), write))
+    }
+
+    #[test]
+    fn develop_builds_and_run_acts() {
+        assert_eq!(
+            mode_actions(Some("develop"), actions()).unwrap().unwrap(),
+            ["record.get", "model.form.edit", "model.form.describe"]
+        );
+        assert_eq!(
+            mode_actions(Some("run"), actions()).unwrap().unwrap(),
+            ["record.get", "record.update", "model.form.describe"]
+        );
+        assert!(mode_actions(None, actions()).unwrap().is_none());
+        assert!(mode_actions(Some("chaos"), actions()).is_err());
+    }
 }
