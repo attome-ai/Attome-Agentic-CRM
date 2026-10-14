@@ -5,6 +5,7 @@ use attome_core::EngineState;
 use axum::{Router, routing::get};
 
 mod access;
+pub mod favourites;
 mod hierarchy;
 /// U6 (basic-units plan B-R12, D-601): `/{entity}/{id}/history`, the
 /// record-scoped, field-security-filtered change history.
@@ -134,11 +135,35 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(related::openapi_fragment());
     doc.merge(timeline::openapi_fragment());
     doc.merge(history::openapi_fragment());
+    doc.merge(favourites::openapi_fragment());
     doc
 }
 
 pub fn routes() -> Router<EngineState> {
     Router::new()
+        .route(
+            "/api/v1/me/recent",
+            get(favourites::list_recent)
+                .post(favourites::report_recent)
+                .delete(favourites::delete_recent),
+        )
+        .route("/api/v1/me/favourites", get(favourites::list_favourites))
+        .route(
+            "/api/v1/me/favourites/lists",
+            axum::routing::post(favourites::create_my_list),
+        )
+        .route(
+            "/api/v1/me/favourites/lists/{id}",
+            axum::routing::put(favourites::replace_my_list).delete(favourites::delete_my_list),
+        )
+        .route(
+            "/api/v1/teams/{team_id}/favourites/lists",
+            axum::routing::post(favourites::create_team_list),
+        )
+        .route(
+            "/api/v1/teams/{team_id}/favourites/lists/{id}",
+            axum::routing::put(favourites::replace_team_list).delete(favourites::delete_team_list),
+        )
         .route(
             "/api/v1/{entity}",
             axum::routing::post(mutations::create_record),

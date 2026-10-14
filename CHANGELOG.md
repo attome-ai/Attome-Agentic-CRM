@@ -8,6 +8,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Recent records and favourites: `GET/POST/DELETE /api/v1/me/recent`, `GET /api/v1/me/favourites`,
+  personal lists under `/api/v1/me/favourites/lists` and team lists under
+  `/api/v1/teams/{team_id}/favourites/lists` (audited), each saved whole with up to nine pins.
 - Agents get `system.status`, and a tool call refused because a service is down says which one and
   whether to retry (`degraded`, `retryable`).
 - Responses prefer Brotli, fall back to gzip, and are sent raw when under 1 KB or already

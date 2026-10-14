@@ -3296,6 +3296,58 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             let id = stored_query(fx).await;
             request("DELETE", &format!("/api/v1/admin/queries/{id}"), t, None)
         }
+        // ── team favourites (B9-T2) ─────────────────────────────────────────
+        "POST /api/v1/teams/{team_id}/favourites/lists" => {
+            let team_id = team(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/teams/{team_id}/favourites/lists"),
+                t,
+                Some(
+                    json!({"name": uniq("team-list"), "items": [{"kind": "page", "ref": "/dashboard"}]}),
+                ),
+            )
+        }
+        "PUT /api/v1/teams/{team_id}/favourites/lists/{id}" => {
+            let team_id = team(fx).await;
+            let created = admin(
+                fx,
+                "POST",
+                &format!("/api/v1/teams/{team_id}/favourites/lists"),
+                Some(json!({"name": uniq("team-list")})),
+            )
+            .await;
+            request(
+                "PUT",
+                &format!(
+                    "/api/v1/teams/{team_id}/favourites/lists/{}",
+                    id_of(&created)
+                ),
+                t,
+                Some(
+                    json!({"name": uniq("team-list"), "items": [{"kind": "page", "ref": "/x", "pinned": true}]}),
+                ),
+            )
+        }
+        "DELETE /api/v1/teams/{team_id}/favourites/lists/{id}" => {
+            let team_id = team(fx).await;
+            let created = admin(
+                fx,
+                "POST",
+                &format!("/api/v1/teams/{team_id}/favourites/lists"),
+                Some(json!({"name": uniq("team-list")})),
+            )
+            .await;
+            request(
+                "DELETE",
+                &format!(
+                    "/api/v1/teams/{team_id}/favourites/lists/{}",
+                    id_of(&created)
+                ),
+                t,
+                None,
+            )
+        }
         "POST /api/v1/admin/views" => {
             let query_id = stored_query(fx).await;
             request(
