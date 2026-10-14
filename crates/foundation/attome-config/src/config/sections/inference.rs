@@ -262,12 +262,12 @@ pub struct InferenceSection {
 
 /// D-489 — the canonical KB article, so the case→draft loop runs unconfigured.
 ///
-/// Naming an `xrm-*`-provisioned entity here does not break the boundary
+/// Naming an engine-provisioned entity here does not break the boundary
 /// ruling this crate records (attome-config plan BCF-14): the value is plain
-/// data, not an `xrm-*` dependency, and `attome-config` neither knows nor
+/// data, not an engine dependency, and `attome-config` neither knows nor
 /// imports the engine that provisions it. See the plan's §4.1 last bullet.
 fn default_knowledge_article_entity() -> Option<String> {
-    Some("xrm_knowledge_data_item".to_string())
+    Some("knowledge_data_item".to_string())
 }
 
 impl Default for InferenceSection {
