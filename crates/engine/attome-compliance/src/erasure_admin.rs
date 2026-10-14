@@ -222,6 +222,16 @@ pub async fn do_erase_record(
     audit_service.write_in_tx(&mut tx, event).await?;
 
     tx.commit().await.map_err(AppError::internal)?;
+    // R2-T1: outside the database, so a restore cannot bring it back.
+    attome_audit::erasure_ledger::record_or_log(
+        &state.base.storage,
+        &attome_audit::erasure_ledger::LedgerEntry {
+            kind: attome_audit::erasure_ledger::ErasureKind::Erasure,
+            entity: logicalname.clone(),
+            record_id,
+        },
+    )
+    .await;
 
     Ok(ErasureResult {
         record_id,

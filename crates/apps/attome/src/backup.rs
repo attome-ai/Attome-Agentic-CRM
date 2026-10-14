@@ -39,6 +39,9 @@ const FILES_DIR: &str = "files";
 /// The mirror's record of what it holds, so unchanged objects are not
 /// read again.
 const INDEX_FILE: &str = ".index.json";
+/// Left in the backup folder by `attome restore`: the next boot must apply
+/// the erasure ledger before it serves (R2-T1), and removes it once done.
+pub const RESTORE_PENDING: &str = "restore-pending";
 
 /// One file a backup holds.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -589,6 +592,16 @@ pub async fn run_restore(args: Vec<String>) -> std::process::ExitCode {
         archive.display(),
         config.database.dbname
     );
+    // R2-T1: the next boot applies every erasure since this backup before
+    // it serves, and refuses to serve if it cannot.
+    let marker = backup_dir(&config).join(RESTORE_PENDING);
+    if let Err(error) = tokio::fs::write(&marker, archive.display().to_string()).await {
+        eprintln!(
+            "attome restore: cannot write {}: {error}; do not start the server until it exists",
+            marker.display()
+        );
+        return std::process::ExitCode::FAILURE;
+    }
     match restore_files(&config, &archive).await {
         Ok(0) => {}
         Ok(count) => println!("put back {count} files"),
@@ -597,6 +610,7 @@ pub async fn run_restore(args: Vec<String>) -> std::process::ExitCode {
             return std::process::ExitCode::FAILURE;
         }
     }
+    println!("start the server: it applies erasures made since this backup before it serves");
     std::process::ExitCode::SUCCESS
 }
 

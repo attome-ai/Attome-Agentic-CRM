@@ -43,6 +43,7 @@ pub mod consent_admin;
 pub mod consent_seed;
 pub mod dsr_admin;
 pub mod erasure_admin;
+pub mod erasure_replay;
 pub mod governance_admin;
 pub mod legal_hold_admin;
 pub mod legal_matter_admin;

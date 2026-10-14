@@ -24,8 +24,24 @@ fn path_of(key: &str) -> Result<Path, StorageError> {
 /// Every object in the bucket, sorted by key. Walks one prefix level at a
 /// time, so no listing holds more than one folder's entries.
 pub async fn list_all(client: &StorageClient) -> Result<Vec<ObjectEntry>, StorageError> {
+    walk(client, None).await
+}
+
+/// Every object under `prefix` (a folder such as `erasure-ledger`), sorted
+/// by key.
+pub async fn list_prefix(
+    client: &StorageClient,
+    prefix: &str,
+) -> Result<Vec<ObjectEntry>, StorageError> {
+    walk(client, Some(path_of(prefix)?)).await
+}
+
+async fn walk(
+    client: &StorageClient,
+    start: Option<Path>,
+) -> Result<Vec<ObjectEntry>, StorageError> {
     let store = client.store();
-    let mut pending: Vec<Option<Path>> = vec![None];
+    let mut pending: Vec<Option<Path>> = vec![start];
     let mut entries = Vec::new();
     while let Some(prefix) = pending.pop() {
         let listed = store.list_with_delimiter(prefix.as_ref()).await?;

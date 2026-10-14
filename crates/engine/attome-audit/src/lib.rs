@@ -10,6 +10,7 @@ pub mod canonical;
 pub mod chainer;
 pub mod checkpoint;
 pub mod erasure;
+pub mod erasure_ledger;
 pub mod initiator;
 mod model;
 pub mod policy_resolver;

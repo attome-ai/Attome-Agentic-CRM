@@ -41,6 +41,16 @@ Then it puts back the files that archive's `.files.json` lists: each one the sto
 holds at another size, is checked against its SHA-256 and written back. Files added to the store
 after the backup are left in place; the restored database does not refer to them.
 
+### Erasures stay erased
+
+Every erasure or retention purge also writes an entry to the erasure ledger, in object storage
+under `erasure-ledger/`, outside the database a backup restores. After `attome restore`, the next
+server start applies every ledger entry the restored database is missing (audit keys destroyed,
+recovery-archive and release-report copies deleted, purged fields scrubbed) before it serves. If
+the file store cannot be reached at that point the server refuses to start, so a restored database
+never serves someone who was erased; start the file store and boot again. On an ordinary start an
+unreadable ledger is logged and the server starts.
+
 To restore by hand into a new database instead:
 
 ```text

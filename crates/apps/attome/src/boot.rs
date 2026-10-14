@@ -1089,6 +1089,7 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     // resolve; idempotent through the changeset ledger.
     apply_configured_packs(system.state(), config).await?;
     platform_seed_lock.release().await;
+    replay_erasures(system.state(), config).await?;
     attome_profiler::record("boot.post_build", t_post_build.elapsed());
 
     Ok(Boot {
@@ -1119,6 +1120,46 @@ pub fn request_stop() {
     clippy::expect_used,
     reason = "each expect() here guards an invariant its message states"
 )]
+/// R2-T1: applies the erasure ledger before anything serves. After
+/// `attome restore` (which leaves [`crate::backup::RESTORE_PENDING`] in the
+/// backup folder) a replay that fails stops the boot: the restored database
+/// could otherwise serve erased people. On an ordinary boot a ledger that
+/// cannot be read is logged and the boot goes on.
+async fn replay_erasures(
+    state: &EngineState,
+    config: &AppConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let marker = config
+        .backup
+        .resolved_dir()
+        .join(crate::backup::RESTORE_PENDING);
+    let after_restore = tokio::fs::metadata(&marker).await.is_ok();
+    match attome_compliance::erasure_replay::replay(state).await {
+        Ok(report) => {
+            if report.replayed > 0 {
+                tracing::warn!(
+                    replayed = report.replayed,
+                    keys_destroyed = report.keys_destroyed,
+                    entries = report.entries,
+                    "erasure ledger: erasures missing from the database were applied again"
+                );
+            }
+            if after_restore && let Err(error) = tokio::fs::remove_file(&marker).await {
+                tracing::warn!(%error, "erasure ledger: the restore marker could not be removed");
+            }
+            Ok(())
+        }
+        Err(error) if after_restore => Err(format!(
+            "the database was restored and the erasure ledger could not be applied ({error});              start the file store and boot again"
+        )
+        .into()),
+        Err(error) => {
+            tracing::error!(%error, "erasure ledger: could not be read; erasures were not checked this boot");
+            Ok(())
+        }
+    }
+}
+
 pub async fn wait_for_shutdown_signal() {
     let ctrl_c = async {
         tokio::signal::ctrl_c()

@@ -1152,6 +1152,18 @@ pub async fn do_fulfill_erasure(
     .await?;
 
     tx.commit().await.map_err(AppError::internal)?;
+    // R2-T1: outside the database, so a restore cannot bring them back.
+    for record in &erased {
+        attome_audit::erasure_ledger::record_or_log(
+            &state.base.storage,
+            &attome_audit::erasure_ledger::LedgerEntry {
+                kind: attome_audit::erasure_ledger::ErasureKind::Erasure,
+                entity: record.entity_logicalname.clone(),
+                record_id: record.record_id,
+            },
+        )
+        .await;
+    }
 
     Ok(FulfillErasureResult {
         id,

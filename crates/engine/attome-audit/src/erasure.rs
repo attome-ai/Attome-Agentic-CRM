@@ -148,6 +148,28 @@ pub async fn destroy_key(
     Ok(result.rows_affected() > 0)
 }
 
+/// R2-T1: destroys a record's key again when the erasure ledger says it was
+/// erased but a restored database still holds it. No legal-hold check: the
+/// erasure already passed one when it happened, and a restored database can
+/// carry a hold that was released before then. Returns whether a live key
+/// was destroyed.
+pub async fn replay_destroy(
+    tx: &mut sqlx::Transaction<'_, Postgres>,
+    record_id: Uuid,
+) -> Result<bool, AppError> {
+    let result = sqlx::query(
+        "UPDATE audit_erasure_key
+             SET wrapped_dek = NULL, destroyed_at = COALESCE(destroyed_at, NOW()),
+                 updated_at = NOW(), row_version = row_version + 1
+         WHERE record_id = $1 AND wrapped_dek IS NOT NULL",
+    )
+    .bind(record_id)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(result.rows_affected() > 0)
+}
+
 /// See `attome_auth::mfa::RewrapProgress` — same cursor-driven-batch contract.
 pub struct RewrapProgress {
     pub scanned: u64,
