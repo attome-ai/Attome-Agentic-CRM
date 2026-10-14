@@ -475,6 +475,23 @@ struct RuleRow {
 /// entity allocates in a stable order (and therefore takes row locks in a
 /// stable order, which is what keeps two concurrent creates from deadlocking
 /// against each other).
+/// B7: the fields `entity_logicalname` numbers automatically, which a copy
+/// of a record must leave empty.
+pub async fn numbered_fields(
+    db: &attome_db::DbPool,
+    entity_logicalname: &str,
+) -> Result<Vec<String>, AppError> {
+    sqlx::query_scalar(
+        "SELECT attribute_logicalname FROM autovalue \
+          WHERE entity_logicalname = $1 AND is_active = TRUE \
+            AND attribute_logicalname IS NOT NULL AND attribute_logicalname <> ''",
+    )
+    .bind(entity_logicalname)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
+}
+
 async fn load_rules(
     conn: &mut PgConnection,
     entity_logicalname: &str,

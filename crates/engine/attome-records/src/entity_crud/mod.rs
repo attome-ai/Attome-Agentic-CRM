@@ -5,6 +5,7 @@ use attome_core::EngineState;
 use axum::{Router, routing::get};
 
 mod access;
+pub mod clone;
 pub mod favourites;
 mod hierarchy;
 /// U6 (basic-units plan B-R12, D-601): `/{entity}/{id}/history`, the
@@ -139,6 +140,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(timeline::openapi_fragment());
     doc.merge(history::openapi_fragment());
     doc.merge(favourites::openapi_fragment());
+    doc.merge(clone::openapi_fragment());
     doc.merge(tags::openapi_fragment());
     doc.merge(recycle_bin::openapi_fragment());
     doc.merge(new_record::openapi_fragment());
@@ -210,6 +212,10 @@ pub fn routes() -> Router<EngineState> {
         .route(
             "/api/v1/{entity}/{id}/restore",
             axum::routing::post(mutations::restore_record),
+        )
+        .route(
+            "/api/v1/{entity}/{id}/clone",
+            axum::routing::post(clone::clone_record_route),
         )
         .route(
             "/api/v1/{entity}/{id}/hard-delete",
