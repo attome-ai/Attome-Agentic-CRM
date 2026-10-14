@@ -21,6 +21,7 @@ pub mod graph;
 pub mod knowledge;
 pub mod knowledge_answer;
 pub mod memory;
+pub mod model_edit;
 pub mod read;
 pub mod record_update_field;
 pub mod record_write;
@@ -45,6 +46,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(search_records::descriptor());
     all.extend(workflow::descriptors());
     all.extend(memory::descriptors());
+    all.extend(model_edit::descriptors());
     all.push(route_classify::descriptor());
     all.extend(agent_supervise::descriptors());
     all.push(agent_playground::descriptor());
@@ -70,6 +72,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(search_records::SearchRecords));
     all.extend(workflow::executors());
     all.extend(memory::executors());
+    all.extend(model_edit::executors());
     all.push(Box::new(route_classify::RouteClassify));
     all.extend(agent_supervise::executors());
     all.push(Box::new(agent_playground::AgentPlaygroundComplete));

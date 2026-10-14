@@ -20,7 +20,6 @@ use std::sync::{Arc, OnceLock};
 use attome_audit::security::{MandatoryCategory, SecurityEvent, write_security_event};
 use attome_audit::{AuditOperation, audit_service};
 use attome_core::EngineState;
-use attome_model::commands::{self, Command};
 use attome_model::store::{self, ObjectSpec};
 use attome_model::{Issue, Kind, KindRegistry, Layer, ObjectId, ObjectRef};
 use attome_server::authz::{Admin, Authorized, SelfService};
@@ -36,29 +35,9 @@ use serde_json::{Value, json};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-/// The kinds every engine registers: forms (stored in the model) and the
-/// entity, attribute, rule, state model and relationship adapters over their
-/// own tables (Y1-T13).
-fn registered_kinds() -> Vec<Arc<dyn Kind>> {
-    let mut kinds: Vec<Arc<dyn Kind>> = vec![Arc::new(attome_model::kinds::FormKind)];
-    for adapter in attome_metadata::kinds::ADAPTER_KINDS {
-        kinds.push(Arc::new(adapter));
-    }
-    kinds
-}
-
-/// The process-wide kind registry.
+/// The process-wide kind registry (`attome_metadata::model_edit`).
 pub fn kinds() -> &'static KindRegistry {
-    static KINDS: OnceLock<KindRegistry> = OnceLock::new();
-    KINDS.get_or_init(|| {
-        let mut registry = KindRegistry::default();
-        for kind in registered_kinds() {
-            if let Err(error) = registry.register(kind) {
-                tracing::error!(%error, "metadata kind registered twice; the second is ignored");
-            }
-        }
-        registry
-    })
+    attome_metadata::model_edit::registry()
 }
 
 /// The cooked registry of the published metadata, one per process.
@@ -552,37 +531,21 @@ async fn apply_commands(
     Json(request): Json<CommandsRequest>,
 ) -> Result<Json<CommandsResponse>, AppError> {
     let kind = kind(&kind_name)?;
-    let parsed: Vec<Command> = request
-        .commands
-        .into_iter()
-        .map(serde_json::from_value)
-        .collect::<Result<_, _>>()
-        .map_err(|error| AppError::Validation(format!("a command is malformed: {error}")))?;
-    let name = match store::read(&state.base.db, id, None).await {
-        Ok(existing) if existing.kind != kind.name().as_str() => return Err(AppError::NotFound),
-        Ok(existing) => existing.name,
-        Err(AppError::NotFound) => request.name.clone().ok_or_else(|| {
-            AppError::Validation("name is required for an object that does not exist yet".into())
-        })?,
-        Err(other) => return Err(other),
-    };
-    let object = ObjectSpec {
-        id: ObjectId(id),
-        name: name.clone(),
-        app: "customer".to_owned(),
-        layer: Layer::Customer,
-    };
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    let saved = commands::apply_commands(
+    let edited = attome_metadata::model_edit::edit(
+        &state.base.db,
         &mut tx,
-        kinds(),
         kind.as_ref(),
-        &object,
-        &request.base_hash,
-        &parsed,
+        attome_metadata::model_edit::EditRequest {
+            id,
+            base_hash: request.base_hash,
+            name: request.name,
+            commands: request.commands,
+        },
         Some(ctx.user_id),
     )
     .await?;
+    let (name, saved) = (edited.name, edited.saved);
     write_security_event(
         &mut tx,
         &audit_service(&state),
@@ -598,7 +561,7 @@ async fn apply_commands(
             "{} `{name}` draft v{}: {} command(s)",
             kind.name(),
             saved.version_no,
-            parsed.len()
+            edited.commands
         )),
     )
     .await?;

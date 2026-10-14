@@ -1,5 +1,6 @@
 pub mod autovalue;
 pub mod kinds;
+pub mod model_edit;
 pub mod provision;
 pub mod purge;
 
