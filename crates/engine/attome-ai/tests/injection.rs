@@ -528,3 +528,28 @@ fn the_persona_path_holds_no_authority_a_persona_could_claim() {
     assert_eq!(d.effect, Effect::Read);
     assert!(d.required_privileges.is_empty());
 }
+
+/// **N23-T4.** The Arabic, dialect and Arabizi attacks in the corpus are all
+/// flagged by the local classifier (`attome_ai::injection`), so a payload a
+/// Saudi, Emirati or Egyptian attacker would write is marked before the model
+/// reads it, not only the MSA and English ones.
+#[test]
+fn arabic_dialect_and_arabizi_attacks_are_flagged() {
+    for p in fixture().payloads {
+        let arabic_attack = p.id.starts_with("dialect-")
+            || p.id.starts_with("arabizi-")
+            || matches!(
+                p.id.as_str(),
+                "arabic-tool-call" | "arabic-exfiltration" | "arabic-prompt-extraction"
+            );
+        if !arabic_attack {
+            continue;
+        }
+        let (score, signals) = attome_ai::injection::score(&p.text);
+        assert!(
+            score >= attome_ai::injection::WARN_AT,
+            "{}: scored {score} ({signals:?})",
+            p.id
+        );
+    }
+}
