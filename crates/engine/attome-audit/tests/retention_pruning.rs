@@ -16,6 +16,7 @@
 //! cargo test -p attome-audit --test retention_pruning -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

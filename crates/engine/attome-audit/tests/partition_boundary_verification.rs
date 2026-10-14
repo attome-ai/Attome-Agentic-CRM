@@ -20,6 +20,7 @@
 //! part of the composite PK here) — this test exercises that cross-partition
 //! move for real, not just a same-partition happy path.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

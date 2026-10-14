@@ -11,6 +11,7 @@
 //! needs — unrelated to this crate, but it blocks that suite's empty-database
 //! path entirely).
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

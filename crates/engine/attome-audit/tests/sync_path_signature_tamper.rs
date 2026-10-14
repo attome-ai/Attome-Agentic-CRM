@@ -26,6 +26,7 @@
 //! cargo test -p attome-audit --test sync_path_signature_tamper
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

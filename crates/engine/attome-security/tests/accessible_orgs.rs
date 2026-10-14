@@ -24,6 +24,7 @@
 //! (that row's presence is irrelevant to these assertions, which only ever
 //! look at their own orgs).
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

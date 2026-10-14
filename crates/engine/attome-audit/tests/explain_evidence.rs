@@ -17,6 +17,7 @@
 //! points at `attome_dev`, same guarantee every other DB-backed suite here
 //! relies on.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

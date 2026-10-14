@@ -45,6 +45,7 @@
 //! cargo test -p attome-report --test run_as_permission_scoping -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

@@ -33,6 +33,7 @@
 //! and `query_execute_*_audit_*` tests run the generated SQL against a live
 //! Postgres, including the volume case that F-002/TODO-007 fixed.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

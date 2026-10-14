@@ -5,6 +5,7 @@
 //! 2 Projects, each with leaf work items, and asserts the roll-up against
 //! hand-computed totals at both the program and portfolio scope.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

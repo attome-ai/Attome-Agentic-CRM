@@ -9,6 +9,7 @@
 //! `field_gate` instead. The bulk surfaces D-589 names are also checked the
 //! other way: each must reach the gate.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

@@ -33,6 +33,7 @@
 //! cargo test -p attome-audit --test hash_v2_tamper -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

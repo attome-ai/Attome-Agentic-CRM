@@ -19,6 +19,7 @@
 //! cargo test -p attome-audit --test v1_cutover_checkpoint -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

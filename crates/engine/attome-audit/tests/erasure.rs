@@ -15,6 +15,7 @@
 //! cargo test -p attome-audit --test erasure
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

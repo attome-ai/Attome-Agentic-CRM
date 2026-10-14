@@ -20,6 +20,7 @@
 //! `tests/resolver.rs`. Uses throwaway entities with random suffixes, never a
 //! shared or real one.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

@@ -18,6 +18,7 @@
 //! cargo test -p attome-audit --test chainer_race_and_leader_election -- --test-threads=1
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

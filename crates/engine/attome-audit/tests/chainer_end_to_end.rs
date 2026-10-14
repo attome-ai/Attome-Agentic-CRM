@@ -8,6 +8,7 @@
 //! cargo test -p attome-audit --test chainer_end_to_end
 //! ```
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,

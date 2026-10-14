@@ -15,6 +15,7 @@
 //! Each test creates its own throwaway `privilege`/`user_account`
 //! rows (random UUIDs) rather than truncating shared tables.
 
+#![recursion_limit = "512"]
 #![allow(
     clippy::expect_used,
     clippy::unwrap_used,
