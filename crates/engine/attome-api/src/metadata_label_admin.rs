@@ -695,6 +695,371 @@ async fn refresh_local_labels(state: &EngineState) {
     }
 }
 
+// ── XLIFF (A20-T4) ───────────────────────────────────────────────────────────
+
+/// One translatable unit: `{object_kind}:{object_ref}`, the default text and
+/// the translation, if any.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct XliffUnit {
+    pub id: String,
+    pub source: String,
+    pub target: Option<String>,
+}
+
+fn xml_escape(text: &str) -> String {
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
+
+fn xml_unescape(text: &str) -> String {
+    text.replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'")
+        .replace("&amp;", "&")
+}
+
+/// The `{name}` placeholders in a text, which a translation must keep.
+fn placeholders(text: &str) -> std::collections::BTreeSet<&str> {
+    let mut out = std::collections::BTreeSet::new();
+    let mut rest = text;
+    while let Some(open) = rest.find('{') {
+        let after = &rest[open..];
+        let Some(close) = after.find('}') else { break };
+        out.insert(&after[..=close]);
+        rest = &after[close + 1..];
+    }
+    out
+}
+
+/// An XLIFF 2.0 document of `units` from `source_lang` to `target_lang`.
+pub(crate) fn build_xliff(source_lang: &str, target_lang: &str, units: &[XliffUnit]) -> String {
+    let mut out = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+         <xliff xmlns=\"urn:oasis:names:tc:xliff:document:2.0\" version=\"2.0\" \
+         srcLang=\"{}\" trgLang=\"{}\">\n  <file id=\"attome-labels\">\n",
+        xml_escape(source_lang),
+        xml_escape(target_lang)
+    );
+    for unit in units {
+        out.push_str(&format!(
+            "    <unit id=\"{}\">\n      <segment>\n        <source>{}</source>\n",
+            xml_escape(&unit.id),
+            xml_escape(&unit.source)
+        ));
+        if let Some(target) = &unit.target {
+            out.push_str(&format!(
+                "        <target>{}</target>\n",
+                xml_escape(target)
+            ));
+        }
+        out.push_str("      </segment>\n    </unit>\n");
+    }
+    out.push_str("  </file>\n</xliff>\n");
+    out
+}
+
+/// The text inside the first `<tag ...>...</tag>` in `xml`, unescaped.
+fn element_text(xml: &str, tag: &str) -> Option<String> {
+    let open = format!("<{tag}");
+    let start = xml.find(&open)?;
+    let after_name = &xml[start + open.len()..];
+    // `<target>` or `<target state="final">`, never `<targetLanguage>`.
+    if !after_name.starts_with(['>', ' ', '\t', '\n', '\r', '/']) {
+        return None;
+    }
+    let body_start = after_name.find('>')?;
+    if after_name[..body_start].ends_with('/') {
+        return Some(String::new());
+    }
+    let body = &after_name[body_start + 1..];
+    let end = body.find(&format!("</{tag}>"))?;
+    Some(xml_unescape(&body[..end]))
+}
+
+/// The value of `name="..."` in an element's opening tag.
+fn attribute(tag: &str, name: &str) -> Option<String> {
+    let key = format!("{name}=\"");
+    let start = tag.find(&key)? + key.len();
+    let end = tag[start..].find('"')?;
+    Some(xml_unescape(&tag[start..start + end]))
+}
+
+/// The target language and units of an XLIFF 2.0 document; tolerant of the
+/// attributes and whitespace translation tools add, strict about the shape.
+pub(crate) fn parse_xliff(xml: &str) -> Result<(String, Vec<XliffUnit>), String> {
+    let root_start = xml.find("<xliff").ok_or("not an XLIFF document")?;
+    let root_end = xml[root_start..]
+        .find('>')
+        .ok_or("the xliff element is not closed")?;
+    let root = &xml[root_start..root_start + root_end];
+    if attribute(root, "version").as_deref() != Some("2.0") {
+        return Err("only XLIFF 2.0 is read".into());
+    }
+    let target_lang = attribute(root, "trgLang").ok_or("trgLang is missing")?;
+    let mut units = Vec::new();
+    let mut rest = &xml[root_start..];
+    while let Some(start) = rest.find("<unit") {
+        let unit_xml = &rest[start..];
+        let open_end = unit_xml.find('>').ok_or("a unit is not closed")?;
+        let id = attribute(&unit_xml[..open_end], "id").ok_or("a unit has no id")?;
+        let close = unit_xml.find("</unit>").ok_or("a unit is not closed")?;
+        let body = &unit_xml[..close];
+        let source =
+            element_text(body, "source").ok_or_else(|| format!("unit {id} has no source"))?;
+        let target = element_text(body, "target").filter(|t| !t.trim().is_empty());
+        units.push(XliffUnit { id, source, target });
+        rest = &unit_xml[close + "</unit>".len()..];
+    }
+    Ok((target_lang, units))
+}
+
+/// Every label-able text with its default and the `locale` translation.
+async fn label_units(state: &EngineState, locale: &str) -> Result<Vec<XliffUnit>, AppError> {
+    let db = &state.base.db;
+    let entities: Vec<(String, Option<String>)> = sqlx::query_as(
+        "SELECT logicalname::text, name::text FROM entity_info \
+         WHERE is_active = true AND logicalname IS NOT NULL ORDER BY logicalname",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let attributes: Vec<(String, String, Option<String>, Option<Value>)> = sqlx::query_as(
+        "SELECT e.logicalname::text, a.logicalname::text, a.name::text, a.options \
+         FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
+         WHERE a.is_active = true AND e.is_active = true \
+         ORDER BY e.logicalname, a.logicalname",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let labels: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT object_kind, object_ref, display_name FROM metadata_label \
+         WHERE locale = $1 AND is_deleted = false",
+    )
+    .bind(locale)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let translated: std::collections::HashMap<String, String> = labels
+        .into_iter()
+        .map(|(kind, reference, name)| (format!("{kind}:{reference}"), name))
+        .collect();
+    let unit = |id: String, source: String| XliffUnit {
+        target: translated.get(&id).cloned(),
+        id,
+        source,
+    };
+    let mut units = Vec::new();
+    for (entity, name) in entities {
+        units.push(unit(
+            format!("entity:{entity}"),
+            name.unwrap_or_else(|| entity.clone()),
+        ));
+    }
+    for (entity, attr, name, options) in attributes {
+        units.push(unit(
+            format!("attribute:{entity}.{attr}"),
+            name.unwrap_or_else(|| attr.clone()),
+        ));
+        let choices = options
+            .as_ref()
+            .and_then(|o| o.get("choices"))
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        for choice in choices.iter().filter_map(Value::as_str) {
+            let shown = options
+                .as_ref()
+                .and_then(|o| o.get("option_labels"))
+                .and_then(|l| l.get(choice))
+                .and_then(Value::as_str)
+                .unwrap_or(choice);
+            units.push(unit(
+                format!("choice_option:{entity}.{attr}.{choice}"),
+                shown.to_owned(),
+            ));
+        }
+    }
+    Ok(units)
+}
+
+#[derive(Deserialize, utoipa::IntoParams)]
+struct XliffQuery {
+    /// The language to translate into, e.g. `ar-SA`.
+    locale: String,
+}
+
+/// `POST /api/v1/admin/entities/labels/xliff`: what an import did.
+#[derive(Serialize, ToSchema)]
+struct XliffImportResult {
+    locale: String,
+    /// Labels written.
+    imported: usize,
+    /// Units with no translation, left alone.
+    skipped: usize,
+    /// Units refused, with why; nothing is written when any unit is refused.
+    errors: Vec<String>,
+}
+
+/// A20-T4: every entity, attribute and choice label as an XLIFF 2.0 file to
+/// translate into `locale`, with the translations already made.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/entities/labels/xliff",
+    tag = "admin",
+    params(XliffQuery),
+    responses(
+        (status = 200, description = "The labels as XLIFF 2.0", body = String, content_type = "application/xliff+xml"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Invalid locale", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn export_xliff(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    axum::extract::Query(query): axum::extract::Query<XliffQuery>,
+) -> Result<axum::response::Response, AppError> {
+    use axum::response::IntoResponse;
+    if !is_valid_locale_tag(&query.locale) {
+        return Err(AppError::Validation(
+            "locale must be a BCP-47 tag like ar-SA".into(),
+        ));
+    }
+    let units = label_units(&state, &query.locale).await?;
+    let file = format!("attachment; filename=\"labels-{}.xlf\"", query.locale);
+    Ok((
+        [
+            (
+                axum::http::header::CONTENT_TYPE,
+                "application/xliff+xml; charset=utf-8".to_owned(),
+            ),
+            (axum::http::header::CONTENT_DISPOSITION, file),
+        ],
+        build_xliff("en", &query.locale, &units),
+    )
+        .into_response())
+}
+
+/// A20-T4: reads a translated XLIFF 2.0 file and writes its translations as
+/// labels for its `trgLang`. Every unit must name a label that exists and keep
+/// its source's `{placeholders}`; if any unit is refused, nothing is written.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/entities/labels/xliff",
+    tag = "admin",
+    request_body(content = String, content_type = "application/xliff+xml"),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Entity, AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "What the import did", body = XliffImportResult),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Not an XLIFF 2.0 file, or an invalid language", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn import_xliff(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    recording: RecordingCtx,
+    body: String,
+) -> Result<Json<XliffImportResult>, AppError> {
+    let (locale, units) = parse_xliff(&body).map_err(AppError::Validation)?;
+    if !is_valid_locale_tag(&locale) {
+        return Err(AppError::Validation(
+            "trgLang must be a BCP-47 tag like ar-SA".into(),
+        ));
+    }
+    let known: std::collections::HashMap<String, String> = label_units(&state, &locale)
+        .await?
+        .into_iter()
+        .map(|u| (u.id, u.source))
+        .collect();
+    let mut errors = Vec::new();
+    let mut writes = Vec::new();
+    let mut skipped = 0;
+    for unit in &units {
+        let Some(target) = unit.target.as_deref().map(str::trim) else {
+            skipped += 1;
+            continue;
+        };
+        let Some(source) = known.get(&unit.id) else {
+            errors.push(format!("{}: no such label", unit.id));
+            continue;
+        };
+        if placeholders(source) != placeholders(target) {
+            errors.push(format!(
+                "{}: the translation must keep the placeholders of its source",
+                unit.id
+            ));
+            continue;
+        }
+        if target.chars().count() > 200 {
+            errors.push(format!("{}: a label is at most 200 characters", unit.id));
+            continue;
+        }
+        let Some((kind, reference)) = unit.id.split_once(':') else {
+            errors.push(format!("{}: not a label id", unit.id));
+            continue;
+        };
+        writes.push((kind.to_owned(), reference.to_owned(), target.to_owned()));
+    }
+    if !errors.is_empty() {
+        return Ok(Json(XliffImportResult {
+            locale,
+            imported: 0,
+            skipped,
+            errors,
+        }));
+    }
+    recording.preflight(&state.base.db).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    for (kind, reference, target) in &writes {
+        let id =
+            write_label_in_tx(&mut tx, &recording, kind, reference, &locale, target, None).await?;
+        record_label_op(&mut tx, &recording, Op::SetLabel, id).await?;
+    }
+    let (user_ctx, org_ref) =
+        attome_records::entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    audit_service(&state)
+        .write_in_tx(
+            &mut tx,
+            AuditEvent {
+                organization_ref: org_ref,
+                category: AuditCategory::Entity,
+                entity_name: Some("metadata_label".to_owned()),
+                record_id: None,
+                operation: AuditOperation::Update,
+                version_before: None,
+                version_after: None,
+                user_context: user_ctx,
+                changed_on: chrono::Utc::now(),
+                source: AuditSource::Api,
+                request_context: AuditRequestContext::default(),
+                correlation_id: None,
+                batch_id: None,
+                event_name: Some("metadata_labels_imported".to_owned()),
+                event_comment: Some(format!("{} label(s) imported for {locale}", writes.len())),
+                changed_fields: vec![],
+                snapshot_json: None,
+            },
+        )
+        .await?;
+    attome_db::tx::commit(tx).await?;
+    refresh_local_labels(&state).await;
+    Ok(Json(XliffImportResult {
+        locale,
+        imported: writes.len(),
+        skipped,
+        errors,
+    }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route(
@@ -705,14 +1070,63 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/entities/{entity_id}/labels/{label_id}",
             axum::routing::patch(update_label).delete(delete_label),
         )
+        .route(
+            "/api/v1/admin/entities/labels/xliff",
+            get(export_xliff).post(import_xliff),
+        )
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document, merged upward by `attome_api::openapi_document`.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_labels, create_label, update_label, delete_label))]
+#[openapi(paths(
+    list_labels,
+    create_label,
+    update_label,
+    delete_label,
+    export_xliff,
+    import_xliff
+))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod xliff_tests {
+    use super::*;
+
+    #[test]
+    fn xliff_round_trips_and_checks_placeholders() {
+        let units = vec![
+            XliffUnit {
+                id: "entity:account".into(),
+                source: "Account".into(),
+                target: Some("حساب".into()),
+            },
+            XliffUnit {
+                id: "attribute:account.name".into(),
+                source: "Name <of {who}>".into(),
+                target: None,
+            },
+        ];
+        let xml = build_xliff("en", "ar-SA", &units);
+        assert!(xml.contains("trgLang=\"ar-SA\""));
+        assert!(xml.contains("Name &lt;of {who}&gt;"));
+        let (lang, back) = parse_xliff(&xml).unwrap();
+        assert_eq!(lang, "ar-SA");
+        assert_eq!(back, units);
+
+        // What a translation tool sends back: attributes on the target.
+        let edited = xml.replace(
+            "<source>Name &lt;of {who}&gt;</source>",
+            "<source>Name &lt;of {who}&gt;</source><target state=\"translated\">اسم {who}</target>",
+        );
+        let (_, edited) = parse_xliff(&edited).unwrap();
+        assert_eq!(edited[1].target.as_deref(), Some("اسم {who}"));
+        assert_eq!(placeholders("اسم {who}"), placeholders("Name <of {who}>"));
+        assert_ne!(placeholders("اسم"), placeholders("Name {who}"));
+        assert!(parse_xliff("<xliff version=\"1.2\">").is_err());
+    }
 }

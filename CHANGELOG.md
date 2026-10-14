@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Label translation through XLIFF 2.0: `GET /api/v1/admin/entities/labels/xliff?locale=ar-SA`
+  exports every entity, attribute and choice label; `POST` the translated file back (placeholders
+  checked, all or nothing).
 - `GET /api/v1/{entity}/new` returns a new record's defaults, and the new-record form shows them.
 - Attribute defaults: `options.default` is `{"kind": "fixed", "value": ...}`, `today`, `now` or
   `current_user`, filled on every create path when the attribute is empty.
