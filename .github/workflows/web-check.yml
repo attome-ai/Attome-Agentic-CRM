@@ -53,6 +53,13 @@ jobs:
           set -o pipefail
           { npm run test:base && npm run test:xrm && npm run test:sdk && npm test; } 2>&1 | tee -a ../web-check.log
         shell: bash
+      # AC7-T1: npm advisories at the thresholds web/package.json sets
+      # (moderate for production dependencies, high for development ones).
+      - name: audit
+        run: |
+          set -o pipefail
+          { npm run audit:prod && npm run audit:dev; } 2>&1 | tee -a ../web-check.log
+        shell: bash
       # One annotation list with every failure, readable through the public
       # checks API (GitHub shows at most 10 annotations per step).
       - name: summarize failures

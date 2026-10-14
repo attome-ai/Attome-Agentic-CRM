@@ -1,0 +1,124 @@
+# cargo-deny configuration for the Attome workspace.
+# Run by the release gate (`attome release --check`, step `cargo_deny`) on every
+# push in CI; its waivers are checked by the `waivers` step, and its licence
+# allow-list also governs the web app's production npm packages (`npm_licences`).
+# Baseline is intentionally permissive on multiple-versions (warn, not deny) —
+# flip to deny once a clean baseline is established (P1.8a design note).
+
+[graph]
+all-features = false
+no-default-features = false
+
+[advisories]
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+# cargo-deny >=0.14 removed the per-kind LINT LEVELS it used to take here
+# (`vulnerability`, `notice`); a vulnerability advisory now always errors, and
+# the informational kinds are configured by SCOPE instead
+# (`all` | `workspace` | `transitive` | `none`). All three knobs are set
+# explicitly below because their defaults are not uniform, and the gap that
+# created is what TODO-012 / finding M-1 (2026-08-12 review) closed:
+#
+#   unmaintained  default `all`       — pinned so a future cargo-deny default
+#                                       cannot narrow it silently.
+#   unsound       default `workspace` — the real hole. `Scope::Workspace` matches
+#                                       an advisory crate only when one of its
+#                                       DIRECT dependents is a workspace member
+#                                       (cargo-deny 0.20.2, src/advisories.rs
+#                                       :123-137), so an unsound advisory reached
+#                                       through someone else's dependency passed
+#                                       this gate with `advisories ok` while
+#                                       `cargo audit` was reporting it. That is
+#                                       exactly how the event-listener 5.4.x
+#                                       unsound advisory (2026-0221, !Send tags
+#                                       crossing threads via `StackSlot`, reached
+#                                       through base-cache -> moka -> async-lock)
+#                                       stayed invisible here; it is fixed by the
+#                                       5.4.2 bump in Cargo.lock, not waived.
+#   yanked        default `warn`      — denied, so a yanked crate in Cargo.lock
+#                                       fails the build instead of printing a
+#                                       warning nobody reads.
+#
+# With those three set, every RUSTSEC advisory class (vulnerability,
+# unmaintained, unsound, yanked) anywhere in the graph — not just on a direct
+# dependency — denies the build unless it is listed in `ignore` below with a
+# reason + revisit date (P-secure-sdlc, closes the P1.8a step 8 baseline-triage
+# gap).
+#
+# INVARIANT: a RUSTSEC id may appear in this file ONLY as an `ignore` entry.
+# `cargo audit` greps `RUSTSEC-nnnn-nnnn` out of this whole file, comments
+# included — naming an id in prose (as above, deliberately without the prefix)
+# would silently widen the ignore set. Describe the advisory, don't spell its id.
+unmaintained = "all"
+unsound = "all"
+yanked = "deny"
+ignore = [
+    # rustls-pemfile 2.2.0 — crate is archived/unmaintained; no patched version
+    # exists (advisory `patched = []`, re-checked 2026-09-28). Reached ONE way
+    # since 2026-09-28, when base-cache and base-storage moved to
+    # rustls-pki-types' `PemObject`: fred 9.4.0 -> rustls-native-certs 0.7.3 ->
+    # rustls-pemfile. 0.7.3 is the last 0.7.x; rustls-native-certs 0.8 drops
+    # rustls-pemfile but is semver-major and fred 9.x requires ^0.7, so the
+    # fix is a fred upgrade. No known vulnerability, just unmaintained.
+    # D-206: every ignore entry names an owner (who re-triages it) and a
+    # revisit date (when it stops being honored without re-triage) — kept in
+    # `reason` since cargo-deny's ignore schema has no dedicated owner field;
+    # The check that used to fail the build on an entry missing the leading
+    # "Owner:" tag was a CI job and is gone; keep the tag anyway, and re-read
+    # the revisit dates before a release.
+    { id = "RUSTSEC-2025-0134", reason = "Owner: @attome-ai/seniors — unmaintained, no vulnerability; re-triaged 2026-09-28, no patched release; only remaining path is transitive fred 9.4 -> rustls-native-certs 0.7.3 (direct uses ported to rustls-pki-types PemObject); fix = fred upgrade — revisit 2026-12-26" },
+    # rsa (Marvin Attack timing side-channel) — pulled in only as a (dev)
+    # dependency of base-auth's own test suite (OIDC test fixtures need RSA key
+    # generation), never reaches a production build (re-verified 2026-09-28:
+    # `cargo tree --workspace -i rsa -e normal,build` prints nothing; direct
+    # dev-dependency of base-auth and server only). "No safe upgrade is
+    # available" per the advisory itself (`patched = []`); the only newer
+    # line is the 0.10 release-candidate series, a pre-release semver-major.
+    { id = "RUSTSEC-2023-0071", reason = "Owner: @attome-ai/seniors — dev-only dependency (base-auth test suite), never reaches a production binary; no safe upgrade available upstream (re-triaged 2026-09-28; only rsa 0.10 RCs exist) — revisit 2026-12-26" },
+]
+
+[licenses]
+version = 2
+confidence-threshold = 0.8
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "0BSD",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "MPL-2.0",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    # Permissive licences of production web dependencies: the bundled fonts
+    # (@fontsource/*, OFL-1.1), argparse (Python-2.0) and make-plural
+    # (Unicode-DFS-2016). None restricts distributing the app.
+    "OFL-1.1",
+    "Python-2.0",
+    "Unicode-DFS-2016",
+]
+# Copyleft (GPL/AGPL/LGPL) and unrecognized licenses fail closed — anything not
+# in `allow` above is denied by default (cargo-deny's `unlicensed`/unmatched
+# behavior), which is what an SBOM/procurement review needs to see.
+
+[licenses.private]
+# Every internal base-*/xrm-*/server crate is `publish = false` (D-099: path
+# deps only, nothing in this workspace is ever published) and carries a
+# proprietary `license-file` rather than an SBOM-friendly SPDX `license`
+# expression — this check is about third-party OSS obligations flowing into
+# the shipped product, not about re-litigating our own crates' licensing.
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+deny = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

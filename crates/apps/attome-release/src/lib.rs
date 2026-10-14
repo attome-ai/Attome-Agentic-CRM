@@ -32,6 +32,7 @@ mod contract;
 pub mod parity;
 pub mod slo;
 pub mod slo_report;
+pub mod supply;
 pub mod test_cmd;
 pub mod test_coverage;
 pub mod test_flaky;
@@ -133,6 +134,9 @@ pub fn check_with(options: &Options) -> ExitCode {
         ("clippy", clippy as Step),
         ("tests", tests as Step),
         ("contract", contract_step as Step),
+        ("waivers", waivers as Step),
+        ("cargo_deny", cargo_deny as Step),
+        ("npm_licences", supply::npm_licences_step as Step),
         ("slo", slo_step as Step),
         ("rules", rules_step as Step),
         ("install_timing", install_timing as Step),
@@ -602,6 +606,16 @@ fn web(root: &Path) -> Result<(), String> {
     if run(&mut host_tests, &web, "npm test").is_err() {
         failed.push("test".to_owned());
     }
+    // AC7-T1: the npm advisory thresholds (moderate for production
+    // dependencies, high for development ones); waivers live in
+    // web/audit-waivers.yaml and are checked by the `waivers` step.
+    for script in ["audit:prod", "audit:dev"] {
+        let mut audit = Command::new(npm_program("npm"));
+        audit.args(["run", script]);
+        if run(&mut audit, &web, &format!("npm run {script}")).is_err() {
+            failed.push(script.to_owned());
+        }
+    }
     if failed.is_empty() {
         Ok(())
     } else {
@@ -709,6 +723,28 @@ fn install_timing(root: &Path) -> Result<(), String> {
         ));
     }
     Ok(())
+}
+
+/// AC7-T2: every waiver is owned and in date (see [`supply`]).
+fn waivers(root: &Path) -> Result<(), String> {
+    supply::waivers_step(root, &test_flaky::date_from_unix(unix_seconds()))
+}
+
+/// AC7-T1: `cargo deny check` (advisories, licences, bans, sources) against
+/// `deny.toml`.
+fn cargo_deny(root: &Path) -> Result<(), String> {
+    let installed = Command::new("cargo")
+        .args(["deny", "--version"])
+        .output()
+        .is_ok_and(|out| out.status.success());
+    if !installed {
+        return Err("cargo-deny is not installed: cargo install cargo-deny --locked".to_owned());
+    }
+    run(
+        Command::new("cargo").args(["deny", "check"]),
+        root,
+        "cargo deny check",
+    )
 }
 
 fn tests(root: &Path) -> Result<(), String> {

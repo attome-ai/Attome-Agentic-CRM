@@ -12,7 +12,9 @@ machine does not count as either), at the same commit:
 cargo run -p attome-release -- --check --web
 ```
 
-The steps are format, clippy, tests, the API contract, the SLO outputs (`attome slo generate
+The steps are format, clippy, tests, the API contract, the waivers (every `deny.toml`,
+`web/audit-waivers.yaml` and `.trivyignore.yaml` entry owned and in date), `cargo deny check`
+(install `cargo-deny`), the production npm licences, the SLO outputs (`attome slo generate
 --check`, see [slo.md](slo.md)) and the Prometheus rules (`promtool check rules` and `promtool test
 rules`; install Prometheus's `promtool`, or point `ATTOME_PROMTOOL` at it), the install time
 (`attome init` into the empty database `ATTOME_INSTALL_DATABASE_URL` names, under ten minutes; not
