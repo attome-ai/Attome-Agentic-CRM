@@ -99,6 +99,13 @@ export interface UpdateApprovalPolicyBody {
   row_version: number;
 }
 
+/** `POST /api/v1/admin/approvals/batch-decide`. */
+export interface BatchDecideResponse {
+  decided: number;
+  failed:  number;
+  items:   { id: string; status: string | null; error: string | null }[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApprovalsAdminService {
   private readonly api = inject(ApiService);
@@ -133,6 +140,19 @@ export class ApprovalsAdminService {
     const note = comment?.trim();
     if (note) body.comment = note;
     return this.api.post<DecideResponse>(`/api/v1/admin/approvals/${id}/decide`, body);
+  }
+
+  /** Decides many requests the same way (N30-T6); each keeps its own checks
+   *  and the response reports each one's outcome. */
+  batchDecide(
+    decision: 'approve' | 'reject', items: { id: string; row_version: number }[], comment?: string | null,
+  ): Observable<BatchDecideResponse> {
+    const body: { decision: string; items: { id: string; row_version: number }[]; comment?: string } = {
+      decision, items,
+    };
+    const note = comment?.trim();
+    if (note) body.comment = note;
+    return this.api.post<BatchDecideResponse>('/api/v1/admin/approvals/batch-decide', body);
   }
 
   /** Only the request's own `requested_by` may cancel it — a different admin

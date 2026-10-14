@@ -162,6 +162,8 @@ export const xrmEn = {
   },
   // N29-T3 — delegated sessions in a trace.
   agentSessionsTree: { delegated: 'Delegated to' },
+  // N30-T6 — deciding many approval requests at once.
+  approvalBatch: { picked: 'Picked', pick: 'Pick for a batch decision', approve: 'Approve picked', reject: 'Reject picked' },
   // N30-T10 — an agent's change on the approval card.
   approvalCard: { field: 'Field', before: 'Now', after: 'After approval', agentSaid: 'The agent wrote (not checked by the platform):' },
   // N20-T2 — translate a note or reply.

@@ -26,10 +26,21 @@
 } @else if (items().length === 0) {
   <div class="empty-state"><p>No pending approval requests.</p></div>
 } @else {
+  <div class="batch-bar">
+    <span>{{ 'approvalBatch.picked' | translate }}: {{ picked().size }}</span>
+    <button class="btn-sm" type="button" [disabled]="picked().size === 0 || busyId() !== null"
+            (click)="decidePicked('approve')">{{ 'approvalBatch.approve' | translate }}</button>
+    <button class="btn-sm" type="button" [disabled]="picked().size === 0 || busyId() !== null"
+            (click)="decidePicked('reject')">{{ 'approvalBatch.reject' | translate }}</button>
+    @for (f of batchFailures(); track f.id) {
+      <span class="cell-muted" [attr.data-batch-failure]="f.id"><code>{{ f.id }}</code> {{ f.error }}</span>
+    }
+  </div>
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
+          <th><span class="visually-hidden">{{ 'approvalBatch.pick' | translate }}</span></th>
           <th>Action</th>
           <th>Step</th>
           <th>Requested by</th>
@@ -42,6 +53,12 @@
       <tbody>
         @for (r of items(); track r.id) {
           <tr>
+            <td>
+              @if (r.requested_by !== selfId()) {
+                <input #pick type="checkbox" [attr.aria-label]="'approvalBatch.pick' | translate"
+                       [checked]="picked().has(r.id)" (change)="togglePick(r, pick.checked)" />
+              }
+            </td>
             <td class="mono-input">{{ r.action_type }}</td>
             <td class="cell-muted">
               @if (stepLabel(r); as label) {

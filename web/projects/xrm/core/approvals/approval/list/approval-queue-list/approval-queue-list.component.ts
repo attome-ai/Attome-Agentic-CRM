@@ -78,6 +78,10 @@ export class ApprovalQueueListComponent implements OnInit {
   readonly loading = signal(true);
   readonly error   = signal<string | null>(null);
   readonly busyId  = signal<string | null>(null);
+  /** Requests picked for one batch decision (N30-T6), by id. */
+  readonly picked  = signal<Set<string>>(new Set());
+  /** The last batch's per-request failures. */
+  readonly batchFailures = signal<{ id: string; error: string | null }[]>([]);
   readonly selfId  = this.auth.userId;
 
   /** D-421 — the request currently showing its inline "delegate to" form,
@@ -121,6 +125,31 @@ export class ApprovalQueueListComponent implements OnInit {
   stepLabel(r: ApprovalRequestItem): string | null {
     if (!r.plan) return null;
     return `Step ${r.step + 1}/${r.plan.steps.length}`;
+  }
+
+  togglePick(r: ApprovalRequestItem, on: boolean): void {
+    const next = new Set(this.picked());
+    if (on) next.add(r.id);
+    else next.delete(r.id);
+    this.picked.set(next);
+  }
+
+  /** Approves or rejects every picked request, each at the version shown. */
+  decidePicked(decision: 'approve' | 'reject'): void {
+    const items = this.items()
+      .filter(r => this.picked().has(r.id))
+      .map(r => ({ id: r.id, row_version: r.row_version }));
+    if (items.length === 0) return;
+    this.busyId.set('batch');
+    this.svc.batchDecide(decision, items).subscribe({
+      next: result => {
+        this.busyId.set(null);
+        this.picked.set(new Set());
+        this.batchFailures.set(result.items.filter(i => i.error !== null));
+        this.load();
+      },
+      error: (e: ApiError) => { this.busyId.set(null); this.error.set(e.message); },
+    });
   }
 
   approve(r: ApprovalRequestItem): void {
