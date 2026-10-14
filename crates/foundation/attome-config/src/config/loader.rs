@@ -740,6 +740,21 @@ impl AppConfig {
         ] {
             validate_inference_timeout_secs(field, secs)?;
         }
+        // N26-T3: prompts are customer data. A generation endpoint outside this
+        // deployment is refused at boot unless the operator said so
+        // (`inference.allow_external_provider`), rather than at the first
+        // request it would have carried.
+        let generation_url = self.inference.generation.base_url.trim();
+        if !generation_url.is_empty()
+            && !self.inference.allow_external_provider
+            && !super::sections::inference::endpoint_is_in_deployment(generation_url)
+        {
+            return Err(ConfigError::Insecure {
+                field: "inference.generation.base_url".into(),
+                reason: "points outside this deployment, which sends every prompt (record data                          included) to that provider; use a model server on your own network, or                          set inference.allow_external_provider = true to allow it"
+                    .into(),
+            });
+        }
         let embedding_url = self.inference.embedding.base_url.trim();
         if !embedding_url.is_empty()
             && !super::sections::inference::endpoint_is_in_deployment(embedding_url)

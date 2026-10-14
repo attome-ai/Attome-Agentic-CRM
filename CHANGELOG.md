@@ -69,6 +69,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- Boot refuses an `inference.generation.base_url` outside the deployment unless
+  `inference.allow_external_provider` is true (it used to fail at the first request).
 - v2 renames every table, entity and API path segment that carried v1's `xrm_` or `core_` prefix
   (`/api/v1/xrm_service_ticket` is `/api/v1/service_ticket`); see `docs/roadmap-paths.md`.
 - Licences are gone: `/api/v1/admin/system-health` reports `modules` instead of `license`.

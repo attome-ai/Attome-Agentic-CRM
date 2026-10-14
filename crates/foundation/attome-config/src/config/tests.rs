@@ -4290,3 +4290,22 @@ fn sovereign_preset_refuses_outside_destinations() {
         .collect();
     assert_eq!(fields, ["storage.s3_endpoint", "google_ai.api_key"]);
 }
+
+#[test]
+fn validate_refuses_an_outside_generation_endpoint_unless_allowed() {
+    let mut config = minimal_valid_config();
+    config.inference.generation.base_url = "https://api.example-ai.com/v1".into();
+    let err = config.validate().unwrap_err();
+    assert!(
+        format!("{err}").contains("inference.generation.base_url"),
+        "{err}"
+    );
+    config.inference.allow_external_provider = true;
+    assert!(config.validate().is_ok());
+    config.inference.allow_external_provider = false;
+    config.inference.generation.base_url = "http://10.1.2.3:8000/v1".into();
+    assert!(
+        config.validate().is_ok(),
+        "a model server on the private network is inside"
+    );
+}
