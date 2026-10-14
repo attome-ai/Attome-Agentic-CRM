@@ -81,7 +81,7 @@
           <div class="setting-row">
             <div class="setting-copy">
               <strong>{{ row.view.key }}</strong>
-              <small>{{ row.view.description }}</small>
+              <small dir="auto">{{ describe(row.view) }}</small>
               <span class="source-badge" [class.is-override]="row.view.source === 'user'">
                 {{ row.view.source === 'user' ? 'Your override' : 'Inherited (' + row.view.source + ')' }}
               </span>
@@ -136,7 +136,7 @@
           <div class="setting-row">
             <div class="setting-copy">
               <strong>{{ row.view.key }}</strong>
-              <small>{{ row.view.description }}</small>
+              <small dir="auto">{{ describe(row.view) }}</small>
             </div>
             <div class="setting-control">
               @switch (row.kind) {

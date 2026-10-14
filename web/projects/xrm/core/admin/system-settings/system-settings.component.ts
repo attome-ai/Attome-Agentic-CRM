@@ -4,6 +4,7 @@ import { catchError, of } from 'rxjs';
 
 import { SidebarPreferencesService, SidebarStyle } from '@attome/xrm/core/admin/data';
 import { SettingsService, SettingValueView } from '@attome/xrm/core/admin/data';
+import { LangService } from '@attome/base';
 
 /** What kind of control `renderSetting` should show for one descriptor's
  * JSON Schema (`attome_core::setting_store`'s validated-keyword subset —
@@ -57,6 +58,12 @@ function toRow(view: SettingValueView): SettingRow {
 export class SystemSettingsComponent {
   readonly preferences = inject(SidebarPreferencesService);
   private readonly settingsApi = inject(SettingsService);
+  private readonly lang = inject(LangService);
+
+  /** U10-T1: a setting's description in the interface language. */
+  describe(view: SettingValueView): string {
+    return this.lang.current() === 'ar' && view.description_ar ? view.description_ar : view.description;
+  }
 
   /** Every runtime-eligible setting the calling user may set for
    * themselves (`allowed_scopes` includes `user`) — `/api/v1/settings/me`. */

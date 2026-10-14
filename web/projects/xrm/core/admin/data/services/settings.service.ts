@@ -15,6 +15,10 @@ export type SettingScope = 'user' | 'organization' | 'deployment';
 export interface SettingValueView {
   key:             string;
   description:     string;
+  /** U10-T1: the admin console area (`general`, `security`, `features`, `ai`, `channels`). */
+  area?:           string;
+  /** U10-T1: the description in Arabic. */
+  description_ar?: string | null;
   schema:          Record<string, unknown>;
   allowed_scopes:  SettingScope[];
   boot_time_only:  boolean;
