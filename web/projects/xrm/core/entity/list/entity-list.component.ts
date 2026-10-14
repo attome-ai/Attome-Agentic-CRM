@@ -959,12 +959,9 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
     const ids = [...this.selectedRecordIds()];
     if (!ids.length || this.bulkActionRunning()) return;
     const entity = this.entityName();
-    let impact: DeleteImpact | null = null;
-    try {
-      impact = await firstValueFrom(this.entitySvc.deleteImpact(entity, ids));
-    } catch {
-      impact = null; // The preview is a courtesy; the delete still checks everything.
-    }
+    // The preview is a courtesy; the delete itself still checks everything.
+    const impact: DeleteImpact | null = await firstValueFrom(this.entitySvc.deleteImpact(entity, ids))
+      .catch(() => null);
     if (impact?.blocked_by.length) {
       this.dialogSvc.error({
         title: this.lang.translate('entityList.actionFailedTitle'),
