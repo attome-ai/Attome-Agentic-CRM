@@ -6,6 +6,7 @@ pub mod builder;
 pub mod capability;
 pub mod health;
 pub mod metrics;
+pub mod metrics_store;
 pub mod middleware;
 pub mod openapi;
 pub mod replica_watermark;

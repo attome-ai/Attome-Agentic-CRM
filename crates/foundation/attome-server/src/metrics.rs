@@ -68,7 +68,7 @@ pub struct RouteLatency {
 }
 
 /// The `name="value"` labels of one exposition line, in order.
-fn labels_of(line: &str) -> Vec<(String, String)> {
+pub(crate) fn labels_of(line: &str) -> Vec<(String, String)> {
     let Some(start) = line.find('{') else {
         return Vec::new();
     };

@@ -322,9 +322,23 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     // request-duration/status histogram sees every response the server sends,
     // including early rejections (413 body-limit, 401 authn) that never reach
     // a handler — see attome_server::metrics for the rest of the design.
-    let metrics_server = if config.observability.metrics_port != 0 {
+    // U4-T1: the built-in metrics store needs the recorder even with no
+    // metrics port.
+    let builtin_store = config
+        .observability
+        .builtin_store
+        .unwrap_or(config.cache.backend == attome_config::CacheBackend::Memory);
+    let metrics_server = if config.observability.metrics_port != 0 || builtin_store {
         let (metrics_layer, metrics_handle) = attome_server::build_layer_and_handle();
         app = app.layer(metrics_layer);
+        if builtin_store {
+            attome_server::metrics_store::spawn(
+                base_state.db.clone(),
+                base_state.db_migrator.clone(),
+                metrics_handle.clone(),
+            );
+            tracing::info!("metrics store: sampling every minute, kept 30 days");
+        }
 
         attome_server::spawn_pool_gauge_refresh(
             base_state.clone(),
@@ -370,16 +384,20 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             );
         }
 
-        let metrics_addr = format!(
-            "{}:{}",
-            config.app.server_host, config.observability.metrics_port
-        );
-        let metrics_listener = tokio::net::TcpListener::bind(&metrics_addr).await?;
-        tracing::info!(addr = %metrics_addr, "metrics listening");
-        Some(axum::serve(
-            metrics_listener,
-            attome_server::metrics_routes(metrics_handle),
-        ))
+        if config.observability.metrics_port != 0 {
+            let metrics_addr = format!(
+                "{}:{}",
+                config.app.server_host, config.observability.metrics_port
+            );
+            let metrics_listener = tokio::net::TcpListener::bind(&metrics_addr).await?;
+            tracing::info!(addr = %metrics_addr, "metrics listening");
+            Some(axum::serve(
+                metrics_listener,
+                attome_server::metrics_routes(metrics_handle),
+            ))
+        } else {
+            None
+        }
     } else {
         None
     };

@@ -51,6 +51,11 @@ pub struct ObservabilitySection {
     /// `metrics_port == 0`.
     #[serde(default)]
     pub profiler_enabled: bool,
+    /// U4-T1: sample this process's metrics into `ops_metric_sample` every
+    /// minute, kept 30 days. Unset: on for Solo (`cache.backend = "memory"`),
+    /// off otherwise (several servers use Prometheus).
+    #[serde(default)]
+    pub builtin_store: Option<bool>,
     /// P-worker-process-split follow-up (the TODO `crates/server/src/bin/
     /// worker.rs` shipped with) — the dedicated `worker` binary has no HTTP
     /// listener at all today, so a split deployment's compose/k8s healthcheck
