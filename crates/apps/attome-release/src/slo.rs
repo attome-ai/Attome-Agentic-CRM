@@ -10,8 +10,12 @@
 //!
 //! Rules and thresholds use the `solo` profile's numbers; a class whose p99
 //! is `null` (S8 today) gets thresholds but no burn-rate rules, because the
-//! latency rules are built on the p99 bucket.
+//! latency rules are built on the p99 bucket. A `gauge` class gets one
+//! `attome:slo_gauge_bad:ratio_rate5m` rule per objective (the share of
+//! one-minute samples over the objective in the last five minutes); a
+//! `browser` class is a target only, measured in the browser, with no rule.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -32,10 +36,25 @@ pub struct Class {
     pub kind: String,
     #[serde(rename = "match")]
     pub matcher: Matcher,
-    pub targets: Targets,
-    pub error_objective: f64,
+    /// `http` classes: latency targets per profile.
+    pub targets: Option<Targets>,
+    /// `http` classes: the 5xx share allowed.
+    pub error_objective: Option<f64>,
+    /// `gauge` classes: the ceilings, one per labelled series.
+    pub objectives: Option<Vec<Objective>>,
+    /// `gauge` classes: the unit of the ceilings.
+    pub unit: Option<String>,
+    /// `browser` classes: Core Web Vitals targets.
+    pub vitals: Option<Vitals>,
     pub status: String,
     pub k6_scenario: Option<String>,
+}
+
+impl Class {
+    /// The Solo profile's latency targets, for an `http` class.
+    pub fn solo(&self) -> Option<&Latency> {
+        self.targets.as_ref().map(|targets| &targets.solo)
+    }
 }
 
 /// What a class measures: an HTTP route, or a metric with labels.
@@ -43,6 +62,22 @@ pub struct Class {
 pub struct Matcher {
     pub method: Option<String>,
     pub endpoint: Option<String>,
+    pub metric: Option<String>,
+}
+
+/// A gauge ceiling for the series with `labels`.
+#[derive(Debug, Deserialize)]
+pub struct Objective {
+    pub labels: BTreeMap<String, String>,
+    pub max: f64,
+}
+
+/// Core Web Vitals targets at the 75th percentile.
+#[derive(Debug, Deserialize)]
+pub struct Vitals {
+    pub lcp_p75_ms: f64,
+    pub inp_p75_ms: f64,
+    pub cls_p75: f64,
 }
 
 /// Per-profile latency targets.
@@ -105,11 +140,20 @@ fn lower_first(text: &str) -> String {
 /// 5xx ratios over the burn-rate windows. Empty for a non-HTTP class or one
 /// without a p99 target.
 pub fn render_class_rules(class: &Class) -> String {
-    let (Some((method, endpoint)), Some(p99)) = (route(class), class.targets.solo.p99_ms) else {
+    let (Some((method, endpoint)), Some(p99)) =
+        (route(class), class.solo().and_then(|target| target.p99_ms))
+    else {
         return String::new();
     };
     let sel = format!("method=\"{method}\",endpoint=\"{endpoint}\"");
-    let le = format!("{}", p99 / 1000.0);
+    // Prometheus 3 normalises an integer `le` to its float form (`1` is
+    // stored as `1.0`), so a whole-second budget is written that way.
+    let seconds = p99 / 1000.0;
+    let le = if seconds.fract() == 0.0 {
+        format!("{seconds:.1}")
+    } else {
+        format!("{seconds}")
+    };
     let labels = format!(
         "        labels:\n          slo_class: {}\n          slo_route: \"{method} {endpoint}\"\n          slo_p99_ms: \"{}\"\n",
         class.id,
@@ -139,11 +183,59 @@ pub fn render_class_rules(class: &Class) -> String {
     out
 }
 
+/// `name="value"` pairs, comma-separated, for a selector.
+fn selector(labels: &BTreeMap<String, String>) -> String {
+    labels
+        .iter()
+        .map(|(name, value)| format!("{name}=\"{value}\""))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+/// `name=value` pairs for a label value, or `all` for the whole metric.
+fn series(labels: &BTreeMap<String, String>) -> String {
+    if labels.is_empty() {
+        "all".to_owned()
+    } else {
+        labels
+            .iter()
+            .map(|(name, value)| format!("{name}={value}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    }
+}
+
+/// The recording rules for a `gauge` class: per objective, the share of
+/// one-minute samples over the ceiling in the last five minutes. Empty for
+/// any other class.
+pub fn render_gauge_rules(class: &Class) -> String {
+    let (Some(metric), Some(objectives)) = (&class.matcher.metric, &class.objectives) else {
+        return String::new();
+    };
+    if class.kind != "gauge" {
+        return String::new();
+    }
+    let unit = class.unit.as_deref().unwrap_or_default();
+    let mut out = String::new();
+    for objective in objectives {
+        let max = ms(objective.max);
+        let series = series(&objective.labels);
+        let selector = selector(&objective.labels);
+        out.push_str(&format!(
+            "      # {id} — {name}; {series} at most {max} {unit}\n      - record: attome:slo_gauge_bad:ratio_rate5m\n        expr: avg_over_time((max({metric}{{{selector}}}) > bool {max})[5m:1m])\n        labels:\n          slo_class: {id}\n          slo_metric: {metric}\n          slo_series: \"{series}\"\n          slo_objective: \"{max}\"\n",
+            id = class.id,
+            name = lower_first(&class.name_en),
+        ));
+    }
+    out
+}
+
 /// The whole `attome-slo` group, markers excluded.
 pub fn render_rules(catalogue: &Catalogue) -> String {
     let mut out = String::from("  - name: attome-slo\n    rules:\n");
     for class in &catalogue.classes {
         out.push_str(&render_class_rules(class));
+        out.push_str(&render_gauge_rules(class));
     }
     out.push_str(&GENERIC_ALERTS.replace("\r\n", "\n"));
     out
@@ -156,14 +248,16 @@ pub fn render_k6(catalogue: &Catalogue) -> String {
         catalogue.version
     );
     for class in &catalogue.classes {
-        let t = &class.targets.solo;
+        let Some(t) = class.solo() else {
+            continue;
+        };
         let p99 = t.p99_ms.map_or_else(|| "null".to_owned(), ms);
         out.push_str(&format!(
             "  {}: {{ p50: {}, p95: {}, p99: {p99}, errorRate: {} }},\n",
             class.id,
             ms(t.p50_ms),
             ms(t.p95_ms),
-            class.error_objective
+            class.error_objective.unwrap_or(0.001)
         ));
     }
     out.push_str(
@@ -187,28 +281,64 @@ export function thresholdsFor(classId) {\n\
     out
 }
 
+/// What a class's objective says beyond latency percentiles.
+fn objective_text(class: &Class) -> String {
+    if let Some(objectives) = &class.objectives {
+        let unit = class.unit.as_deref().unwrap_or_default();
+        return objectives
+            .iter()
+            .map(|o| format!("{} ≤ {} {unit}", series(&o.labels), ms(o.max)))
+            .collect::<Vec<_>>()
+            .join("; ");
+    }
+    if let Some(v) = &class.vitals {
+        return format!(
+            "LCP p75 ≤ {} ms, INP p75 ≤ {} ms, CLS p75 ≤ {}",
+            ms(v.lcp_p75_ms),
+            ms(v.inp_p75_ms),
+            ms(v.cls_p75)
+        );
+    }
+    "—".to_owned()
+}
+
+/// What a class measures, for the table.
+fn measures(class: &Class) -> String {
+    if let Some((method, endpoint)) = route(class) {
+        format!("`{method} {endpoint}`")
+    } else if let Some(metric) = &class.matcher.metric {
+        format!("`{metric}`")
+    } else if class.kind == "browser" {
+        "the browser (Core Web Vitals)".to_owned()
+    } else {
+        "—".to_owned()
+    }
+}
+
 /// The markdown rows of the SLO table, header included.
 pub fn render_table(catalogue: &Catalogue) -> String {
+    let dash = || "—".to_owned();
     let mut out = String::from(
-        "| Class | Name | Route | p50 ms | p95 ms | p99 ms | Error objective | Status | k6 scenario |\n\
-         |---|---|---|---|---|---|---|---|---|\n",
+        "| Class | Name | Measures | p50 ms | p95 ms | p99 ms | Objective | 5xx objective | Status | k6 scenario |\n\
+         |---|---|---|---|---|---|---|---|---|---|\n",
     );
     for class in &catalogue.classes {
-        let t = &class.targets.solo;
-        let route_text = route(class).map_or_else(|| "—".to_owned(), |(m, e)| format!("`{m} {e}`"));
+        let solo = class.solo();
         out.push_str(&format!(
-            "| {} | {} | {route_text} | {} | {} | {} | {} | {} | {} |\n",
+            "| {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |\n",
             class.id,
             class.name_en,
-            ms(t.p50_ms),
-            ms(t.p95_ms),
-            t.p99_ms.map_or_else(|| "—".to_owned(), ms),
-            class.error_objective,
+            measures(class),
+            solo.map_or_else(dash, |t| ms(t.p50_ms)),
+            solo.map_or_else(dash, |t| ms(t.p95_ms)),
+            solo.and_then(|t| t.p99_ms).map_or_else(dash, ms),
+            objective_text(class),
+            class.error_objective.map_or_else(dash, |e| e.to_string()),
             class.status,
             class
                 .k6_scenario
                 .as_deref()
-                .map_or_else(|| "—".to_owned(), |s| format!("`{s}`")),
+                .map_or_else(dash, |s| format!("`{s}`")),
         ));
     }
     out
@@ -338,6 +468,30 @@ mod tests {
         let s8 = catalogue.classes.iter().find(|c| c.id == "S8").unwrap();
         assert!(render_class_rules(s8).is_empty());
         assert!(render_k6(&catalogue).contains("S8: { p50: 60, p95: 150, p99: null"));
+    }
+
+    #[test]
+    fn gauge_class_renders_ratio_rule() {
+        let catalogue = catalogue();
+        let s10 = catalogue.classes.iter().find(|c| c.id == "S10").unwrap();
+        let rules = render_gauge_rules(s10);
+        assert_eq!(
+            rules.matches("attome:slo_gauge_bad:ratio_rate5m").count(),
+            2
+        );
+        assert!(rules.contains(
+            "avg_over_time((max(apalis_oldest_pending_age_seconds{queue=\"interactive\"}) > bool 30)[5m:1m])"
+        ));
+        assert!(
+            render_class_rules(s10).is_empty(),
+            "a gauge has no latency rules"
+        );
+        let s12 = catalogue.classes.iter().find(|c| c.id == "S12").unwrap();
+        assert!(render_gauge_rules(s12).is_empty() && render_class_rules(s12).is_empty());
+        assert!(
+            !render_k6(&catalogue).contains("S10"),
+            "k6 thresholds are http-only"
+        );
     }
 
     #[test]

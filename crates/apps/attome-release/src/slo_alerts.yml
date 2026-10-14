@@ -109,3 +109,18 @@
             alerts for {{ $labels.slo_class }} are blind. The bucket list
             (attome_server::metrics::HTTP_DURATION_BUCKETS) and the SLO budgets
             have drifted apart: add the missing boundary.
+
+      - alert: SloGaugeOverObjective
+        expr: attome:slo_gauge_bad:ratio_rate5m > 0.5
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#slogaugeoverobjective"
+          summary: "{{ $labels.slo_class }} {{ $labels.slo_series }} is over its objective of {{ $labels.slo_objective }}"
+          description: >
+            More than half of the one-minute samples of {{ $labels.slo_metric }}
+            ({{ $labels.slo_series }}) in the last five minutes were above the
+            {{ $labels.slo_class }} objective of {{ $labels.slo_objective }}, and it has
+            stayed so for 15 minutes. Ticket, not page.

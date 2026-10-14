@@ -1777,6 +1777,123 @@ groups:
           slo_class: S7
           slo_route: "POST /api/v1/notification/poll"
           slo_p99_ms: "100"
+      # S9 — mCP tool call; p99 budget 1000 ms
+      - record: attome:slo_requests:rate5m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/mcp"}[5m]))
+        labels:
+          slo_class: S9
+          slo_route: "POST /api/v1/mcp"
+          slo_p99_ms: "1000"
+      - record: attome:slo_requests:rate30m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/mcp"}[30m]))
+        labels:
+          slo_class: S9
+          slo_route: "POST /api/v1/mcp"
+          slo_p99_ms: "1000"
+      - record: attome:slo_latency_bad:ratio_rate5m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/mcp",le="1.0"}[5m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/mcp"}[5m]))
+          )
+        labels:
+          slo_class: S9
+          slo_route: "POST /api/v1/mcp"
+          slo_p99_ms: "1000"
+      - record: attome:slo_latency_bad:ratio_rate30m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/mcp",le="1.0"}[30m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/mcp"}[30m]))
+          )
+        labels:
+          slo_class: S9
+          slo_route: "POST /api/v1/mcp"
+          slo_p99_ms: "1000"
+      - record: attome:slo_latency_bad:ratio_rate1h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/mcp",le="1.0"}[1h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/mcp"}[1h]))
+          )
+        labels:
+          slo_class: S9
+          slo_route: "POST /api/v1/mcp"
+          slo_p99_ms: "1000"
+      - record: attome:slo_latency_bad:ratio_rate6h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/mcp",le="1.0"}[6h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/mcp"}[6h]))
+          )
+        labels:
+          slo_class: S9
+          slo_route: "POST /api/v1/mcp"
+          slo_p99_ms: "1000"
+      - record: attome:slo_errors:ratio_rate5m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/mcp",status=~"5.."}[5m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/mcp"}[5m]))
+        labels:
+          slo_class: S9
+          slo_route: "POST /api/v1/mcp"
+          slo_p99_ms: "1000"
+      - record: attome:slo_errors:ratio_rate30m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/mcp",status=~"5.."}[30m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/mcp"}[30m]))
+        labels:
+          slo_class: S9
+          slo_route: "POST /api/v1/mcp"
+          slo_p99_ms: "1000"
+      - record: attome:slo_errors:ratio_rate1h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/mcp",status=~"5.."}[1h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/mcp"}[1h]))
+        labels:
+          slo_class: S9
+          slo_route: "POST /api/v1/mcp"
+          slo_p99_ms: "1000"
+      - record: attome:slo_errors:ratio_rate6h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/mcp",status=~"5.."}[6h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/mcp"}[6h]))
+        labels:
+          slo_class: S9
+          slo_route: "POST /api/v1/mcp"
+          slo_p99_ms: "1000"
+      # S10 — job queue delay; queue=interactive at most 30 seconds
+      - record: attome:slo_gauge_bad:ratio_rate5m
+        expr: avg_over_time((max(apalis_oldest_pending_age_seconds{queue="interactive"}) > bool 30)[5m:1m])
+        labels:
+          slo_class: S10
+          slo_metric: apalis_oldest_pending_age_seconds
+          slo_series: "queue=interactive"
+          slo_objective: "30"
+      # S10 — job queue delay; queue=batch at most 300 seconds
+      - record: attome:slo_gauge_bad:ratio_rate5m
+        expr: avg_over_time((max(apalis_oldest_pending_age_seconds{queue="batch"}) > bool 300)[5m:1m])
+        labels:
+          slo_class: S10
+          slo_metric: apalis_oldest_pending_age_seconds
+          slo_series: "queue=batch"
+          slo_objective: "300"
+      # S11 — change-feed lag; all at most 1000 rows
+      - record: attome:slo_gauge_bad:ratio_rate5m
+        expr: avg_over_time((max(events_subscription_lag_max{}) > bool 1000)[5m:1m])
+        labels:
+          slo_class: S11
+          slo_metric: events_subscription_lag_max
+          slo_series: "all"
+          slo_objective: "1000"
 
       # Class-generic burn alerts: each reads every class's recorded series.
 
@@ -1888,4 +2005,19 @@ groups:
             alerts for {{ $labels.slo_class }} are blind. The bucket list
             (attome_server::metrics::HTTP_DURATION_BUCKETS) and the SLO budgets
             have drifted apart: add the missing boundary.
+
+      - alert: SloGaugeOverObjective
+        expr: attome:slo_gauge_bad:ratio_rate5m > 0.5
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#slogaugeoverobjective"
+          summary: "{{ $labels.slo_class }} {{ $labels.slo_series }} is over its objective of {{ $labels.slo_objective }}"
+          description: >
+            More than half of the one-minute samples of {{ $labels.slo_metric }}
+            ({{ $labels.slo_series }}) in the last five minutes were above the
+            {{ $labels.slo_class }} objective of {{ $labels.slo_objective }}, and it has
+            stayed so for 15 minutes. Ticket, not page.
   # END GENERATED attome-slo

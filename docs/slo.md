@@ -31,14 +31,18 @@ cannot claim it. The report is unsigned until the release signing key exists (AC
 ## Targets
 
 <!-- BEGIN GENERATED slo-table -->
-| Class | Name | Route | p50 ms | p95 ms | p99 ms | Error objective | Status | k6 scenario |
-|---|---|---|---|---|---|---|---|---|
-| S1 | Authenticated read, no DB work | `GET /api/v1/admin/security/whoami` | 10 | 30 | 60 | 0.001 | target | `auth.js` |
-| S2 | Login (password KDF) | `POST /api/v1/auth/login` | 150 | 300 | 500 | 0.001 | target | `auth.js` |
-| S3 | Metadata read | `GET /api/v1/schema/{logicalname}` | 10 | 20 | 40 | 0.001 | target | `metadata_read.js` |
-| S4 | Record read | `GET /api/v1/{entity}/{id}` | 15 | 40 | 100 | 0.001 | target | `crud_read.js` |
-| S5 | List page, cursor, up to 100 rows | `POST /api/v1/query/execute` | 40 | 120 | 300 | 0.001 | target | `list_query.js` |
-| S6 | Mutating write | `PATCH /api/v1/{entity}/{id}` | 30 | 100 | 200 | 0.001 | target | `mutating_write.js` |
-| S7 | Notification poll | `POST /api/v1/notification/poll` | 15 | 40 | 100 | 0.001 | target | `notification_poll.js` |
-| S8 | Search (lexical) | `GET /api/v1/search` | 60 | 150 | — | 0.001 | target | `search.js` |
+| Class | Name | Measures | p50 ms | p95 ms | p99 ms | Objective | 5xx objective | Status | k6 scenario |
+|---|---|---|---|---|---|---|---|---|---|
+| S1 | Authenticated read, no DB work | `GET /api/v1/admin/security/whoami` | 10 | 30 | 60 | — | 0.001 | target | `auth.js` |
+| S2 | Login (password KDF) | `POST /api/v1/auth/login` | 150 | 300 | 500 | — | 0.001 | target | `auth.js` |
+| S3 | Metadata read | `GET /api/v1/schema/{logicalname}` | 10 | 20 | 40 | — | 0.001 | target | `metadata_read.js` |
+| S4 | Record read | `GET /api/v1/{entity}/{id}` | 15 | 40 | 100 | — | 0.001 | target | `crud_read.js` |
+| S5 | List page, cursor, up to 100 rows | `POST /api/v1/query/execute` | 40 | 120 | 300 | — | 0.001 | target | `list_query.js` |
+| S6 | Mutating write | `PATCH /api/v1/{entity}/{id}` | 30 | 100 | 200 | — | 0.001 | target | `mutating_write.js` |
+| S7 | Notification poll | `POST /api/v1/notification/poll` | 15 | 40 | 100 | — | 0.001 | target | `notification_poll.js` |
+| S8 | Search (lexical) | `GET /api/v1/search` | 60 | 150 | — | — | 0.001 | target | `search.js` |
+| S9 | MCP tool call | `POST /api/v1/mcp` | 100 | 300 | 1000 | — | 0.001 | target | — |
+| S10 | Job queue delay | `apalis_oldest_pending_age_seconds` | — | — | — | queue=interactive ≤ 30 seconds; queue=batch ≤ 300 seconds | — | target | — |
+| S11 | Change-feed lag | `events_subscription_lag_max` | — | — | — | all ≤ 1000 rows | — | target | — |
+| S12 | Frontend vitals | the browser (Core Web Vitals) | — | — | — | LCP p75 ≤ 2500 ms, INP p75 ≤ 200 ms, CLS p75 ≤ 0.1 | — | target | — |
 <!-- END GENERATED slo-table -->

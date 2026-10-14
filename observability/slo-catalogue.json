@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "classes": [
     {
       "id": "S1",
@@ -288,6 +288,108 @@
       "status": "target",
       "evidence": null,
       "k6_scenario": "search.js"
+    },
+    {
+      "id": "S9",
+      "name_en": "MCP tool call",
+      "name_ar": "استدعاء أداة MCP",
+      "kind": "http",
+      "match": {
+        "method": "POST",
+        "endpoint": "/api/v1/mcp"
+      },
+      "targets": {
+        "solo": {
+          "p50_ms": 100,
+          "p95_ms": 300,
+          "p99_ms": 1000
+        },
+        "team": {
+          "p50_ms": 100,
+          "p95_ms": 300,
+          "p99_ms": 1000
+        },
+        "ha": {
+          "p50_ms": 100,
+          "p95_ms": 300,
+          "p99_ms": 1000
+        },
+        "scale": {
+          "p50_ms": 100,
+          "p95_ms": 300,
+          "p99_ms": 1000
+        }
+      },
+      "error_objective": 0.001,
+      "status": "target",
+      "evidence": null,
+      "k6_scenario": null
+    },
+    {
+      "id": "S10",
+      "name_en": "Job queue delay",
+      "name_ar": "تأخر طابور المهام",
+      "kind": "gauge",
+      "match": {
+        "metric": "apalis_oldest_pending_age_seconds",
+        "labels": {}
+      },
+      "objectives": [
+        {
+          "labels": {
+            "queue": "interactive"
+          },
+          "max": 30
+        },
+        {
+          "labels": {
+            "queue": "batch"
+          },
+          "max": 300
+        }
+      ],
+      "unit": "seconds",
+      "error_objective": null,
+      "status": "target",
+      "evidence": null,
+      "k6_scenario": null
+    },
+    {
+      "id": "S11",
+      "name_en": "Change-feed lag",
+      "name_ar": "تأخر سجل التغييرات",
+      "kind": "gauge",
+      "match": {
+        "metric": "events_subscription_lag_max",
+        "labels": {}
+      },
+      "objectives": [
+        {
+          "labels": {},
+          "max": 1000
+        }
+      ],
+      "unit": "rows",
+      "error_objective": null,
+      "status": "target",
+      "evidence": null,
+      "k6_scenario": null
+    },
+    {
+      "id": "S12",
+      "name_en": "Frontend vitals",
+      "name_ar": "مؤشرات الواجهة",
+      "kind": "browser",
+      "match": {},
+      "vitals": {
+        "lcp_p75_ms": 2500,
+        "inp_p75_ms": 200,
+        "cls_p75": 0.1
+      },
+      "error_objective": null,
+      "status": "target",
+      "evidence": null,
+      "k6_scenario": null
     }
   ]
 }

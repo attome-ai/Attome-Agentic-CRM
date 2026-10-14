@@ -81,9 +81,19 @@ pub fn measured(matrix: &Value, class_id: &str) -> Option<Measured> {
 }
 
 /// Judges one class. A target percentile with no matching measurement makes
-/// the class not measured rather than met.
+/// the class not measured rather than met. A class with no latency targets
+/// (a gauge or browser class) is not something the load test measures, so it
+/// is always "not measured" here.
 pub fn verdict(class: &Class, matrix: &Value) -> Verdict {
-    let target = &class.targets.solo;
+    let Some(target) = class.solo() else {
+        return Verdict {
+            id: class.id.clone(),
+            name: class.name_en.clone(),
+            measured: None,
+            met: None,
+            missed: Vec::new(),
+        };
+    };
     let measured = measured(matrix, &class.id);
     let (met, missed) = match measured {
         None => (None, Vec::new()),
@@ -178,11 +188,14 @@ pub fn report(
         .iter()
         .zip(&verdicts)
         .map(|(class, v)| {
-            let t = &class.targets.solo;
+            let target = class.solo().map_or(
+                Value::Null,
+                |t| json!({ "p50_ms": t.p50_ms, "p95_ms": t.p95_ms, "p99_ms": t.p99_ms }),
+            );
             json!({
                 "id": v.id,
                 "name": v.name,
-                "target": { "p50_ms": t.p50_ms, "p95_ms": t.p95_ms, "p99_ms": t.p99_ms },
+                "target": target,
                 "measured": measured_json(v.measured),
                 "met": v.met,
                 "missed": v.missed,

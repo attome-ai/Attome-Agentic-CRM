@@ -32,22 +32,19 @@ the common causes.
 
 ## SLOs (burn rate)
 
-The `attome-slo` group records, per class in runtime-performance §1.1 (S1–S7), the share of
-requests slower than the class p99 budget and the share that returned 5xx, over 5m, 30m, 1h and
-6h. The objectives are 99% within budget and under 0.1% 5xx over 30 days. Every alert carries
-`slo_class`, `slo_route` (method and matched path) and `slo_p99_ms`. The recorded series are
-`attome:slo_latency_bad:ratio_rate<window>` and `attome:slo_errors:ratio_rate<window>`; graph
-them by `slo_class` to see when the burn started.
+`observability/slo-catalogue.json` is the single source for the SLO classes; `docs/slo.md` has the
+generated table and `attome slo generate` writes the `attome-slo` group from it (edit the
+catalogue, never the group). For each `http` class the group records the share of requests slower
+than the class p99 budget and the share that returned 5xx, over 5m, 30m, 1h and 6h. The objectives
+are 99% within budget and under 0.1% 5xx over 30 days. Every burn alert carries `slo_class`,
+`slo_route` (method and matched path) and `slo_p99_ms`. The recorded series are
+`attome:slo_latency_bad:ratio_rate<window>` and `attome:slo_errors:ratio_rate<window>`; graph them
+by `slo_class` to see when the burn started.
 
-| Class | Route | p99 budget |
-|---|---|---|
-| S1 | `GET /api/v1/admin/security/whoami` | 60 ms |
-| S2 | `POST /api/v1/auth/login` | 500 ms |
-| S3 | `GET /api/v1/schema/{logicalname}` | 40 ms |
-| S4 | `GET /api/v1/{entity}/{id}` | 100 ms |
-| S5 | `POST /api/v1/query/execute` | 300 ms |
-| S6 | `PATCH /api/v1/{entity}/{id}` | 200 ms |
-| S7 | `POST /api/v1/notification/poll` | 100 ms |
+A `gauge` class (S10 job queue delay, S11 change-feed lag) records
+`attome:slo_gauge_bad:ratio_rate5m` per objective: the share of one-minute samples over the
+ceiling in the last five minutes, labelled `slo_class`, `slo_metric`, `slo_series` and
+`slo_objective`. A `browser` class (S12) is a target only; nothing here measures it.
 
 ### SloLatencyBurnFast
 
@@ -88,6 +85,18 @@ every class budget (`attome_server::metrics::HTTP_DURATION_BUCKETS`, pinned by `
 `the_duration_histogram_has_every_slo_bucket` test), so this firing means the bucket list and the
 §1.1 budgets have drifted apart: add the missing boundary. Check the exporter output
 with `curl <node>:9464/metrics | grep 'axum_http_requests_duration_seconds_bucket' | grep -o 'le="[^"]*"' | sort -u`.
+
+### SloGaugeOverObjective
+
+A gauge SLO class has been over its objective for most of the last five minutes, for 15 minutes.
+`slo_series` names the series and `slo_objective` the ceiling.
+
+- **S10, job queue delay** (`apalis_oldest_pending_age_seconds`): the oldest ready job has waited
+  longer than the lane allows (30 s interactive, 300 s batch). Check that a worker is running
+  (`apalis_worker_last_seen_age_seconds`), the backlog (`apalis_pending_jobs`) and whether one job kind
+  floods the lane; add a worker or fix the stuck kind.
+- **S11, change-feed lag** (`events_subscription_lag_max`): an active subscription is more than
+  1000 feed rows behind. `EventDeliveryBacklogGrowing` usually fires with it; follow that entry.
 
 ## Redis / Dragonfly
 
