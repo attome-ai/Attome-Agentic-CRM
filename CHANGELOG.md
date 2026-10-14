@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `GET /api/v1/admin/approvals/metrics`: per-approver decisions, approval share and median time,
+  backlog by action, common rejection words, and rubber-stamp warnings.
 - `POST /api/v1/admin/approvals/batch-decide`: decide up to 100 similar requests at once, each through
   the single-decision path, with each request's outcome returned.
 - The agent designer runs the agent's eval suites and shows each case's result.

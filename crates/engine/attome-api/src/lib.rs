@@ -13,6 +13,8 @@ mod api_usage_admin;
 /// `view_admin`/`calendar_admin` are — `bundle` reconciles it.
 pub mod app_admin;
 mod approval_admin;
+/// N30-T8/T9 — `/api/v1/admin/approvals/metrics`.
+mod approval_metrics;
 mod approval_policy_admin;
 /// audit-10-10 Phase 6 items 6.1-6.3 — self-service record history and my-
 /// activity read APIs over the audit ledger. `mod`, not `pub`: nothing else

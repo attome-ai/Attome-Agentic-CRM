@@ -147,6 +147,8 @@ impl EngineSystem {
             .merge(crate::model_admin::routes())
             // A1-T11: model-health findings (admin-gated in the handler).
             .merge(crate::model_health::routes())
+            // N30-T8/T9: approval figures and rubber-stamp warnings (admin-gated).
+            .merge(crate::approval_metrics::routes())
             .merge(crate::live::routes())
             .merge(crate::calendar_admin::routes())
             // M65 Phase 1 — Application Builder: same "core, always-on,

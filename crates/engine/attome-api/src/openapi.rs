@@ -88,6 +88,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         crate::email_admin::openapi_fragment(),
         crate::license_admin::openapi_fragment(),
         crate::approval_admin::openapi_fragment(),
+        crate::approval_metrics::openapi_fragment(),
         crate::approval_policy_admin::openapi_fragment(),
         crate::signoff::openapi_fragment(),
         crate::profiler_admin::openapi_fragment(),
