@@ -159,6 +159,8 @@ export const xrmEn = {
     kinds: { agent: 'Agent', model: 'Model', provider: 'Provider', tool: 'Tool', channel: 'Channel' },
     causes: { manual: 'by an administrator', budget: 'budget overrun', quality: 'quality drop', injection: 'injection spike', departure: 'owner left' },
   },
+  // N29-T3 — delegated sessions in a trace.
+  agentSessionsTree: { delegated: 'Delegated to' },
   // N30-T10 — an agent's change on the approval card.
   approvalCard: { field: 'Field', before: 'Now', after: 'After approval', agentSaid: 'The agent wrote (not checked by the platform):' },
   // N20-T2 — translate a note or reply.

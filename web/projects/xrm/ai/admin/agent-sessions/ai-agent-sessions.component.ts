@@ -8,7 +8,7 @@ import type { ApiError } from '@attome/base';
 import { AiActionsService } from '../../services/ai-actions.service';
 import type { ActionOutcome } from '../../services/ai-actions.service';
 import { AdminAiService } from '../../services/admin-ai.service';
-import type { AgentTraceStep } from '../../services/admin-ai.service';
+import type { AgentChildSession, AgentTraceStep } from '../../services/admin-ai.service';
 import { AiRuntimeSwitchComponent } from '../runtime-switch/ai-runtime-switch.component';
 import { AiBotAnalyticsComponent } from '../bot-analytics/ai-bot-analytics.component';
 import type {
@@ -74,6 +74,10 @@ export class AiAgentSessionsComponent implements OnInit {
   /** N29-T2: the session whose steps are shown, and its steps. */
   readonly traceFor = signal<string | null>(null);
   readonly trace = signal<AgentTraceStep[]>([]);
+  /** The sessions the traced session delegated to (N29-T3). */
+  readonly children = signal<AgentChildSession[]>([]);
+  /** A delegated session's steps, by its id, once opened. */
+  readonly childTrace = signal<Record<string, AgentTraceStep[]>>({});
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
 
@@ -94,15 +98,42 @@ export class AiAgentSessionsComponent implements OnInit {
     if (this.traceFor() === session.id) {
       this.traceFor.set(null);
       this.trace.set([]);
+      this.children.set([]);
+      this.childTrace.set({});
       return;
     }
     this.traceFor.set(session.id);
     this.trace.set([]);
+    this.children.set([]);
+    this.childTrace.set({});
+    this.adminAi
+      .sessionChildren(session.id)
+      .pipe(takeUntilDestroyed(this.viewDestroyRef))
+      .subscribe({
+        next: (page) => this.children.set(page.items ?? []),
+        error: () => this.children.set([]),
+      });
     this.adminAi
       .sessionTrace(session.id)
       .pipe(takeUntilDestroyed(this.viewDestroyRef))
       .subscribe({
         next: (page) => this.trace.set(page.items ?? []),
+        error: (e: ApiError) => this.error.set(e.message),
+      });
+  }
+
+  /** Shows a delegated session's steps, or hides them. */
+  toggleChild(id: string): void {
+    const open = { ...this.childTrace() };
+    if (open[id]) {
+      this.childTrace.set(Object.fromEntries(Object.entries(open).filter(([key]) => key !== id)));
+      return;
+    }
+    this.adminAi
+      .sessionTrace(id)
+      .pipe(takeUntilDestroyed(this.viewDestroyRef))
+      .subscribe({
+        next: (page) => this.childTrace.set({ ...this.childTrace(), [id]: page.items ?? [] }),
         error: (e: ApiError) => this.error.set(e.message),
       });
   }

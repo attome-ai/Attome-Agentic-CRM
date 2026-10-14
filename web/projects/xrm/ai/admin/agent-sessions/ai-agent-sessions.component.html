@@ -250,6 +250,28 @@
             }
           </ol>
         }
+        @if (children().length > 0) {
+          <h4>{{ 'agentSessionsTree.delegated' | translate }}</h4>
+          <ul class="as__children">
+            @for (child of children(); track child.id) {
+              <li [attr.data-child]="child.id">
+                <code dir="ltr">{{ child.agent_object_ref ?? child.id }}</code>
+                <span>{{ child.started_at | localDate }}</span>
+                <button type="button" (click)="toggleChild(child.id)">{{ 'agentSessions.trace' | translate }}</button>
+                @if (childTrace()[child.id]; as steps) {
+                  <ol class="as__trace-steps">
+                    @for (step of steps; track step.id) {
+                      <li [attr.data-child-step]="step.action_id">
+                        <code dir="ltr">{{ step.action_id }}</code>
+                        <span class="as__trace-outcome">{{ step.outcome }}</span>
+                      </li>
+                    }
+                  </ol>
+                }
+              </li>
+            }
+          </ul>
+        }
       </section>
     }
 

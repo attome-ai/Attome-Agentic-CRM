@@ -230,6 +230,20 @@ export class AdminAiService {
   sessionTrace(id: string): Observable<Page<AgentTraceStep>> {
     return this.api.get<Page<AgentTraceStep>>(`/api/v1/admin/agents/sessions/${encodeURIComponent(id)}/trace`);
   }
+
+  /** The sessions a supervising session delegated to (N8-T1's run tree). */
+  sessionChildren(id: string): Observable<Page<AgentChildSession>> {
+    return this.api.get<Page<AgentChildSession>>(`/api/v1/admin/agents/sessions/${encodeURIComponent(id)}/children`);
+  }
+}
+
+/** One delegated session (`session_admin::ChildSession`). */
+export interface AgentChildSession {
+  id:               string;
+  agent_object_ref: string | null;
+  surface:          string;
+  started_at:       string;
+  revoked_at:       string | null;
 }
 
 /** One step of a session's run (`session_admin::TraceStep`). */

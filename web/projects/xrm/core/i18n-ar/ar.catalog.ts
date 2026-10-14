@@ -129,6 +129,7 @@ export const xrmAr = {
     save: 'حفظ', saving: 'جارٍ الحفظ…', saved: 'تم الحفظ',
   },
   // N31-T2 — مفاتيح الذكاء الاصطناعي المحددة، انظر en.catalog.ts
+  agentSessionsTree: { delegated: 'فُوِّض إلى' },
   approvalCard: { field: 'الحقل', before: 'الآن', after: 'بعد الموافقة', agentSaid: 'كتب الوكيل (لم تتحقق منه المنصة):' },
   translateText: { translate: 'ترجمة', working: 'جارٍ الترجمة…', hide: 'إخفاء الترجمة', failed: 'الترجمة غير متاحة.' },
   aiStatus: {

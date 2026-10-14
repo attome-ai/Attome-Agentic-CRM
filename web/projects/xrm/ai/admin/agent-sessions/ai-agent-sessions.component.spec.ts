@@ -51,6 +51,11 @@ describe('AiAgentSessionsComponent — retrieval mode', () => {
                         acting_user_id: 'u1', created_at: '2026-10-14T00:00:00Z' }],
               total: 1, page: 1, page_size: 1000,
             })),
+            sessionChildren: vi.fn().mockReturnValue(of({
+              items: [{ id: 'c1', agent_object_ref: 'a9', surface: 'delegate',
+                        started_at: '2026-10-14T00:00:00Z', revoked_at: '2026-10-14T00:01:00Z' }],
+              total: 1, page: 1, page_size: 200,
+            })),
           },
         },
         { provide: AiActionsService, useValue: { invoke: vi.fn() } },
@@ -94,6 +99,21 @@ describe('AiAgentSessionsComponent — retrieval mode', () => {
     cmp.toggleTrace(cmp.sessions()[0]);
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('.as__trace')).toBeNull();
+  });
+
+  it('shows the sessions a supervisor delegated to and their steps (N29-T3)', async () => {
+    await render([session({})]);
+    const cmp = fixture.componentInstance;
+    cmp.toggleTrace(cmp.sessions()[0]);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-child="c1"]')?.textContent).toContain('a9');
+    cmp.toggleChild('c1');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-child-step="record.get"]')).not.toBeNull();
+    cmp.toggleChild('c1');
+    fixture.detectChanges();
+    expect(el.querySelector('[data-child-step="record.get"]')).toBeNull();
   });
 
   it('shows no configured mode for a session without a definition', async () => {
