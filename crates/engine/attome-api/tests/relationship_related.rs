@@ -113,7 +113,8 @@ fn test_config() -> AppConfig {
             "llm_api": {{}},
             "external_api": {{}},
             "s2s": {{ "enabled": false }},
-            "security": {{ "bootstrap_admin_email": null }}
+            "security": {{ "bootstrap_admin_email": null }},
+            "audit": {{ "chainer_enabled": false }}
         }}"#,
         redis_host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "localhost".into()),
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),

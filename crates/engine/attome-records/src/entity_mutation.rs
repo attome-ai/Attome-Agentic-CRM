@@ -3479,8 +3479,18 @@ pub async fn restore_one(
     // distinct lookup-target table this row's current values reference, so
     // nothing can deactivate a target out from under this restore between
     // the check and the commit below.
+    //
+    // System columns (`created_by`, `modified_by`, `owner_ref`,
+    // `organization_ref`) are skipped: they are server-stamped provenance and
+    // ownership, not user lookups, and a record created or owned by a user
+    // who has since been deactivated must stay restorable.
     if let Some(obj) = snapshot.as_object() {
-        lock_lookup_targets(tx, state, attrs, obj).await?;
+        let user_lookups: Vec<AttrInfo> = attrs
+            .iter()
+            .filter(|a| !attome_core::ALL_SYSTEM_COLS.contains(&a.logicalname.as_str()))
+            .cloned()
+            .collect();
+        lock_lookup_targets(tx, state, &user_lookups, obj).await?;
     }
 
     // Same `WITH r AS (... RETURNING {cols}) SELECT row_to_json(r)` shape
