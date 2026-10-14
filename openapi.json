@@ -41734,12 +41734,68 @@
         }
       }
     },
+    "/api/v1/branding/me": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T5: the brand for the signed-in caller: the deployment's, then the\napp's (`app`), the caller's business unit's, the domain's.",
+        "operationId": "my_branding",
+        "parameters": [
+          {
+            "name": "app",
+            "in": "path",
+            "description": "The app being shown, when it has its own theme.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The brand to apply",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBranding"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Unchanged since the ETag the caller holds"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/branding/public": {
       "get": {
         "tags": [
           "settings"
         ],
-        "summary": "B13-T5: the published brand for this host, for the sign-in page and the\napp shell: CSS variables, fonts and whether to hide the vendor's name.\nNo session and no user data.",
+        "summary": "B13-T5: the published brand for this host, for the sign-in page and the\napp shell: CSS variables, fonts and whether to hide the vendor's name.\nNo session and no user data. Answers `304` to an `If-None-Match` naming\nthe current published versions.",
         "operationId": "public_branding",
         "responses": {
           "200": {
@@ -41751,6 +41807,9 @@
                 }
               }
             }
+          },
+          "304": {
+            "description": "Unchanged since the ETag the caller holds"
           }
         }
       }

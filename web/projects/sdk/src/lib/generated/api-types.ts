@@ -7880,6 +7880,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/branding/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * B13-T5: the brand for the signed-in caller: the deployment's, then the
+         *     app's (`app`), the caller's business unit's, the domain's.
+         */
+        get: operations["my_branding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/branding/public": {
         parameters: {
             query?: never;
@@ -7890,7 +7910,8 @@ export interface paths {
         /**
          * B13-T5: the published brand for this host, for the sign-in page and the
          *     app shell: CSS variables, fonts and whether to hide the vendor's name.
-         *     No session and no user data.
+         *     No session and no user data. Answers `304` to an `If-None-Match` naming
+         *     the current published versions.
          */
         get: operations["public_branding"];
         put?: never;
@@ -54120,6 +54141,45 @@ export interface operations {
             };
         };
     };
+    my_branding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The app being shown, when it has its own theme. */
+                app: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The brand to apply */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicBranding"];
+                };
+            };
+            /** @description Unchanged since the ETag the caller holds */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     public_branding: {
         parameters: {
             query?: never;
@@ -54137,6 +54197,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PublicBranding"];
                 };
+            };
+            /** @description Unchanged since the ETag the caller holds */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
