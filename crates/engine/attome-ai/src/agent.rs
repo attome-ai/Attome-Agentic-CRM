@@ -789,15 +789,90 @@ async fn start_session_from_definition(
     }))
 }
 
+/// One limit class's use today against the agent's cap.
+#[derive(Serialize, ToSchema)]
+pub struct AgentUsageView {
+    /// `record_changes` | `deletes` | `messages` | `external_calls`.
+    pub class: String,
+    /// Steps of this class the agent ran today (UTC), across its sessions.
+    pub used: i64,
+    /// The agent's published daily cap, or `null` for no cap.
+    pub limit: Option<u64>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct AgentUsageResponse {
+    pub items: Vec<AgentUsageView>,
+}
+
+const DAILY_CLASSES: [(&str, crate::descriptor::LimitClass); 4] = [
+    (
+        "record_changes",
+        crate::descriptor::LimitClass::RecordChange,
+    ),
+    ("deletes", crate::descriptor::LimitClass::Delete),
+    ("messages", crate::descriptor::LimitClass::MessageSend),
+    (
+        "external_calls",
+        crate::descriptor::LimitClass::ExternalCall,
+    ),
+];
+
+/// `GET /api/v1/admin/ai/agents/{agent}/usage` — what a published agent
+/// object did today against its daily limits (AH4-T4, V2-D487).
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/ai/agents/{agent}/usage",
+    tag = "action",
+    params(("agent" = Uuid, Path, description = "The agent metadata object")),
+    responses(
+        (status = 200, description = "Used and limit per class, today (UTC)", body = AgentUsageResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No published agent object with this id", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn agent_usage(
+    State(state): State<EngineState>,
+    _ctx: Authorized<attome_server::authz::Admin>,
+    Path(agent): Path<Uuid>,
+) -> Result<Json<AgentUsageResponse>, AppError> {
+    let (_, daily) = published_agent(&state, agent).await?;
+    let mut items = Vec::with_capacity(DAILY_CLASSES.len());
+    for (key, class) in DAILY_CLASSES {
+        let ids = crate::engine::REGISTRY.ids_of_class(class);
+        let used = session::used_today(&state.base.db, agent, &ids).await?;
+        let limit = daily
+            .as_ref()
+            .and_then(|d| d.get(key))
+            .and_then(Value::as_u64);
+        items.push(AgentUsageView {
+            class: key.to_owned(),
+            used,
+            limit,
+        });
+    }
+    Ok(Json(AgentUsageResponse { items }))
+}
+
 pub fn routes() -> Router<EngineState> {
-    Router::new().route(
-        "/api/v1/agents/{id}/sessions",
-        post(start_session_from_definition),
-    )
+    Router::new()
+        .route(
+            "/api/v1/agents/{id}/sessions",
+            post(start_session_from_definition),
+        )
+        .route(
+            "/api/v1/admin/ai/agents/{agent}/usage",
+            axum::routing::get(agent_usage),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(start_session_from_definition))]
+#[openapi(
+    paths(start_session_from_definition, agent_usage),
+    components(schemas(AgentUsageView, AgentUsageResponse))
+)]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
