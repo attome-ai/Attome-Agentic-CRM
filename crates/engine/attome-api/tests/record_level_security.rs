@@ -3912,7 +3912,43 @@ async fn provision_xrm_document_minimal(
     if let Some(entity_id) = existing {
         return entity_id;
     }
-    let entity_id = provision_entity(app, admin_cookie, "attome_document").await;
+    // Two tests in this binary can race here: the loser's create is a 409,
+    // and it waits for the winner's fields instead of creating its own.
+    let req = Request::builder()
+        .method("POST")
+        .uri("/api/v1/admin/entities")
+        .header("cookie", admin_cookie)
+        .header("content-type", "application/json")
+        .body(Body::from(
+            r#"{"logicalname":"attome_document","name":"RLS Test"}"#,
+        ))
+        .unwrap();
+    let res = app.clone().oneshot(req).await.expect("create entity");
+    if res.status() == StatusCode::CONFLICT {
+        for _ in 0..100 {
+            let fields: i64 = sqlx::query_scalar(
+                "SELECT COUNT(*) FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref                  WHERE e.logicalname = 'attome_document'                  AND a.logicalname IN ('entity_name', 'record_id')",
+            )
+            .fetch_one(db)
+            .await
+            .expect("count attome_document fields");
+            if fields == 2 {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        return sqlx::query_scalar(
+            "SELECT id FROM entity_info WHERE logicalname = 'attome_document' AND is_active IS NOT FALSE",
+        )
+        .fetch_one(db)
+        .await
+        .expect("attome_document exists after the conflict");
+    }
+    assert_eq!(res.status(), StatusCode::CREATED, "create attome_document");
+    let entity_id: Uuid = body_json(res).await["id"]
+        .as_str()
+        .and_then(|s| s.parse().ok())
+        .expect("entity id");
     for logicalname in ["entity_name", "record_id"] {
         let req = Request::builder()
             .method("POST")
