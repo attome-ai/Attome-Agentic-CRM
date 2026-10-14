@@ -1,6 +1,6 @@
 //! P-health-readiness (extended by P-observability-completion) — `GET
 //! /health/dependencies`: read-only diagnostic coverage for object storage,
-//! apalis job workers, email/SMTP, the audit chainer, and license state.
+//! apalis job workers, email/SMTP and the audit chainer.
 //! Deliberately separate from `attome_server::health_routes`'s `/health/ready`
 //! (readiness — gates load-balancer/Kubernetes traffic routing on DB/Redis/
 //! registry) and `attome_server::liveness_routes`'s `/health` (liveness — must
@@ -10,12 +10,14 @@
 //! rotation. This endpoint therefore **always returns 200** — a
 //! diagnostic-only endpoint that can return a non-200 status is one careless
 //! `livenessProbe:` edit away from becoming a second, accidental readiness
-//! gate. Unauthenticated, same convention as `/health`/`/health/ready` (infra
-//! tooling can't authenticate, and what this reveals is operational state
-//! only — queue ages, lag seconds, reachability booleans — never customer
-//! data or secrets).
+//! gate. **Administrators only** (U9-T2): unlike `/health` and `/health/ready`,
+//! which a load balancer polls, this one describes the deployment's
+//! internals (which relays and workers exist, their lag), so a monitor reads
+//! it with an administrator API key. It no longer reports which modules are
+//! on.
 
 use attome_core::EngineState;
+use attome_server::authz::{Admin, Authorized};
 use attome_types::ErrorResponse;
 use axum::{Json, Router, extract::State, routing::get};
 use serde_json::{Value, json};
@@ -26,10 +28,12 @@ use serde_json::{Value, json};
     tag = "operations",
     responses(
         (status = 200, description = "Success", body = serde_json::Value),
-        (status = 422, description = "Request failed validation", body = ErrorResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
     ),
+    security(("session_cookie" = []), ("api_key" = [])),
 )]
-async fn dependencies(State(state): State<EngineState>) -> Json<Value> {
+async fn dependencies(State(state): State<EngineState>, _ctx: Authorized<Admin>) -> Json<Value> {
     let (storage, email) = tokio::join!(
         attome_storage::health_check(&state.base.storage),
         attome_email::health_check_with_timeout(
@@ -71,14 +75,6 @@ async fn dependencies(State(state): State<EngineState>) -> Json<Value> {
         json!({ "enabled": false })
     };
 
-    // P-observability-completion — closes the "health reporting omits
-    // license ... state" half of the finding this endpoint was extended for.
-    // A cheap arc-swap load, same cost class as every other field read here —
-    // never a DB round trip, so it costs nothing to include unconditionally.
-    // The modules this deployment has on (attome-modules); there are no
-    // licences, seats or expiry dates in v2.
-    let modules: Vec<&str> = state.modules.load().names().collect();
-
     // D-344 (amends D-167) — the enforceable half. Everything above is a
     // *live* probe run for this request; this block is what the route-level
     // gate (`attome_server::capability`) is currently enforcing, as maintained
@@ -112,7 +108,6 @@ async fn dependencies(State(state): State<EngineState>) -> Json<Value> {
             "batch": { "worker_last_seen_age_seconds": batch_age.ok().flatten() },
         },
         "audit_chainer": audit,
-        "modules": modules,
         "capabilities": {
             "gated_routes": capabilities,
             "audit_ingest": {

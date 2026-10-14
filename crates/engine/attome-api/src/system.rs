@@ -614,11 +614,10 @@ impl EngineSystem {
             // mounted separately via `ServerBuilder::with_liveness_routes`
             // in main.rs so it skips the Redis-dependent pre-auth rate
             // limiter (see `attome_server::liveness_routes`'s doc comment).
-            // `/health/ready` (above, via health_routes) and
-            // `/health/dependencies` (below) are unauthenticated but
-            // deliberately DO depend on Redis/DB/storage/jobs/email/audit —
-            // that's their purpose as readiness/diagnostic probes; see
-            // system_health.rs's module doc.
+            // `/health/ready` (above, via health_routes) is unauthenticated
+            // but deliberately DOES depend on Redis/DB; `/health/dependencies`
+            // (below) is for administrators (U9-T2) and probes storage, jobs,
+            // email and audit; see system_health.rs's module doc.
             .merge(crate::system_health::routes())
             .merge(authed)
             .with_state(self.state);

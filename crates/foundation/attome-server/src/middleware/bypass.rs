@@ -30,13 +30,9 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     "/health/ready",
     // U9-T1: the startup probe, same unauthenticated convention.
     "/health/startup",
-    // P-health-readiness: diagnostic-only (storage/jobs/email/audit
-    // reachability) — never gates traffic, always 200, same unauthenticated
-    // convention as the other two /health paths above.
-    "/health/dependencies",
     // P-deployment-preflight follow-up (deployment manifest): read-only
     // version/schema info, same unauthenticated diagnostic convention as the
-    // three /health paths above — never customer data or secrets.
+    // /health paths above — never customer data or secrets.
     "/version",
     // Content Management (D-367): the platform's first public,
     // anonymous-facing content route — a published page's custom URL is
@@ -206,8 +202,10 @@ mod tests {
         assert!(is_bypass("/api/v1/auth/login"));
         assert!(is_bypass("/health"));
         assert!(is_bypass("/health/ready"));
-        assert!(is_bypass("/health/dependencies"));
+        assert!(is_bypass("/health/startup"));
         assert!(is_bypass("/version"));
+        // U9-T2: the dependency report is for administrators.
+        assert!(!is_bypass("/health/dependencies"));
     }
 
     #[test]

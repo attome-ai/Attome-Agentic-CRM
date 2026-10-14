@@ -16,7 +16,7 @@
 )]
 
 use attome_api::EngineSystem;
-use attome_config::AppConfig;
+use attome_config::{AppConfig, KeyRing};
 use attome_core::EngineState;
 use attome_server::AppState;
 use attome_testkit::skip_if_no_db;
@@ -24,6 +24,51 @@ use axum::body::Body;
 use axum::body::to_bytes;
 use axum::http::{Request, StatusCode};
 use tower::ServiceExt;
+use uuid::Uuid;
+
+fn session_cookie(user_id: Uuid) -> String {
+    let now = chrono::Utc::now().timestamp();
+    let claims = attome_auth::SessionClaims {
+        sub: user_id,
+        iat: now,
+        exp: now + 3600,
+        jti: Uuid::now_v7(),
+        epoch: 0,
+        iss: "attome-test".into(),
+        aud: "attome-test".into(),
+        typ: attome_auth::TokenType::Session,
+    };
+    let ring = KeyRing::single("test-only-throwaway-secret-do-not-use-in-prod".to_string());
+    let token = attome_auth::create_token(&claims, &ring).expect("encode throwaway jwt");
+    format!("{}={token}", attome_auth::cookie::session_cookie_name(true))
+}
+
+/// A user holding `system.admin`, and a session cookie for them.
+async fn seed_admin(db: &attome_db::DbPool) -> String {
+    let user_id = Uuid::now_v7();
+    sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
+        .bind(user_id)
+        .bind(format!("system-health-admin-{user_id}"))
+        .execute(db)
+        .await
+        .expect("insert throwaway admin");
+    let privilege_id: Uuid =
+        sqlx::query_scalar("SELECT id FROM privilege WHERE key = 'system.admin'")
+            .fetch_one(db)
+            .await
+            .expect("system.admin is seeded");
+    sqlx::query(
+        "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+         VALUES ($1, $2, $3, true, NOW())",
+    )
+    .bind(Uuid::now_v7())
+    .bind(user_id)
+    .bind(privilege_id)
+    .execute(db)
+    .await
+    .expect("grant system.admin");
+    session_cookie(user_id)
+}
 
 fn test_config() -> AppConfig {
     let json = format!(
@@ -165,17 +210,27 @@ fn full_app(system: EngineSystem) -> axum::Router {
         .build(|r| attome_api::apply_s2s_layer(r, base_state.clone()))
 }
 
-/// The actual regression this feature exists to prevent: no cookie, no
-/// API key, no S2S header at all — this is meant to be reachable by
-/// uptime monitors/on-call dashboards that can't authenticate.
+/// U9-T2: the dependency report is for administrators. Without a session it
+/// is refused; with an administrator's it answers 200, and it no longer names
+/// the modules this deployment has on.
 #[tokio::test]
-async fn dependencies_endpoint_is_reachable_with_no_auth_headers_at_all() {
+async fn dependencies_endpoint_answers_administrators_only() {
     let system = skip_if_no_db!(test_system().await);
+    let cookie = seed_admin(&system.state().base.db).await;
     let app = full_app(system);
+
+    let anonymous = Request::builder()
+        .method("GET")
+        .uri("/health/dependencies")
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(anonymous).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
 
     let req = Request::builder()
         .method("GET")
         .uri("/health/dependencies")
+        .header("cookie", &cookie)
         .body(Body::empty())
         .unwrap();
     let resp = app.oneshot(req).await.unwrap();
@@ -194,10 +249,7 @@ async fn dependencies_endpoint_is_reachable_with_no_auth_headers_at_all() {
     assert_eq!(body["clamav"]["enabled"], false);
     assert!(body["jobs"]["fast"].is_object());
     assert!(body["jobs"]["batch"].is_object());
-    // The modules this deployment has on; test_system() turns all of them on.
-    let modules = body["modules"].as_array().expect("modules is a list");
-    assert!(modules.iter().any(|m| m == "core"));
-    assert!(modules.iter().any(|m| m == "workflow"));
+    assert!(body.get("modules").is_none(), "no licence or module state");
 }
 
 /// This endpoint must never affect `/health/ready`'s own status code —
@@ -205,12 +257,14 @@ async fn dependencies_endpoint_is_reachable_with_no_auth_headers_at_all() {
 #[tokio::test]
 async fn dependencies_endpoint_never_affects_health_ready() {
     let system = skip_if_no_db!(test_system().await);
+    let cookie = seed_admin(&system.state().base.db).await;
     let app = full_app(system);
 
     for _ in 0..3 {
         let req = Request::builder()
             .method("GET")
             .uri("/health/dependencies")
+            .header("cookie", &cookie)
             .body(Body::empty())
             .unwrap();
         let resp = app.clone().oneshot(req).await.unwrap();

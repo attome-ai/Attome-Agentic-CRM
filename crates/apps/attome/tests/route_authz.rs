@@ -163,11 +163,6 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     ),
     (
         "GET",
-        "/health/dependencies",
-        "Deliberately unauthenticated readiness/diagnostic probe - see system_health.rs's module doc. Reports dependency up/down only.",
-    ),
-    (
-        "GET",
         "/health/ready",
         "Readiness probe: reports whether this node can serve safely (database, cache, registry pre-warm). Public by design so a load balancer can poll it; it returns no data.",
     ),
