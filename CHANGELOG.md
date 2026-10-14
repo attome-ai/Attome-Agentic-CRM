@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- An agent's approval request records its target record's row version and the before and after of
+  the fields it changes; if the record changes before the approved action runs, the approval is void.
 - `article.draft` never drafts twice: an article already drafted from the same record is returned,
   and one with the same title (Arabic letter forms normalised) is reported unless `force` is set.
 - `GET /api/v1/admin/ai/status` and the AI status screen (`/ai/status`): the model in use and its card,

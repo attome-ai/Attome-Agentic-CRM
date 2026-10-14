@@ -234,6 +234,7 @@ pub async fn dispatch(
                 agent_session_id,
                 acting_user_id: ctx.security.user_id,
                 agent_rationale: None,
+                target: capture_target(state, ctx, args).await,
             };
             // D-502: a retried tool call must not raise a second four-eyes
             // request for one intent — an approver seeing two identical
@@ -734,6 +735,19 @@ pub async fn dispatch_approved_agent_action_under(
         ));
     }
 
+    // N30-T2: an approval covers the record as it stood when it was asked
+    // for. Changed since (or gone) is terminal: the approver approved a
+    // different record, and the agent can ask again against the world as it
+    // is now.
+    if let Some(target) = &request.target
+        && !target_unchanged(state, target).await?
+    {
+        return Ok(invalidated(
+            request,
+            "the record changed after the request was made",
+        ));
+    }
+
     // D-512 §3: an approved write still counts against the session-wide daily
     // write total. Used up is "not now", not "never": the request stays
     // approved and runs on a later retry, once the day rolls over.
@@ -838,6 +852,7 @@ pub async fn dispatch_confirmed_agent_action(
             agent_session_id,
             acting_user_id: ctx.security.user_id,
             agent_rationale: None,
+            target: capture_target(state, ctx, args).await,
         };
         let pending = match crate::approval::request_approval(
             &state.base.db,
@@ -973,6 +988,65 @@ pub enum ApprovedExecution {
     /// Not runnable right now, but may be later (a paused session). Nothing
     /// ran, and the request must stay `approved` so it can be retried.
     Deferred { reason: &'static str },
+}
+
+/// The record an approval request is about, read as the requesting caller
+/// reads it (N30-T1). `None` when the arguments name no single record or the
+/// caller cannot read it: the request still goes ahead, without a diff.
+async fn capture_target(
+    state: &EngineState,
+    ctx: &ActionContext,
+    args: &serde_json::Value,
+) -> Option<crate::approval::ApprovalTarget> {
+    let (entity, record_id) = crate::approval::target_of(args)?;
+    let record =
+        attome_records::entity_crud::read_record_bulk(state, &ctx.security, &entity, record_id)
+            .await
+            .ok()?;
+    let state_field = state
+        .state_models
+        .load()
+        .get(&entity)
+        .and_then(|entry| entry.model.as_ref())
+        .map(|model| model.state_field.clone());
+    let (before, after) = crate::approval::diff(record.data(), args, state_field.as_deref());
+    Some(crate::approval::ApprovalTarget {
+        entity,
+        record_id,
+        row_version: record.row_version(),
+        before,
+        after,
+    })
+}
+
+/// Whether the target record still exists at the version the request saw.
+/// An append-only entity has no versions to compare, so it always matches.
+async fn target_unchanged(
+    state: &EngineState,
+    target: &crate::approval::ApprovalTarget,
+) -> Result<bool, AppError> {
+    let append_only = {
+        let registry = state.entities.load();
+        match registry.get(&target.entity) {
+            Some(meta) => meta.is_append_only,
+            None => return Ok(false),
+        }
+    };
+    if append_only {
+        return Ok(true);
+    }
+    let table = attome_core::quote_ident(&target.entity);
+    let live = attome_core::live_row_predicate("t", false)
+        .map(|p| format!("AND {p}"))
+        .unwrap_or_default();
+    let current: Option<i64> = sqlx::query_scalar(&format!(
+        "SELECT t.row_version::bigint FROM {table} t WHERE t.id = $1 {live}"
+    ))
+    .bind(target.record_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(current == Some(target.row_version))
 }
 
 fn invalidated(

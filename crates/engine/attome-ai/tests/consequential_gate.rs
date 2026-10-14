@@ -55,6 +55,7 @@ fn agent_request(acting_user_id: Uuid) -> AgentActionRequest {
         agent_session_id: Uuid::now_v7(),
         acting_user_id,
         agent_rationale: Some("the user asked me to remove the duplicate".into()),
+        target: None,
     }
 }
 

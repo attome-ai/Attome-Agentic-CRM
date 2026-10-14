@@ -69,6 +69,68 @@ pub struct AgentActionRequest {
     /// must render it as a quotation rather than as the platform's own
     /// description of what will happen.
     pub agent_rationale: Option<String>,
+    /// The record the action changes, as it stood when the request was made
+    /// (N30-T1): what an approver sees as the diff, and what execution
+    /// re-checks (N30-T2). `None` for an action with no single target, and
+    /// for a request raised before this field existed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<ApprovalTarget>,
+}
+
+/// The record an approval is about, when it was requested.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ApprovalTarget {
+    pub entity: String,
+    pub record_id: Uuid,
+    /// The record's `row_version` at request time. An approval runs only
+    /// against that version: a record changed in between invalidates it.
+    pub row_version: i64,
+    /// The values the action would change, as they were.
+    #[serde(default)]
+    pub before: serde_json::Map<String, Value>,
+    /// What the action would set them to.
+    #[serde(default)]
+    pub after: serde_json::Map<String, Value>,
+}
+
+/// The entity and record an action's arguments name (`entity` with
+/// `record_id` or `id`), when they name exactly one.
+pub fn target_of(args: &Value) -> Option<(String, Uuid)> {
+    let entity = args.get("entity")?.as_str()?.trim();
+    if entity.is_empty() {
+        return None;
+    }
+    let id = args
+        .get("record_id")
+        .or_else(|| args.get("id"))?
+        .as_str()
+        .and_then(|s| Uuid::parse_str(s).ok())?;
+    Some((entity.to_owned(), id))
+}
+
+/// The before and after of the fields `args` changes (`values`, or a state
+/// move's `to` on `state_field`), read from `record` (the record's data).
+pub fn diff(
+    record: &Value,
+    args: &Value,
+    state_field: Option<&str>,
+) -> (
+    serde_json::Map<String, Value>,
+    serde_json::Map<String, Value>,
+) {
+    let mut after = args
+        .get("values")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    if let (Some(field), Some(to)) = (state_field, args.get("to")) {
+        after.insert(field.to_owned(), to.clone());
+    }
+    let before = after
+        .keys()
+        .map(|k| (k.clone(), record.get(k).cloned().unwrap_or(Value::Null)))
+        .collect();
+    (before, after)
 }
 
 /// The handle returned to a caller whose action needs approval.
@@ -145,7 +207,47 @@ mod tests {
             agent_session_id: Uuid::now_v7(),
             acting_user_id: Uuid::now_v7(),
             agent_rationale: Some("the user asked me to remove the duplicate".into()),
+            target: None,
         }
+    }
+
+    #[test]
+    fn a_request_names_its_target_and_diff() {
+        let id = Uuid::now_v7();
+        assert_eq!(
+            target_of(&serde_json::json!({ "entity": "lead", "record_id": id.to_string() })),
+            Some(("lead".to_owned(), id))
+        );
+        assert_eq!(target_of(&serde_json::json!({ "entity": "lead" })), None);
+        assert_eq!(
+            target_of(&serde_json::json!({ "record_ids": [id.to_string()] })),
+            None
+        );
+        let (before, after) = diff(
+            &serde_json::json!({ "status": "open", "owner": "a" }),
+            &serde_json::json!({ "values": { "status": "won", "amount": 5 } }),
+            None,
+        );
+        assert_eq!(before["status"], "open");
+        assert_eq!(before["amount"], Value::Null);
+        assert_eq!(after["status"], "won");
+        let (before, after) = diff(
+            &serde_json::json!({ "stage": "new" }),
+            &serde_json::json!({ "to": "qualified" }),
+            Some("stage"),
+        );
+        assert_eq!(before["stage"], "new");
+        assert_eq!(after["stage"], "qualified");
+    }
+
+    #[test]
+    fn a_request_without_a_target_still_decodes() {
+        let old = serde_json::json!({
+            "action_id": "record.delete", "args": {}, "agent_session_id": Uuid::now_v7(),
+            "acting_user_id": Uuid::now_v7(), "agent_rationale": null
+        });
+        let parsed: AgentActionRequest = serde_json::from_value(old).unwrap();
+        assert_eq!(parsed.target, None);
     }
 
     /// The `action_type` is namespaced, so an approver UI can tell an agent
