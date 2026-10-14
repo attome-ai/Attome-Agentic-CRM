@@ -106,6 +106,7 @@ impl EngineModel for ActionModel {
             .merge(crate::analytics::routes())
             // C11 B5 — the runtime AI switch, admin-gated and audited.
             .merge(crate::runtime_switch::routes())
+            .merge(crate::scope_switch::routes())
     }
 
     // D-435, simplified by D-491 — `ai_model` (the AI Model catalog,

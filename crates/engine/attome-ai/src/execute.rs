@@ -168,6 +168,15 @@ pub async fn dispatch(
         }
     }
 
+    // N31-T1: a switched-off tool or agent is refused before anything else
+    // runs; an unreadable switch table refuses (fails closed).
+    crate::scope_switch::check(
+        &state.base.db,
+        descriptor.id.0,
+        ctx.agent_session_id.filter(|_| ctx.is_agent()),
+    )
+    .await?;
+
     // C11 B5 (P-5, row A-85): the runtime AI switch narrows whatever the
     // caller passed — `caller AND runtime` — here, at the one entry every
     // action takes, so no caller can skip it. A stale or unreadable switch

@@ -118,6 +118,7 @@ pub mod quality_monitor;
 pub mod registry;
 pub mod runtime_switch;
 pub mod sanitize_input;
+pub mod scope_switch;
 pub mod session;
 pub mod session_admin;
 pub mod telemetry;
@@ -176,6 +177,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     // C10-B — `/admin/ai/bot-analytics`.
     doc.merge(analytics::openapi_fragment());
     doc.merge(runtime_switch::openapi_fragment());
+    doc.merge(scope_switch::openapi_fragment());
     doc
 }
 
