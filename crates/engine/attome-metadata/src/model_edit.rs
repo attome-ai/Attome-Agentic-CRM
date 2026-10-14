@@ -21,6 +21,7 @@ fn registered_kinds() -> Vec<Arc<dyn Kind>> {
     let mut kinds: Vec<Arc<dyn Kind>> = vec![
         Arc::new(attome_model::kinds::FormKind),
         Arc::new(attome_model::kinds::AgentKind),
+        Arc::new(attome_model::kinds::NavigationKind),
     ];
     for adapter in crate::kinds::ADAPTER_KINDS {
         kinds.push(Arc::new(adapter));
