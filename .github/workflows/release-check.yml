@@ -82,10 +82,11 @@ jobs:
           AWS_DEFAULT_REGION: us-east-1
         run: |
           for i in $(seq 1 30); do
-            aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attomebase && \
-              aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attome-test && break
+            aws --endpoint-url http://127.0.0.1:9000 s3 ls && break
             sleep 2
           done
+          aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attomebase
+          aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attome-test
       - name: install promtool
         shell: bash
         run: |
