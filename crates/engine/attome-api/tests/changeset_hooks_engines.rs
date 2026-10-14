@@ -574,7 +574,7 @@ fn security_routes_record_one_operation_each() {
             "POST",
             "/api/v1/admin/security/entity-default-shares",
             "POST /api/v1/admin/security/entity-default-shares",
-            Some(json!({ "entity": entity, "capability": "read", "user_email": admin.email })),
+            Some(json!({ "entity": entity, "capability": "view", "user_email": admin.email })),
             &["set_entity_default_share"],
         )
         .await;

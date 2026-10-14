@@ -867,10 +867,9 @@ async fn fulfill_erasure(
     Path(id): Path<Uuid>,
     Json(body): Json<FulfillErasureBody>,
 ) -> Result<Response, AppError> {
-    if body.scopes.is_empty() {
-        return Err(AppError::Validation("scopes must not be empty".into()));
-    }
-
+    // Empty `scopes` is allowed: an erasure can still withdraw the subject's
+    // active consents (M24/D-428). `do_fulfill_erasure` refuses with a
+    // conflict when there is truly nothing to erase.
     if let Some(request) = attome_audit::approval::gate(
         &state,
         ACTION_DSR_FULFILL_ERASURE,

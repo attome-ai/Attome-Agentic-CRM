@@ -425,8 +425,9 @@ fn withdraw_appends_a_new_row_and_never_touches_the_grant() {
             ))
             .unwrap();
         let resp = app.clone().oneshot(create_req).await.unwrap();
-        assert_eq!(resp.status(), StatusCode::CREATED, "grant must succeed");
+        let status = resp.status();
         let granted = body_json(resp).await;
+        assert_eq!(status, StatusCode::CREATED, "grant must succeed: {granted}");
         let granted_id = granted["id"].as_str().unwrap().to_string();
 
         // Withdraw via the dedicated endpoint.
@@ -554,8 +555,9 @@ fn dsr_erasure_withdraws_active_consents() {
             .body(Body::from(serde_json::json!({ "scopes": [] }).to_string()))
             .unwrap();
         let resp = app.oneshot(fulfill_req).await.unwrap();
-        assert_eq!(resp.status(), StatusCode::OK);
+        let status = resp.status();
         let result = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{result}");
         assert_eq!(result["status"], "fulfilled");
         assert_eq!(result["consents_withdrawn"], 1);
 
