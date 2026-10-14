@@ -106,6 +106,7 @@ pub mod outcome;
 pub mod output_filter;
 pub mod pii_mask;
 pub mod prompt;
+pub mod prompt_layer;
 pub mod prompt_preview;
 pub mod prompt_registry;
 /// The `ai_provider` record as this crate reads it, plus the API protocol

@@ -138,6 +138,7 @@ pub(crate) fn translate_system_prompt(
     prompt
 }
 
+#[cfg(test)]
 fn translate_messages(
     from: Option<&str>,
     to: &str,
@@ -152,6 +153,7 @@ fn translate_messages(
 
 /// The cache key a translation of `text` is kept under.
 pub fn cache_key(
+    version: &str,
     model_id: &str,
     from: Option<&str>,
     to: &str,
@@ -160,14 +162,7 @@ pub fn cache_key(
 ) -> String {
     let mut hasher = Sha256::new();
     let glossary = serde_json::to_string(glossary).unwrap_or_default();
-    for part in [
-        TRANSLATE_PROMPT_VERSION,
-        model_id,
-        from.unwrap_or(""),
-        to,
-        &glossary,
-        text,
-    ] {
+    for part in [version, model_id, from.unwrap_or(""), to, &glossary, text] {
         hasher.update(part.as_bytes());
         hasher.update([0u8]);
     }
@@ -238,7 +233,16 @@ impl Action for TextTranslate {
             )
             .await?;
 
-            let key = cache_key(client.model_id(), from, to, &glossary, text);
+            // N10-T1: an administrator's published override, layered over
+            // the code prompt; its version names the override.
+            let layer = crate::prompt_layer::effective(
+                &state.base.db,
+                TEXT_TRANSLATE,
+                TRANSLATE_PROMPT_VERSION,
+                &translate_system_prompt(from, to, &glossary),
+            )
+            .await;
+            let key = cache_key(&layer.version, client.model_id(), from, to, &glossary, text);
             match state.base.redis.get(&key).await {
                 Ok(Some(hit)) => {
                     if let Ok(cached) = serde_json::from_str::<CachedTranslation>(&hit) {
@@ -246,7 +250,7 @@ impl Action for TextTranslate {
                             value: json!({ "translation": cached.translation, "to": to, "cached": true }),
                             provenance: Some(Provenance {
                                 model_id: cached.model_id,
-                                prompt_version: TRANSLATE_PROMPT_VERSION.to_owned(),
+                                prompt_version: layer.version.clone(),
                                 suggestion_id: None,
                             }),
                         });
@@ -256,7 +260,10 @@ impl Action for TextTranslate {
                 Err(error) => tracing::warn!(%error, "text.translate: cache unavailable"),
             }
 
-            let mut request = GenerationRequest::new(translate_messages(from, to, &glossary, text));
+            let mut request = GenerationRequest::new(crate::prompt::assemble(&[
+                Segment::trusted(layer.system.clone()),
+                Segment::untrusted("text", text),
+            ]));
             let grant = crate::budget_guard::admit(
                 state,
                 ctx,
@@ -290,7 +297,7 @@ impl Action for TextTranslate {
                 }),
                 provenance: Some(Provenance {
                     model_id: generated.usage.model_id,
-                    prompt_version: TRANSLATE_PROMPT_VERSION.to_owned(),
+                    prompt_version: layer.version.clone(),
                     suggestion_id: None,
                 }),
             })
@@ -351,13 +358,13 @@ mod tests {
     #[test]
     fn the_cache_key_follows_every_input() {
         let g = BTreeMap::new();
-        let base = cache_key("m", None, "ar", &g, "hello");
-        assert_eq!(base, cache_key("m", None, "ar", &g, "hello"));
-        assert_ne!(base, cache_key("m", Some("en"), "ar", &g, "hello"));
-        assert_ne!(base, cache_key("m", None, "en", &g, "hello"));
-        assert_ne!(base, cache_key("n", None, "ar", &g, "hello"));
+        let base = cache_key("v", "m", None, "ar", &g, "hello");
+        assert_eq!(base, cache_key("v", "m", None, "ar", &g, "hello"));
+        assert_ne!(base, cache_key("v", "m", Some("en"), "ar", &g, "hello"));
+        assert_ne!(base, cache_key("v", "m", None, "en", &g, "hello"));
+        assert_ne!(base, cache_key("v", "n", None, "ar", &g, "hello"));
         let with = BTreeMap::from([("hello".to_owned(), "مرحبا".to_owned())]);
-        assert_ne!(base, cache_key("m", None, "ar", &with, "hello"));
+        assert_ne!(base, cache_key("v", "m", None, "ar", &with, "hello"));
     }
 
     #[test]

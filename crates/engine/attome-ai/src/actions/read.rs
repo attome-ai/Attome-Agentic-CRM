@@ -301,6 +301,7 @@ pub(crate) fn summarize_system_prompt(language: &str) -> String {
 /// instructions" paragraph in this file, which is precisely the drift
 /// `prompt.rs` exists to prevent: two implementations of one trust boundary
 /// diverge, and the one that diverges is the one nobody is testing.
+#[cfg(test)]
 pub(crate) fn summarize_messages(language: &str, entity: &str, facts: &str) -> Vec<ChatMessage> {
     crate::prompt::assemble(&[
         Segment::trusted(summarize_system_prompt(language)),
@@ -345,8 +346,17 @@ impl Action for RecordSummarize {
                 .language
                 .as_deref()
                 .unwrap_or("the record's own language");
-            let cache_key = super::summary_context::cache_key(
+            // N10-T1: an administrator's published override, layered over
+            // the code prompt; its version names the override.
+            let layer = crate::prompt_layer::effective(
+                &state.base.db,
+                RECORD_SUMMARIZE,
                 SUMMARIZE_PROMPT_VERSION,
+                &summarize_system_prompt(language),
+            )
+            .await;
+            let cache_key = super::summary_context::cache_key(
+                &layer.version,
                 client.model_id(),
                 language,
                 &args.entity,
@@ -380,7 +390,7 @@ impl Action for RecordSummarize {
                             }),
                             provenance: Some(Provenance {
                                 model_id: cached.model_id,
-                                prompt_version: SUMMARIZE_PROMPT_VERSION.to_owned(),
+                                prompt_version: layer.version.clone(),
                                 suggestion_id: None,
                             }),
                         });
@@ -402,8 +412,10 @@ impl Action for RecordSummarize {
             // Assembly goes through `prompt::assemble` (TODO-052(a)), which
             // makes routing untrusted text to the system role unrepresentable
             // rather than merely avoided.
-            let mut request =
-                GenerationRequest::new(summarize_messages(language, &args.entity, &facts));
+            let mut request = GenerationRequest::new(crate::prompt::assemble(&[
+                Segment::trusted(layer.system.clone()),
+                Segment::untrusted(&args.entity, &facts),
+            ]));
 
             // M101 slice 2 — the token budget, admitted BEFORE the call. Like
             // the model-registry check above it, this must precede
@@ -455,7 +467,7 @@ impl Action for RecordSummarize {
                 &crate::telemetry::SuggestionRecord {
                     action_id: RECORD_SUMMARIZE,
                     model_id: &generated.usage.model_id,
-                    prompt_version: SUMMARIZE_PROMPT_VERSION,
+                    prompt_version: &layer.version,
                     entity_logicalname: &args.entity,
                     field_ref: None,
                     record_id: Some(args.record_id),
@@ -480,7 +492,7 @@ impl Action for RecordSummarize {
                 }),
                 provenance: Some(Provenance {
                     model_id: generated.usage.model_id,
-                    prompt_version: SUMMARIZE_PROMPT_VERSION.to_owned(),
+                    prompt_version: layer.version.clone(),
                     suggestion_id,
                 }),
             })

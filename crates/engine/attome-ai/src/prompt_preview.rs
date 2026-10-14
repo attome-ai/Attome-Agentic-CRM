@@ -65,10 +65,21 @@ async fn preview_summary(
         .language
         .as_deref()
         .unwrap_or("the record's own language");
-    let messages = crate::actions::read::summarize_messages(language, &body.entity, &facts);
+    // The administrator's override too, exactly as `record.summarize` layers it.
+    let layer = crate::prompt_layer::effective(
+        &state.base.db,
+        crate::actions::read::RECORD_SUMMARIZE,
+        crate::actions::read::SUMMARIZE_PROMPT_VERSION,
+        &crate::actions::read::summarize_system_prompt(language),
+    )
+    .await;
+    let messages = crate::prompt::assemble(&[
+        crate::prompt::Segment::trusted(layer.system),
+        crate::prompt::Segment::untrusted(&body.entity, &facts),
+    ]);
     let chars = messages.iter().map(|m| m.content.chars().count()).sum();
     Ok(Json(PromptPreview {
-        prompt_version: crate::actions::read::SUMMARIZE_PROMPT_VERSION.to_owned(),
+        prompt_version: layer.version,
         messages: serde_json::to_value(&messages).map_err(AppError::internal)?,
         chars,
     }))
