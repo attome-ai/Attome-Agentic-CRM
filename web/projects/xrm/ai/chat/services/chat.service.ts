@@ -86,6 +86,16 @@ export class ChatService {
     return this.api.post<TurnResponse>(`${BASE}/${conversationId}/messages`, body);
   }
 
+  /**
+   * Gives the agent a task to work through in the background (N7-T1). Returns
+   * at once; the run's steps and end state arrive on the conversation's
+   * stream like any turn's.
+   */
+  startRun(conversationId: string, task: string, maxSteps?: number): Observable<{ conversation_id: string; status: string }> {
+    const body: { task: string; max_steps?: number } = maxSteps === undefined ? { task } : { task, max_steps: maxSteps };
+    return this.api.post<{ conversation_id: string; status: string }>(`${BASE}/${conversationId}/runs`, body);
+  }
+
   /** The newest page of the transcript, oldest first within it. */
   messages(conversationId: string, page = 1): Observable<MessagePage> {
     return this.api.get<MessagePage>(`${BASE}/${conversationId}/messages`, {

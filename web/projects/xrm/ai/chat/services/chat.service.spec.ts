@@ -34,6 +34,19 @@ describe('ChatService', () => {
     req.flush({ outcome: 'executed', result: {} });
   });
 
+  it('starts a background run with a task and an optional step budget (N7-T1)', () => {
+    service.startRun(CONV, 'triage the new cases').subscribe();
+    const plain = http.expectOne(`${API}/api/v1/ai/conversations/${CONV}/runs`);
+    expect(plain.request.method).toBe('POST');
+    expect(plain.request.body).toEqual({ task: 'triage the new cases' });
+    plain.flush({ conversation_id: CONV, status: 'running' });
+
+    service.startRun(CONV, 'again', 5).subscribe();
+    const bounded = http.expectOne(`${API}/api/v1/ai/conversations/${CONV}/runs`);
+    expect(bounded.request.body).toEqual({ task: 'again', max_steps: 5 });
+    bounded.flush({ conversation_id: CONV, status: 'running' });
+  });
+
   /** I-19: record context travels in its own field, only when there is one. */
   it('sends record context in `context`, never folded into the text by the client', () => {
     const context = { entity: 'contact', record_id: '01900000-0000-7000-8000-0000000000a1' };
