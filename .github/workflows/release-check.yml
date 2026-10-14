@@ -103,7 +103,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          cargo run -p attome-release -- --check 2>&1 | tee release-check.log
+          cargo run -p attome-release --target-dir target/gate -- --check 2>&1 | tee release-check.log
       # GitHub shows at most 10 error annotations per step, so the full list of
       # failures goes into one annotation: errors, their locations, and failed
       # tests, readable through the public checks API.
@@ -143,7 +143,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          cargo run -p attome-release -- --check 2>&1 | tee release-check.log
+          cargo run -p attome-release --target-dir target/gate -- --check 2>&1 | tee release-check.log
       # GitHub shows at most 10 error annotations per step, so the full list of
       # failures goes into one annotation: errors, their locations, and failed
       # tests, readable through the public checks API.

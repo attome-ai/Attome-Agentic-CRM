@@ -75,7 +75,7 @@ audit tools).
 The release gate, the same one CI runs on Windows and Linux:
 
 ```sh
-cargo run -p attome-release -- --check   # format, clippy (warnings are errors), tests
+cargo run -p attome-release --target-dir target/gate -- --check   # format, clippy (warnings are errors), tests
 ```
 
 `attome test` runs the tests a change needs ([docs/testing.md](docs/testing.md)). Tests that need

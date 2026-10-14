@@ -9,7 +9,7 @@ On a Windows machine and on a Linux machine (a real one: a Linux run inside WSL 
 machine does not count as either), at the same commit:
 
 ```sh
-cargo run -p attome-release -- --check --web
+cargo run -p attome-release --target-dir target/gate -- --check --web
 ```
 
 The steps are format, clippy, tests, the API contract, the waivers (every `deny.toml`,
@@ -31,7 +31,7 @@ A failing step that must not block this release can be overridden only by a name
 reason of at least 20 characters; the step still runs and the report keeps its failure:
 
 ```sh
-cargo run -p attome-release -- --check --override tests="flaky mirror, tracked in issue 42" --by "Name"
+cargo run -p attome-release --target-dir target/gate -- --check --override tests="flaky mirror, tracked in issue 42" --by "Name"
 ```
 
 `format` and `clippy` can never be overridden.

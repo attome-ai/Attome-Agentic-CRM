@@ -1047,14 +1047,6 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     })
 }
 
-/// Ctrl-C (SIGINT) or SIGTERM — the latter is what a container/Docker stop
-/// actually sends. Shared by every long-lived process built on [`init`]
-/// (`main.rs`'s HTTP server and inline worker, `bin/worker.rs`'s standalone
-/// worker) so a split deployment drains identically on either binary.
-#[expect(
-    clippy::expect_used,
-    reason = "each expect() here guards an invariant its message states"
-)]
 /// A stop asked for from outside the process's signals: the Windows service
 /// control manager's Stop and Shutdown (roadmap U1-T1). It starts the same
 /// graceful drain as Ctrl+C or SIGTERM.
@@ -1068,6 +1060,14 @@ pub fn request_stop() {
     EXTERNAL_STOP.notify_one();
 }
 
+/// Ctrl-C (SIGINT), SIGTERM (what a container stop sends) or a
+/// [`request_stop`] (the Windows service control manager). Shared by every
+/// long-lived process built on [`init`] (the HTTP server and inline worker,
+/// the standalone worker) so a split deployment drains identically on either.
+#[expect(
+    clippy::expect_used,
+    reason = "each expect() here guards an invariant its message states"
+)]
 pub async fn wait_for_shutdown_signal() {
     let ctrl_c = async {
         tokio::signal::ctrl_c()
