@@ -30,7 +30,7 @@
 //! |------------------------|--------------------------------------------|
 //! | `{DDDD}`, `{####}`     | the sequence number, zero-padded to width  |
 //! | `{SEQ}`, `{SEQ:4}`     | the same, named explicitly                 |
-//! | `{YY-MM-DD}`, `{YYYY}` | the current UTC date/time, by pattern      |
+//! | `{YY-MM-DD}`, `{YYYY}` | the current local date/time, by pattern    |
 //!
 //! The `D`-vs-day ambiguity in the motivating example `AVG-{DDDD}-{YY-MM-DD}`
 //! is resolved structurally, not by guessing: a token made of *nothing but*
@@ -58,7 +58,7 @@
 use attome_core::AttrInfo;
 use attome_db::DbPool;
 use attome_types::AppError;
-use chrono::{DateTime, Datelike, Timelike, Utc};
+use chrono::{DateTime, Datelike, FixedOffset, Timelike};
 use serde_json::Value;
 use sqlx::PgConnection;
 use uuid::Uuid;
@@ -109,7 +109,7 @@ impl ResetScope {
     }
 
     /// The period key for `now`. Equal keys mean "same period, keep counting".
-    pub fn scope_key(self, now: DateTime<Utc>) -> String {
+    pub fn scope_key(self, now: DateTime<FixedOffset>) -> String {
         match self {
             Self::Never => String::new(),
             Self::Yearly => format!("{:04}", now.year()),
@@ -141,7 +141,7 @@ pub struct AutoValue {
 
 impl AutoValue {
     /// Renders this rule's format with `seq` and `now`. Pure — no I/O.
-    pub fn render(&self, seq: i64, now: DateTime<Utc>) -> String {
+    pub fn render(&self, seq: i64, now: DateTime<FixedOffset>) -> String {
         render_format(&self.format, seq, now)
     }
 
@@ -172,7 +172,7 @@ impl AutoValue {
     pub async fn allocate(
         &self,
         conn: &mut PgConnection,
-        now: DateTime<Utc>,
+        now: DateTime<FixedOffset>,
     ) -> Result<Option<String>, AppError> {
         let scope_key = self.reset_scope.scope_key(now);
         let seq: Option<i64> = sqlx::query_scalar(
@@ -202,7 +202,7 @@ impl AutoValue {
 /// Pure, infallible, and total: an unterminated `{` is emitted literally
 /// rather than erroring, because a rule is applied on the create path and a
 /// typo in a format must not make an entity un-creatable.
-fn render_format(format: &str, seq: i64, now: DateTime<Utc>) -> String {
+fn render_format(format: &str, seq: i64, now: DateTime<FixedOffset>) -> String {
     let mut out = String::with_capacity(format.len() + 8);
     let mut chars = format.chars().peekable();
 
@@ -245,7 +245,7 @@ fn render_format(format: &str, seq: i64, now: DateTime<Utc>) -> String {
 /// the test for "is this a sequence" is structural (`D`/`#` only, or a `SEQ`
 /// prefix) so that `{DDDD}` and `{YY-MM-DD}` can coexist in one format — see
 /// the module docs.
-fn render_token(token: &str, seq: i64, now: DateTime<Utc>) -> String {
+fn render_token(token: &str, seq: i64, now: DateTime<FixedOffset>) -> String {
     let trimmed = token.trim();
 
     if !trimmed.is_empty() && trimmed.chars().all(|c| c == 'D' || c == '#') {
@@ -273,7 +273,7 @@ fn pad(seq: i64, width: usize) -> String {
 
 /// Greedy longest-match over the recognised date units; every other character
 /// is literal, which is what lets `YY-MM-DD` keep its own hyphens.
-fn render_datetime_pattern(pattern: &str, now: DateTime<Utc>) -> String {
+fn render_datetime_pattern(pattern: &str, now: DateTime<FixedOffset>) -> String {
     const UNITS: &[&str] = &["YYYY", "YY", "MM", "DD", "HH", "mm", "ss"];
 
     let mut out = String::with_capacity(pattern.len());
@@ -341,7 +341,8 @@ pub async fn generate_for_create(
     entity_logicalname: &str,
     attrs: &[AttrInfo],
     supplied: &serde_json::Map<String, Value>,
-    now: DateTime<Utc>,
+    now: DateTime<FixedOffset>,
+    allow_supplied: bool,
 ) -> Result<Vec<(String, String)>, AppError> {
     let rules = load_rules(&mut *conn, entity_logicalname).await?;
     let mut generated = Vec::new();
@@ -353,7 +354,15 @@ pub async fn generate_for_create(
             .get(field)
             .is_some_and(|v| !v.is_null() && v.as_str() != Some(""))
         {
-            continue;
+            // A4-T2: a number the system issues is not the caller's to pick.
+            // A data migration (an approved staged import, a bundle record
+            // set) keeps the numbers it brings.
+            if allow_supplied {
+                continue;
+            }
+            return Err(AppError::Validation(format!(
+                "{field} is numbered automatically; leave it empty"
+            )));
         }
 
         if !attrs.iter().any(|a| a.logicalname == field) {
@@ -468,8 +477,28 @@ mod tests {
     use super::*;
     use chrono::TimeZone;
 
-    fn at(y: i32, m: u32, d: u32) -> DateTime<Utc> {
-        Utc.with_ymd_and_hms(y, m, d, 13, 4, 5).unwrap()
+    fn at(y: i32, m: u32, d: u32) -> DateTime<FixedOffset> {
+        chrono::Utc
+            .with_ymd_and_hms(y, m, d, 13, 4, 5)
+            .unwrap()
+            .fixed_offset()
+    }
+
+    /// A4-T1: the date tokens and the reset key read the local date. At
+    /// 22:30 UTC on 31 December it is already 1 January in Riyadh (UTC+3).
+    #[test]
+    fn dates_and_resets_follow_the_local_date() {
+        let riyadh = FixedOffset::east_opt(3 * 3600).unwrap();
+        let utc_evening = chrono::Utc
+            .with_ymd_and_hms(2026, 12, 31, 22, 30, 0)
+            .unwrap();
+        let local = utc_evening.with_timezone(&riyadh);
+        assert_eq!(render_format("{YYYY-MM-DD}", 1, local), "2027-01-01");
+        assert_eq!(ResetScope::Yearly.scope_key(local), "2027");
+        assert_eq!(
+            render_format("{YYYY-MM-DD}", 1, utc_evening.fixed_offset()),
+            "2026-12-31"
+        );
     }
 
     #[test]

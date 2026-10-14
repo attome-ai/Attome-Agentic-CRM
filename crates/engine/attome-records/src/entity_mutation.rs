@@ -1639,7 +1639,12 @@ pub async fn create_one_as(
         entity_name,
         attrs,
         obj,
-        chrono::Utc::now(),
+        attome_core::calendar::deployment_now(state.base.config.app.time_zone.as_deref()),
+        // A4-T2: only a data migration may bring its own numbers.
+        matches!(
+            mode,
+            MutationMode::ApprovedStagedImport | MutationMode::BundleRecordSet(_)
+        ),
     )
     .await?;
     let with_auto_values;

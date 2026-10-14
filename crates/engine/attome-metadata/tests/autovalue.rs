@@ -89,7 +89,7 @@ async fn concurrent_allocation_across_two_connections_is_distinct_and_gap_free()
     };
 
     let url = attome_testkit::migrated_db_url().expect("checked by skip_if_no_db above");
-    let now = Utc::now();
+    let now = Utc::now().fixed_offset();
 
     let mut tasks = Vec::new();
     for _ in 0..2 {

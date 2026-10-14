@@ -91,6 +91,11 @@ pub struct AppSection {
     /// Where packs live. Unset: `packs` next to the executable.
     #[serde(default)]
     pub packs_root: Option<String>,
+    /// A4-T1: the deployment's time zone, an IANA name such as `Asia/Riyadh`.
+    /// Dates in autonumber formats and their yearly, monthly and daily resets
+    /// follow it. Unset (or unknown): UTC.
+    #[serde(default)]
+    pub time_zone: Option<String>,
     /// U11-T1: the operator's contract or purchase-order reference, shown on
     /// the usage page. Free text; nothing is enforced by it.
     #[serde(default)]

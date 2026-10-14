@@ -101,6 +101,29 @@ const WEEKDAY_HINT: &str = "use one of mon, tue, wed, thu, fri, sat, sun";
 /// to `[{"start_minute", "end_minute"}]` — and builds the calendar.
 /// `exceptions` are already parsed ([`parse_exception_ranges`]); their
 /// overlap and bounds rules are checked here with the rest.
+/// A4-T1: the current time in the deployment's time zone (`app.time_zone`,
+/// an IANA name). An unset or unknown name is UTC, logged once.
+pub fn deployment_now(time_zone: Option<&str>) -> chrono::DateTime<chrono::FixedOffset> {
+    use chrono::Utc;
+    let now = Utc::now();
+    match time_zone.map(str::trim).filter(|name| !name.is_empty()) {
+        None => now.fixed_offset(),
+        Some(name) => match name.parse::<chrono_tz::Tz>() {
+            Ok(tz) => now.with_timezone(&tz).fixed_offset(),
+            Err(_) => {
+                static WARNED: std::sync::Once = std::sync::Once::new();
+                WARNED.call_once(|| {
+                    tracing::warn!(
+                        time_zone = name,
+                        "app.time_zone is not a known IANA time zone; using UTC"
+                    );
+                });
+                now.fixed_offset()
+            }
+        },
+    }
+}
+
 pub fn build_calendar(
     tz: &str,
     working_days: &[String],
