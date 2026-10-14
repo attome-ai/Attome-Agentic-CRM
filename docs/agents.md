@@ -48,7 +48,8 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 ## Tools agents get
 
 - Records: `record.get`, `search.records`, `query.execute`, `record.schema` (an entity's typed input),
-  `record.validate` (a dry run of a create), `record.create|update|delete|restore`, `record.assign`,
+  `record.validate` (a dry run of a create), `record.create|update|delete|restore`, `record.deleted`
+  (the deleted records you may see, to restore), `record.assign`,
   `record.transitions` and `record.transition` (move a stage or status through the state model; a
   move that needs approval goes to its pending state and asks for it).
 - Many records: `record.bulk.preview` (count, a sample of what changes, problems), then

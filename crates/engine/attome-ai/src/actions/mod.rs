@@ -15,6 +15,7 @@
 pub mod agent_playground;
 pub mod agent_supervise;
 pub mod ai_field;
+pub mod bin;
 pub mod bot_handoff;
 pub mod bulk;
 pub mod business;
@@ -69,6 +70,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(crate::mcp_client::descriptors());
     all.push(search_records::descriptor());
     all.push(system_status::descriptor());
+    all.push(bin::descriptor());
     all.push(nl_query::descriptor());
     all.extend(workflow::descriptors());
     all.extend(memory::descriptors());
@@ -110,6 +112,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(crate::mcp_client::executors());
     all.push(Box::new(search_records::SearchRecords));
     all.push(Box::new(system_status::SystemStatus));
+    all.push(Box::new(bin::RecordDeleted));
     all.push(Box::new(nl_query::QueryPlan));
     all.extend(workflow::executors());
     all.extend(memory::executors());

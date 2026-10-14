@@ -15,6 +15,7 @@ pub mod history;
 mod lookup_names;
 mod merge;
 mod mutations;
+pub mod recycle_bin;
 /// M01 Core P3 gap (D-455): `/{entity}/{id}/related/{relationship}` — the
 /// generic M:M link/unlink/list API.
 mod related;
@@ -138,6 +139,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(history::openapi_fragment());
     doc.merge(favourites::openapi_fragment());
     doc.merge(tags::openapi_fragment());
+    doc.merge(recycle_bin::openapi_fragment());
     doc
 }
 
@@ -195,6 +197,7 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/{entity}/validate",
             axum::routing::post(mutations::validate_record),
         )
+        .route("/api/v1/{entity}/deleted", get(recycle_bin::list_deleted))
         .route(
             "/api/v1/{entity}/{id}",
             get(mutations::get_record)

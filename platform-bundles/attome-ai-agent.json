@@ -35,7 +35,7 @@
               "model.relationship.describe", "model.rule.describe", "model.state_model.describe",
               "query.execute", "query.plan", "record.ai_field", "record.assign", "record.bulk.delete",
               "record.bulk.preview", "record.bulk.status", "record.bulk.update", "record.classify",
-              "record.create", "record.delete", "record.get", "record.restore", "record.schema",
+              "record.create", "record.delete", "record.deleted", "record.get", "record.restore", "record.schema",
               "record.summarize", "record.transition", "record.transitions", "record.update",
               "record.update_field", "record.validate", "route.classify", "search.knowledge", "search.records",
               "system.status", "text.sentiment", "text.translate", "workflow.start"

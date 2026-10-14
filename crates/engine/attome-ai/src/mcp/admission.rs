@@ -84,6 +84,7 @@ pub(crate) const GOVERNED_ACTIONS: &[(&str, Verb)] = &[
     ("record.update", Verb::Update),
     ("record.delete", Verb::Delete),
     ("record.restore", Verb::Update),
+    ("record.deleted", Verb::Read),
     ("record.assign", Verb::Update),
     ("record.schema", Verb::Read),
     ("record.validate", Verb::Read),
