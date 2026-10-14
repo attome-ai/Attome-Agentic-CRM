@@ -8,6 +8,13 @@
 //! same token within a turn, so the model can still reason about "the same
 //! person". [`Masker::unmask`] puts real values back. Which model may see
 //! which labels (the Z9 catalogue) decides whether a turn masks at all.
+//!
+//! The answer is shown to a viewer, who may not read every field the turn
+//! touched (roadmap N28-T2). [`Masker::mask_field`] remembers which
+//! `entity.attribute` a value came from, and [`Masker::restore_for`] puts back
+//! only the values that viewer may read: first it replaces any forbidden real
+//! value the answer leaked verbatim with its token, then it restores the
+//! tokens the viewer may see. Every other token stays a token.
 
 use std::collections::BTreeMap;
 
@@ -33,11 +40,33 @@ impl MaskKind {
     }
 }
 
+/// Where a masked value came from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MaskSource {
+    /// An attribute of a record: restored only for a viewer who may read it.
+    Field { entity: String, attribute: String },
+    /// Found in free text the turn was given.
+    Text,
+}
+
+/// What [`Masker::restore_for`] produced.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Restored {
+    pub text: String,
+    /// Tokens put back as real values.
+    pub restored: usize,
+    /// Tokens left in place because the viewer may not read them.
+    pub withheld: usize,
+    /// Forbidden real values the answer contained verbatim, replaced.
+    pub leaks: usize,
+}
+
 /// One turn's token map.
 #[derive(Default)]
 pub struct Masker {
     by_value: BTreeMap<(MaskKind, String), String>,
     by_token: BTreeMap<String, String>,
+    sources: BTreeMap<String, MaskSource>,
     counters: BTreeMap<MaskKind, usize>,
 }
 
@@ -112,7 +141,78 @@ impl Masker {
         self.by_value
             .insert((kind, value.to_owned()), token.clone());
         self.by_token.insert(token.clone(), value.to_owned());
+        self.sources.insert(token.clone(), MaskSource::Text);
         token
+    }
+
+    /// A labelled value's token, remembering the field it came from so
+    /// [`Masker::restore_for`] can check the viewer's access to it.
+    pub fn mask_field(
+        &mut self,
+        kind: MaskKind,
+        value: &str,
+        entity: &str,
+        attribute: &str,
+    ) -> String {
+        if value.trim().is_empty() {
+            return value.to_owned();
+        }
+        let token = self.token_for(kind, value);
+        // A value seen in a field is as private as its strictest source.
+        self.sources.insert(
+            token.clone(),
+            MaskSource::Field {
+                entity: entity.to_owned(),
+                attribute: attribute.to_owned(),
+            },
+        );
+        token
+    }
+
+    /// `text` as `viewer may read` allows: tokens whose source the viewer may
+    /// read become real values, the rest stay tokens, and a forbidden real
+    /// value the text already contains is replaced by its token first.
+    pub fn restore_for(&self, text: &str, may_read: impl Fn(&MaskSource) -> bool) -> Restored {
+        let mut out = text.to_owned();
+        let mut leaks = 0;
+        // Longest values first, so a value inside a longer one is not split.
+        let mut forbidden: Vec<(&String, &String)> = self
+            .by_token
+            .iter()
+            .filter(|(token, _)| !self.sources.get(*token).is_some_and(&may_read))
+            .collect();
+        forbidden.sort_by_key(|(_, value)| std::cmp::Reverse(value.len()));
+        for (token, value) in &forbidden {
+            let n = out.matches(value.as_str()).count();
+            if n > 0 {
+                leaks += n;
+                out = out.replace(value.as_str(), token);
+            }
+        }
+        let mut restored = 0;
+        let mut withheld = 0;
+        let mut tokens: Vec<&String> = self.by_token.keys().collect();
+        tokens.sort_by_key(|t| std::cmp::Reverse(t.len()));
+        for token in tokens {
+            let n = out.matches(token.as_str()).count();
+            if n == 0 {
+                continue;
+            }
+            if self.sources.get(token).is_some_and(&may_read) {
+                if let Some(value) = self.by_token.get(token) {
+                    out = out.replace(token.as_str(), value);
+                    restored += n;
+                }
+            } else {
+                withheld += n;
+            }
+        }
+        Restored {
+            text: out,
+            restored,
+            withheld,
+            leaks,
+        }
     }
 
     /// A labelled value's token (a sensitive attribute's value).
@@ -231,5 +331,50 @@ mod tests {
             !format!("{masker:?}").contains("Ada"),
             "Debug never prints values"
         );
+    }
+
+    fn salary_hidden(source: &MaskSource) -> bool {
+        !matches!(source, MaskSource::Field { attribute, .. } if attribute == "salary")
+    }
+
+    #[test]
+    fn pii_restore_only_what_the_viewer_may_read() {
+        let mut masker = Masker::new();
+        let name = masker.mask_field(MaskKind::Person, "Ada Lovelace", "contact", "full_name");
+        let pay = masker.mask_field(MaskKind::Value, "42000", "employee", "salary");
+        let mail = masker.mask_text("ada@example.com");
+        let answer = format!("{name} ({mail}) earns {pay}.");
+        let out = masker.restore_for(&answer, salary_hidden);
+        assert_eq!(out.text, "Ada Lovelace (ada@example.com) earns [VALUE_1].");
+        assert_eq!((out.restored, out.withheld, out.leaks), (2, 1, 0));
+        // A viewer who may read everything sees every value.
+        let all = masker.restore_for(&answer, |_| true);
+        assert_eq!(all.text, "Ada Lovelace (ada@example.com) earns 42000.");
+        // A viewer who may read nothing sees only tokens.
+        let none = masker.restore_for(&answer, |_| false);
+        assert_eq!(none.text, answer);
+        assert_eq!(none.withheld, 3);
+    }
+
+    #[test]
+    fn pii_restore_replaces_a_leaked_forbidden_value() {
+        let mut masker = Masker::new();
+        let pay = masker.mask_field(MaskKind::Value, "42000", "employee", "salary");
+        // The model echoed the real value instead of the token.
+        let out = masker.restore_for("Pay is 42000, i.e. 42000.", salary_hidden);
+        assert_eq!(out.text, format!("Pay is {pay}, i.e. {pay}."));
+        assert_eq!(out.leaks, 2);
+        assert!(!out.text.contains("42000"));
+    }
+
+    #[test]
+    fn pii_restore_field_source_wins_over_text() {
+        let mut masker = Masker::new();
+        let from_text = masker.mask_text("ada@example.com");
+        let from_field =
+            masker.mask_field(MaskKind::Email, "ada@example.com", "employee", "salary");
+        assert_eq!(from_text, from_field, "one token per value");
+        let out = masker.restore_for(&from_text, salary_hidden);
+        assert_eq!(out.text, from_text, "the field's access decides");
     }
 }
