@@ -2,9 +2,45 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ApiError, AuthService } from '@attome/base';
+import { ApiError, AuthService, TranslatePipe } from '@attome/base';
 
 import { ApprovalRequestItem, ApprovalsAdminService } from '../../../services/approvals-admin.service';
+
+/** One changed field of an agent's request. */
+export interface AgentChangeRow { field: string; before: string; after: string }
+
+/** What an agent asked to do, as the approval card shows it (N30-T10). */
+export interface AgentChange {
+  action:    string;
+  entity:    string | null;
+  recordId:  string | null;
+  rows:      AgentChangeRow[];
+  /** The agent's own words: untrusted, shown as a quotation. */
+  rationale: string | null;
+}
+
+function show(value: unknown): string {
+  if (value === null || value === undefined) return '—';
+  return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
+/** Reads an `attome-ai/invoke` payload (`approval::AgentActionRequest`). */
+export function agentChange(actionType: string, payload: unknown): AgentChange | null {
+  if (!actionType.startsWith('attome-ai/invoke')) return null;
+  const p = (payload ?? {}) as Record<string, unknown>;
+  const target = (p['target'] ?? null) as Record<string, unknown> | null;
+  const before = (target?.['before'] ?? {}) as Record<string, unknown>;
+  const after = (target?.['after'] ?? {}) as Record<string, unknown>;
+  const fields = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort();
+  return {
+    action:    typeof p['action_id'] === 'string' ? p['action_id'] : actionType,
+    entity:    typeof target?.['entity'] === 'string' ? target['entity'] : null,
+    recordId:  typeof target?.['record_id'] === 'string' ? target['record_id'] : null,
+    rows:      fields.map(field => ({ field, before: show(before[field]), after: show(after[field]) })),
+    rationale: typeof p['agent_rationale'] === 'string' ? p['agent_rationale'] : null,
+  };
+}
+
 
 /**
  * D-195 / `document/detailed-plans/P-four-eyes-approval.md` §5 step 10 — the
@@ -25,11 +61,12 @@ import { ApprovalRequestItem, ApprovalsAdminService } from '../../../services/ap
  * conventions (inline template, shared `../../../../../styles/admin-page.css`, signals, `ApiService`
  * error-kind contract) — review against those before trusting it compiles.
  */
+
 @Component({
   selector:   'xrm-approval-queue-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports:    [DatePipe, FormsModule, RouterLink],
+  imports:    [DatePipe, FormsModule, RouterLink, TranslatePipe],
   styleUrls:  ['../../../../../styles/admin-page.css', './approval-queue-list.component.css'],
   templateUrl: './approval-queue-list.component.html',
 })
@@ -67,6 +104,11 @@ export class ApprovalQueueListComponent implements OnInit {
       next:  res => { this.items.set(res.items); this.loading.set(false); },
       error: (e: ApiError) => { this.error.set(e.message); this.loading.set(false); },
     });
+  }
+
+  /** The agent change an `attome-ai/invoke` request carries (N30-T10). */
+  agentChange(r: ApprovalRequestItem): AgentChange | null {
+    return agentChange(r.action_type, r.payload);
   }
 
   payloadPreview(r: ApprovalRequestItem): string {

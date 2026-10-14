@@ -58,7 +58,38 @@
             <td class="cell-muted">{{ r.requested_by }}</td>
             <td class="cell-muted">{{ r.requested_at | date:'medium' }}</td>
             <td class="cell-muted">{{ r.expires_at | date:'medium' }}</td>
-            <td class="cell-muted"><code>{{ payloadPreview(r) }}</code></td>
+            <td class="cell-muted">
+              @if (agentChange(r); as change) {
+                <div class="agent-change" [attr.data-agent-change]="r.id">
+                  <strong><code>{{ change.action }}</code></strong>
+                  @if (change.entity) {
+                    <span> · {{ change.entity }} <code>{{ change.recordId }}</code></span>
+                  }
+                  @if (change.rows.length > 0) {
+                    <table class="agent-diff">
+                      <thead><tr>
+                        <th>{{ 'approvalCard.field' | translate }}</th>
+                        <th>{{ 'approvalCard.before' | translate }}</th>
+                        <th>{{ 'approvalCard.after' | translate }}</th>
+                      </tr></thead>
+                      <tbody>
+                        @for (row of change.rows; track row.field) {
+                          <tr><td><code>{{ row.field }}</code></td><td>{{ row.before }}</td><td>{{ row.after }}</td></tr>
+                        }
+                      </tbody>
+                    </table>
+                  }
+                  @if (change.rationale) {
+                    <blockquote class="agent-words">
+                      <span class="agent-words-label">{{ 'approvalCard.agentSaid' | translate }}</span>
+                      {{ change.rationale }}
+                    </blockquote>
+                  }
+                </div>
+              } @else {
+                <code>{{ payloadPreview(r) }}</code>
+              }
+            </td>
             <td class="actions">
               @if (r.requested_by === selfId()) {
                 <button

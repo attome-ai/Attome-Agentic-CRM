@@ -159,6 +159,8 @@ export const xrmEn = {
     kinds: { agent: 'Agent', model: 'Model', provider: 'Provider', tool: 'Tool', channel: 'Channel' },
     causes: { manual: 'by an administrator', budget: 'budget overrun', quality: 'quality drop', injection: 'injection spike', departure: 'owner left' },
   },
+  // N30-T10 — an agent's change on the approval card.
+  approvalCard: { field: 'Field', before: 'Now', after: 'After approval', agentSaid: 'The agent wrote (not checked by the platform):' },
   // N20-T2 — translate a note or reply.
   translateText: { translate: 'Translate', working: 'Translating…', hide: 'Hide translation', failed: 'Translation is not available.' },
   // N31-T2 — the AI status page.
