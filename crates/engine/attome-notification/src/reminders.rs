@@ -121,16 +121,10 @@ fn valid_logical_name(name: &str) -> bool {
 }
 
 /// The in-app route of a record form, mirroring the host app's
-/// `logicalToUrlPath`: an `xrm_{module}_{entity}` name maps `_` to `/`; any
-/// other name (`trd_*`, unprefixed vertical entities, project prefixes) and
-/// any `entity_*` name uses the verbatim `xrm/entity/{logicalname}` shape.
+/// `logicalToUrlPath`: logical names carry no module prefix (V2-D483), so
+/// every entity has the one `xrm/entity/{logicalname}` shape.
 fn record_route(entity_name: &str, record_id: Uuid) -> String {
-    let path = if entity_name.starts_with("xrm_") && !entity_name.starts_with("entity_") {
-        entity_name.replace('_', "/")
-    } else {
-        format!("xrm/entity/{entity_name}")
-    };
-    format!("/{path}/form?id={record_id}")
+    format!("/xrm/entity/{entity_name}/form?id={record_id}")
 }
 
 #[cfg(test)]
@@ -143,7 +137,7 @@ mod record_route_tests {
         let id = Uuid::nil();
         assert_eq!(
             record_route("note", id),
-            format!("/xrm/core/note/form?id={id}")
+            format!("/xrm/entity/note/form?id={id}")
         );
         assert_eq!(
             record_route("trd_symbol", id),
@@ -365,7 +359,7 @@ mod tests {
         let id = Uuid::nil();
         assert_eq!(
             record_route("service_ticket", id),
-            format!("/xrm/service/ticket/form?id={id}")
+            format!("/xrm/entity/service_ticket/form?id={id}")
         );
         assert_eq!(
             record_route("account", id),
