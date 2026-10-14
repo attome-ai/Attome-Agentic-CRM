@@ -44,6 +44,7 @@ pub mod embed;
 pub mod generate;
 pub mod models;
 pub mod ocr;
+pub mod rerank;
 pub mod speech;
 pub mod telemetry;
 #[cfg(feature = "test-support")]
@@ -56,6 +57,7 @@ pub use generate::{
 };
 pub use models::{MODELS_PATH, ModelListAuth, ModelListing, list_models, parse_model_listing};
 pub use ocr::{OcrClient, OcrText};
+pub use rerank::RerankClient;
 pub use speech::{Segment, SpeechClient, TRANSCRIPTIONS_PATH, Transcript};
 
 /// An HTTP client a caller built, plus the check that caller requires before

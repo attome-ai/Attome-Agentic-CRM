@@ -60,6 +60,17 @@ services:
               capabilities: [gpu]
     restart: unless-stopped
 
+  # Reranking knowledge passages (N15-T1): a cross-encoder behind TEI's /rerank.
+  # Point inference.rerank.base_url at http://127.0.0.1:8089 and
+  # inference.rerank.model at the model id.
+  rerank:
+    profiles: ["rerank"]
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.6
+    command: ["--model-id", "BAAI/bge-reranker-v2-m3", "--auto-truncate", "--port", "80"]
+    ports: ["127.0.0.1:8089:80"]
+    volumes: ["tei-models:/data"]
+    restart: unless-stopped
+
   # Speech to text (N22-T1): faster-whisper behind an OpenAI-compatible
   # /v1/audio/transcriptions. Point inference.speech.base_url at
   # http://127.0.0.1:8090/v1 and set inference.speech.model to the model id.

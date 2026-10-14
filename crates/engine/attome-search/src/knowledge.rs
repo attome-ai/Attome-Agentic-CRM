@@ -440,9 +440,18 @@ pub async fn search_knowledge(
     query: &str,
     limit: i64,
 ) -> Result<Vec<KnowledgeHit>, AppError> {
-    retrieve(db, ctx, query, limit, RetrievalMode::Lexical, None, None)
-        .await
-        .map(|r| r.hits)
+    retrieve(
+        db,
+        ctx,
+        query,
+        limit,
+        RetrievalMode::Lexical,
+        None,
+        None,
+        None,
+    )
+    .await
+    .map(|r| r.hits)
 }
 
 /// Which candidate sources a knowledge retrieval draws on (D-498 step 5).
@@ -486,7 +495,7 @@ pub async fn search_knowledge_with(
     mode: RetrievalMode,
     embedder: Option<&attome_inference::EmbeddingClient>,
 ) -> Result<Vec<KnowledgeHit>, AppError> {
-    retrieve(db, ctx, query, limit, mode, embedder, None)
+    retrieve(db, ctx, query, limit, mode, embedder, None, None)
         .await
         .map(|r| r.hits)
 }
@@ -620,6 +629,10 @@ struct Retrieval {
 
 /// [`search_knowledge_with`]'s body. Returns [`Retrieval`] so the recording
 /// wrapper makes the gap decision from this resolution rather than a second one.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "one private body behind four public entry points; each argument is a distinct retrieval input"
+)]
 async fn retrieve(
     db: &sqlx::PgPool,
     ctx: &SecurityContext,
@@ -628,6 +641,7 @@ async fn retrieve(
     mode: RetrievalMode,
     embedder: Option<&attome_inference::EmbeddingClient>,
     scope: Option<&[Uuid]>,
+    reranker: Option<&attome_inference::RerankClient>,
 ) -> Result<Retrieval, AppError> {
     let trimmed = query.trim();
     if trimmed.is_empty() || limit <= 0 {
@@ -757,6 +771,10 @@ async fn retrieve(
         (_, true) => lexical,
         (true, false) => vector,
         (false, false) => fuse_ranked(lexical, vector),
+    };
+    let rows = match reranker {
+        Some(reranker) if rows.len() > 1 => rerank_rows(reranker, trimmed, rows).await,
+        _ => rows,
     };
 
     if rows.is_empty() {
@@ -902,7 +920,19 @@ pub async fn search_knowledge_recorded(
     let Retrieval {
         hits,
         searched_readable_collections,
-    } = retrieve(db, ctx, query, limit, RetrievalMode::Lexical, None, scope).await?;
+    } = {
+        // N15-T1: fused and reranked when boot installed the clients, else
+        // lexical as before.
+        let ranking = RANKING.get();
+        let embedder = ranking.and_then(|r| r.embedder.as_ref());
+        let reranker = ranking.and_then(|r| r.reranker.as_ref());
+        let mode = if embedder.is_some() {
+            RetrievalMode::Fused
+        } else {
+            RetrievalMode::Lexical
+        };
+        retrieve(db, ctx, query, limit, mode, embedder, scope, reranker).await?
+    };
 
     let mut chunk_ids: Vec<Uuid> = Vec::new();
     for hit in &hits {
@@ -999,7 +1029,17 @@ pub async fn explain(
     let Retrieval {
         hits,
         searched_readable_collections,
-    } = retrieve(db, ctx, query, limit, RetrievalMode::Lexical, None, None).await?;
+    } = retrieve(
+        db,
+        ctx,
+        query,
+        limit,
+        RetrievalMode::Lexical,
+        None,
+        None,
+        None,
+    )
+    .await?;
     let passages: Vec<ExplainedPassage> = hits
         .into_iter()
         .enumerate()
@@ -1030,6 +1070,63 @@ pub async fn explain(
         passages,
         empty_reason,
     })
+}
+
+/// The clients the recorded retrieval ranks with (N15-T1), installed once at
+/// boot by the search drain loop from the configuration. Read-only after
+/// that; a process that installs none (tests, a deployment without an
+/// embedding model) retrieves lexically, exactly as before.
+struct Ranking {
+    embedder: Option<attome_inference::EmbeddingClient>,
+    reranker: Option<attome_inference::RerankClient>,
+}
+
+static RANKING: std::sync::OnceLock<Ranking> = std::sync::OnceLock::new();
+
+/// Installs the ranking clients. The first call wins; later calls are ignored.
+pub fn install_ranking(
+    embedder: Option<attome_inference::EmbeddingClient>,
+    reranker: Option<attome_inference::RerankClient>,
+) {
+    let _ = RANKING.set(Ranking { embedder, reranker });
+}
+
+/// Passages the reranker scores, from the top of the fused list.
+pub const RERANK_TOP: usize = 50;
+
+/// Reorders the top [`RERANK_TOP`] rows by the reranker's score, best first,
+/// keeping the rest after them. A reranker that fails leaves the fused order:
+/// a broken model server must not take retrieval down with it.
+async fn rerank_rows(
+    reranker: &attome_inference::RerankClient,
+    query: &str,
+    mut rows: Vec<ChunkRow>,
+) -> Vec<ChunkRow> {
+    let top = rows.len().min(RERANK_TOP);
+    let texts: Vec<&str> = rows[..top].iter().map(|row| row.5.as_str()).collect();
+    match reranker.rerank(query, &texts).await {
+        Ok(scores) => {
+            let rest = rows.split_off(top);
+            let mut scored: Vec<(f32, ChunkRow)> = scores.into_iter().zip(rows).collect();
+            // Stable: equal scores keep their fused order.
+            scored.sort_by(|a, b| b.0.total_cmp(&a.0));
+            scored.into_iter().map(|(_, row)| row).chain(rest).collect()
+        }
+        Err(e) => {
+            tracing::warn!(
+                error = %e,
+                model = reranker.model_id(),
+                "knowledge rerank failed; keeping the fused order"
+            );
+            metrics::counter!(
+                crate::metrics::LEG_DEGRADED_TOTAL.name,
+                "leg" => "knowledge_rerank",
+                "reason" => "error"
+            )
+            .increment(1);
+            rows
+        }
+    }
 }
 
 /// Upper bound on the terms one knowledge query ORs together: the route's own

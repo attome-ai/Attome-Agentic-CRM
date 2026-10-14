@@ -45,6 +45,15 @@ An endpoint outside this machine or its private network is refused at boot unles
 `inference.allow_external_provider` is true; an outside embedding endpoint is always refused.
 Pin the images by digest for production.
 
+## Reranking
+
+The `rerank` profile serves a cross-encoder (`BAAI/bge-reranker-v2-m3`) through text-embeddings-
+inference on `127.0.0.1:8089`. Set `inference.rerank.base_url` to `http://127.0.0.1:8089` and
+`inference.rerank.model` to the model id. With an embedding model configured, knowledge retrieval
+fuses the keyword and vector results; with a reranker too, the top 50 passages are reordered by
+the reranker's score. A reranker that fails leaves the fused order and counts
+`attome_search_leg_degraded_total{leg="knowledge_rerank"}`.
+
 ## Speech to text
 
 The `speech` profile starts a faster-whisper server on `127.0.0.1:8090`. Set

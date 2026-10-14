@@ -131,6 +131,7 @@ impl std::fmt::Debug for InferenceSection {
             .field("embedding", &self.embedding)
             .field("speech", &self.speech)
             .field("ocr", &self.ocr)
+            .field("rerank", &self.rerank)
             .field("embedding_query_prefix", &self.embedding_query_prefix)
             .field("embedding_document_prefix", &self.embedding_document_prefix)
             .field("allow_external_provider", &self.allow_external_provider)
@@ -179,6 +180,12 @@ pub struct InferenceSection {
     /// must be inside the deployment. Empty `base_url` means OCR is off.
     #[serde(default)]
     pub ocr: InferenceEndpoint,
+
+    /// Reranking knowledge passages (N15-T1): a cross-encoder behind TEI's
+    /// `/rerank`. Inside the deployment only. Empty `base_url`: no reranking,
+    /// passages keep their fused order.
+    #[serde(default)]
+    pub rerank: InferenceEndpoint,
 
     /// Prefix prepended to every **query** text before it is embedded,
     /// overriding the model-family heuristic (BIN-D6/BIN-G5).
@@ -310,6 +317,7 @@ impl Default for InferenceSection {
             embedding: InferenceEndpoint::default(),
             speech: InferenceEndpoint::default(),
             ocr: InferenceEndpoint::default(),
+            rerank: InferenceEndpoint::default(),
             embedding_query_prefix: None,
             embedding_document_prefix: None,
             allow_external_provider: false,

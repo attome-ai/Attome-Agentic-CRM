@@ -172,6 +172,29 @@ fn semantic_embedder(state: &EngineState) -> Option<attome_inference::EmbeddingC
     }
 }
 
+/// The knowledge reranker, when `inference.rerank` names one and semantic
+/// search is on. A client that cannot be built is logged and left out.
+fn reranker(state: &EngineState) -> Option<attome_inference::RerankClient> {
+    let inference = &state.base.config.inference;
+    if inference.rerank.base_url.trim().is_empty()
+        || !inference
+            .ai
+            .allows(attome_config::AiSurface::SemanticSearch)
+    {
+        return None;
+    }
+    match attome_inference::RerankClient::new(inference) {
+        Ok(client) => {
+            tracing::info!(model = client.model_id(), "knowledge reranker enabled");
+            Some(client)
+        }
+        Err(e) => {
+            tracing::error!(error = %e, "the rerank client could not be built; passages keep their fused order");
+            None
+        }
+    }
+}
+
 /// Runs up to [`EMBED_BATCHES_PER_TICK`] embedding passes, stopping when a pass
 /// finds fewer chunks than a full batch.
 ///
@@ -236,6 +259,9 @@ pub async fn run_drain_loop(state: EngineState, shutdown: impl std::future::Futu
     }
 
     let embedder = semantic_embedder(&state);
+    // N15-T1: the recorded knowledge retrieval fuses with the same embedder
+    // and reranks when a reranker is configured.
+    crate::knowledge::install_ranking(embedder.clone(), reranker(&state));
 
     let mut ticker = tokio::time::interval(DRAIN_INTERVAL);
     ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
