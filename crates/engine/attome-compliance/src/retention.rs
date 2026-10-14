@@ -109,11 +109,13 @@ pub async fn propose_retention_actions(state: &EngineState) -> Result<u32, AppEr
             partition_maintenance::propose_partition_archive_actions(db, "s2s_access_log", days)
                 .await?;
     }
-    if let Some(days) = retention.entity_purge_grace_days {
-        proposed +=
-            attome_metadata::purge::propose_purge_actions(db, days, &retention.disposition_action)
-                .await?;
-    }
+    // A18-T5: an entity's own bin retention wins over the deployment's.
+    proposed += attome_metadata::purge::propose_purge_actions_by_entity(
+        db,
+        retention.entity_purge_grace_days,
+        &retention.disposition_action,
+    )
+    .await?;
 
     Ok(proposed)
 }
@@ -594,6 +596,16 @@ async fn execute_entity_purge(
     let scrubbed =
         attome_metadata::purge::scrub_record(&mut tx, entity_logicalname, &attrs, record_id, actor)
             .await?;
+    // A18-T5: the bin entry is closed as purged, so it is no longer offered
+    // for restore.
+    sqlx::query(
+        "UPDATE deletion SET purged_at = NOW()          WHERE entity = $1 AND record_id = $2 AND restored_at IS NULL AND purged_at IS NULL",
+    )
+    .bind(entity_logicalname)
+    .bind(record_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
     // D-788 rule 9 / security review L6: a purged record's values in the
     // 30-day recovery archive go with it, in the same transaction.
     let archived_erased =

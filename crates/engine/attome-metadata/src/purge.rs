@@ -60,6 +60,28 @@ pub async fn propose_purge_actions(
     grace_days: u32,
     disposition_action: &str,
 ) -> Result<u32, AppError> {
+    propose_purge_actions_by_entity(db, Some(grace_days), disposition_action).await
+}
+
+/// A18-T5: [`propose_purge_actions`] with each entity's own recycle-bin
+/// retention (`bin_setting.retention_days`) ahead of the deployment's
+/// `default_grace_days`; an entity with neither is kept forever.
+pub async fn propose_purge_actions_by_entity(
+    db: &DbPool,
+    default_grace_days: Option<u32>,
+    disposition_action: &str,
+) -> Result<u32, AppError> {
+    let per_entity: std::collections::HashMap<String, i32> = sqlx::query_as::<_, (String, i32)>(
+        "SELECT entity, retention_days FROM bin_setting WHERE retention_days IS NOT NULL",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?
+    .into_iter()
+    .collect();
+    if default_grace_days.is_none() && per_entity.is_empty() {
+        return Ok(0);
+    }
     let action_type = match disposition_action {
         "archive" => "archive",
         "purge" => "entity_purge",
@@ -72,8 +94,6 @@ pub async fn propose_purge_actions(
             "entity_purge"
         }
     };
-    let cutoff = Utc::now() - chrono::Duration::days(grace_days as i64);
-
     let entities: Vec<String> = sqlx::query_scalar(
         "SELECT logicalname FROM entity_info \
          WHERE is_append_only = false AND (is_active IS NULL OR is_active = true)",
@@ -103,6 +123,14 @@ pub async fn propose_purge_actions(
             );
             continue;
         }
+        let days = per_entity
+            .get(&logicalname)
+            .map(|d| i64::from(*d))
+            .or(default_grace_days.map(i64::from));
+        let Some(days) = days else {
+            continue;
+        };
+        let cutoff = Utc::now() - chrono::Duration::days(days);
         proposed += propose_purge_actions_for_entity(db, &logicalname, cutoff, action_type).await?;
     }
     Ok(proposed)
