@@ -17,6 +17,10 @@ every day:
 - If the file store cannot be reached, the database backup still counts; the server logs an error
   and the next run copies the files.
 - `attome backup now` writes one at once.
+- On the first day of each month, right after the backup, a restore drill restores it into a
+  throwaway database, checks that migrations, entities and people are there, and drops it. Each
+  drill appends its result, time and archive to `drills.jsonl` in the backup folder; the admin
+  console shows the newest. `attome backup drill` runs one now.
 - The PostgreSQL client tools must be installed (`pg_dump`); set `backup.pg_dump` to its path
   when it is not on the PATH. Turn the backup off with `backup.enabled = false`.
 

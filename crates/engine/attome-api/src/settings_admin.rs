@@ -995,6 +995,9 @@ struct BackupStatus {
     same_disk: bool,
     archives: usize,
     latest: Option<BackupArchive>,
+    /// The newest restore drill (U6-T3), as `attome backup drill` and the
+    /// monthly run record it.
+    last_drill: Option<serde_json::Value>,
 }
 
 /// U6-T1: what the daily local backup does and the newest one it wrote, so
@@ -1067,6 +1070,15 @@ async fn backup_status(
             .is_none_or(str::is_empty),
         archives: names.len(),
         latest,
+        last_drill: tokio::fs::read_to_string(dir.join("drills.jsonl"))
+            .await
+            .ok()
+            .and_then(|text| {
+                text.lines()
+                    .rev()
+                    .find(|l| !l.trim().is_empty())
+                    .and_then(|l| serde_json::from_str(l).ok())
+            }),
     }))
 }
 

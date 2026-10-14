@@ -34,8 +34,10 @@ Usage:
   attome healthcheck            Exit 0 when the local server is healthy
   attome preflight              Check configuration and dependencies
   attome doctor                 The same checks, with what to do about each failure
-  attome backup now             Write a database backup now (pg_dump custom format;
-                                restore one with pg_restore into an empty database)
+  attome backup now             Write a database backup now (pg_dump custom format,
+                                plus the file store's files)
+  attome backup drill           Restore the newest backup into a throwaway database,
+                                check it, drop it, and record the result
   attome restore <archive|latest> --yes
                                 Put the database back to a backup (stop the server
                                 first; the current database is backed up before)
@@ -122,6 +124,7 @@ fn main() -> ExitCode {
         ["preflight", ..] => attome::cmd::preflight::run(),
         ["doctor", ..] => attome::cmd::preflight::run_doctor(),
         ["backup", "now"] => attome::backup::run_now(),
+        ["backup", "drill"] => attome::backup::run_drill_now(),
         ["restore", rest @ ..] => {
             attome::backup::run_restore(rest.iter().map(|arg| (*arg).to_owned()).collect())
         }

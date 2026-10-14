@@ -42,6 +42,154 @@ const INDEX_FILE: &str = ".index.json";
 /// Left in the backup folder by `attome restore`: the next boot must apply
 /// the erasure ledger before it serves (R2-T1), and removes it once done.
 pub const RESTORE_PENDING: &str = "restore-pending";
+/// One line per restore drill (U6-T3), newest last.
+pub const DRILLS_FILE: &str = "drills.jsonl";
+
+/// The evidence one restore drill leaves (U6-T3).
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct DrillRecord {
+    pub at: DateTime<Utc>,
+    pub archive: String,
+    pub seconds: u64,
+    pub passed: bool,
+    /// What was checked, or why the drill failed.
+    pub detail: String,
+}
+
+/// The throwaway database a drill restores into.
+pub fn drill_database_name(at: DateTime<Utc>) -> String {
+    format!("attome_drill_{}", at.format("%Y%m%d%H%M%S"))
+}
+
+fn connect_options(config: &AppConfig, dbname: &str) -> sqlx::postgres::PgConnectOptions {
+    let db = &config.database;
+    let mut options = sqlx::postgres::PgConnectOptions::new()
+        .host(&db.host)
+        .port(db.port)
+        .username(&db.user)
+        .database(dbname);
+    if let Some(password) = db.password.as_deref() {
+        options = options.password(password);
+    }
+    options
+}
+
+/// The checks a restored copy must pass: migrations applied, entities
+/// registered, people present.
+const DRILL_CHECKS: [(&str, &str); 3] = [
+    ("migrations", "SELECT COUNT(*) FROM _sqlx_migrations"),
+    ("entities", "SELECT COUNT(*) FROM entity_info"),
+    ("people", "SELECT COUNT(*) FROM user_account"),
+];
+
+/// Restores `archive` into a new throwaway database, runs [`DRILL_CHECKS`]
+/// there, and drops it. Returns what the checks found.
+async fn drill_into(config: &AppConfig, archive: &Path, temp: &str) -> Result<String, String> {
+    use sqlx::{Connection, Executor};
+    let mut admin =
+        sqlx::PgConnection::connect_with(&connect_options(config, &config.database.dbname))
+            .await
+            .map_err(|e| format!("cannot connect: {e}"))?;
+    // The name is generated (letters, digits, underscores), never input.
+    admin
+        .execute(format!("CREATE DATABASE \"{temp}\"").as_str())
+        .await
+        .map_err(|e| format!("cannot create {temp}: {e}"))?;
+    let outcome = async {
+        let program = pg_restore_program(config);
+        let mut command = tokio::process::Command::new(&program);
+        command
+            .args([
+                "--no-owner".to_owned(),
+                "--exit-on-error".to_owned(),
+                format!("--host={}", config.database.host),
+                format!("--port={}", config.database.port),
+                format!("--username={}", config.database.user),
+                format!("--dbname={temp}"),
+                archive.display().to_string(),
+            ])
+            .kill_on_drop(true);
+        if let Some(password) = config.database.password.as_deref() {
+            command.env("PGPASSWORD", password);
+        }
+        let output = tokio::time::timeout(BACKUP_TIMEOUT, command.output())
+            .await
+            .map_err(|_| "pg_restore did not finish within two hours".to_owned())?
+            .map_err(|e| format!("cannot run {program}: {e}"))?;
+        if !output.status.success() {
+            let reason = String::from_utf8_lossy(&output.stderr);
+            return Err(format!(
+                "pg_restore failed ({}): {}",
+                output.status,
+                reason.lines().last().unwrap_or_default()
+            ));
+        }
+        let mut copy = sqlx::PgConnection::connect_with(&connect_options(config, temp))
+            .await
+            .map_err(|e| format!("cannot open the restored copy: {e}"))?;
+        let mut found = Vec::new();
+        for (name, sql) in DRILL_CHECKS {
+            let count: i64 = sqlx::query_scalar(sql)
+                .fetch_one(&mut copy)
+                .await
+                .map_err(|e| format!("check {name} failed: {e}"))?;
+            if count == 0 {
+                return Err(format!("check {name} found nothing"));
+            }
+            found.push(format!("{name}={count}"));
+        }
+        let _ = copy.close().await;
+        Ok(found.join(", "))
+    }
+    .await;
+    if let Err(error) = admin
+        .execute(format!("DROP DATABASE IF EXISTS \"{temp}\" WITH (FORCE)").as_str())
+        .await
+    {
+        tracing::warn!(%error, database = %temp, "restore drill: the throwaway database was not dropped");
+    }
+    outcome
+}
+
+/// U6-T3: restores the newest backup into a throwaway database, checks it,
+/// drops it, and appends the result to [`DRILLS_FILE`] in the backup folder.
+pub async fn run_drill(config: &AppConfig) -> Result<DrillRecord, String> {
+    let archive = archive_for(config, "latest").await?;
+    let started = std::time::Instant::now();
+    let at = Utc::now();
+    let outcome = drill_into(config, &archive, &drill_database_name(at)).await;
+    let record = DrillRecord {
+        at,
+        archive: archive
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        seconds: started.elapsed().as_secs(),
+        passed: outcome.is_ok(),
+        detail: match &outcome {
+            Ok(found) => found.clone(),
+            Err(error) => error.clone(),
+        },
+    };
+    let line = serde_json::to_string(&record).map_err(|e| e.to_string())? + "\n";
+    let path = backup_dir(config).join(DRILLS_FILE);
+    let mut file = tokio::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .await
+        .map_err(|e| format!("cannot open {}: {e}", path.display()))?;
+    tokio::io::AsyncWriteExt::write_all(&mut file, line.as_bytes())
+        .await
+        .map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+    Ok(record)
+}
+
+/// Whether today's run also drills: the first day of each month.
+pub fn drill_due(now: DateTime<Utc>) -> bool {
+    use chrono::Datelike;
+    now.day() == 1
+}
 
 /// One file a backup holds.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -405,6 +553,21 @@ pub fn spawn_daily(config: std::sync::Arc<AppConfig>) {
             match run_once(&config).await {
                 Ok(file) => {
                     tracing::info!(file = %file.display(), seconds = started.elapsed().as_secs(), "backup: done");
+                    if drill_due(Utc::now()) {
+                        match run_drill(&config).await {
+                            Ok(drill) if drill.passed => tracing::info!(
+                                seconds = drill.seconds, detail = %drill.detail,
+                                "backup: the monthly restore drill passed"
+                            ),
+                            Ok(drill) => tracing::error!(
+                                detail = %drill.detail,
+                                "backup: the monthly restore drill failed"
+                            ),
+                            Err(error) => {
+                                tracing::error!(%error, "backup: the monthly restore drill could not run")
+                            }
+                        }
+                    }
                 }
                 Err(error) => {
                     tracing::error!(%error, "backup: the daily backup failed");
@@ -438,6 +601,42 @@ pub async fn run_now() -> std::process::ExitCode {
         }
         Err(error) => {
             eprintln!("attome backup: {error}");
+            std::process::ExitCode::FAILURE
+        }
+    }
+}
+
+/// `attome backup drill`: one restore drill now.
+#[allow(
+    clippy::print_stdout,
+    reason = "a command-line command reports to standard output"
+)]
+#[tokio::main]
+pub async fn run_drill_now() -> std::process::ExitCode {
+    let config = match AppConfig::from_file() {
+        Ok(config) => config,
+        Err(error) => {
+            eprintln!("attome backup drill: cannot read the configuration: {error}");
+            return std::process::ExitCode::FAILURE;
+        }
+    };
+    match run_drill(&config).await {
+        Ok(drill) if drill.passed => {
+            println!(
+                "restore drill passed in {}s on {}: {}",
+                drill.seconds, drill.archive, drill.detail
+            );
+            std::process::ExitCode::SUCCESS
+        }
+        Ok(drill) => {
+            eprintln!(
+                "attome backup drill: failed on {}: {}",
+                drill.archive, drill.detail
+            );
+            std::process::ExitCode::FAILURE
+        }
+        Err(error) => {
+            eprintln!("attome backup drill: {error}");
             std::process::ExitCode::FAILURE
         }
     }
@@ -717,6 +916,26 @@ mod tests {
             sha256_hex(b"abc"),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
         );
+    }
+
+    #[test]
+    fn drills_run_monthly_into_a_named_throwaway_database() {
+        let first = Utc.with_ymd_and_hms(2026, 11, 1, 2, 0, 0).unwrap();
+        let second = Utc.with_ymd_and_hms(2026, 11, 2, 2, 0, 0).unwrap();
+        assert!(drill_due(first));
+        assert!(!drill_due(second));
+        let name = drill_database_name(first);
+        assert_eq!(name, "attome_drill_20261101020000");
+        assert!(name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'));
+        let record = DrillRecord {
+            at: first,
+            archive: "attome-20261101-0200.dump".into(),
+            seconds: 42,
+            passed: true,
+            detail: "migrations=23, entities=95, people=3".into(),
+        };
+        let line = serde_json::to_string(&record).unwrap();
+        assert_eq!(serde_json::from_str::<DrillRecord>(&line).unwrap(), record);
     }
 
     #[test]
