@@ -49,7 +49,7 @@ use crate::budget::Budgets;
 use crate::context::{Context, Schema};
 use crate::error::{BudgetKind, RulesError};
 use crate::trace::Trace;
-use crate::value::Value;
+use crate::value::{Type, Value};
 
 /// Evaluates without building a trace — the hot path (every record write with
 /// a rule or formula, every matching event, every TRD bar). BRU-E1: no node is
@@ -199,7 +199,10 @@ impl Evaluator<'_> {
             _ => {}
         }
 
+        // A field declared `Null` has no known type ("unifies with
+        // anything"), so any value conforms to it.
         if let Some(declared) = declared
+            && declared != Type::Null
             && !value.is_null()
             && value.ty().unify(&declared).as_ref() != Some(&declared)
         {
@@ -1347,6 +1350,14 @@ mod tests {
     }
 
     // ── BRU-C3: Context conformance ─────────────────────────────────────────
+
+    #[test]
+    fn a_field_declared_null_accepts_any_value() {
+        let schema = Schema::new().with_field("status", Type::Null);
+        let compiled = crate::compile::compile("status == \"approved\"", &schema).unwrap();
+        let context = ctx().with_field("status", Value::Text("approved".to_owned()));
+        assert_eq!(compiled.eval(&context), Ok(Value::Bool(true)));
+    }
 
     #[test]
     fn a_context_value_of_the_wrong_type_is_typed() {

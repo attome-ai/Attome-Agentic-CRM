@@ -91,7 +91,9 @@
     "_comment": "Optional; both null (the default) means no promoted-configuration pull is configured — production is then never authored by anything but an operator-run `bundle-tool apply`/an approved POST /api/v1/admin/metadata/import. Set bundle_ref (path or https:// URL to a signed attome-bundle/v1 artifact) + bundle_signing_public_key (base64 Ed25519 public key) together to let this deployment pull and plan its own configuration at first boot and via POST …/metadata/sync — approval is still required before the plan actually applies on this profile (metadata.bundle_apply is production-mandatory).",
     "data_region": null,
     "bundle_ref": null,
-    "bundle_signing_public_key": null
+    "bundle_signing_public_key": null,
+    "sovereign": false,
+    "sovereign_allowed_hosts": []
   },
   "auth": {
     "jwt_secret": "${JWT_SECRET}",

@@ -91,7 +91,9 @@
     "_comment": "Optional; both null (the default) means no promoted-configuration pull is configured. See config.production.example.json's deployment block for the full explanation — identical here.",
     "data_region": null,
     "bundle_ref": null,
-    "bundle_signing_public_key": null
+    "bundle_signing_public_key": null,
+    "sovereign": false,
+    "sovereign_allowed_hosts": []
   },
   "auth": {
     "jwt_secret": "${JWT_SECRET}",

@@ -2037,10 +2037,8 @@ mod tests {
             "ALTER TABLE IF EXISTS a RENAME TO a;",
         ]);
         let got: Vec<&str> = t.iter().map(String::as_str).collect();
-        assert_eq!(
-            got,
-            ["foo_bar", "a", "audit_header", "a", "role", "s2s_client"]
-        );
+        // A set: each table once, in name order.
+        assert_eq!(got, ["a", "audit_header", "foo_bar", "role", "s2s_client"]);
     }
 
     #[test]

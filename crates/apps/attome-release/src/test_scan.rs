@@ -1,6 +1,7 @@
 //! The test tag scanner (roadmap AC5-T1).
 //!
-//! Every test may carry tags in the comment lines just above it:
+//! Every test may carry tags in the comment lines directly above it (no blank
+//! line between):
 //!
 //! ```text
 //! // feature: A1, A2        the feature ids it proves (docs/features.json)
@@ -181,7 +182,19 @@ pub fn scan_text(relative: &str, text: &str) -> Vec<TestRef> {
                 None => continue,
             }
         };
-        let above = &lines[index.saturating_sub(5)..index];
+        // The comment and attribute lines directly above the test (at most
+        // five); a blank or code line ends them, so one test's tags never
+        // reach the next.
+        let mut start = index;
+        while start > 0 && index - start < 5 {
+            let previous = lines[start - 1].trim_start();
+            if previous.starts_with("//") || previous.starts_with("#[") {
+                start -= 1;
+            } else {
+                break;
+            }
+        }
+        let above = &lines[start..index];
         let [features, ops, negative_ops, regressions] = tags(above);
         found.push(TestRef {
             file: relative.to_owned(),

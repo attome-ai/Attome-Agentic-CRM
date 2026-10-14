@@ -30,6 +30,16 @@ const MODULE_CATEGORIES: &[(&str, &str)] = &[
 /// since a naive split would either miss these or miscategorize them under
 /// a module named after the entity itself.
 const EXPLICIT_CATEGORIES: &[(&str, &str)] = &[
+    // Core tables lost their `core_` word in v2 (V2-D483).
+    ("user_account", "Core Platform"),
+    ("team", "Core Platform"),
+    ("role", "Core Platform"),
+    ("organization", "Core Platform"),
+    ("privilege", "Core Platform"),
+    ("position", "Core Platform"),
+    ("business_unit", "Core Platform"),
+    ("api_key", "Core Platform"),
+    ("autovalue", "Core Platform"),
     ("note", "Core Platform"),
     ("communication", "Core Platform"),
     ("attome_document", "Document Management"),
@@ -44,10 +54,9 @@ fn category_for(logicalname: &str) -> &'static str {
             return category;
         }
     }
-    let Some(rest) = logicalname.strip_prefix("xrm_") else {
-        return FALLBACK_CATEGORY;
-    };
-    let Some(module) = rest.split('_').next() else {
+    // v2 names carry no `xrm_` prefix (V2-D483): a module's tables start
+    // with the module word (`audit_header`, `project_team`).
+    let Some(module) = logicalname.split('_').next() else {
         return FALLBACK_CATEGORY;
     };
     MODULE_CATEGORIES
