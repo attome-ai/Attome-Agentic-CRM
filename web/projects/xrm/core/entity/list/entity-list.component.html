@@ -85,6 +85,9 @@
           {{ activeFilterSummary() }}
         </button>
         }
+        <a class="summary-chip summary-chip-button" data-bin-link [routerLink]="['/xrm/bin', entityName()]">
+          <i class="las la-trash-alt" aria-hidden="true"></i> {{ 'recycleBin.title' | translate }}
+        </a>
         @if (tagFilter()) {
         <button type="button" class="summary-chip summary-chip-button" data-tag-filter (click)="clearTagFilter()">
           <i class="las la-tags" aria-hidden="true"></i> {{ 'recordTags.filtered' | translate }}

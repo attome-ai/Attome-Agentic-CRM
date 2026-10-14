@@ -1428,6 +1428,11 @@ export const xrmEn = {
   },
 
   // ── U5 (basic-units-10-10 §4.5, D-602): the user's own notification preferences ──
+  recycleBin: {
+    title: 'Recycle bin', restoreSelected: 'Restore {count} selected', restoreOperation: 'Restore all {count} from this delete',
+    result: '{restored} restored, {failed} could not be', empty: 'Nothing in the recycle bin.',
+    select: 'Select', record: 'Record', deletedAt: 'Deleted', reason: 'Reason', operation: 'Deleted together',
+  },
   recordTags: {
     label: 'Tags', add: 'Add a tag…', personal: 'Only me', remove: 'Remove {tag}',
     bulkTag: 'Tag', bulkAdd: 'Add to selected', bulkRemove: 'Remove "{tag}"',

@@ -514,6 +514,13 @@ export const xrmShellRoutes: Routes = [
               import('@attome/xrm/core/approvals').then(m => m.MyApprovalsPageComponent),
           },
           {
+            // A18-T9 — an entity's recycle bin. Literal segment, ahead of the
+            // entity wildcard below.
+            path: 'bin/:entity',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/entity').then(m => m.RecycleBinComponent),
+          },
+          {
             // B4-T4 — every record carrying a tag, across entities. Literal
             // segment, ahead of the entity wildcard below.
             path: 'tags/:tagId',

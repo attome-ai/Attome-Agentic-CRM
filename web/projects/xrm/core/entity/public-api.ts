@@ -10,6 +10,7 @@ export type {
 export { EntityListComponent, resolveRouteTemplate } from './list/entity-list.component';
 export { RelatedGridComponent }       from './related-grid/related-grid.component';
 export { TagPageComponent }           from './record-tags/tag-page.component';
+export { RecycleBinComponent }        from './recycle-bin/recycle-bin.component';
 export { BulkTagComponent }           from './record-tags/bulk-tag.component';
 // The bounded poll loop for durable jobs (bulk edit, export) — also used by
 // the report runner (U16), so it is public rather than list-internal.

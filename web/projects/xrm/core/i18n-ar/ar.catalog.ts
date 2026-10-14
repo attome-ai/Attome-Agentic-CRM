@@ -1351,6 +1351,11 @@ export const xrmAr = {
   },
 
   // ── U5 — تفضيلات الإشعارات الخاصة بالمستخدم (D-602) ──
+  recycleBin: {
+    title: 'سلة المحذوفات', restoreSelected: 'استعادة {count} محدد', restoreOperation: 'استعادة الـ{count} المحذوفة معًا',
+    result: 'استُعيد {restored}، وتعذّر {failed}', empty: 'سلة المحذوفات فارغة.',
+    select: 'تحديد', record: 'السجل', deletedAt: 'حُذف في', reason: 'السبب', operation: 'حُذفت معًا',
+  },
   recordTags: {
     label: 'الوسوم', add: 'أضف وسماً…', personal: 'لي فقط', remove: 'إزالة {tag}',
     bulkTag: 'وسم', bulkAdd: 'أضف إلى المحدد', bulkRemove: 'إزالة "{tag}"',
