@@ -37,19 +37,20 @@
 
 html, body { height: 100%; }
 
+/* B13-T8: a published theme's fonts arrive as --brand-* variables. */
 body {
-  font-family: 'Twemoji Country Flags', 'DM Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Twemoji Country Flags', var(--brand-font-latin, 'DM Sans'), 'Inter', system-ui, -apple-system, sans-serif;
   background: #0f172a;
 }
 
 app-root { display: block; height: 100%; }
 
 [dir="rtl"] body, [dir="rtl"] {
-  font-family: 'Twemoji Country Flags', 'Cairo', 'DM Sans', system-ui, sans-serif;
+  font-family: 'Twemoji Country Flags', var(--brand-font-arabic, 'Cairo'), 'DM Sans', system-ui, sans-serif;
   font-size: 14px;
   color: var(--color-text-primary);
   background: var(--color-bg);
-  line-height: 1.5;
+  line-height: var(--brand-arabic-line-height, 1.5);
 }
 
 a { color: inherit; text-decoration: none; }

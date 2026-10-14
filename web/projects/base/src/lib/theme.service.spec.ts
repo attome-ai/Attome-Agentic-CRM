@@ -43,6 +43,25 @@ describe('ThemeService', () => {
     expect(root.getPropertyValue('--color-accent')).not.toBe('#112233');
   });
 
+  it('B13-T8 applies brand fonts in both schemes and removes stale ones', () => {
+    const theme = setUp();
+    theme.setMode('dark');
+    theme.setBrand({
+      '--brand-font-arabic': '"Noto Naskh Arabic"',
+      '--brand-arabic-line-height': '1.8',
+      '--brand-font-latin': '"x"; } body {',
+    });
+    const root = document.documentElement.style;
+    expect(root.getPropertyValue('--brand-font-arabic')).toBe('"Noto Naskh Arabic"');
+    expect(root.getPropertyValue('--brand-arabic-line-height')).toBe('1.8');
+    expect(root.getPropertyValue('--brand-font-latin')).toBe('');
+    theme.setBrand({ '--brand-arabic-line-height': '1.6' });
+    expect(root.getPropertyValue('--brand-font-arabic')).toBe('');
+    expect(root.getPropertyValue('--brand-arabic-line-height')).toBe('1.6');
+    theme.setBrand(null);
+    expect(root.getPropertyValue('--brand-arabic-line-height')).toBe('');
+  });
+
   // NGB-P.1, flipped by NGB-1.6: `load()` goes through a guarded read now, so a
   // blocked store leaves the defaults in place instead of throwing out of the
   // constructor.

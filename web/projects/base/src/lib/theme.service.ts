@@ -96,15 +96,21 @@ export class ThemeService {
   }
 
   /**
-   * B13-T8: the published brand (`/api/v1/branding/public`'s `variables`):
-   * `--color-*` values laid over the light scheme. The dark scheme keeps the
-   * product's own colours until a theme declares dark ones.
+   * B13-T8: the published brand (`/api/v1/branding/*`'s `variables`):
+   * `--color-*` values laid over the light scheme (the dark scheme keeps the
+   * product's own colours until a theme declares dark ones), and the
+   * `--brand-*` fonts in both schemes. A variable a newer brand no longer
+   * sets is removed.
    */
   setBrand(variables: Record<string, string> | null): void {
-    this.brand = Object.fromEntries(
-      Object.entries(variables ?? {}).filter(([name, value]) => /^--color-[a-z-]+$/.test(name) && /^#[0-9a-fA-F]{6}$/.test(value)),
-    );
-    if (isPlatformBrowser(this.platformId)) this.apply();
+    const previous = Object.keys(this.brand);
+    this.brand = Object.fromEntries(Object.entries(variables ?? {}).filter(([name, value]) => isBrandVariable(name, value)));
+    if (!isPlatformBrowser(this.platformId)) return;
+    const style = this.doc.documentElement.style;
+    for (const name of previous) {
+      if (name.startsWith('--brand-') && !(name in this.brand)) style.removeProperty(name);
+    }
+    this.apply();
   }
 
   /** Back to the OS preference. The palette reset went with the palette API (OD-7). */
@@ -168,8 +174,8 @@ export class ThemeService {
     root.style.setProperty('--color-on-accent',      colors.onAccent);
     root.style.setProperty('--color-danger',         colors.danger);
     root.style.setProperty('--color-success',        colors.success);
-    if (!isDark) {
-      for (const [name, value] of Object.entries(this.brand)) root.style.setProperty(name, value);
+    for (const [name, value] of Object.entries(this.brand)) {
+      if (!isDark || name.startsWith('--brand-')) root.style.setProperty(name, value);
     }
 
     if (isDark) {
@@ -182,4 +188,12 @@ export class ThemeService {
   private save(key: string, value: string): void {
     try { localStorage.setItem(key, value); } catch { /* SSR / private browsing */ }
   }
+}
+
+/** The brand variables `setBrand` accepts, each with the value shape the server sends. */
+export function isBrandVariable(name: string, value: string): boolean {
+  if (/^--color-[a-z-]+$/.test(name)) return /^#[0-9a-fA-F]{6}$/.test(value);
+  if (name === '--brand-font-latin' || name === '--brand-font-arabic') return /^"[\p{L}\p{N} -]{1,64}"$/u.test(value);
+  if (name === '--brand-arabic-line-height') return /^[12](\.\d+)?$/.test(value);
+  return false;
 }

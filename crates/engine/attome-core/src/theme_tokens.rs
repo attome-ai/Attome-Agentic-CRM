@@ -281,10 +281,22 @@ pub fn check(theme: &ThemeTokens) -> ContrastReport {
     }
 }
 
-/// The light-mode CSS variables a theme sets, by the names the web app
-/// already uses (`--color-*` in `theme.service.ts`). Tokens with no
-/// variable yet (warning, info, the dark pair, fonts, radius, density) are
-/// left out until the web app reads them (B13-T8).
+/// A font family name a theme may name: letters, digits, spaces and
+/// hyphens, at most 64 characters. Anything else is left out of the CSS.
+fn is_font_name(name: &str) -> bool {
+    (1..=64).contains(&name.chars().count())
+        && name
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == ' ' || c == '-')
+}
+
+/// The CSS variables a theme sets: the light-mode colours by the names the
+/// web app already uses (`--color-*` in `theme.service.ts`), and the fonts
+/// as `--brand-font-latin`, `--brand-font-arabic` (quoted family names) and
+/// `--brand-arabic-line-height` (1 to 2.5), which `web/src/styles.css`
+/// reads with the product's fonts as fallback. Tokens with no variable yet
+/// (warning, info, the dark pair, radius, density) are left out until the
+/// web app reads them.
 pub fn to_css_variables(theme: &ThemeTokens) -> BTreeMap<String, String> {
     let mut out = BTreeMap::new();
     let mut put = |var: &str, value: &Option<HexColor>| {
@@ -298,6 +310,18 @@ pub fn to_css_variables(theme: &ThemeTokens) -> BTreeMap<String, String> {
     put("--color-text-primary", &theme.text);
     put("--color-success", &theme.success);
     put("--color-danger", &theme.danger);
+    let fonts = [
+        ("--brand-font-latin", &theme.font_latin),
+        ("--brand-font-arabic", &theme.font_arabic),
+    ];
+    for (var, name) in fonts {
+        if let Some(name) = name.as_deref().map(str::trim).filter(|n| is_font_name(n)) {
+            out.insert(var.to_owned(), format!("\"{name}\""));
+        }
+    }
+    if let Some(height) = theme.arabic_line_height.filter(|h| (1.0..=2.5).contains(h)) {
+        out.insert("--brand-arabic-line-height".to_owned(), format!("{height}"));
+    }
     out
 }
 
@@ -362,6 +386,37 @@ mod tests {
                 .iter()
                 .any(|f| f.pair == "success/danger" && f.mode == "distinct")
         );
+    }
+
+    #[test]
+    fn fonts_become_variables_only_when_safe() {
+        let theme = ThemeTokens {
+            font_latin: Some("IBM Plex Sans".into()),
+            font_arabic: Some("x\"; } body { display: none".into()),
+            arabic_line_height: Some(1.8),
+            ..ThemeTokens::default()
+        };
+        let vars = to_css_variables(&theme);
+        assert_eq!(
+            vars.get("--brand-font-latin").map(String::as_str),
+            Some("\"IBM Plex Sans\"")
+        );
+        assert!(!vars.contains_key("--brand-font-arabic"));
+        assert_eq!(
+            vars.get("--brand-arabic-line-height").map(String::as_str),
+            Some("1.8")
+        );
+        let arabic = ThemeTokens {
+            font_arabic: Some("نسخ عربي".into()),
+            arabic_line_height: Some(9.0),
+            ..ThemeTokens::default()
+        };
+        let vars = to_css_variables(&arabic);
+        assert_eq!(
+            vars.get("--brand-font-arabic").map(String::as_str),
+            Some("\"نسخ عربي\"")
+        );
+        assert!(!vars.contains_key("--brand-arabic-line-height"));
     }
 
     #[test]
