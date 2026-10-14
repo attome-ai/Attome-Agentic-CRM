@@ -5924,6 +5924,29 @@ export interface paths {
         patch: operations["update_theme"];
         trace?: never;
     };
+    "/api/v1/admin/themes/{id}/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** B13-T4: a theme version's assets. */
+        get: operations["list_theme_assets"];
+        put?: never;
+        /**
+         * B13-T4: uploads one asset of a draft theme as the raw request body, with
+         *     its `Content-Type`. At most 2 MB; PNG, SVG, ICO, WOFF2 or PDF as the kind
+         *     allows. An SVG with a script, event handler, external reference or
+         *     foreign object is refused. Replaces the draft's asset of that kind.
+         */
+        post: operations["upload_theme_asset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/themes/{id}/diff": {
         parameters: {
             query?: never;
@@ -7874,6 +7897,28 @@ export interface paths {
          *     necessarily logged in when clicking the emailed link.
          */
         post: operations["verify_email_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/branding/asset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * B13-T4: a published logo, favicon or font for this host, without a
+         *     session (the sign-in page shows them). Served inert: `nosniff` and a
+         *     `sandbox` content security policy, so an SVG opened directly runs
+         *     nothing.
+         */
+        get: operations["public_brand_asset"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -13014,6 +13059,20 @@ export interface components {
             to: string;
             tool_calls: components["schemas"]["ToolCallStats"];
             turns: components["schemas"]["TurnStats"];
+        };
+        /** @description A brand asset of one theme version. */
+        BrandAsset: {
+            /** Format: int64 */
+            byte_size: number;
+            content_type: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            sha256: string;
+            /** Format: uuid */
+            theme_id: string;
         };
         BreakGlassBody: {
             /**
@@ -19070,6 +19129,28 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_BrandAsset: {
+            items: {
+                /** Format: int64 */
+                byte_size: number;
+                content_type: string;
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                id: string;
+                kind: string;
+                sha256: string;
+                /** Format: uuid */
+                theme_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_BusinessRule: {
             items: {
                 applies_to: components["schemas"]["AppliesTo"];
@@ -22767,9 +22848,15 @@ export interface components {
          *     to hide the vendor's name.
          */
         PublicBranding: {
+            favicon_url?: string | null;
             font_arabic?: string | null;
+            font_arabic_url?: string | null;
             font_latin?: string | null;
+            font_latin_url?: string | null;
             hide_vendor_name: boolean;
+            logo_dark_url?: string | null;
+            /** @description `/api/v1/branding/asset?kind=logo&v=…` when a logo is published. */
+            logo_url?: string | null;
             variables: {
                 [key: string]: string;
             };
@@ -48239,6 +48326,132 @@ export interface operations {
             };
         };
     };
+    list_theme_assets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The version's assets, one per kind */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_BrandAsset"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    upload_theme_asset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                /**
+                 * @description `logo`, `logo_dark`, `favicon`, `font_arabic`, `font_latin` or
+                 *     `guidelines_pdf`.
+                 */
+                kind: string;
+            };
+            cookie?: never;
+        };
+        /** @description The file */
+        requestBody: {
+            content: {
+                "application/octet-stream": number[];
+            };
+        };
+        responses: {
+            /** @description The stored asset */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BrandAsset"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such theme */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The theme is not a draft */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Larger than 2 MB */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unknown kind, wrong content type or unsafe SVG */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     diff_theme: {
         parameters: {
             query?: never;
@@ -54132,6 +54345,48 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    public_brand_asset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description `logo`, `logo_dark`, `favicon`, `font_arabic`, `font_latin` or
+                 *     `guidelines_pdf`.
+                 */
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": number[];
+                };
+            };
+            /** @description Unchanged since the ETag the caller holds */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No published asset of that kind */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

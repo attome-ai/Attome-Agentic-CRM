@@ -32708,6 +32708,198 @@
         }
       }
     },
+    "/api/v1/admin/themes/{id}/assets": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T4: a theme version's assets.",
+        "operationId": "list_theme_assets",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The version's assets, one per kind",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_BrandAsset"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T4: uploads one asset of a draft theme as the raw request body, with\nits `Content-Type`. At most 2 MB; PNG, SVG, ICO, WOFF2 or PDF as the kind\nallows. An SVG with a script, event handler, external reference or\nforeign object is refused. Replaces the draft's asset of that kind.",
+        "operationId": "upload_theme_asset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "`logo`, `logo_dark`, `favicon`, `font_arabic`, `font_latin` or\n`guidelines_pdf`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "The file",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The stored asset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandAsset"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such theme",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The theme is not a draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Larger than 2 MB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unknown kind, wrong content type or unsafe SVG",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
     "/api/v1/admin/themes/{id}/diff": {
       "get": {
         "tags": [
@@ -41731,6 +41923,56 @@
             }
           ],
           "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/branding/asset": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "B13-T4: a published logo, favicon or font for this host, without a\nsession (the sign-in page shows them). Served inert: `nosniff` and a\n`sandbox` content security policy, so an SVG opened directly runs\nnothing.",
+        "operationId": "public_brand_asset",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "`logo`, `logo_dark`, `favicon`, `font_arabic`, `font_latin` or\n`guidelines_pdf`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The file",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Unchanged since the ETag the caller holds"
+          },
+          "404": {
+            "description": "No published asset of that kind",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -63721,6 +63963,46 @@
           }
         }
       },
+      "BrandAsset": {
+        "type": "object",
+        "description": "A brand asset of one theme version.",
+        "required": [
+          "id",
+          "theme_id",
+          "kind",
+          "content_type",
+          "byte_size",
+          "sha256",
+          "created_at"
+        ],
+        "properties": {
+          "byte_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "theme_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "BreakGlassBody": {
         "type": "object",
         "properties": {
@@ -79143,6 +79425,73 @@
           }
         }
       },
+      "PaginatedResponse_BrandAsset": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A brand asset of one theme version.",
+              "required": [
+                "id",
+                "theme_id",
+                "kind",
+                "content_type",
+                "byte_size",
+                "sha256",
+                "created_at"
+              ],
+              "properties": {
+                "byte_size": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "content_type": {
+                  "type": "string"
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "sha256": {
+                  "type": "string"
+                },
+                "theme_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_BusinessRule": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -89204,7 +89553,19 @@
           "hide_vendor_name"
         ],
         "properties": {
+          "favicon_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "font_arabic": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "font_arabic_url": {
             "type": [
               "string",
               "null"
@@ -89216,8 +89577,27 @@
               "null"
             ]
           },
+          "font_latin_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "hide_vendor_name": {
             "type": "boolean"
+          },
+          "logo_dark_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "logo_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`/api/v1/branding/asset?kind=logo&v=…` when a logo is published."
           },
           "variables": {
             "type": "object",
