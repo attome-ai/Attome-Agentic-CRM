@@ -13,6 +13,10 @@
 //!
 //! The database must exist and the connecting role must be able to create
 //! roles and tables in it (the migrations create the three application roles).
+//! Before writing anything it checks the machine against the Solo minimums
+//! ([`super::sizing`]): below them it warns, and it refuses only when the
+//! disk is nearly full.
+//!
 //! The command never touches an existing configuration file unless `--force`
 //! is given, and it never prints a secret other than where it writes it.
 
@@ -255,6 +259,28 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         )
         .into());
     }
+    // Sizing (U1-T3): warn below the Solo minimums, refuse on a nearly full disk.
+    let install_dir = args
+        .out
+        .parent()
+        .filter(|dir| !dir.as_os_str().is_empty())
+        .unwrap_or(std::path::Path::new("."));
+    let findings = super::sizing::judge(
+        &super::sizing::read(install_dir, args.port),
+        &super::sizing::SOLO,
+        args.port,
+    );
+    let mut refused = Vec::new();
+    for finding in findings {
+        match finding {
+            super::sizing::Finding::Warn(text) => say(&format!("warning: {text}")),
+            super::sizing::Finding::Refuse(text) => refused.push(text),
+        }
+    }
+    if !refused.is_empty() {
+        return Err(format!("attome init: {}", refused.join("; ")).into());
+    }
+
     let text = render(&db, args.port, &password)?;
     // Parse and validate what we are about to write, so a bad value is found
     // here and not at the first boot.
