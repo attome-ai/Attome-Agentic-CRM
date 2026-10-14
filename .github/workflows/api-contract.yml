@@ -43,7 +43,16 @@ jobs:
         run: npm ci
       - name: generate
         working-directory: web
-        run: npm run generate:api
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run generate:api 2>&1 | tee ../api-contract.log
+      # This builds the server first, so it reports compile errors well before
+      # the release gate does; the same summary step makes them readable.
+      - name: summarize failures
+        if: failure()
+        shell: bash
+        run: bash scripts/ci/summarize-failures.sh api-contract.log
       - name: commit when changed
         run: |
           if git diff --quiet -- openapi.json web/projects/base/src/lib/generated web/projects/sdk/src/lib/generated; then
