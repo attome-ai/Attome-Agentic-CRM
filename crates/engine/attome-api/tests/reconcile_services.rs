@@ -530,7 +530,8 @@ fn admin_customized_attribute_create_patch_and_is_sensitive() {
             ))
             .await
             .unwrap();
-        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        // A PATCH never converts; the dedicated change-type route does.
+        assert_eq!(resp.status(), StatusCode::CONFLICT);
     })
 }
 

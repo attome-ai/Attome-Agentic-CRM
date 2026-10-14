@@ -285,6 +285,21 @@ async fn enabling_a_dependent_flag_without_its_prerequisite_is_rejected() {
     let (_, admin_cookie) = seed_admin(&db).await;
     let app = full_app(system);
 
+    // The tests of this binary share one database; make sure the prerequisite
+    // is off whatever an earlier test left behind.
+    let mut off = full_on_policy();
+    off["deployment"] = serde_json::json!(false);
+    let resp = app
+        .clone()
+        .oneshot(put_req(
+            "/api/v1/admin/features/core.beta_ui",
+            &admin_cookie,
+            off,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+
     let req = put_req(
         "/api/v1/admin/features/core.beta_ui_advanced_panels",
         &admin_cookie,
