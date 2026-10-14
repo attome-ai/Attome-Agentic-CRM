@@ -34,7 +34,7 @@ through the same API and the same permissions.
 | `crates/apps/` | The `attome` server and command-line tool. |
 | `web/` | The web application. |
 | `packs/` | Pack metadata: changesets, layouts, sample data. |
-| `docs/` | Documentation. |
+| `docs/` | Documentation; `docs/roadmap-paths.md` maps the roadmap's v1 paths to this tree. |
 
 Dependencies point one way: foundation → engine → sdk → packs → apps. See
 [`docs/architecture.md`](docs/architecture.md).
