@@ -12,6 +12,13 @@
 //! - `record.bulk.status` (read): the operation's progress and each record's
 //!   result.
 //!
+//! **Large changes preview first** (roadmap N1-T2). A change to more than
+//! [`PREVIEW_REQUIRED_OVER`] records runs only with the `preview_token` the
+//! preview of exactly that change returned, so the agent (and the person who
+//! confirms it) has seen the sample diff before anything is written. The
+//! change itself runs in the background; `record.bulk.status` reports its
+//! progress.
+//!
 //! **Never applied twice.** An agent's call carries its tool-call id, and
 //! the action ledger claims it before the executor runs (`execute::claim_write`):
 //! a retried or replayed call returns the first call's result instead of
@@ -42,13 +49,16 @@ pub const BULK_STATUS: &str = "record.bulk.status";
 pub const MAX_RECORDS: usize = 500;
 /// Records a preview reads to show what the change does.
 pub const SAMPLE_SIZE: usize = 5;
+/// A change to more records than this needs its preview's token.
+pub const PREVIEW_REQUIRED_OVER: usize = 20;
 
 const BULK_INPUT: &str = r#"{
   "type": "object",
   "properties": {
     "entity": { "type": "string", "description": "Entity logical name." },
     "record_ids": { "type": "array", "items": { "type": "string", "format": "uuid" }, "minItems": 1, "maxItems": 500, "description": "The records to change, e.g. from query.execute." },
-    "values": { "type": "object", "description": "For an update: the fields to set on every record." }
+    "values": { "type": "object", "description": "For an update: the fields to set on every record." },
+    "preview_token": { "type": "string", "description": "The preview_token record.bulk.preview returned for this exact change; required above 20 records." }
   },
   "required": ["entity", "record_ids"],
   "additionalProperties": false
@@ -137,6 +147,8 @@ pub struct BulkArgs {
     pub record_ids: Vec<Uuid>,
     #[serde(default)]
     pub values: Option<Map<String, Value>>,
+    #[serde(default)]
+    pub preview_token: Option<String>,
 }
 
 /// A checked bulk request.
@@ -218,6 +230,29 @@ pub fn check(
         record_ids,
         values,
     })
+}
+
+/// The token naming one exact change: entity, operation, the set of records
+/// and the values. Order and duplicates do not change it.
+pub fn preview_token(plan: &BulkPlan) -> String {
+    use sha2::{Digest, Sha256};
+    let mut ids: Vec<String> = plan.record_ids.iter().map(Uuid::to_string).collect();
+    ids.sort();
+    let values: std::collections::BTreeMap<&String, &Value> = plan.values.iter().collect();
+    let text = json!({
+        "entity": plan.entity,
+        "operation": plan.operation,
+        "ids": ids,
+        "values": values,
+    })
+    .to_string();
+    format!("{:x}", Sha256::digest(text.as_bytes()))[..32].to_owned()
+}
+
+/// Whether `plan` may run with `token`: small changes always, large ones only
+/// with the token of their own preview.
+pub fn preview_satisfied(plan: &BulkPlan, token: Option<&str>) -> bool {
+    plan.record_ids.len() <= PREVIEW_REQUIRED_OVER || token == Some(preview_token(plan).as_str())
 }
 
 /// Parses and checks a request in `ctx`'s name: the entity's `bulk` and
@@ -309,8 +344,10 @@ impl Action for BulkPreview {
                     Err(other) => return Err(other),
                 }
             }
+            let token = preview_token(&plan);
             Ok(ActionResult::plain(json!({
                 "valid": true,
+                "preview_token": token,
                 "entity": plan.entity,
                 "operation": plan.operation,
                 "count": plan.record_ids.len(),
@@ -344,6 +381,12 @@ impl Action for BulkApply {
                 Ok(plan) => plan,
                 Err(issues) => return Ok(issues_result(issues)),
             };
+            if !preview_satisfied(&plan, args["preview_token"].as_str()) {
+                return Ok(issues_result(vec![format!(
+                    "a change to more than {PREVIEW_REQUIRED_OVER} records needs a preview first: \
+                     call {BULK_PREVIEW} with the same records and values and pass its preview_token"
+                )]));
+            }
             let items = plan
                 .record_ids
                 .iter()
@@ -382,6 +425,7 @@ impl Action for BulkApply {
             "entity": parsed.entity,
             "records": parsed.record_ids.len(),
             "values": parsed.values,
+            "previewed": parsed.preview_token.is_some(),
         }))
     }
 }
@@ -453,6 +497,37 @@ mod tests {
 
     fn args(value: Value) -> BulkArgs {
         serde_json::from_value(value).unwrap()
+    }
+
+    #[test]
+    fn large_change_preview_is_required_above_the_threshold() {
+        let meta = meta();
+        let many: Vec<Uuid> = (0..=PREVIEW_REQUIRED_OVER)
+            .map(|_| Uuid::now_v7())
+            .collect();
+        let request =
+            args(json!({ "entity": "lead", "record_ids": many, "values": { "status": "x" } }));
+        let plan = check(&request, "update", &meta, |_| true).unwrap();
+        assert!(!preview_satisfied(&plan, None), "no preview");
+        assert!(!preview_satisfied(&plan, Some("guess")), "a wrong token");
+        let token = preview_token(&plan);
+        assert!(preview_satisfied(&plan, Some(&token)));
+        // The token names the change: other values need their own preview.
+        let other = args(
+            json!({ "entity": "lead", "record_ids": plan.record_ids, "values": { "status": "y" } }),
+        );
+        let other = check(&other, "update", &meta, |_| true).unwrap();
+        assert!(!preview_satisfied(&other, Some(&token)));
+        // Order does not change it.
+        let mut reversed = plan.clone();
+        reversed.record_ids.reverse();
+        assert_eq!(preview_token(&reversed), token);
+        // A small change needs no preview.
+        let small = args(
+            json!({ "entity": "lead", "record_ids": [Uuid::now_v7()], "values": { "status": "x" } }),
+        );
+        let small = check(&small, "update", &meta, |_| true).unwrap();
+        assert!(preview_satisfied(&small, None));
     }
 
     #[test]
