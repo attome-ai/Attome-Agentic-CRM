@@ -21,6 +21,8 @@
     reason = "test support: a failed setup step should stop the test with its message"
 )]
 
+pub mod fixtures;
+
 use attome_api::EngineSystem;
 use attome_config::{AppConfig, KeyRing};
 use attome_core::EngineState;
