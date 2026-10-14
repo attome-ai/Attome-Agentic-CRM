@@ -1276,3 +1276,36 @@ fn no_handler_extracts_a_bare_security_context() {
 ")
     );
 }
+
+/// Routes that are mounted but deliberately absent from the API document:
+/// the Prometheus scrape (operations, not the API) and the developer-only
+/// fleet console, compiled only with the debug `fleet-console` feature.
+const UNDOCUMENTED_PREFIXES: &[&str] = &["/metrics", "/api/v1/fleet/"];
+
+/// Y9-T1: every mounted route has an operation in the OpenAPI document, for
+/// each method it answers. A route without one is invisible to the
+/// generated clients, the SDK and the contract diff.
+#[test]
+fn every_mounted_route_is_in_the_api_document() {
+    let (bindings, _) = scan();
+    let doc = serde_json::to_value(&*attome::openapi::document()).expect("document serialises");
+    let paths = doc["paths"].as_object().expect("paths");
+    let mut missing: BTreeSet<String> = BTreeSet::new();
+    for b in &bindings {
+        if UNDOCUMENTED_PREFIXES.iter().any(|p| b.path.starts_with(p)) {
+            continue;
+        }
+        let method = b.method.to_lowercase();
+        let documented = paths
+            .get(&b.path)
+            .and_then(|item| item.get(&method))
+            .is_some();
+        if !documented {
+            missing.insert(format!("{} {}  ({})", b.method, b.path, b.file));
+        }
+    }
+    assert!(
+        missing.is_empty(),
+        "add a #[utoipa::path] for each, and list it in its file's ApiDocFragment: {missing:#?}"
+    );
+}
