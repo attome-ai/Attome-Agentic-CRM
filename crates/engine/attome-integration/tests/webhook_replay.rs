@@ -29,12 +29,8 @@ use uuid::Uuid;
 
 const CRED: &str = "replay-test-credential";
 
-async fn test_pool() -> RedisPool {
-    let host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-    let port: u16 = std::env::var("TEST_REDIS_PORT")
-        .unwrap_or_else(|_| "6379".into())
-        .parse()
-        .expect("TEST_REDIS_PORT must be a valid port number");
+async fn test_pool() -> Option<RedisPool> {
+    let (host, port) = attome_testkit::test_redis()?;
     let config = RedisConfig::from_url(&format!("redis://{host}:{port}"))
         .expect("build redis config from test host/port");
     let pool = RedisPool::new(config, None, None, None, 2).expect("build redis pool");
@@ -42,7 +38,7 @@ async fn test_pool() -> RedisPool {
     pool.wait_for_connect()
         .await
         .expect("connect to local test Redis/Dragonfly");
-    pool
+    Some(pool)
 }
 
 fn sign(parts: &[&[u8]]) -> String {
@@ -70,7 +66,7 @@ fn now() -> i64 {
 
 #[tokio::test]
 async fn a_replayed_signed_request_is_refused_with_409() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let system = Uuid::now_v7();
     let body = br#"{"event":"x"}"#;
     let (h, _) = signed(now(), body);
@@ -104,7 +100,7 @@ async fn a_replayed_signed_request_is_refused_with_409() {
 /// bytes: an upper-cased copy of a captured signature is the same nonce.
 #[tokio::test]
 async fn a_replay_with_a_recased_signature_is_still_refused() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let system = Uuid::now_v7();
     let body = b"{}";
     let (h, sig) = signed(now(), body);
@@ -142,7 +138,7 @@ async fn a_replay_with_a_recased_signature_is_still_refused() {
 /// system's own first delivery — nonces are scoped per system.
 #[tokio::test]
 async fn distinct_deliveries_and_distinct_systems_are_each_admitted() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let system = Uuid::now_v7();
     let body = b"{}";
     let t = now();
@@ -184,7 +180,7 @@ async fn distinct_deliveries_and_distinct_systems_are_each_admitted() {
 /// the identical request is admitted rather than refused as a replay.
 #[tokio::test]
 async fn a_released_nonce_admits_the_retry() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let system = Uuid::now_v7();
     let body = b"{}";
     let (h, _) = signed(now(), body);

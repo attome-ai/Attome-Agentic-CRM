@@ -27,12 +27,8 @@ use fred::interfaces::ClientLike;
 use fred::prelude::*;
 use uuid::Uuid;
 
-async fn test_pool() -> RedisPool {
-    let host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-    let port: u16 = std::env::var("TEST_REDIS_PORT")
-        .unwrap_or_else(|_| "6379".into())
-        .parse()
-        .expect("TEST_REDIS_PORT must be a valid port number");
+async fn test_pool() -> Option<RedisPool> {
+    let (host, port) = attome_testkit::test_redis()?;
 
     let config = RedisConfig::from_url(&format!("redis://{host}:{port}"))
         .expect("build redis config from test host/port");
@@ -41,12 +37,12 @@ async fn test_pool() -> RedisPool {
     pool.wait_for_connect()
         .await
         .expect("connect to local test Redis/Dragonfly");
-    pool
+    Some(pool)
 }
 
 #[tokio::test]
 async fn allows_requests_under_the_limit() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let client_id = format!("test-client-{}", Uuid::new_v4());
 
     for _ in 0..5 {
@@ -64,7 +60,7 @@ async fn allows_requests_under_the_limit() {
 
 #[tokio::test]
 async fn rejects_a_replayed_nonce() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let client_id = format!("test-client-{}", Uuid::new_v4());
     let nonce = Uuid::new_v4().to_string();
 
@@ -92,7 +88,7 @@ async fn rejects_a_replayed_nonce() {
 
 #[tokio::test]
 async fn rejects_once_the_limit_is_exceeded() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let client_id = format!("test-client-{}", Uuid::new_v4());
 
     for _ in 0..3 {
@@ -135,7 +131,7 @@ async fn rejects_once_the_limit_is_exceeded() {
 /// individually.
 #[tokio::test]
 async fn concurrent_requests_in_the_same_millisecond_are_not_undercounted() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let client_id = format!("test-client-{}", Uuid::new_v4());
     let limit = 5;
 
@@ -177,7 +173,7 @@ async fn concurrent_requests_in_the_same_millisecond_are_not_undercounted() {
 
 #[tokio::test]
 async fn the_window_expires_so_an_old_burst_does_not_permanently_block_the_client() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let client_id = format!("test-client-{}", Uuid::new_v4());
     let rl_key = format!("s2s:rl:{client_id}");
 
@@ -224,7 +220,7 @@ async fn the_window_expires_so_an_old_burst_does_not_permanently_block_the_clien
 /// live TTL back and pins it strictly above the window.
 #[tokio::test]
 async fn a_used_nonce_outlives_the_whole_timestamp_window() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let client_id = format!("test-client-{}", Uuid::new_v4());
     let nonce = Uuid::new_v4().to_string();
     let nonce_key = format!("s2s:nonce:{client_id}:{nonce}");

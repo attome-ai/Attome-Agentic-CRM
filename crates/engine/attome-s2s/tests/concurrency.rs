@@ -24,12 +24,8 @@ use fred::interfaces::ClientLike;
 use fred::prelude::*;
 use uuid::Uuid;
 
-async fn test_pool() -> RedisPool {
-    let host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-    let port: u16 = std::env::var("TEST_REDIS_PORT")
-        .unwrap_or_else(|_| "6379".into())
-        .parse()
-        .expect("TEST_REDIS_PORT must be a valid port number");
+async fn test_pool() -> Option<RedisPool> {
+    let (host, port) = attome_testkit::test_redis()?;
 
     let config = RedisConfig::from_url(&format!("redis://{host}:{port}"))
         .expect("build redis config from test host/port");
@@ -38,12 +34,12 @@ async fn test_pool() -> RedisPool {
     pool.wait_for_connect()
         .await
         .expect("connect to local test Redis/Dragonfly");
-    pool
+    Some(pool)
 }
 
 #[tokio::test]
 async fn allows_requests_under_the_limit() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let client_id = format!("test-client-{}", Uuid::new_v4());
 
     let mut guards = Vec::new();
@@ -58,7 +54,7 @@ async fn allows_requests_under_the_limit() {
 
 #[tokio::test]
 async fn rejects_once_the_limit_is_reached() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let client_id = format!("test-client-{}", Uuid::new_v4());
 
     let mut guards = Vec::new();
@@ -85,7 +81,7 @@ async fn rejects_once_the_limit_is_reached() {
 
 #[tokio::test]
 async fn releasing_a_slot_frees_it_back_up() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let client_id = format!("test-client-{}", Uuid::new_v4());
 
     let guard = concurrency::acquire(&attome_cache::Store::Redis(pool.clone()), &client_id, 1)
@@ -110,7 +106,7 @@ async fn releasing_a_slot_frees_it_back_up() {
 /// client's concurrency budget must not affect another's.
 #[tokio::test]
 async fn limits_are_scoped_per_client() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let client_a = format!("test-client-{}", Uuid::new_v4());
     let client_b = format!("test-client-{}", Uuid::new_v4());
 
@@ -136,7 +132,7 @@ async fn limits_are_scoped_per_client() {
 /// atomic script (not merely the Rust call site) enforces the cap.
 #[tokio::test]
 async fn concurrent_acquires_never_admit_more_than_the_limit() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let client_id = format!("test-client-{}", Uuid::new_v4());
     let limit = 5;
 

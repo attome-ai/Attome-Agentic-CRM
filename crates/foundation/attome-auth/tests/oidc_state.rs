@@ -39,12 +39,8 @@ use uuid::Uuid;
 /// A pool against the local test Redis/Dragonfly. The state and cache roles
 /// are the same instance here — their split is what `BAU-9` is about, not
 /// this test.
-async fn redis_pool() -> attome_cache::Store {
-    let host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-    let port: u16 = std::env::var("TEST_REDIS_PORT")
-        .unwrap_or_else(|_| "6379".into())
-        .parse()
-        .expect("TEST_REDIS_PORT must be a valid port number");
+async fn redis_pool() -> Option<attome_cache::Store> {
+    let (host, port) = attome_testkit::test_redis()?;
     let config = RedisConfig::from_url(&format!("redis://{host}:{port}"))
         .expect("build redis config from test host/port");
     let pool = RedisPool::new(config, None, None, None, 4).expect("build redis pool");
@@ -52,7 +48,7 @@ async fn redis_pool() -> attome_cache::Store {
     pool.wait_for_connect()
         .await
         .expect("connect to local test Redis/Dragonfly");
-    attome_cache::Store::Redis(pool)
+    Some(attome_cache::Store::Redis(pool))
 }
 
 /// A pool that can never be reached: nothing listens on port 1.
@@ -151,7 +147,7 @@ async fn seed_state(redis: &attome_cache::Store, state_id: &str) {
 /// exchange.
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 async fn concurrent_callbacks_on_one_state_admit_at_most_one() {
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let provider_key = unique_provider();
     let (token_endpoint, exchanges) = counting_token_endpoint().await;
     prime_discovery(&redis, &provider_key, &token_endpoint).await;
@@ -204,7 +200,7 @@ async fn concurrent_callbacks_on_one_state_admit_at_most_one() {
 /// replaying the same state after the first consumed it reaches no exchange.
 #[tokio::test]
 async fn a_replayed_state_reaches_no_exchange() {
-    let redis = redis_pool().await;
+    let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let provider_key = unique_provider();
     let (token_endpoint, exchanges) = counting_token_endpoint().await;
     prime_discovery(&redis, &provider_key, &token_endpoint).await;
@@ -247,7 +243,7 @@ async fn a_replayed_state_reaches_no_exchange() {
 /// rather than degrading to "no state = proceed".
 #[tokio::test]
 async fn an_unreachable_state_store_rejects_without_an_exchange() {
-    let cache = redis_pool().await;
+    let cache = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let state_store = unreachable_pool();
     let provider_key = unique_provider();
     let (token_endpoint, exchanges) = counting_token_endpoint().await;

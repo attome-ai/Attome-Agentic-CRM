@@ -25,12 +25,8 @@ use fred::interfaces::ClientLike;
 use fred::prelude::*;
 use uuid::Uuid;
 
-async fn test_pool() -> RedisPool {
-    let host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".into());
-    let port: u16 = std::env::var("TEST_REDIS_PORT")
-        .unwrap_or_else(|_| "6379".into())
-        .parse()
-        .expect("TEST_REDIS_PORT must be a valid port number");
+async fn test_pool() -> Option<RedisPool> {
+    let (host, port) = attome_testkit::test_redis()?;
 
     let config = RedisConfig::from_url(&format!("redis://{host}:{port}"))
         .expect("build redis config from test host/port");
@@ -39,12 +35,12 @@ async fn test_pool() -> RedisPool {
     pool.wait_for_connect()
         .await
         .expect("connect to local test Redis/Dragonfly");
-    pool
+    Some(pool)
 }
 
 #[tokio::test]
 async fn the_attempt_after_the_budget_gets_a_finished_429() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = mfa_account_key(Uuid::now_v7());
 
     for attempt in 1..=MFA_ATTEMPTS_PER_ACCOUNT_RPM {
@@ -78,7 +74,7 @@ async fn the_attempt_after_the_budget_gets_a_finished_429() {
 
 #[tokio::test]
 async fn concurrent_attempts_never_exceed_the_shared_budget() {
-    let pool = test_pool().await;
+    let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = mfa_account_key(Uuid::now_v7());
     let attempts = 3 * MFA_ATTEMPTS_PER_ACCOUNT_RPM as usize;
 
