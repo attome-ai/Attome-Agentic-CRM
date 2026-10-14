@@ -88,6 +88,35 @@ export interface PatchOp {
   value?: unknown;
 }
 
+/** One edit command (`attome_model::commands::Command`). */
+export type ModelCommand =
+  | { op: 'set'; path: string; value: unknown }
+  | { op: 'add'; path: string; value: unknown }
+  | { op: 'remove'; path: string }
+  | { op: 'move'; from: string; to: string };
+
+export interface ModelIssue {
+  path:    string;
+  code:    string;
+  message: string;
+}
+
+/** What saving a draft returns. */
+export interface DraftSaved {
+  id:           string;
+  version_no:   number;
+  content_hash: string;
+  /** References to objects that do not exist; they do not block the draft. */
+  issues:       ModelIssue[];
+}
+
+/** An action an agent may be given (`GET /api/v1/actions`). */
+export interface ActionSummary {
+  id:          string;
+  description: string;
+  risk:        string;
+}
+
 /** The published metadata model, as the renderer reads it (roadmap Y14). */
 @Injectable({ providedIn: 'root' })
 export class ModelService {
@@ -172,5 +201,31 @@ export class ModelService {
       `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/diff`,
       { from: String(from), to: String(to) },
     );
+  }
+
+  object(kind: string, id: string): Observable<ObjectVersion> {
+    return this.api.get<ObjectVersion>(
+      `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`,
+    );
+  }
+
+  /** Applies edit commands to a draft; `baseHash` is `''` for a new object. */
+  saveDraft(kind: string, id: string, baseHash: string, name: string | null, commands: ModelCommand[]): Observable<DraftSaved> {
+    return this.api.post<DraftSaved>(
+      `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/commands`,
+      { base_hash: baseHash, name, commands },
+    );
+  }
+
+  publish(kind: string, id: string): Observable<{ id: string; version_no: number }> {
+    return this.api.post<{ id: string; version_no: number }>(
+      `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/publish`,
+      {},
+    );
+  }
+
+  /** The actions the caller may invoke, which an agent may be given as tools. */
+  actions(): Observable<{ items: ActionSummary[] }> {
+    return this.api.get<{ items: ActionSummary[] }>('/api/v1/actions');
   }
 }

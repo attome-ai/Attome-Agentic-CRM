@@ -1,0 +1,113 @@
+<section class="ad">
+  <h2 class="ad-title">{{ 'agentDesigner.title' | translate }}</h2>
+  @if (error(); as message) {
+    <p class="ad-error" role="alert">{{ message }}</p>
+  }
+
+  <div class="ad-columns">
+    <nav class="ad-panel" [attr.aria-label]="'agentDesigner.agents' | translate">
+      <div class="ad-panel-head">
+        <h3>{{ 'agentDesigner.agents' | translate }}</h3>
+        <button type="button" class="ad-new" (click)="create()">{{ 'agentDesigner.new' | translate }}</button>
+      </div>
+      @if (agents().length === 0) {
+        <p class="ad-muted">{{ 'agentDesigner.none' | translate }}</p>
+      }
+      <ul class="ad-list">
+        @for (a of agents(); track a.id) {
+          <li>
+            <button type="button" class="ad-item" [class.ad-selected]="selected() === a.id"
+                    [attr.data-agent]="a.id" (click)="open(a)">
+              <span>{{ a.name }}</span>
+              <span class="ad-muted">v{{ a.version_no }} · {{ ('metadataExplorer.state.' + a.state) | translate }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    @if (editing()) {
+      <form class="ad-panel ad-form" (submit)="$event.preventDefault(); save()">
+        @if (newName() !== null) {
+          <label for="ad-name">{{ 'agentDesigner.name' | translate }}</label>
+          <input #nameInput id="ad-name" type="text" required [value]="newName()"
+                 (input)="newName.set(nameInput.value)" />
+        }
+
+        <label for="ad-role">{{ 'agentDesigner.role' | translate }}</label>
+        <input #roleInput id="ad-role" type="text" required [value]="draft().role"
+               (input)="update({ role: roleInput.value })" />
+
+        <label for="ad-instructions">{{ 'agentDesigner.instructions' | translate }}</label>
+        <textarea #instr id="ad-instructions" rows="6" required [value]="draft().instructions"
+                  (input)="update({ instructions: instr.value })"></textarea>
+
+        <fieldset class="ad-fieldset">
+          <legend>{{ 'agentDesigner.tools' | translate }}</legend>
+          <div class="ad-tools">
+            @for (action of actions(); track action.id) {
+              <label class="ad-check" [title]="action.description">
+                <input #tool type="checkbox" [checked]="draft().tools.includes(action.id)"
+                       (change)="toggle('tools', action.id, tool.checked)" />
+                <code>{{ action.id }}</code>
+                <span class="ad-muted">{{ action.risk }}</span>
+              </label>
+            }
+          </div>
+        </fieldset>
+
+        <fieldset class="ad-fieldset">
+          <legend>{{ 'agentDesigner.limits' | translate }}</legend>
+          <div class="ad-limits">
+            <label for="ad-steps">{{ 'agentDesigner.maxSteps' | translate }}</label>
+            <input #steps id="ad-steps" type="number" min="1" [value]="draft().maxSteps"
+                   (input)="update({ maxSteps: numberFrom(steps.value) })" />
+            <label for="ad-calls">{{ 'agentDesigner.maxToolCalls' | translate }}</label>
+            <input #calls id="ad-calls" type="number" min="1" [value]="draft().maxToolCalls"
+                   (input)="update({ maxToolCalls: numberFrom(calls.value) })" />
+            <label for="ad-tokens">{{ 'agentDesigner.maxTokens' | translate }}</label>
+            <input #tokens id="ad-tokens" type="number" min="1" [value]="draft().maxTokens"
+                   (input)="update({ maxTokens: numberFrom(tokens.value) })" />
+          </div>
+        </fieldset>
+
+        <label for="ad-run-as">{{ 'agentDesigner.runAs' | translate }}</label>
+        <select #runAs id="ad-run-as" (change)="update({ runAs: runAs.value === 'service' ? 'service' : 'caller' })">
+          <option value="caller" [selected]="draft().runAs === 'caller'">{{ 'agentDesigner.runAsCaller' | translate }}</option>
+          <option value="service" [selected]="draft().runAs === 'service'">{{ 'agentDesigner.runAsService' | translate }}</option>
+        </select>
+
+        <fieldset class="ad-fieldset">
+          <legend>{{ 'agentDesigner.channels' | translate }}</legend>
+          <div class="ad-channels">
+            @for (channel of channels; track channel) {
+              <label class="ad-check">
+                <input #ch type="checkbox" [checked]="draft().channels.includes(channel)"
+                       (change)="toggle('channels', channel, ch.checked)" />
+                {{ ('agentDesigner.channel.' + channel) | translate }}
+              </label>
+            }
+          </div>
+        </fieldset>
+
+        @if (issues().length > 0) {
+          <ul class="ad-issues" role="status">
+            @for (issue of issues(); track $index) {
+              <li><code dir="ltr">{{ issue.path }}</code> {{ issue.message }}</li>
+            }
+          </ul>
+        }
+
+        <div class="ad-actions">
+          <button type="submit" [disabled]="saving()">{{ 'agentDesigner.save' | translate }}</button>
+          <button type="button" [disabled]="!canPublish()" (click)="publish()">{{ 'agentDesigner.publish' | translate }}</button>
+          @if (status() === 'saved') {
+            <span class="ad-ok">{{ 'agentDesigner.saved' | translate }}</span>
+          } @else if (status() === 'published') {
+            <span class="ad-ok">{{ 'agentDesigner.published' | translate }}</span>
+          }
+        </div>
+      </form>
+    }
+  </div>
+</section>

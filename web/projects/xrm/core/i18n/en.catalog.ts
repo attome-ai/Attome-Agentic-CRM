@@ -151,6 +151,15 @@ export const xrmEn = {
     loading: 'Loading the form…', required: 'Required',
     save: 'Save', saving: 'Saving…', saved: 'Saved',
   },
+  // N9-T2 — the agent designer.
+  agentDesigner: {
+    title: 'Agents', agents: 'Agents', new: 'New agent', none: 'No agents yet.',
+    name: 'Name', role: 'Role', instructions: 'Instructions', tools: 'Tools', limits: 'Limits',
+    maxSteps: 'Most steps', maxToolCalls: 'Most tool calls', maxTokens: 'Most tokens',
+    runAs: 'Runs as', runAsCaller: 'The person using it', runAsService: 'Its own service identity',
+    channels: 'Channels', save: 'Save draft', publish: 'Publish', saved: 'Draft saved', published: 'Published',
+    channel: { chat: 'Chat', web: 'Web', whatsapp: 'WhatsApp', sms: 'SMS', email: 'Email' },
+  },
   // Y1-T15 — the metadata explorer (kinds, objects, history, diff).
   metadataExplorer: {
     title: 'Metadata explorer', kinds: 'Kinds', objects: 'Objects', history: 'History',

@@ -571,6 +571,13 @@ export const xrmShellRoutes: Routes = [
               import('@attome/xrm/dashboard/registration').then(m => m.PAGE_EDITOR_ROUTES),
           },
           {
+            // N9-T2: the agent designer (define, save as draft, publish).
+            path: 'model/agents',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('@attome/xrm/model').then(m => m.AgentDesignerComponent),
+          },
+          {
             // Y1-T15: the metadata explorer (kinds, objects, history,
             // diff). The admin model API refuses non-administrators.
             path: 'model/explorer',

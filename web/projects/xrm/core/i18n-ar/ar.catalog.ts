@@ -128,6 +128,15 @@ export const xrmAr = {
     loading: 'جارٍ تحميل النموذج…', required: 'مطلوب',
     save: 'حفظ', saving: 'جارٍ الحفظ…', saved: 'تم الحفظ',
   },
+  // N9-T2 — مصمم الوكلاء، انظر en.catalog.ts
+  agentDesigner: {
+    title: 'الوكلاء', agents: 'الوكلاء', new: 'وكيل جديد', none: 'لا يوجد وكلاء بعد.',
+    name: 'الاسم', role: 'الدور', instructions: 'التعليمات', tools: 'الأدوات', limits: 'الحدود',
+    maxSteps: 'أقصى عدد من الخطوات', maxToolCalls: 'أقصى عدد من استدعاءات الأدوات', maxTokens: 'أقصى عدد من الرموز',
+    runAs: 'يعمل بصفة', runAsCaller: 'الشخص الذي يستخدمه', runAsService: 'هوية الخدمة الخاصة به',
+    channels: 'القنوات', save: 'حفظ المسودة', publish: 'نشر', saved: 'تم حفظ المسودة', published: 'تم النشر',
+    channel: { chat: 'المحادثة', web: 'الويب', whatsapp: 'واتساب', sms: 'الرسائل النصية', email: 'البريد الإلكتروني' },
+  },
   // Y1-T15 — مستكشف البيانات الوصفية، انظر en.catalog.ts
   metadataExplorer: {
     title: 'مستكشف البيانات الوصفية', kinds: 'الأنواع', objects: 'العناصر', history: 'السجل',
