@@ -48,6 +48,10 @@ impl EngineModel for ActionModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
+        // N9-T1: the agent kind checks an agent's tools against these ids.
+        attome_model::kinds::agent::set_known_tools(
+            REGISTRY.all().map(|descriptor| descriptor.id.0.to_owned()),
+        );
         Router::new()
             .route("/api/v1/actions", get(list_invocable_actions))
             .route("/api/v1/actions/{id}/invoke", post(invoke_action))

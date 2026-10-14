@@ -276,7 +276,7 @@ fn admin_lists_kinds_and_an_unknown_kind_is_404() {
         let body = body_json(resp).await;
         assert!(body["items"].is_array(), "a paginated list: {body}");
         assert_eq!(body["page"], 1);
-        // Y1-T13: the six first kinds.
+        // Y1-T13's six first kinds, and N9-T1's agents.
         let mut names: Vec<&str> = body["items"]
             .as_array()
             .expect("items")
@@ -287,6 +287,7 @@ fn admin_lists_kinds_and_an_unknown_kind_is_404() {
         assert_eq!(
             names,
             [
+                "agent",
                 "attribute",
                 "entity",
                 "form",

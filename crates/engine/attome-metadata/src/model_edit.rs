@@ -15,10 +15,13 @@ use attome_types::AppError;
 use serde_json::Value;
 use uuid::Uuid;
 
-/// The kinds every engine registers: forms (stored in the model) and the
-/// adapters over their own tables.
+/// The kinds every engine registers: forms and agents (stored in the model)
+/// and the adapters over their own tables.
 fn registered_kinds() -> Vec<Arc<dyn Kind>> {
-    let mut kinds: Vec<Arc<dyn Kind>> = vec![Arc::new(attome_model::kinds::FormKind)];
+    let mut kinds: Vec<Arc<dyn Kind>> = vec![
+        Arc::new(attome_model::kinds::FormKind),
+        Arc::new(attome_model::kinds::AgentKind),
+    ];
     for adapter in crate::kinds::ADAPTER_KINDS {
         kinds.push(Arc::new(adapter));
     }
