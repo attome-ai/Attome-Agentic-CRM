@@ -455,9 +455,105 @@ pub fn tool_definitions<'a>(
 ///
 /// A result written before migration 0488 has no link to its call, so it
 /// keeps the old shape — an untrusted `user` block — at its own position.
+/// Memories recalled for one turn, at most.
+pub const RECALL_LIMIT: i64 = 5;
+/// Characters of recalled memory one turn carries, at most.
+pub const RECALL_MAX_CHARS: usize = 4_000;
+/// Characters of the person's message used as the recall query.
+const RECALL_QUERY_CHARS: usize = 500;
+
+/// The memories the caller can see that match `user_text` (lexically, the
+/// way `attome_search::corpus::memory::recall` ranks), within
+/// [`RECALL_LIMIT`] and [`RECALL_MAX_CHARS`], as untrusted segments. Memory
+/// is context, not the turn: a failure to recall degrades to none.
+async fn recall_for_turn(
+    state: &EngineState,
+    security: &attome_server::security::SecurityContext,
+    user_text: &str,
+) -> Vec<crate::prompt::Segment> {
+    let query: String = user_text.chars().take(RECALL_QUERY_CHARS).collect();
+    if query.trim().is_empty() {
+        return Vec::new();
+    }
+    let hits = async {
+        let access = attome_security::resolve_all_entity_access_levels(
+            &state.base.db,
+            security.user_id,
+            attome_security::RecordAction::Read,
+        )
+        .await?;
+        let shares = attome_security::resolve_default_share_entities(
+            &state.base.db,
+            security.user_id,
+            &security.team_ids,
+            attome_security::RecordAction::Read
+                .share_capability()
+                .as_i16(),
+        )
+        .await?;
+        let records = attome_security::visibility::PolymorphicVisibility::new(
+            security, &access, &shares, None,
+        );
+        attome_search::corpus::memory::recall(
+            &state.base.db,
+            attome_search::RecallQuery {
+                owner_principal: security.user_id,
+                scope_kind: None,
+                scope_ref: None,
+                query_text: Some(query.trim()),
+                records: &records,
+                limit: RECALL_LIMIT,
+            },
+        )
+        .await
+    }
+    .await;
+    match hits {
+        Ok(hits) => within_budget(&hits, RECALL_MAX_CHARS),
+        Err(error) => {
+            tracing::warn!(%error, "memory recall failed; the turn goes ahead without it");
+            Vec::new()
+        }
+    }
+}
+
+/// The recalled memories, best first, until `max_chars` would be passed.
+fn within_budget(
+    hits: &[attome_search::MemoryHit],
+    max_chars: usize,
+) -> Vec<crate::prompt::Segment> {
+    let mut used = 0usize;
+    let mut kept = Vec::new();
+    for hit in hits {
+        let size = hit.summary.chars().count()
+            + hit
+                .facts
+                .iter()
+                .map(|f| f.chars().count() + 2)
+                .sum::<usize>();
+        if used + size > max_chars {
+            break;
+        }
+        used += size;
+        kept.push(hit.clone());
+    }
+    crate::actions::memory::memory_recall_segments(&kept)
+}
+
 pub fn assemble_messages(
     frame: &str,
     persona: Option<&str>,
+    history: Vec<crate::conversation::ContextMessage>,
+) -> Vec<ChatMessage> {
+    assemble_messages_with_memory(frame, persona, &[], history)
+}
+
+/// [`assemble_messages`] with the memories recalled for this turn (N17-T1),
+/// each an untrusted segment after the persona (`memory_recall_segments`).
+pub fn assemble_messages_with_memory(
+    frame: &str,
+    persona: Option<&str>,
+    recalled: &[crate::prompt::Segment],
     history: Vec<crate::conversation::ContextMessage>,
 ) -> Vec<ChatMessage> {
     use crate::conversation::Role as LedgerRole;
@@ -467,6 +563,7 @@ pub fn assemble_messages(
     if let Some(persona) = persona {
         segments.push(Segment::persona(persona.to_owned()));
     }
+    segments.extend(recalled.iter().cloned());
     let carries_tool_output = history.iter().any(|m| m.role == LedgerRole::Tool);
     let mut messages = crate::prompt::assemble_framing(&segments, carries_tool_output);
     for item in history {
@@ -683,6 +780,13 @@ pub async fn run(
     // entered, it has entered. Tracked on a flag rather than a long-lived
     // context, because the context itself is now rebuilt every step.
     let mut tainted = inputs.session.tainted;
+    // N17-T1: what this person's memories say about the question, recalled
+    // once per turn. Memory is retrieved content (I-10): it reaches the
+    // prompt only as untrusted segments, and recalling any taints the turn.
+    let recalled = recall_for_turn(state, &inputs.security, user_text).await;
+    if !recalled.is_empty() {
+        tainted = true;
+    }
     // **I-10 across turns.** Tool-obtained text from any earlier turn taints
     // this one — decided over the whole conversation, not over what the window
     // shows, because an answer that repeated a tool's text outlives the tool
@@ -807,9 +911,13 @@ pub async fn run(
             tainted = true;
         }
 
-        let mut request =
-            GenerationRequest::new(assemble_messages(&system_frame(), persona, history))
-                .with_tools(tools);
+        let mut request = GenerationRequest::new(assemble_messages_with_memory(
+            &system_frame(),
+            persona,
+            &recalled,
+            history,
+        ))
+        .with_tools(tools);
 
         // 4b. Budget BEFORE generation.
         let grant = match crate::budget_guard::admit(
@@ -1453,6 +1561,35 @@ async fn record_invalid(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn hit(summary: &str) -> attome_search::MemoryHit {
+        attome_search::MemoryHit {
+            id: uuid::Uuid::now_v7(),
+            scope_kind: "user".into(),
+            kind: "fact".into(),
+            summary: summary.into(),
+            facts: vec!["prefers Arabic".into()],
+            source_refs: vec![],
+        }
+    }
+
+    /// N17-T1: recalled memory stays within its budget and is never trusted.
+    #[test]
+    fn recalled_memory_is_bounded_and_untrusted() {
+        let hits = vec![
+            hit(&"a".repeat(30)),
+            hit(&"b".repeat(30)),
+            hit(&"c".repeat(30)),
+        ];
+        let kept = within_budget(&hits, 100);
+        assert_eq!(kept.len(), 2, "the third would pass the budget");
+        let messages = assemble_messages_with_memory("FRAME", None, &kept, vec![]);
+        assert!(
+            !messages[0].content.contains("aaaa"),
+            "memory never reaches the system role"
+        );
+        assert!(messages.iter().any(|m| m.content.contains("aaaa")));
+    }
     use attome_inference::Usage;
 
     /// Descriptions say what a tool is **not** for.

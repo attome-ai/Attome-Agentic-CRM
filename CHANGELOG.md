@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Each chat or agent turn recalls the person's matching memories (at most 5, 4,000 characters) as
+  untrusted context.
 - An agent's approval request records its target record's row version and the before and after of
   the fields it changes; if the record changes before the approved action runs, the approval is void.
 - `article.draft` never drafts twice: an article already drafted from the same record is returned,
