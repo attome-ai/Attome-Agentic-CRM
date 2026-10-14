@@ -962,6 +962,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * U6-T1: what the daily local backup does and the newest one it wrote, so
+         *     the admin console can warn when backups stay on the same disk or have
+         *     stopped.
+         */
+        get: operations["backup_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/business-rules": {
         parameters: {
             query?: never;
@@ -12973,6 +12994,43 @@ export interface components {
             oldest?: string | null;
             /** Format: int64 */
             pending: number;
+        };
+        /** @description The newest local backup. */
+        BackupArchive: {
+            /** @description Files listed beside it; `null` when it has no file list. */
+            files?: number | null;
+            name: string;
+            /** Format: int64 */
+            size_bytes: number;
+            /**
+             * Format: date-time
+             * @description When it was taken, from its name.
+             */
+            taken_at?: string | null;
+        };
+        /** @description `GET /api/v1/admin/backup`. */
+        BackupStatus: {
+            archives: number;
+            dir: string;
+            /** @description `backup.enabled`. */
+            enabled: boolean;
+            /** @description `backup.files`. */
+            files: boolean;
+            /**
+             * Format: int32
+             * @description The hour (UTC) it runs.
+             */
+            hour: number;
+            /** Format: int32 */
+            keep: number;
+            latest?: null | components["schemas"]["BackupArchive"];
+            /** @description Whether this deployment runs the built-in backup (Solo only). */
+            runs_here: boolean;
+            /**
+             * @description True when `backup.dir` is not set, so backups share the database's
+             *     machine and disk.
+             */
+            same_disk: boolean;
         };
         BatchDecideBody: {
             comment?: string | null;
@@ -29961,6 +30019,44 @@ export interface operations {
                 };
             };
             /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    backup_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The backup settings and the newest archive */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackupStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
             403: {
                 headers: {
                     [name: string]: unknown;

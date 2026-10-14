@@ -4506,6 +4506,55 @@
         }
       }
     },
+    "/api/v1/admin/backup": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "U6-T1: what the daily local backup does and the newest one it wrote, so\nthe admin console can warn when backups stay on the same disk or have\nstopped.",
+        "operationId": "backup_status",
+        "responses": {
+          "200": {
+            "description": "The backup settings and the newest archive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/business-rules": {
       "get": {
         "tags": [
@@ -63825,6 +63874,100 @@
           "pending": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "BackupArchive": {
+        "type": "object",
+        "description": "The newest local backup.",
+        "required": [
+          "name",
+          "size_bytes"
+        ],
+        "properties": {
+          "files": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Files listed beside it; `null` when it has no file list.",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "taken_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When it was taken, from its name."
+          }
+        }
+      },
+      "BackupStatus": {
+        "type": "object",
+        "description": "`GET /api/v1/admin/backup`.",
+        "required": [
+          "enabled",
+          "runs_here",
+          "files",
+          "dir",
+          "keep",
+          "hour",
+          "same_disk",
+          "archives"
+        ],
+        "properties": {
+          "archives": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dir": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "`backup.enabled`."
+          },
+          "files": {
+            "type": "boolean",
+            "description": "`backup.files`."
+          },
+          "hour": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The hour (UTC) it runs.",
+            "minimum": 0
+          },
+          "keep": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "latest": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BackupArchive"
+              }
+            ]
+          },
+          "runs_here": {
+            "type": "boolean",
+            "description": "Whether this deployment runs the built-in backup (Solo only)."
+          },
+          "same_disk": {
+            "type": "boolean",
+            "description": "True when `backup.dir` is not set, so backups share the database's\nmachine and disk."
           }
         }
       },
