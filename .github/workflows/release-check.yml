@@ -96,6 +96,17 @@ jobs:
         if: failure()
         shell: bash
         run: bash scripts/ci/summarize-failures.sh release-check.log
+      # The gate report and the full log stay with the run as evidence (AC4).
+      - name: keep the gate report and log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-gate-linux
+          path: |
+            target/release-gate/*.json
+            release-check.log
+          if-no-files-found: ignore
+          retention-days: 30
 
   windows:
     name: release check (windows)
@@ -116,3 +127,14 @@ jobs:
         if: failure()
         shell: bash
         run: bash scripts/ci/summarize-failures.sh release-check.log
+      # The gate report and the full log stay with the run as evidence (AC4).
+      - name: keep the gate report and log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-gate-windows
+          path: |
+            target/release-gate/*.json
+            release-check.log
+          if-no-files-found: ignore
+          retention-days: 30
