@@ -4117,6 +4117,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ops/metrics/names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** U4-T4: the metric names sampled in the last hour. */
+        get: operations["metric_names"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ops/metrics/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * U4-T4: a metric's values over time from the built-in metrics store
+         *     (U4-T1), averaged per `step`. Administrators only.
+         */
+        get: operations["metric_query"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/outcomes": {
         parameters: {
             query?: never;
@@ -18419,6 +18456,13 @@ export interface components {
             period_start: string;
             root: components["schemas"]["MetricLineageNode"];
         };
+        /** @description One point: the bucket's start and the average of the samples in it. */
+        MetricPoint: {
+            /** Format: date-time */
+            at: string;
+            /** Format: double */
+            value: number;
+        };
         MetricTarget: {
             /** Format: double */
             target_value?: number | null;
@@ -21776,6 +21820,16 @@ export interface components {
                 row_version: number;
                 state_field: string;
             }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_String: {
+            items: string[];
             /** Format: int64 */
             page: number;
             /** Format: int64 */
@@ -41890,6 +41944,105 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    metric_names: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Metric names, sorted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_String"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    metric_query: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A metric name, as `GET .../metrics/names` lists them. */
+                name: string;
+                /** @description Start (UTC, ISO-8601); default an hour ago. */
+                from: string | null;
+                /** @description End (UTC); default now. */
+                to: string | null;
+                /** @description Seconds per point, 60 to 86,400; default 60. */
+                step: number | null;
+                /**
+                 * @description Only series whose labels include these (a JSON object), for example
+                 *     `{"endpoint":"/api/v1/{entity}"}`.
+                 */
+                labels: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The points, oldest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetricPoint"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A bad range, step or labels filter */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
