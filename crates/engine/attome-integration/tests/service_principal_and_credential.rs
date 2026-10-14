@@ -66,16 +66,25 @@ async fn seed_systemuser(db: &DbPool) -> Uuid {
 }
 
 async fn grant_privilege(db: &DbPool, user_id: Uuid, entity: &str, action: &str) {
+    // The key is shared by every test in the binary: insert it once and
+    // read the id back either way.
+    let key = format!("{entity}.{action}");
     let privilege_id: Uuid = sqlx::query_scalar(
-        "INSERT INTO privilege (name, owner_layer) VALUES ($1, 'project') RETURNING id",
+        "INSERT INTO privilege (id, key, name, is_active, created_at, owner_layer) \
+         VALUES ($1, $2, $2, true, NOW(), 'project') \
+         ON CONFLICT (key) DO UPDATE SET is_active = true \
+         RETURNING id",
     )
-    .bind(format!("{entity}.{action}"))
+    .bind(Uuid::now_v7())
+    .bind(&key)
     .fetch_one(db)
     .await
     .expect("insert privilege");
     sqlx::query(
-        "INSERT INTO user_account_mm_privilege (systemuser_id, privilege_id) VALUES ($1, $2)",
+        "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+         VALUES ($1, $2, $3, true, NOW())",
     )
+    .bind(Uuid::now_v7())
     .bind(user_id)
     .bind(privilege_id)
     .execute(db)
