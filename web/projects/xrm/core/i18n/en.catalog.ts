@@ -176,6 +176,15 @@ export const xrmEn = {
     share: 'Share of users (1 to 100)', save: 'Save draft', publish: 'Publish', saved: 'Draft saved', published: 'Published',
     tryOn: 'Try on a record', entity: 'Entity', record: 'Record id', show: 'Show what the model receives',
   },
+  // N30-T5/T9 — AI governance.
+  aiGovernance: {
+    title: 'AI governance', policies: 'Writes that need a second person',
+    policiesIntro: 'Off by default. Name an action (and optionally an entity) and an agent’s confirmed write of it waits for another person’s approval.',
+    action: 'Action', entity: 'Entity (optional)', add: 'Add', remove: 'Turn off', anyEntity: 'any entity',
+    noPolicies: 'No policies: confirmed reversible writes run once the person confirms them.',
+    approvals: 'Approvals', days: 'days', median: 'median', rubberStamp: 'Approves nearly everything within seconds: check these are read',
+    backlog: 'Waiting', rejectionWords: 'Common words in rejections',
+  },
   // N13-T1 — outside MCP servers.
   aiMcp: {
     title: 'Outside tools (MCP)', intro: 'Servers whose tools agents may use. Imported tools start off; read each description (it comes from the server), choose its tier and enable it.',

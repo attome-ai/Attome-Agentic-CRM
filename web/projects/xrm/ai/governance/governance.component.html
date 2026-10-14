@@ -1,0 +1,64 @@
+<section class="gv">
+  <h2>{{ 'aiGovernance.title' | translate }}</h2>
+  @if (error(); as message) {
+    <p class="gv-error" role="alert">{{ message }}</p>
+  }
+
+  <h3>{{ 'aiGovernance.policies' | translate }}</h3>
+  <p class="gv-muted">{{ 'aiGovernance.policiesIntro' | translate }}</p>
+  <form class="gv-form" (submit)="$event.preventDefault(); addPolicy()">
+    <label for="gv-action">{{ 'aiGovernance.action' | translate }}</label>
+    <select #ac id="gv-action" (change)="newAction.set(ac.value)">
+      <option value="" [selected]="newAction() === ''">—</option>
+      @for (a of writeActions(); track a) {
+        <option [value]="a" [selected]="newAction() === a">{{ a }}</option>
+      }
+    </select>
+    <label for="gv-entity">{{ 'aiGovernance.entity' | translate }}</label>
+    <input #en id="gv-entity" type="text" dir="ltr" [value]="newEntity()" (input)="newEntity.set(en.value)" />
+    <button type="submit" [disabled]="!newAction()">{{ 'aiGovernance.add' | translate }}</button>
+  </form>
+  @if (policies().length === 0) {
+    <p class="gv-muted">{{ 'aiGovernance.noPolicies' | translate }}</p>
+  } @else {
+    <ul class="gv-list">
+      @for (p of policies(); track p.id) {
+        <li [attr.data-policy]="p.action_id">
+          <code dir="ltr">{{ p.action_id }}</code>
+          <span>{{ p.entity ?? ('aiGovernance.anyEntity' | translate) }}</span>
+          <span class="gv-muted">{{ p.created_at | localDate }}</span>
+          <button type="button" (click)="removePolicy(p)">{{ 'aiGovernance.remove' | translate }}</button>
+        </li>
+      }
+    </ul>
+  }
+
+  @if (metrics(); as m) {
+    <h3>{{ 'aiGovernance.approvals' | translate }} ({{ m.days }} {{ 'aiGovernance.days' | translate }})</h3>
+    <ul class="gv-list">
+      @for (a of m.approvers; track a.approver_id) {
+        <li [attr.data-approver]="a.approver_id" [class.gv-warn]="a.warning">
+          <code dir="ltr">{{ a.approver_id }}</code>
+          <span>{{ a.decisions }} · {{ approvedShare(a) }}%</span>
+          @if (a.median_seconds !== null) {
+            <span class="gv-muted">{{ 'aiGovernance.median' | translate }} {{ a.median_seconds }}s</span>
+          }
+          @if (a.warning) {
+            <strong>{{ 'aiGovernance.rubberStamp' | translate }}</strong>
+          }
+        </li>
+      }
+    </ul>
+    <h4>{{ 'aiGovernance.backlog' | translate }}</h4>
+    <ul class="gv-list">
+      @for (b of m.backlog; track b.action_type) {
+        <li><code dir="ltr">{{ b.action_type }}</code> {{ b.pending }}</li>
+      }
+    </ul>
+    @if (m.rejection_words.length > 0) {
+      <p class="gv-muted">{{ 'aiGovernance.rejectionWords' | translate }}:
+        @for (w of m.rejection_words; track w.word) { {{ w.word }} ({{ w.count }}) }
+      </p>
+    }
+  }
+</section>

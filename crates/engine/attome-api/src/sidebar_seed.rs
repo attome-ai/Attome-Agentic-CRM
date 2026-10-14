@@ -2360,6 +2360,12 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
                 ("AI Spend", "/xrm/ai/spend", "las la-chart-line", 100),
                 ("AI Switches", "/xrm/ai/switches", "las la-power-off", 110),
                 ("Outside Tools", "/xrm/ai/mcp", "las la-plug", 120),
+                (
+                    "AI Governance",
+                    "/xrm/ai/governance",
+                    "las la-tachometer-alt",
+                    130,
+                ),
             ] {
                 upsert_sidebar(
                     db,

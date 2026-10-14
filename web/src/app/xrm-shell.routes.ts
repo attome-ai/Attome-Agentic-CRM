@@ -534,6 +534,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiScopeSwitchesComponent),
           },
           {
+            // N30-T5/T9: per-write approval policies and approval figures.
+            path: 'ai/governance',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/ai').then(m => m.AiGovernanceComponent),
+          },
+          {
             // N13-T1: outside MCP servers (the API refuses non-administrators).
             path: 'ai/mcp',
             canActivate: [authGuard],
