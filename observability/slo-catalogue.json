@@ -1,0 +1,293 @@
+{
+  "version": 1,
+  "classes": [
+    {
+      "id": "S1",
+      "name_en": "Authenticated read, no DB work",
+      "name_ar": "قراءة موثقة دون عمل على قاعدة البيانات",
+      "kind": "http",
+      "match": {
+        "method": "GET",
+        "endpoint": "/api/v1/admin/security/whoami"
+      },
+      "targets": {
+        "solo": {
+          "p50_ms": 10,
+          "p95_ms": 30,
+          "p99_ms": 60
+        },
+        "team": {
+          "p50_ms": 10,
+          "p95_ms": 30,
+          "p99_ms": 60
+        },
+        "ha": {
+          "p50_ms": 10,
+          "p95_ms": 30,
+          "p99_ms": 60
+        },
+        "scale": {
+          "p50_ms": 10,
+          "p95_ms": 30,
+          "p99_ms": 60
+        }
+      },
+      "error_objective": 0.001,
+      "status": "target",
+      "evidence": null,
+      "k6_scenario": "auth.js"
+    },
+    {
+      "id": "S2",
+      "name_en": "Login (password KDF)",
+      "name_ar": "تسجيل الدخول (اشتقاق مفتاح كلمة المرور)",
+      "kind": "http",
+      "match": {
+        "method": "POST",
+        "endpoint": "/api/v1/auth/login"
+      },
+      "targets": {
+        "solo": {
+          "p50_ms": 150,
+          "p95_ms": 300,
+          "p99_ms": 500
+        },
+        "team": {
+          "p50_ms": 150,
+          "p95_ms": 300,
+          "p99_ms": 500
+        },
+        "ha": {
+          "p50_ms": 150,
+          "p95_ms": 300,
+          "p99_ms": 500
+        },
+        "scale": {
+          "p50_ms": 150,
+          "p95_ms": 300,
+          "p99_ms": 500
+        }
+      },
+      "error_objective": 0.001,
+      "status": "target",
+      "evidence": null,
+      "k6_scenario": "auth.js"
+    },
+    {
+      "id": "S3",
+      "name_en": "Metadata read",
+      "name_ar": "قراءة البيانات الوصفية",
+      "kind": "http",
+      "match": {
+        "method": "GET",
+        "endpoint": "/api/v1/schema/{logicalname}"
+      },
+      "targets": {
+        "solo": {
+          "p50_ms": 10,
+          "p95_ms": 20,
+          "p99_ms": 40
+        },
+        "team": {
+          "p50_ms": 10,
+          "p95_ms": 20,
+          "p99_ms": 40
+        },
+        "ha": {
+          "p50_ms": 10,
+          "p95_ms": 20,
+          "p99_ms": 40
+        },
+        "scale": {
+          "p50_ms": 10,
+          "p95_ms": 20,
+          "p99_ms": 40
+        }
+      },
+      "error_objective": 0.001,
+      "status": "target",
+      "evidence": null,
+      "k6_scenario": "metadata_read.js"
+    },
+    {
+      "id": "S4",
+      "name_en": "Record read",
+      "name_ar": "قراءة سجل",
+      "kind": "http",
+      "match": {
+        "method": "GET",
+        "endpoint": "/api/v1/{entity}/{id}"
+      },
+      "targets": {
+        "solo": {
+          "p50_ms": 15,
+          "p95_ms": 40,
+          "p99_ms": 100
+        },
+        "team": {
+          "p50_ms": 15,
+          "p95_ms": 40,
+          "p99_ms": 100
+        },
+        "ha": {
+          "p50_ms": 15,
+          "p95_ms": 40,
+          "p99_ms": 100
+        },
+        "scale": {
+          "p50_ms": 15,
+          "p95_ms": 40,
+          "p99_ms": 100
+        }
+      },
+      "error_objective": 0.001,
+      "status": "target",
+      "evidence": null,
+      "k6_scenario": "crud_read.js"
+    },
+    {
+      "id": "S5",
+      "name_en": "List page, cursor, up to 100 rows",
+      "name_ar": "صفحة قائمة بالمؤشر، حتى 100 صف",
+      "kind": "http",
+      "match": {
+        "method": "POST",
+        "endpoint": "/api/v1/query/execute"
+      },
+      "targets": {
+        "solo": {
+          "p50_ms": 40,
+          "p95_ms": 120,
+          "p99_ms": 300
+        },
+        "team": {
+          "p50_ms": 40,
+          "p95_ms": 120,
+          "p99_ms": 300
+        },
+        "ha": {
+          "p50_ms": 40,
+          "p95_ms": 120,
+          "p99_ms": 300
+        },
+        "scale": {
+          "p50_ms": 40,
+          "p95_ms": 120,
+          "p99_ms": 300
+        }
+      },
+      "error_objective": 0.001,
+      "status": "target",
+      "evidence": null,
+      "k6_scenario": "list_query.js"
+    },
+    {
+      "id": "S6",
+      "name_en": "Mutating write",
+      "name_ar": "كتابة معدِّلة",
+      "kind": "http",
+      "match": {
+        "method": "PATCH",
+        "endpoint": "/api/v1/{entity}/{id}"
+      },
+      "targets": {
+        "solo": {
+          "p50_ms": 30,
+          "p95_ms": 100,
+          "p99_ms": 200
+        },
+        "team": {
+          "p50_ms": 30,
+          "p95_ms": 100,
+          "p99_ms": 200
+        },
+        "ha": {
+          "p50_ms": 30,
+          "p95_ms": 100,
+          "p99_ms": 200
+        },
+        "scale": {
+          "p50_ms": 30,
+          "p95_ms": 100,
+          "p99_ms": 200
+        }
+      },
+      "error_objective": 0.001,
+      "status": "target",
+      "evidence": null,
+      "k6_scenario": "mutating_write.js"
+    },
+    {
+      "id": "S7",
+      "name_en": "Notification poll",
+      "name_ar": "استطلاع الإشعارات",
+      "kind": "http",
+      "match": {
+        "method": "POST",
+        "endpoint": "/api/v1/notification/poll"
+      },
+      "targets": {
+        "solo": {
+          "p50_ms": 15,
+          "p95_ms": 40,
+          "p99_ms": 100
+        },
+        "team": {
+          "p50_ms": 15,
+          "p95_ms": 40,
+          "p99_ms": 100
+        },
+        "ha": {
+          "p50_ms": 15,
+          "p95_ms": 40,
+          "p99_ms": 100
+        },
+        "scale": {
+          "p50_ms": 15,
+          "p95_ms": 40,
+          "p99_ms": 100
+        }
+      },
+      "error_objective": 0.001,
+      "status": "target",
+      "evidence": null,
+      "k6_scenario": "notification_poll.js"
+    },
+    {
+      "id": "S8",
+      "name_en": "Search (lexical)",
+      "name_ar": "البحث (النصي)",
+      "kind": "http",
+      "match": {
+        "method": "GET",
+        "endpoint": "/api/v1/search"
+      },
+      "targets": {
+        "solo": {
+          "p50_ms": 60,
+          "p95_ms": 150,
+          "p99_ms": null
+        },
+        "team": {
+          "p50_ms": 60,
+          "p95_ms": 150,
+          "p99_ms": null
+        },
+        "ha": {
+          "p50_ms": 60,
+          "p95_ms": 150,
+          "p99_ms": null
+        },
+        "scale": {
+          "p50_ms": 60,
+          "p95_ms": 150,
+          "p99_ms": null
+        }
+      },
+      "error_objective": 0.001,
+      "status": "target",
+      "evidence": null,
+      "k6_scenario": "search.js"
+    }
+  ]
+}

@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/attome-ai/Attome-Agentic-CRM/observability/slo-catalogue.schema.json",
+  "title": "Attome SLO catalogue",
+  "description": "The single source for every service-level objective (roadmap AA13). Prometheus rules, k6 thresholds and the SLO table are generated from it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "classes"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "classes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/class"
+      }
+    }
+  },
+  "$defs": {
+    "latency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "p50_ms",
+        "p95_ms",
+        "p99_ms"
+      ],
+      "properties": {
+        "p50_ms": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "p95_ms": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "p99_ms": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "class": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name_en",
+        "name_ar",
+        "kind",
+        "match",
+        "targets",
+        "error_objective",
+        "status",
+        "evidence",
+        "k6_scenario"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^S[0-9]+$"
+        },
+        "name_en": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name_ar": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "http",
+            "gauge",
+            "browser"
+          ]
+        },
+        "match": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "method",
+                "endpoint"
+              ],
+              "properties": {
+                "method": {
+                  "enum": [
+                    "GET",
+                    "POST",
+                    "PUT",
+                    "PATCH",
+                    "DELETE"
+                  ]
+                },
+                "endpoint": {
+                  "type": "string",
+                  "pattern": "^/api/"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "metric",
+                "labels"
+              ],
+              "properties": {
+                "metric": {
+                  "type": "string"
+                },
+                "labels": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "targets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "solo",
+            "team",
+            "ha",
+            "scale"
+          ],
+          "properties": {
+            "solo": {
+              "$ref": "#/$defs/latency"
+            },
+            "team": {
+              "$ref": "#/$defs/latency"
+            },
+            "ha": {
+              "$ref": "#/$defs/latency"
+            },
+            "scale": {
+              "$ref": "#/$defs/latency"
+            }
+          }
+        },
+        "error_objective": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "status": {
+          "enum": [
+            "target",
+            "measured_reference",
+            "proven_production"
+          ]
+        },
+        "evidence": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "k6_scenario": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}
