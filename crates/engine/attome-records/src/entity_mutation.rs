@@ -3736,13 +3736,15 @@ pub async fn restore_one(
          RETURNING {cols}) \
          SELECT row_to_json(r) FROM r"
     );
+    // A18-T3: a value another live record took while this one was in the
+    // bin (a unique field) is a 409 the caller can act on, not a 500.
     let new_row: Option<Value> = sqlx::query_scalar(&sql)
         .bind(record_id)
         .bind(user_id)
         .bind(expected_row_version)
         .fetch_optional(&mut **tx)
         .await
-        .map_err(AppError::internal)?;
+        .map_err(attome_db::classify)?;
     // Defensive, not a race this function actually expects to hit: the `FOR
     // UPDATE` lock taken above is held for the rest of this transaction, and
     // the checks above already proved the predicate matches.

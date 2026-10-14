@@ -11,7 +11,7 @@
 
 use attome_auth::SessionClaims;
 use attome_core::{EngineState, quote_ident};
-use attome_security::record_action::Read;
+use attome_security::record_action::{Delete, Read};
 use attome_security::{RecordAction, SecurityContextExt};
 use attome_server::authz::{Authorized, RecordScoped, SelfService};
 use attome_server::security::SecurityContext;
@@ -183,6 +183,135 @@ pub(super) async fn list_deleted(
     Ok(Json(deleted_records(&state, &ctx, &entity, &query).await?))
 }
 
+/// `POST /api/v1/{entity}/delete-impact`.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct DeleteImpactRequest {
+    /// The records about to be deleted, at most 500.
+    pub ids: Vec<Uuid>,
+}
+
+/// Live records of one entity that point at the records being deleted
+/// through one lookup field.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DependentCount {
+    pub entity: String,
+    pub field: String,
+    pub count: i64,
+}
+
+/// What deleting the records would do (A18-T4), counted without changing
+/// anything.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct DeleteImpact {
+    /// Removed with them (and restored with them).
+    pub cascades: Vec<DependentCount>,
+    /// Records that stop the delete while they point here.
+    pub blocked_by: Vec<DependentCount>,
+    /// Left pointing at a deleted record.
+    pub orphaned: Vec<DependentCount>,
+    /// Dependents in entities the caller cannot read exist; they are not
+    /// counted here.
+    pub hidden_dependents: bool,
+    /// The entity's bin setting asks for a reason.
+    pub reason_required: bool,
+}
+
+/// Counts what deleting `ids` of `entity_input` would touch.
+pub async fn delete_impact(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    ids: &[Uuid],
+) -> Result<DeleteImpact, AppError> {
+    if ids.is_empty() || ids.len() > MAX_BIN_RESTORE {
+        return Err(AppError::Validation(format!(
+            "give 1 to {MAX_BIN_RESTORE} ids"
+        )));
+    }
+    let (entity_id, entity, _, _) = resolve_entity(state, entity_input).await?;
+    ctx.require(&entity, "delete")?;
+    let registry = state.entities.load();
+    let mut impact = DeleteImpact {
+        cascades: Vec::new(),
+        blocked_by: Vec::new(),
+        orphaned: Vec::new(),
+        hidden_dependents: false,
+        reason_required: false,
+    };
+    for (dependent, field, policy) in registry.dependents_of(entity_id) {
+        let live = match registry.get(&dependent) {
+            Some(meta) if meta.is_append_only => "",
+            Some(_) => " AND is_active = true",
+            None => continue,
+        };
+        let count: i64 = sqlx::query_scalar(&format!(
+            "SELECT COUNT(*) FROM {} WHERE {} = ANY($1){live}",
+            quote_ident(&dependent),
+            quote_ident(&field)
+        ))
+        .bind(ids)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(attome_db::classify)?;
+        if count == 0 {
+            continue;
+        }
+        if ctx.require(&dependent, "read").is_err() {
+            impact.hidden_dependents = true;
+            continue;
+        }
+        let row = DependentCount {
+            entity: dependent,
+            field,
+            count,
+        };
+        match policy {
+            attome_core::OnTargetDelete::CascadeDeactivate => impact.cascades.push(row),
+            attome_core::OnTargetDelete::Restrict => impact.blocked_by.push(row),
+            attome_core::OnTargetDelete::Orphan => impact.orphaned.push(row),
+        }
+    }
+    impact.reason_required =
+        sqlx::query_scalar::<_, bool>("SELECT require_reason FROM bin_setting WHERE entity = $1")
+            .bind(&entity)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(attome_db::classify)?
+            .unwrap_or(false);
+    Ok(impact)
+}
+
+/// A18-T4: what deleting these records would cascade to, be blocked by or
+/// leave pointing at them, and whether a reason is required; nothing is
+/// changed.
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/delete-impact",
+    tag = "entity",
+    params(("entity" = String, Path)),
+    request_body = DeleteImpactRequest,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "counts dependent records and writes nothing"
+    )))),
+    responses(
+        (status = 200, description = "What the delete would touch", body = DeleteImpact),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not delete this entity's records", body = ErrorResponse),
+        (status = 422, description = "No ids, or more than 500", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn preview_delete(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Delete>>,
+    Path(entity): Path<String>,
+    Json(body): Json<DeleteImpactRequest>,
+) -> Result<Json<DeleteImpact>, AppError> {
+    Ok(Json(delete_impact(&state, &ctx, &entity, &body.ids).await?))
+}
+
 /// Records one bin restore may bring back.
 pub const MAX_BIN_RESTORE: usize = 500;
 
@@ -336,7 +465,7 @@ pub(super) async fn restore_operation(
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_deleted, restore_selection, restore_operation))]
+#[openapi(paths(list_deleted, restore_selection, restore_operation, preview_delete))]
 struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {

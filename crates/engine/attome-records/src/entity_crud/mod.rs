@@ -207,6 +207,10 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/{entity}/deleted", get(recycle_bin::list_deleted))
         .route(
+            "/api/v1/{entity}/delete-impact",
+            axum::routing::post(recycle_bin::preview_delete),
+        )
+        .route(
             "/api/v1/bin/restore",
             axum::routing::post(recycle_bin::restore_selection),
         )
