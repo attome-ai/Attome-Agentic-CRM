@@ -44,6 +44,13 @@ impl AppConfig {
         Ok((config, ignored))
     }
 
+    /// The unknown keys in a configuration text, as dotted JSON paths: what
+    /// `preflight` would refuse. For a generator (`attome init`) to check
+    /// what it writes.
+    pub fn unknown_keys_in(text: &str) -> Result<Vec<String>, serde_json::Error> {
+        Self::deserialize_tracked(text).map(|(_, ignored)| ignored)
+    }
+
     /// BCF-10 — the unknown keys `from_file` recorded, as dotted JSON paths.
     /// Boot warns on each one; `preflight` fails on any.
     pub fn ignored_keys(&self) -> &[String] {

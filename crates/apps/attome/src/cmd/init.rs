@@ -173,27 +173,16 @@ fn secret() -> String {
 
 /// The Solo configuration, as JSON. Pure, so a test can build it.
 fn solo_config(db: &PgConnectOptions, port: u16) -> Value {
+    // Only keys the configuration knows: preflight (and the release gate's
+    // install smoke test) refuses an unknown one.
     json!({
         "app": {
             "port": port,
             "server_host": "127.0.0.1",
             "frontend_host": "localhost",
             "frontend_port": port,
-            "log_level": "info",
-            "threads": 0,
             "max_body_size_bytes": 10_485_760,
             "request_timeout_secs": 30,
-            "enable_session": true,
-            "max_connection_num": 1024,
-            "max_connection_num_per_ip": 64,
-            "use_gzip": true,
-            "enable_compression": true,
-            "gzip_level": 4,
-            "br_level": 4,
-            "idle_connection_timeout": 60,
-            "keepalive_requests": 1000,
-            "static_files_cache_time": 3600,
-            "server_header_field": "attome",
             "deployment_profile": "development"
         },
         "database": {
@@ -213,8 +202,6 @@ fn solo_config(db: &PgConnectOptions, port: u16) -> Value {
         // Solo keeps its shared state in process memory: no Redis.
         "cache": {
             "backend": "memory",
-            "l1_cache_size_mb": 64,
-            "l1_cache_ttl_seconds": 60,
             "metadata_registry_enabled": true
         },
         "storage": {
@@ -224,13 +211,11 @@ fn solo_config(db: &PgConnectOptions, port: u16) -> Value {
             "s3_access_key": "unset",
             "s3_secret_key": "unset",
             "s3_bucket": "attome",
-            "s3_use_path_style": true,
             "s3_verify_ssl": false
         },
         "auth": {
             "jwt_secret": secret(),
             "jwt_issuer": "attome",
-            "jwt_expiry_hours": 1,
             "apikey_hash_pepper": secret(),
             "apikey_hash_pepper_id": 0,
             // Solo is reached over plain http on this machine until a TLS
@@ -242,24 +227,17 @@ fn solo_config(db: &PgConnectOptions, port: u16) -> Value {
         "rate_limit": { "anonymous_rpm": 120, "authenticated_rpm": 1200 },
         "observability": {
             "metrics_port": 0,
-            "log_sampling_rate": 1.0,
             "trace_sampling_rate": 0.0,
             "enable_distributed_tracing": false
         },
         "email": {
             "smtp_host": "localhost", "smtp_port": 1025, "smtp_user": "",
             "smtp_password": "", "smtp_from_address": "attome@localhost",
-            "smtp_from_name": "Attome", "smtp_use_tls": false,
-            "queue_poll_seconds": 30, "max_retries": 3, "batch_size": 20
+            "smtp_from_name": "Attome", "smtp_use_tls": false
         },
-        "google_ai": {
-            "api_key": "", "base_url": "https://example.invalid",
-            "default_model": "none", "timeout_seconds": 30
-        },
-        "llm_api": {},
-        "external_api": {},
+        "google_ai": { "api_key": "" },
         "s2s": { "enabled": false },
-        "security": { "bootstrap_admin_email": null },
+        "security": {},
         "cors": { "allowed_origins": [format!("http://localhost:{port}")] },
         "jobs": { "run_worker_inline": true }
     })
@@ -482,6 +460,12 @@ mod tests {
         config.validate().expect("validates");
         assert_eq!(config.cache.backend, attome_config::CacheBackend::Memory);
         assert!(config.jobs.run_worker_inline);
+        // Preflight refuses an unknown key, and the release gate runs it on
+        // exactly this file.
+        assert_eq!(
+            AppConfig::unknown_keys_in(&text).unwrap(),
+            Vec::<String>::new()
+        );
     }
 
     #[test]
