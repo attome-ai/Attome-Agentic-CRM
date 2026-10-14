@@ -168,7 +168,8 @@ pub fn render_untrusted(source: &str, text: &str) -> String {
     format!(
         "{OPEN} source={}\n{}\n{CLOSE}",
         sanitize(source),
-        sanitize(text)
+        // N27-T1: hidden characters and hidden HTML go before anything else.
+        sanitize(&crate::sanitize_input::clean(text))
     )
 }
 

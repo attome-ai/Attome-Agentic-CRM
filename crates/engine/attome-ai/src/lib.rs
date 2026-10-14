@@ -115,6 +115,7 @@ pub mod registry;
 /// C11 B5 (P-5) — the runtime AI switch's audited admin routes. The read side
 /// is `attome_core::ai_runtime_switch`.
 pub mod runtime_switch;
+pub mod sanitize_input;
 pub mod session;
 pub mod session_admin;
 pub mod telemetry;
