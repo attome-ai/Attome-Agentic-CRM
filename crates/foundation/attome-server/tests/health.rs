@@ -142,6 +142,8 @@ async fn ready_only_after_registry_ready_flag_is_set() {
     // Once the pre-warm (simulated here) completes, the same DB/Redis state
     // reports ready.
     state.registry_ready.store(true, Ordering::Relaxed);
+    // The verdict is memoised for READY_VERDICT_TTL; probe again after it.
+    tokio::time::sleep(health::READY_VERDICT_TTL + std::time::Duration::from_millis(100)).await;
     let (status, Json(body)) = health::health_ready(State(state)).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["status"], "ready");
@@ -208,6 +210,8 @@ async fn schema_check_is_opt_in_and_fails_closed_when_behind() {
     // compiled MIGRATOR is ahead of what the one-shot `migrate` job has
     // applied to the database yet.
     state.expected_schema_version = Some(i64::MAX);
+    // The verdict is memoised for READY_VERDICT_TTL; probe again after it.
+    tokio::time::sleep(health::READY_VERDICT_TTL + std::time::Duration::from_millis(100)).await;
     let (status, Json(body)) = health::health_ready(State(state)).await;
     assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
     assert_eq!(body["status"], "not_ready");
