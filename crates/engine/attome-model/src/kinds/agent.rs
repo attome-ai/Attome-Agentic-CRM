@@ -8,8 +8,14 @@
 //!   "identity": { "run_as": "caller" },
 //!   "limits": { "max_steps": 20, "max_tool_calls": 40, "max_tokens": 60000 },
 //!   "triggers": [{ "kind": "record_change", "entity": "<entity id>" }],
-//!   "channels": ["chat", "web"] }
+//!   "channels": ["chat", "web"],
+//!   "persona": { "model": "<ai_model id>", "language": "ar", "temperature": 0.2 } }
 //! ```
+//!
+//! `limits.daily` optionally caps what the agent does per day across all its
+//! sessions, by limit class (`record_changes`, `deletes`, `messages`,
+//! `external_calls`, V2-D487); `persona` is the optional model and voice
+//! configuration that v1 kept on `ai_agent`.
 //!
 //! Checked on every edit: the tools are action ids the AI engine knows (the
 //! engine hands its list over at boot through [`set_known_tools`]; without
@@ -40,11 +46,15 @@ pub const MAX_TOOL_CALLS_CEILING: u64 = 500;
 pub const MAX_TOKENS_CEILING: u64 = 1_000_000;
 /// Most tools one agent may hold.
 pub const MAX_TOOLS: usize = 64;
+/// The ceiling on any one daily limit.
+pub const MAX_DAILY_CEILING: u64 = 1_000_000;
+/// The daily limit classes (V2-D487).
+pub const DAILY_CLASSES: [&str; 4] = ["record_changes", "deletes", "messages", "external_calls"];
 
 const RUN_AS: [&str; 2] = ["caller", "service"];
 const TRIGGER_KINDS: [&str; 3] = ["manual", "record_change", "schedule"];
 const CHANNELS: [&str; 5] = ["chat", "web", "whatsapp", "sms", "email"];
-const PROPERTIES: [&str; 8] = [
+const PROPERTIES: [&str; 9] = [
     "role",
     "instructions",
     "tools",
@@ -53,6 +63,7 @@ const PROPERTIES: [&str; 8] = [
     "limits",
     "triggers",
     "channels",
+    "persona",
 ];
 
 static KNOWN_TOOLS: OnceLock<BTreeSet<String>> = OnceLock::new();
@@ -110,7 +121,26 @@ impl Kind for AgentKind {
                     "properties": {
                         "max_steps": { "type": "integer", "minimum": 1, "maximum": MAX_STEPS_CEILING },
                         "max_tool_calls": { "type": "integer", "minimum": 1, "maximum": MAX_TOOL_CALLS_CEILING },
-                        "max_tokens": { "type": "integer", "minimum": 1, "maximum": MAX_TOKENS_CEILING }
+                        "max_tokens": { "type": "integer", "minimum": 1, "maximum": MAX_TOKENS_CEILING },
+                        "daily": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "record_changes": { "type": "integer", "minimum": 0, "maximum": MAX_DAILY_CEILING },
+                                "deletes": { "type": "integer", "minimum": 0, "maximum": MAX_DAILY_CEILING },
+                                "messages": { "type": "integer", "minimum": 0, "maximum": MAX_DAILY_CEILING },
+                                "external_calls": { "type": "integer", "minimum": 0, "maximum": MAX_DAILY_CEILING }
+                            }
+                        }
+                    }
+                },
+                "persona": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "model": { "type": "string", "format": "uuid" },
+                        "language": { "type": "string", "minLength": 2, "maxLength": 16 },
+                        "temperature": { "type": "number", "minimum": 0, "maximum": 2 }
                     }
                 },
                 "triggers": {
@@ -214,6 +244,65 @@ impl Kind for AgentKind {
                         "required",
                         format!("{key} is a whole number from 1 to {ceiling}"),
                     )),
+                }
+            }
+        }
+        if let Some(daily) = limits.get("daily") {
+            match daily.as_object() {
+                None => issues.push(Issue::new(
+                    "/limits/daily",
+                    "invalid",
+                    "daily limits are an object of whole numbers",
+                )),
+                Some(daily) => {
+                    for (key, value) in daily {
+                        if !DAILY_CLASSES.contains(&key.as_str()) {
+                            issues.push(Issue::new(
+                                format!("/limits/daily/{key}"),
+                                "unknown_property",
+                                format!("a daily limit is one of {}", DAILY_CLASSES.join(", ")),
+                            ));
+                        } else if !value.as_u64().is_some_and(|v| v <= MAX_DAILY_CEILING) {
+                            issues.push(Issue::new(
+                                format!("/limits/daily/{key}"),
+                                "limit_exceeded",
+                                format!("{key} is a whole number from 0 to {MAX_DAILY_CEILING}"),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        if let Some(persona) = doc.get("persona") {
+            match persona.as_object() {
+                None => issues.push(Issue::new("/persona", "invalid", "a persona is an object")),
+                Some(persona) => {
+                    for (key, value) in persona {
+                        let ok = match key.as_str() {
+                            "model" => value.as_str().is_some_and(|v| Uuid::parse_str(v).is_ok()),
+                            "language" => {
+                                value.as_str().is_some_and(|v| (2..=16).contains(&v.len()))
+                            }
+                            "temperature" => {
+                                value.as_f64().is_some_and(|v| (0.0..=2.0).contains(&v))
+                            }
+                            _ => {
+                                issues.push(Issue::new(
+                                    format!("/persona/{key}"),
+                                    "unknown_property",
+                                    format!("a persona has no `{key}`"),
+                                ));
+                                continue;
+                            }
+                        };
+                        if !ok {
+                            issues.push(Issue::new(
+                                format!("/persona/{key}"),
+                                "invalid",
+                                format!("`{key}` is not valid here"),
+                            ));
+                        }
+                    }
                 }
             }
         }
@@ -385,6 +474,29 @@ mod tests {
         assert_eq!(issues.len(), 1);
         assert_eq!(issues[0].code, "unknown_tool");
         assert_eq!(issues[0].path, "/tools/1");
+    }
+
+    #[test]
+    fn daily_limits_and_persona_are_checked() {
+        let mut doc = agent();
+        doc["limits"]["daily"] = json!({ "deletes": 5, "record_changes": 100 });
+        doc["persona"] =
+            json!({ "model": Uuid::now_v7().to_string(), "language": "ar", "temperature": 0.3 });
+        assert!(AgentKind.validate_shape(&doc).is_ok());
+
+        doc["limits"]["daily"] = json!({ "deletes": -1, "naps": 2 });
+        doc["persona"] = json!({ "model": "x", "temperature": 9, "mood": "calm" });
+        let issues = AgentKind.validate_shape(&doc).unwrap_err();
+        let paths: Vec<&str> = issues.iter().map(|i| i.path.as_str()).collect();
+        for path in [
+            "/limits/daily/deletes",
+            "/limits/daily/naps",
+            "/persona/model",
+            "/persona/temperature",
+            "/persona/mood",
+        ] {
+            assert!(paths.contains(&path), "{path} in {paths:?}");
+        }
     }
 
     #[test]
