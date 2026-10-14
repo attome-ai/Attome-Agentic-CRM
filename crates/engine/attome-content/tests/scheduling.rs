@@ -371,7 +371,8 @@ async fn a_due_draft_that_fails_block_validation_is_skipped_not_force_published(
     let state = skip_if_no_db!(test_state().await);
     let space_id = insert_space(&state).await;
 
-    let due_at = Utc::now() - chrono::Duration::minutes(5);
+    // Microseconds, as PostgreSQL stores them, so the read-back compares equal.
+    let due_at = chrono::SubsecRound::trunc_subsecs(Utc::now() - chrono::Duration::minutes(5), 6);
     // An empty "text" prop fails `blocks::validate_blocks` for a Heading
     // block (see `blocks.rs::require_nonempty_str`) — same shape a draft
     // saved invalid, or one whose registry rules tightened after it was
