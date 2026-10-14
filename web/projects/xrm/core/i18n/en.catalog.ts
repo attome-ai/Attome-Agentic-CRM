@@ -515,6 +515,7 @@ export const xrmEn = {
     modeStored: 'stored at start',
     modeConfigured: 'agent now: {mode}',
     modeDiffers: 'differs — applies to new sessions only',
+    trace: 'Steps', traceTitle: 'What this session did', traceEmpty: 'This session has not invoked anything yet.',
   },
 
   // ── FE-2 second slice (2026-08-25, T0-11): search, webcrawl, workflow ──

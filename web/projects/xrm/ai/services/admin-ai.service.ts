@@ -225,4 +225,19 @@ export class AdminAiService {
     if (status !== 'all') params['status'] = status;
     return this.api.get<Page<AgentSessionSummary>>('/api/v1/admin/agents/sessions', params);
   }
+
+  /** A session's steps, oldest first (`GET /api/v1/admin/agents/sessions/{id}/trace`, N29-T2). */
+  sessionTrace(id: string): Observable<Page<AgentTraceStep>> {
+    return this.api.get<Page<AgentTraceStep>>(`/api/v1/admin/agents/sessions/${encodeURIComponent(id)}/trace`);
+  }
+}
+
+/** One step of a session's run (`session_admin::TraceStep`). */
+export interface AgentTraceStep {
+  id:             string;
+  action_id:      string;
+  outcome:        string;
+  tool_call_id:   string | null;
+  acting_user_id: string;
+  created_at:     string;
 }

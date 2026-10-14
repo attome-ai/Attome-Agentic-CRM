@@ -46,6 +46,11 @@ describe('AiAgentSessionsComponent — retrieval mode', () => {
             runtimeSwitch: vi.fn().mockReturnValue(throwError(() => ({ status: 403 }))),
             // Likewise the analytics card (C10 B2b).
             botAnalytics: vi.fn().mockReturnValue(throwError(() => ({ status: 403 }))),
+            sessionTrace: vi.fn().mockReturnValue(of({
+              items: [{ id: 't1', action_id: 'record.get', outcome: 'completed', tool_call_id: null,
+                        acting_user_id: 'u1', created_at: '2026-10-14T00:00:00Z' }],
+              total: 1, page: 1, page_size: 1000,
+            })),
           },
         },
         { provide: AiActionsService, useValue: { invoke: vi.fn() } },
@@ -77,6 +82,18 @@ describe('AiAgentSessionsComponent — retrieval mode', () => {
     const cell = (fixture.nativeElement as HTMLElement).querySelector('tbody .as__cellstack .as__ceiling');
     expect(cell?.textContent?.trim()).toBe('agentSessions.modePreRetrieved');
     expect(text()).toContain('agentSessions.modeDiffers');
+  });
+
+  it('shows a session's steps on request and hides them again (N29-T2)', async () => {
+    await render([session({})]);
+    const cmp = fixture.componentInstance;
+    cmp.toggleTrace(cmp.sessions()[0]);
+    fixture.detectChanges();
+    const step = (fixture.nativeElement as HTMLElement).querySelector('[data-step="record.get"]');
+    expect(step?.textContent).toContain('completed');
+    cmp.toggleTrace(cmp.sessions()[0]);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.as__trace')).toBeNull();
   });
 
   it('shows no configured mode for a session without a definition', async () => {

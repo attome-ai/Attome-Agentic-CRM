@@ -8,6 +8,7 @@ import type { ApiError } from '@attome/base';
 import { AiActionsService } from '../../services/ai-actions.service';
 import type { ActionOutcome } from '../../services/ai-actions.service';
 import { AdminAiService } from '../../services/admin-ai.service';
+import type { AgentTraceStep } from '../../services/admin-ai.service';
 import { AiRuntimeSwitchComponent } from '../runtime-switch/ai-runtime-switch.component';
 import { AiBotAnalyticsComponent } from '../bot-analytics/ai-bot-analytics.component';
 import type {
@@ -70,6 +71,9 @@ export class AiAgentSessionsComponent implements OnInit {
   readonly reason = signal('');
   /** The last action result, announced through a live region. */
   readonly outcome = signal<string | null>(null);
+  /** N29-T2: the session whose steps are shown, and its steps. */
+  readonly traceFor = signal<string | null>(null);
+  readonly trace = signal<AgentTraceStep[]>([]);
 
   readonly totalPages = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize)));
 
@@ -83,6 +87,24 @@ export class AiAgentSessionsComponent implements OnInit {
 
   ngOnInit(): void {
     this.load();
+  }
+
+  /** Shows a session's steps, or hides them when they are already shown. */
+  toggleTrace(session: AgentSessionSummary): void {
+    if (this.traceFor() === session.id) {
+      this.traceFor.set(null);
+      this.trace.set([]);
+      return;
+    }
+    this.traceFor.set(session.id);
+    this.trace.set([]);
+    this.adminAi
+      .sessionTrace(session.id)
+      .pipe(takeUntilDestroyed(this.viewDestroyRef))
+      .subscribe({
+        next: (page) => this.trace.set(page.items ?? []),
+        error: (e: ApiError) => this.error.set(e.message),
+      });
   }
 
   load(): void {

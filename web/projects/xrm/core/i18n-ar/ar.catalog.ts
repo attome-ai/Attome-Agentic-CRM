@@ -487,6 +487,7 @@ export const xrmAr = {
     modeStored: 'مخزن عند البدء',
     modeConfigured: 'الوكيل الآن: {mode}',
     modeDiffers: 'مختلف — ينطبق على الجلسات الجديدة فقط',
+    trace: 'الخطوات', traceTitle: 'ما الذي فعلته هذه الجلسة', traceEmpty: 'لم تستدعِ هذه الجلسة شيئًا بعد.',
   },
 
   // ── FE-2 second slice (2026-08-25, T0-11): search, webcrawl, workflow ──

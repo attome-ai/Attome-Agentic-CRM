@@ -315,3 +315,8 @@
 
 .as__pagemeta { font-size: 12px; color: var(--color-text-secondary, #94a3b8); }
 .as__modediff { color: var(--color-warning, #b45309); }
+
+.as__trace { margin-block-start: 1rem; }
+.as__trace-steps { padding-inline-start: 1.25rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.as__trace-steps li { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.as__trace-outcome { color: var(--muted-color, #5b6472); }

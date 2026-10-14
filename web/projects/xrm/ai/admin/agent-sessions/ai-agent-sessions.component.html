@@ -220,6 +220,9 @@
                   <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm as__danger-outline"
                           [disabled]="!canKill(session) || busyId() === session.id"
                           (click)="askKill(session)">Kill…</button>
+                  <button type="button" class="xf-btn xf-btn-secondary xf-btn-sm"
+                          [attr.aria-expanded]="traceFor() === session.id"
+                          (click)="toggleTrace(session)">{{ 'agentSessions.trace' | translate }}</button>
                   <p class="as__refnote">
                     Takes effect now. Editing the policy does not — it reaches the next session only.
                   </p>
@@ -230,6 +233,25 @@
         </tbody>
       </table>
     </div>
+
+    @if (traceFor()) {
+      <section class="as__trace" [attr.aria-label]="'agentSessions.traceTitle' | translate">
+        <h3>{{ 'agentSessions.traceTitle' | translate }}</h3>
+        @if (trace().length === 0) {
+          <p>{{ 'agentSessions.traceEmpty' | translate }}</p>
+        } @else {
+          <ol class="as__trace-steps">
+            @for (step of trace(); track step.id) {
+              <li [attr.data-step]="step.action_id">
+                <code dir="ltr">{{ step.action_id }}</code>
+                <span class="as__trace-outcome">{{ step.outcome }}</span>
+                <span>{{ step.created_at | localDate }}</span>
+              </li>
+            }
+          </ol>
+        }
+      </section>
+    }
 
     @if (totalPages() > 1) {
       <div class="as__pager">
