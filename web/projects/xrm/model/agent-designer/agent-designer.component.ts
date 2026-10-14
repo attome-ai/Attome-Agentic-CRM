@@ -218,10 +218,13 @@ export class AgentDesignerComponent implements OnInit {
 
   /** Sets one daily cap; a blank input removes it. */
   setDaily(key: DailyClass, value: string): void {
-    const daily = { ...this.draft().daily };
     const n = Number.parseInt(value, 10);
-    if (value.trim() === '' || !Number.isFinite(n)) delete daily[key];
-    else daily[key] = Math.max(0, n);
+    const cleared = value.trim() === '' || !Number.isFinite(n);
+    const daily: Partial<Record<DailyClass, number>> = {};
+    for (const [k, v] of Object.entries(this.draft().daily) as [DailyClass, number][]) {
+      if (k !== key) daily[k] = v;
+    }
+    if (!cleared) daily[key] = Math.max(0, n);
     this.update({ daily });
   }
 
