@@ -78,6 +78,9 @@ answers and proposes any change through its own gate.
 
 ## Running
 
+- From a trusted partner: `GET /api/v1/a2a/agents` lists the agents with a handoff contract;
+  `POST /api/v1/a2a/agents/{agent}/tasks` with `{ "input": ... }` runs one read-only task.
+
 - Over MCP: `initialize` with `"params": { "agent": "<agent object id>" }` runs the connection as
   that agent (its tools and daily limits, under the connecting person's own privileges).
 

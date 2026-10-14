@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Agent-to-agent: `GET /api/v1/a2a/agents` (agent cards with their contracts) and
+  `POST /api/v1/a2a/agents/{agent}/tasks` (one read-only task through the contract).
 - An MCP connection can run as an agent: `initialize` with `params.agent` narrows the session to
   the agent's tools and applies its daily limits.
 - Eval suite runs: `POST /api/v1/admin/ai/eval-suites/{suite}/runs` runs each case as a turn of

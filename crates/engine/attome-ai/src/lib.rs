@@ -48,6 +48,7 @@
 /// `hashtext` space with every other subsystem.
 pub const ADVISORY_LOCK_NAMESPACE: i32 = 25;
 
+pub mod a2a;
 pub mod actions;
 pub mod agent;
 pub mod ai_status;
@@ -193,6 +194,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(eval_capture::openapi_fragment());
     doc.merge(eval_runner::openapi_fragment());
     doc.merge(ai_status::openapi_fragment());
+    doc.merge(a2a::openapi_fragment());
     doc
 }
 
