@@ -90,7 +90,7 @@ pub(crate) fn note_acquire_timeout() {
 /// Z2-T12: per-role pool pressure. `role` is the pool's database user
 /// (`attome_runtime`, `attome_migrator`, `attome_readonly`, or the bootstrap
 /// user), so the series count stays as small as the set of pools.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct PoolPressureHooks {
     /// How long one `tx::begin` waited for a connection.
     pub wait: fn(role: &str, waited: std::time::Duration),

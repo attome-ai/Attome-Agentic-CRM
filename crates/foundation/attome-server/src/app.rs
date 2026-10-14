@@ -355,7 +355,7 @@ const X_REQUEST_ID: &str = "x-request-id";
 
 /// Bodies at or under this many bytes go out raw: compressing them costs
 /// more than it saves (AA7-T6).
-const COMPRESS_MIN_BYTES: u16 = 1024;
+const COMPRESS_MIN_BYTES: u64 = 1024;
 
 /// AA7-T6: Brotli when the client accepts it (tower-http prefers `br` over
 /// `gzip` at equal q-values), gzip otherwise, both at the default level. A
