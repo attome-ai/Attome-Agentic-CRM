@@ -1,7 +1,7 @@
 //! `attome test` (roadmap Z15-T1): the scoped test runner.
 //!
 //! ```text
-//! attome test [--tier unit|db|contract|security|browser|all] [--changed] [--release] [--dry-run] [--no-stack]
+//! attome test [--tier unit|db|contract|security|browser|all] [--changed] [--release] [--dry-run] [--no-stack] [--coverage]
 //! ```
 //!
 //! - `unit` runs each crate's library tests, `db` its integration targets,
@@ -15,13 +15,18 @@
 //!   `ATTOME_TEST_REQUIRE_REDIS` and `ATTOME_TEST_REQUIRE_S3`, so a test that
 //!   would skip for a missing service fails instead.
 //! - `--dry-run` prints the commands and runs nothing.
+//! - A failing test is rerun once on its own; one that then passes is
+//!   reported FLAKY and still fails the run. `tests/quarantine.json` skips
+//!   listed tests until their date ([`crate::test_flaky`]).
+//! - `--coverage` runs the cargo commands under `cargo llvm-cov` and prints
+//!   line coverage per crate ([`crate::test_coverage`]).
 //! - A tier that needs PostgreSQL starts the test stack when `DATABASE_URL`
 //!   is not set (see [`crate::test_stack`]); `--no-stack` skips that.
 //!
 //! Each command's output goes to `target/attome-test/<unix seconds>/NN.log`.
 
 use std::collections::BTreeSet;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Command, ExitCode, Stdio};
 
 /// A test tier.
@@ -67,6 +72,9 @@ pub struct TestArgs {
     pub dry_run: bool,
     /// Do not start the test stack; the caller manages the services.
     pub no_stack: bool,
+    /// Run the cargo commands under `cargo llvm-cov` and print line coverage
+    /// per crate.
+    pub coverage: bool,
 }
 
 impl Default for TestArgs {
@@ -77,6 +85,7 @@ impl Default for TestArgs {
             release: false,
             dry_run: false,
             no_stack: false,
+            coverage: false,
         }
     }
 }
@@ -92,6 +101,7 @@ pub fn parse_args(args: &[String]) -> Option<TestArgs> {
             "--release" => parsed.release = true,
             "--dry-run" => parsed.dry_run = true,
             "--no-stack" => parsed.no_stack = true,
+            "--coverage" => parsed.coverage = true,
             _ => return None,
         }
     }
@@ -398,34 +408,128 @@ pub fn run(args: &TestArgs, root: &Path, started_at: u64) -> ExitCode {
         eprintln!("attome test: {}: {error}", logs.display());
         return ExitCode::FAILURE;
     }
+    let quarantine = match crate::test_flaky::load(root) {
+        Ok(quarantine) => quarantine,
+        Err(error) => {
+            eprintln!("attome test: {error}");
+            return ExitCode::from(2);
+        }
+    };
+    let today = crate::test_flaky::date_from_unix(started_at);
+    let stale = crate::test_flaky::expired(&quarantine, &today);
+    if !stale.is_empty() {
+        eprintln!(
+            "attome test: tests/quarantine.json has entries past their date or without an owner:"
+        );
+        for entry in stale {
+            eprintln!(
+                "  {} {} (until {}, owner {:?})",
+                entry.target, entry.name, entry.until, entry.owner
+            );
+        }
+        return ExitCode::from(2);
+    }
+    if args.coverage && !crate::test_coverage::available() {
+        eprintln!(
+            "attome test: --coverage needs cargo-llvm-cov: {}",
+            crate::test_coverage::INSTALL_HINT
+        );
+        return ExitCode::from(2);
+    }
+
     let mut failed = Vec::new();
+    let mut flaky: Vec<String> = Vec::new();
+    let mut coverage_files = Vec::new();
     for (index, step) in steps.iter().enumerate() {
-        let log: PathBuf = logs.join(format!("{:02}.log", index + 1));
-        crate::say(&format!("==> {}  [{}]", step.display(), log.display()));
-        let outcome = std::fs::File::create(&log)
-            .and_then(|file| Ok((file.try_clone()?, file)))
-            .map_err(|error| error.to_string())
-            .and_then(|(out, err)| {
-                Command::new(&step.program)
-                    .args(&step.args)
-                    .envs(env.iter().map(|(name, value)| (name, value)))
-                    .current_dir(root.join(step.dir))
-                    .stdout(Stdio::from(out))
-                    .stderr(Stdio::from(err))
-                    .status()
-                    .map_err(|error| error.to_string())
-            });
-        match outcome {
-            Ok(status) if status.success() => {}
-            Ok(status) => {
-                crate::say(&format!("    failed ({status}); see {}", log.display()));
+        let log = logs.join(format!("{:02}.log", index + 1));
+        let mut step_args = step.args.clone();
+        let package = package_of(&step_args);
+        if step.program == "cargo" {
+            match &package {
+                Some(package) => {
+                    crate::test_flaky::apply_skips(&mut step_args, package, &quarantine)
+                }
+                None => {
+                    let packages: BTreeSet<&str> = quarantine
+                        .tests
+                        .iter()
+                        .map(crate::test_flaky::Entry::package)
+                        .collect();
+                    for package in packages {
+                        crate::test_flaky::apply_skips(&mut step_args, package, &quarantine);
+                    }
+                }
+            }
+            if args.coverage {
+                let output = logs.join(format!("coverage-{:02}.json", index + 1));
+                step_args = crate::test_coverage::wrap(&step_args, &output);
+                coverage_files.push(output);
+            }
+        }
+        crate::say(&format!(
+            "==> {} {}  [{}]",
+            step.program,
+            step_args.join(" "),
+            log.display()
+        ));
+        match exec(&step.program, &step_args, &root.join(step.dir), &env, &log) {
+            Ok(true) => {}
+            Ok(false) => {
+                crate::say(&format!("    failed; see {}", log.display()));
                 failed.push(step.display());
+                if step.program == "cargo"
+                    && let Some(package) = &package
+                {
+                    let text = std::fs::read_to_string(&log).unwrap_or_default();
+                    for (attempt, test) in crate::test_flaky::parse_failed(&text).iter().enumerate()
+                    {
+                        let rerun_log =
+                            logs.join(format!("{:02}-rerun-{}.log", index + 1, attempt + 1));
+                        let rerun = crate::test_flaky::rerun_args(package, test);
+                        if let Ok(true) = exec("cargo", &rerun, root, &env, &rerun_log) {
+                            let id = format!("{package}::{}::{}", test.binary, test.name);
+                            crate::say(&format!(
+                                "    FLAKY {id} (passed on rerun; still a failure)"
+                            ));
+                            flaky.push(id);
+                        }
+                    }
+                }
             }
             Err(error) => {
                 crate::say(&format!("    could not start: {error}"));
                 failed.push(step.display());
             }
         }
+    }
+    if !flaky.is_empty() {
+        let path = root.join("target").join("attome-test").join("flaky.json");
+        let body = serde_json::json!({ "date": today, "flaky": flaky });
+        if let Err(error) = std::fs::write(
+            &path,
+            body.to_string()
+                + "
+",
+        ) {
+            eprintln!("attome test: {}: {error}", path.display());
+        }
+    }
+    if args.coverage {
+        let mut totals = std::collections::BTreeMap::new();
+        for file in &coverage_files {
+            let Ok(text) = std::fs::read_to_string(file) else {
+                continue;
+            };
+            let Ok(report) = serde_json::from_str::<serde_json::Value>(&text) else {
+                continue;
+            };
+            for (package, (covered, count)) in crate::test_coverage::per_crate(&report, root) {
+                let entry: &mut (u64, u64) = totals.entry(package).or_default();
+                entry.0 += covered;
+                entry.1 += count;
+            }
+        }
+        crate::say(&crate::test_coverage::render(&totals));
     }
     if failed.is_empty() {
         crate::say(&format!("attome test: {} command(s) passed", steps.len()));
@@ -439,11 +543,42 @@ pub fn run(args: &TestArgs, root: &Path, started_at: u64) -> ExitCode {
     }
 }
 
+/// The package a `cargo test` argument list names with `-p`.
+fn package_of(args: &[String]) -> Option<String> {
+    args.iter()
+        .position(|arg| arg == "-p")
+        .and_then(|at| args.get(at + 1))
+        .cloned()
+}
+
+/// Runs one command with its output in `log`; `Ok(true)` when it passed.
+fn exec(
+    program: &str,
+    args: &[String],
+    dir: &Path,
+    env: &[(String, String)],
+    log: &Path,
+) -> Result<bool, String> {
+    let file = std::fs::File::create(log).map_err(|error| format!("{}: {error}", log.display()))?;
+    let err = file
+        .try_clone()
+        .map_err(|error| format!("{}: {error}", log.display()))?;
+    Command::new(program)
+        .args(args)
+        .envs(env.iter().map(|(name, value)| (name, value)))
+        .current_dir(dir)
+        .stdout(Stdio::from(file))
+        .stderr(Stdio::from(err))
+        .status()
+        .map(|status| status.success())
+        .map_err(|error| error.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn workspace() -> PathBuf {
+    fn workspace() -> std::path::PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .ancestors()
             .nth(3)

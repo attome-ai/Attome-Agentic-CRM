@@ -11,7 +11,7 @@ usage:
   attome-release tag <version>
   attome-release slo generate [--check]
   attome-release slo report <matrix-summary.json>
-  attome-release test [--tier unit|db|contract|security|browser|all] [--changed] [--release] [--dry-run] [--no-stack]";
+  attome-release test [--tier unit|db|contract|security|browser|all] [--changed] [--release] [--dry-run] [--no-stack] [--coverage]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
