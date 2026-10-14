@@ -292,7 +292,7 @@ imminent outage: free space now.
 
 A capability (the `capability` label) is unavailable on at least one node, and routes that need
 it answer 503 `capability_unavailable`. Ordinary CRUD is unaffected and the node stays in
-rotation. `GET /health/dependencies` shows the live probe and what the gate enforces. Fix the
+rotation. `GET /health/dependencies` (administrator API key) shows the live probe and what the gate enforces. Fix the
 underlying dependency; this alert is not about the node.
 
 ### CapabilityRejectingTraffic
