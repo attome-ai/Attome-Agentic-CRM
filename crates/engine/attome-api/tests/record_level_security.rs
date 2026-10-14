@@ -3896,7 +3896,22 @@ fn get_record_shows_an_audit_header_row_via_referenced_record_share_despite_narr
 /// (`access.rs`) is keyed on the literal entity name. Unlike `audit_header`,
 /// `attome_document` isn't seeded by any crate — every test that needs it
 /// provisions it itself, same as any other admin-created entity.
-async fn provision_xrm_document_minimal(app: &axum::Router, admin_cookie: &str) -> Uuid {
+async fn provision_xrm_document_minimal(
+    app: &axum::Router,
+    admin_cookie: &str,
+    db: &attome_db::DbPool,
+) -> Uuid {
+    // The attome-document platform bundle provisions the entity at boot in v2,
+    // with both fields; only a system booted without it needs them created.
+    let existing: Option<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM entity_info WHERE logicalname = 'attome_document' AND is_active IS NOT FALSE",
+    )
+    .fetch_optional(db)
+    .await
+    .expect("look up attome_document");
+    if let Some(entity_id) = existing {
+        return entity_id;
+    }
     let entity_id = provision_entity(app, admin_cookie, "attome_document").await;
     for logicalname in ["entity_name", "record_id"] {
         let req = Request::builder()
@@ -3940,7 +3955,7 @@ fn get_record_rejects_xrm_document_referencing_a_record_outside_caller_scope() {
 
         let target_entity_id = provision_entity(&app, &admin_cookie, &target_name).await;
         provision_text_field(&app, &admin_cookie, target_entity_id).await;
-        provision_xrm_document_minimal(&app, &admin_cookie).await;
+        provision_xrm_document_minimal(&app, &admin_cookie, &db).await;
 
         let (record_id, _) = create_record_as(&app, &admin_cookie, &target_name, "private").await;
 
