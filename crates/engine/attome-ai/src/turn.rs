@@ -807,15 +807,17 @@ pub async fn run(
             tainted = true;
         }
 
-        let request = GenerationRequest::new(assemble_messages(&system_frame(), persona, history))
-            .with_tools(tools);
+        let mut request =
+            GenerationRequest::new(assemble_messages(&system_frame(), persona, history))
+                .with_tools(tools);
 
         // 4b. Budget BEFORE generation.
         let grant = match crate::budget_guard::admit(
             state,
             &ctx,
             attome_inference::budget::Priority::Chat,
-            &request,
+            crate::budget_guard::AGENT_TURN_FEATURE,
+            &mut request,
         )
         .await
         {

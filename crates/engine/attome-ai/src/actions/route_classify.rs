@@ -209,7 +209,7 @@ impl Action for RouteClassify {
             let context_json = serde_json::to_string(&args.context)
                 .map_err(|e| AppError::internal(format!("context serialization failed: {e}")))?;
 
-            let request = GenerationRequest::new(route_messages(
+            let mut request = GenerationRequest::new(route_messages(
                 &args.routes,
                 args.purpose.as_deref(),
                 &context_json,
@@ -230,7 +230,8 @@ impl Action for RouteClassify {
                 state,
                 ctx,
                 attome_inference::budget::Priority::Chat,
-                &request,
+                ROUTE_CLASSIFY,
+                &mut request,
             )
             .await?;
 

@@ -432,7 +432,7 @@ impl Action for RecordSummarize {
             // Assembly goes through `prompt::assemble` (TODO-052(a)), which
             // makes routing untrusted text to the system role unrepresentable
             // rather than merely avoided.
-            let request =
+            let mut request =
                 GenerationRequest::new(summarize_messages(language, &args.entity, &facts));
 
             // M101 slice 2 — the token budget, admitted BEFORE the call. Like
@@ -444,7 +444,8 @@ impl Action for RecordSummarize {
                 state,
                 ctx,
                 attome_inference::budget::Priority::Chat,
-                &request,
+                RECORD_SUMMARIZE,
+                &mut request,
             )
             .await?;
 

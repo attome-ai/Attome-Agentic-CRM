@@ -143,6 +143,7 @@ impl std::fmt::Debug for InferenceSection {
                 "knowledge_article_data_source",
                 &self.knowledge_article_data_source,
             )
+            .field("spend", &self.spend)
             .finish()
     }
 }
@@ -258,6 +259,11 @@ pub struct InferenceSection {
     /// with a validation error naming this key rather than writing an orphan.
     #[serde(default)]
     pub knowledge_article_data_source: Option<String>,
+
+    /// N24-T1 — money budgets for generation. Empty by default: no prices,
+    /// no money budgets, only the token budgets apply.
+    #[serde(default)]
+    pub spend: SpendSection,
 }
 
 /// D-489 — the canonical KB article, so the case→draft loop runs unconfigured.
@@ -284,7 +290,126 @@ impl Default for InferenceSection {
             max_output_tokens: default_max_output_tokens(),
             knowledge_article_entity: default_knowledge_article_entity(),
             knowledge_article_data_source: None,
+            spend: SpendSection::default(),
         }
+    }
+}
+
+/// N24-T1 — what generation may cost per rolling month (30 days), in the
+/// unit the prices are written in (the deployment's currency).
+///
+/// Every cap is optional and applies only when the generation model has a
+/// price: a model with no price is never counted against a money budget
+/// (the token budgets still apply). Each cap is a separate window: the
+/// whole deployment, each person (`caller_monthly`), each agent
+/// (`agent_monthly`, for sessions started with an agent) and each feature
+/// (`feature_monthly`, by action id such as `record.summarize`, or
+/// `agent.turn` for chat and agent turns). Once any window passes
+/// `degrade_at_percent` of its cap, generations are shortened to
+/// `degraded_max_output_tokens`; at the cap they are refused (429) before
+/// anything is spent.
+#[derive(Clone, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SpendSection {
+    /// Price per million tokens, by model id (`inference.generation.model`).
+    #[serde(default)]
+    pub prices: std::collections::BTreeMap<String, ModelPrice>,
+    #[serde(default)]
+    pub deployment_monthly: Option<f64>,
+    #[serde(default)]
+    pub caller_monthly: Option<f64>,
+    #[serde(default)]
+    pub agent_monthly: Option<f64>,
+    #[serde(default)]
+    pub feature_monthly: std::collections::BTreeMap<String, f64>,
+    /// Percent of a cap at which generations are shortened.
+    #[serde(default = "default_degrade_at_percent")]
+    pub degrade_at_percent: u8,
+    /// The output ceiling near a cap; unset leaves generations unshortened.
+    #[serde(default)]
+    pub degraded_max_output_tokens: Option<u32>,
+}
+
+/// One model's price per million tokens.
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct ModelPrice {
+    pub prompt_per_million: f64,
+    pub completion_per_million: f64,
+}
+
+fn default_degrade_at_percent() -> u8 {
+    80
+}
+
+impl Default for SpendSection {
+    fn default() -> Self {
+        Self {
+            prices: std::collections::BTreeMap::new(),
+            deployment_monthly: None,
+            caller_monthly: None,
+            agent_monthly: None,
+            feature_monthly: std::collections::BTreeMap::new(),
+            degrade_at_percent: default_degrade_at_percent(),
+            degraded_max_output_tokens: None,
+        }
+    }
+}
+
+impl SpendSection {
+    /// Whether any money cap is set.
+    pub fn has_caps(&self) -> bool {
+        self.deployment_monthly.is_some()
+            || self.caller_monthly.is_some()
+            || self.agent_monthly.is_some()
+            || !self.feature_monthly.is_empty()
+    }
+
+    /// Boot check: prices and caps are finite and not negative, the degrade
+    /// threshold is a percentage, a degraded ceiling is at least one token.
+    pub fn validate(&self) -> Result<(), (String, String)> {
+        let money = |field: String, value: f64| {
+            if value.is_finite() && value >= 0.0 {
+                Ok(())
+            } else {
+                Err((field, "must be a finite amount, not negative".to_owned()))
+            }
+        };
+        for (model, price) in &self.prices {
+            money(
+                format!("inference.spend.prices.{model}.prompt_per_million"),
+                price.prompt_per_million,
+            )?;
+            money(
+                format!("inference.spend.prices.{model}.completion_per_million"),
+                price.completion_per_million,
+            )?;
+        }
+        for (field, cap) in [
+            ("deployment_monthly", self.deployment_monthly),
+            ("caller_monthly", self.caller_monthly),
+            ("agent_monthly", self.agent_monthly),
+        ] {
+            if let Some(cap) = cap {
+                money(format!("inference.spend.{field}"), cap)?;
+            }
+        }
+        for (feature, cap) in &self.feature_monthly {
+            money(format!("inference.spend.feature_monthly.{feature}"), *cap)?;
+        }
+        if !(1..=100).contains(&self.degrade_at_percent) {
+            return Err((
+                "inference.spend.degrade_at_percent".to_owned(),
+                "must be between 1 and 100".to_owned(),
+            ));
+        }
+        if self.degraded_max_output_tokens == Some(0) {
+            return Err((
+                "inference.spend.degraded_max_output_tokens".to_owned(),
+                "must be at least 1".to_owned(),
+            ));
+        }
+        Ok(())
     }
 }
 

@@ -50,10 +50,10 @@ pub use config::{
     CaptchaProvider, ChangesetLayer, ChangesetMode, ChangesetsSection, ConfigError,
     DatabasePoolSize, DatabasePools, DatabaseSection, DocgenSection, EmailSection, EventsSection,
     FleetSection, GoogleAiSection, InferenceEndpoint, InferenceSection, IntegrationSection,
-    KdfSection, MetadataSection, NotificationSection, ObservabilitySection, OidcProviderConfig,
-    OidcSection, PortalSection, RateLimitSection, ReleaseReportSection, S2SSection,
-    S2sSeededClient, S2sSeededPermission, S3Target, StorageSection, WebchatSection,
-    WebcrawlSection, cidr_contains, endpoint_is_in_deployment,
+    KdfSection, MetadataSection, ModelPrice, NotificationSection, ObservabilitySection,
+    OidcProviderConfig, OidcSection, PortalSection, RateLimitSection, ReleaseReportSection,
+    S2SSection, S2sSeededClient, S2sSeededPermission, S3Target, SpendSection, StorageSection,
+    WebchatSection, WebcrawlSection, cidr_contains, endpoint_is_in_deployment,
 };
 pub use env::{APP_ENV_VAR, DEBUG_APP_ENV, app_env, is_debug_app_env, is_debug_env};
 pub use keyring::{BARE_STRING_KEY_ID, KeyRing};

@@ -722,6 +722,11 @@ impl AppConfig {
                 &self.inference.provider_credential_key,
             )?;
         }
+        // N24-T1 — money budgets.
+        self.inference
+            .spend
+            .validate()
+            .map_err(|(field, reason)| ConfigError::Invalid { field, reason })?;
         // BIN-C3 — a zero timeout fails every request at once.
         for (field, secs) in [
             (

@@ -331,7 +331,8 @@ impl Action for KnowledgeAnswer {
                 state,
                 ctx,
                 attome_inference::budget::Priority::Chat,
-                &request,
+                KNOWLEDGE_ANSWER,
+                &mut request,
             )
             .await?;
             let generated = client.generate(request).await.map_err(|e| {

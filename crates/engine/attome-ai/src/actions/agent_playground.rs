@@ -305,13 +305,14 @@ impl Action for AgentPlaygroundComplete {
             )
             .await?;
 
-            let request = GenerationRequest::new(playground_messages(&persona, message));
+            let mut request = GenerationRequest::new(playground_messages(&persona, message));
 
             let grant = crate::budget_guard::admit(
                 state,
                 ctx,
                 attome_inference::budget::Priority::Chat,
-                &request,
+                AGENT_PLAYGROUND_COMPLETE,
+                &mut request,
             )
             .await?;
 

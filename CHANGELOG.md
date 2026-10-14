@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Money budgets for AI (`inference.spend`): prices per model and monthly caps per deployment, person,
+  agent and feature; near a cap generations are shortened, at a cap refused (429) before any spend.
 - `record.summarize` sees the related records and the recent timeline (within a budget, every part
   filtered by the caller's grants) and reuses a summary of identical facts from a 24-hour cache.
 - `query.plan`: a question becomes a query model checked against the metadata (fields, operators,

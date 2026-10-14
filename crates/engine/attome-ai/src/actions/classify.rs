@@ -292,7 +292,7 @@ impl Action for RecordClassify {
             // never interpolated into the system instruction. The real
             // control is that this action is Read-tier and writes nothing;
             // this is defense in depth, not the defense.
-            let request = GenerationRequest::new(classify_messages(
+            let mut request = GenerationRequest::new(classify_messages(
                 &args.field,
                 &choice_opts.choices,
                 &args.entity,
@@ -316,7 +316,8 @@ impl Action for RecordClassify {
                 state,
                 ctx,
                 attome_inference::budget::Priority::Chat,
-                &request,
+                RECORD_CLASSIFY,
+                &mut request,
             )
             .await?;
 
