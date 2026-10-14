@@ -62,8 +62,9 @@ pub fn descriptor() -> ActionDescriptor {
          JSON object matching its output contract. Specialists only read.",
         RiskTier::Read,
         Effect::Read,
-        // A replay would start a second specialist run.
-        RetryClass::NeverRetry,
+        // Specialists only read, so a replay is safe: it starts a second
+        // read-only run, whose cost the turn's token budget bounds.
+        RetryClass::Idempotent,
         MODULE_AI,
         &[],
     )

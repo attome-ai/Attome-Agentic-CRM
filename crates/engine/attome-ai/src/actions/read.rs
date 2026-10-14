@@ -680,8 +680,9 @@ mod tests {
     #[test]
     fn the_model_approval_check_precedes_the_generate_call() {
         let source = include_str!("read.rs");
+        // The test module, not the test-only helper above it.
         let code = source
-            .split_once("#[cfg(test)]")
+            .split_once("#[cfg(test)]\nmod tests")
             .map(|(before, _)| before)
             .expect("test marker");
 

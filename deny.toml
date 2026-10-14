@@ -115,6 +115,9 @@ ignore = true
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# Workspace crates depend on each other by path, never by version; they are
+# all `publish = false`, which is the case this allowance covers.
+allow-wildcard-paths = true
 deny = []
 
 [sources]

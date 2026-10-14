@@ -157,31 +157,6 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
         "Public consent-form submission: no session exists for a data subject. Bypass-listed and rate-limited (consent_capture); the purpose key and subject are validated inside the handler.",
     ),
     (
-        "POST",
-        "/{keyword}/api/v1/records/{entity}/{id}/files/{field}/upload-session",
-        "Web-portal data route: authenticated by the portal session through data_caller, which resolves the portal's role grants for the entity; staff policies do not apply.",
-    ),
-    (
-        "POST",
-        "/{keyword}/api/v1/records/{entity}/{id}/files/{field}/upload-session/{session_id}/finalize",
-        "Web-portal data route: authenticated by the portal session through data_caller, which resolves the portal's role grants for the entity; staff policies do not apply.",
-    ),
-    (
-        "GET",
-        "/{keyword}/api/v1/records/{entity}/{id}/files/{field}/upload-session/{session_id}",
-        "Web-portal data route: authenticated by the portal session through data_caller, which resolves the portal's role grants for the entity; staff policies do not apply.",
-    ),
-    (
-        "GET",
-        "/{keyword}/api/v1/records/{entity}",
-        "Web-portal data route: authenticated by the portal session through data_caller, which resolves the portal's role grants for the entity; staff policies do not apply.",
-    ),
-    (
-        "GET",
-        "/{keyword}/api/v1/records/{entity}/{id}/files/{field}",
-        "Web-portal data route: authenticated by the portal session through data_caller, which resolves the portal's role grants for the entity; staff policies do not apply.",
-    ),
-    (
         "GET",
         "/api/v1/openapi.json",
         "Static, generated API description with no customer data in it. Still behind authn - it is not on the bypass list.",

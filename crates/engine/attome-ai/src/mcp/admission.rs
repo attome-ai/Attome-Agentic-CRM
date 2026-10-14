@@ -84,6 +84,16 @@ pub(crate) const GOVERNED_ACTIONS: &[(&str, Verb)] = &[
     ("record.update", Verb::Update),
     ("record.delete", Verb::Delete),
     ("record.restore", Verb::Update),
+    ("record.assign", Verb::Update),
+    ("record.schema", Verb::Read),
+    ("record.validate", Verb::Read),
+    ("record.ai_field", Verb::Read),
+    ("record.transitions", Verb::Read),
+    ("record.transition", Verb::Update),
+    ("record.bulk.preview", Verb::Read),
+    ("record.bulk.status", Verb::Read),
+    ("record.bulk.update", Verb::Update),
+    ("record.bulk.delete", Verb::Delete),
 ];
 
 /// Security, identity, audit and licence entities, by exact logical name,
@@ -994,8 +1004,9 @@ mod tests {
             ),
             ("actions/graph.rs", include_str!("../actions/graph.rs")),
         ] {
+            // The test module, not a test-only helper above it.
             let production = source
-                .split_once("\n#[cfg(test)]")
+                .split_once("\n#[cfg(test)]\nmod tests")
                 .map_or(source, |(before, _)| before);
             assert!(
                 production.contains("admission::ReadAdmission::for_caller("),

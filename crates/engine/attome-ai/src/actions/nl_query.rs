@@ -506,8 +506,16 @@ impl Action for QueryPlan {
             ctx.security.require(entity, "read")?;
             let registry = state.entities.load();
             let meta = registry.get(entity).ok_or(AppError::NotFound)?;
+            // D-589: the plan feeds query.execute, a bulk surface, so a field
+            // is offered only when the bulk gate admits it.
             let readable = |attr: &AttrInfo| {
-                !attr.is_sensitive || ctx.security.has_field_read_grant(entity, &attr.logicalname)
+                attome_security::field_gate::readable(
+                    &ctx.security,
+                    entity,
+                    attr,
+                    meta.primary_name_attribute.as_deref(),
+                    attome_security::field_gate::Surface::Bulk,
+                )
             };
             Ok(ActionResult::plain(match plan(&model, meta, readable) {
                 Ok(planned) => json!({

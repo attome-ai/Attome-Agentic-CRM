@@ -24,11 +24,21 @@
           "is_write_restricted": true,
           "options": {
             "choices": [
-              "agent.kill", "agent.pause", "agent.playground_complete", "agent.resume", "approval.status",
-              "article.draft", "bot.handoff", "graph.traverse", "knowledge.answer", "memory.forget",
-              "memory.remember", "query.execute", "record.classify", "record.create", "record.delete",
-              "record.get", "record.restore", "record.summarize", "record.update", "record.update_field",
-              "route.classify", "search.knowledge", "search.records", "workflow.start"
+              "agent.delegate", "agent.kill", "agent.pause", "agent.playground_complete", "agent.resume",
+              "approval.status", "article.draft", "bot.handoff", "email.draft", "graph.traverse",
+              "knowledge.answer", "mcp.call.consequential", "mcp.call.read", "mcp.call.reversible", "mcp.tools",
+              "memory.forget", "memory.remember", "model.agent.describe", "model.agent.edit", "model.agent.list",
+              "model.attribute.describe", "model.entity.describe", "model.eval_suite.describe",
+              "model.eval_suite.edit", "model.eval_suite.list", "model.form.describe", "model.form.edit",
+              "model.form.list", "model.navigation.describe", "model.navigation.edit", "model.navigation.list",
+              "model.prompt_override.describe", "model.prompt_override.edit", "model.prompt_override.list",
+              "model.relationship.describe", "model.rule.describe", "model.state_model.describe",
+              "query.execute", "query.plan", "record.ai_field", "record.assign", "record.bulk.delete",
+              "record.bulk.preview", "record.bulk.status", "record.bulk.update", "record.classify",
+              "record.create", "record.delete", "record.get", "record.restore", "record.schema",
+              "record.summarize", "record.transition", "record.transitions", "record.update",
+              "record.update_field", "record.validate", "route.classify", "search.knowledge", "search.records",
+              "text.sentiment", "text.translate", "workflow.start"
             ],
             "multi": true
           }
