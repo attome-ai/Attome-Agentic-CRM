@@ -615,6 +615,19 @@ GRANT SELECT ON
     workflow_trigger_failure
 TO attome_readonly;
 
+-- sqlx creates its own ledger before the first migration runs, outside every
+-- migration file, so the per-table grants above never name it. The platform
+-- reads the applied schema version from it (bundle export and plans), and the
+-- migrator maintains it.
+DO $$
+BEGIN
+    IF to_regclass('_sqlx_migrations') IS NOT NULL THEN
+        GRANT SELECT, INSERT, UPDATE, DELETE ON _sqlx_migrations TO attome_runtime;
+        GRANT ALL ON _sqlx_migrations TO attome_migrator;
+    END IF;
+END
+$$;
+
 -- The two credential-bearing tables are readable by attome_readonly only
 -- column by column, never the secret hashes.
 DO $$

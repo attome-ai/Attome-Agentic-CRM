@@ -111,7 +111,7 @@ pub const PLATFORM_BUNDLES: &[(&str, &str)] = &[
         include_str!("../../../../../platform-bundles/attome-compliance-legal-matter.json"),
     ),
     (
-        "xrm-core-api_key",
+        "xrm-core-api-key",
         include_str!("../../../../../platform-bundles/xrm-core-api_key.json"),
     ),
     (

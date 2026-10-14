@@ -1088,5 +1088,5 @@ async fn apikey_platform_bundle_is_a_pure_noop_after_apply() {
     )
     .await
     .expect("apply api_key");
-    assert_platform_bundle_is_pure_noop(state, "xrm-core-api_key").await;
+    assert_platform_bundle_is_pure_noop(state, "xrm-core-api-key").await;
 }

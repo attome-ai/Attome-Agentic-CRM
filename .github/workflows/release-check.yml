@@ -49,18 +49,40 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
+      rustfs:
+        image: rustfs/rustfs:1.0.0-beta.12
+        env:
+          RUSTFS_ACCESS_KEY: attometest
+          RUSTFS_SECRET_KEY: attometest-secret
+        ports:
+          - 9000:9000
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
       ATTOME_TEST_REQUIRE_DB: "1"
       TEST_REDIS_HOST: 127.0.0.1
       TEST_REDIS_PORT: "6379"
+      REDIS_URL: redis://127.0.0.1:6379/0
       ATTOME_TEST_REQUIRE_REDIS: "1"
+      S3_ACCESS_KEY: attometest
+      S3_SECRET_KEY: attometest-secret
     steps:
       - uses: actions/checkout@v5
       # Installs the toolchain pinned in rust-toolchain.toml (with clippy and
       # rustfmt), caches the cargo registry and target directory, and turns
       # compiler and clippy messages into annotations on the run.
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+      # The object-store tests expect the `attomebase` bucket to exist.
+      - name: create the object-store test bucket
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: attometest
+          AWS_SECRET_ACCESS_KEY: attometest-secret
+          AWS_DEFAULT_REGION: us-east-1
+        run: |
+          for i in $(seq 1 30); do
+            aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attomebase && break
+            sleep 2
+          done
       - name: attome release --check
         shell: bash
         run: |

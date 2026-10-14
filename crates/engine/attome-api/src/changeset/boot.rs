@@ -34,7 +34,7 @@ use super::platform_index::{PLATFORM_CHANGESETS, PlatformChangeset};
 use crate::bundle::PLATFORM_VERSION;
 
 /// Boot call sites whose watermark key is not the bundle file's name.
-const MODULE_ALIASES: &[(&str, &str)] = &[("api_key", "xrm-core-api_key")];
+const MODULE_ALIASES: &[(&str, &str)] = &[("api_key", "xrm-core-api-key")];
 
 /// The platform bundle / changeset name a boot call site's `module` key
 /// names.
@@ -224,8 +224,6 @@ const UTILIZATION_QUERY: (&str, &str) = (
 /// - `sidebar_seed.rs`: every live sidebar item the seed maintains — an item
 ///   no admin has customized (`is_customized = false`; the admin route sets
 ///   it and the seed never does, D-375's ownership boolean);
-/// - `trd_engine::seed`: the `trd_*` entities and fields it provisions and the
-///   list views/queries it seeds for them, not customized;
 /// - `attome_project::seed_utilization`: its one report query;
 /// - `attome_dashboard::seed`: none (it re-syncs the options of a field the
 ///   `attome-dashboard` platform definition already declares).
@@ -251,49 +249,6 @@ pub async fn imperative_seed_keys(db: &DbPool) -> Result<PlatformKeys, AppError>
     .await
     .map_err(AppError::internal)?;
     keys.sidebar.extend(sidebar);
-
-    let trd_entities: Vec<String> = sqlx::query_scalar(
-        "SELECT logicalname FROM entity_info \
-          WHERE logicalname LIKE 'trd\\_%' AND COALESCE(is_customized, false) = false \
-            AND COALESCE(is_active, true) = true",
-    )
-    .fetch_all(db)
-    .await
-    .map_err(AppError::internal)?;
-    keys.entities.extend(trd_entities);
-
-    let trd_fields: Vec<(String, String)> = sqlx::query_as(
-        "SELECT e.logicalname, a.logicalname FROM attribute_info a \
-           JOIN entity_info e ON e.id = a.entity_ref \
-          WHERE e.logicalname LIKE 'trd\\_%' AND COALESCE(a.is_customized, false) = false \
-            AND COALESCE(a.is_active, true) = true",
-    )
-    .fetch_all(db)
-    .await
-    .map_err(AppError::internal)?;
-    keys.attributes.extend(trd_fields);
-
-    let trd_views: Vec<(String, String)> = sqlx::query_as(
-        "SELECT e.logicalname, v.name FROM view v \
-           JOIN entity_info e ON e.id = v.entity_logical_name \
-          WHERE e.logicalname LIKE 'trd\\_%' AND v.scope = 'system' AND v.is_active = true \
-            AND COALESCE(v.is_customized, false) = false",
-    )
-    .fetch_all(db)
-    .await
-    .map_err(AppError::internal)?;
-    keys.views.extend(trd_views);
-
-    let trd_queries: Vec<(String, String)> = sqlx::query_as(
-        "SELECT e.logicalname, q.record_no FROM sql_query q \
-           JOIN entity_info e ON e.id = q.entity_logical_name \
-          WHERE e.logicalname LIKE 'trd\\_%' AND q.record_no IS NOT NULL \
-            AND COALESCE(q.is_active, true) = true AND COALESCE(q.is_customized, false) = false",
-    )
-    .fetch_all(db)
-    .await
-    .map_err(AppError::internal)?;
-    keys.queries.extend(trd_queries);
 
     keys.queries.insert((
         UTILIZATION_QUERY.0.to_owned(),
@@ -343,7 +298,7 @@ mod tests {
                 "{bundle}: a platform bundle with content needs a compiled changeset"
             );
         }
-        assert_eq!(definition_name("api_key"), "xrm-core-api_key");
+        assert_eq!(definition_name("api_key"), "xrm-core-api-key");
         assert_eq!(definition_name("attome-audit"), "attome-audit");
         assert!(compiled(definition_name("api_key")).is_some());
     }

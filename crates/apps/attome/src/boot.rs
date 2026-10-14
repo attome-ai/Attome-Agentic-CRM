@@ -659,7 +659,7 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     state.modules = std::sync::Arc::new(arc_swap::ArcSwap::from_pointee(license));
     attome_profiler::record("boot.license", t_license.elapsed());
 
-    // Every seed from here to `trd-governance` below runs in each process that
+    // Every seed from here to the last seed below runs in each process that
     // calls this function — `server` and `worker` alike — so it is serialized
     // across processes (`platform_seed_lock`'s module doc has the failure it
     // prevents). Taken before the watermark prefetch, so a process that waited
@@ -979,24 +979,16 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
 
     // Not a duplicate of `.build()`'s own `seed_all` (CLEANUP-REVIEW 1.5
     // checked): `attome_report{,_schedule}`, the bot-analytics bundles and every
-    // `trd_*` entity above register only after `.build()` returns, so this
+    // entity above register only after `.build()` returns, so this
     // second sweep is what mints their per-entity privileges on a fresh
     // database's first boot.
     attome_security::entity_privileges::seed_all(&system.state().base.db_migrator).await?;
-    // trd governance bundle (roles Viewer/Analyst/Trader/Senior Trader/Admin,
-    // their `trd_*` grants, and starter `trd_prop_rule_pack` records) — runs
-    // after `entity_privileges::seed_all` on purpose: the per-entity
-    // privileges it grants against need their proper display names already
-    // reconciled, or the bundle's own role-grant `reconcile_role` step could
-    // win an `ON CONFLICT DO NOTHING` race against a bare-key auto-mint.
-    attome_api::changeset::boot::apply_platform_definition(system.state(), "trd-governance")
-        .await?;
     // D-588 item 4: fill the portal login-email column for credentials
     // created before migration 0489. Idempotent; runs after `.build()`
     // because it reads the runtime-provisioned `webportal_user` table.
     attome_portal::provision::backfill_login_emails(&system.state().base.db_migrator).await?;
     // Same reason as the second `seed_all` above: `attome_report{,_schedule}`,
-    // the bot-analytics bundles and every `trd_*` entity register only after
+    // the bot-analytics bundles  register only after
     // `.build()`'s own backfills ran, so a fresh database's first boot left
     // them without their readonly grant, RLS columns and category until the
     // next boot (seen by the Phase 1.5 equivalence test: a second boot moved
@@ -1010,7 +1002,7 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     // Solution 7 (D-785, design §2.2 step 2): mark every row a platform
     // definition declares `owner_layer = 'platform'` — the compiled platform
     // definitions (inside `stamp_platform_owned`) plus the keys the imperative
-    // seeds own (`sidebar_seed.rs`, `trd_engine::seed`, `attome_project::seed`;
+    // seeds own (`sidebar_seed.rs`, `attome_project::seed`;
     // `attome_dashboard::seed` adds none). After every platform definition and
     // seed above, still under the platform seed lock; gated by its own seed
     // watermark, so an unchanged boot costs one read.

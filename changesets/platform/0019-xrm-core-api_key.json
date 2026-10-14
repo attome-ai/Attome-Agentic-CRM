@@ -1,12 +1,12 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:698816f0b37b9b2345368b8abef2aeb504a87fba538112c175e0c4264665ebe2",
+  "checksum": "sha256:56a3460066153c4b83515033927660d3cadd8b3e7e24e6528cc26471bb42413d",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/xrm-core-api_key.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
   "id": "b0b252e6-3e5f-7ede-a8c0-2aa60fa95c5d",
   "layer": "platform",
-  "name": "xrm-core-api_key",
+  "name": "xrm-core-api-key",
   "opened_at": "2026-09-29T00:00:00Z",
   "operations": [
     {

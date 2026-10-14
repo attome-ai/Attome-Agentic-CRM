@@ -122,7 +122,7 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
     },
     PlatformChangeset {
         file: "0019-xrm-core-api_key.json",
-        name: "xrm-core-api_key",
+        name: "xrm-core-api-key",
         json: include_str!("../../../../../changesets/platform/0019-xrm-core-api_key.json"),
     },
     PlatformChangeset {

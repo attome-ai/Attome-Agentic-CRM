@@ -356,45 +356,44 @@ async fn concurrent_boots_seed_the_platform_once_and_both_succeed() {
          did not exercise concurrent seeding; raise CHILD_START_DELAY rather than relax this"
     );
 
-    // Seeding actually ran, and every plan it wrote finished.
-    let plan_table = format!("{DEPLOYMENT_SCHEMA}.metadata_bundle_plan");
+    // Seeding actually ran, and every changeset it applied finished. Platform
+    // seeding goes through the changeset ledger: one row per changeset and
+    // phase, so a second boot that planned the same changeset again would hit
+    // the (changeset_id, phase) key rather than add a row.
+    let ledger = format!("{DEPLOYMENT_SCHEMA}.changeset_apply");
     let succeeded: i64 = sqlx::query_scalar(&format!(
-        "SELECT COUNT(*) FROM {plan_table} WHERE status = 'succeeded'"
+        "SELECT COUNT(*) FROM {ledger} WHERE status IN ('succeeded', 'adopted')"
     ))
     .fetch_one(&migration_db)
     .await
-    .expect("count succeeded plans");
+    .expect("count applied changesets");
     assert!(
         succeeded > 0,
-        "no platform bundle plan succeeded, so seeding never ran and this test proved nothing"
+        "no platform changeset was applied, so seeding never ran and this test proved nothing"
     );
     let unfinished: Vec<(String, String, Option<String>)> = sqlx::query_as(&format!(
-        "SELECT bundle_hash, status, error_message FROM {plan_table} \
-         WHERE status <> 'succeeded' ORDER BY created_at"
+        "SELECT ref, status, error_message FROM {ledger}          WHERE status NOT IN ('succeeded', 'adopted') ORDER BY created_at"
     ))
     .fetch_all(&migration_db)
     .await
-    .expect("read unfinished plans");
+    .expect("read unfinished changesets");
     assert!(
         unfinished.is_empty(),
-        "every platform bundle plan written during the concurrent boots must succeed; \
-         not succeeded (bundle_hash, status, error): {unfinished:?}"
+        "every platform changeset applied during the concurrent boots must finish;          not finished (ref, status, error): {unfinished:?}"
     );
 
-    // Each bundle planned once: the boot that ran second found the first
-    // boot's watermarks and skipped, instead of provisioning the same
-    // objects again.
-    let planned_twice: Vec<(String, i64)> = sqlx::query_as(&format!(
-        "SELECT bundle_hash, COUNT(*) FROM {plan_table} \
-         GROUP BY bundle_hash HAVING COUNT(*) > 1 ORDER BY bundle_hash"
+    // Each changeset phase applied once: the boot that ran second found the
+    // first boot's ledger rows and skipped, instead of applying the same
+    // changeset again.
+    let applied_twice: Vec<(String, i64)> = sqlx::query_as(&format!(
+        "SELECT ref, COUNT(*) FROM {ledger}          GROUP BY changeset_id, phase, ref HAVING COUNT(*) > 1 ORDER BY ref"
     ))
     .fetch_all(&migration_db)
     .await
-    .expect("read bundles planned more than once");
+    .expect("read changesets applied more than once");
     assert!(
-        planned_twice.is_empty(),
-        "each platform bundle must be planned once across both boots; planned more than \
-         once (bundle_hash, plans): {planned_twice:?}"
+        applied_twice.is_empty(),
+        "each platform changeset must be applied once across both boots; applied more than          once (ref, rows): {applied_twice:?}"
     );
 
     let stamps_after: i64 = sqlx::query_scalar(&format!(

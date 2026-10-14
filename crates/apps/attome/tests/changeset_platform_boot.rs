@@ -253,7 +253,7 @@ async fn boot_fresh(db: &attome_testkit::EmptyDatabase) -> (attome::boot::Boot, 
     migration_db.close().await;
     let boot = attome::boot::init(&config)
         .await
-        .unwrap_or_else(|e| panic!("a fresh boot failed: {e}"));
+        .unwrap_or_else(|e| panic!("a fresh boot failed: {e:?}"));
     assert_connected_to(&boot.system.state().base.db, db.name()).await;
     (boot, config)
 }
