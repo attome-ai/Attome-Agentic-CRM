@@ -33,6 +33,7 @@ pub mod parity;
 pub mod slo;
 pub mod slo_report;
 pub mod test_cmd;
+pub mod test_stack;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};

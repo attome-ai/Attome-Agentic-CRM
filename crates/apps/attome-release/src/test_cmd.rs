@@ -1,7 +1,7 @@
 //! `attome test` (roadmap Z15-T1): the scoped test runner.
 //!
 //! ```text
-//! attome test [--tier unit|db|contract|security|browser|all] [--changed] [--release] [--dry-run]
+//! attome test [--tier unit|db|contract|security|browser|all] [--changed] [--release] [--dry-run] [--no-stack]
 //! ```
 //!
 //! - `unit` runs each crate's library tests, `db` its integration targets,
@@ -15,6 +15,8 @@
 //!   `ATTOME_TEST_REQUIRE_REDIS` and `ATTOME_TEST_REQUIRE_S3`, so a test that
 //!   would skip for a missing service fails instead.
 //! - `--dry-run` prints the commands and runs nothing.
+//! - A tier that needs PostgreSQL starts the test stack when `DATABASE_URL`
+//!   is not set (see [`crate::test_stack`]); `--no-stack` skips that.
 //!
 //! Each command's output goes to `target/attome-test/<unix seconds>/NN.log`.
 
@@ -49,6 +51,11 @@ impl Tier {
     fn includes(self, other: Self) -> bool {
         self == Self::All || self == other
     }
+
+    /// Whether the tier's tests need PostgreSQL (and Redis).
+    pub fn needs_services(self) -> bool {
+        !matches!(self, Self::Unit | Self::Browser)
+    }
 }
 
 /// Parsed `attome test` arguments.
@@ -58,6 +65,8 @@ pub struct TestArgs {
     pub changed: bool,
     pub release: bool,
     pub dry_run: bool,
+    /// Do not start the test stack; the caller manages the services.
+    pub no_stack: bool,
 }
 
 impl Default for TestArgs {
@@ -67,6 +76,7 @@ impl Default for TestArgs {
             changed: false,
             release: false,
             dry_run: false,
+            no_stack: false,
         }
     }
 }
@@ -81,6 +91,7 @@ pub fn parse_args(args: &[String]) -> Option<TestArgs> {
             "--changed" => parsed.changed = true,
             "--release" => parsed.release = true,
             "--dry-run" => parsed.dry_run = true,
+            "--no-stack" => parsed.no_stack = true,
             _ => return None,
         }
     }
@@ -350,7 +361,19 @@ pub fn run(args: &TestArgs, root: &Path, started_at: u64) -> ExitCode {
         None
     };
     let steps = plan(args, root, changed.as_deref());
-    let env = env_for(args);
+    let mut env: Vec<(String, String)> = env_for(args)
+        .into_iter()
+        .map(|(name, value)| (name.to_owned(), value.to_owned()))
+        .collect();
+    if args.tier.needs_services() && !args.no_stack && !steps.is_empty() {
+        match crate::test_stack::ensure(args.dry_run) {
+            Ok(stack) => env.extend(stack),
+            Err(error) => {
+                eprintln!("attome test: {error} (or pass --no-stack and set DATABASE_URL)");
+                return ExitCode::from(2);
+            }
+        }
+    }
     if args.tier.includes(Tier::Browser) && !root.join("e2e").join("package.json").is_file() {
         crate::say("attome test: no browser suite yet (e2e/ is added by Z15-T9)");
     }
@@ -385,7 +408,7 @@ pub fn run(args: &TestArgs, root: &Path, started_at: u64) -> ExitCode {
             .and_then(|(out, err)| {
                 Command::new(&step.program)
                     .args(&step.args)
-                    .envs(env.iter().copied())
+                    .envs(env.iter().map(|(name, value)| (name, value)))
                     .current_dir(root.join(step.dir))
                     .stdout(Stdio::from(out))
                     .stderr(Stdio::from(err))

@@ -32,7 +32,7 @@ Usage:
   attome slo generate [--check]
                                 Regenerate the SLO rules, k6 thresholds and table
                                 from observability/slo-catalogue.json
-  attome test [--tier unit|db|contract|security|browser|all] [--changed] [--release] [--dry-run]
+  attome test [--tier unit|db|contract|security|browser|all] [--changed] [--release] [--dry-run] [--no-stack]
                                 Run the tests a tier needs (--changed scopes them
                                 to the change; --release fails instead of skipping)
   attome slo report <matrix-summary.json>
