@@ -1617,8 +1617,9 @@ async fn mcp_tools_list_offers_action_ids_with_object_schemas_in_a_stable_order(
     let registry = attome_ai::registry::ActionRegistry::new();
     for tool in tools {
         let name = tool["name"].as_str().expect("name");
+        // N12-T2: the search tool is the one listed tool that is not an action.
         assert!(
-            registry.resolve(name).is_some(),
+            name == attome_ai::mcp::SEARCH_TOOL || registry.resolve(name).is_some(),
             "{name} must be an action id, unchanged"
         );
         assert_eq!(tool["inputSchema"]["type"], "object", "{tool}");

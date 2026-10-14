@@ -697,15 +697,82 @@ fn context_for(security: Arc<SecurityContext>, session: &session::AgentSession) 
 /// The visible tool set, filtered by exactly the conditions the gate applies
 /// to an invocation — the session's allow-list included, because
 /// `ActionContext::for_session` carries it and `visible_to` asks the gate.
-async fn tools_list(
-    state: &EngineState,
-    security: Arc<SecurityContext>,
-    headers: &HeaderMap,
-) -> Result<Value, AppError> {
-    let session = require_session(state, &security, headers).await?;
-    let action_ctx = context_for(security, &session);
+/// The one tool that is not an action (N12-T2): searches the tools this
+/// caller may use. `tools/list` returns a small core set plus this, so a
+/// host is not handed every generated metadata tool up front.
+pub const SEARCH_TOOL: &str = "tools.search";
 
-    // C11 B5: `tools/list` honours the runtime AI switch, as the gate does.
+/// Generated tools (`model.<kind>.*`) are found through [`SEARCH_TOOL`]
+/// rather than listed; every other visible tool is in the core set.
+fn is_core_tool(name: &str) -> bool {
+    !name.starts_with("model.")
+}
+
+fn search_tool_definition() -> Value {
+    json!({
+        "name": SEARCH_TOOL,
+        "description": "Find tools by what they do. Returns up to 20 tools you may call, \
+                        with their input schemas. Metadata building tools (model.<kind>.edit, \
+                        describe, list) are found here rather than listed up front.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["query"],
+            "properties": { "query": { "type": "string", "minLength": 1 } },
+            "additionalProperties": false
+        }
+    })
+}
+
+/// The tools whose name or description holds every word of `query`
+/// (case-insensitive), best first: a name match ranks above a description
+/// match. At most 20.
+pub(crate) fn search_tools(tools: &[Value], query: &str) -> Vec<Value> {
+    let words: Vec<String> = query
+        .split(|c: char| c.is_whitespace() || c == '.' || c == '_')
+        .filter(|w| !w.is_empty())
+        .map(str::to_lowercase)
+        .collect();
+    if words.is_empty() {
+        return Vec::new();
+    }
+    let mut scored: Vec<(usize, &Value)> = tools
+        .iter()
+        .filter_map(|tool| {
+            let name = tool["name"].as_str().unwrap_or_default().to_lowercase();
+            let description = tool["description"]
+                .as_str()
+                .unwrap_or_default()
+                .to_lowercase();
+            let mut score = 0;
+            for word in &words {
+                if name.contains(word.as_str()) {
+                    score += 2;
+                } else if description.contains(word.as_str()) {
+                    score += 1;
+                } else {
+                    return None;
+                }
+            }
+            Some((score, tool))
+        })
+        .collect();
+    scored.sort_by(|a, b| {
+        b.0.cmp(&a.0)
+            .then_with(|| a.1["name"].as_str().cmp(&b.1["name"].as_str()))
+    });
+    scored
+        .into_iter()
+        .take(20)
+        .map(|(_, tool)| tool.clone())
+        .collect()
+}
+
+/// Every tool this caller may use, rendered for MCP.
+async fn visible_tools(
+    state: &EngineState,
+    action_ctx: &crate::context::ActionContext,
+) -> Vec<Value> {
+    // C11 B5: the tool list honours the runtime AI switch, as the gate does.
     attome_core::ai_runtime_switch::refresh(&state.base.db).await;
     let license = state.modules.load();
     let is_licensed = |module: attome_modules::ModuleId| license.has(module);
@@ -716,8 +783,8 @@ async fn tools_list(
         external_effects_enabled: state.base.config.security.external_effects_enabled,
     };
 
-    let tools: Vec<Value> = crate::engine::REGISTRY
-        .visible_to(&action_ctx, &inputs)
+    crate::engine::REGISTRY
+        .visible_to(action_ctx, &inputs)
         .map(|descriptor| {
             json!({
                 "name": descriptor.id.as_str(),
@@ -726,7 +793,22 @@ async fn tools_list(
                     .unwrap_or_else(|_| json!({ "type": "object", "properties": {} })),
             })
         })
+        .collect()
+}
+
+async fn tools_list(
+    state: &EngineState,
+    security: Arc<SecurityContext>,
+    headers: &HeaderMap,
+) -> Result<Value, AppError> {
+    let session = require_session(state, &security, headers).await?;
+    let action_ctx = context_for(security, &session);
+    let mut tools: Vec<Value> = visible_tools(state, &action_ctx)
+        .await
+        .into_iter()
+        .filter(|tool| tool["name"].as_str().is_some_and(is_core_tool))
         .collect();
+    tools.push(search_tool_definition());
 
     Ok(json!({
         "tools": tools,
@@ -763,6 +845,15 @@ async fn tools_call(
         .map_err(|e| AppError::Validation(format!("invalid tools/call params: {e}")))?;
 
     let session = require_session(state, &security, headers).await?;
+
+    // N12-T2: the search tool reads the caller's own visible list; it runs no
+    // action and changes nothing.
+    if params.name == SEARCH_TOOL {
+        let query = params.arguments["query"].as_str().unwrap_or_default();
+        let action_ctx = context_for(security, &session);
+        let found = search_tools(&visible_tools(state, &action_ctx).await, query);
+        return Ok(tool_result(&json!({ "tools": found }), false));
+    }
 
     // The action's OWN module decides licensing, not this surface's — same
     // reasoning `engine::invoke_action` documents. An unknown id resolves to
@@ -948,6 +1039,34 @@ mod tests {
 
     /// Tool names are action ids verbatim. A sanitising transformation is how
     /// two distinct actions collide onto one name — see the module doc.
+    #[test]
+    fn search_finds_tools_by_name_before_description() {
+        let tools = vec![
+            json!({ "name": "model.form.edit", "description": "Edit a draft form" }),
+            json!({ "name": "record.update", "description": "Change a record's form fields" }),
+            json!({ "name": "record.get", "description": "Read a record" }),
+        ];
+        let names = |found: Vec<Value>| -> Vec<String> {
+            found
+                .iter()
+                .map(|t| t["name"].as_str().unwrap_or_default().to_owned())
+                .collect()
+        };
+        assert_eq!(
+            names(search_tools(&tools, "form")),
+            ["model.form.edit", "record.update"]
+        );
+        assert_eq!(names(search_tools(&tools, "record get")), ["record.get"]);
+        assert!(search_tools(&tools, "  ").is_empty());
+        assert!(is_core_tool("record.get") && !is_core_tool("model.form.edit"));
+        assert!(
+            crate::registry::ActionRegistry::new()
+                .resolve(SEARCH_TOOL)
+                .is_none(),
+            "the name is free"
+        );
+    }
+
     #[test]
     fn tool_names_are_action_ids_with_no_transformation() {
         for descriptor in crate::registry::ActionRegistry::new().all() {
