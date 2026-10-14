@@ -9,11 +9,13 @@
 //! `rls_predicate` every read uses: a deleted record the caller could not
 //! read while it was live stays out of their bin.
 
+use attome_audit::AuditOperation;
+use attome_audit::security::{MandatoryCategory, SecurityEvent, SecurityTx};
 use attome_auth::SessionClaims;
 use attome_core::{EngineState, quote_ident};
 use attome_security::record_action::{Delete, Read};
 use attome_security::{RecordAction, SecurityContextExt};
-use attome_server::authz::{Authorized, RecordScoped, SelfService};
+use attome_server::authz::{Admin, Authorized, RecordScoped, SelfService};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PaginatedResponse};
 use axum::{
@@ -312,6 +314,136 @@ pub(super) async fn preview_delete(
     Ok(Json(delete_impact(&state, &ctx, &entity, &body.ids).await?))
 }
 
+/// One entity's recycle-bin rules (`bin_setting`); an entity with no row
+/// has the defaults.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct BinSetting {
+    pub entity: String,
+    /// A person must give a reason to delete.
+    pub require_reason: bool,
+    /// Days a deleted record stays in the bin before it is purged; `null`
+    /// follows the deployment's `retention.entity_purge_grace_days`.
+    pub retention_days: Option<i32>,
+    /// Deletions by one person within ten minutes that raise an alert.
+    pub alert_threshold: i32,
+    /// A permanent delete waits for a second person's approval.
+    pub hard_delete_needs_approval: bool,
+    pub updated_at: DateTime<Utc>,
+    pub row_version: i64,
+}
+
+/// `PUT /api/v1/admin/bin-settings/{entity}`.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct BinSettingBody {
+    #[serde(default)]
+    pub require_reason: bool,
+    /// 1 to 3,650, or `null`.
+    pub retention_days: Option<i32>,
+    /// 1 to 100,000; default 100.
+    pub alert_threshold: Option<i32>,
+    #[serde(default)]
+    pub hard_delete_needs_approval: bool,
+}
+
+const BIN_SETTING_COLUMNS: &str = "entity, require_reason, retention_days, alert_threshold, \
+     hard_delete_needs_approval, updated_at, row_version";
+
+/// A18-T7: every entity that has its own bin rules.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/bin-settings",
+    tag = "admin",
+    responses(
+        (status = 200, description = "Entities with their own bin rules", body = PaginatedResponse<BinSetting>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn list_bin_settings(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Result<Json<PaginatedResponse<BinSetting>>, AppError> {
+    let items: Vec<BinSetting> = sqlx::query_as(&format!(
+        "SELECT {BIN_SETTING_COLUMNS} FROM bin_setting ORDER BY entity"
+    ))
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    let total = i64::try_from(items.len()).map_err(AppError::internal)?;
+    Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
+}
+
+/// A18-T7: sets an entity's bin rules.
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/bin-settings/{entity}",
+    tag = "admin",
+    params(("entity" = String, Path)),
+    request_body = BinSettingBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The entity's bin rules", body = BinSetting),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No such entity", body = ErrorResponse),
+        (status = 422, description = "A value out of range", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn put_bin_setting(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(entity_input): Path<String>,
+    Json(body): Json<BinSettingBody>,
+) -> Result<Json<BinSetting>, AppError> {
+    let (_, entity, _, _) = resolve_entity(&state, &entity_input).await?;
+    if body
+        .retention_days
+        .is_some_and(|d| !(1..=3650).contains(&d))
+    {
+        return Err(AppError::Validation(
+            "retention_days is 1 to 3650, or null".into(),
+        ));
+    }
+    let threshold = body.alert_threshold.unwrap_or(100);
+    if !(1..=100_000).contains(&threshold) {
+        return Err(AppError::Validation(
+            "alert_threshold is 1 to 100000".into(),
+        ));
+    }
+    let event = SecurityEvent::new(
+        MandatoryCategory::Configuration,
+        AuditOperation::Update,
+        ctx.user_id,
+        "bin_setting",
+        None,
+    )
+    .named("bin_setting.updated")
+    .comment(format!("recycle bin rules for {entity}"));
+    let mut stx = SecurityTx::begin(&state, event).await?;
+    let setting: BinSetting = sqlx::query_as(&format!(
+        "INSERT INTO bin_setting (entity, require_reason, retention_days, alert_threshold, \
+                                  hard_delete_needs_approval) \
+         VALUES ($1, $2, $3, $4, $5) \
+         ON CONFLICT (entity) DO UPDATE SET require_reason = EXCLUDED.require_reason, \
+             retention_days = EXCLUDED.retention_days, alert_threshold = EXCLUDED.alert_threshold, \
+             hard_delete_needs_approval = EXCLUDED.hard_delete_needs_approval, \
+             updated_at = NOW(), row_version = bin_setting.row_version + 1 \
+         RETURNING {BIN_SETTING_COLUMNS}"
+    ))
+    .bind(&entity)
+    .bind(body.require_reason)
+    .bind(body.retention_days)
+    .bind(threshold)
+    .bind(body.hard_delete_needs_approval)
+    .fetch_one(&mut *stx)
+    .await
+    .map_err(attome_db::classify)?;
+    stx.commit().await?;
+    Ok(Json(setting))
+}
+
 /// Records one bin restore may bring back.
 pub const MAX_BIN_RESTORE: usize = 500;
 
@@ -465,7 +597,14 @@ pub(super) async fn restore_operation(
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_deleted, restore_selection, restore_operation, preview_delete))]
+#[openapi(paths(
+    list_deleted,
+    restore_selection,
+    restore_operation,
+    preview_delete,
+    list_bin_settings,
+    put_bin_setting
+))]
 struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {

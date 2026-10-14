@@ -3383,6 +3383,13 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"scope_kind": "portal", "scope_ref": scope_ref, "version": 1})),
             )
         }
+        // ── recycle bin rules (A18-T7) ──────────────────────────────────────
+        "PUT /api/v1/admin/bin-settings/{entity}" => request(
+            "PUT",
+            &format!("/api/v1/admin/bin-settings/{}", fx.entity),
+            t,
+            Some(json!({"require_reason": false, "retention_days": 30})),
+        ),
         // ── tag groups (B4-T2) ──────────────────────────────────────────────
         "POST /api/v1/admin/tag-groups" => request(
             "POST",
