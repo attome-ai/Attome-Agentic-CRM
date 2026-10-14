@@ -307,17 +307,9 @@ async fn create_definition(
     let now = Utc::now();
     let id: Uuid = sqlx::query_scalar(
         r#"
-        -- created_at/created_by mirror created_at/created_by: this table is a
-        -- registered XRM entity (see this crate's `seed`), so its rows are
-        -- also read through generic entity CRUD, which projects the
-        -- ALL_SYSTEM_COLS names. Writing both here keeps a workflow created
-        -- on this surface from showing a blank "Created by" on the generic
-        -- form (migration 0101 added the columns and backfilled the rows
-        -- that predate them).
         INSERT INTO workflow_definition
-            (logicalname, name, created_by, created_by, created_at, created_at, updated_at,
-             owner_layer)
-        VALUES ($1, $2, $3, $3, $4, $4, $4, $5)
+            (logicalname, name, created_by, created_at, updated_at, owner_layer)
+        VALUES ($1, $2, $3, $4, $4, $5)
         RETURNING id
         "#,
     )

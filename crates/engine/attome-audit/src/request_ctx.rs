@@ -49,6 +49,13 @@ pub(crate) fn backfill(event: &mut crate::model::AuditEvent) {
     {
         event.correlation_id = Some(parsed);
     }
+    // A failed login is written for traffic that never authenticated, so its
+    // raw address and user agent are not kept: the coalescing key already
+    // carries a hash of the IP (`apps/attome/src/auth/failed_login.rs`), and an
+    // attacker's address is not worth a plaintext column.
+    if matches!(event.operation, crate::model::AuditOperation::FailedLogin) {
+        return;
+    }
     if event.request_context.ip_address.is_none() {
         event.request_context.ip_address = meta.ip_address;
     }

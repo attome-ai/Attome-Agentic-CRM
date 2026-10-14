@@ -1640,7 +1640,7 @@ fn t15_no_security_context_is_built_on_the_portal_path() {
 #[test]
 fn t15_portal_routes_describe_entities_only_through_the_plan() {
     let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../crates/engine/attome-portal/src");
+        .join("../../engine/attome-portal/src");
     let mut files = vec![src.join("router.rs")];
     for entry in std::fs::read_dir(src.join("router")).unwrap() {
         files.push(entry.unwrap().path());

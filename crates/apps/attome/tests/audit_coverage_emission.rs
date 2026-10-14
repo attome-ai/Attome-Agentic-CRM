@@ -145,24 +145,6 @@ const UNDRIVABLE: &[(&str, &str)] = &[
          login hook",
     ),
     (
-        "POST /api/v1/trd/emergency/request-release",
-        "submits a dual-control approval request for a kill-switch release; its own \
-         module doc (trd-engine/src/emergency_controls.rs) says no real caller exists \
-         yet ahead of the future emergency-control work this scaffolds, and there is \
-         no real trading-account entity in this harness to validate account_id against",
-    ),
-    (
-        "POST /api/v1/trd/experiments/{id}/export-pdf",
-        "renders and stores a PDF in the object store before the event is written; \
-         same no-live-bucket gap as the archive-restore/DSR-export entries below",
-    ),
-    (
-        "POST /api/v1/trd/quotes/{symbol_id}/publish-test",
-        "publishes a synthetic quote to Redis pub/sub, not a database row; needs a \
-         trd_symbol fixture under the Paid-tier trd module license this DB-focused \
-         emission harness does not provision",
-    ),
-    (
         "POST /api/v1/admin/integrations/systems/{id}/credential",
         "the create_system prerequisite 404s (FeatureHidden) in this harness even \
          with full_license() (all module bits set) and \
@@ -405,7 +387,7 @@ async fn fixture() -> Option<Fx> {
         base: base_state,
         admin_id,
         admin_token,
-        entity: format!("audit_emit_{}", Uuid::now_v7().simple()),
+        entity: format!("emission_{}", Uuid::now_v7().simple()),
         entity_id: Uuid::nil(),
         record_id: Uuid::nil(),
     };

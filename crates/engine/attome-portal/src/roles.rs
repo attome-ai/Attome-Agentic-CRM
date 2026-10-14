@@ -38,13 +38,44 @@ pub const MAX_CONDITIONS: usize = 3;
 /// audit, AI, S2S, notifications, integrations, and the portal's own identity
 /// entities.
 pub const DENIED_ENTITY_PREFIXES: &[&str] = &[
-    "",
-    "attome_audit",
+    "audit_",
     "ai_",
-    "attome_s2s",
-    "attome_notification",
-    "attome_integration",
+    "s2s_",
+    "notification_",
+    "integration_",
     "webportal",
+];
+
+/// The platform's core entities, by exact name: staff identity, access
+/// control and the generic record-attached entities (notes, activity,
+/// communication, tags). v1 denied these with one `xrm_core_` prefix; v2
+/// entities carry no prefix (V2-D483), so the set is spelled out. A name here
+/// is refused for portal exposure, a custom entity that merely starts with one
+/// of these words is not.
+pub const DENIED_CORE_ENTITIES: &[&str] = &[
+    "organization",
+    "team",
+    "user_account",
+    "user_account_mm_team",
+    "user_account_mm_privilege",
+    "privilege",
+    "role",
+    "api_key",
+    "authentication_type",
+    "license",
+    "note",
+    "activity",
+    "communication",
+    "communication_event",
+    "follow",
+    "tag_category",
+    "tag_item",
+    "glossary_term",
+    "record_relationship",
+    "profiler_finding",
+    "autovalue",
+    "reminder",
+    "saved_search",
 ];
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
@@ -148,9 +179,10 @@ pub fn validate_value_ref(registry: &EntityMetaRegistry, value_ref: &str) -> Res
 }
 
 fn entity_allowed(logicalname: &str) -> bool {
-    !DENIED_ENTITY_PREFIXES
-        .iter()
-        .any(|prefix| logicalname.starts_with(prefix))
+    !DENIED_CORE_ENTITIES.contains(&logicalname)
+        && !DENIED_ENTITY_PREFIXES
+            .iter()
+            .any(|prefix| logicalname.starts_with(prefix))
 }
 
 /// Whether a lookup pointing at `target` may be shown to a portal. A lookup to
