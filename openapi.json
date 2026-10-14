@@ -16122,6 +16122,55 @@
         }
       }
     },
+    "/api/v1/admin/latency": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "AA1-T6: per-route p50, p95 and p99 latency on this node since it started,\nfrom the same request-duration histogram `/metrics` exposes. Administrators\nonly. Empty, with `enabled: false`, when metrics are off.",
+        "operationId": "latency",
+        "responses": {
+          "200": {
+            "description": "Per-route latency on this node",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LatencyReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/legal-holds": {
       "get": {
         "tags": [
@@ -72060,6 +72109,27 @@
           }
         }
       },
+      "LatencyReport": {
+        "type": "object",
+        "description": "`GET /api/v1/admin/latency`.",
+        "required": [
+          "enabled",
+          "routes"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Metrics are on in this process (`observability.metrics_port` set)."
+          },
+          "routes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RouteLatency"
+            },
+            "description": "Every route seen since this process started, slowest p95 first."
+          }
+        }
+      },
       "LedgerHead": {
         "type": "object",
         "description": "The newest ledger row of one (layer, scope).",
@@ -88120,6 +88190,43 @@
         "properties": {
           "tool": {
             "type": "string"
+          }
+        }
+      },
+      "RouteLatency": {
+        "type": "object",
+        "description": "One route's request latency, from the request-duration histogram.",
+        "required": [
+          "method",
+          "endpoint",
+          "count",
+          "p50_ms",
+          "p95_ms",
+          "p99_ms"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "method": {
+            "type": "string"
+          },
+          "p50_ms": {
+            "type": "number",
+            "format": "double"
+          },
+          "p95_ms": {
+            "type": "number",
+            "format": "double"
+          },
+          "p99_ms": {
+            "type": "number",
+            "format": "double"
           }
         }
       },

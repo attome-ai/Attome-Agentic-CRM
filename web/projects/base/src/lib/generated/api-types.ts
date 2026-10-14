@@ -2794,6 +2794,27 @@ export interface paths {
         patch: operations["triage_gap"];
         trace?: never;
     };
+    "/api/v1/admin/latency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AA1-T6: per-route p50, p95 and p99 latency on this node since it started,
+         *     from the same request-duration histogram `/metrics` exposes. Administrators
+         *     only. Empty, with `enabled: false`, when metrics are off.
+         */
+        get: operations["latency"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/legal-holds": {
         parameters: {
             query?: never;
@@ -16940,6 +16961,13 @@ export interface components {
             /** Format: int64 */
             row_version: number;
         };
+        /** @description `GET /api/v1/admin/latency`. */
+        LatencyReport: {
+            /** @description Metrics are on in this process (`observability.metrics_port` set). */
+            enabled: boolean;
+            /** @description Every route seen since this process started, slowest p95 first. */
+            routes: components["schemas"]["RouteLatency"][];
+        };
         /** @description The newest ledger row of one (layer, scope). */
         LedgerHead: {
             /** Format: uuid */
@@ -23006,6 +23034,19 @@ export interface components {
         };
         RouteHintDto: {
             tool: string;
+        };
+        /** @description One route's request latency, from the request-duration histogram. */
+        RouteLatency: {
+            /** Format: int64 */
+            count: number;
+            endpoint: string;
+            method: string;
+            /** Format: double */
+            p50_ms: number;
+            /** Format: double */
+            p95_ms: number;
+            /** Format: double */
+            p99_ms: number;
         };
         /**
          * @description M45 Phase 2 (D-472) — `rule`, keyed by `"{entity}:{name}"`.
@@ -36156,6 +36197,44 @@ export interface operations {
             };
             /** @description Unknown status */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    latency: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Per-route latency on this node */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LatencyReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
