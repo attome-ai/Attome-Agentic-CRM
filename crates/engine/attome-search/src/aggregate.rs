@@ -784,7 +784,23 @@ fn interval_for(bucket: DateBucket) -> &'static str {
         DateBucket::Month => "1 month",
         DateBucket::Quarter => "3 months",
         DateBucket::Year => "1 year",
+        // Hijri buckets take their bounds from `hijri_month`.
+        DateBucket::HijriMonth | DateBucket::HijriYear => "0 days",
     }
+}
+
+/// AG1-T4: the join that places each row's local day in its Umm al-Qura
+/// month (or year), as `h.gregorian_start`/`h.gregorian_end`. The table
+/// carries this deployment's moon-sighting corrections.
+fn hijri_join(bucket: DateBucket, column: &str, tz_param: usize) -> String {
+    let day = format!("({column} AT TIME ZONE ${tz_param})::date");
+    let source = if bucket == DateBucket::HijriYear {
+        "(SELECT hijri_year, min(gregorian_start) AS gregorian_start, \
+         max(gregorian_end) AS gregorian_end FROM hijri_month GROUP BY hijri_year)"
+    } else {
+        "hijri_month"
+    };
+    format!("LEFT JOIN {source} h ON {day} >= h.gregorian_start AND {day} < h.gregorian_end")
 }
 
 /// The display label of a time bucket starting at `start`, in `tz`.
@@ -799,6 +815,16 @@ pub fn range_label(start: DateTime<Utc>, bucket: DateBucket, tz: chrono_tz::Tz) 
         DateBucket::Month => local.format("%Y-%m").to_string(),
         DateBucket::Quarter => format!("{}-Q{}", local.year(), (local.month() - 1) / 3 + 1),
         DateBucket::Year => local.format("%Y").to_string(),
+        // Read two weeks in, so a one-day sighting correction to the
+        // bucket's first day never names the month before.
+        DateBucket::HijriMonth | DateBucket::HijriYear => {
+            let mid = local.date_naive() + chrono::Days::new(14);
+            match attome_core::calendar::hijri::to_hijri(mid) {
+                Ok(h) if bucket == DateBucket::HijriMonth => format!("{}-{:02}", h.year, h.month),
+                Ok(h) => h.year.to_string(),
+                Err(_) => local.format("%Y-%m-%d").to_string(),
+            }
+        }
     }
 }
 
@@ -836,6 +862,7 @@ pub async fn run_structured_aggregate(
     let mut select = Vec::new();
     let mut group_by: Vec<String> = Vec::new();
     let mut key_order = String::new();
+    let mut join_sql = String::new();
     let bucket = definition.group.as_ref().and_then(|g| g.bucket);
 
     if let Some(group) = &definition.group {
@@ -854,13 +881,26 @@ pub async fn run_structured_aggregate(
                     ));
                 }
                 let tz_param = scope.bind(tz.name().to_owned());
-                let unit = date_trunc_unit(bucket);
-                let local = format!("date_trunc('{unit}', {column} AT TIME ZONE ${tz_param})");
-                select.push(format!("({local} AT TIME ZONE ${tz_param}) AS g_start"));
-                select.push(format!(
-                    "(({local} + interval '{}') AT TIME ZONE ${tz_param}) AS g_end",
-                    interval_for(bucket)
-                ));
+                match date_trunc_unit(bucket) {
+                    Some(unit) => {
+                        let local =
+                            format!("date_trunc('{unit}', {column} AT TIME ZONE ${tz_param})");
+                        select.push(format!("({local} AT TIME ZONE ${tz_param}) AS g_start"));
+                        select.push(format!(
+                            "(({local} + interval '{}') AT TIME ZONE ${tz_param}) AS g_end",
+                            interval_for(bucket)
+                        ));
+                    }
+                    None => {
+                        join_sql = hijri_join(bucket, &column, tz_param);
+                        select.push(format!(
+                            "(h.gregorian_start::timestamp AT TIME ZONE ${tz_param}) AS g_start"
+                        ));
+                        select.push(format!(
+                            "(h.gregorian_end::timestamp AT TIME ZONE ${tz_param}) AS g_end"
+                        ));
+                    }
+                }
                 select.push("NULL::text AS g".to_owned());
                 group_by.extend(["1".to_owned(), "2".to_owned()]);
                 key_order = "g_start".to_owned();
@@ -919,7 +959,7 @@ pub async fn run_structured_aggregate(
             SortOrder::KeyDesc => format!("{key_order} DESC NULLS LAST{series_order}"),
         };
         format!(
-            "SELECT {} FROM {table} t {where_sql} GROUP BY {} ORDER BY {order} LIMIT {}",
+            "SELECT {} FROM {table} t {join_sql} {where_sql} GROUP BY {} ORDER BY {order} LIMIT {}",
             select.join(", "),
             group_by.join(", "),
             limit + 1
@@ -1542,6 +1582,22 @@ mod tests {
         assert_eq!(range_label(start, DateBucket::Quarter, tz), "2026-Q1");
         assert_eq!(range_label(start, DateBucket::Year, tz), "2026");
         assert_eq!(range_label(start, DateBucket::Week, tz), "2026-W09");
+    }
+
+    #[test]
+    fn hijri_month_bucket_sql_joins_reference_table() {
+        let join = hijri_join(DateBucket::HijriMonth, "t.\"closed_on\"", 3);
+        assert!(join.starts_with("LEFT JOIN hijri_month h ON"), "{join}");
+        assert!(join.contains("(t.\"closed_on\" AT TIME ZONE $3)::date >= h.gregorian_start"));
+        let year = hijri_join(DateBucket::HijriYear, "t.\"closed_on\"", 3);
+        assert!(year.contains("GROUP BY hijri_year"), "{year}");
+        assert_eq!(date_trunc_unit(DateBucket::HijriMonth), None);
+
+        let tz = chrono_tz::Asia::Riyadh;
+        // 1 Ramadan 1447 begins 2026-02-18, local midnight in Riyadh (UTC+3).
+        let ramadan = "2026-02-17T21:00:00Z".parse::<DateTime<Utc>>().unwrap();
+        assert_eq!(range_label(ramadan, DateBucket::HijriMonth, tz), "1447-09");
+        assert_eq!(range_label(ramadan, DateBucket::HijriYear, tz), "1447");
     }
 
     #[test]

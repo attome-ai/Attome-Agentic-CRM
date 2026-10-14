@@ -116,6 +116,10 @@ pub enum DateBucket {
     Month,
     Quarter,
     Year,
+    /// AG1-T4: an Umm al-Qura month (`hijri_month`).
+    HijriMonth,
+    /// AG1-T4: an Umm al-Qura year (`hijri_year`).
+    HijriYear,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, ToSchema)]

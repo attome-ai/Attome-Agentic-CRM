@@ -149,13 +149,16 @@ pub struct Grouping {
 
 /// The PostgreSQL `date_trunc` unit for a bucket — a closed set, so the
 /// executor may place it in SQL text.
-pub fn date_trunc_unit(bucket: DateBucket) -> &'static str {
+pub fn date_trunc_unit(bucket: DateBucket) -> Option<&'static str> {
     match bucket {
-        DateBucket::Day => "day",
-        DateBucket::Week => "week",
-        DateBucket::Month => "month",
-        DateBucket::Quarter => "quarter",
-        DateBucket::Year => "year",
+        DateBucket::Day => Some("day"),
+        DateBucket::Week => Some("week"),
+        DateBucket::Month => Some("month"),
+        DateBucket::Quarter => Some("quarter"),
+        DateBucket::Year => Some("year"),
+        // AG1-T4: Hijri periods come from the `hijri_month` table, not
+        // `date_trunc`.
+        DateBucket::HijriMonth | DateBucket::HijriYear => None,
     }
 }
 
