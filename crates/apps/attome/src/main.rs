@@ -13,6 +13,8 @@ attome: the Attome command-line tool
 
 Usage:
   attome init                   Install Solo: write a config, apply the schema
+  attome bundle offline|verify  Make or check an offline bundle for an
+                                air-gapped install
   attome sovereignty report [--json]
                                 Where copies of data live and where data is
                                 sent, each marked inside or outside
@@ -80,6 +82,10 @@ fn main() -> ExitCode {
         ["service", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             outcome(attome::cmd::service::run(&rest).map_err(Into::into))
+        }
+        ["bundle", rest @ ..] => {
+            let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
+            outcome(attome::cmd::bundle_offline::run(&rest).map_err(Into::into))
         }
         ["sovereignty", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();

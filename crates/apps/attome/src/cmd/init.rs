@@ -33,7 +33,7 @@ attome init: install a Solo deployment (the binary and PostgreSQL, no Redis)
 
 Usage:
   attome init --database-url <url> [--out <file>] [--port <n>] [--force]
-              [--no-migrate]
+              [--no-migrate] [--from-bundle <dir>]
 
   --database-url  postgres://user:password@host:port/database, a database that
                   exists, reached as a role that can create roles and tables
@@ -42,6 +42,8 @@ Usage:
   --force         overwrite an existing configuration file
   --no-migrate    write the configuration only; apply the schema later with
                   `attome migrate`
+  --from-bundle   an offline bundle directory to verify first
+                  (`attome bundle offline` makes one)
 ";
 
 /// What the command was asked to do.
@@ -52,6 +54,8 @@ struct Args {
     port: u16,
     force: bool,
     migrate: bool,
+    /// An offline bundle to verify before installing (U1-T4).
+    from_bundle: Option<PathBuf>,
 }
 
 fn parse_args(raw: &[String]) -> Result<Args, String> {
@@ -60,6 +64,7 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
     let mut port = 7865u16;
     let mut force = false;
     let mut migrate = true;
+    let mut from_bundle = None;
     let mut it = raw.iter();
     while let Some(arg) = it.next() {
         let mut value = |name: &str| -> Result<String, String> {
@@ -77,6 +82,7 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
             }
             "--force" => force = true,
             "--no-migrate" => migrate = false,
+            "--from-bundle" => from_bundle = Some(PathBuf::from(value("--from-bundle")?)),
             "--help" | "-h" => return Err(USAGE.to_owned()),
             other => return Err(format!("unknown option `{other}`\n\n{USAGE}")),
         }
@@ -89,6 +95,7 @@ fn parse_args(raw: &[String]) -> Result<Args, String> {
         port,
         force,
         migrate,
+        from_bundle,
     })
 }
 
@@ -246,6 +253,11 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
             return Err("attome init: invalid arguments".into());
         }
     };
+
+    // U1-T4: an air-gapped install checks the bundle it came in first.
+    if let Some(bundle) = &args.from_bundle {
+        super::bundle_offline::verify_or_refuse(bundle)?;
+    }
 
     let db = PgConnectOptions::from_str(&args.database_url)
         .map_err(|e| format!("--database-url is not a PostgreSQL URL: {e}"))?;
