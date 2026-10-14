@@ -167,7 +167,7 @@ impl EntityModuleMap {
             && *existing != owner
         {
             panic!(
-                "entity '{entity}' is claimed by both '{}' and '{}' — an entity has exactly one                  owning engine (see EngineModel::owned_entities)",
+                "entity '{entity}' is claimed by both '{}' and '{}' — an entity has exactly one owning engine (see EngineModel::owned_entities)",
                 existing.model_name, owner.model_name
             );
         }

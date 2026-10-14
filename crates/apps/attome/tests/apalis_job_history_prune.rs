@@ -153,7 +153,7 @@ async fn prune_deletes_only_terminal_rows_past_retention() {
     );
     assert!(
         remaining.contains(&young_killed),
-        "a Killed row past history retention but inside dead_letter_retention_days must          survive (BJB-15: dead letters follow their own, longer retention)"
+        "a Killed row past history retention but inside dead_letter_retention_days must survive (BJB-15: dead letters follow their own, longer retention)"
     );
     assert!(
         remaining.contains(&recent_done),

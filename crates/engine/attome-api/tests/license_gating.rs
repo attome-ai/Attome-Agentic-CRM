@@ -254,7 +254,7 @@ async fn narrow_configuration_excluding(db: &attome_db::DbPool, name: &str) {
         .map(str::to_owned)
         .collect();
     sqlx::query(
-        "INSERT INTO module_configuration (singleton, enabled, enabled_modules)          VALUES (TRUE, TRUE, $1)          ON CONFLICT (singleton) DO UPDATE          SET enabled = TRUE, enabled_modules = EXCLUDED.enabled_modules",
+        "INSERT INTO module_configuration (singleton, enabled, enabled_modules) VALUES (TRUE, TRUE, $1) ON CONFLICT (singleton) DO UPDATE SET enabled = TRUE, enabled_modules = EXCLUDED.enabled_modules",
     )
     .bind(&kept)
     .execute(db)

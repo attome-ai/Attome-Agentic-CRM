@@ -584,7 +584,7 @@ async fn ticket_timeline_returns_the_same_entries_as_the_legacy_merge() {
 
     let ticket_id = insert_ticket(db).await;
     let header: Uuid = sqlx::query_scalar(
-        "INSERT INTO audit_header             (entity_name, record_id, category, operation, event_hash, changed_on, user_display_name)          VALUES ('service_ticket', $1, 1, 1, $2, NOW(), 'Tester') RETURNING id",
+        "INSERT INTO audit_header (entity_name, record_id, category, operation, event_hash, changed_on, user_display_name) VALUES ('service_ticket', $1, 1, 1, $2, NOW(), 'Tester') RETURNING id",
     )
     .bind(ticket_id)
     .bind(format!("test-{}", Uuid::now_v7()))
@@ -593,7 +593,7 @@ async fn ticket_timeline_returns_the_same_entries_as_the_legacy_merge() {
     .expect("insert audit header");
     for (field, old, new) in [("status", "open", "in_progress"), ("title", "a", "b")] {
         sqlx::query(
-            "INSERT INTO audit_detail (audit_ref, field_name, old_value, new_value, is_sensitive)              VALUES ($1, $2, $3, $4, false)",
+            "INSERT INTO audit_detail (audit_ref, field_name, old_value, new_value, is_sensitive) VALUES ($1, $2, $3, $4, false)",
         )
         .bind(header)
         .bind(field)
@@ -612,7 +612,7 @@ async fn ticket_timeline_returns_the_same_entries_as_the_legacy_merge() {
     .await
     .expect("insert decision");
     sqlx::query(
-        "INSERT INTO record_relationship             (from_entity_name, from_record_id, to_entity_name, to_record_id, relationship_type)          VALUES ('dashboard_decision', $1, 'service_ticket', $2, 'related')",
+        "INSERT INTO record_relationship (from_entity_name, from_record_id, to_entity_name, to_record_id, relationship_type) VALUES ('dashboard_decision', $1, 'service_ticket', $2, 'related')",
     )
     .bind(decision.to_string())
     .bind(ticket_id.to_string())
@@ -620,7 +620,7 @@ async fn ticket_timeline_returns_the_same_entries_as_the_legacy_merge() {
     .await
     .expect("link decision");
     let note: Uuid = sqlx::query_scalar(
-        "INSERT INTO note (entity_name, record_id, title)          VALUES ('service_ticket', $1, 'not on this route') RETURNING id",
+        "INSERT INTO note (entity_name, record_id, title) VALUES ('service_ticket', $1, 'not on this route') RETURNING id",
     )
     .bind(ticket_id.to_string())
     .fetch_one(db)
@@ -638,7 +638,7 @@ async fn ticket_timeline_returns_the_same_entries_as_the_legacy_merge() {
     .expect("legacy audit query");
     expected.extend(audit.into_iter().map(|id| ("audit_header".to_string(), id)));
     let transitions: Vec<Uuid> = sqlx::query_scalar(
-        "SELECT d.id FROM audit_detail d JOIN audit_header h ON h.id = d.audit_ref          WHERE h.entity_name = 'service_ticket' AND h.record_id = $1 AND d.field_name = 'status'",
+        "SELECT d.id FROM audit_detail d JOIN audit_header h ON h.id = d.audit_ref WHERE h.entity_name = 'service_ticket' AND h.record_id = $1 AND d.field_name = 'status'",
     )
     .bind(ticket_id)
     .fetch_all(db)
@@ -650,7 +650,7 @@ async fn ticket_timeline_returns_the_same_entries_as_the_legacy_merge() {
             .map(|id| ("audit_detail".to_string(), id)),
     );
     let comms: Vec<Uuid> = sqlx::query_scalar(
-        "SELECT id FROM communication          WHERE entity_name = 'service_ticket' AND record_id = $1 AND is_active IS NOT FALSE",
+        "SELECT id FROM communication WHERE entity_name = 'service_ticket' AND record_id = $1 AND is_active IS NOT FALSE",
     )
     .bind(ticket_id.to_string())
     .fetch_all(db)

@@ -217,7 +217,7 @@ mod tests {
         assert_eq!(
             decrypt_secret(&ring, &integration_ciphertext).unwrap(),
             "secret",
-            "if this ever fails, attome_auth::envelope started binding field_name as AAD —              update this module's doc comment, which currently promises only key separation"
+            "if this ever fails, attome_auth::envelope started binding field_name as AAD — update this module's doc comment, which currently promises only key separation"
         );
     }
 

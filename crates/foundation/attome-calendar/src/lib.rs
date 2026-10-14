@@ -249,7 +249,7 @@ fn render_range(range: TimeRange) -> String {
 
 fn range_rule_message(range: TimeRange) -> String {
     format!(
-        "range {} must satisfy start < end <= 24:00          (ranges cannot cross midnight)",
+        "range {} must satisfy start < end <= 24:00 (ranges cannot cross midnight)",
         render_range(range)
     )
 }

@@ -390,7 +390,7 @@ mod tests {
         );
         assert!(
             matches!(injected, Route::Aggregation { .. }),
-            "an injected instruction must not talk the router out of the              aggregation route: {injected:?}"
+            "an injected instruction must not talk the router out of the aggregation route: {injected:?}"
         );
 
         // Arabic, same property. A rule set that held in English and not in

@@ -48,7 +48,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let config = AppConfig::from_file()?;
     config.validate()?;
     if config.cache.backend == attome_config::CacheBackend::Memory {
-        return Err("attome worker cannot run with cache.backend = \"memory\": the in-process                     store is private to the server process. Run the worker inline                     (jobs.run_worker_inline = true) or configure Redis."
+        return Err("attome worker cannot run with cache.backend = \"memory\": the in-process store is private to the server process. Run the worker inline (jobs.run_worker_inline = true) or configure Redis."
             .into());
     }
     let tracing_guard =

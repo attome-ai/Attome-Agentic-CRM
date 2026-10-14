@@ -55,7 +55,7 @@ async fn entity_labels(
     entities: &[String],
 ) -> Result<BTreeMap<String, String>, AppError> {
     let rows: Vec<(String, Option<String>)> = sqlx::query_as(
-        "SELECT logicalname, name FROM entity_info          WHERE logicalname = ANY($1) AND is_active IS NOT FALSE",
+        "SELECT logicalname, name FROM entity_info WHERE logicalname = ANY($1) AND is_active IS NOT FALSE",
     )
     .bind(entities)
     .fetch_all(&state.base.db)

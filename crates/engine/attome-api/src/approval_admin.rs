@@ -825,7 +825,7 @@ async fn dispatch_approved(
                     "approved field update was blocked when it ran; not executed"
                 );
                 return Err(AppError::Conflict(
-                    "the approved field change was blocked when it ran and was not applied;                      dry-run it to see the blockers, clear them, then retry execution",
+                    "the approved field change was blocked when it ran and was not applied; dry-run it to see the blockers, clear them, then retry execution",
                 ));
             }
             response_json_body(response).await?

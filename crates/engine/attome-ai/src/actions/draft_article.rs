@@ -385,7 +385,7 @@ mod tests {
             .expect("the executor must call the create path");
         assert!(
             check < create,
-            "the privilege check must come BEFORE the create, or an agent              restricted to Read actions reaches create_one unchecked"
+            "the privilege check must come BEFORE the create, or an agent restricted to Read actions reaches create_one unchecked"
         );
     }
 

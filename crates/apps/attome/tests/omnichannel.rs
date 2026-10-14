@@ -1420,7 +1420,7 @@ async fn a_runtime_switched_off_widget_is_the_offline_message() {
         let db = w.db.clone();
         async move {
             sqlx::query(
-                "INSERT INTO ai_runtime_switch (surface, enabled, changed_by)                  VALUES ($1, $2, $3) ON CONFLICT (surface) DO UPDATE SET enabled = EXCLUDED.enabled",
+                "INSERT INTO ai_runtime_switch (surface, enabled, changed_by) VALUES ($1, $2, $3) ON CONFLICT (surface) DO UPDATE SET enabled = EXCLUDED.enabled",
             )
             .bind(surface)
             .bind(enabled)

@@ -705,7 +705,7 @@ async fn claim_and_run(
 /// requesting session, so the count is this request's alone.
 async fn executions(state: &EngineState, f: &Fixture) -> i64 {
     sqlx::query_scalar(
-        "SELECT COUNT(*) FROM action_invocation           WHERE agent_session_id = $1 AND action_id = $2",
+        "SELECT COUNT(*) FROM action_invocation WHERE agent_session_id = $1 AND action_id = $2",
     )
     .bind(f.agent_session_id)
     .bind(AGENT_PAUSE)

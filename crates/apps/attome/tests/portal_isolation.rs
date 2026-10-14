@@ -210,7 +210,7 @@ async fn fixture() -> Option<Fx> {
             .await
             .expect("system.admin is seeded by attome_security::seed");
     sqlx::query(
-        "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at)          VALUES ($1, $2, $3, true, NOW())",
+        "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) VALUES ($1, $2, $3, true, NOW())",
     )
     .bind(Uuid::now_v7())
     .bind(admin_id)
@@ -3062,7 +3062,7 @@ async fn g14_admin_export_is_the_dsr_access_fulfillment() {
     }
     let w = skip_if_no_db!(world().await);
     sqlx::query(
-        "INSERT INTO webportal_consent (id, webportal_id, webportal_user_id, terms_version, privacy_version)          VALUES ($1, $2, $3, 'terms-1', 'privacy-1')",
+        "INSERT INTO webportal_consent (id, webportal_id, webportal_user_id, terms_version, privacy_version) VALUES ($1, $2, $3, 'terms-1', 'privacy-1')",
     )
     .bind(Uuid::now_v7())
     .bind(w.a.id)

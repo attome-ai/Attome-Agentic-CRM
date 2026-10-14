@@ -1490,7 +1490,7 @@ async fn a_recovery_code_signs_in_once_and_regeneration_voids_the_old_set() {
     );
 
     let events: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM audit_ingest          WHERE payload->>'event_name' = 'portal login with an MFA recovery code'            AND payload->>'record_id' = $1::text",
+        "SELECT COUNT(*) FROM audit_ingest WHERE payload->>'event_name' = 'portal login with an MFA recovery code' AND payload->>'record_id' = $1::text",
     )
     .bind(user_id)
     .fetch_one(&fx.base.db)

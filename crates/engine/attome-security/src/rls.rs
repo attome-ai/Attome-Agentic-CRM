@@ -1821,7 +1821,7 @@ mod tests {
         assert_eq!(
             params.len(),
             8,
-            "the placeholder layout carries the boolean array (D-357) and the              fast tier's org array (TODO-003): {params:?}"
+            "the placeholder layout carries the boolean array (D-357) and the fast tier's org array (TODO-003): {params:?}"
         );
         // Postgres boolean-array literal, elements in bind order.
         assert!(
@@ -1898,12 +1898,12 @@ mod tests {
 
         assert!(
             guard < tier,
-            "the tier must be INSIDE the map guard — outside it, a caller with              no read privilege on an entity would see its rows: {}",
+            "the tier must be INSIDE the map guard — outside it, a caller with no read privilege on an entity would see its rows: {}",
             pred.sql
         );
         assert!(
             tier < deny,
-            "the tier must precede — and therefore be ANDed with — the deny              check, not sit outside it: {}",
+            "the tier must precede — and therefore be ANDed with — the deny check, not sit outside it: {}",
             pred.sql
         );
     }
@@ -1929,7 +1929,7 @@ mod tests {
         );
         assert!(
             pred.sql.contains("= 2"),
-            "the tier must test the BusinessUnit level explicitly, so a              Team-tier caller does not get it: {}",
+            "the tier must test the BusinessUnit level explicitly, so a Team-tier caller does not get it: {}",
             pred.sql
         );
     }
@@ -1961,7 +1961,7 @@ mod tests {
             );
             assert!(
                 !pred.sql.contains("owner_id"),
-                "ownership grants nothing in this platform; owner_id must                  never appear in a permission predicate: {}",
+                "ownership grants nothing in this platform; owner_id must never appear in a permission predicate: {}",
                 pred.sql
             );
         }

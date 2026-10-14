@@ -88,7 +88,7 @@ pub(crate) async fn trace_context_with(
             if let Err(err) = tracing::Span::current().set_parent(parent_cx) {
                 tracing::debug!(
                     error = %err,
-                    "traceparent parsed but could not be restored as the request span's                      OTel parent — continuing without a linked parent span"
+                    "traceparent parsed but could not be restored as the request span's OTel parent — continuing without a linked parent span"
                 );
             }
             req.extensions_mut().insert(TraceParent(value));

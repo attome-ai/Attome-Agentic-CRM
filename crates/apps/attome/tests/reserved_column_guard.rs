@@ -141,7 +141,7 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
         "crates/engine/attome-core/src/sql_ident.rs",
         "select_columns_where",
         Projection,
-        "The filtered SELECT/RETURNING projection builder, a sibling of          select_columns_filtered: reads only.",
+        "The filtered SELECT/RETURNING projection builder, a sibling of select_columns_filtered: reads only.",
     ),
     (
         "crates/engine/attome-core/src/sql_ident.rs",
@@ -171,7 +171,7 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
         "crates/engine/attome-records/src/entity_crud/upsert.rs",
         "upsert_record_inner",
         Projection,
-        "Quotes the `match` key's columns for the conflict predicate and the unique          index. The create and update branches write through create_one/update_one,          i.e. build_insert_binds/build_update_binds below, which carry the system-column          exclusion; no SET clause is built here.",
+        "Quotes the `match` key's columns for the conflict predicate and the unique index. The create and update branches write through create_one/update_one, i.e. build_insert_binds/build_update_binds below, which carry the system-column exclusion; no SET clause is built here.",
     ),
     (
         "crates/engine/attome-records/src/access_plan.rs",

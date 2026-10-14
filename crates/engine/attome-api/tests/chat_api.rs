@@ -4113,7 +4113,7 @@ async fn a_turn_whose_client_goes_away_still_finishes() {
         // than on the first empty read.
         let ledger = || async {
             sqlx::query_as::<_, (i64, i64)>(
-                "SELECT COUNT(*) FILTER (WHERE role = 'user'),                         COUNT(*) FILTER (WHERE role = 'assistant' AND terminal_state IS NOT NULL)                    FROM ai_message WHERE conversation_id = $1",
+                "SELECT COUNT(*) FILTER (WHERE role = 'user'), COUNT(*) FILTER (WHERE role = 'assistant' AND terminal_state IS NOT NULL) FROM ai_message WHERE conversation_id = $1",
             )
             .bind(conversation)
             .fetch_one(fx.db())

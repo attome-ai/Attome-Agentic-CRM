@@ -281,7 +281,7 @@ pub(crate) const SUMMARIZE_PROMPT_VERSION: &str = "record.summarize/v1";
 /// surface.
 pub(crate) fn summarize_system_prompt(language: &str) -> String {
     format!(
-        "You summarise CRM records for a business user. Write in {language}.          Be factual and concise; state only what the record contains. If the          record is empty or uninformative, say so rather than inventing          detail."
+        "You summarise CRM records for a business user. Write in {language}. Be factual and concise; state only what the record contains. If the record is empty or uninformative, say so rather than inventing detail."
     )
 }
 

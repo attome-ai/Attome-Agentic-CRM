@@ -225,7 +225,7 @@ mod tests {
         // A grant changed. The epoch moves.
         assert!(
             cache.get(&ctx(user, 8)).await.is_none(),
-            "a revoked caller must not be served the access map they had              before the revocation — a TTL-only cache would leave a real              privilege-escalation window open for its whole TTL"
+            "a revoked caller must not be served the access map they had before the revocation — a TTL-only cache would leave a real privilege-escalation window open for its whole TTL"
         );
     }
 

@@ -186,7 +186,7 @@ async fn concurrent_callbacks_on_one_state_admit_at_most_one() {
     assert_eq!(
         exchanges.load(Ordering::SeqCst),
         1,
-        "exactly one of twenty concurrent callbacks on one state may reach the          token exchange; the rest must be refused by the atomic consume          (none may succeed: the mock endpoint refuses every exchange)"
+        "exactly one of twenty concurrent callbacks on one state may reach the token exchange; the rest must be refused by the atomic consume (none may succeed: the mock endpoint refuses every exchange)"
     );
     assert_eq!(oks, 0, "the mock endpoint refuses every exchange");
     let left: i64 = redis

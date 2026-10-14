@@ -642,7 +642,7 @@ async fn pin_metric_dependencies(
             .to_string();
         for metric_id in crate::execution::kpi_metric_refs(widget) {
             let definition: Option<MetricDefinitionCapture> = sqlx::query_as(
-                "SELECT source_kind, query_ref, formula, period, direction                  FROM dashboard_metric_definition                  WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
+                "SELECT source_kind, query_ref, formula, period, direction FROM dashboard_metric_definition WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
             )
             .bind(metric_id)
             .fetch_optional(&mut **tx)
@@ -650,7 +650,7 @@ async fn pin_metric_dependencies(
             .map_err(AppError::internal)?;
             let definition = definition.ok_or_else(|| {
                 AppError::Validation(format!(
-                    "widget {widget_id} cannot be published: metric {metric_id} is missing or                      inactive"
+                    "widget {widget_id} cannot be published: metric {metric_id} is missing or inactive"
                 ))
             })?;
             let query_version_id: Option<Uuid> = match (
@@ -661,7 +661,7 @@ async fn pin_metric_dependencies(
                     .and_then(|r| Uuid::parse_str(r).ok()),
             ) {
                 (Some("query"), Some(query_id)) => sqlx::query_scalar(
-                    "SELECT id FROM sql_query_version WHERE query_id = $1                      ORDER BY id DESC LIMIT 1",
+                    "SELECT id FROM sql_query_version WHERE query_id = $1 ORDER BY id DESC LIMIT 1",
                 )
                 .bind(query_id)
                 .fetch_optional(&mut **tx)
@@ -670,7 +670,7 @@ async fn pin_metric_dependencies(
                 _ => None,
             };
             let snapshot_id: Option<Uuid> = sqlx::query_scalar(
-                "SELECT id FROM metric_snapshot WHERE metric_ref = $1                  ORDER BY period_start DESC, computed_at DESC, id DESC LIMIT 1",
+                "SELECT id FROM metric_snapshot WHERE metric_ref = $1 ORDER BY period_start DESC, computed_at DESC, id DESC LIMIT 1",
             )
             .bind(metric_id)
             .fetch_optional(&mut **tx)

@@ -1838,7 +1838,7 @@ pub async fn lock_run_in_tx(conn: &mut PgConnection, id: Uuid) -> Result<Option<
 /// changed).
 pub async fn abandon_run_in_tx(conn: &mut PgConnection, id: Uuid) -> Result<bool, AppError> {
     let done = sqlx::query(
-        "UPDATE data_step_run          SET status = 'abandoned', cursor = NULL, claimed_by = NULL, claimed_at = NULL,              finished_at = NOW(), updated_at = NOW(), row_version = row_version + 1          WHERE id = $1 AND status = 'failed'",
+        "UPDATE data_step_run SET status = 'abandoned', cursor = NULL, claimed_by = NULL, claimed_at = NULL, finished_at = NOW(), updated_at = NOW(), row_version = row_version + 1 WHERE id = $1 AND status = 'failed'",
     )
     .bind(id)
     .execute(&mut *conn)

@@ -75,22 +75,22 @@ const GATED_HANDLERS: &[(&str, &str, &str)] = &[
     (
         "enqueue_bulk_transform",
         "BatchJobs",
-        "Returns 202 'durably accepted, applied later' for a bulk transform job. With no live          batch worker, 'later' is never.",
+        "Returns 202 'durably accepted, applied later' for a bulk transform job. With no live batch worker, 'later' is never.",
     ),
     (
         "enqueue_export",
         "BatchJobs",
-        "Returns 202 for a data export job the batch worker has to run; with no worker the          caller polls a job that never starts.",
+        "Returns 202 for a data export job the batch worker has to run; with no worker the caller polls a job that never starts.",
     ),
     (
         "enqueue_profile",
         "BatchJobs",
-        "Returns 202 for a data-profile job the batch worker has to run; with no worker the          caller polls a profile that never starts.",
+        "Returns 202 for a data-profile job the batch worker has to run; with no worker the caller polls a profile that never starts.",
     ),
     (
         "rollback_run",
         "BatchJobs",
-        "Enqueues the rollback of a migration run as a batch job and reports it accepted;          with no worker the run stays half-applied.",
+        "Enqueues the rollback of a migration run as a batch job and reports it accepted; with no worker the run stays half-applied.",
     ),
     (
         "staged_import",

@@ -57,7 +57,7 @@ pub async fn apply_platform_definition(state: &EngineState, module: &str) -> Res
     let name = definition_name(module);
     let entry = compiled(name).ok_or_else(|| {
         AppError::internal(format!(
-            "no compiled platform changeset was converted from the platform bundle {name:?};              run node scripts/changesets/from-bundle.mjs --all and              node scripts/changesets/gen-platform-index.mjs"
+            "no compiled platform changeset was converted from the platform bundle {name:?}; run node scripts/changesets/from-bundle.mjs --all and node scripts/changesets/gen-platform-index.mjs"
         ))
     })?;
     apply_compiled(state, entry).await

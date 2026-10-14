@@ -1139,7 +1139,7 @@ mod tests {
         assert_eq!(
             hits.load(Ordering::SeqCst),
             0,
-            "a redirect must not be followed: the request (and its body) must              never reach the redirect target"
+            "a redirect must not be followed: the request (and its body) must never reach the redirect target"
         );
     }
 

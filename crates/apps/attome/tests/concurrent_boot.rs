@@ -372,28 +372,28 @@ async fn concurrent_boots_seed_the_platform_once_and_both_succeed() {
         "no platform changeset was applied, so seeding never ran and this test proved nothing"
     );
     let unfinished: Vec<(String, String, Option<String>)> = sqlx::query_as(&format!(
-        "SELECT ref, status, error_message FROM {ledger}          WHERE status NOT IN ('succeeded', 'adopted') ORDER BY created_at"
+        "SELECT ref, status, error_message FROM {ledger} WHERE status NOT IN ('succeeded', 'adopted') ORDER BY created_at"
     ))
     .fetch_all(&migration_db)
     .await
     .expect("read unfinished changesets");
     assert!(
         unfinished.is_empty(),
-        "every platform changeset applied during the concurrent boots must finish;          not finished (ref, status, error): {unfinished:?}"
+        "every platform changeset applied during the concurrent boots must finish; not finished (ref, status, error): {unfinished:?}"
     );
 
     // Each changeset phase applied once: the boot that ran second found the
     // first boot's ledger rows and skipped, instead of applying the same
     // changeset again.
     let applied_twice: Vec<(String, i64)> = sqlx::query_as(&format!(
-        "SELECT ref, COUNT(*) FROM {ledger}          GROUP BY changeset_id, phase, ref HAVING COUNT(*) > 1 ORDER BY ref"
+        "SELECT ref, COUNT(*) FROM {ledger} GROUP BY changeset_id, phase, ref HAVING COUNT(*) > 1 ORDER BY ref"
     ))
     .fetch_all(&migration_db)
     .await
     .expect("read changesets applied more than once");
     assert!(
         applied_twice.is_empty(),
-        "each platform changeset must be applied once across both boots; applied more than          once (ref, rows): {applied_twice:?}"
+        "each platform changeset must be applied once across both boots; applied more than once (ref, rows): {applied_twice:?}"
     );
 
     let stamps_after: i64 = sqlx::query_scalar(&format!(

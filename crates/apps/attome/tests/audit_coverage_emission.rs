@@ -1289,14 +1289,14 @@ async fn query_metric(fx: &Fx) -> Uuid {
     let db = &fx.base.db;
     let query_id = Uuid::now_v7();
     sqlx::query(
-        "INSERT INTO sql_query (id, sql_query, is_active, is_report, owner_layer)          VALUES ($1, 'SELECT 7::float8 AS value', true, true, 'project')",
+        "INSERT INTO sql_query (id, sql_query, is_active, is_report, owner_layer) VALUES ($1, 'SELECT 7::float8 AS value', true, true, 'project')",
     )
     .bind(query_id)
     .execute(db)
     .await
     .expect("insert stored query");
     sqlx::query(
-        "INSERT INTO sql_query_version (id, query_id, sql_query, cost_estimate)          VALUES ($1, $2, 'SELECT 7::float8 AS value', 0)",
+        "INSERT INTO sql_query_version (id, query_id, sql_query, cost_estimate) VALUES ($1, $2, 'SELECT 7::float8 AS value', 0)",
     )
     .bind(Uuid::now_v7())
     .bind(query_id)
@@ -1305,7 +1305,7 @@ async fn query_metric(fx: &Fx) -> Uuid {
     .expect("insert published query version");
     let metric_id = Uuid::now_v7();
     sqlx::query(
-        "INSERT INTO dashboard_metric_definition          (id, name, key, source_kind, query_ref, direction, period)          VALUES ($1, $2, $3, 'query', $4, 'higher_is_better', 'month')",
+        "INSERT INTO dashboard_metric_definition (id, name, key, source_kind, query_ref, direction, period) VALUES ($1, $2, $3, 'query', $4, 'higher_is_better', 'month')",
     )
     .bind(metric_id)
     .bind(format!("Emission Metric {metric_id}"))
@@ -2291,7 +2291,7 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             let (portal, user, _) = portal_with_active_user(fx).await;
             let request_id = Uuid::now_v7();
             sqlx::query(
-                "INSERT INTO webportal_erasure_request (id, webportal_id, webportal_user_id)                  VALUES ($1, $2, $3)",
+                "INSERT INTO webportal_erasure_request (id, webportal_id, webportal_user_id) VALUES ($1, $2, $3)",
             )
             .bind(request_id)
             .bind(portal.id)

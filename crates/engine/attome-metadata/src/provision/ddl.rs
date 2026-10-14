@@ -58,7 +58,7 @@ pub(super) async fn column_exists(
     column: &str,
 ) -> Result<bool, AppError> {
     sqlx::query_scalar(
-        "SELECT EXISTS (SELECT 1 FROM information_schema.columns          WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2)",
+        "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2)",
     )
     .bind(table)
     .bind(column)
@@ -84,7 +84,7 @@ pub(super) async fn existing_columns(
         .bind(table)
         .fetch_one(db);
     let columns_q = sqlx::query_as::<_, (String, String)>(
-        "SELECT column_name, data_type FROM information_schema.columns          WHERE table_schema = current_schema() AND table_name = $1",
+        "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1",
     )
     .bind(table)
     .fetch_all(db);
@@ -93,7 +93,7 @@ pub(super) async fn existing_columns(
     // storage parameters) — `reloptions` repeats identically on every row of
     // this join, so any row's copy is as good as any other.
     let defaults_q = sqlx::query_as::<_, (String, Option<String>, Option<Vec<String>>)>(
-        "SELECT a.attname, pg_get_expr(ad.adbin, ad.adrelid), c.reloptions          FROM pg_catalog.pg_attribute a          JOIN pg_catalog.pg_class c ON c.oid = a.attrelid          JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace          LEFT JOIN pg_catalog.pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum          WHERE n.nspname = current_schema() AND c.relname = $1            AND a.attnum > 0 AND NOT a.attisdropped",
+        "SELECT a.attname, pg_get_expr(ad.adbin, ad.adrelid), c.reloptions FROM pg_catalog.pg_attribute a JOIN pg_catalog.pg_class c ON c.oid = a.attrelid JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace LEFT JOIN pg_catalog.pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum WHERE n.nspname = current_schema() AND c.relname = $1 AND a.attnum > 0 AND NOT a.attisdropped",
     )
     .bind(table)
     .fetch_all(db);

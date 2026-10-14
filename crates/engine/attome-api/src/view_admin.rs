@@ -989,7 +989,7 @@ async fn update_personal_view(
         // which this body does not carry. Same owner/scope predicate as the
         // UPDATE below, so a view the caller cannot edit is the same 404.
         let entity_id: Uuid = sqlx::query_scalar(
-            "SELECT entity_logical_name FROM view              WHERE id=$1 AND owner_ref=$2 AND scope='personal' AND is_active=true",
+            "SELECT entity_logical_name FROM view WHERE id=$1 AND owner_ref=$2 AND scope='personal' AND is_active=true",
         )
         .bind(id)
         .bind(ctx.user_id)

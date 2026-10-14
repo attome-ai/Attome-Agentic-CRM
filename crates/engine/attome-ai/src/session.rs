@@ -418,7 +418,7 @@ pub async fn load_live_owned(
 #[derive(Debug)]
 #[allow(
     clippy::large_enum_variant,
-    reason = "a short-lived return value, matched once and never stored or collected;               boxing the live session would only add an allocation per approved execution"
+    reason = "a short-lived return value, matched once and never stored or collected; boxing the live session would only add an allocation per approved execution"
 )]
 pub enum SessionForExecution {
     /// Runnable now.

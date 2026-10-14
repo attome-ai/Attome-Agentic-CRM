@@ -297,7 +297,7 @@ pub async fn enqueue_on_pool<J: Job>(pool: &attome_db::DbPool, job: J) -> Result
     ))
     .map_err(|e| sqlx::Error::Encode(Box::new(e)))?;
     sqlx::query(
-        "SELECT apalis.push_job(             job_type => $1, job => $2::json, priority => $3, max_attempts => $4),              pg_notify($5, $1)",
+        "SELECT apalis.push_job( job_type => $1, job => $2::json, priority => $3, max_attempts => $4), pg_notify($5, $1)",
     )
     .bind(namespace)
     .bind(payload)

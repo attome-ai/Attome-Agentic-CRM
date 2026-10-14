@@ -98,7 +98,7 @@ fn execute_approved_has_exactly_three_call_sites() {
             "execute_approved_request".to_string(),
             "retry_execution".to_string(),
         ],
-        "the only dispatch paths are the decide route, retry-execution and the auto-approval          job; found {owners:?}"
+        "the only dispatch paths are the decide route, retry-execution and the auto-approval job; found {owners:?}"
     );
 }
 
