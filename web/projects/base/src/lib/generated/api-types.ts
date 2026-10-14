@@ -2072,6 +2072,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/entities/labels/xliff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A20-T4: every entity, attribute and choice label as an XLIFF 2.0 file to
+         *     translate into `locale`, with the translations already made.
+         */
+        get: operations["export_xliff"];
+        put?: never;
+        /**
+         * A20-T4: reads a translated XLIFF 2.0 file and writes its translations as
+         *     labels for its `trgLang`. Every unit must name a label that exists and keep
+         *     its source's `{placeholders}`; if any unit is refused, nothing is written.
+         */
+        post: operations["import_xliff"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/entities/{entity_id}": {
         parameters: {
             query?: never;
@@ -10299,6 +10324,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/new": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A28-T2: the defaults a new record of the entity starts with, by field. */
+        get: operations["new_record_defaults"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/staged-import": {
         parameters: {
             query?: never;
@@ -10431,6 +10473,28 @@ export interface paths {
         get: operations["list_ancestors"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/{id}/clone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B7-T2: copies a record: the new record starts with the source's values
+         *     (less system, numbered, file, formula and engine-owned fields), with
+         *     `overrides` applied, through the ordinary create. `preview` creates
+         *     nothing.
+         */
+        post: operations["clone_record_route"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13821,9 +13885,28 @@ export interface components {
             /** Format: date-time */
             state_changed_at: string;
         };
+        /** @description `POST /api/v1/{entity}/{id}/clone`. */
+        CloneRequest: {
+            /** @description Values for the copy that replace the source's, by field. */
+            overrides?: Record<string, never>;
+            /** @description Return the copy's body without creating it. */
+            preview?: boolean;
+        };
         CloneResponse: {
             /** Format: uuid */
             id: string;
+        };
+        /** @description What a clone made, or would make. */
+        CloneResult: {
+            /** @description The body sent to the create path. */
+            body: Record<string, never>;
+            /**
+             * Format: uuid
+             * @description The new record's id; absent for a preview.
+             */
+            id?: string | null;
+            /** @description Fields of the source left out of the copy, and why. */
+            left_out: string[];
         };
         /** @description `POST /api/v1/admin/changesets/{id}/close`. */
         CloseResponse: {
@@ -26656,6 +26739,16 @@ export interface components {
             id: string;
             reason?: string | null;
         };
+        /** @description `POST /api/v1/admin/entities/labels/xliff`: what an import did. */
+        XliffImportResult: {
+            /** @description Units refused, with why; nothing is written when any unit is refused. */
+            errors: string[];
+            /** @description Labels written. */
+            imported: number;
+            locale: string;
+            /** @description Units with no translation, left alone. */
+            skipped: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -34403,6 +34496,107 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    export_xliff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The language to translate into, e.g. `ar-SA`. */
+                locale: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The labels as XLIFF 2.0 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/xliff+xml": string;
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid locale */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    import_xliff: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/xliff+xml": string;
+            };
+        };
+        responses: {
+            /** @description What the import did */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["XliffImportResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not an XLIFF 2.0 file, or an invalid language */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -61426,6 +61620,57 @@ export interface operations {
             };
         };
     };
+    new_record_defaults: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each defaulted field and its starting value */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the entity's read privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     staged_import: {
         parameters: {
             query?: never;
@@ -61825,6 +62070,78 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    clone_record_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloneRequest"];
+            };
+        };
+        responses: {
+            /** @description A preview: nothing was created */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloneResult"];
+                };
+            };
+            /** @description The copy was created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloneResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read the source or create records */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller cannot read it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The copy failed validation */
             422: {
                 headers: {
                     [name: string]: unknown;

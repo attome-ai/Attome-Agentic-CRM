@@ -12247,6 +12247,152 @@
         }
       }
     },
+    "/api/v1/admin/entities/labels/xliff": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A20-T4: every entity, attribute and choice label as an XLIFF 2.0 file to\ntranslate into `locale`, with the translations already made.",
+        "operationId": "export_xliff",
+        "parameters": [
+          {
+            "name": "locale",
+            "in": "path",
+            "description": "The language to translate into, e.g. `ar-SA`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The labels as XLIFF 2.0",
+            "content": {
+              "application/xliff+xml": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid locale",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A20-T4: reads a translated XLIFF 2.0 file and writes its translations as\nlabels for its `trgLang`. Every unit must name a label that exists and keep\nits source's `{placeholders}`; if any unit is refused, nothing is written.",
+        "operationId": "import_xliff",
+        "requestBody": {
+          "content": {
+            "application/xliff+xml": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What the import did",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/XliffImportResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not an XLIFF 2.0 file, or an invalid language",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/admin/entities/{entity_id}": {
       "get": {
         "tags": [
@@ -53481,6 +53627,79 @@
         ]
       }
     },
+    "/api/v1/{entity}/new": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "A28-T2: the defaults a new record of the entity starts with, by field.",
+        "operationId": "new_record_defaults",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Each defaulted field and its starting value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {},
+                  "propertyNames": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the entity's read privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/{entity}/staged-import": {
       "post": {
         "tags": [
@@ -54137,6 +54356,123 @@
             "api_key": []
           }
         ]
+      }
+    },
+    "/api/v1/{entity}/{id}/clone": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B7-T2: copies a record: the new record starts with the source's values\n(less system, numbered, file, formula and engine-owned fields), with\n`overrides` applied, through the ordinary create. `preview` creates\nnothing.",
+        "operationId": "clone_record_route",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloneRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "A preview: nothing was created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloneResult"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "The copy was created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloneResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not read the source or create records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or the caller cannot read it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The copy failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
       }
     },
     "/api/v1/{entity}/{id}/communications": {
@@ -65392,6 +65728,20 @@
           }
         }
       },
+      "CloneRequest": {
+        "type": "object",
+        "description": "`POST /api/v1/{entity}/{id}/clone`.",
+        "properties": {
+          "overrides": {
+            "type": "object",
+            "description": "Values for the copy that replace the source's, by field."
+          },
+          "preview": {
+            "type": "boolean",
+            "description": "Return the copy's body without creating it."
+          }
+        }
+      },
       "CloneResponse": {
         "type": "object",
         "required": [
@@ -65401,6 +65751,35 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "CloneResult": {
+        "type": "object",
+        "description": "What a clone made, or would make.",
+        "required": [
+          "body",
+          "left_out"
+        ],
+        "properties": {
+          "body": {
+            "type": "object",
+            "description": "The body sent to the create path."
+          },
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The new record's id; absent for a preview."
+          },
+          "left_out": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Fields of the source left out of the copy, and why."
           }
         }
       },
@@ -98311,6 +98690,38 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "XliffImportResult": {
+        "type": "object",
+        "description": "`POST /api/v1/admin/entities/labels/xliff`: what an import did.",
+        "required": [
+          "locale",
+          "imported",
+          "skipped",
+          "errors"
+        ],
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Units refused, with why; nothing is written when any unit is refused."
+          },
+          "imported": {
+            "type": "integer",
+            "description": "Labels written.",
+            "minimum": 0
+          },
+          "locale": {
+            "type": "string"
+          },
+          "skipped": {
+            "type": "integer",
+            "description": "Units with no translation, left alone.",
+            "minimum": 0
           }
         }
       }
