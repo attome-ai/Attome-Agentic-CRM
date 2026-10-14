@@ -58,8 +58,9 @@ use attome_types::AppError;
 use chrono::Utc;
 use fred::interfaces::LuaInterface;
 
+use crate::memory::Keyspace;
 use crate::ops::{self, Primitive};
-use crate::redis_pool::RedisPool;
+use crate::store::Store;
 // Same posture and same number as every other Redis guard in this crate: a
 // cost control must fail fast rather than hang a request on a slow Redis
 // (guidelines §10). BCA-13 moved the value to `crate::timeouts`.
@@ -150,6 +151,46 @@ redis.call('PEXPIRE', KEYS[1], ARGV[3])
 return 1
 "#;
 
+/// In-process form of [`READ_SCRIPT`]: evicts buckets below `cutoff`, then
+/// returns `(sum, oldest_bucket)` (`oldest = -1` when nothing is counted).
+fn window_scan(ks: &mut Keyspace, key: &str, cutoff: i64) -> Result<(i64, i64), AppError> {
+    let fields = ks
+        .hgetall(key)
+        .map_err(|_| AppError::internal("token-window key holds a non-hash value"))?;
+    let mut sum = 0i64;
+    let mut oldest = -1i64;
+    for (field, value) in fields {
+        let bucket = field.parse::<i64>().ok();
+        match bucket {
+            Some(bucket) if bucket >= cutoff => {
+                sum += value.parse::<i64>().unwrap_or(0);
+                if oldest < 0 || bucket < oldest {
+                    oldest = bucket;
+                }
+            }
+            _ => {
+                let _ = ks.hdel(key, &field);
+            }
+        }
+    }
+    ks.drop_if_empty(key);
+    Ok((sum, oldest))
+}
+
+/// In-process form of [`ADD_SCRIPT`].
+fn window_add(
+    ks: &mut Keyspace,
+    key: &str,
+    bucket: i64,
+    delta: i64,
+    ttl_ms: u64,
+) -> Result<(), AppError> {
+    ks.hincr_by(key, &bucket.to_string(), delta)
+        .map_err(|_| AppError::internal("token-window key holds a non-hash value"))?;
+    ks.expire(key, Duration::from_millis(ttl_ms));
+    Ok(())
+}
+
 fn current_bucket(window: Duration) -> i64 {
     Utc::now().timestamp() / bucket_secs(window).max(1) as i64
 }
@@ -163,11 +204,27 @@ fn current_bucket(window: Duration) -> i64 {
 /// exists to prevent. The caller decides what response that produces; in
 /// practice a deployment whose Redis is unreachable is already failing
 /// sessions and rate limits, so this costs little that was still working.
-pub async fn read(redis: &RedisPool, key: &str, window: Duration) -> Result<WindowState, AppError> {
+pub async fn read(store: &Store, key: &str, window: Duration) -> Result<WindowState, AppError> {
     let width = bucket_secs(window).max(1) as i64;
     let now_bucket = current_bucket(window);
     // `window / width` buckets back, inclusive of the current one.
     let cutoff = now_bucket - (window.as_secs() as i64 / width);
+
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            let (sum, oldest) = memory.transaction(|ks| window_scan(ks, key, cutoff))?;
+            let elapsed = if oldest < 0 {
+                Duration::ZERO
+            } else {
+                Duration::from_secs(((now_bucket - oldest) * width).max(0) as u64)
+            };
+            return Ok(WindowState {
+                consumed: sum.max(0) as u64,
+                elapsed,
+            });
+        }
+    };
 
     let attempt = tokio::time::timeout(
         REQUEST_PATH,
@@ -208,16 +265,11 @@ pub async fn read(redis: &RedisPool, key: &str, window: Duration) -> Result<Wind
 /// budget — `budget::check`'s own doc comment requires the estimate be
 /// charged up front), and once afterwards with the signed difference between
 /// estimate and actual. See `xrm_ai::budget_guard`.
-pub async fn add(
-    redis: &RedisPool,
-    key: &str,
-    tokens: u64,
-    window: Duration,
-) -> Result<(), AppError> {
+pub async fn add(store: &Store, key: &str, tokens: u64, window: Duration) -> Result<(), AppError> {
     if tokens == 0 {
         return Ok(());
     }
-    charge(redis, key, tokens as i64, window).await
+    charge(store, key, tokens as i64, window).await
 }
 
 /// Charges a signed amount — the reconciliation path, where an over-estimate
@@ -227,7 +279,7 @@ pub async fn add(
 /// negative; the read path clamps the *sum* at zero rather than each field,
 /// so an over-refund can only ever under-count within a window, never wrap.
 pub async fn charge(
-    redis: &RedisPool,
+    store: &Store,
     key: &str,
     delta: i64,
     window: Duration,
@@ -236,6 +288,13 @@ pub async fn charge(
         return Ok(());
     }
     let ttl_ms = (window.as_millis() as u64).saturating_add(bucket_secs(window) * 1_000);
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            return memory
+                .transaction(|ks| window_add(ks, key, current_bucket(window), delta, ttl_ms));
+        }
+    };
 
     let attempt = tokio::time::timeout(
         REQUEST_PATH,
@@ -374,6 +433,48 @@ end
 return {1, 0, 0, 0}
 "#;
 
+/// In-process form of [`RESERVE_ALL_SCRIPT`]: every window is evicted, summed
+/// and checked before any is written, and the writes happen only if all pass.
+fn reserve_all_in(
+    ks: &mut Keyspace,
+    windows: &[ReserveWindow<'_>],
+    tokens: u64,
+) -> Result<Reservation, AppError> {
+    let mut scans = Vec::with_capacity(windows.len());
+    let mut buckets = Vec::with_capacity(windows.len());
+    for w in windows {
+        let width = bucket_secs(w.window).max(1) as i64;
+        let now_bucket = current_bucket(w.window);
+        let cutoff = now_bucket - (w.window.as_secs() as i64 / width);
+        scans.push(window_scan(ks, w.key, cutoff)?);
+        buckets.push((now_bucket, width));
+    }
+    for (index, w) in windows.iter().enumerate() {
+        let (sum, oldest) = scans[index];
+        if tokens > w.limit || sum.max(0) as u64 + tokens > w.limit {
+            let (now_bucket, width) = buckets[index];
+            let elapsed = if oldest < 0 {
+                Duration::ZERO
+            } else {
+                Duration::from_secs(((now_bucket - oldest) * width).max(0) as u64)
+            };
+            return Ok(Reservation::Refused(Refused {
+                index,
+                state: WindowState {
+                    consumed: sum.max(0) as u64,
+                    elapsed,
+                },
+            }));
+        }
+    }
+    for (index, w) in windows.iter().enumerate() {
+        let (now_bucket, width) = buckets[index];
+        let ttl_ms = (w.window.as_millis() as u64).saturating_add(width as u64 * 1_000);
+        window_add(ks, w.key, now_bucket, tokens as i64, ttl_ms)?;
+    }
+    Ok(Reservation::Reserved(Reserved { tokens }))
+}
+
 /// Checks every window and, only if all of them have room, charges `tokens` to
 /// all of them — **atomically** (BCA-31). This is the shared-state primitive
 /// `xrm_ai::budget_guard` needs to stop read-then-charging across windows:
@@ -391,13 +492,17 @@ return {1, 0, 0, 0}
 /// An empty `windows` slice reserves nothing and succeeds vacuously; a
 /// zero-token reservation likewise succeeds without a round trip.
 pub async fn reserve_all(
-    redis: &RedisPool,
+    store: &Store,
     windows: &[ReserveWindow<'_>],
     tokens: u64,
 ) -> Result<Reservation, AppError> {
     if tokens == 0 || windows.is_empty() {
         return Ok(Reservation::Reserved(Reserved { tokens }));
     }
+    if let Store::Memory(memory) = store {
+        return memory.transaction(|ks| reserve_all_in(ks, windows, tokens));
+    }
+    let redis = store.redis()?;
 
     let mut keys: Vec<String> = Vec::with_capacity(windows.len());
     let mut args: Vec<String> = Vec::with_capacity(1 + windows.len() * 4);
@@ -504,7 +609,7 @@ mod tests {
         let config = fred::prelude::RedisConfig::from_url("redis://127.0.0.1:1").expect("config");
         let pool = crate::redis_pool::RedisPool::new(config, None, None, None, 1).expect("pool");
         let outcome = reserve_all(
-            &pool,
+            &crate::store::Store::Redis(pool.clone()),
             &[ReserveWindow {
                 key: "test:tw:noop",
                 window: Duration::from_secs(3600),

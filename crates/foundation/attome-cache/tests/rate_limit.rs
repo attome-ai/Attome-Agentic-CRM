@@ -43,7 +43,7 @@ async fn allows_requests_under_the_limit() {
     let key = format!("test:rl:{}", Uuid::new_v4());
 
     for _ in 0..5 {
-        let outcome = rate_limit::check(&pool, &key, 10)
+        let outcome = rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &key, 10)
             .await
             .expect("check must not error");
         assert!(outcome.allowed, "under-limit request must be allowed");
@@ -56,13 +56,13 @@ async fn rejects_once_the_limit_is_exceeded() {
     let key = format!("test:rl:{}", Uuid::new_v4());
 
     for _ in 0..3 {
-        let outcome = rate_limit::check(&pool, &key, 3)
+        let outcome = rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &key, 3)
             .await
             .expect("check must not error");
         assert!(outcome.allowed, "requests up to the limit must be allowed");
     }
 
-    let outcome = rate_limit::check(&pool, &key, 3)
+    let outcome = rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &key, 3)
         .await
         .expect("check must not error");
     assert!(
@@ -90,7 +90,7 @@ async fn concurrent_requests_in_the_same_millisecond_are_not_undercounted() {
         let pool = pool.clone();
         let key = key.clone();
         handles.push(tokio::spawn(async move {
-            rate_limit::check(&pool, &key, limit).await
+            rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &key, limit).await
         }));
     }
 
@@ -117,11 +117,11 @@ async fn the_window_expires_so_an_old_burst_does_not_permanently_block_the_key()
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = format!("test:rl:{}", Uuid::new_v4());
 
-    let first = rate_limit::check(&pool, &key, 1)
+    let first = rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &key, 1)
         .await
         .expect("check must not error");
     assert!(first.allowed, "first request must be allowed");
-    let second = rate_limit::check(&pool, &key, 1)
+    let second = rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &key, 1)
         .await
         .expect("check must not error");
     assert!(
@@ -155,7 +155,7 @@ async fn a_rejected_request_is_never_recorded_in_the_window() {
     let limit = 2;
 
     for _ in 0..limit {
-        let outcome = rate_limit::check(&pool, &key, limit)
+        let outcome = rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &key, limit)
             .await
             .expect("check must not error");
         assert!(outcome.allowed);
@@ -164,7 +164,7 @@ async fn a_rejected_request_is_never_recorded_in_the_window() {
     // Ten more rejected requests on top of the limit must not grow the
     // window past `limit` members.
     for _ in 0..10 {
-        let outcome = rate_limit::check(&pool, &key, limit)
+        let outcome = rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &key, limit)
             .await
             .expect("check must not error");
         assert!(!outcome.allowed);
@@ -194,12 +194,12 @@ async fn retry_after_is_derived_from_the_windows_actual_remaining_time() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = format!("test:rl:{}", Uuid::new_v4());
 
-    let first = rate_limit::check(&pool, &key, 1)
+    let first = rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &key, 1)
         .await
         .expect("check must not error");
     assert!(first.allowed);
 
-    let rejected = rate_limit::check(&pool, &key, 1)
+    let rejected = rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &key, 1)
         .await
         .expect("check must not error");
     assert!(!rejected.allowed);

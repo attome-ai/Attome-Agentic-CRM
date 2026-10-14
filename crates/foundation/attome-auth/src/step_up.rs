@@ -22,13 +22,12 @@
 
 use std::time::Duration;
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_config::KeyRing;
 use attome_db::DbPool;
 use attome_types::AppError;
 use chrono::{DateTime, Utc};
 use fred::interfaces::LuaInterface;
-use fred::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -485,11 +484,39 @@ enum Step {
 
 /// Runs one atomic step against a challenge. A Redis error or timeout is an
 /// `Err`, which every caller treats as a rejection.
-async fn challenge_step(
-    redis: &RedisPool,
-    challenge_id: Uuid,
-    step: Step,
-) -> Result<bool, AppError> {
+async fn challenge_step(redis: &Store, challenge_id: Uuid, step: Step) -> Result<bool, AppError> {
+    let redis = match redis {
+        Store::Redis(pool) => pool,
+        // The in-process form of CHALLENGE_STEP_SCRIPT, one locked step.
+        Store::Memory(memory) => {
+            let alive = memory
+                .transaction(|ks| -> Result<bool, attome_cache::memory::WrongType> {
+                    if !ks.exists(&challenge_key(challenge_id)) {
+                        return Ok(false);
+                    }
+                    if step == Step::Consume {
+                        ks.del(&challenge_key(challenge_id));
+                        ks.del(&attempts_key(challenge_id));
+                        return Ok(true);
+                    }
+                    let attempts = ks.incr_by(&attempts_key(challenge_id), 1)?;
+                    if attempts == 1 {
+                        ks.expire(
+                            &attempts_key(challenge_id),
+                            std::time::Duration::from_secs(CHALLENGE_TTL_SECS as u64),
+                        );
+                    }
+                    if attempts >= i64::from(CHALLENGE_MAX_ATTEMPTS) {
+                        ks.del(&challenge_key(challenge_id));
+                        ks.del(&attempts_key(challenge_id));
+                        return Ok(false);
+                    }
+                    Ok(true)
+                })
+                .map_err(|_| AppError::Unauthorized)?;
+            return Ok(alive);
+        }
+    };
     let arg = match step {
         Step::Consume => "consume",
         Step::Fail => "fail",
@@ -515,12 +542,12 @@ async fn challenge_step(
 /// Reads a challenge's binding. `Ok(None)` when it is gone; `Err` on a Redis
 /// error, a timeout or an unreadable value.
 async fn load_binding(
-    redis: &RedisPool,
+    redis: &Store,
     challenge_id: Uuid,
 ) -> Result<Option<ChallengeBinding>, AppError> {
     let value: Option<String> = tokio::time::timeout(
         CHALLENGE_STORE_TIMEOUT,
-        redis.get(challenge_key(challenge_id)),
+        redis.get(&challenge_key(challenge_id)),
     )
     .await
     .map_err(|_| AppError::Unauthorized)?
@@ -535,7 +562,7 @@ async fn load_binding(
 pub struct StepUpStores<'a> {
     pub db: &'a DbPool,
     /// The coordination pool (rule 6).
-    pub redis: &'a RedisPool,
+    pub redis: &'a Store,
     /// The refresh family's absolute lifetime (`auth.refresh_absolute_lifetime_days`).
     pub absolute_lifetime_secs: i64,
 }
@@ -599,20 +626,17 @@ pub async fn start_challenge(
         factors: accepted.clone(),
     };
     let value = serde_json::to_string(&binding).map_err(AppError::internal)?;
-    let written: Option<String> = tokio::time::timeout(
+    let written = tokio::time::timeout(
         CHALLENGE_STORE_TIMEOUT,
-        stores.redis.set(
-            challenge_key(challenge_id),
-            value,
-            Some(Expiration::EX(CHALLENGE_TTL_SECS)),
-            Some(SetOptions::NX),
-            false,
+        stores.redis.set_nx(
+            &challenge_key(challenge_id),
+            &value,
+            Some(std::time::Duration::from_secs(CHALLENGE_TTL_SECS as u64)),
         ),
     )
     .await
-    .map_err(|_| AppError::internal("step-up challenge write timed out"))?
-    .map_err(AppError::internal)?;
-    if written.is_none() {
+    .map_err(|_| AppError::internal("step-up challenge write timed out"))??;
+    if !written {
         return Err(AppError::internal("step-up challenge id collided"));
     }
 
@@ -1467,9 +1491,10 @@ mod tests {
         );
     }
 
-    fn unreachable_redis() -> RedisPool {
+    fn unreachable_redis() -> Store {
+        use fred::prelude::{Builder, RedisConfig};
         let config = RedisConfig::from_url("redis://127.0.0.1:1/0").unwrap();
-        Builder::from_config(config).build_pool(1).unwrap()
+        Store::Redis(Builder::from_config(config).build_pool(1).unwrap())
     }
 
     /// Security contract §6: an unreachable challenge store rejects.

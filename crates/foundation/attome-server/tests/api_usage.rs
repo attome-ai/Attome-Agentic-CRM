@@ -57,15 +57,23 @@ async fn a_failed_rollup_insert_keeps_the_counts() {
     let today = Utc::now().date_naive();
     let who = Identity::User(Uuid::now_v7());
     for _ in 0..3 {
-        api_usage::record(&redis, today, "GET", &route, &who)
-            .await
-            .expect("record");
+        api_usage::record(
+            &attome_cache::Store::Redis(redis.clone()),
+            today,
+            "GET",
+            &route,
+            &who,
+        )
+        .await
+        .expect("record");
     }
 
     let dead = attome_testkit::migrated_pool(1).await.expect("second pool");
     dead.close().await;
     assert!(
-        api_usage::flush(&dead, &redis).await.is_err(),
+        api_usage::flush(&dead, &attome_cache::Store::Redis(redis.clone()))
+            .await
+            .is_err(),
         "a flush against a closed pool must fail"
     );
 
@@ -84,17 +92,27 @@ async fn a_failed_rollup_insert_keeps_the_counts() {
     assert_eq!(staged[0].1, "3");
 
     for _ in 0..2 {
-        api_usage::record(&redis, today, "GET", &route, &who)
-            .await
-            .expect("record");
+        api_usage::record(
+            &attome_cache::Store::Redis(redis.clone()),
+            today,
+            "GET",
+            &route,
+            &who,
+        )
+        .await
+        .expect("record");
     }
-    let flushed = api_usage::flush(&db, &redis).await.expect("flush");
+    let flushed = api_usage::flush(&db, &attome_cache::Store::Redis(redis.clone()))
+        .await
+        .expect("flush");
     assert!(flushed >= 2, "the leftover and the new claim both flush");
     assert_eq!(stored_count(&db, &route).await, Some(5));
 
     let staging_left: bool = redis.exists(STAGING_KEY).await.expect("exists");
     assert!(!staging_left, "a committed flush releases its staging hash");
-    api_usage::flush(&db, &redis).await.expect("idle flush");
+    api_usage::flush(&db, &attome_cache::Store::Redis(redis.clone()))
+        .await
+        .expect("idle flush");
     assert_eq!(
         stored_count(&db, &route).await,
         Some(5),

@@ -136,7 +136,10 @@ fn test_config(replica_max_lag_secs: Option<u64>) -> AppConfig {
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into()),
     );
 
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), false)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        false,
+    )
 }
 
 /// Builds a real `AppState` with a genuine primary/replica pair, same shape
@@ -486,17 +489,14 @@ async fn legacy_sentinel_pin_routes_to_readonly_primary_pool() {
     let state = test_state(None, true, true).await;
     let user_id = Uuid::now_v7();
     {
-        use fred::prelude::*;
         // The bare `1` an old node's deleted `pin_write` wrote (BCA-47): no
         // current writer produces it, so seed it raw.
         state
             .redis
-            .set::<(), _, _>(
-                attome_cache::sticky_primary::pin_key(user_id),
-                1,
-                Some(Expiration::EX(30)),
-                None,
-                false,
+            .set(
+                &attome_cache::sticky_primary::pin_key(user_id),
+                &(1).to_string(),
+                Some(std::time::Duration::from_secs(30)),
             )
             .await
             .expect("seed legacy pin");
@@ -529,7 +529,11 @@ async fn redis_error_fails_closed_to_readonly_primary_pool() {
     let unreachable_pool = RedisPool::new(unreachable_config, None, None, None, 1)
         .expect("build redis pool (no eager connect — check_pin's own timeout applies)");
 
-    let pin_check = attome_cache::sticky_primary::check_pin(&unreachable_pool, user_id).await;
+    let pin_check = attome_cache::sticky_primary::check_pin(
+        &attome_cache::Store::Redis(unreachable_pool.clone()),
+        user_id,
+    )
+    .await;
     assert_eq!(
         pin_check,
         attome_cache::sticky_primary::PinCheck::RedisError,

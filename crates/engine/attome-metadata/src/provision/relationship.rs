@@ -35,7 +35,6 @@ use attome_types::AppError;
 // `.next().publish(...)` call in `invalidate` below.
 use attome_core::reconcile::{ReconcileOutcome, ReconcilePolicy};
 use attome_core::{EngineState, RelationshipCascade};
-use fred::prelude::*;
 use uuid::Uuid;
 
 use super::changeset::{self, ObjectKind, RecordAs};
@@ -60,8 +59,7 @@ async fn invalidate(state: &EngineState) {
         state
             .base
             .redis
-            .next()
-            .publish::<i64, _, _>(attome_core::RELATIONSHIP_VERSION_CHANNEL, "1"),
+            .publish(attome_core::RELATIONSHIP_VERSION_CHANNEL, "1"),
     )
     .await;
     match publish_result {

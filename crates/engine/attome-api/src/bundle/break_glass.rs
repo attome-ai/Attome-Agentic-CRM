@@ -37,7 +37,6 @@ use attome_server::middleware::authoring_gate::BREAK_GLASS_WINDOW_KEY;
 use attome_types::{AppError, ErrorResponse};
 use axum::{Json, Router, extract::State, http::StatusCode, routing::get};
 use chrono::{DateTime, Utc};
-use fred::prelude::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -124,12 +123,10 @@ pub(crate) async fn do_open_break_glass(
 ) -> Result<BreakGlassOpened, AppError> {
     let ttl_minutes = validate_ttl_minutes(Some(ttl_minutes))?;
     let ttl_secs = i64::from(ttl_minutes) * 60;
-    let write = state.base.redis_coordination.set::<(), _, _>(
+    let write = state.base.redis_coordination.set(
         BREAK_GLASS_WINDOW_KEY,
-        1,
-        Some(Expiration::EX(ttl_secs)),
-        None,
-        false,
+        "1",
+        Some(std::time::Duration::from_secs(ttl_secs as u64)),
     );
     match tokio::time::timeout(OP_TIMEOUT, write).await {
         Ok(Ok(())) => {}
@@ -183,10 +180,7 @@ pub(crate) async fn do_close_break_glass(
 ) -> Result<BreakGlassClosed, AppError> {
     let deleted = match tokio::time::timeout(
         OP_TIMEOUT,
-        state
-            .base
-            .redis_coordination
-            .del::<i64, _>(BREAK_GLASS_WINDOW_KEY),
+        state.base.redis_coordination.del(BREAK_GLASS_WINDOW_KEY),
     )
     .await
     {
@@ -372,10 +366,7 @@ async fn break_glass_status(
     // module; reported as open with no deadline), n >= 0 seconds left.
     let ttl = match tokio::time::timeout(
         OP_TIMEOUT,
-        state
-            .base
-            .redis_coordination
-            .ttl::<i64, _>(BREAK_GLASS_WINDOW_KEY),
+        state.base.redis_coordination.ttl(BREAK_GLASS_WINDOW_KEY),
     )
     .await
     {

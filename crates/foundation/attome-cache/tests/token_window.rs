@@ -56,7 +56,7 @@ fn test_key() -> String {
 #[tokio::test]
 async fn an_absent_key_reads_as_zero_consumed_and_zero_elapsed() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
-    let state = token_window::read(&pool, &test_key(), HOUR)
+    let state = token_window::read(&attome_cache::Store::Redis(pool.clone()), &test_key(), HOUR)
         .await
         .expect("read an absent window");
     assert_eq!(state.consumed, 0);
@@ -68,14 +68,16 @@ async fn charge_then_read_reports_the_tokens_and_an_elapsed_inside_the_window() 
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = test_key();
 
-    token_window::add(&pool, &key, 250, HOUR)
+    token_window::add(&attome_cache::Store::Redis(pool.clone()), &key, 250, HOUR)
         .await
         .expect("charge 250");
-    token_window::add(&pool, &key, 125, HOUR)
+    token_window::add(&attome_cache::Store::Redis(pool.clone()), &key, 125, HOUR)
         .await
         .expect("charge 125");
 
-    let state = token_window::read(&pool, &key, HOUR).await.expect("read");
+    let state = token_window::read(&attome_cache::Store::Redis(pool.clone()), &key, HOUR)
+        .await
+        .expect("read");
     assert_eq!(state.consumed, 375, "charges must sum, not overwrite");
     assert!(
         state.elapsed < HOUR,
@@ -92,7 +94,7 @@ async fn the_key_ttl_outlives_the_window() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = test_key();
 
-    token_window::add(&pool, &key, 10, HOUR)
+    token_window::add(&attome_cache::Store::Redis(pool.clone()), &key, 10, HOUR)
         .await
         .expect("charge");
 
@@ -125,7 +127,9 @@ async fn eviction_drops_buckets_that_aged_out() {
         .await
         .expect("plant a stale bucket");
 
-    let state = token_window::read(&pool, &key, HOUR).await.expect("read");
+    let state = token_window::read(&attome_cache::Store::Redis(pool.clone()), &key, HOUR)
+        .await
+        .expect("read");
     assert_eq!(
         state.consumed, 0,
         "a bucket from a previous window must not be counted"
@@ -144,11 +148,18 @@ async fn a_refund_below_zero_clamps_the_reported_sum_at_zero() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = test_key();
 
-    token_window::charge(&pool, &key, -100_000, HOUR)
-        .await
-        .expect("an over-refund must be accepted");
+    token_window::charge(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        -100_000,
+        HOUR,
+    )
+    .await
+    .expect("an over-refund must be accepted");
 
-    let state = token_window::read(&pool, &key, HOUR).await.expect("read");
+    let state = token_window::read(&attome_cache::Store::Redis(pool.clone()), &key, HOUR)
+        .await
+        .expect("read");
     assert_eq!(state.consumed, 0, "a negative sum must clamp at zero");
 }
 
@@ -175,7 +186,12 @@ async fn concurrent_reservations_reserve_exactly_the_allowance() {
         let pool = pool.clone();
         let key = key.clone();
         handles.push(tokio::spawn(async move {
-            token_window::reserve_all(&pool, &[window(&key, limit)], estimate).await
+            token_window::reserve_all(
+                &attome_cache::Store::Redis(pool.clone()),
+                &[window(&key, limit)],
+                estimate,
+            )
+            .await
         }));
     }
 
@@ -198,7 +214,9 @@ async fn concurrent_reservations_reserve_exactly_the_allowance() {
     );
     assert_eq!(refused, 15);
 
-    let state = token_window::read(&pool, &key, HOUR).await.expect("read");
+    let state = token_window::read(&attome_cache::Store::Redis(pool.clone()), &key, HOUR)
+        .await
+        .expect("read");
     assert_eq!(
         state.consumed, limit,
         "the stored window must hold exactly the admitted total, never more"
@@ -212,14 +230,22 @@ async fn reserve_all_refuses_once_the_window_is_full() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = test_key();
 
-    let first = token_window::reserve_all(&pool, &[window(&key, 50)], 50)
-        .await
-        .expect("reserve the whole allowance");
+    let first = token_window::reserve_all(
+        &attome_cache::Store::Redis(pool.clone()),
+        &[window(&key, 50)],
+        50,
+    )
+    .await
+    .expect("reserve the whole allowance");
     assert!(matches!(first, Reservation::Reserved(_)));
 
-    let second = token_window::reserve_all(&pool, &[window(&key, 50)], 1)
-        .await
-        .expect("a refusal is not an error");
+    let second = token_window::reserve_all(
+        &attome_cache::Store::Redis(pool.clone()),
+        &[window(&key, 50)],
+        1,
+    )
+    .await
+    .expect("a refusal is not an error");
     match second {
         Reservation::Refused(refusal) => {
             assert_eq!(refusal.index, 0);
@@ -248,19 +274,29 @@ async fn reserve_all_charges_nothing_when_any_window_refuses() {
     let full = test_key();
     let empty = test_key();
 
-    token_window::reserve_all(&pool, &[window(&full, 5)], 5)
-        .await
-        .expect("fill the second window");
+    token_window::reserve_all(
+        &attome_cache::Store::Redis(pool.clone()),
+        &[window(&full, 5)],
+        5,
+    )
+    .await
+    .expect("fill the second window");
 
-    let outcome = token_window::reserve_all(&pool, &[window(&empty, 1_000), window(&full, 5)], 1)
-        .await
-        .expect("a refusal is not an error");
+    let outcome = token_window::reserve_all(
+        &attome_cache::Store::Redis(pool.clone()),
+        &[window(&empty, 1_000), window(&full, 5)],
+        1,
+    )
+    .await
+    .expect("a refusal is not an error");
     match outcome {
         Reservation::Refused(refusal) => assert_eq!(refusal.index, 1, "window 1 is the full one"),
         Reservation::Reserved(_) => panic!("a full window must refuse the whole reservation"),
     }
 
-    let untouched = token_window::read(&pool, &empty, HOUR).await.expect("read");
+    let untouched = token_window::read(&attome_cache::Store::Redis(pool.clone()), &empty, HOUR)
+        .await
+        .expect("read");
     assert_eq!(
         untouched.consumed, 0,
         "no window may be charged when another refuses"
@@ -275,12 +311,19 @@ async fn reserve_all_refuses_an_estimate_larger_than_the_whole_allowance() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = test_key();
 
-    let outcome = token_window::reserve_all(&pool, &[window(&key, 100)], 101)
-        .await
-        .expect("a refusal is not an error");
+    let outcome = token_window::reserve_all(
+        &attome_cache::Store::Redis(pool.clone()),
+        &[window(&key, 100)],
+        101,
+    )
+    .await
+    .expect("a refusal is not an error");
     assert!(matches!(outcome, Reservation::Refused(_)));
 
-    let state: WindowState = token_window::read(&pool, &key, HOUR).await.expect("read");
+    let state: WindowState =
+        token_window::read(&attome_cache::Store::Redis(pool.clone()), &key, HOUR)
+            .await
+            .expect("read");
     assert_eq!(
         state.consumed, 0,
         "a refused reservation must charge nothing"
@@ -302,9 +345,13 @@ async fn a_full_window_is_not_a_reset_at_the_boundary() {
         .await
         .expect("plant the current bucket at the limit");
 
-    let outcome = token_window::reserve_all(&pool, &[window(&key, 100)], 1)
-        .await
-        .expect("a refusal is not an error");
+    let outcome = token_window::reserve_all(
+        &attome_cache::Store::Redis(pool.clone()),
+        &[window(&key, 100)],
+        1,
+    )
+    .await
+    .expect("a refusal is not an error");
     match outcome {
         Reservation::Refused(refusal) => {
             assert_eq!(refusal.state.consumed, 100);

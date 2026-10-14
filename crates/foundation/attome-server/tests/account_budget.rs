@@ -48,16 +48,26 @@ async fn the_attempt_after_the_budget_gets_a_finished_429() {
     let key = mfa_account_key(Uuid::now_v7());
 
     for attempt in 1..=MFA_ATTEMPTS_PER_ACCOUNT_RPM {
-        let rejected = enforce_account_budget(&pool, &key, MFA_ATTEMPTS_PER_ACCOUNT_RPM, "test")
-            .await
-            .expect("a reachable Redis must not error");
+        let rejected = enforce_account_budget(
+            &attome_cache::Store::Redis(pool.clone()),
+            &key,
+            MFA_ATTEMPTS_PER_ACCOUNT_RPM,
+            "test",
+        )
+        .await
+        .expect("a reachable Redis must not error");
         assert!(rejected.is_none(), "attempt {attempt} must be admitted");
     }
 
-    let rejected = enforce_account_budget(&pool, &key, MFA_ATTEMPTS_PER_ACCOUNT_RPM, "test")
-        .await
-        .expect("a reachable Redis must not error")
-        .expect("the attempt past the budget must be rejected");
+    let rejected = enforce_account_budget(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        MFA_ATTEMPTS_PER_ACCOUNT_RPM,
+        "test",
+    )
+    .await
+    .expect("a reachable Redis must not error")
+    .expect("the attempt past the budget must be rejected");
     assert_eq!(rejected.status(), StatusCode::TOO_MANY_REQUESTS);
     assert!(
         rejected.headers().contains_key(RETRY_AFTER),
@@ -77,7 +87,13 @@ async fn concurrent_attempts_never_exceed_the_shared_budget() {
         let pool = pool.clone();
         let key = key.clone();
         handles.push(tokio::spawn(async move {
-            enforce_account_budget(&pool, &key, MFA_ATTEMPTS_PER_ACCOUNT_RPM, "test").await
+            enforce_account_budget(
+                &attome_cache::Store::Redis(pool.clone()),
+                &key,
+                MFA_ATTEMPTS_PER_ACCOUNT_RPM,
+                "test",
+            )
+            .await
         }));
     }
 

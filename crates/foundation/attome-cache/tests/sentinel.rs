@@ -275,7 +275,7 @@ async fn pool_follows(topology: &Topology, pool: &RedisPool, old: u16, phase: &s
     }
 
     let limiter_key = format!("test:sentinel:rl:{}", Uuid::now_v7());
-    let outcome = rate_limit::check(pool, &limiter_key, 10)
+    let outcome = rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &limiter_key, 10)
         .await
         .unwrap_or_else(|e| panic!("{phase}: rate_limit::check after the failover: {e:?}"));
     assert!(outcome.allowed, "{phase}: a fresh limiter key must admit");

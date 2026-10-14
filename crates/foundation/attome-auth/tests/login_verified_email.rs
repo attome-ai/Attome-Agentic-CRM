@@ -77,7 +77,7 @@ async fn login_succeeds_regardless_of_verification_when_policy_is_off() {
     let redis = unconnected_redis();
     let result = accounts::login(
         &db,
-        &redis,
+        &attome_cache::Store::Redis(redis.clone()),
         &email,
         "correct-password",
         false,
@@ -98,7 +98,7 @@ async fn login_is_forbidden_for_an_unverified_account_when_policy_is_on() {
     let redis = unconnected_redis();
     let result = accounts::login(
         &db,
-        &redis,
+        &attome_cache::Store::Redis(redis.clone()),
         &email,
         "correct-password",
         true,
@@ -119,7 +119,7 @@ async fn login_succeeds_for_a_verified_account_when_policy_is_on() {
     let redis = unconnected_redis();
     let result = accounts::login(
         &db,
-        &redis,
+        &attome_cache::Store::Redis(redis.clone()),
         &email,
         "correct-password",
         true,
@@ -142,7 +142,7 @@ async fn login_still_rejects_a_wrong_password_before_the_verification_check_runs
     let redis = unconnected_redis();
     let result = accounts::login(
         &db,
-        &redis,
+        &attome_cache::Store::Redis(redis.clone()),
         &email,
         "wrong-password",
         true,

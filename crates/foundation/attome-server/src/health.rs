@@ -182,10 +182,8 @@ async fn probe_readiness(state: &AppState) -> ReadyVerdict {
     // P1.15: pinged in parallel — when `cache.roles.coordination` isn't set
     // this is a clone of the same pool, so the second ping is a harmless
     // no-op; when it IS set, readiness now actually reflects both endpoints.
-    let (redis, redis_coordination) = tokio::join!(
-        attome_cache::redis_ping(&state.redis),
-        attome_cache::redis_ping(&state.redis_coordination),
-    );
+    let (redis, redis_coordination) =
+        tokio::join!(state.redis.ping(), state.redis_coordination.ping(),);
     let registry = state.registry_ready.load(Ordering::Relaxed);
 
     // P-migration-governance: `None` (no expected version attached) always

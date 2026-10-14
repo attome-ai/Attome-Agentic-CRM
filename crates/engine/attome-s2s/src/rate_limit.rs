@@ -1,4 +1,4 @@
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_types::AppError;
 use chrono::Utc;
 use fred::interfaces::LuaInterface;
@@ -85,7 +85,7 @@ end
 /// shorter TTL, because one shorter than the timestamp window reopens the
 /// replay gap that constant's doc comment describes.
 pub async fn check_with_nonce(
-    redis: &RedisPool,
+    redis: &Store,
     client_id: &str,
     nonce: &str,
     limit_rpm: i32,
@@ -96,9 +96,35 @@ pub async fn check_with_nonce(
     let nonce_key = format!("s2s:nonce:{client_id}:{nonce}");
     let member = format!("{now_ms}:{}", Uuid::new_v4());
 
+    let pool = match redis {
+        Store::Redis(pool) => pool,
+        // The in-process form of GUARD_SCRIPT: the nonce claim and the window
+        // count happen in one locked step, so a replay can never be counted
+        // as fresh.
+        Store::Memory(memory) => {
+            let (nonce_fresh, count) = memory
+                .transaction(
+                    |ks| -> Result<(bool, i64), attome_cache::memory::WrongType> {
+                        let fresh = ks.set_nx(
+                            &nonce_key,
+                            "1",
+                            Some(std::time::Duration::from_secs(NONCE_TTL_SECS)),
+                        );
+                        let zset = ks.zset(&rl_key)?;
+                        zset.remove_range_by_score(0.0, window_start_ms as f64);
+                        zset.add(now_ms as f64, &member);
+                        let count = zset.len() as i64;
+                        ks.expire(&rl_key, std::time::Duration::from_secs(61));
+                        Ok((fresh, count))
+                    },
+                )
+                .map_err(|_| AppError::internal("s2s rate-limit key holds a non-zset value"))?;
+            return verdict(nonce_fresh, count, limit_rpm);
+        }
+    };
     let (nonce_fresh, count): (i64, i64) = tokio::time::timeout(
         GUARD_TIMEOUT,
-        redis.eval(
+        pool.eval(
             GUARD_SCRIPT,
             vec![nonce_key, rl_key],
             vec![
@@ -113,7 +139,12 @@ pub async fn check_with_nonce(
     .map_err(|_| AppError::internal("redis s2s guard eval timed out"))?
     .map_err(|e| AppError::internal(format!("redis s2s guard eval failed: {e}")))?;
 
-    if nonce_fresh == 0 {
+    verdict(nonce_fresh != 0, count, limit_rpm)
+}
+
+/// The decision shared by both backends.
+fn verdict(nonce_fresh: bool, count: i64, limit_rpm: i32) -> Result<(), AppError> {
+    if !nonce_fresh {
         // P-observability-completion — SecurityAnomalyRateHigh alert source.
         // No-op if no recorder was ever installed (observability.metrics_port
         // == 0), same convention as every other `metrics::` call site in this

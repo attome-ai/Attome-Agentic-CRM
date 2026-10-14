@@ -38,7 +38,6 @@ use std::time::Duration;
 
 use attome_cache::{HotCache, create_hot_cache};
 use attome_core::EngineState;
-use fred::prelude::*;
 use sqlx::Row;
 
 use crate::model::AuditOperation;
@@ -142,14 +141,8 @@ pub async fn resolve(state: &EngineState, entity_name: &str) -> AuditPolicy {
         return policy;
     }
 
-    if let Ok(Ok(Some(json))) = tokio::time::timeout(
-        OP_TIMEOUT,
-        state
-            .base
-            .redis
-            .get::<Option<String>, _>(redis_key(entity_name)),
-    )
-    .await
+    if let Ok(Ok(Some(json))) =
+        tokio::time::timeout(OP_TIMEOUT, state.base.redis.get(&redis_key(entity_name))).await
         && let Ok(policy) = serde_json::from_str::<AuditPolicy>(&json)
     {
         l1().insert(redis_key(entity_name), policy.clone()).await;
@@ -170,12 +163,10 @@ pub async fn resolve(state: &EngineState, entity_name: &str) -> AuditPolicy {
     if let Ok(json) = serde_json::to_string(&policy) {
         let _ = tokio::time::timeout(
             OP_TIMEOUT,
-            state.base.redis.set::<Option<String>, _, _>(
-                redis_key(entity_name),
-                json,
-                Some(Expiration::EX(TTL_SECS as i64)),
-                None,
-                false,
+            state.base.redis.set(
+                &redis_key(entity_name),
+                &json,
+                Some(std::time::Duration::from_secs(TTL_SECS)),
             ),
         )
         .await;
@@ -256,11 +247,7 @@ async fn resolve_from_db(
 /// `module_configuration` already use for a table this shape).
 pub async fn invalidate(state: &EngineState, entity_name: &str) {
     l1().invalidate(&redis_key(entity_name)).await;
-    let _ = tokio::time::timeout(
-        OP_TIMEOUT,
-        state.base.redis.del::<i64, _>(redis_key(entity_name)),
-    )
-    .await;
+    let _ = tokio::time::timeout(OP_TIMEOUT, state.base.redis.del(&redis_key(entity_name))).await;
 }
 
 #[cfg(test)]

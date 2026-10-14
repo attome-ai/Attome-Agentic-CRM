@@ -17,7 +17,6 @@ use attome_types::AppError;
 // Glob import matches `attome_core::state`'s own import for the identical
 // `.next().publish(...)` call in `invalidate` below.
 use attome_core::{EngineState, reconcile::ReconcileOutcome, reconcile::ReconcilePolicy};
-use fred::prelude::*;
 use uuid::Uuid;
 
 pub struct TransitionDesc {
@@ -375,8 +374,7 @@ pub(crate) async fn invalidate(state: &EngineState) {
         state
             .base
             .redis
-            .next()
-            .publish::<i64, _, _>(attome_core::STATE_MODEL_VERSION_CHANNEL, "1"),
+            .publish(attome_core::STATE_MODEL_VERSION_CHANNEL, "1"),
     )
     .await;
     match publish_result {

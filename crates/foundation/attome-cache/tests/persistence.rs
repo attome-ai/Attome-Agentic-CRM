@@ -49,7 +49,7 @@ async fn test_pool() -> Option<RedisPool> {
 async fn probe_reads_a_live_server_without_erroring() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
 
-    let status = persistence::probe(&pool)
+    let status = persistence::probe(&attome_cache::Store::Redis(pool.clone()))
         .await
         .expect("probe a live Redis/Dragonfly");
 
@@ -65,7 +65,7 @@ async fn probe_reads_a_live_server_without_erroring() {
 async fn the_change_counter_reflects_real_writes() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
 
-    let before = persistence::probe(&pool)
+    let before = persistence::probe(&attome_cache::Store::Redis(pool.clone()))
         .await
         .expect("probe before the write")
         .changes_since_last_save
@@ -79,7 +79,7 @@ async fn the_change_counter_reflects_real_writes() {
         .await
         .expect("write a throwaway key");
 
-    let after = persistence::probe(&pool)
+    let after = persistence::probe(&attome_cache::Store::Redis(pool.clone()))
         .await
         .expect("probe after the write")
         .changes_since_last_save
@@ -101,7 +101,7 @@ async fn the_change_counter_reflects_real_writes() {
 async fn persistence_policy_is_configured() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
 
-    let status = persistence::probe(&pool)
+    let status = persistence::probe(&attome_cache::Store::Redis(pool.clone()))
         .await
         .expect("probe a live Redis/Dragonfly");
 

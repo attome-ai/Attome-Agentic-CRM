@@ -94,15 +94,20 @@ async fn every_control_fails_closed_within_its_crate_bound_while_the_store_is_st
     let mut measured: Vec<Measurement> = Vec::new();
 
     let started = Instant::now();
-    let outcome = rate_limit::check(&pool, &key, 10).await;
+    let outcome = rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &key, 10).await;
     measured.push(("rate_limit::check", started.elapsed(), outcome.is_err()));
 
     let started = Instant::now();
-    let outcome = token_window::read(&pool, &key, Duration::from_secs(3600)).await;
+    let outcome = token_window::read(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        Duration::from_secs(3600),
+    )
+    .await;
     measured.push(("token_window::read", started.elapsed(), outcome.is_err()));
 
     let started = Instant::now();
-    let outcome = sticky_primary::check_pin(&pool, user).await;
+    let outcome = sticky_primary::check_pin(&attome_cache::Store::Redis(pool.clone()), user).await;
     measured.push((
         "sticky_primary::check_pin",
         started.elapsed(),
@@ -110,7 +115,13 @@ async fn every_control_fails_closed_within_its_crate_bound_while_the_store_is_st
     ));
 
     let started = Instant::now();
-    let outcome = sticky_primary::pin_write_with_lsn(&pool, user, "0/0", 30).await;
+    let outcome = sticky_primary::pin_write_with_lsn(
+        &attome_cache::Store::Redis(pool.clone()),
+        user,
+        "0/0",
+        30,
+    )
+    .await;
     measured.push((
         "sticky_primary::pin_write_with_lsn",
         started.elapsed(),
@@ -118,11 +129,24 @@ async fn every_control_fails_closed_within_its_crate_bound_while_the_store_is_st
     ));
 
     let started = Instant::now();
-    let outcome = write_coalesce::set(&pool, &key, "field", "value").await;
+    let outcome = write_coalesce::set(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        "field",
+        "value",
+    )
+    .await;
     measured.push(("write_coalesce::set", started.elapsed(), outcome.is_err()));
 
     let started = Instant::now();
-    let outcome = write_coalesce::set_with_ttl(&pool, &key, "field", "value", 60).await;
+    let outcome = write_coalesce::set_with_ttl(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        "field",
+        "value",
+        60,
+    )
+    .await;
     measured.push((
         "write_coalesce::set_with_ttl",
         started.elapsed(),
@@ -130,11 +154,18 @@ async fn every_control_fails_closed_within_its_crate_bound_while_the_store_is_st
     ));
 
     let started = Instant::now();
-    let outcome = write_coalesce::incr(&pool, &key, "field", 1, 60).await;
+    let outcome = write_coalesce::incr(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        "field",
+        1,
+        60,
+    )
+    .await;
     measured.push(("write_coalesce::incr", started.elapsed(), outcome.is_err()));
 
     let started = Instant::now();
-    let outcome = persistence::probe(&pool).await;
+    let outcome = persistence::probe(&attome_cache::Store::Redis(pool.clone())).await;
     measured.push(("persistence::probe", started.elapsed(), outcome.is_err()));
 
     let started = Instant::now();
@@ -177,8 +208,14 @@ async fn the_degrade_class_reports_an_error_rather_than_panicking() {
     let key = format!("test:fail-closed-degrade:{}", Uuid::new_v4());
 
     docker(&["pause", &container]);
-    let set_result = write_coalesce::set(&pool, &key, "field", "value").await;
-    let drain_result = write_coalesce::drain(&pool, &key).await;
+    let set_result = write_coalesce::set(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        "field",
+        "value",
+    )
+    .await;
+    let drain_result = write_coalesce::drain(&attome_cache::Store::Redis(pool.clone()), &key).await;
     docker(&["unpause", &container]);
 
     assert!(set_result.is_err(), "set must return an error, not panic");

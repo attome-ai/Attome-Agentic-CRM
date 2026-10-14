@@ -536,13 +536,11 @@ fn without_test_modules(text: &str) -> String {
             if is_mod
                 && let Some(open) =
                     (after..chars.len()).find(|&j| chars[j] == '{' || chars[j] == ';')
+                && chars[open] == '{'
+                && let Some(close) = matching(&chars, open, '{', '}')
             {
-                if chars[open] == '{'
-                    && let Some(close) = matching(&chars, open, '{', '}')
-                {
-                    i = close + 1;
-                    continue;
-                }
+                i = close + 1;
+                continue;
             }
         }
         out.push(chars[i]);

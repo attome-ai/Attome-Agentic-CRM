@@ -70,7 +70,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use fred::prelude::*;
 use futures_util::TryStreamExt;
 use serde::{Deserialize, Serialize};
@@ -461,11 +461,18 @@ fn to_ms(duration: Duration) -> f64 {
 /// top-level name. Best-effort and fail-open — every failure path counts a
 /// `DroppedReason` and returns, and the request it describes is unaffected.
 pub async fn flush(
-    redis: &RedisPool,
+    redis: &Store,
     top_level: &str,
     total: Duration,
     parts: &[ProbeRecord],
 ) -> Result<(), ProfilerError> {
+    // Probe statistics live in Redis, shared across nodes. A Solo install has
+    // one process and no Redis, and its profiler page reports no samples
+    // rather than holding a second copy of the aggregation in process memory.
+    let redis = match redis {
+        Store::Redis(pool) => pool,
+        Store::Memory(_) => return Ok(()),
+    };
     let top = probe_name(top_level);
 
     let sample = TraceSample {
@@ -554,7 +561,7 @@ impl std::fmt::Debug for Flusher {
 impl Flusher {
     /// Starts the worker over `redis` (the general `cache`/`state.redis` pool
     /// for live deployments — never `redis_coordination`).
-    pub fn new(redis: RedisPool) -> Self {
+    pub fn new(redis: Store) -> Self {
         let sink: FlushSink = Arc::new(move |job: FlushJob| {
             let redis = redis.clone();
             Box::pin(async move { flush(&redis, &job.top_level, job.total, &job.parts).await })
@@ -603,7 +610,7 @@ impl Flusher {
     /// calls ignore their argument). For call sites with no state to carry one
     /// in, such as the job wrapper apalis invokes. Must first be called from
     /// inside a Tokio runtime that outlives the process's flushes.
-    pub fn shared(redis: &RedisPool) -> &'static Flusher {
+    pub fn shared(redis: &Store) -> &'static Flusher {
         static SHARED: std::sync::OnceLock<Flusher> = std::sync::OnceLock::new();
         SHARED.get_or_init(|| Flusher::new(redis.clone()))
     }
@@ -613,7 +620,14 @@ impl Flusher {
 /// batches: the current `attome-profiler:*` namespace plus the pre-rename
 /// `profiler:*` one (which never expired). Idempotent — a second call deletes
 /// nothing and still succeeds. Returns the number of keys removed.
-pub async fn reset(redis: &RedisPool) -> Result<u64, ProfilerError> {
+pub async fn reset(redis: &Store) -> Result<u64, ProfilerError> {
+    // Probe statistics live in Redis, shared across nodes. A Solo install has
+    // one process and no Redis, and its profiler page reports no samples
+    // rather than holding a second copy of the aggregation in process memory.
+    let redis = match redis {
+        Store::Redis(pool) => pool,
+        Store::Memory(_) => return Ok(0),
+    };
     let mut keys = scan_keys(redis, "attome-profiler:*").await?;
     keys.extend(scan_keys(redis, LEGACY_PATTERN).await?);
 
@@ -644,12 +658,15 @@ pub struct StatRow {
 
 /// Cursor-based `SCAN` (never blocking `KEYS`) over the probe-name keyspace —
 /// small and bounded by `MAX_NAMES`, not by request volume.
-async fn scan_keys(redis: &RedisPool, pattern: &str) -> Result<Vec<String>, ProfilerError> {
+async fn scan_keys(
+    redis: &attome_cache::RedisPool,
+    pattern: &str,
+) -> Result<Vec<String>, ProfilerError> {
     use fred::types::Scanner;
 
     let mut keys = Vec::new();
     // `scan` depends on per-connection cursor state, so it isn't implemented
-    // directly on `RedisPool` (round-robin) — pin it to one client via
+    // directly on `Store` (round-robin) — pin it to one client via
     // `next()`, same restriction fred documents for pubsub/client commands.
     let mut stream = redis.next().scan(pattern, Some(200u32), None);
     loop {
@@ -671,13 +688,20 @@ async fn scan_keys(redis: &RedisPool, pattern: &str) -> Result<Vec<String>, Prof
 /// a single `READ_DEADLINE` for the whole read — at the `MAX_NAMES` ceiling
 /// this is the difference between a fast admin page and one that stalls a 3 s
 /// poll.
-pub async fn read_stats(redis: &RedisPool) -> Result<Vec<StatRow>, ProfilerError> {
+pub async fn read_stats(redis: &Store) -> Result<Vec<StatRow>, ProfilerError> {
     tokio::time::timeout(READ_DEADLINE, read_stats_inner(redis))
         .await
         .map_err(|_| ProfilerError::Timeout)?
 }
 
-async fn read_stats_inner(redis: &RedisPool) -> Result<Vec<StatRow>, ProfilerError> {
+async fn read_stats_inner(redis: &Store) -> Result<Vec<StatRow>, ProfilerError> {
+    // Probe statistics live in Redis, shared across nodes. A Solo install has
+    // one process and no Redis, and its profiler page reports no samples
+    // rather than holding a second copy of the aggregation in process memory.
+    let redis = match redis {
+        Store::Redis(pool) => pool,
+        Store::Memory(_) => return Ok(Vec::new()),
+    };
     let pattern = format!("{STAT_PREFIX}*");
     let keys = scan_keys(redis, &pattern).await?;
 
@@ -731,10 +755,17 @@ async fn read_stats_inner(redis: &RedisPool) -> Result<Vec<StatRow>, ProfilerErr
 /// newest first. A stored sample that no longer parses is skipped and counted
 /// (`corrupt_trace_samples`) rather than failing the whole read.
 pub async fn read_trace(
-    redis: &RedisPool,
+    redis: &Store,
     top_level: &str,
     limit: i64,
 ) -> Result<Vec<TraceSample>, ProfilerError> {
+    // Probe statistics live in Redis, shared across nodes. A Solo install has
+    // one process and no Redis, and its profiler page reports no samples
+    // rather than holding a second copy of the aggregation in process memory.
+    let redis = match redis {
+        Store::Redis(pool) => pool,
+        Store::Memory(_) => return Ok(Vec::new()),
+    };
     let key = trace_key(&lookup_name(top_level));
     let raw: Vec<String> = tokio::time::timeout(OP_TIMEOUT, redis.lrange(&key, 0, limit - 1))
         .await

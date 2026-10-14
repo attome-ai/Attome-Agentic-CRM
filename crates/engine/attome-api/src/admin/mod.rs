@@ -24,13 +24,13 @@ mod recovery_archive;
 mod release_report;
 
 use attome_audit::AuditFieldChange;
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_core::EngineState;
 use axum::{
     Router,
     routing::{get, patch, post},
 };
-use fred::interfaces::{KeysInterface, PubsubInterface};
+
 use uuid::Uuid;
 
 use attribute::{
@@ -70,14 +70,12 @@ const NOTIFY_TIMEOUT: std::time::Duration = attome_cache::timeouts::BACKGROUND;
 /// table). Best-effort — a Redis hiccup here must never fail the request; a
 /// missed doorbell is caught by the subscriber's reconnect re-check
 /// (`attome-api/src/system.rs`).
-pub(crate) async fn notify_metadata_change(redis: &RedisPool) {
-    match tokio::time::timeout(NOTIFY_TIMEOUT, redis.incr::<i64, _>("meta_version")).await {
-        // PubsubInterface isn't implemented on the pool itself — `.next()`
-        // borrows the client the pool would route the next command to.
+pub(crate) async fn notify_metadata_change(redis: &Store) {
+    match tokio::time::timeout(NOTIFY_TIMEOUT, redis.incr("meta_version")).await {
         Ok(Ok(n)) => {
             match tokio::time::timeout(
                 NOTIFY_TIMEOUT,
-                redis.next().publish::<i64, _, _>("meta_version", n),
+                redis.publish("meta_version", &n.to_string()),
             )
             .await
             {

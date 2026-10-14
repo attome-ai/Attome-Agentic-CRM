@@ -20,7 +20,7 @@
 
 use std::time::Duration;
 
-use attome_cache::{RedisPool, write_coalesce};
+use attome_cache::{Store, write_coalesce};
 use attome_db::DbPool;
 use attome_types::AppError;
 use chrono::{DateTime, Utc};
@@ -39,11 +39,7 @@ const TOUCH_TTL_SECS: i64 = 86_400;
 /// for the same key since the last flush (last write wins, which is exactly
 /// the desired "most recent use" semantics). Best-effort: callers should log
 /// a warning and continue rather than fail the request over this.
-pub async fn record_touch(
-    redis: &RedisPool,
-    key_id: Uuid,
-    at: DateTime<Utc>,
-) -> Result<(), AppError> {
+pub async fn record_touch(redis: &Store, key_id: Uuid, at: DateTime<Utc>) -> Result<(), AppError> {
     write_coalesce::set_with_ttl(
         redis,
         HASH_KEY,
@@ -59,7 +55,7 @@ pub async fn record_touch(
 /// keys were flushed. A malformed field/value pair (should never happen —
 /// every writer is `record_touch` above) is logged and skipped rather than
 /// failing the whole flush over one bad entry.
-pub async fn flush(db: &DbPool, redis: &RedisPool) -> Result<usize, AppError> {
+pub async fn flush(db: &DbPool, redis: &Store) -> Result<usize, AppError> {
     let drained = write_coalesce::drain(redis, HASH_KEY).await?;
     if drained.is_empty() {
         return Ok(0);
@@ -106,7 +102,7 @@ pub async fn flush(db: &DbPool, redis: &RedisPool) -> Result<usize, AppError> {
 /// flushes the touch buffer rather than requiring an operator to remember to
 /// call `flush` anywhere. Meant to be started unconditionally at boot (this
 /// mechanism has no config gate — API-key auth already runs unconditionally).
-pub fn spawn_flush_scheduler(db: DbPool, redis: RedisPool, interval: Duration) {
+pub fn spawn_flush_scheduler(db: DbPool, redis: Store, interval: Duration) {
     tokio::spawn(async move {
         loop {
             tokio::time::sleep(interval).await;

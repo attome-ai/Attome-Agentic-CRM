@@ -98,10 +98,14 @@ async fn the_atomic_admission_path_holds_every_conformance_row() {
             window,
             limit: case.tokens,
         }];
-        let admission = reserve(&pool, &windows, case.estimated)
-            .await
-            .unwrap_or_else(|e| panic!("row `{}`: reserve failed: {e}", case.name));
-        let held = token_window::read(&pool, &key, window)
+        let admission = reserve(
+            &attome_cache::Store::Redis(pool.clone()),
+            &windows,
+            case.estimated,
+        )
+        .await
+        .unwrap_or_else(|e| panic!("row `{}`: reserve failed: {e}", case.name));
+        let held = token_window::read(&attome_cache::Store::Redis(pool.clone()), &key, window)
             .await
             .expect("read back")
             .consumed;
@@ -223,7 +227,9 @@ async fn a_refusal_on_any_window_charges_none_of_them() {
             limit: 1_000,
         },
     ];
-    let admission = reserve(&pool, &windows, 10).await.expect("reserve");
+    let admission = reserve(&attome_cache::Store::Redis(pool.clone()), &windows, 10)
+        .await
+        .expect("reserve");
     assert!(
         matches!(
             admission,
@@ -236,7 +242,7 @@ async fn a_refusal_on_any_window_charges_none_of_them() {
         "{admission:?}"
     );
     for (key, window) in [(&session, hour), (&caller, day)] {
-        let held = token_window::read(&pool, key, window)
+        let held = token_window::read(&attome_cache::Store::Redis(pool.clone()), key, window)
             .await
             .expect("read")
             .consumed;
@@ -261,7 +267,7 @@ async fn an_unreachable_store_refuses_the_admission() {
         limit: 1_000_000,
     }];
     let started = std::time::Instant::now();
-    let outcome = reserve(&pool, &windows, 10).await;
+    let outcome = reserve(&attome_cache::Store::Redis(pool.clone()), &windows, 10).await;
     assert!(
         outcome.is_err(),
         "an unreachable budget store must fail closed, got {outcome:?}"
@@ -290,7 +296,12 @@ async fn fifty_concurrent_admissions_against_room_for_ten_admit_exactly_ten() {
                 window: hour,
                 limit: 10 * estimate,
             }];
-            reserve(&pool, &windows, estimate).await
+            reserve(
+                &attome_cache::Store::Redis(pool.clone()),
+                &windows,
+                estimate,
+            )
+            .await
         }));
     }
     let mut admitted = 0;
@@ -300,7 +311,7 @@ async fn fifty_concurrent_admissions_against_room_for_ten_admit_exactly_ten() {
         }
     }
     assert_eq!(admitted, 10);
-    let held = token_window::read(&pool, &key, hour)
+    let held = token_window::read(&attome_cache::Store::Redis(pool.clone()), &key, hour)
         .await
         .expect("read")
         .consumed;

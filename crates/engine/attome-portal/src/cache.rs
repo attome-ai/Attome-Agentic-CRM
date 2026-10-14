@@ -58,11 +58,10 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use attome_cache::{HotCache, RedisPool, create_hot_cache, get_recorded};
+use attome_cache::{HotCache, Store, create_hot_cache, get_recorded};
 use attome_core::{EngineState, EntityMetaRegistry};
 use attome_db::DbPool;
 use attome_types::AppError;
-use fred::prelude::*;
 use uuid::Uuid;
 
 use crate::context::PlanTemplate;
@@ -197,13 +196,8 @@ impl PortalCache {
 
 /// The current access version, or `None` when the cache must be bypassed
 /// (Redis error or timeout, or no version yet — one is then started).
-pub(crate) async fn current_version(redis: &RedisPool) -> Option<String> {
-    match tokio::time::timeout(
-        OP_TIMEOUT,
-        redis.get::<Option<String>, _>(ACCESS_VERSION_KEY),
-    )
-    .await
-    {
+pub(crate) async fn current_version(redis: &Store) -> Option<String> {
+    match tokio::time::timeout(OP_TIMEOUT, redis.get(ACCESS_VERSION_KEY)).await {
         Ok(Ok(Some(version))) => Some(version),
         Ok(Ok(None)) => {
             // Cold, expired or evicted. Start a version no earlier entry can
@@ -211,12 +205,12 @@ pub(crate) async fn current_version(redis: &RedisPool) -> Option<String> {
             // bypasses: it can't know which node's token won.
             let started = tokio::time::timeout(
                 OP_TIMEOUT,
-                redis.set::<Option<String>, _, _>(
+                redis.set_nx(
                     ACCESS_VERSION_KEY,
-                    Uuid::now_v7().to_string(),
-                    Some(Expiration::EX(ACCESS_VERSION_TTL_SECS)),
-                    Some(SetOptions::NX),
-                    false,
+                    &Uuid::now_v7().to_string(),
+                    Some(std::time::Duration::from_secs(
+                        ACCESS_VERSION_TTL_SECS as u64,
+                    )),
                 ),
             )
             .await;
@@ -243,15 +237,15 @@ pub(crate) async fn current_version(redis: &RedisPool) -> Option<String> {
 /// Call after the admin write's transaction commits, never inside it. Public
 /// for code (and tests) that write portal configuration through the engine
 /// functions directly instead of the admin API.
-pub async fn bump_version(redis: &RedisPool) -> Result<(), String> {
+pub async fn bump_version(redis: &Store) -> Result<(), String> {
     match tokio::time::timeout(
         OP_TIMEOUT,
-        redis.set::<Option<String>, _, _>(
+        redis.set(
             ACCESS_VERSION_KEY,
-            Uuid::now_v7().to_string(),
-            Some(Expiration::EX(ACCESS_VERSION_TTL_SECS)),
-            None,
-            false,
+            &Uuid::now_v7().to_string(),
+            Some(std::time::Duration::from_secs(
+                ACCESS_VERSION_TTL_SECS as u64,
+            )),
         ),
     )
     .await
@@ -283,7 +277,9 @@ mod tests {
     use super::*;
 
     /// A pool whose server does not exist: every command fails or times out.
-    fn unreachable_pool() -> RedisPool {
+    fn unreachable_pool() -> Store {
+        use fred::interfaces::ClientLike;
+        use fred::prelude::{Builder, RedisConfig};
         let config = RedisConfig::from_url("redis://127.0.0.1:1").unwrap();
         let pool = Builder::from_config(config)
             .with_performance_config(|c| {
@@ -292,7 +288,7 @@ mod tests {
             .build_pool(1)
             .unwrap();
         pool.connect();
-        pool
+        Store::Redis(pool)
     }
 
     /// Redis down: no version, so the caller bypasses the cache and reads

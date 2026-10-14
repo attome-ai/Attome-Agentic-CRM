@@ -23,9 +23,8 @@
 
 use std::time::Duration;
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_types::AppError;
-use fred::prelude::*;
 use uuid::Uuid;
 
 /// Tight bound so a Redis blip can't hang an authenticated request (guidelines §10).
@@ -41,27 +40,24 @@ fn key(jti: Uuid) -> String {
 /// with that `jti` was issued at most `ttl_secs` ago, so it cannot outlive a
 /// denylist entry with that TTL. A non-positive `ttl_secs` means the token is
 /// already expired on its own — nothing to denylist.
-pub async fn revoke(redis: &RedisPool, jti: Uuid, ttl_secs: i64) -> Result<(), AppError> {
+pub async fn revoke(store: &Store, jti: Uuid, ttl_secs: i64) -> Result<(), AppError> {
     if ttl_secs <= 0 {
         return Ok(());
     }
-    tokio::time::timeout(
-        CHECK_TIMEOUT,
-        redis.set::<(), _, _>(key(jti), 1, Some(Expiration::EX(ttl_secs)), None, false),
-    )
-    .await
-    .map_err(|_| AppError::internal("redis denylist write timed out"))?
-    .map_err(|e| AppError::internal(format!("redis denylist write failed: {e}")))
+    store
+        .set(&key(jti), "1", Some(Duration::from_secs(ttl_secs as u64)))
+        .await
 }
 
-/// Fail-closed revocation check: a Redis error or timeout is treated as
+/// Fail-closed revocation check: a store error or timeout is treated as
 /// "revoked" — a network blip must never let a possibly-revoked token through.
 ///
-/// `redis` MUST be the coordination pool — the one `revoke` writes to and the
+/// `store` MUST be the coordination store — the one `revoke` writes to and the
 /// one no eviction policy is pointed at; see this module's doc. A miss on the
-/// cache pool after an eviction would read as "not revoked".
-pub async fn is_revoked(redis: &RedisPool, jti: Uuid) -> bool {
-    match tokio::time::timeout(CHECK_TIMEOUT, redis.get::<Option<i64>, _>(key(jti))).await {
+/// cache pool after an eviction would read as "not revoked". (The in-process
+/// store has no eviction, so Solo is safe by construction.)
+pub async fn is_revoked(store: &Store, jti: Uuid) -> bool {
+    match tokio::time::timeout(CHECK_TIMEOUT, store.get(&key(jti))).await {
         Ok(Ok(Some(_))) => true,
         Ok(Ok(None)) => false,
         Ok(Err(e)) => {
@@ -82,9 +78,19 @@ mod tests {
     /// A client built but never connected — sufficient for `revoke`'s
     /// non-positive-ttl path below, which returns before issuing any Redis
     /// command at all.
-    fn unconnected_pool() -> RedisPool {
+    fn unconnected_pool() -> Store {
+        use fred::prelude::*;
         let config = RedisConfig::from_url("redis://127.0.0.1:1/0").unwrap();
-        Builder::from_config(config).build_pool(1).unwrap()
+        Store::Redis(Builder::from_config(config).build_pool(1).unwrap())
+    }
+
+    #[tokio::test]
+    async fn the_in_process_store_denylists_and_reads_back() {
+        let store = Store::memory();
+        let jti = Uuid::now_v7();
+        assert!(!is_revoked(&store, jti).await);
+        revoke(&store, jti, 60).await.unwrap();
+        assert!(is_revoked(&store, jti).await);
     }
 
     #[tokio::test]

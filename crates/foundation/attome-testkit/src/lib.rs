@@ -608,36 +608,6 @@ pub fn run_shared<F: std::future::Future<Output = ()>>(body: F) {
     shared_runtime().block_on(body)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn unique_values_differ_and_keep_their_prefix() {
-        let a = unique("case");
-        let b = unique("case");
-        assert_ne!(a, b);
-        assert!(a.starts_with("case-"));
-        assert!(unique_email("user").ends_with("@example.invalid"));
-    }
-
-    #[test]
-    fn db_url_parts_decode_credentials_and_default_the_port() {
-        let parts = DbUrlParts::parse("postgres://app%40x:p%2Fw%3Ad@db.local/attome_t").unwrap();
-        assert_eq!(parts.user, "app@x");
-        assert_eq!(parts.password, "p/w:d");
-        assert_eq!(parts.host, "db.local");
-        assert_eq!(parts.port, 5432);
-        assert_eq!(parts.dbname, "attome_t");
-        assert!(DbUrlParts::parse("postgres://u:p@h:6000/").is_err());
-    }
-
-    #[test]
-    fn run_id_is_stable_within_a_process() {
-        assert_eq!(run_id(), run_id());
-    }
-}
-
 /// Environment switch that turns a missing object store into a failure, as
 /// [`REQUIRE_DB_ENV`] does for the database.
 pub const REQUIRE_S3_ENV: &str = "ATTOME_TEST_REQUIRE_S3";
@@ -668,4 +638,34 @@ pub fn s3_or_skip() -> Option<()> {
         "SKIP: set S3_ACCESS_KEY and S3_SECRET_KEY to a live RustFS/MinIO credential to run this test"
     );
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unique_values_differ_and_keep_their_prefix() {
+        let a = unique("case");
+        let b = unique("case");
+        assert_ne!(a, b);
+        assert!(a.starts_with("case-"));
+        assert!(unique_email("user").ends_with("@example.invalid"));
+    }
+
+    #[test]
+    fn db_url_parts_decode_credentials_and_default_the_port() {
+        let parts = DbUrlParts::parse("postgres://app%40x:p%2Fw%3Ad@db.local/attome_t").unwrap();
+        assert_eq!(parts.user, "app@x");
+        assert_eq!(parts.password, "p/w:d");
+        assert_eq!(parts.host, "db.local");
+        assert_eq!(parts.port, 5432);
+        assert_eq!(parts.dbname, "attome_t");
+        assert!(DbUrlParts::parse("postgres://u:p@h:6000/").is_err());
+    }
+
+    #[test]
+    fn run_id_is_stable_within_a_process() {
+        assert_eq!(run_id(), run_id());
+    }
 }

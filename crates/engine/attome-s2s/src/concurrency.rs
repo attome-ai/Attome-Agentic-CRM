@@ -1,4 +1,5 @@
-use attome_cache::RedisPool;
+use attome_cache::Store;
+use attome_cache::memory::Keyspace;
 use attome_types::AppError;
 use chrono::Utc;
 use fred::interfaces::LuaInterface;
@@ -52,7 +53,7 @@ return 1
 /// immediately; if it's dropped without that call (e.g. a panic), the slot
 /// still self-heals via `MAX_SLOT_AGE_MS` on the client's next `acquire`.
 pub struct ConcurrencyGuard {
-    redis: RedisPool,
+    redis: Store,
     key: String,
     member: String,
 }
@@ -65,10 +66,22 @@ impl std::fmt::Debug for ConcurrencyGuard {
 
 impl ConcurrencyGuard {
     pub async fn release(self) {
+        let pool = match &self.redis {
+            Store::Redis(pool) => pool,
+            // In-process form of RELEASE_SCRIPT.
+            Store::Memory(memory) => {
+                memory.transaction(|ks| {
+                    if let Ok(zset) = ks.zset(&self.key) {
+                        zset.remove(&self.member);
+                    }
+                    ks.drop_if_empty(&self.key);
+                });
+                return;
+            }
+        };
         let outcome: Result<Result<i64, _>, _> = tokio::time::timeout(
             OP_TIMEOUT,
-            self.redis
-                .eval(RELEASE_SCRIPT, vec![self.key.clone()], vec![self.member]),
+            pool.eval(RELEASE_SCRIPT, vec![self.key.clone()], vec![self.member]),
         )
         .await;
 
@@ -97,7 +110,7 @@ impl ConcurrencyGuard {
 ///
 /// Returns `Err(AppError::TooManyRequests { retry_after_secs: None })` once the client is at its limit.
 pub async fn acquire(
-    redis: &RedisPool,
+    redis: &Store,
     client_id: &str,
     max_concurrent: i32,
 ) -> Result<ConcurrencyGuard, AppError> {
@@ -106,9 +119,27 @@ pub async fn acquire(
     let key = format!("s2s:concurrent:{client_id}");
     let member = format!("{now_ms}:{}", Uuid::new_v4());
 
+    let pool = match redis {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            let admitted = memory.transaction(|ks| {
+                acquire_in(ks, &key, now_ms, stale_before_ms, max_concurrent, &member)
+            })?;
+            if !admitted {
+                return Err(AppError::TooManyRequests {
+                    retry_after_secs: None,
+                });
+            }
+            return Ok(ConcurrencyGuard {
+                redis: redis.clone(),
+                key,
+                member,
+            });
+        }
+    };
     let admitted: i64 = tokio::time::timeout(
         OP_TIMEOUT,
-        redis.eval(
+        pool.eval(
             ACQUIRE_SCRIPT,
             vec![key.clone()],
             vec![
@@ -134,4 +165,27 @@ pub async fn acquire(
         key,
         member,
     })
+}
+
+/// In-process form of [`ACQUIRE_SCRIPT`]: evict abandoned slots, count, and
+/// admit only below `max_concurrent`, all under the store lock.
+fn acquire_in(
+    ks: &mut Keyspace,
+    key: &str,
+    now_ms: i64,
+    stale_before_ms: i64,
+    max_concurrent: i32,
+    member: &str,
+) -> Result<bool, AppError> {
+    let zset = ks
+        .zset(key)
+        .map_err(|_| AppError::internal("s2s concurrency key holds a non-zset value"))?;
+    zset.remove_range_by_score(0.0, stale_before_ms as f64);
+    if zset.len() as i64 >= i64::from(max_concurrent) {
+        ks.drop_if_empty(key);
+        return Ok(false);
+    }
+    zset.add(now_ms as f64, member);
+    ks.expire(key, Duration::from_secs(300));
+    Ok(true)
 }

@@ -1,7 +1,7 @@
 use std::future::Future;
 use std::pin::Pin;
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_db::DbPool;
 use std::sync::Arc;
 
@@ -128,8 +128,8 @@ impl std::fmt::Debug for EngineSecurityResolver {
 impl EngineSecurityResolver {
     pub fn new(
         db: DbPool,
-        redis: RedisPool,
-        redis_coordination: RedisPool,
+        redis: Store,
+        redis_coordination: Store,
         strict_revocation: bool,
     ) -> Self {
         Self {

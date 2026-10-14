@@ -80,7 +80,7 @@ async fn issue(db: &DbPool, user_id: Uuid, ttl_secs: i64) -> Result<String, AppE
 async fn redeem(db: &DbPool, presented: &str, ttl_secs: i64) -> Result<(Uuid, String), AppError> {
     refresh::redeem(
         db,
-        &unconnected_redis(),
+        &attome_cache::Store::Redis(unconnected_redis()),
         presented,
         lifetimes(ttl_secs),
         &ring(),
@@ -471,13 +471,26 @@ async fn a_wrong_secret_is_rejected_on_the_hmac_path() {
     let forged = format!("{public_id}.{}", "z".repeat(48));
 
     assert!(matches!(
-        refresh::redeem(&db, &unconnected_redis(), &forged, lifetimes(3600), &ring(),).await,
+        refresh::redeem(
+            &db,
+            &attome_cache::Store::Redis(unconnected_redis()),
+            &forged,
+            lifetimes(3600),
+            &ring(),
+        )
+        .await,
         Err(AppError::Unauthorized)
     ));
     // The real token is untouched by the failed attempt.
-    refresh::redeem(&db, &unconnected_redis(), &token, lifetimes(3600), &ring())
-        .await
-        .expect("the genuine token still redeems");
+    refresh::redeem(
+        &db,
+        &attome_cache::Store::Redis(unconnected_redis()),
+        &token,
+        lifetimes(3600),
+        &ring(),
+    )
+    .await
+    .expect("the genuine token still redeems");
 }
 
 /// Reuse detection (D-129) is independent of the hash format — a replayed
@@ -497,15 +510,27 @@ async fn reuse_detection_still_fires_on_an_hmac_row() {
     .await
     .expect("issue hmac")
     .bearer;
-    let (_, replacement) =
-        refresh::redeem(&db, &unconnected_redis(), &token, lifetimes(3600), &ring())
-            .await
-            .expect("first redemption");
+    let (_, replacement) = refresh::redeem(
+        &db,
+        &attome_cache::Store::Redis(unconnected_redis()),
+        &token,
+        lifetimes(3600),
+        &ring(),
+    )
+    .await
+    .expect("first redemption");
     age_rotation(&db, &token, PAST_GRACE_SECS).await;
 
     assert!(
         matches!(
-            refresh::redeem(&db, &unconnected_redis(), &token, lifetimes(3600), &ring(),).await,
+            refresh::redeem(
+                &db,
+                &attome_cache::Store::Redis(unconnected_redis()),
+                &token,
+                lifetimes(3600),
+                &ring(),
+            )
+            .await,
             Err(AppError::Unauthorized)
         ),
         "replaying a used hmac token must be rejected"
@@ -514,7 +539,7 @@ async fn reuse_detection_still_fires_on_an_hmac_row() {
         matches!(
             refresh::redeem(
                 &db,
-                &unconnected_redis(),
+                &attome_cache::Store::Redis(unconnected_redis()),
                 &replacement,
                 lifetimes(3600),
                 &ring(),
@@ -549,7 +574,7 @@ async fn a_row_hashed_under_an_unknown_pepper_fails_closed() {
     assert!(matches!(
         refresh::redeem(
             &db,
-            &unconnected_redis(),
+            &attome_cache::Store::Redis(unconnected_redis()),
             &token,
             lifetimes(3600),
             &other_ring,

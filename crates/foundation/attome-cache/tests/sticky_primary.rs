@@ -41,7 +41,10 @@ async fn check_pin_returns_none_when_no_pin_exists() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let user_id = Uuid::now_v7();
 
-    assert_eq!(check_pin(&pool, user_id).await, PinCheck::None);
+    assert_eq!(
+        check_pin(&attome_cache::Store::Redis(pool.clone()), user_id).await,
+        PinCheck::None
+    );
 }
 
 #[tokio::test]
@@ -49,12 +52,17 @@ async fn check_pin_returns_pinned_with_the_stored_lsn() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let user_id = Uuid::now_v7();
 
-    pin_write_with_lsn(&pool, user_id, "16/B374D848", 30)
-        .await
-        .expect("pin_write_with_lsn must not error");
+    pin_write_with_lsn(
+        &attome_cache::Store::Redis(pool.clone()),
+        user_id,
+        "16/B374D848",
+        30,
+    )
+    .await
+    .expect("pin_write_with_lsn must not error");
 
     assert_eq!(
-        check_pin(&pool, user_id).await,
+        check_pin(&attome_cache::Store::Redis(pool.clone()), user_id).await,
         PinCheck::Pinned("16/B374D848".to_string())
     );
 }
@@ -71,7 +79,10 @@ async fn check_pin_treats_a_legacy_bare_sentinel_as_legacy() {
         .await
         .expect("seed legacy sentinel value");
 
-    assert_eq!(check_pin(&pool, user_id).await, PinCheck::Legacy);
+    assert_eq!(
+        check_pin(&attome_cache::Store::Redis(pool.clone()), user_id).await,
+        PinCheck::Legacy
+    );
 }
 
 #[tokio::test]
@@ -89,7 +100,10 @@ async fn check_pin_treats_any_other_unexpected_value_as_legacy_defensively() {
     .await
     .expect("seed unexpected value");
 
-    assert_eq!(check_pin(&pool, user_id).await, PinCheck::Legacy);
+    assert_eq!(
+        check_pin(&attome_cache::Store::Redis(pool.clone()), user_id).await,
+        PinCheck::Legacy
+    );
 }
 
 #[tokio::test]
@@ -98,9 +112,14 @@ async fn pin_write_with_lsn_sets_the_configured_ttl() {
     let user_id = Uuid::now_v7();
     let key = pin_key(user_id);
 
-    pin_write_with_lsn(&pool, user_id, "0/0", 30)
-        .await
-        .expect("pin_write_with_lsn must not error");
+    pin_write_with_lsn(
+        &attome_cache::Store::Redis(pool.clone()),
+        user_id,
+        "0/0",
+        30,
+    )
+    .await
+    .expect("pin_write_with_lsn must not error");
 
     let ttl: i64 = pool.ttl(&key).await.expect("TTL query must not error");
     assert!(
@@ -115,13 +134,21 @@ async fn two_different_users_get_independent_pins() {
     let user_a = Uuid::now_v7();
     let user_b = Uuid::now_v7();
 
-    pin_write_with_lsn(&pool, user_a, "16/B374D848", 30)
-        .await
-        .expect("pin user_a");
+    pin_write_with_lsn(
+        &attome_cache::Store::Redis(pool.clone()),
+        user_a,
+        "16/B374D848",
+        30,
+    )
+    .await
+    .expect("pin user_a");
 
-    assert_eq!(check_pin(&pool, user_b).await, PinCheck::None);
     assert_eq!(
-        check_pin(&pool, user_a).await,
+        check_pin(&attome_cache::Store::Redis(pool.clone()), user_b).await,
+        PinCheck::None
+    );
+    assert_eq!(
+        check_pin(&attome_cache::Store::Redis(pool.clone()), user_a).await,
         PinCheck::Pinned("16/B374D848".to_string())
     );
 }

@@ -283,7 +283,7 @@ async fn refresh_once(state: &AppState) {
     }
 
     let start = Instant::now();
-    let redis_ok = attome_cache::redis_ping(&state.redis).await;
+    let redis_ok = state.redis.ping().await;
     let redis_ms = start.elapsed().as_secs_f64() * 1000.0;
     metrics::gauge!("redis_up").set(if redis_ok { 1.0 } else { 0.0 });
     if redis_ok {
@@ -301,7 +301,7 @@ async fn refresh_once(state: &AppState) {
     // == 1` (the general pool was fine) with no distinct signal that every
     // S2S/rate-limit/idempotency call was being rejected.
     let coord_start = Instant::now();
-    let redis_coordination_ok = attome_cache::redis_ping(&state.redis_coordination).await;
+    let redis_coordination_ok = state.redis_coordination.ping().await;
     let redis_coordination_ms = coord_start.elapsed().as_secs_f64() * 1000.0;
     metrics::gauge!("redis_coordination_up").set(if redis_coordination_ok { 1.0 } else { 0.0 });
     if redis_coordination_ok {

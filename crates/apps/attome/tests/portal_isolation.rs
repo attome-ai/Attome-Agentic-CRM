@@ -1639,8 +1639,8 @@ fn t15_no_security_context_is_built_on_the_portal_path() {
 /// (`router/metadata.rs`) asks for exactly the plan's field names.
 #[test]
 fn t15_portal_routes_describe_entities_only_through_the_plan() {
-    let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../engine/attome-portal/src");
+    let src =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../engine/attome-portal/src");
     let mut files = vec![src.join("router.rs")];
     for entry in std::fs::read_dir(src.join("router")).unwrap() {
         files.push(entry.unwrap().path());
@@ -2414,7 +2414,7 @@ fn refused(status: StatusCode) -> bool {
 async fn t32_budgets_fail_closed_when_redis_is_unavailable() {
     let w = skip_if_no_db!(world().await);
     let mut dead = w.fx.xrm.clone();
-    dead.base.redis_coordination = unreachable_redis();
+    dead.base.redis_coordination = unreachable_redis().into();
     // The portal router exactly as `router::app` builds it, on the outage state.
     let outage = attome_portal::router::app(dead);
     let send_outage = |req: Request<Body>| {
@@ -2678,7 +2678,6 @@ async fn c7_record_latency_and_statements_per_request() {
         w.a.id, w.a1.user
     ));
     let reset_budget = || async {
-        use fred::interfaces::KeysInterface;
         let _: i64 = w.fx.base.redis_coordination.del(&read_key).await.unwrap();
     };
 
@@ -2810,25 +2809,20 @@ async fn statements_of(
 /// Starts a new access version, as a portal-admin write does: nothing cached
 /// so far is served again.
 async fn new_access_version(w: &World) -> String {
-    use fred::interfaces::KeysInterface;
     let version = Uuid::now_v7().to_string();
-    let _: Option<String> =
-        w.fx.base
-            .redis
-            .set(
-                attome_portal::cache::ACCESS_VERSION_KEY,
-                version.clone(),
-                Some(fred::types::Expiration::EX(3600)),
-                None,
-                false,
-            )
-            .await
-            .unwrap();
+    w.fx.base
+        .redis
+        .set(
+            attome_portal::cache::ACCESS_VERSION_KEY,
+            &version,
+            Some(std::time::Duration::from_secs(3600)),
+        )
+        .await
+        .unwrap();
     version
 }
 
 async fn access_version(w: &World) -> Option<String> {
-    use fred::interfaces::KeysInterface;
     w.fx.base
         .redis
         .get(attome_portal::cache::ACCESS_VERSION_KEY)
@@ -2989,7 +2983,7 @@ async fn g9_a_cache_redis_outage_serves_the_source_of_truth() {
     let theirs = create_case(&w, &w.a2, &w.a, "g9 not mine").await;
     let url = |c: &Value| format!("{}/{}", records(&w.a, &w.case), c["id"].as_str().unwrap());
     let mut dead = w.fx.xrm.clone();
-    dead.base.redis = unreachable_redis();
+    dead.base.redis = unreachable_redis().into();
     let outage = attome_portal::router::app(dead);
     let get = |uri: String| {
         let app = outage.clone();
@@ -3592,19 +3586,15 @@ async fn t36_a_revocation_racing_an_in_flight_write() {
 }
 
 async fn set_access_version(w: &World, version: &str) {
-    use fred::interfaces::KeysInterface;
-    let _: Option<String> =
-        w.fx.base
-            .redis
-            .set(
-                attome_portal::cache::ACCESS_VERSION_KEY,
-                version.to_owned(),
-                Some(fred::types::Expiration::EX(3600)),
-                None,
-                false,
-            )
-            .await
-            .unwrap();
+    w.fx.base
+        .redis
+        .set(
+            attome_portal::cache::ACCESS_VERSION_KEY,
+            version,
+            Some(std::time::Duration::from_secs(3600)),
+        )
+        .await
+        .unwrap();
 }
 
 /// C5's degraded case (§4.2 "Failure"): when the access-version bump after an

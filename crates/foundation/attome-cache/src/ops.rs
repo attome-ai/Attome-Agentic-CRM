@@ -256,7 +256,12 @@ mod tests {
         let before = recorder.counter("base_cache_redis_ops_total", &labels);
 
         let started = std::time::Instant::now();
-        let result = crate::rate_limit::check(&pool, "test:ops-timeout", 10).await;
+        let result = crate::rate_limit::check(
+            &crate::store::Store::Redis(pool.clone()),
+            "test:ops-timeout",
+            10,
+        )
+        .await;
         let elapsed = started.elapsed();
         acceptor.abort();
 

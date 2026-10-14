@@ -143,9 +143,14 @@ async fn a_cached_kid_resolves_without_a_fetch() {
     seed_cache(&redis, &provider, &jwks(&["current"])).await;
     let (uri, fetches) = jwks_endpoint(Reply::Body(jwks(&["current"]))).await;
 
-    let jwk = resolve_signing_key(&redis, &provider, &uri, "current")
-        .await
-        .expect("a cached kid must resolve");
+    let jwk = resolve_signing_key(
+        &attome_cache::Store::Redis(redis.clone()),
+        &provider,
+        &uri,
+        "current",
+    )
+    .await
+    .expect("a cached kid must resolve");
 
     assert_eq!(jwk.common.key_id.as_deref(), Some("current"));
     assert_eq!(fetches.load(Ordering::SeqCst), 0);
@@ -158,9 +163,14 @@ async fn a_rotated_key_is_found_by_exactly_one_refetch() {
     seed_cache(&redis, &provider, &jwks(&["old"])).await;
     let (uri, fetches) = jwks_endpoint(Reply::Body(jwks(&["old", "rotated"]))).await;
 
-    let jwk = resolve_signing_key(&redis, &provider, &uri, "rotated")
-        .await
-        .expect("one refetch must find the rotated key");
+    let jwk = resolve_signing_key(
+        &attome_cache::Store::Redis(redis.clone()),
+        &provider,
+        &uri,
+        "rotated",
+    )
+    .await
+    .expect("one refetch must find the rotated key");
     assert_eq!(jwk.common.key_id.as_deref(), Some("rotated"));
     assert_eq!(fetches.load(Ordering::SeqCst), 1);
     assert!(
@@ -170,10 +180,21 @@ async fn a_rotated_key_is_found_by_exactly_one_refetch() {
         "the refetched set must replace the cached one"
     );
 
-    resolve_signing_key(&redis, &provider, &uri, "rotated")
-        .await
-        .expect("the rotated key is cached now");
-    let result = resolve_signing_key(&redis, &provider, &uri, "never-published").await;
+    resolve_signing_key(
+        &attome_cache::Store::Redis(redis.clone()),
+        &provider,
+        &uri,
+        "rotated",
+    )
+    .await
+    .expect("the rotated key is cached now");
+    let result = resolve_signing_key(
+        &attome_cache::Store::Redis(redis.clone()),
+        &provider,
+        &uri,
+        "never-published",
+    )
+    .await;
     assert!(
         matches!(result, Err(AppError::Unauthorized)),
         "an unpublished kid must be rejected, got {:?}",
@@ -199,7 +220,13 @@ async fn parallel_unknown_kids_cause_at_most_one_upstream_fetch() {
         let provider = provider.clone();
         let uri = uri.clone();
         handles.push(tokio::spawn(async move {
-            resolve_signing_key(&redis, &provider, &uri, &format!("unknown-{i}")).await
+            resolve_signing_key(
+                &attome_cache::Store::Redis(redis.clone()),
+                &provider,
+                &uri,
+                &format!("unknown-{i}"),
+            )
+            .await
         }));
     }
     for handle in handles {
@@ -226,7 +253,13 @@ async fn a_malformed_refetch_is_rejected_and_keeps_the_cached_set() {
     let original = cached(&redis, &provider).await;
     let (uri, fetches) = jwks_endpoint(Reply::Body("not a jwks document".into())).await;
 
-    let result = resolve_signing_key(&redis, &provider, &uri, "rotated").await;
+    let result = resolve_signing_key(
+        &attome_cache::Store::Redis(redis.clone()),
+        &provider,
+        &uri,
+        "rotated",
+    )
+    .await;
 
     assert!(
         matches!(result, Err(AppError::Unauthorized)),
@@ -239,9 +272,14 @@ async fn a_malformed_refetch_is_rejected_and_keeps_the_cached_set() {
         original,
         "a malformed document must not replace the cached set"
     );
-    resolve_signing_key(&redis, &provider, &uri, "old")
-        .await
-        .expect("the cached key must still resolve");
+    resolve_signing_key(
+        &attome_cache::Store::Redis(redis.clone()),
+        &provider,
+        &uri,
+        "old",
+    )
+    .await
+    .expect("the cached key must still resolve");
 }
 
 #[tokio::test]
@@ -253,7 +291,13 @@ async fn an_upstream_stall_on_refetch_is_bounded_and_keeps_the_cached_set() {
     let (uri, fetches) = jwks_endpoint(Reply::Stall).await;
 
     let started = Instant::now();
-    let result = resolve_signing_key(&redis, &provider, &uri, "rotated").await;
+    let result = resolve_signing_key(
+        &attome_cache::Store::Redis(redis.clone()),
+        &provider,
+        &uri,
+        "rotated",
+    )
+    .await;
 
     assert!(
         matches!(result, Err(AppError::Unauthorized)),

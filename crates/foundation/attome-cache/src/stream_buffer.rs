@@ -63,6 +63,7 @@ use fred::prelude::*;
 use fred::types::{XCap, XCapKind, XCapTrim, XID};
 
 use crate::ops::{self, Primitive};
+use crate::store::Store;
 // BCA-13 moved both bounds to `crate::timeouts`: `BACKGROUND` is the plain
 // round-trip bound, `STREAM_BLOCK_SLACK` the extra a blocking read adds to
 // its own `block_ms` because the consumer legitimately waits inside Redis.
@@ -85,11 +86,14 @@ pub struct StreamEntry {
 /// ever stalls, so every producer call must go through this, not a raw
 /// unbounded `XADD`. Returns the assigned entry id.
 pub async fn add(
-    redis: &RedisPool,
+    store: &Store,
     stream_key: &str,
     fields: Vec<(String, String)>,
     maxlen_approx: u64,
 ) -> Result<String, AppError> {
+    // Streams have no in-process form: a consumer-group transport needs a
+    // server. On the in-process store this is a typed "needs Redis" error.
+    let redis = store.redis()?;
     let cap: XCap = (
         XCapKind::MaxLen,
         XCapTrim::AlmostExact,
@@ -118,11 +122,10 @@ pub async fn add(
 /// propagated — this is meant to be called at the top of every consumer
 /// loop tick, not just once at startup, so it must be safe to call
 /// repeatedly.
-pub async fn ensure_group(
-    redis: &RedisPool,
-    stream_key: &str,
-    group: &str,
-) -> Result<(), AppError> {
+pub async fn ensure_group(store: &Store, stream_key: &str, group: &str) -> Result<(), AppError> {
+    // Streams have no in-process form: a consumer-group transport needs a
+    // server. On the in-process store this is a typed "needs Redis" error.
+    let redis = store.redis()?;
     let attempt: Result<Result<(), RedisError>, tokio::time::error::Elapsed> =
         tokio::time::timeout(
             BACKGROUND,
@@ -191,13 +194,16 @@ fn entries_for_stream(reply: ReadGroupReply, stream_key: &str) -> Vec<StreamEntr
 /// module exists to provide; a caller that wants fire-and-forget delivery
 /// should not be using a consumer group at all.
 pub async fn read_group(
-    redis: &RedisPool,
+    store: &Store,
     stream_key: &str,
     group: &str,
     consumer: &str,
     count: u64,
     block_ms: u64,
 ) -> Result<Vec<StreamEntry>, AppError> {
+    // Streams have no in-process form: a consumer-group transport needs a
+    // server. On the in-process store this is a typed "needs Redis" error.
+    let redis = store.redis()?;
     // `xreadgroup` (unlike `xreadgroup_map`) hands its raw reply straight to
     // `FromRedis::convert`, which does NOT know about RESP2's extra array
     // wrapper around XREAD*/XREADGROUP replies (documented pitfall in fred's
@@ -253,11 +259,14 @@ pub async fn read_group(
 /// bulk write has actually committed; acking before the write commits would
 /// reopen the crash-loses-the-record gap this whole mechanism exists to close.
 pub async fn ack(
-    redis: &RedisPool,
+    store: &Store,
     stream_key: &str,
     group: &str,
     ids: &[String],
 ) -> Result<(), AppError> {
+    // Streams have no in-process form: a consumer-group transport needs a
+    // server. On the in-process store this is a typed "needs Redis" error.
+    let redis = store.redis()?;
     if ids.is_empty() {
         return Ok(());
     }
@@ -391,7 +400,7 @@ fn parse_autoclaim_reply(reply: &RedisValue) -> Result<AutoclaimResult, AppError
 /// function still acks the unparseable ones (the fix for BCA-F5's "cycles
 /// forever" defect is in the shared implementation, not opt-in).
 pub async fn autoclaim(
-    redis: &RedisPool,
+    store: &Store,
     stream_key: &str,
     group: &str,
     consumer: &str,
@@ -400,7 +409,7 @@ pub async fn autoclaim(
     count: u64,
 ) -> Result<(String, Vec<StreamEntry>), AppError> {
     let result = autoclaim_full(
-        redis,
+        store,
         stream_key,
         group,
         consumer,
@@ -421,7 +430,7 @@ pub async fn autoclaim(
 /// `stream_key` becomes a metric label, so callers must pass a bounded,
 /// operator-known stream name (never a per-tenant or per-record key).
 pub async fn autoclaim_full(
-    redis: &RedisPool,
+    store: &Store,
     stream_key: &str,
     group: &str,
     consumer: &str,
@@ -429,6 +438,9 @@ pub async fn autoclaim_full(
     start: &str,
     count: u64,
 ) -> Result<AutoclaimResult, AppError> {
+    // Streams have no in-process form: a consumer-group transport needs a
+    // server. On the in-process store this is a typed "needs Redis" error.
+    let redis = store.redis()?;
     let attempt = tokio::time::timeout(
         BACKGROUND,
         redis.xautoclaim(
@@ -461,7 +473,7 @@ pub async fn autoclaim_full(
     // dropped it again, forever (BCA-F5). Ack it; a failure here is logged,
     // not fatal — the claim itself succeeded and the ids are still reported.
     if !result.unparsed_ids.is_empty()
-        && let Err(e) = ack(redis, stream_key, group, &result.unparsed_ids).await
+        && let Err(e) = ack(store, stream_key, group, &result.unparsed_ids).await
     {
         tracing::warn!(
             stream = stream_key,
@@ -494,11 +506,10 @@ pub async fn autoclaim_full(
 /// group hasn't been created yet, e.g. a fresh deployment before the first
 /// consumer tick) is treated as zero pending, not a failure — there is
 /// nothing to be behind on yet.
-pub async fn pending_count(
-    redis: &RedisPool,
-    stream_key: &str,
-    group: &str,
-) -> Result<i64, AppError> {
+pub async fn pending_count(store: &Store, stream_key: &str, group: &str) -> Result<i64, AppError> {
+    // Streams have no in-process form: a consumer-group transport needs a
+    // server. On the in-process store this is a typed "needs Redis" error.
+    let redis = store.redis()?;
     let result: Result<Result<RedisValue, RedisError>, tokio::time::error::Elapsed> =
         tokio::time::timeout(BACKGROUND, redis.xpending(stream_key, group, ())).await;
     // Real Redis prefixes a missing group "NOGROUP"; Dragonfly (confirmed live)

@@ -55,7 +55,6 @@ use attome_db::Tx;
 use attome_metadata::provision::{self, field_change as fc};
 use attome_types::AppError;
 use chrono::Utc;
-use fred::prelude::*;
 use serde::Serialize;
 use serde_json::{Value, json};
 use utoipa::ToSchema;
@@ -302,7 +301,7 @@ pub async fn after_commit(
         with_retry(|| async move {
             match tokio::time::timeout(
                 std::time::Duration::from_millis(200),
-                state.base.redis.next().publish::<i64, _, _>(channel, "1"),
+                state.base.redis.publish(channel, "1"),
             )
             .await
             {

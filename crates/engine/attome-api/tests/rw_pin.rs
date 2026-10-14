@@ -64,7 +64,6 @@ use attome_server::AppState;
 use attome_testkit::skip_if_no_db;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use fred::interfaces::KeysInterface;
 use serde_json::Value;
 use tower::ServiceExt;
 use uuid::Uuid;
@@ -361,7 +360,7 @@ async fn http_create_pins_the_writer_to_a_real_postgres_lsn() {
     // precondition true by construction rather than by timing, and the
     // assertion still proves what it was written to prove — that the CREATE
     // below is what establishes the pin.
-    let _: () = redis
+    let _: i64 = redis
         .del(rw_pin_key(user_id))
         .await
         .expect("clearing the provisioning pin must not error");

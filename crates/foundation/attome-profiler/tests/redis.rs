@@ -145,7 +145,7 @@ async fn flush_aggregates_the_whole_batch_and_stores_one_trace_sample() {
 
     for (total_ms, part_ms) in [(100u64, 40u64), (200, 60)] {
         flush(
-            &pool,
+            &attome_cache::Store::Redis(pool.clone()),
             &top,
             Duration::from_millis(total_ms),
             &[ProbeRecord {
@@ -157,7 +157,9 @@ async fn flush_aggregates_the_whole_batch_and_stores_one_trace_sample() {
         .expect("flush must succeed against a live store");
     }
 
-    let rows = read_stats(&pool).await.expect("read_stats");
+    let rows = read_stats(&attome_cache::Store::Redis(pool.clone()))
+        .await
+        .expect("read_stats");
     let top_row = rows
         .iter()
         .find(|r| r.name == top)
@@ -175,7 +177,9 @@ async fn flush_aggregates_the_whole_batch_and_stores_one_trace_sample() {
     assert_eq!(sub_row.count, 2);
     assert!((sub_row.total_ms - 100.0).abs() < 1.0, "{sub_row:?}");
 
-    let samples = read_trace(&pool, &top, 10).await.expect("read_trace");
+    let samples = read_trace(&attome_cache::Store::Redis(pool.clone()), &top, 10)
+        .await
+        .expect("read_trace");
     assert_eq!(samples.len(), 2, "one trace sample per flush: {samples:?}");
     assert!(
         (samples[0].total_ms - 200.0).abs() < 1.0,
@@ -194,12 +198,17 @@ async fn the_trace_ring_is_capped_at_fifty_samples() {
     };
     let top = unique("tracecap");
     for i in 0..(TRACE_CAP + 10) {
-        flush(&pool, &top, Duration::from_millis(i as u64 + 1), &[])
-            .await
-            .expect("flush");
+        flush(
+            &attome_cache::Store::Redis(pool.clone()),
+            &top,
+            Duration::from_millis(i as u64 + 1),
+            &[],
+        )
+        .await
+        .expect("flush");
     }
 
-    let samples = read_trace(&pool, &top, TRACE_CAP)
+    let samples = read_trace(&attome_cache::Store::Redis(pool.clone()), &top, TRACE_CAP)
         .await
         .expect("read_trace");
     assert_eq!(
@@ -226,7 +235,7 @@ async fn every_profiler_key_is_namespaced_and_expires() {
     };
     let top = unique("ttl");
     flush(
-        &pool,
+        &attome_cache::Store::Redis(pool.clone()),
         &top,
         Duration::from_millis(5),
         &[ProbeRecord {
@@ -269,9 +278,14 @@ async fn every_profiler_key_is_namespaced_and_expires() {
     let stat_key = format!("{STAT_PREFIX}{top}");
     let first: i64 = pool.pttl(stat_key.as_str()).await.expect("pttl");
     tokio::time::sleep(Duration::from_millis(1_100)).await;
-    flush(&pool, &top, Duration::from_millis(5), &[])
-        .await
-        .expect("second flush");
+    flush(
+        &attome_cache::Store::Redis(pool.clone()),
+        &top,
+        Duration::from_millis(5),
+        &[],
+    )
+    .await
+    .expect("second flush");
     let second: i64 = pool.pttl(stat_key.as_str()).await.expect("pttl");
     assert!(
         second > first,
@@ -287,17 +301,27 @@ async fn the_names_set_ttl_slides_on_a_flush_of_known_names() {
         return;
     };
     let top = unique("namesttl");
-    flush(&pool, &top, Duration::from_millis(5), &[])
-        .await
-        .expect("first flush");
+    flush(
+        &attome_cache::Store::Redis(pool.clone()),
+        &top,
+        Duration::from_millis(5),
+        &[],
+    )
+    .await
+    .expect("first flush");
 
     let _: bool = pool
         .pexpire(NAMES_KEY, 10_000, None)
         .await
         .expect("shorten the names ttl");
-    flush(&pool, &top, Duration::from_millis(5), &[])
-        .await
-        .expect("flush of an already-admitted name");
+    flush(
+        &attome_cache::Store::Redis(pool.clone()),
+        &top,
+        Duration::from_millis(5),
+        &[],
+    )
+    .await
+    .expect("flush of an already-admitted name");
 
     let pttl: i64 = pool.pttl(NAMES_KEY).await.expect("pttl");
     assert!(
@@ -313,12 +337,14 @@ async fn the_name_cap_bounds_the_keyspace() {
     let Some(pool) = test_pool(env_db("TEST_REDIS_DB_CAP", 9)).await else {
         return;
     };
-    reset(&pool).await.expect("reset before the cap run");
+    reset(&attome_cache::Store::Redis(pool.clone()))
+        .await
+        .expect("reset before the cap run");
     let before = dropped(DroppedReason::Cardinality);
 
     for i in 0..3_000 {
         flush(
-            &pool,
+            &attome_cache::Store::Redis(pool.clone()),
             &format!("cap.probe.{i}"),
             Duration::from_millis(1),
             &[],
@@ -333,7 +359,9 @@ async fn the_name_cap_bounds_the_keyspace() {
         "SCARD {NAMES_KEY} = {scard} must be <= {MAX_NAMES}"
     );
     let start = Instant::now();
-    let rows = read_stats(&pool).await.expect("read_stats");
+    let rows = read_stats(&attome_cache::Store::Redis(pool.clone()))
+        .await
+        .expect("read_stats");
     let read_elapsed = start.elapsed();
     assert!(
         rows.len() as i64 <= MAX_NAMES,
@@ -352,7 +380,9 @@ async fn the_name_cap_bounds_the_keyspace() {
         "refused names must be counted as cardinality drops"
     );
 
-    reset(&pool).await.expect("reset after the cap run");
+    reset(&attome_cache::Store::Redis(pool.clone()))
+        .await
+        .expect("reset after the cap run");
 }
 
 /// S4 (BPR-21): a flush of a top-level probe plus a sub-part is exactly one
@@ -369,7 +399,7 @@ async fn a_flush_is_exactly_one_redis_command() {
     for _ in 0..8 {
         let before = eval_calls(&pool).await;
         flush(
-            &pool,
+            &attome_cache::Store::Redis(pool.clone()),
             &top,
             Duration::from_millis(3),
             &[ProbeRecord {
@@ -396,30 +426,54 @@ async fn reset_removes_every_key_and_is_idempotent() {
     let Some(pool) = test_pool(env_db("TEST_REDIS_DB_RESET", 10)).await else {
         return;
     };
-    reset(&pool).await.expect("reset to a clean slate");
+    reset(&attome_cache::Store::Redis(pool.clone()))
+        .await
+        .expect("reset to a clean slate");
 
     let a = unique("reset.a");
     let b = unique("reset.b");
-    flush(&pool, &a, Duration::from_millis(2), &[])
-        .await
-        .expect("flush a");
-    flush(&pool, &b, Duration::from_millis(2), &[])
-        .await
-        .expect("flush b");
-    assert_eq!(read_stats(&pool).await.expect("read_stats").len(), 2);
+    flush(
+        &attome_cache::Store::Redis(pool.clone()),
+        &a,
+        Duration::from_millis(2),
+        &[],
+    )
+    .await
+    .expect("flush a");
+    flush(
+        &attome_cache::Store::Redis(pool.clone()),
+        &b,
+        Duration::from_millis(2),
+        &[],
+    )
+    .await
+    .expect("flush b");
+    assert_eq!(
+        read_stats(&attome_cache::Store::Redis(pool.clone()))
+            .await
+            .expect("read_stats")
+            .len(),
+        2
+    );
 
-    let deleted = reset(&pool).await.expect("reset");
+    let deleted = reset(&attome_cache::Store::Redis(pool.clone()))
+        .await
+        .expect("reset");
     assert!(
         deleted >= 2,
         "reset must remove the keys this test wrote, removed {deleted}"
     );
-    let rows = read_stats(&pool).await.expect("read_stats");
+    let rows = read_stats(&attome_cache::Store::Redis(pool.clone()))
+        .await
+        .expect("read_stats");
     assert!(
         rows.is_empty(),
         "no stat rows may survive a reset: {rows:?}"
     );
 
-    let again = reset(&pool).await.expect("second reset");
+    let again = reset(&attome_cache::Store::Redis(pool.clone()))
+        .await
+        .expect("second reset");
     assert_eq!(again, 0, "a second reset must be a no-op");
 }
 
@@ -437,7 +491,13 @@ async fn an_unreachable_store_fails_open() {
 
     let before = dropped(DroppedReason::RedisError) + dropped(DroppedReason::Timeout);
     let start = Instant::now();
-    let result = flush(&dead, "fail.open", Duration::from_millis(1), &[]).await;
+    let result = flush(
+        &attome_cache::Store::Redis(dead.clone()),
+        "fail.open",
+        Duration::from_millis(1),
+        &[],
+    )
+    .await;
     let elapsed = start.elapsed();
 
     assert!(
@@ -462,9 +522,14 @@ async fn unparsable_trace_samples_are_counted_not_fatal() {
         return;
     };
     let top = unique("corrupt");
-    flush(&pool, &top, Duration::from_millis(7), &[])
-        .await
-        .expect("flush");
+    flush(
+        &attome_cache::Store::Redis(pool.clone()),
+        &top,
+        Duration::from_millis(7),
+        &[],
+    )
+    .await
+    .expect("flush");
     let key = format!("{TRACE_PREFIX}{top}");
     let _: i64 = pool
         .lpush(&key, "not-json")
@@ -472,7 +537,9 @@ async fn unparsable_trace_samples_are_counted_not_fatal() {
         .expect("push a corrupt sample");
 
     let before = corrupt_trace_samples();
-    let samples = read_trace(&pool, &top, 10).await.expect("read_trace");
+    let samples = read_trace(&attome_cache::Store::Redis(pool.clone()), &top, 10)
+        .await
+        .expect("read_trace");
     assert_eq!(samples.len(), 1, "the valid sample must still come back");
     assert!(
         corrupt_trace_samples() > before,
@@ -496,9 +563,14 @@ async fn recovers_after_the_store_restarts() {
         return;
     };
     let top = unique("recovery");
-    flush(&pool, &top, Duration::from_millis(3), &[])
-        .await
-        .expect("flush before the restart");
+    flush(
+        &attome_cache::Store::Redis(pool.clone()),
+        &top,
+        Duration::from_millis(3),
+        &[],
+    )
+    .await
+    .expect("flush before the restart");
 
     let status = std::process::Command::new("docker")
         .args(["restart", "-t", "0", &container])
@@ -510,9 +582,14 @@ async fn recovers_after_the_store_restarts() {
     // this process: retry the flush until it succeeds.
     let deadline = Instant::now() + Duration::from_secs(20);
     loop {
-        if flush(&pool, &top, Duration::from_millis(3), &[])
-            .await
-            .is_ok()
+        if flush(
+            &attome_cache::Store::Redis(pool.clone()),
+            &top,
+            Duration::from_millis(3),
+            &[],
+        )
+        .await
+        .is_ok()
         {
             break;
         }
@@ -523,7 +600,9 @@ async fn recovers_after_the_store_restarts() {
         tokio::time::sleep(Duration::from_millis(250)).await;
     }
 
-    let rows = read_stats(&pool).await.expect("read_stats after recovery");
+    let rows = read_stats(&attome_cache::Store::Redis(pool.clone()))
+        .await
+        .expect("read_stats after recovery");
     assert!(
         rows.iter().any(|r| r.name == top),
         "the probe must be readable again after recovery: {rows:?}"

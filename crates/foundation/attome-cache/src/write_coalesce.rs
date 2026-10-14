@@ -28,6 +28,7 @@ use fred::interfaces::LuaInterface;
 use fred::prelude::*;
 
 use crate::ops::{self, Primitive};
+use crate::store::Store;
 // Tight bound so a Redis blip can never add meaningful latency to the
 // request path this buffer is called from (guidelines §10). Callers should
 // treat a failure here as best-effort — log and continue, never fail the
@@ -49,16 +50,25 @@ redis.call('DEL', KEYS[1])
 return vals
 "#;
 
+fn wrong_type(hash_key: &str) -> AppError {
+    AppError::internal(format!(
+        "write-coalesce key {hash_key} holds a non-hash value"
+    ))
+}
+
 /// Sets `field` to `value` in the coalescing hash at `hash_key`. Last write
 /// before the next `drain` wins — callers doing "touch to now" writes
 /// (last-used timestamps, counters meant to be overwritten, not summed)
 /// should call this on every occurrence rather than trying to batch client-side.
-pub async fn set(
-    redis: &RedisPool,
-    hash_key: &str,
-    field: &str,
-    value: &str,
-) -> Result<(), AppError> {
+pub async fn set(store: &Store, hash_key: &str, field: &str, value: &str) -> Result<(), AppError> {
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            return memory
+                .transaction(|ks| ks.hset(hash_key, field, value))
+                .map_err(|_| wrong_type(hash_key));
+        }
+    };
     let attempt = tokio::time::timeout(
         REQUEST_PATH,
         redis.hset::<(), _, _>(hash_key, (field, value)),
@@ -91,12 +101,25 @@ return 1
 /// `set` signature is unchanged for the two callers outside this crate that
 /// still use it.
 pub async fn set_with_ttl(
-    redis: &RedisPool,
+    store: &Store,
     hash_key: &str,
     field: &str,
     value: &str,
     ttl_secs: i64,
 ) -> Result<(), AppError> {
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            let ttl = std::time::Duration::from_millis(ttl_secs.saturating_mul(1000).max(1) as u64);
+            return memory
+                .transaction(|ks| {
+                    ks.hset(hash_key, field, value)?;
+                    ks.expire(hash_key, ttl);
+                    Ok(())
+                })
+                .map_err(|_: crate::memory::WrongType| wrong_type(hash_key));
+        }
+    };
     // At least 1 ms: `PEXPIRE 0` deletes the key immediately, which would
     // silently drop the touch this call exists to record.
     let ttl_ms = ttl_secs.saturating_mul(1000).max(1);
@@ -155,12 +178,25 @@ return 1
 /// fail-closed security class, so losing a buffer no flusher ever drained is
 /// an accepted tradeoff, not a correctness bug).
 pub async fn incr(
-    redis: &RedisPool,
+    store: &Store,
     hash_key: &str,
     field: &str,
     by: i64,
     ttl_secs: i64,
 ) -> Result<(), AppError> {
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            let ttl = std::time::Duration::from_millis(ttl_secs.saturating_mul(1000).max(1) as u64);
+            return memory
+                .transaction(|ks| {
+                    ks.hincr_by(hash_key, field, by)?;
+                    ks.expire(hash_key, ttl);
+                    Ok(())
+                })
+                .map_err(|_: crate::memory::WrongType| wrong_type(hash_key));
+        }
+    };
     // At least 1 ms: `PEXPIRE 0` would delete the field this call just
     // incremented, silently losing the count it exists to record.
     let ttl_ms = ttl_secs.saturating_mul(1000).max(1);
@@ -185,7 +221,20 @@ pub async fn incr(
 /// Atomically drains every field currently in the hash at `hash_key`,
 /// returning `(field, value)` pairs, and clears the hash. An empty hash
 /// (nothing to flush) returns an empty `Vec`, not an error.
-pub async fn drain(redis: &RedisPool, hash_key: &str) -> Result<Vec<(String, String)>, AppError> {
+pub async fn drain(store: &Store, hash_key: &str) -> Result<Vec<(String, String)>, AppError> {
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            // Read and clear under one lock, as DRAIN_SCRIPT does.
+            return memory
+                .transaction(|ks| {
+                    let fields = ks.hgetall(hash_key)?;
+                    ks.del(hash_key);
+                    Ok(fields.into_iter().collect())
+                })
+                .map_err(|_: crate::memory::WrongType| wrong_type(hash_key));
+        }
+    };
     let attempt = tokio::time::timeout(
         BACKGROUND,
         redis.eval(

@@ -3,11 +3,10 @@
 
 use std::sync::Arc;
 
-use attome_cache::{HotCache, RedisPool, create_hot_cache};
+use attome_cache::{HotCache, Store, create_hot_cache};
 use attome_db::DbPool;
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
-use fred::prelude::*;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -60,14 +59,14 @@ fn epoch_key(user_id: Uuid) -> String {
 /// the ordinary D-012 cache path. A Redis hiccup here must never break an
 /// otherwise-successful resolve; `0` is the same value an absent key GETs
 /// as, so failing open never manufactures a false "stale" reading later.
-async fn get_epoch_fail_open(redis_coordination: &RedisPool, user_id: Uuid) -> i64 {
+async fn get_epoch_fail_open(redis_coordination: &Store, user_id: Uuid) -> i64 {
     match tokio::time::timeout(
         EPOCH_OP_TIMEOUT,
-        redis_coordination.get::<Option<i64>, _>(epoch_key(user_id)),
+        redis_coordination.get(&epoch_key(user_id)),
     )
     .await
     {
-        Ok(Ok(Some(n))) => n,
+        Ok(Ok(Some(n))) => n.parse().unwrap_or(0),
         Ok(Ok(None)) => 0,
         Ok(Err(e)) => {
             tracing::warn!(error = %e, %user_id, "authz epoch GET failed (ordinary path — failing open to 0)");
@@ -85,27 +84,24 @@ async fn get_epoch_fail_open(redis_coordination: &RedisPool, user_id: Uuid) -> i
 /// `attome_auth::revocation::is_revoked`/`attome_s2s::rate_limit::check_with_nonce`'s
 /// posture: a Redis error or timeout here must never be mistaken for "no
 /// revocation happened," so it's a hard `Err`, not a stale value.
-async fn get_epoch_fail_closed(
-    redis_coordination: &RedisPool,
-    user_id: Uuid,
-) -> Result<i64, AppError> {
+async fn get_epoch_fail_closed(redis_coordination: &Store, user_id: Uuid) -> Result<i64, AppError> {
     tokio::time::timeout(
         EPOCH_OP_TIMEOUT,
-        redis_coordination.get::<Option<i64>, _>(epoch_key(user_id)),
+        redis_coordination.get(&epoch_key(user_id)),
     )
     .await
     .map_err(|_| AppError::internal("authz epoch check timed out"))?
-    .map(|opt| opt.unwrap_or(0))
+    .map(|opt| opt.and_then(|n| n.parse().ok()).unwrap_or(0))
     .map_err(|e| AppError::internal(format!("authz epoch check failed: {e}")))
 }
 
 /// INCRs the per-user epoch, fail-closed — the caller decides whether a
 /// failure here is acceptable (`invalidate`, best-effort) or must abort the
 /// whole operation (`invalidate_sync`, goal (b)'s acknowledged path).
-async fn incr_epoch(redis_coordination: &RedisPool, user_id: Uuid) -> Result<i64, AppError> {
+async fn incr_epoch(redis_coordination: &Store, user_id: Uuid) -> Result<i64, AppError> {
     tokio::time::timeout(
         EPOCH_OP_TIMEOUT,
-        redis_coordination.incr::<i64, _>(epoch_key(user_id)),
+        redis_coordination.incr(&epoch_key(user_id)),
     )
     .await
     .map_err(|_| AppError::internal("authz epoch bump timed out"))?
@@ -114,12 +110,12 @@ async fn incr_epoch(redis_coordination: &RedisPool, user_id: Uuid) -> Result<i64
 
 pub struct SecurityCache {
     hot: HotCache<Arc<SecurityContext>>,
-    redis: RedisPool,
+    redis: Store,
     /// P-authz-revocation-epoch (D-116): the epoch counter is a security
     /// control (P1.15/D-027), so it lives on the coordination-role pool —
     /// same classification as the S2S nonce/rate-limit guard and the general
     /// HTTP rate limiter, never the general `redis` pool above.
-    redis_coordination: RedisPool,
+    redis_coordination: Store,
     db: DbPool,
 }
 
@@ -135,11 +131,11 @@ impl SecurityCache {
         &self.db
     }
 
-    pub fn new(db: DbPool, redis: RedisPool, redis_coordination: RedisPool) -> Self {
+    pub fn new(db: DbPool, redis: impl Into<Store>, redis_coordination: impl Into<Store>) -> Self {
         Self {
             hot: create_hot_cache(10_000, TTL_SECS),
-            redis,
-            redis_coordination,
+            redis: redis.into(),
+            redis_coordination: redis_coordination.into(),
             db,
         }
     }
@@ -181,12 +177,10 @@ impl SecurityCache {
         if let Ok(json) = serde_json::to_string(&ctx) {
             let _ = tokio::time::timeout(
                 OP_TIMEOUT,
-                self.redis.set::<Option<String>, _, _>(
-                    redis_key(user_id),
-                    json,
-                    Some(Expiration::EX(TTL_SECS as i64)),
-                    None,
-                    false,
+                self.redis.set(
+                    &redis_key(user_id),
+                    &json,
+                    Some(std::time::Duration::from_secs(TTL_SECS)),
                 ),
             )
             .await;
@@ -208,11 +202,8 @@ impl SecurityCache {
             return Ok(ctx);
         }
 
-        if let Ok(Ok(Some(json))) = tokio::time::timeout(
-            OP_TIMEOUT,
-            self.redis.get::<Option<String>, _>(redis_key(user_id)),
-        )
-        .await
+        if let Ok(Ok(Some(json))) =
+            tokio::time::timeout(OP_TIMEOUT, self.redis.get(&redis_key(user_id))).await
             && let Ok(ctx) = serde_json::from_str::<SecurityContext>(&json)
         {
             let ctx = Arc::new(ctx);
@@ -265,14 +256,12 @@ impl SecurityCache {
         }
 
         self.hot.invalidate(&moka_key(user_id)).await;
-        let _ =
-            tokio::time::timeout(OP_TIMEOUT, self.redis.del::<i64, _>(redis_key(user_id))).await;
+        let _ = tokio::time::timeout(OP_TIMEOUT, self.redis.del(&redis_key(user_id))).await;
 
         match tokio::time::timeout(
             OP_TIMEOUT,
             self.redis
-                .next()
-                .publish::<i64, _, _>(SECURITY_VERSION_CHANNEL, user_id.to_string()),
+                .publish(SECURITY_VERSION_CHANNEL, &user_id.to_string()),
         )
         .await
         {
@@ -297,7 +286,7 @@ impl SecurityCache {
         incr_epoch(&self.redis_coordination, user_id).await?;
 
         self.hot.invalidate(&moka_key(user_id)).await;
-        tokio::time::timeout(OP_TIMEOUT, self.redis.del::<i64, _>(redis_key(user_id)))
+        tokio::time::timeout(OP_TIMEOUT, self.redis.del(&redis_key(user_id)))
             .await
             .map_err(|_| AppError::internal("authz cache purge (L2 delete) timed out"))?
             .map_err(|e| {
@@ -307,8 +296,7 @@ impl SecurityCache {
         match tokio::time::timeout(
             OP_TIMEOUT,
             self.redis
-                .next()
-                .publish::<i64, _, _>(SECURITY_VERSION_CHANNEL, user_id.to_string()),
+                .publish(SECURITY_VERSION_CHANNEL, &user_id.to_string()),
         )
         .await
         {

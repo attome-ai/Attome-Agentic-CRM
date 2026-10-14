@@ -239,7 +239,6 @@ fn percentile(values: &mut [f64], p: f64) -> f64 {
 
 /// Median of 50 sequential `SELECT 1` and 50 `PING`s, in milliseconds.
 async fn round_trips(state: &EngineState) -> (f64, f64) {
-    use fred::interfaces::ClientLike;
     let mut db = Vec::new();
     let mut redis = Vec::new();
     for _ in 0..50 {
@@ -250,7 +249,7 @@ async fn round_trips(state: &EngineState) -> (f64, f64) {
             .expect("select 1");
         db.push(t.elapsed().as_secs_f64() * 1000.0);
         let t = Instant::now();
-        let _: () = state.base.redis.ping().await.expect("ping");
+        assert!(state.base.redis.ping().await, "ping");
         redis.push(t.elapsed().as_secs_f64() * 1000.0);
     }
     (percentile(&mut db, 50.0), percentile(&mut redis, 50.0))

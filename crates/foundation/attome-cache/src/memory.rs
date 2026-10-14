@@ -73,6 +73,17 @@ impl ZSet {
         self.ordered.insert((Score(score), member.to_owned()));
     }
 
+    /// Removes `member`; true when it was present (Redis `ZREM`).
+    pub fn remove(&mut self, member: &str) -> bool {
+        match self.scores.remove(member) {
+            Some(score) => {
+                self.ordered.remove(&(Score(score), member.to_owned()));
+                true
+            }
+            None => false,
+        }
+    }
+
     /// Removes members scored within `[min, max]`; returns how many.
     pub fn remove_range_by_score(&mut self, min: f64, max: f64) -> usize {
         let doomed: Vec<(Score, String)> = self

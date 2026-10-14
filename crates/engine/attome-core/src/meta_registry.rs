@@ -8,10 +8,9 @@
 
 use std::collections::HashMap;
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_db::DbPool;
 use attome_types::AppError;
-use fred::prelude::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -646,7 +645,7 @@ struct RegistrySnapshot {
 /// already has a correct in-memory registry regardless of whether the
 /// snapshot write succeeds.
 pub async fn save_snapshot(
-    redis: &RedisPool,
+    redis: &Store,
     log_id: i64,
     registry: &EntityMetaRegistry,
 ) -> Result<(), AppError> {
@@ -656,13 +655,9 @@ pub async fn save_snapshot(
     })
     .map_err(AppError::internal)?;
 
-    tokio::time::timeout(
-        OP_TIMEOUT,
-        redis.set::<Option<String>, _, _>(SNAPSHOT_REDIS_KEY, json, None, None, false),
-    )
-    .await
-    .map_err(|_| AppError::internal("redis metadata snapshot write timed out"))?
-    .map_err(AppError::internal)?;
+    tokio::time::timeout(OP_TIMEOUT, redis.set(SNAPSHOT_REDIS_KEY, &json, None))
+        .await
+        .map_err(|_| AppError::internal("redis metadata snapshot write timed out"))??;
 
     Ok(())
 }
@@ -700,9 +695,7 @@ pub async fn verify_ids_exist(
 /// stored snapshot didn't decode" — either way the caller falls back to a
 /// full rebuild, never a hard error. Returns `(registry, log_id)` — same
 /// tuple order as `build_registry`'s callers use for a full rebuild.
-pub async fn load_snapshot(
-    redis: &RedisPool,
-) -> Result<Option<(EntityMetaRegistry, i64)>, AppError> {
+pub async fn load_snapshot(redis: &Store) -> Result<Option<(EntityMetaRegistry, i64)>, AppError> {
     let json: Option<String> = tokio::time::timeout(OP_TIMEOUT, redis.get(SNAPSHOT_REDIS_KEY))
         .await
         .map_err(|_| AppError::internal("redis metadata snapshot read timed out"))?

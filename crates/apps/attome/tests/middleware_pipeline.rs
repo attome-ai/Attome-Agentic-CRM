@@ -1548,13 +1548,15 @@ async fn authoring_gate_allows_metadata_import_prefix() {
 /// this file's header says to run it with `--test-threads=1`.
 #[tokio::test]
 async fn authoring_gate_admits_a_write_while_the_break_glass_window_is_open() {
-    use fred::prelude::*;
-
     let (app, state) = skip_if_no_db!(test_app(production_config()).await);
     let key = attome_server::middleware::authoring_gate::BREAK_GLASS_WINDOW_KEY;
     state
         .redis_coordination
-        .set::<(), _, _>(key, "1", Some(Expiration::EX(10)), None, false)
+        .set(
+            &key,
+            &("1").to_string(),
+            Some(std::time::Duration::from_secs(10)),
+        )
         .await
         .expect("open break-glass window");
 
@@ -1570,7 +1572,7 @@ async fn authoring_gate_admits_a_write_while_the_break_glass_window_is_open() {
 
     state
         .redis_coordination
-        .del::<i64, _>(key)
+        .del(key)
         .await
         .expect("close break-glass window");
 

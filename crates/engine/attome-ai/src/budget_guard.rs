@@ -369,7 +369,7 @@ pub enum Admission {
 /// this exact path through `attome_inference::budget::CONFORMANCE` rather than a
 /// copy of it (BIN-G1, BIN-D8). Fails closed: a Redis error is `Err`.
 pub async fn reserve(
-    redis: &attome_cache::RedisPool,
+    redis: &attome_cache::Store,
     windows: &[token_window::ReserveWindow<'_>],
     estimated: u64,
 ) -> Result<Admission, AppError> {

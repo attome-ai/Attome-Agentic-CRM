@@ -63,7 +63,7 @@ async fn pool() -> Option<DbPool> {
     Some(attome_testkit::connect(&attome_testkit::migrated_db_url()?, 3).await)
 }
 
-async fn redis_pool() -> RedisPool {
+async fn redis_pool() -> attome_cache::Store {
     let host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".into());
     let port: u16 = std::env::var("TEST_REDIS_PORT")
         .unwrap_or_else(|_| "6379".into())
@@ -77,7 +77,7 @@ async fn redis_pool() -> RedisPool {
     pool.wait_for_connect()
         .await
         .expect("connect to local test Redis/Dragonfly");
-    pool
+    attome_cache::Store::Redis(pool)
 }
 
 /// P-key-rotation-and-jwt (a): the MFA/JWT secrets are `KeyRing`s now, not

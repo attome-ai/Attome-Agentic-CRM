@@ -35,7 +35,6 @@ use attome_server::AppState;
 use attome_testkit::point_config_at;
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
-use fred::prelude::*;
 use tower::ServiceExt;
 use uuid::Uuid;
 
@@ -207,12 +206,10 @@ async fn prime_discovery_cache(state: &AppState) {
     );
     state
         .redis
-        .set::<(), _, _>(
-            format!("oidc:discovery:{PROVIDER_KEY}"),
-            doc,
-            Some(Expiration::EX(120)),
-            None,
-            false,
+        .set(
+            &format!("oidc:discovery:{PROVIDER_KEY}"),
+            &(doc).to_string(),
+            Some(std::time::Duration::from_secs(120)),
         )
         .await
         .expect("prime oidc discovery cache");

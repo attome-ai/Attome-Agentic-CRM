@@ -86,7 +86,14 @@ async fn issue(db: &DbPool, user_id: Uuid, context: &AuthContext) -> IssuedRefre
 }
 
 async fn try_rotate(db: &DbPool, bearer: &str) -> Result<RedeemedRefresh, AppError> {
-    refresh::redeem_session(db, &unconnected_redis(), bearer, lifetimes(), &ring()).await
+    refresh::redeem_session(
+        db,
+        &attome_cache::Store::Redis(unconnected_redis()),
+        bearer,
+        lifetimes(),
+        &ring(),
+    )
+    .await
 }
 
 async fn rotate(db: &DbPool, bearer: &str) -> RedeemedRefresh {

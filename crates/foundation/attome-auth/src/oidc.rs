@@ -21,7 +21,7 @@
 
 use std::time::Duration;
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_config::OidcProviderConfig;
 use attome_types::AppError;
 use fred::prelude::*;
@@ -248,7 +248,25 @@ return value
 /// Reads and invalidates the single-use state in one atomic step. A Redis
 /// error or timeout is an `Err`, which `complete_login` turns into a
 /// rejection before the token endpoint is ever contacted.
-async fn consume_state(redis: &RedisPool, state_id: &str) -> Result<Option<String>, AppError> {
+async fn consume_state(redis: &Store, state_id: &str) -> Result<Option<String>, AppError> {
+    let redis = match redis {
+        Store::Redis(pool) => pool,
+        // The in-process form of CONSUME_STATE_SCRIPT: read and delete under
+        // one lock, so a state can be redeemed once.
+        Store::Memory(memory) => {
+            return memory
+                .transaction(|ks| {
+                    let value = ks.get_str(&state_key(state_id))?;
+                    if value.is_some() {
+                        ks.del(&state_key(state_id));
+                    }
+                    Ok(value)
+                })
+                .map_err(|_: attome_cache::memory::WrongType| {
+                    AppError::internal("oidc state key holds a non-string value")
+                });
+        }
+    };
     tokio::time::timeout(
         REDIS_TIMEOUT,
         redis.eval::<Option<String>, _, _, _>(
@@ -287,13 +305,12 @@ fn generate_nonce() -> String {
 }
 
 async fn fetch_discovery(
-    redis: &RedisPool,
+    redis: &Store,
     provider_key: &str,
     issuer: &str,
 ) -> Result<DiscoveryDocument, AppError> {
     let cache_key = discovery_key(provider_key);
-    if let Ok(Ok(Some(cached))) =
-        tokio::time::timeout(REDIS_TIMEOUT, redis.get::<Option<String>, _>(&cache_key)).await
+    if let Ok(Ok(Some(cached))) = tokio::time::timeout(REDIS_TIMEOUT, redis.get(&cache_key)).await
         && let Ok(doc) = serde_json::from_str::<DiscoveryDocument>(&cached)
     {
         validate_discovery(&doc, issuer)?;
@@ -308,12 +325,10 @@ async fn fetch_discovery(
 
     let _ = tokio::time::timeout(
         REDIS_TIMEOUT,
-        redis.set::<(), _, _>(
+        redis.set(
             &cache_key,
             &body,
-            Some(Expiration::EX(DISCOVERY_CACHE_TTL_SECS)),
-            None,
-            false,
+            Some(Duration::from_secs(DISCOVERY_CACHE_TTL_SECS as u64)),
         ),
     )
     .await;
@@ -326,15 +341,12 @@ async fn fetch_discovery(
 /// no fallback that lets a token through unverified. The `bool` is `true`
 /// when the set came from the cache, which may predate a key rotation.
 async fn fetch_jwks(
-    redis: &RedisPool,
+    redis: &Store,
     provider_key: &str,
     jwks_uri: &str,
 ) -> Result<(JwkSet, bool), AppError> {
-    if let Ok(Ok(Some(cached))) = tokio::time::timeout(
-        REDIS_TIMEOUT,
-        redis.get::<Option<String>, _>(jwks_key(provider_key)),
-    )
-    .await
+    if let Ok(Ok(Some(cached))) =
+        tokio::time::timeout(REDIS_TIMEOUT, redis.get(&jwks_key(provider_key))).await
         && let Ok(jwks) = serde_json::from_str::<JwkSet>(&cached)
     {
         return Ok((jwks, true));
@@ -347,7 +359,7 @@ async fn fetch_jwks(
 /// the document parses, so a malformed or unfetchable document leaves the
 /// cache as it was.
 async fn fetch_and_cache_jwks(
-    redis: &RedisPool,
+    redis: &Store,
     provider_key: &str,
     jwks_uri: &str,
 ) -> Result<JwkSet, AppError> {
@@ -357,12 +369,10 @@ async fn fetch_and_cache_jwks(
 
     let _ = tokio::time::timeout(
         REDIS_TIMEOUT,
-        redis.set::<(), _, _>(
-            jwks_key(provider_key),
+        redis.set(
+            &jwks_key(provider_key),
             &body,
-            Some(Expiration::EX(JWKS_CACHE_TTL_SECS)),
-            None,
-            false,
+            Some(Duration::from_secs(JWKS_CACHE_TTL_SECS as u64)),
         ),
     )
     .await;
@@ -393,19 +403,17 @@ fn on_unknown_kid(served_from_cache: bool, won_refetch_gate: bool) -> UnknownKid
 /// `SET NX EX` on the provider's refetch gate: `true` only when this caller
 /// set it. A Redis error or timeout counts as losing, so an outage can never
 /// turn unknown-`kid` tokens into unbounded upstream fetches.
-async fn try_acquire_refetch_gate(redis: &RedisPool, provider_key: &str) -> bool {
+async fn try_acquire_refetch_gate(redis: &Store, provider_key: &str) -> bool {
     let acquired = tokio::time::timeout(
         REDIS_TIMEOUT,
-        redis.set::<Option<String>, _, _>(
-            jwks_refetch_gate_key(provider_key),
+        redis.set_nx(
+            &jwks_refetch_gate_key(provider_key),
             "1",
-            Some(Expiration::EX(JWKS_REFETCH_GATE_SECS)),
-            Some(SetOptions::NX),
-            false,
+            Some(Duration::from_secs(JWKS_REFETCH_GATE_SECS as u64)),
         ),
     )
     .await;
-    matches!(acquired, Ok(Ok(Some(_))))
+    matches!(acquired, Ok(Ok(true)))
 }
 
 /// The provider's signing key for `kid` (attome-auth hardening 1.7).
@@ -422,7 +430,7 @@ async fn try_acquire_refetch_gate(redis: &RedisPool, provider_key: &str) -> bool
 /// Public so the refetch bound can be tested against a real Redis from
 /// `tests/`; `verify_id_token` is its only production caller.
 pub async fn resolve_signing_key(
-    redis: &RedisPool,
+    redis: &Store,
     provider_key: &str,
     jwks_uri: &str,
     kid: &str,
@@ -524,8 +532,8 @@ async fn http_get_text(url: &str, max_bytes: usize) -> Result<String, AppError> 
 /// (P-federation-linking-policy §4.3(a)) — the caller must have already
 /// authenticated `user_id` via a live session before calling this with `Some`.
 pub async fn start_login(
-    state_redis: &RedisPool,
-    cache_redis: &RedisPool,
+    state_redis: &Store,
+    cache_redis: &Store,
     provider: &OidcProviderConfig,
     provider_key: &str,
     redirect_uri: &str,
@@ -550,8 +558,8 @@ pub async fn start_login(
 /// so `step_up::complete_federated_step_up` accepts nothing but the validated
 /// ID token's own `auth_time`.
 pub async fn start_step_up_login(
-    state_redis: &RedisPool,
-    cache_redis: &RedisPool,
+    state_redis: &Store,
+    cache_redis: &Store,
     provider: &OidcProviderConfig,
     provider_key: &str,
     redirect_uri: &str,
@@ -579,8 +587,8 @@ fn step_up_params(step_up: Option<&crate::step_up::FederatedStepUp>) -> String {
 }
 
 async fn start_authorization(
-    state_redis: &RedisPool,
-    cache_redis: &RedisPool,
+    state_redis: &Store,
+    cache_redis: &Store,
     provider: &OidcProviderConfig,
     provider_key: &str,
     redirect_uri: &str,
@@ -603,17 +611,14 @@ async fn start_authorization(
 
     tokio::time::timeout(
         REDIS_TIMEOUT,
-        state_redis.set::<(), _, _>(
-            state_key(&state_id),
-            state_json,
-            Some(Expiration::EX(STATE_TTL_SECS)),
-            Some(SetOptions::NX),
-            false,
+        state_redis.set_nx(
+            &state_key(&state_id),
+            &state_json,
+            Some(Duration::from_secs(STATE_TTL_SECS as u64)),
         ),
     )
     .await
-    .map_err(|_| AppError::internal("oidc state write timed out"))?
-    .map_err(AppError::internal)?;
+    .map_err(|_| AppError::internal("oidc state write timed out"))??;
 
     let discovery = fetch_discovery(cache_redis, provider_key, &provider.issuer).await?;
 
@@ -709,8 +714,8 @@ pub fn bind_to_browser(
 ///
 /// It consumes the single-use state unconditionally once it is reached.
 pub async fn complete_login(
-    state_redis: &RedisPool,
-    cache_redis: &RedisPool,
+    state_redis: &Store,
+    cache_redis: &Store,
     provider: &OidcProviderConfig,
     provider_key: &str,
     code: &str,
@@ -775,7 +780,7 @@ pub async fn complete_login(
 }
 
 async fn verify_id_token(
-    redis: &RedisPool,
+    redis: &Store,
     provider: &OidcProviderConfig,
     provider_key: &str,
     id_token: &str,
@@ -805,7 +810,7 @@ async fn verify_id_token(
 /// itself by consuming a single-use marker per credential on the coordination
 /// pool, failing closed. Never call this from a path that skips that marker.
 pub(crate) async fn verify_id_token_without_nonce(
-    redis: &RedisPool,
+    redis: &Store,
     provider: &OidcProviderConfig,
     provider_key: &str,
     id_token: &str,
@@ -814,7 +819,7 @@ pub(crate) async fn verify_id_token_without_nonce(
 }
 
 async fn verify_id_token_inner(
-    redis: &RedisPool,
+    redis: &Store,
     provider: &OidcProviderConfig,
     provider_key: &str,
     id_token: &str,

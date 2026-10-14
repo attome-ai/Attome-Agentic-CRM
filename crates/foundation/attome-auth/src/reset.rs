@@ -19,7 +19,7 @@
 //! invalidate the epoch cache. API keys and MFA enrollment are untouched, and
 //! the caller revokes nothing itself.
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_db::DbPool;
 use attome_types::AppError;
 use chrono::{Duration as ChronoDuration, Utc};
@@ -156,7 +156,7 @@ pub async fn request_in_tx(
 /// `Validation` for a policy failure; `Conflict` for an already-used token.
 pub async fn confirm(
     db: &DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     presented: &str,
     new_password: &str,
     ring: &PepperRing,
@@ -181,7 +181,7 @@ pub async fn confirm(
 /// account without trusting an unverified token (audit plan 3.4).
 pub async fn confirm_with_subject(
     db: &DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     presented: &str,
     new_password: &str,
     ring: &PepperRing,
@@ -195,7 +195,7 @@ pub async fn confirm_with_subject(
 /// the new password or neither does (D-062). A refused reset does not run it.
 pub async fn confirm_with_subject_hook(
     db: &DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     presented: &str,
     new_password: &str,
     ring: &PepperRing,
@@ -208,7 +208,7 @@ pub async fn confirm_with_subject_hook(
 
 async fn confirm_inner(
     db: &DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     presented: &str,
     new_password: &str,
     ring: &PepperRing,
@@ -359,9 +359,9 @@ mod tests {
     /// A Redis client built but never connected — valid only for the
     /// early-return parsing paths below, which return before `confirm` ever
     /// reaches its `epoch::invalidate_cache` call.
-    fn unconnected_redis() -> attome_cache::RedisPool {
+    fn unconnected_redis() -> attome_cache::Store {
         let config = RedisConfig::from_url("redis://127.0.0.1:1/0").unwrap();
-        Builder::from_config(config).build_pool(1).unwrap()
+        attome_cache::Store::Redis(Builder::from_config(config).build_pool(1).unwrap())
     }
 
     /// Both parsing tests return before the ring is consulted.

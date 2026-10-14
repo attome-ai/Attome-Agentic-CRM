@@ -1,12 +1,13 @@
 use attome_types::AppError;
 use chrono::Utc;
 use fred::interfaces::LuaInterface;
-use fred::prelude::*;
 use std::borrow::Cow;
 use std::sync::OnceLock;
 use uuid::Uuid;
 
+use crate::memory::Keyspace;
 use crate::ops::{self, Primitive};
+use crate::store::Store;
 // P1.15 §4(d): a security control (rate limiting) must fail closed and fast,
 // never hang on a slow/unreachable Redis (guidelines §10). BCA-13 moved the
 // bound itself into `crate::timeouts`, where every module shares one value.
@@ -147,16 +148,22 @@ return {admitted, count, oldest[2] or ARGV[1]}
 /// counter identifier, e.g. `"base:rl:user:{uuid}:credential"`, never a
 /// credential itself) — so a future recurrence has an immediate log
 /// correlation point instead of requiring a blind re-reproduction attempt.
-pub async fn check(
-    redis: &RedisPool,
-    key: &str,
-    limit_rpm: i32,
-) -> Result<RateLimitOutcome, AppError> {
+pub async fn check(store: &Store, key: &str, limit_rpm: i32) -> Result<RateLimitOutcome, AppError> {
     let key = &*namespaced(key);
     let now_ms = Utc::now().timestamp_millis();
     let window_start_ms = now_ms - WINDOW_MS;
     let member = format!("{now_ms}:{}", Uuid::now_v7());
     let attempt_started = std::time::Instant::now();
+
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            let (admitted, count, oldest) = memory.transaction(|ks| {
+                window_step(ks, key, now_ms, window_start_ms, limit_rpm, &member)
+            })?;
+            return Ok(outcome(admitted, count, oldest, limit_rpm, now_ms));
+        }
+    };
 
     let attempt = tokio::time::timeout(
         REQUEST_PATH,
@@ -195,19 +202,62 @@ pub async fn check(
         ))
     })? as i64;
 
-    let allowed = admitted == 1;
-    let remaining = (limit_rpm as i64 - count).max(0) as u32;
+    Ok(outcome(
+        admitted == 1,
+        count,
+        oldest_score,
+        limit_rpm,
+        now_ms,
+    ))
+}
+
+/// The in-process form of [`RATE_LIMIT_SCRIPT`]: evict, count, record when
+/// under the limit, all while the store is locked. Returns
+/// `(admitted, count, oldest_score_ms)`.
+fn window_step(
+    ks: &mut Keyspace,
+    key: &str,
+    now_ms: i64,
+    window_start_ms: i64,
+    limit_rpm: i32,
+    member: &str,
+) -> Result<(bool, i64, i64), AppError> {
+    let wrong_type = |_| AppError::internal("rate-limit key holds a non-window value");
+    let zset = ks.zset(key).map_err(wrong_type)?;
+    zset.remove_range_by_score(0.0, window_start_ms as f64);
+    let mut count = zset.len() as i64;
+    let admitted = count < i64::from(limit_rpm);
+    if admitted {
+        zset.add(now_ms as f64, member);
+        count += 1;
+    }
+    let oldest = zset.first().map_or(now_ms, |(score, _)| score as i64);
+    if admitted {
+        ks.expire(key, std::time::Duration::from_millis(61_000));
+    }
+    Ok((admitted, count, oldest))
+}
+
+/// Builds the caller-facing outcome from one atomic read, identically for
+/// both backends.
+fn outcome(
+    admitted: bool,
+    count: i64,
+    oldest_score: i64,
+    limit_rpm: i32,
+    now_ms: i64,
+) -> RateLimitOutcome {
+    let remaining = (i64::from(limit_rpm) - count).max(0) as u32;
     let reset_ms = (oldest_score + WINDOW_MS - now_ms).max(0);
     let retry_after_secs = ((reset_ms as f64) / 1000.0).ceil().max(1.0) as u64;
     let reset_unix = (now_ms + reset_ms) / 1000;
-
-    Ok(RateLimitOutcome {
-        allowed,
+    RateLimitOutcome {
+        allowed: admitted,
         limit: limit_rpm.max(0) as u32,
         remaining,
         retry_after_secs,
         reset_unix,
-    })
+    }
 }
 
 /// The per-account throttle key for `subject` (a user id, or a hash of a
@@ -223,6 +273,22 @@ pub fn account_key(subject: &str, purpose: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn memory_window_admits_up_to_the_limit_then_refuses() {
+        let store = Store::memory();
+        for n in 1..=3 {
+            let out = check(&store, "t:rl:a", 3).await.unwrap();
+            assert!(out.allowed, "request {n} is under the limit");
+            assert_eq!(out.remaining, 3 - n);
+        }
+        let refused = check(&store, "t:rl:a", 3).await.unwrap();
+        assert!(!refused.allowed);
+        assert_eq!(refused.remaining, 0);
+        assert!(refused.retry_after_secs >= 1);
+        // Another key has its own window.
+        assert!(check(&store, "t:rl:b", 3).await.unwrap().allowed);
+    }
 
     #[test]
     fn account_key_keeps_the_existing_bucket_shape() {

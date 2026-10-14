@@ -176,7 +176,7 @@ async fn a_pool_and_a_subscriber_recover_after_the_store_restarts() {
 
     // (b) A request-path primitive works again.
     let key = format!("test:reconnect:rl:{}", Uuid::now_v7());
-    let outcome = rate_limit::check(&pool, &key, 10)
+    let outcome = rate_limit::check(&attome_cache::Store::Redis(pool.clone()), &key, 10)
         .await
         .expect("(b) rate_limit::check must succeed after the reconnect");
     assert!(outcome.allowed);

@@ -79,7 +79,20 @@ pub struct PersistenceStatus {
 /// that refuses `CONFIG` (ACL-restricted, or a managed provider that hides it)
 /// should raise the persistence alarm for a human to confirm, not blind the
 /// whole metrics tick by erroring out of the `INFO` result too.
-pub async fn probe(redis: &RedisPool) -> Result<PersistenceStatus, AppError> {
+pub async fn probe(store: &crate::store::Store) -> Result<PersistenceStatus, AppError> {
+    // The in-process store has no snapshot policy to report, and its loss on
+    // restart is by design (caches, windows and nonces are all short-lived), so
+    // the "running purely in memory" alarm does not apply to it.
+    let redis = match store {
+        crate::store::Store::Redis(pool) => pool,
+        crate::store::Store::Memory(_) => {
+            return Ok(PersistenceStatus {
+                policy_configured: true,
+                changes_since_last_save: None,
+                last_success_save: None,
+            });
+        }
+    };
     let attempt = tokio::time::timeout(BACKGROUND, redis.info(Some(InfoKind::Persistence))).await;
     ops::record_op(Primitive::Persistence, &attempt);
     let raw: String = attempt
@@ -203,7 +216,12 @@ impl MemoryStatus {
 /// Reads `INFO memory` and reports [`MemoryStatus`]. Both supported servers
 /// answer with the same two field names, so — like [`probe`] — there is no
 /// server-type detection to keep in sync with a version matrix.
-pub async fn memory_probe(redis: &RedisPool) -> Result<MemoryStatus, AppError> {
+pub async fn memory_probe(store: &crate::store::Store) -> Result<MemoryStatus, AppError> {
+    let redis = match store {
+        crate::store::Store::Redis(pool) => pool,
+        // No separate server process: nothing to report or alarm on.
+        crate::store::Store::Memory(_) => return Ok(MemoryStatus::default()),
+    };
     let attempt = tokio::time::timeout(BACKGROUND, redis.info(Some(InfoKind::Memory))).await;
     ops::record_op(Primitive::Persistence, &attempt);
     let raw: String = attempt

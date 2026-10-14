@@ -578,14 +578,13 @@ async fn change_log_rows(state: &EngineState) -> i64 {
 }
 
 async fn meta_version(state: &EngineState) -> i64 {
-    use fred::interfaces::KeysInterface;
-    let v: Option<i64> = state
+    let v: Option<String> = state
         .base
         .redis
         .get("meta_version")
         .await
         .expect("GET meta_version");
-    v.unwrap_or(0)
+    v.and_then(|raw| raw.parse().ok()).unwrap_or(0)
 }
 
 async fn attribute_state(state: &EngineState, entity: &str, field: &str) -> Option<(bool, bool)> {

@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use attome_auth::session::SessionClaims;
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_types::AppError;
 use axum::{
     body::Body,
@@ -11,7 +11,6 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use bytes::{Bytes, BytesMut};
-use fred::prelude::*;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -234,24 +233,18 @@ trait IdempotencyStore {
     async fn delete(&self, key: &str) -> Result<(), String>;
 }
 
-struct RedisStore<'a>(&'a RedisPool);
+struct RedisStore<'a>(&'a Store);
 
 impl IdempotencyStore for RedisStore<'_> {
     async fn acquire(&self, key: &str, value: String) -> Result<bool, String> {
-        let created: Option<String> = tokio::time::timeout(
+        tokio::time::timeout(
             OP_TIMEOUT,
-            self.0.set(
-                key,
-                value,
-                Some(Expiration::EX(TTL_SECS)),
-                Some(SetOptions::NX),
-                false,
-            ),
+            self.0
+                .set_nx(key, &value, Some(Duration::from_secs(TTL_SECS as u64))),
         )
         .await
         .map_err(|_| "redis idempotency acquire timed out".to_owned())?
-        .map_err(|e| format!("redis idempotency acquire failed: {e}"))?;
-        Ok(created.is_some())
+        .map_err(|e| format!("redis idempotency acquire failed: {e}"))
     }
 
     async fn get(&self, key: &str) -> Result<Option<String>, String> {
@@ -264,22 +257,16 @@ impl IdempotencyStore for RedisStore<'_> {
     async fn put(&self, key: &str, value: String) -> Result<(), String> {
         tokio::time::timeout(
             OP_TIMEOUT,
-            self.0.set::<Option<String>, _, _>(
-                key,
-                value,
-                Some(Expiration::EX(TTL_SECS)),
-                None,
-                false,
-            ),
+            self.0
+                .set(key, &value, Some(Duration::from_secs(TTL_SECS as u64))),
         )
         .await
         .map_err(|_| "redis idempotency write timed out".to_owned())?
-        .map(|_| ())
         .map_err(|e| format!("redis idempotency write failed: {e}"))
     }
 
     async fn delete(&self, key: &str) -> Result<(), String> {
-        tokio::time::timeout(OP_TIMEOUT, self.0.del::<i64, _>(key))
+        tokio::time::timeout(OP_TIMEOUT, self.0.del(key))
             .await
             .map_err(|_| "redis idempotency delete timed out".to_owned())?
             .map(|_| ())

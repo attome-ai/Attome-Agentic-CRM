@@ -44,7 +44,6 @@ use attome_types::ReauthRequiredResponse;
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
 use chrono::{DateTime, Utc};
-use fred::prelude::*;
 use totp_rs::{Algorithm, Builder, Secret, Totp};
 use tower::ServiceExt;
 use uuid::Uuid;
@@ -219,12 +218,10 @@ async fn test_app() -> Option<(axum::Router, AppState)> {
     );
     base_state
         .redis
-        .set::<(), _, _>(
-            format!("oidc:discovery:{PROVIDER_KEY}"),
-            doc,
-            Some(Expiration::EX(600)),
-            None,
-            false,
+        .set(
+            &format!("oidc:discovery:{PROVIDER_KEY}"),
+            &(doc).to_string(),
+            Some(std::time::Duration::from_secs(600)),
         )
         .await
         .expect("prime oidc discovery cache");

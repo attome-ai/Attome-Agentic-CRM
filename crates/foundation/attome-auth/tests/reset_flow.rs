@@ -100,7 +100,7 @@ async fn full_round_trip_changes_the_password_and_the_token_is_single_use() {
 
     let confirmed_user_id = reset::confirm(
         &db,
-        &unconnected_redis(),
+        &attome_cache::Store::Redis(unconnected_redis()),
         &issued.bearer,
         "new-password-456",
         &test_ring(),
@@ -125,7 +125,7 @@ async fn full_round_trip_changes_the_password_and_the_token_is_single_use() {
     // Single-use: the same bearer must not work a second time.
     let second_attempt = reset::confirm(
         &db,
-        &unconnected_redis(),
+        &attome_cache::Store::Redis(unconnected_redis()),
         &issued.bearer,
         "yet-another-password",
         &test_ring(),
@@ -171,7 +171,7 @@ async fn confirm_rejects_an_expired_token() {
 
     let result = reset::confirm(
         &db,
-        &unconnected_redis(),
+        &attome_cache::Store::Redis(unconnected_redis()),
         &issued.bearer,
         "new-password",
         &test_ring(),
@@ -194,7 +194,7 @@ async fn confirm_rejects_a_wrong_secret_for_a_real_public_id() {
 
     let result = reset::confirm(
         &db,
-        &unconnected_redis(),
+        &attome_cache::Store::Redis(unconnected_redis()),
         &tampered,
         "new-password",
         &test_ring(),
@@ -218,7 +218,7 @@ async fn confirm_rejects_a_weak_new_password_without_consuming_the_token() {
 
     let result = reset::confirm(
         &db,
-        &unconnected_redis(),
+        &attome_cache::Store::Redis(unconnected_redis()),
         &issued.bearer,
         "too-short",
         &test_ring(),
@@ -236,7 +236,7 @@ async fn confirm_rejects_a_weak_new_password_without_consuming_the_token() {
 
     let retry = reset::confirm(
         &db,
-        &unconnected_redis(),
+        &attome_cache::Store::Redis(unconnected_redis()),
         &issued.bearer,
         "long-enough-password",
         &test_ring(),
@@ -291,7 +291,7 @@ async fn new_reset_tokens_are_hmac_and_an_argon2_token_is_refused() {
 
     let refused = reset::confirm(
         &db,
-        &unconnected_redis(),
+        &attome_cache::Store::Redis(unconnected_redis()),
         &format!("{legacy_public_id}.{legacy_secret}"),
         "brand-new-password-789",
         &test_ring(),
@@ -342,7 +342,14 @@ async fn request_finds_an_account_through_a_differently_cased_email() {
 const OLD_PASSWORD: &str = "old-password-123";
 
 async fn confirm_with(db: &DbPool, bearer: &str, new_password: &str) -> Result<Uuid, AppError> {
-    reset::confirm(db, &unconnected_redis(), bearer, new_password, &test_ring()).await
+    reset::confirm(
+        db,
+        &attome_cache::Store::Redis(unconnected_redis()),
+        bearer,
+        new_password,
+        &test_ring(),
+    )
+    .await
 }
 
 async fn issue_reset(db: &DbPool, email: &str) -> String {

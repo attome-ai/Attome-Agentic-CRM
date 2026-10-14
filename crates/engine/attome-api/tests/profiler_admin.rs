@@ -59,7 +59,6 @@ use attome_testkit::skip_if_no_db;
 use std::time::Duration;
 
 use attome_api::EngineSystem;
-use attome_cache::RedisPool;
 use attome_config::{AppConfig, KeyRing};
 use attome_core::EngineState;
 use attome_profiler::ProbeRecord;
@@ -340,7 +339,9 @@ fn reset_request(cookie: &str) -> Request<Body> {
 /// of which test wrote it, so tests asserting an exact or empty result set need
 /// a clean slate rather than assuming no other test (or prior failed run
 /// against the same throwaway Redis) left data behind.
-async fn clear_profiler_keys(redis: &RedisPool) {
+async fn clear_profiler_keys(store: &attome_cache::Store) {
+    // Profiler statistics live in Redis; the in-process store holds none.
+    let Ok(redis) = store.redis() else { return };
     let mut keys = Vec::new();
     for pattern in ["attome-profiler:*", "profiler:*"] {
         let mut stream = redis.next().scan(pattern, Some(200u32), None);

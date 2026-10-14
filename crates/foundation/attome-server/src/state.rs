@@ -1,7 +1,7 @@
 use arc_swap::ArcSwapOption;
 use attome_auth::PepperRing;
 use attome_cache::sticky_primary::PinCheck;
-use attome_cache::{MetadataCache, RedisPool};
+use attome_cache::{MetadataCache, Store};
 use attome_config::AppConfig;
 use attome_db::DbPool;
 use attome_storage::StorageClient;
@@ -40,13 +40,13 @@ pub struct AppState {
     /// using `db`, not this — this pool exists so `db` can eventually be
     /// locked down to DML-only without breaking schema administration.
     pub db_migrator: DbPool,
-    pub redis: RedisPool,
+    pub redis: Store,
     /// P1.15 — coordination-role Redis pool (S2S nonce/rate-limit, general
     /// HTTP rate limiter, idempotency gate). A clone of `redis` unless the
     /// deployment configured `cache.roles.coordination`, in which case it's a
     /// dedicated pool against that endpoint — see
     /// `attome_cache::create_role_redis_pool`.
-    pub redis_coordination: RedisPool,
+    pub redis_coordination: Store,
     pub storage: StorageClient,
     /// Hot-read secrets — seeded at boot from whatever `config` already
     /// resolved (see `SecretRings::from_config`) and never refreshed after
@@ -176,8 +176,8 @@ impl AppState {
         db: DbPool,
         db_readonly: DbPool,
         db_migrator: DbPool,
-        redis: RedisPool,
-        redis_coordination: RedisPool,
+        redis: impl Into<Store>,
+        redis_coordination: impl Into<Store>,
         storage: StorageClient,
     ) -> Self {
         let secrets = MetadataCache::new(SecretRings::from_config(&config));
@@ -187,8 +187,8 @@ impl AppState {
             db_readonly,
             db_readonly_primary: None,
             db_migrator,
-            redis,
-            redis_coordination,
+            redis: redis.into(),
+            redis_coordination: redis_coordination.into(),
             storage,
             secrets,
             security: SecurityResolverHandle::default_deny(),

@@ -56,7 +56,6 @@ use axum::{
     extract::{Query, State},
     routing::get,
 };
-use fred::prelude::*;
 use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -127,37 +126,22 @@ fn redis_key(prefix_norm: &str) -> String {
 /// Reads cached raw candidates for a normalized prefix, degrading to `None`
 /// (meaning: go to the database) on any Redis error or timeout — a coherence
 /// cache per D-027, never a security control.
-async fn cache_get(
-    redis: &attome_cache::RedisPool,
-    prefix_norm: &str,
-) -> Option<Vec<RawCandidate>> {
-    let raw: Option<String> = tokio::time::timeout(
-        REDIS_OP_TIMEOUT,
-        redis.get::<Option<String>, _>(redis_key(prefix_norm)),
-    )
-    .await
-    .ok()?
-    .ok()?;
+async fn cache_get(redis: &attome_cache::Store, prefix_norm: &str) -> Option<Vec<RawCandidate>> {
+    let raw: Option<String> =
+        tokio::time::timeout(REDIS_OP_TIMEOUT, redis.get(&redis_key(prefix_norm)))
+            .await
+            .ok()?
+            .ok()?;
     raw.and_then(|json| serde_json::from_str(&json).ok())
 }
 
-async fn cache_put(
-    redis: &attome_cache::RedisPool,
-    prefix_norm: &str,
-    candidates: &[RawCandidate],
-) {
+async fn cache_put(redis: &attome_cache::Store, prefix_norm: &str, candidates: &[RawCandidate]) {
     let Ok(json) = serde_json::to_string(candidates) else {
         return;
     };
     let _ = tokio::time::timeout(
         REDIS_OP_TIMEOUT,
-        redis.set::<Option<String>, _, _>(
-            redis_key(prefix_norm),
-            json,
-            Some(Expiration::EX(SUGGEST_CACHE_TTL.as_secs() as i64)),
-            None,
-            false,
-        ),
+        redis.set(&redis_key(prefix_norm), &json, Some(SUGGEST_CACHE_TTL)),
     )
     .await;
 }

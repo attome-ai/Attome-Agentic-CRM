@@ -39,7 +39,7 @@ use uuid::Uuid;
 /// A pool against the local test Redis/Dragonfly. The state and cache roles
 /// are the same instance here — their split is what `BAU-9` is about, not
 /// this test.
-async fn redis_pool() -> RedisPool {
+async fn redis_pool() -> attome_cache::Store {
     let host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".into());
     let port: u16 = std::env::var("TEST_REDIS_PORT")
         .unwrap_or_else(|_| "6379".into())
@@ -52,13 +52,13 @@ async fn redis_pool() -> RedisPool {
     pool.wait_for_connect()
         .await
         .expect("connect to local test Redis/Dragonfly");
-    pool
+    attome_cache::Store::Redis(pool)
 }
 
 /// A pool that can never be reached: nothing listens on port 1.
-fn unreachable_pool() -> RedisPool {
+fn unreachable_pool() -> attome_cache::Store {
     let config = RedisConfig::from_url("redis://127.0.0.1:1/0").unwrap();
-    Builder::from_config(config).build_pool(1).unwrap()
+    attome_cache::Store::Redis(Builder::from_config(config).build_pool(1).unwrap())
 }
 
 /// A provider key no other test run shares, so state, discovery and cache keys
@@ -112,7 +112,7 @@ async fn counting_token_endpoint() -> (String, Arc<AtomicUsize>) {
     (url, exchanges)
 }
 
-async fn prime_discovery(redis: &RedisPool, provider_key: &str, token_endpoint: &str) {
+async fn prime_discovery(redis: &attome_cache::Store, provider_key: &str, token_endpoint: &str) {
     let doc = serde_json::json!({
         "authorization_endpoint": "http://127.0.0.1:1/authorize",
         "token_endpoint": token_endpoint,
@@ -120,19 +120,17 @@ async fn prime_discovery(redis: &RedisPool, provider_key: &str, token_endpoint: 
     })
     .to_string();
     redis
-        .set::<(), _, _>(
-            format!("oidc:discovery:{provider_key}"),
-            doc,
-            Some(Expiration::EX(300)),
-            None,
-            false,
+        .set(
+            &format!("oidc:discovery:{provider_key}"),
+            &(doc).to_string(),
+            Some(std::time::Duration::from_secs(300_u64)),
         )
         .await
         .expect("prime the discovery cache");
 }
 
 /// Writes one single-use state, exactly as `start_login` would.
-async fn seed_state(redis: &RedisPool, state_id: &str) {
+async fn seed_state(redis: &attome_cache::Store, state_id: &str) {
     let state = serde_json::json!({
         "code_verifier": "throwaway-verifier",
         "nonce": "throwaway-nonce",
@@ -140,12 +138,10 @@ async fn seed_state(redis: &RedisPool, state_id: &str) {
     })
     .to_string();
     redis
-        .set::<(), _, _>(
+        .set_nx(
             format!("oidc:state:{state_id}"),
             state,
-            Some(Expiration::EX(300)),
-            Some(SetOptions::NX),
-            false,
+            Some(std::time::Duration::from_secs(300)),
         )
         .await
         .expect("seed the single-use state");

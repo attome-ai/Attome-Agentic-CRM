@@ -258,7 +258,7 @@ fn mfa_ring() -> KeyRing {
     KeyRing::single("ab".repeat(32))
 }
 
-async fn redis_pool() -> RedisPool {
+async fn redis_pool() -> attome_cache::Store {
     let host = std::env::var("TEST_REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".into());
     let port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6379".into());
     let config = RedisConfig::from_url(&format!("redis://{host}:{port}")).expect("redis config");
@@ -267,17 +267,17 @@ async fn redis_pool() -> RedisPool {
     pool.wait_for_connect()
         .await
         .expect("connect to test Redis");
-    pool
+    attome_cache::Store::Redis(pool)
 }
 
-fn unreachable_redis() -> RedisPool {
+fn unreachable_redis() -> attome_cache::Store {
     let config = RedisConfig::from_url("redis://127.0.0.1:1/0").unwrap();
-    Builder::from_config(config).build_pool(1).unwrap()
+    attome_cache::Store::Redis(Builder::from_config(config).build_pool(1).unwrap())
 }
 
 struct Env {
     db: DbPool,
-    redis: RedisPool,
+    redis: attome_cache::Store,
 }
 
 async fn env() -> Option<Env> {

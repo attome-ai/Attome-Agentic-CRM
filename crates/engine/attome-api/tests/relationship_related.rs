@@ -54,7 +54,6 @@ use attome_testkit::skip_if_no_db;
 use axum::body::Body;
 use axum::body::to_bytes;
 use axum::http::{Request, StatusCode};
-use fred::interfaces::KeysInterface;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 use uuid::Uuid;
@@ -818,7 +817,7 @@ fn link_and_unlink_write_audit_change_feed_and_pin_the_writer() {
         // the pin, not leftover state from setup — same fix
         // `rw_pin.rs::http_create_pins_the_writer_to_a_real_postgres_lsn`
         // applies for the identical reason.
-        let _: () = redis
+        let _: i64 = redis
             .del(rw_pin_key(user_id))
             .await
             .expect("clearing the setup pin must not error");
@@ -900,7 +899,7 @@ fn link_and_unlink_write_audit_change_feed_and_pin_the_writer() {
         }
 
         // ── Unlink ──
-        let _: () = redis
+        let _: i64 = redis
             .del(rw_pin_key(user_id))
             .await
             .expect("clearing the link pin must not error");

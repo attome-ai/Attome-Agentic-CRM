@@ -46,7 +46,9 @@ pub mod persistence;
 pub mod rate_limit;
 pub mod redis_pool;
 pub mod sticky_primary;
+pub mod store;
 pub mod stream_buffer;
+pub mod subscriber;
 /// M101 slice 2 — the shared-state half of `attome_inference::budget`, which
 /// shipped with no way to learn what a caller had already consumed. See the
 /// module doc.
@@ -67,5 +69,7 @@ pub use redis_pool::{
     RedisPool, SUBSCRIBER_CLIENTS_CREATED, create_redis_pool, create_role_redis_pool,
     create_subscriber_client, redis_ping,
 };
+pub use store::Store;
 pub use stream_buffer::{AutoclaimResult, StreamEntry};
+pub use subscriber::{Doorbell, Subscriber};
 pub use token_window::{Refused, Reservation, ReserveWindow, Reserved};

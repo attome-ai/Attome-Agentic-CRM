@@ -42,10 +42,10 @@ use std::time::Duration;
 
 use attome_audit::AuditOperation;
 use attome_audit::security::{MandatoryCategory, SecurityAuditor, SecurityEvent};
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_types::AppError;
 use chrono::{DateTime, TimeZone, Utc};
-use fred::interfaces::{KeysInterface, LuaInterface, SetsInterface};
+use fred::interfaces::LuaInterface;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
@@ -166,7 +166,25 @@ end
 return n
 "#;
 
-async fn increment(redis: &RedisPool, key: &str, window: i64) -> Result<i64, String> {
+async fn increment(store: &Store, key: &str, window: i64) -> Result<i64, String> {
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        // The in-process form of RECORD_SCRIPT, one locked step.
+        Store::Memory(memory) => {
+            return memory
+                .transaction(|ks| -> Result<i64, attome_cache::memory::WrongType> {
+                    let ttl = Duration::from_secs(KEY_TTL_SECS as u64);
+                    let n = ks.incr_by(&counter_key(key, window), 1)?;
+                    if n == 1 {
+                        ks.expire(&counter_key(key, window), ttl);
+                        ks.sadd(&pending_key(window), key)?;
+                        ks.expire(&pending_key(window), ttl);
+                    }
+                    Ok(n)
+                })
+                .map_err(|e| e.to_string());
+        }
+    };
     tokio::time::timeout(
         OP_TIMEOUT,
         redis.eval::<i64, _, _, _>(
@@ -187,7 +205,7 @@ async fn increment(redis: &RedisPool, key: &str, window: i64) -> Result<i64, Str
 /// dropping evidence.
 pub async fn record_failure(
     auditor: &SecurityAuditor,
-    redis: &RedisPool,
+    redis: &Store,
     subject: Subject,
     ip: &str,
     now: i64,
@@ -236,7 +254,7 @@ pub struct SweepSummary {
 pub async fn sweep(
     auditor: &SecurityAuditor,
     db: &attome_db::DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     now: i64,
 ) -> Result<SweepSummary, AppError> {
     let current = window_start(now);
@@ -257,7 +275,7 @@ fn redis_err(what: &'static str) -> impl FnOnce(String) -> AppError {
 
 async fn bounded<T, F>(f: F) -> Result<T, String>
 where
-    F: std::future::Future<Output = Result<T, fred::error::RedisError>>,
+    F: std::future::Future<Output = Result<T, AppError>>,
 {
     tokio::time::timeout(OP_TIMEOUT, f)
         .await
@@ -270,7 +288,7 @@ where
 pub async fn sweep_window(
     auditor: &SecurityAuditor,
     db: &attome_db::DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     window: i64,
 ) -> Result<SweepSummary, AppError> {
     let pending = pending_key(window);
@@ -278,7 +296,9 @@ pub async fn sweep_window(
     // this window, and expires two windows after its last addition.
     let keys: Vec<String> = bounded(redis.smembers(&pending))
         .await
-        .map_err(redis_err("smembers"))?;
+        .map_err(redis_err("smembers"))?
+        .into_iter()
+        .collect();
     let mut summary = SweepSummary {
         keys_seen: keys.len(),
         summaries_written: 0,
@@ -287,7 +307,8 @@ pub async fn sweep_window(
         let counter = counter_key(&key, window);
         let n: Option<i64> = bounded(redis.get(&counter))
             .await
-            .map_err(redis_err("get"))?;
+            .map_err(redis_err("get"))?
+            .and_then(|raw| raw.parse().ok());
         if let (Some(n), Some((user_id, ip))) = (n, parse_key(&key))
             && n > 1
             && write_summary_once(auditor, db, user_id, &ip, window, n - 1).await?
@@ -297,10 +318,10 @@ pub async fn sweep_window(
         // Only after the summary committed (or was already there): a crash
         // before this line leaves the counter for the next pass, whose
         // existence check then skips the write.
-        bounded(redis.del::<i64, _>(&counter))
+        bounded(redis.del(&counter))
             .await
             .map_err(redis_err("del"))?;
-        bounded(redis.srem::<i64, _, _>(&pending, key))
+        bounded(redis.srem(&pending, &key))
             .await
             .map_err(redis_err("srem"))?;
     }

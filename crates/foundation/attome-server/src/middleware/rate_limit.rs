@@ -1,5 +1,5 @@
 use attome_auth::session::SessionClaims;
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_cache::rate_limit::RateLimitOutcome;
 use attome_types::AppError;
 use axum::{
@@ -177,7 +177,7 @@ pub fn mfa_account_key(user_id: Uuid) -> String {
 /// category middleware, which stamps its own per-IP numbers on the way out.
 /// `key` is a hash or a user id, never an email, so it is safe to log.
 pub async fn enforce_account_budget(
-    redis: &RedisPool,
+    redis: &Store,
     key: &str,
     limit_rpm: i32,
     route: &'static str,
@@ -415,7 +415,7 @@ mod tests {
         let config = RedisConfig::from_url("redis://127.0.0.1:1/0").unwrap();
         let pool = Builder::from_config(config).build_pool(1).unwrap();
         let result = enforce_account_budget(
-            &pool,
+            &attome_cache::Store::Redis(pool.clone()),
             &mfa_account_key(Uuid::nil()),
             MFA_ATTEMPTS_PER_ACCOUNT_RPM,
             "test",

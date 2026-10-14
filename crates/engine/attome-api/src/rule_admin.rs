@@ -45,7 +45,6 @@ use attome_rules::parse;
 use attome_security::SecurityContextExt;
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
-use fred::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::PgConnection;
@@ -2184,8 +2183,7 @@ pub(crate) async fn invalidate(state: &EngineState) {
         state
             .base
             .redis
-            .next()
-            .publish::<i64, _, _>(attome_core::RULE_VERSION_CHANNEL, "1"),
+            .publish(attome_core::RULE_VERSION_CHANNEL, "1"),
     )
     .await;
     match publish_result {

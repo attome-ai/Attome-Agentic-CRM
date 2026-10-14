@@ -12,7 +12,6 @@ use axum::extract::FromRef;
 // `.next().publish(...)` call below (`ClientPool::next` + `PubsubInterface`
 // aren't worth naming individually — fred's own convention is the prelude).
 use attome_modules::ModuleSet;
-use fred::prelude::*;
 use uuid::Uuid;
 
 use crate::audit_signing::AuditSigner;
@@ -342,10 +341,7 @@ impl EngineState {
 
         match tokio::time::timeout(
             FEATURE_FLAG_INVALIDATE_TIMEOUT,
-            self.base
-                .redis
-                .next()
-                .publish::<i64, _, _>(FEATURE_FLAG_VERSION_CHANNEL, "1"),
+            self.base.redis.publish(FEATURE_FLAG_VERSION_CHANNEL, "1"),
         )
         .await
         {
@@ -383,8 +379,7 @@ impl EngineState {
             AUDIT_USER_INVALIDATE_TIMEOUT,
             self.base
                 .redis
-                .next()
-                .publish::<i64, _, _>(AUDIT_USER_VERSION_CHANNEL, user_id.to_string()),
+                .publish(AUDIT_USER_VERSION_CHANNEL, &user_id.to_string()),
         )
         .await
         {

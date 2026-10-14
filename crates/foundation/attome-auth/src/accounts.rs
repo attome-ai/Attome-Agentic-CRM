@@ -7,7 +7,7 @@
 //! next to `SecurityContext`. This module only ever proves *who someone is*; it
 //! never decides what they're allowed to do.
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_config::KeyRing;
 use attome_db::DbPool;
 use attome_types::AppError;
@@ -352,7 +352,7 @@ pub enum LoginOutcome {
 #[allow(clippy::too_many_arguments)]
 pub async fn login(
     db: &DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     email: &str,
     password: &str,
     require_verified_email: bool,
@@ -530,31 +530,26 @@ fn google_credential_key(credential: &str) -> String {
 /// (`AppState.redis_coordination`), the same pool the OIDC `state`, the S2S
 /// nonce and the step-up challenges use.
 pub async fn consume_google_credential(
-    coordination_redis: &RedisPool,
+    coordination_redis: &Store,
     credential: &str,
     expires_at: chrono::DateTime<Utc>,
 ) -> Result<(), AppError> {
-    use fred::prelude::*;
-
     let ttl = (expires_at.timestamp() + GOOGLE_CREDENTIAL_EXP_LEEWAY_SECS - Utc::now().timestamp())
         .clamp(1, GOOGLE_CREDENTIAL_MARKER_MAX_TTL_SECS);
     let first = tokio::time::timeout(
         GOOGLE_CREDENTIAL_REDIS_TIMEOUT,
-        coordination_redis.set::<Option<String>, _, _>(
-            google_credential_key(credential),
+        coordination_redis.set_nx(
+            &google_credential_key(credential),
             "1",
-            Some(Expiration::EX(ttl)),
-            Some(SetOptions::NX),
-            false,
+            Some(std::time::Duration::from_secs(ttl as u64)),
         ),
     )
     .await
-    .map_err(|_| AppError::internal("google credential single-use marker write timed out"))?
-    .map_err(AppError::internal)?;
+    .map_err(|_| AppError::internal("google credential single-use marker write timed out"))??;
 
     match first {
-        Some(_) => Ok(()),
-        None => {
+        true => Ok(()),
+        false => {
             // No credential material in the log line: only the fact of a replay.
             tracing::warn!("a Google ID token was presented a second time; refusing");
             Err(AppError::Unauthorized)
@@ -592,8 +587,8 @@ pub async fn consume_google_credential(
 /// call `xrm_security::accounts::link_google_account` with the result to
 /// resolve/create the local account.
 pub async fn verify_google_id_token(
-    cache_redis: &RedisPool,
-    coordination_redis: &RedisPool,
+    cache_redis: &Store,
+    coordination_redis: &Store,
     google_client_id: &str,
     credential: &str,
 ) -> Result<GoogleIdentity, AppError> {
@@ -610,8 +605,8 @@ pub async fn verify_google_id_token(
 /// [`verify_google_id_token`] against `issuer`: verification, then the
 /// single-use marker.
 async fn verify_google_id_token_once_at(
-    cache_redis: &RedisPool,
-    coordination_redis: &RedisPool,
+    cache_redis: &Store,
+    coordination_redis: &Store,
     issuer: &str,
     google_client_id: &str,
     credential: &str,
@@ -633,7 +628,7 @@ async fn verify_google_id_token_once_at(
 /// from the issuer alone, and every transport error is stripped of its URL
 /// before `AppError::internal` logs it (BAU-6).
 async fn verify_google_id_token_at(
-    redis: &RedisPool,
+    redis: &Store,
     issuer: &str,
     google_client_id: &str,
     credential: &str,
@@ -743,11 +738,13 @@ mod tests {
     /// A pool that can never be reached. Discovery and JWKS are caches that
     /// degrade to a live fetch (D-027), so an unreachable cache *is* the
     /// cold-start path these tests want — and they need no live Redis.
-    fn unconnected_pool() -> RedisPool {
+    fn unconnected_pool() -> Store {
         let config = fred::prelude::RedisConfig::from_url("redis://127.0.0.1:1/0").unwrap();
-        fred::prelude::Builder::from_config(config)
-            .build_pool(1)
-            .unwrap()
+        attome_cache::Store::Redis(
+            fred::prelude::Builder::from_config(config)
+                .build_pool(1)
+                .unwrap(),
+        )
     }
 
     /// The one throwaway 2048-bit RSA key these tests sign with. Generated once

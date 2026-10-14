@@ -3,11 +3,36 @@
 
 use serde::Deserialize;
 
+/// Where the platform keeps its shared, short-lived state: rate-limit
+/// windows, replay nonces, revocation markers, caches and doorbells.
+/// `docs/solo-memory-backend.md` is the design.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CacheBackend {
+    /// Redis or Dragonfly (Standard and Cluster, and Solo if one is
+    /// configured). The default.
+    #[default]
+    Redis,
+    /// Process memory. For Solo: one server process, no Redis to install. A
+    /// restart clears it, as a Redis restart without persistence would; every
+    /// value in it is short-lived or reconstructable. It is not a cross-node
+    /// source of truth, so a multi-node deployment must not use it.
+    Memory,
+}
+
 #[derive(Clone, Deserialize)]
 pub struct CacheSection {
+    /// `redis` (the default) or `memory`. With `memory`, `host`, `port`,
+    /// `password` and `db` are not used and may be left at any value.
+    #[serde(default)]
+    pub backend: CacheBackend,
+    #[serde(default)]
     pub host: String,
+    #[serde(default)]
     pub port: u16,
+    #[serde(default)]
     pub password: String,
+    #[serde(default)]
     pub db: i64,
     /// Pool size — plausibly scales with hardware/load. Has a default so a
     /// deployment that hasn't tuned it can omit the key entirely.

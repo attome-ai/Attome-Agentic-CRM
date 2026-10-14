@@ -40,7 +40,6 @@ use attome_testkit::skip_if_no_db;
 use axum::body::Body;
 use axum::extract::ConnectInfo;
 use axum::http::{Request, StatusCode, header};
-use fred::interfaces::{KeysInterface, SetsInterface};
 use tower::ServiceExt;
 use uuid::Uuid;
 
@@ -401,15 +400,13 @@ async fn failed_logins_coalesce_per_window_and_the_sweep_writes_one_summary() {
     let _: () = state
         .redis_coordination
         .set(
-            failed_login::counter_key(&key, window),
-            4,
+            &failed_login::counter_key(&key, window),
+            &(4).to_string(),
             None,
-            None,
-            false,
         )
         .await
         .expect("replay the counter");
-    let _: i64 = state
+    let _: bool = state
         .redis_coordination
         .sadd(failed_login::pending_key(window), key.clone())
         .await
@@ -471,9 +468,15 @@ async fn with_redis_unavailable_every_failure_is_written() {
     let now = chrono::Utc::now().timestamp();
 
     for _ in 0..3 {
-        failed_login::record_failure(&auditor, &dead, subject, "203.0.113.4", now)
-            .await
-            .expect("an outage still records the failure");
+        failed_login::record_failure(
+            &auditor,
+            &attome_cache::Store::Redis(dead.clone()),
+            subject,
+            "203.0.113.4",
+            now,
+        )
+        .await
+        .expect("an outage still records the failure");
     }
 
     let rows = events(&state, FAILED_LOGIN, Some(user_id)).await;
@@ -514,7 +517,8 @@ async fn a_throttled_login_is_not_a_failed_login_event() {
         .redis_coordination
         .get(failed_login::counter_key(&key, window))
         .await
-        .expect("read counter");
+        .expect("read counter")
+        .map(|raw| raw.parse().expect("counter"));
     assert_eq!(counted, Some(10), "the 429 was not counted");
     assert_eq!(events(&state, FAILED_LOGIN, Some(user_id)).await.len(), 1);
 }

@@ -30,7 +30,6 @@ use attome_config::AppConfig;
 use attome_core::{STATE_MODEL_VERSION_CHANNEL, SnapshotSource, StateModelRegistry};
 use attome_db::DbPool;
 use attome_testkit::skip_if_no_db;
-use fred::interfaces::PubsubInterface;
 use sqlx::postgres::PgPoolOptions;
 
 async fn test_db() -> Option<DbPool> {
@@ -105,7 +104,10 @@ fn test_config() -> AppConfig {
         redis_port = std::env::var("TEST_REDIS_PORT").unwrap_or_else(|_| "6380".into()),
     );
 
-    attome_testkit::with_test_database(serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"), true)
+    attome_testkit::with_test_database(
+        serde_json::from_str(&json).expect("test_config JSON must deserialize into AppConfig"),
+        true,
+    )
 }
 
 async fn insert_state_model(db: &DbPool, entity_logicalname: &str) {
@@ -144,7 +146,11 @@ async fn a_write_with_no_doorbell_published_still_converges_by_the_next_catch_up
     let db = skip_if_no_db!(test_db().await);
     let config = test_config();
 
-    let subscriber = match attome_cache::create_subscriber_client(&config).await {
+    let redis = attome_cache::Store::from_config(&config).await;
+    let subscriber = match match redis {
+        Ok((store, _)) => attome_cache::Subscriber::connect(&store, &config).await,
+        Err(e) => Err(e),
+    } {
         Ok(c) => c,
         Err(e) => {
             eprintln!(
@@ -156,7 +162,6 @@ async fn a_write_with_no_doorbell_published_still_converges_by_the_next_catch_up
             return;
         }
     };
-    subscriber.manage_subscriptions();
     subscriber
         .subscribe(STATE_MODEL_VERSION_CHANNEL)
         .await

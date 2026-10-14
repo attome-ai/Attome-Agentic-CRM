@@ -31,7 +31,7 @@
 
 use std::time::Duration;
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_core::EngineState;
 use attome_security::SecurityContextExt;
 use attome_types::{AppError, ErrorResponse};
@@ -42,8 +42,6 @@ use axum::{
     http::{HeaderMap, StatusCode},
     routing::post,
 };
-use fred::interfaces::KeysInterface;
-use fred::types::{Expiration, SetOptions};
 use serde::Serialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -167,7 +165,7 @@ fn parse_timestamp(raw: &str) -> Option<i64> {
 /// distinct legitimate deliveries always differ in it, and a provider retry
 /// re-signs with a fresh timestamp.
 pub async fn admit(
-    redis: &RedisPool,
+    redis: &Store,
     system_id: Uuid,
     credential: &str,
     headers: &HeaderMap,
@@ -199,14 +197,12 @@ pub async fn admit(
     }
 
     let key = nonce_key(system_id, &sig);
-    let stored: Option<String> = tokio::time::timeout(
+    let stored = tokio::time::timeout(
         NONCE_TIMEOUT,
-        redis.set(
+        redis.set_nx(
             key.as_str(),
             "1",
-            Some(Expiration::EX(NONCE_TTL_SECS)),
-            Some(SetOptions::NX),
-            false,
+            Some(std::time::Duration::from_secs(NONCE_TTL_SECS as u64)),
         ),
     )
     .await
@@ -226,9 +222,8 @@ pub async fn admit(
             AppError::CapabilityUnavailable("redis"),
         )
     })?;
-    // `SET … NX` replies OK when it stored the key and nil when the key
-    // already existed.
-    if stored.is_none() {
+    // `SET … NX` stores the key, or finds it already there (a replay).
+    if !stored {
         return Err(reject(
             system_id,
             "replay",
@@ -242,9 +237,9 @@ pub async fn admit(
 /// failed, so the provider's retry of the same signed request is not refused
 /// as a replay of a call that never landed. Best-effort and bounded: a
 /// failure only means that retry gets a 409 until the TTL lapses.
-pub async fn release(redis: &RedisPool, admission: &Admission) {
+pub async fn release(redis: &Store, admission: &Admission) {
     let nonce_key = &admission.nonce_key;
-    match tokio::time::timeout(NONCE_TIMEOUT, redis.del::<i64, _>(nonce_key.as_str())).await {
+    match tokio::time::timeout(NONCE_TIMEOUT, redis.del(nonce_key.as_str())).await {
         Ok(Ok(_)) => {}
         Ok(Err(e)) => tracing::warn!(error = %e, "could not release webhook nonce"),
         Err(_) => tracing::warn!("releasing webhook nonce timed out"),
@@ -421,8 +416,6 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 mod tests {
     use super::*;
     use axum::http::HeaderValue;
-    use fred::interfaces::ClientLike;
-    use fred::types::RedisConfig;
 
     const CRED: &str = "top-secret";
     const NOW: i64 = 1_800_000_000;
@@ -458,11 +451,13 @@ mod tests {
     /// times out. A test that expects 401 against it proves the rejection
     /// happened before the store was touched; one that expects 503 proves
     /// the store outage fails closed.
-    fn dead_redis() -> RedisPool {
+    fn dead_redis() -> Store {
+        use fred::interfaces::ClientLike;
+        use fred::prelude::{RedisConfig, RedisPool};
         let config = RedisConfig::from_url("redis://127.0.0.1:1").unwrap();
         let pool = RedisPool::new(config, None, None, None, 1).unwrap();
         pool.connect();
-        pool
+        Store::Redis(pool)
     }
 
     async fn run(h: &HeaderMap, body: &[u8]) -> Result<Admission, AppError> {

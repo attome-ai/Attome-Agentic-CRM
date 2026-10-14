@@ -24,6 +24,7 @@ use fred::prelude::*;
 use uuid::Uuid;
 
 use crate::ops::{self, Primitive};
+use crate::store::Store;
 /// Tight bound so a Redis blip can't hang a request (guidelines §10). BCA-13
 /// moved the value into `crate::timeouts`, and the pin's *writes* are bounded
 /// now too — they were not before (BCA-F3), so a wedged connection could hold
@@ -70,11 +71,24 @@ pub enum PinCheck {
 /// one call). Best-effort: callers log a warning and continue on error
 /// rather than fail an otherwise-successful write over a caching concern.
 pub async fn pin_write_with_lsn(
-    redis: &RedisPool,
+    store: &Store,
     user_id: Uuid,
     lsn: &str,
     ttl_secs: u64,
 ) -> Result<(), AppError> {
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            memory.transaction(|ks| {
+                ks.set(
+                    &pin_key(user_id),
+                    &format!("lsn:{lsn}"),
+                    Some(std::time::Duration::from_secs(ttl_secs)),
+                );
+            });
+            return Ok(());
+        }
+    };
     let attempt = tokio::time::timeout(
         REQUEST_PATH,
         redis.set::<(), _, _>(
@@ -96,7 +110,20 @@ pub async fn pin_write_with_lsn(
 /// a Redis error or timeout is `PinCheck::RedisError`, treated as pinned by
 /// every caller — same posture `has_pin` always had, now expressed as an enum
 /// so a caller can also branch on the LSN once it *is* pinned.
-pub async fn check_pin(redis: &RedisPool, user_id: Uuid) -> PinCheck {
+pub async fn check_pin(store: &Store, user_id: Uuid) -> PinCheck {
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            return match memory.transaction(|ks| ks.get_str(&pin_key(user_id))) {
+                Ok(None) => PinCheck::None,
+                Ok(Some(value)) => match value.strip_prefix("lsn:") {
+                    Some(lsn) => PinCheck::Pinned(lsn.to_string()),
+                    None => PinCheck::Legacy,
+                },
+                Err(_) => PinCheck::RedisError,
+            };
+        }
+    };
     let attempt = tokio::time::timeout(
         REQUEST_PATH,
         redis.get::<Option<String>, _>(pin_key(user_id)),

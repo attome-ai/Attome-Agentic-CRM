@@ -51,9 +51,14 @@ async fn allows_requests_under_the_limit() {
 
     for _ in 0..5 {
         let nonce = Uuid::new_v4().to_string();
-        rate_limit::check_with_nonce(&pool, &client_id, &nonce, 10)
-            .await
-            .expect("under-limit request must be allowed");
+        rate_limit::check_with_nonce(
+            &attome_cache::Store::Redis(pool.clone()),
+            &client_id,
+            &nonce,
+            10,
+        )
+        .await
+        .expect("under-limit request must be allowed");
     }
 }
 
@@ -63,11 +68,22 @@ async fn rejects_a_replayed_nonce() {
     let client_id = format!("test-client-{}", Uuid::new_v4());
     let nonce = Uuid::new_v4().to_string();
 
-    rate_limit::check_with_nonce(&pool, &client_id, &nonce, 10)
-        .await
-        .expect("first use of the nonce must be allowed");
+    rate_limit::check_with_nonce(
+        &attome_cache::Store::Redis(pool.clone()),
+        &client_id,
+        &nonce,
+        10,
+    )
+    .await
+    .expect("first use of the nonce must be allowed");
 
-    let result = rate_limit::check_with_nonce(&pool, &client_id, &nonce, 10).await;
+    let result = rate_limit::check_with_nonce(
+        &attome_cache::Store::Redis(pool.clone()),
+        &client_id,
+        &nonce,
+        10,
+    )
+    .await;
     assert!(
         matches!(result, Err(AppError::Conflict(_))),
         "a replayed nonce must be rejected as a conflict, got {result:?}"
@@ -81,13 +97,24 @@ async fn rejects_once_the_limit_is_exceeded() {
 
     for _ in 0..3 {
         let nonce = Uuid::new_v4().to_string();
-        rate_limit::check_with_nonce(&pool, &client_id, &nonce, 3)
-            .await
-            .expect("requests up to the limit must be allowed");
+        rate_limit::check_with_nonce(
+            &attome_cache::Store::Redis(pool.clone()),
+            &client_id,
+            &nonce,
+            3,
+        )
+        .await
+        .expect("requests up to the limit must be allowed");
     }
 
     let nonce = Uuid::new_v4().to_string();
-    let result = rate_limit::check_with_nonce(&pool, &client_id, &nonce, 3).await;
+    let result = rate_limit::check_with_nonce(
+        &attome_cache::Store::Redis(pool.clone()),
+        &client_id,
+        &nonce,
+        3,
+    )
+    .await;
     assert!(
         matches!(
             result,
@@ -118,7 +145,13 @@ async fn concurrent_requests_in_the_same_millisecond_are_not_undercounted() {
         let client_id = client_id.clone();
         handles.push(tokio::spawn(async move {
             let nonce = Uuid::new_v4().to_string();
-            rate_limit::check_with_nonce(&pool, &client_id, &nonce, limit).await
+            rate_limit::check_with_nonce(
+                &attome_cache::Store::Redis(pool.clone()),
+                &client_id,
+                &nonce,
+                limit,
+            )
+            .await
         }));
     }
 
@@ -149,13 +182,24 @@ async fn the_window_expires_so_an_old_burst_does_not_permanently_block_the_clien
     let rl_key = format!("s2s:rl:{client_id}");
 
     let nonce_a = Uuid::new_v4().to_string();
-    rate_limit::check_with_nonce(&pool, &client_id, &nonce_a, 1)
-        .await
-        .expect("first request must be allowed");
+    rate_limit::check_with_nonce(
+        &attome_cache::Store::Redis(pool.clone()),
+        &client_id,
+        &nonce_a,
+        1,
+    )
+    .await
+    .expect("first request must be allowed");
 
     let nonce_b = Uuid::new_v4().to_string();
     assert!(matches!(
-        rate_limit::check_with_nonce(&pool, &client_id, &nonce_b, 1).await,
+        rate_limit::check_with_nonce(
+            &attome_cache::Store::Redis(pool.clone()),
+            &client_id,
+            &nonce_b,
+            1
+        )
+        .await,
         Err(AppError::TooManyRequests {
             retry_after_secs: None
         })
@@ -185,9 +229,14 @@ async fn a_used_nonce_outlives_the_whole_timestamp_window() {
     let nonce = Uuid::new_v4().to_string();
     let nonce_key = format!("s2s:nonce:{client_id}:{nonce}");
 
-    rate_limit::check_with_nonce(&pool, &client_id, &nonce, 10)
-        .await
-        .expect("first use of the nonce must be allowed");
+    rate_limit::check_with_nonce(
+        &attome_cache::Store::Redis(pool.clone()),
+        &client_id,
+        &nonce,
+        10,
+    )
+    .await
+    .expect("first use of the nonce must be allowed");
 
     let ttl: i64 = pool.ttl(&nonce_key).await.expect("read nonce ttl");
     let window = rate_limit::TIMESTAMP_WINDOW_SECS as i64;

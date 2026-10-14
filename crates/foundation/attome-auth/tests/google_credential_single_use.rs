@@ -61,20 +61,33 @@ async fn a_second_presentation_of_the_same_credential_is_refused() {
     let redis = attome_testkit::skip_if_no_redis!(redis_pool().await);
     let credential = unique_credential();
 
-    consume_google_credential(&redis, &credential, in_an_hour())
-        .await
-        .expect("the first presentation is accepted");
+    consume_google_credential(
+        &attome_cache::Store::Redis(redis.clone()),
+        &credential,
+        in_an_hour(),
+    )
+    .await
+    .expect("the first presentation is accepted");
 
-    let replay = consume_google_credential(&redis, &credential, in_an_hour()).await;
+    let replay = consume_google_credential(
+        &attome_cache::Store::Redis(redis.clone()),
+        &credential,
+        in_an_hour(),
+    )
+    .await;
     assert!(
         matches!(replay, Err(AppError::Unauthorized)),
         "a replayed credential must be refused, got {replay:?}"
     );
 
     // A different credential is unaffected.
-    consume_google_credential(&redis, &unique_credential(), in_an_hour())
-        .await
-        .expect("a different credential is its own first presentation");
+    consume_google_credential(
+        &attome_cache::Store::Redis(redis.clone()),
+        &unique_credential(),
+        in_an_hour(),
+    )
+    .await
+    .expect("a different credential is its own first presentation");
 }
 
 /// Exactly one of many concurrent presentations of one credential succeeds.
@@ -87,9 +100,13 @@ async fn concurrent_presentations_admit_exactly_one() {
         let redis = redis.clone();
         let credential = credential.clone();
         tokio::spawn(async move {
-            consume_google_credential(&redis, &credential, in_an_hour())
-                .await
-                .is_ok()
+            consume_google_credential(
+                &attome_cache::Store::Redis(redis.clone()),
+                &credential,
+                in_an_hour(),
+            )
+            .await
+            .is_ok()
         })
     });
     let mut admitted = 0;
@@ -109,7 +126,7 @@ async fn the_marker_expires_with_the_token() {
     let credential = unique_credential();
     let exp = chrono::Utc::now() + chrono::Duration::seconds(600);
 
-    consume_google_credential(&redis, &credential, exp)
+    consume_google_credential(&attome_cache::Store::Redis(redis.clone()), &credential, exp)
         .await
         .expect("first presentation");
 
@@ -126,7 +143,7 @@ async fn the_marker_expires_with_the_token() {
 
     let far = unique_credential();
     consume_google_credential(
-        &redis,
+        &attome_cache::Store::Redis(redis.clone()),
         &far,
         chrono::Utc::now() + chrono::Duration::days(30),
     )
@@ -143,8 +160,12 @@ async fn the_marker_expires_with_the_token() {
 /// Fail closed (D-027): an unreachable store refuses rather than admits.
 #[tokio::test]
 async fn an_unreachable_store_refuses() {
-    let result =
-        consume_google_credential(&unreachable_pool(), &unique_credential(), in_an_hour()).await;
+    let result = consume_google_credential(
+        &attome_cache::Store::Redis(unreachable_pool()),
+        &unique_credential(),
+        in_an_hour(),
+    )
+    .await;
     assert!(
         result.is_err(),
         "an unreachable single-use store must refuse"

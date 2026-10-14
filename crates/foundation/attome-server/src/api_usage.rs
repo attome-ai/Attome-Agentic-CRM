@@ -31,11 +31,11 @@
 //! so losing an unflushed window is an accepted tradeoff, same posture
 //! `apikey_touch`'s `last_used_at` staleness already accepts).
 
-use attome_cache::{RedisPool, write_coalesce};
+use attome_cache::{Store, write_coalesce};
 use attome_db::DbPool;
 use attome_types::AppError;
 use chrono::NaiveDate;
-use fred::interfaces::{KeysInterface, LuaInterface};
+use fred::interfaces::LuaInterface;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -134,7 +134,7 @@ fn decode_field(field: &str) -> Option<DecodedField> {
 /// the request over a telemetry write (same posture as `apikey_touch::
 /// record_touch`).
 pub async fn record(
-    redis: &RedisPool,
+    redis: &Store,
     day: NaiveDate,
     method: &str,
     route_template: &str,
@@ -150,7 +150,7 @@ pub async fn record(
 /// rather than replacing it. A staging hash left by a failed run is flushed
 /// before the pending hash is claimed (see the module doc). Returns how many
 /// distinct (day, method, route, identity) rows were flushed.
-pub async fn flush(db: &DbPool, redis: &RedisPool) -> Result<usize, AppError> {
+pub async fn flush(db: &DbPool, redis: &Store) -> Result<usize, AppError> {
     let mut rows = 0;
     // At most two claims: a leftover staging hash, then the pending one.
     for _ in 0..2 {
@@ -164,7 +164,31 @@ pub async fn flush(db: &DbPool, redis: &RedisPool) -> Result<usize, AppError> {
     Ok(rows)
 }
 
-async fn claim(redis: &RedisPool) -> Result<Vec<(String, String)>, AppError> {
+async fn claim(store: &Store) -> Result<Vec<(String, String)>, AppError> {
+    let redis = match store {
+        Store::Redis(pool) => pool,
+        // The in-process form of CLAIM_SCRIPT: move the pending hash onto the
+        // staging key unless one is already waiting, then read the staging
+        // hash, all under one lock.
+        Store::Memory(memory) => {
+            return memory
+                .transaction(|ks| {
+                    if !ks.exists(STAGING_KEY) {
+                        if !ks.exists(HASH_KEY) {
+                            return Ok(Vec::new());
+                        }
+                        for (field, value) in ks.hgetall(HASH_KEY)? {
+                            ks.hset(STAGING_KEY, &field, &value)?;
+                        }
+                        ks.del(HASH_KEY);
+                    }
+                    Ok(ks.hgetall(STAGING_KEY)?.into_iter().collect())
+                })
+                .map_err(|_: attome_cache::memory::WrongType| {
+                    AppError::internal("api_usage: buffer key holds a non-hash value")
+                });
+        }
+    };
     let flat: Vec<String> = tokio::time::timeout(
         CLAIM_TIMEOUT,
         redis.eval(
@@ -182,15 +206,10 @@ async fn claim(redis: &RedisPool) -> Result<Vec<(String, String)>, AppError> {
         .collect())
 }
 
-async fn release(redis: &RedisPool) -> Result<(), AppError> {
-    let _: i64 = tokio::time::timeout(CLAIM_TIMEOUT, redis.del(STAGING_KEY))
+async fn release(redis: &Store) -> Result<(), AppError> {
+    tokio::time::timeout(CLAIM_TIMEOUT, redis.del(STAGING_KEY))
         .await
-        .map_err(|_| AppError::internal("api_usage: releasing the staging buffer timed out"))?
-        .map_err(|e| {
-            AppError::internal(format!(
-                "api_usage: releasing the staging buffer failed: {e}"
-            ))
-        })?;
+        .map_err(|_| AppError::internal("api_usage: releasing the staging buffer timed out"))??;
     Ok(())
 }
 

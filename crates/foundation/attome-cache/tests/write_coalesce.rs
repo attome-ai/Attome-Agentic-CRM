@@ -50,14 +50,16 @@ async fn drain_returns_every_field_set_since_the_last_drain() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = test_key();
 
-    write_coalesce::set(&pool, &key, "a", "1")
+    write_coalesce::set(&attome_cache::Store::Redis(pool.clone()), &key, "a", "1")
         .await
         .expect("set a");
-    write_coalesce::set(&pool, &key, "b", "2")
+    write_coalesce::set(&attome_cache::Store::Redis(pool.clone()), &key, "b", "2")
         .await
         .expect("set b");
 
-    let mut drained = write_coalesce::drain(&pool, &key).await.expect("drain");
+    let mut drained = write_coalesce::drain(&attome_cache::Store::Redis(pool.clone()), &key)
+        .await
+        .expect("drain");
     drained.sort();
     assert_eq!(
         drained,
@@ -73,14 +75,26 @@ async fn a_second_write_to_the_same_field_before_drain_coalesces_to_the_latest_v
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = test_key();
 
-    write_coalesce::set(&pool, &key, "field", "first")
-        .await
-        .expect("set first");
-    write_coalesce::set(&pool, &key, "field", "second")
-        .await
-        .expect("set second");
+    write_coalesce::set(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        "field",
+        "first",
+    )
+    .await
+    .expect("set first");
+    write_coalesce::set(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        "field",
+        "second",
+    )
+    .await
+    .expect("set second");
 
-    let drained = write_coalesce::drain(&pool, &key).await.expect("drain");
+    let drained = write_coalesce::drain(&attome_cache::Store::Redis(pool.clone()), &key)
+        .await
+        .expect("drain");
     assert_eq!(
         drained,
         vec![("field".to_string(), "second".to_string())],
@@ -93,15 +107,20 @@ async fn drain_clears_the_hash_so_a_second_drain_finds_nothing_left() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = test_key();
 
-    write_coalesce::set(&pool, &key, "field", "value")
-        .await
-        .expect("set");
-    let first_drain = write_coalesce::drain(&pool, &key)
+    write_coalesce::set(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        "field",
+        "value",
+    )
+    .await
+    .expect("set");
+    let first_drain = write_coalesce::drain(&attome_cache::Store::Redis(pool.clone()), &key)
         .await
         .expect("first drain");
     assert_eq!(first_drain.len(), 1);
 
-    let second_drain = write_coalesce::drain(&pool, &key)
+    let second_drain = write_coalesce::drain(&attome_cache::Store::Redis(pool.clone()), &key)
         .await
         .expect("second drain");
     assert!(
@@ -115,7 +134,9 @@ async fn draining_a_hash_that_was_never_written_to_returns_empty() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = test_key();
 
-    let drained = write_coalesce::drain(&pool, &key).await.expect("drain");
+    let drained = write_coalesce::drain(&attome_cache::Store::Redis(pool.clone()), &key)
+        .await
+        .expect("drain");
     assert!(drained.is_empty());
 }
 
@@ -126,17 +147,37 @@ async fn concurrent_incr_calls_to_the_same_field_sum_rather_than_overwrite() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = test_key();
 
-    write_coalesce::incr(&pool, &key, "route", 1, 60)
-        .await
-        .expect("incr 1");
-    write_coalesce::incr(&pool, &key, "route", 1, 60)
-        .await
-        .expect("incr 2");
-    write_coalesce::incr(&pool, &key, "route", 3, 60)
-        .await
-        .expect("incr 3");
+    write_coalesce::incr(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        "route",
+        1,
+        60,
+    )
+    .await
+    .expect("incr 1");
+    write_coalesce::incr(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        "route",
+        1,
+        60,
+    )
+    .await
+    .expect("incr 2");
+    write_coalesce::incr(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        "route",
+        3,
+        60,
+    )
+    .await
+    .expect("incr 3");
 
-    let drained = write_coalesce::drain(&pool, &key).await.expect("drain");
+    let drained = write_coalesce::drain(&attome_cache::Store::Redis(pool.clone()), &key)
+        .await
+        .expect("drain");
     assert_eq!(
         drained,
         vec![("route".to_string(), "5".to_string())],
@@ -151,14 +192,27 @@ async fn drain_reads_fields_written_by_either_set_or_incr() {
     let pool = attome_testkit::skip_if_no_redis!(test_pool().await);
     let key = test_key();
 
-    write_coalesce::set(&pool, &key, "touched_at", "2026-08-28T00:00:00Z")
-        .await
-        .expect("set");
-    write_coalesce::incr(&pool, &key, "count", 4, 60)
-        .await
-        .expect("incr");
+    write_coalesce::set(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        "touched_at",
+        "2026-08-28T00:00:00Z",
+    )
+    .await
+    .expect("set");
+    write_coalesce::incr(
+        &attome_cache::Store::Redis(pool.clone()),
+        &key,
+        "count",
+        4,
+        60,
+    )
+    .await
+    .expect("incr");
 
-    let mut drained = write_coalesce::drain(&pool, &key).await.expect("drain");
+    let mut drained = write_coalesce::drain(&attome_cache::Store::Redis(pool.clone()), &key)
+        .await
+        .expect("drain");
     drained.sort();
     assert_eq!(
         drained,

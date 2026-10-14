@@ -26,7 +26,7 @@
 //! that provider (different credentials, usually different plans), and
 //! merging them would throttle one admin's integration because of another's.
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_types::AppError;
 
 use crate::connector::{Connector, ConnectorKind, connector_for};
@@ -71,7 +71,7 @@ fn limit_rpm(system: &IntegrationSystem) -> Option<i32> {
 /// cost of a false admission is spending a customer's third-party quota — and
 /// a banned API key is recovered by talking to the provider, not by restarting
 /// Redis.
-pub async fn admit(redis: &RedisPool, system: &IntegrationSystem) -> Result<(), AppError> {
+pub async fn admit(redis: &Store, system: &IntegrationSystem) -> Result<(), AppError> {
     let Some(limit) = limit_rpm(system) else {
         return Ok(());
     };
@@ -106,7 +106,7 @@ pub async fn admit(redis: &RedisPool, system: &IntegrationSystem) -> Result<(), 
 /// caller that reaches for `connector_for` directly is either doing inbound
 /// work (`webhook.rs`, exempt by design above) or has bypassed the quota.
 pub async fn outbound(
-    redis: &RedisPool,
+    redis: &Store,
     system: &IntegrationSystem,
     kind: ConnectorKind,
 ) -> Result<&'static dyn Connector, AppError> {

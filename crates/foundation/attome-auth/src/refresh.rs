@@ -38,7 +38,7 @@
 //! `auth_epoch`, so the account's
 //! access tokens stop working too.
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_config::KeyRing;
 use attome_db::DbPool;
 use attome_types::AppError;
@@ -299,7 +299,7 @@ async fn issue_inner(
 /// `auth_time`, `amr` and `elevated_until` unchanged.
 pub async fn redeem_session(
     db: &DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     presented: &str,
     lifetimes: RefreshLifetimes,
     ring: &PepperRing,
@@ -327,7 +327,7 @@ pub enum RedeemOutcome {
 /// Every other rejection is still an error.
 pub async fn redeem_session_outcome(
     db: &DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     presented: &str,
     lifetimes: RefreshLifetimes,
     ring: &PepperRing,
@@ -341,7 +341,7 @@ pub async fn redeem_session_outcome(
 /// normal rotation does not run it.
 pub async fn redeem_session_outcome_with(
     db: &DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     presented: &str,
     lifetimes: RefreshLifetimes,
     ring: &PepperRing,
@@ -541,7 +541,7 @@ pub struct RedeemedRefresh {
 /// bearer. Kept for callers that do not mint a session token.
 pub async fn redeem(
     db: &DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     presented: &str,
     lifetimes: RefreshLifetimes,
     ring: &PepperRing,
@@ -769,11 +769,13 @@ mod tests {
     }
 
     /// Same idea for Redis: built, never connected, never reached.
-    fn unconnected_redis() -> RedisPool {
+    fn unconnected_redis() -> Store {
         let config = fred::prelude::RedisConfig::from_url("redis://127.0.0.1:1/0").unwrap();
-        fred::prelude::Builder::from_config(config)
-            .build_pool(1)
-            .unwrap()
+        attome_cache::Store::Redis(
+            fred::prelude::Builder::from_config(config)
+                .build_pool(1)
+                .unwrap(),
+        )
     }
 
     /// Both parsing tests below return before the ring is ever consulted, so

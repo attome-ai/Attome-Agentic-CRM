@@ -128,7 +128,7 @@ async fn assert_the_roles_are_split(state: &AppState) {
     let marker = format!("revocation-pool-split:{}", Uuid::now_v7());
     state
         .redis_coordination
-        .set::<(), _, _>(&marker, 1, None, None, false)
+        .set(&marker, &(1).to_string(), None)
         .await
         .expect("write the coordination-role marker");
     // The reverse of the property under test: the cache role must NOT see it.
@@ -137,7 +137,7 @@ async fn assert_the_roles_are_split(state: &AppState) {
         .exists(&marker)
         .await
         .expect("EXISTS on the cache role");
-    let _ = state.redis_coordination.del::<(), _>(&marker).await;
+    let _ = state.redis_coordination.del(&marker).await;
     assert_eq!(
         n, 0,
         "the coordination and cache roles resolved to the same Redis database, so this \
@@ -350,6 +350,8 @@ async fn a_revoked_token_stays_revoked_after_the_cache_role_is_flushed() {
     // "the cache" (or an eviction policy may do for them).
     state
         .redis
+        .redis()
+        .expect("the revocation drill runs against Redis")
         .eval::<(), _, _, _>(
             "redis.call('FLUSHDB')",
             Vec::<String>::new(),

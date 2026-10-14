@@ -179,7 +179,7 @@ async fn a_failing_hook_rolls_back_mfa_enrolment_and_a_password_reset() {
 
     let (result, subject) = reset::confirm_with_subject_hook(
         &db,
-        &unconnected_redis(),
+        &attome_cache::Store::Redis(unconnected_redis()),
         &issued.bearer,
         "a-brand-new-password-9",
         &ring(),

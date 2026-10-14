@@ -27,10 +27,9 @@
 
 use std::time::Duration;
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_db::DbPool;
 use attome_types::AppError;
-use fred::prelude::*;
 use uuid::Uuid;
 
 /// Same bound as `revocation::CHECK_TIMEOUT` — a Redis blip must not hang an
@@ -92,15 +91,13 @@ pub async fn current_epoch(db: &DbPool, user_id: Uuid) -> Result<i32, AppError> 
 /// pair with `CACHE_TTL_SECS`; a Redis error or timeout fails closed
 /// (`Unauthorized`), same posture as `revocation::is_revoked`.
 pub async fn check(
-    redis: &RedisPool,
+    store: &Store,
     db: &DbPool,
     user_id: Uuid,
     claimed_epoch: i32,
 ) -> Result<(), AppError> {
     let cached: Option<(bool, i32)> =
-        match tokio::time::timeout(CHECK_TIMEOUT, redis.get::<Option<String>, _>(key(user_id)))
-            .await
-        {
+        match tokio::time::timeout(CHECK_TIMEOUT, store.get(&key(user_id))).await {
             Ok(Ok(v)) => v.and_then(|s| decode_cached(&s)),
             Ok(Err(e)) => {
                 tracing::warn!("auth epoch cache read failed, failing closed: {e}");
@@ -118,12 +115,10 @@ pub async fn check(
             let v = current_state(db, user_id).await?;
             let _ = tokio::time::timeout(
                 CHECK_TIMEOUT,
-                redis.set::<(), _, _>(
-                    key(user_id),
-                    encode_cached(v),
-                    Some(Expiration::EX(CACHE_TTL_SECS)),
-                    None,
-                    false,
+                store.set(
+                    &key(user_id),
+                    &encode_cached(v),
+                    Some(Duration::from_secs(CACHE_TTL_SECS as u64)),
                 ),
             )
             .await;
@@ -172,8 +167,8 @@ pub async fn bump_in_tx(
 /// (mirrors `SecurityCache::invalidate`'s Redis DEL): a failure here just
 /// means the bounded TTL is the fallback, not a correctness break, since
 /// `CACHE_TTL_SECS` is already short by design.
-pub async fn invalidate_cache(redis: &RedisPool, user_id: Uuid) {
-    let _ = tokio::time::timeout(CHECK_TIMEOUT, redis.del::<i64, _>(key(user_id))).await;
+pub async fn invalidate_cache(store: &Store, user_id: Uuid) {
+    let _ = tokio::time::timeout(CHECK_TIMEOUT, store.del(&key(user_id))).await;
 }
 
 #[cfg(test)]

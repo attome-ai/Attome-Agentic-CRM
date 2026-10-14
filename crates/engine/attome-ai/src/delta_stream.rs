@@ -41,7 +41,7 @@
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use fred::prelude::*;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{broadcast, mpsc};
@@ -94,7 +94,7 @@ impl Publisher {
     /// A bare `tokio::spawn` is sanctioned here (coding-guidelines §10): the
     /// work is disposable and its loss harmless, and the task ends when the
     /// turn drops its sender.
-    pub fn start(redis: RedisPool, conversation_id: Uuid, turn_id: Uuid) -> Self {
+    pub fn start(redis: Store, conversation_id: Uuid, turn_id: Uuid) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
         let task = tokio::spawn(run(redis, conversation_id, turn_id, rx));
         Self { tx, task }
@@ -122,7 +122,7 @@ impl Publisher {
 }
 
 async fn run(
-    redis: RedisPool,
+    redis: Store,
     conversation_id: Uuid,
     turn_id: Uuid,
     mut rx: mpsc::UnboundedReceiver<String>,
@@ -155,11 +155,7 @@ async fn run(
             Ok(payload) => payload,
             Err(_) => continue,
         };
-        match tokio::time::timeout(
-            PUBLISH_TIMEOUT,
-            redis.next().publish::<i64, _, _>(channel.as_str(), payload),
-        )
-        .await
+        match tokio::time::timeout(PUBLISH_TIMEOUT, redis.publish(channel.as_str(), &payload)).await
         {
             Ok(Ok(_)) => {}
             Ok(Err(error)) => {

@@ -48,7 +48,7 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use attome_cache::{RedisPool, stream_buffer, write_coalesce};
+use attome_cache::{Store, stream_buffer, write_coalesce};
 use attome_db::DbPool;
 use attome_types::AppError;
 use chrono::{DateTime, Utc};
@@ -71,7 +71,7 @@ const ACCESS_LOG_GROUP: &str = "access-log-writers";
 /// Best-effort — callers should log a warning and continue rather than fail
 /// the request over this.
 pub async fn record_touch(
-    redis: &RedisPool,
+    redis: &Store,
     client_id: Uuid,
     key_id: Uuid,
     at: DateTime<Utc>,
@@ -95,7 +95,7 @@ pub async fn record_touch(
 /// matching the semantics of a request that always touches both tables with
 /// the same instant already had. Returns the number of distinct (client,
 /// key) pairs flushed.
-pub async fn flush_touches(db: &DbPool, redis: &RedisPool) -> Result<usize, AppError> {
+pub async fn flush_touches(db: &DbPool, redis: &Store) -> Result<usize, AppError> {
     let drained = write_coalesce::drain(redis, TOUCH_HASH_KEY).await?;
     if drained.is_empty() {
         return Ok(0);
@@ -190,7 +190,7 @@ pub async fn flush_touches(db: &DbPool, redis: &RedisPool) -> Result<usize, AppE
 /// flushes the touch buffer. Meant to run unconditionally (S2S touches
 /// happen whenever `s2s.enabled` is true, independent of
 /// `s2s.access_log_enabled`).
-pub fn spawn_touch_flush_scheduler(db: DbPool, redis: RedisPool, interval: Duration) {
+pub fn spawn_touch_flush_scheduler(db: DbPool, redis: Store, interval: Duration) {
     tokio::spawn(async move {
         loop {
             tokio::time::sleep(interval).await;
@@ -285,7 +285,7 @@ fn decode_log_entry(fields: Vec<(String, String)>) -> Result<LogEntry, AppError>
 /// call site (log and continue, same posture as the old enqueue call) —
 /// this function itself propagates the error so the caller can decide.
 pub async fn record_access_log(
-    redis: &RedisPool,
+    redis: &Store,
     entry: &LogEntry,
     stream_maxlen: u64,
 ) -> Result<(), AppError> {
@@ -358,7 +358,7 @@ async fn bulk_insert_access_log(db: &DbPool, entries: &[LogEntry]) -> Result<(),
 /// forever. Returns how many entries were acked this tick (decoded or not).
 pub async fn consume_access_log(
     db: &DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     consumer_name: &str,
     batch_size: u64,
     reclaim_idle_ms: u64,
@@ -430,7 +430,7 @@ pub async fn consume_access_log(
 /// when `s2s.access_log_enabled` — same gate the old enqueue call checked.
 pub fn spawn_access_log_consumer(
     db: DbPool,
-    redis: RedisPool,
+    redis: Store,
     interval: Duration,
     batch_size: u64,
     reclaim_idle_ms: u64,
@@ -456,7 +456,7 @@ pub fn spawn_access_log_consumer(
 /// observable signal). Wired from `attome_api`'s metrics-refresh loop (base
 /// can't see this xrm-layer module; the gauge recording itself lives in
 /// attome-api, which already depends on both `attome_s2s` and `metrics`).
-pub async fn access_log_lag(redis: &RedisPool) -> Result<i64, AppError> {
+pub async fn access_log_lag(redis: &Store) -> Result<i64, AppError> {
     stream_buffer::pending_count(redis, ACCESS_LOG_STREAM_KEY, ACCESS_LOG_GROUP).await
 }
 

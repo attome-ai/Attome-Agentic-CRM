@@ -40,7 +40,6 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use fred::prelude::*;
 use std::time::Duration;
 
 use crate::state::AppState;
@@ -144,13 +143,11 @@ fn should_reject(
 pub async fn break_glass_window_open(state: &AppState) -> Option<bool> {
     match tokio::time::timeout(
         OP_TIMEOUT,
-        state
-            .redis_coordination
-            .exists::<bool, _>(BREAK_GLASS_WINDOW_KEY),
+        state.redis_coordination.exists(BREAK_GLASS_WINDOW_KEY),
     )
     .await
     {
-        Ok(Ok(exists)) => Some(exists),
+        Ok(Ok(exists)) => Some(exists > 0),
         Ok(Err(e)) => {
             tracing::warn!(
                 error = %e,

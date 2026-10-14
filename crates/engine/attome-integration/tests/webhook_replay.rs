@@ -75,14 +75,28 @@ async fn a_replayed_signed_request_is_refused_with_409() {
     let body = br#"{"event":"x"}"#;
     let (h, _) = signed(now(), body);
 
-    let first = webhook::admit(&pool, system, CRED, &h, body, now())
-        .await
-        .expect("first delivery is admitted");
+    let first = webhook::admit(
+        &attome_cache::Store::Redis(pool.clone()),
+        system,
+        CRED,
+        &h,
+        body,
+        now(),
+    )
+    .await
+    .expect("first delivery is admitted");
     assert!(!first.nonce_key.is_empty());
 
-    let replay = webhook::admit(&pool, system, CRED, &h, body, now())
-        .await
-        .unwrap_err();
+    let replay = webhook::admit(
+        &attome_cache::Store::Redis(pool.clone()),
+        system,
+        CRED,
+        &h,
+        body,
+        now(),
+    )
+    .await
+    .unwrap_err();
     assert!(matches!(replay, AppError::Conflict(_)), "{replay:?}");
 }
 
@@ -94,18 +108,32 @@ async fn a_replay_with_a_recased_signature_is_still_refused() {
     let system = Uuid::now_v7();
     let body = b"{}";
     let (h, sig) = signed(now(), body);
-    webhook::admit(&pool, system, CRED, &h, body, now())
-        .await
-        .expect("first delivery is admitted");
+    webhook::admit(
+        &attome_cache::Store::Redis(pool.clone()),
+        system,
+        CRED,
+        &h,
+        body,
+        now(),
+    )
+    .await
+    .expect("first delivery is admitted");
 
     let mut recased = h.clone();
     recased.insert(
         SIGNATURE_HEADER,
         HeaderValue::from_str(&sig.to_uppercase()).unwrap(),
     );
-    let replay = webhook::admit(&pool, system, CRED, &recased, body, now())
-        .await
-        .unwrap_err();
+    let replay = webhook::admit(
+        &attome_cache::Store::Redis(pool.clone()),
+        system,
+        CRED,
+        &recased,
+        body,
+        now(),
+    )
+    .await
+    .unwrap_err();
     assert!(matches!(replay, AppError::Conflict(_)), "{replay:?}");
 }
 
@@ -120,15 +148,36 @@ async fn distinct_deliveries_and_distinct_systems_are_each_admitted() {
     let t = now();
     let (h1, _) = signed(t, body);
     let (h2, _) = signed(t - 1, body);
-    webhook::admit(&pool, system, CRED, &h1, body, t)
-        .await
-        .expect("first");
-    webhook::admit(&pool, system, CRED, &h2, body, t)
-        .await
-        .expect("re-signed delivery");
-    webhook::admit(&pool, Uuid::now_v7(), CRED, &h1, body, t)
-        .await
-        .expect("other system");
+    webhook::admit(
+        &attome_cache::Store::Redis(pool.clone()),
+        system,
+        CRED,
+        &h1,
+        body,
+        t,
+    )
+    .await
+    .expect("first");
+    webhook::admit(
+        &attome_cache::Store::Redis(pool.clone()),
+        system,
+        CRED,
+        &h2,
+        body,
+        t,
+    )
+    .await
+    .expect("re-signed delivery");
+    webhook::admit(
+        &attome_cache::Store::Redis(pool.clone()),
+        Uuid::now_v7(),
+        CRED,
+        &h1,
+        body,
+        t,
+    )
+    .await
+    .expect("other system");
 }
 
 /// A call that wrote nothing releases its nonce, so the provider's retry of
@@ -139,11 +188,25 @@ async fn a_released_nonce_admits_the_retry() {
     let system = Uuid::now_v7();
     let body = b"{}";
     let (h, _) = signed(now(), body);
-    let admission = webhook::admit(&pool, system, CRED, &h, body, now())
-        .await
-        .expect("first");
-    webhook::release(&pool, &admission).await;
-    webhook::admit(&pool, system, CRED, &h, body, now())
-        .await
-        .expect("retry after release is admitted");
+    let admission = webhook::admit(
+        &attome_cache::Store::Redis(pool.clone()),
+        system,
+        CRED,
+        &h,
+        body,
+        now(),
+    )
+    .await
+    .expect("first");
+    webhook::release(&attome_cache::Store::Redis(pool.clone()), &admission).await;
+    webhook::admit(
+        &attome_cache::Store::Redis(pool.clone()),
+        system,
+        CRED,
+        &h,
+        body,
+        now(),
+    )
+    .await
+    .expect("retry after release is admitted");
 }

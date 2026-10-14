@@ -33,8 +33,6 @@ use std::time::Duration;
 use attome_cache::MetadataCache;
 use attome_db::DbPool;
 use attome_types::AppError;
-use fred::clients::SubscriberClient;
-use fred::interfaces::EventInterface;
 
 /// Boxed, `Send` future — the same local alias `services::NotificationService`
 /// already uses in this crate, so `SnapshotSource` stays a plain, non-`dyn`
@@ -90,7 +88,7 @@ async fn reload<T: SnapshotSource>(db: &DbPool, cache: &MetadataCache<T>) {
 /// on the same shared `subscriber`, each independently filtering on its own
 /// `T::CHANNEL`.
 pub fn spawn_doorbell_reload<T: SnapshotSource>(
-    subscriber: &SubscriberClient,
+    subscriber: &attome_cache::Subscriber,
     db: DbPool,
     cache: MetadataCache<T>,
     interval: Duration,
@@ -99,12 +97,11 @@ pub fn spawn_doorbell_reload<T: SnapshotSource>(
         let db = db.clone();
         let cache = cache.clone();
         subscriber.on_message(move |msg| {
-            if &*msg.channel == T::CHANNEL {
+            if msg.channel == T::CHANNEL {
                 let db = db.clone();
                 let cache = cache.clone();
                 tokio::spawn(async move { reload::<T>(&db, &cache).await });
             }
-            Ok(())
         });
     }
 

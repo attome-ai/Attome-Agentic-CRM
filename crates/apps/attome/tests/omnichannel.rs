@@ -822,14 +822,14 @@ struct Widget {
     app: axum::Router,
     db: attome_db::DbPool,
     model: FakeModel,
-    redis: attome_cache::RedisPool,
+    redis: attome_cache::Store,
     offline: String,
 }
 
 /// Zeroes the deployment-wide web-chat budget: it is one Redis key for the
 /// whole deployment (by design), so every assisted test starts from an unspent
 /// day rather than from whatever earlier tests and runs charged to it.
-async fn reset_deployment_budget(redis: &attome_cache::RedisPool) {
+async fn reset_deployment_budget(redis: &attome_cache::Store) {
     let day = std::time::Duration::from_secs(24 * 60 * 60);
     let key = attome_ai::budget_guard::WEBCHAT_DEPLOYMENT_KEY;
     let spent = attome_cache::token_window::read(redis, key, day)
@@ -843,7 +843,7 @@ async fn reset_deployment_budget(redis: &attome_cache::RedisPool) {
     }
 }
 
-async fn spent(redis: &attome_cache::RedisPool, key: &str) -> u64 {
+async fn spent(redis: &attome_cache::Store, key: &str) -> u64 {
     attome_cache::token_window::read(redis, key, std::time::Duration::from_secs(24 * 60 * 60))
         .await
         .expect("read")
@@ -1189,7 +1189,6 @@ async fn two_visitors_never_see_each_others_conversation() {
     // (checked before the token) would otherwise answer 429 before the token
     // is ever read. Clear it so the forged tokens meet the token check.
     {
-        use fred::interfaces::KeysInterface;
         let _: i64 = w
             .redis
             .del(attome_cache::rate_limit::storage_key(
@@ -1342,7 +1341,6 @@ async fn the_kill_switch_is_the_offline_message() {
 /// limit is shared across them. A test that sends several messages clears it
 /// before and after, so it neither trips it nor spends another test's share.
 async fn clear_ip_limit(w: &Widget) {
-    use fred::interfaces::KeysInterface;
     let _: i64 = w
         .redis
         .del(attome_cache::rate_limit::storage_key(

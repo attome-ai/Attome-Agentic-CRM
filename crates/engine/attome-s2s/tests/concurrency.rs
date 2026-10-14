@@ -49,7 +49,7 @@ async fn allows_requests_under_the_limit() {
     let mut guards = Vec::new();
     for _ in 0..3 {
         guards.push(
-            concurrency::acquire(&pool, &client_id, 5)
+            concurrency::acquire(&attome_cache::Store::Redis(pool.clone()), &client_id, 5)
                 .await
                 .expect("under-limit slot must be allowed"),
         );
@@ -64,13 +64,14 @@ async fn rejects_once_the_limit_is_reached() {
     let mut guards = Vec::new();
     for _ in 0..3 {
         guards.push(
-            concurrency::acquire(&pool, &client_id, 3)
+            concurrency::acquire(&attome_cache::Store::Redis(pool.clone()), &client_id, 3)
                 .await
                 .expect("requests up to the limit must be allowed"),
         );
     }
 
-    let result = concurrency::acquire(&pool, &client_id, 3).await;
+    let result =
+        concurrency::acquire(&attome_cache::Store::Redis(pool.clone()), &client_id, 3).await;
     assert!(
         matches!(
             result,
@@ -87,12 +88,12 @@ async fn releasing_a_slot_frees_it_back_up() {
     let pool = test_pool().await;
     let client_id = format!("test-client-{}", Uuid::new_v4());
 
-    let guard = concurrency::acquire(&pool, &client_id, 1)
+    let guard = concurrency::acquire(&attome_cache::Store::Redis(pool.clone()), &client_id, 1)
         .await
         .expect("first slot must be allowed");
 
     assert!(matches!(
-        concurrency::acquire(&pool, &client_id, 1).await,
+        concurrency::acquire(&attome_cache::Store::Redis(pool.clone()), &client_id, 1).await,
         Err(AppError::TooManyRequests {
             retry_after_secs: None
         })
@@ -100,7 +101,7 @@ async fn releasing_a_slot_frees_it_back_up() {
 
     guard.release().await;
 
-    concurrency::acquire(&pool, &client_id, 1)
+    concurrency::acquire(&attome_cache::Store::Redis(pool.clone()), &client_id, 1)
         .await
         .expect("slot must be free again after release");
 }
@@ -113,17 +114,17 @@ async fn limits_are_scoped_per_client() {
     let client_a = format!("test-client-{}", Uuid::new_v4());
     let client_b = format!("test-client-{}", Uuid::new_v4());
 
-    let _guard_a = concurrency::acquire(&pool, &client_a, 1)
+    let _guard_a = concurrency::acquire(&attome_cache::Store::Redis(pool.clone()), &client_a, 1)
         .await
         .expect("client A's first slot must be allowed");
     assert!(matches!(
-        concurrency::acquire(&pool, &client_a, 1).await,
+        concurrency::acquire(&attome_cache::Store::Redis(pool.clone()), &client_a, 1).await,
         Err(AppError::TooManyRequests {
             retry_after_secs: None
         })
     ));
 
-    concurrency::acquire(&pool, &client_b, 1)
+    concurrency::acquire(&attome_cache::Store::Redis(pool.clone()), &client_b, 1)
         .await
         .expect("client B must be unaffected by client A's exhausted budget");
 }
@@ -144,7 +145,7 @@ async fn concurrent_acquires_never_admit_more_than_the_limit() {
         let pool = pool.clone();
         let client_id = client_id.clone();
         handles.push(tokio::spawn(async move {
-            concurrency::acquire(&pool, &client_id, limit).await
+            concurrency::acquire(&attome_cache::Store::Redis(pool.clone()), &client_id, limit).await
         }));
     }
 

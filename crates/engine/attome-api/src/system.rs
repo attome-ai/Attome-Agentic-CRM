@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::time::Duration;
 
 use arc_swap::ArcSwap;
-use attome_cache::{MetadataCache, RedisPool};
+use attome_cache::{MetadataCache, Store};
 use attome_core::{
     EngineModel, EngineState, EntityMetaRegistry, MyWorkProvider,
     services::{NoopNotifications, NotificationService},
@@ -20,7 +20,6 @@ use axum::{
     middleware::{self, Next},
     response::IntoResponse,
 };
-use fred::interfaces::{EventInterface, PubsubInterface};
 
 use crate::registry::ModelRegistry;
 
@@ -1121,8 +1120,8 @@ impl EngineSystemBuilder {
 
         // Dedicated subscriber connection — never the request-path pool, so a
         // slow subscriber can't head-of-line-block ordinary command traffic.
-        let subscriber = attome_cache::create_subscriber_client(&state.base.config).await?;
-        subscriber.manage_subscriptions();
+        let subscriber =
+            attome_cache::Subscriber::connect(&state.base.redis, &state.base.config).await?;
 
         let debounce_pending = Arc::new(AtomicBool::new(false));
 
@@ -1137,8 +1136,8 @@ impl EngineSystemBuilder {
             let redis = state.base.redis.clone();
             let watermark = last_applied.clone();
             subscriber.on_message(move |msg| {
-                if &*msg.channel != META_VERSION_KEY {
-                    return Ok(());
+                if msg.channel != META_VERSION_KEY {
+                    return;
                 }
                 spawn_debounced_catch_up(
                     pending.clone(),
@@ -1147,7 +1146,6 @@ impl EngineSystemBuilder {
                     redis.clone(),
                     watermark.clone(),
                 );
-                Ok(())
             });
         }
         {
@@ -1160,7 +1158,7 @@ impl EngineSystemBuilder {
             let db = state.base.db.clone();
             let redis = state.base.redis.clone();
             let watermark = last_applied.clone();
-            subscriber.on_reconnect(move |_server| {
+            subscriber.on_reconnect(move || {
                 spawn_debounced_catch_up(
                     pending.clone(),
                     entities.clone(),
@@ -1168,7 +1166,6 @@ impl EngineSystemBuilder {
                     redis.clone(),
                     watermark.clone(),
                 );
-                Ok(())
             });
         }
         {
@@ -1390,18 +1387,17 @@ impl EngineSystemBuilder {
         {
             let security_resolver = security_resolver_concrete.clone();
             subscriber.on_message(move |msg| {
-                if &*msg.channel != attome_security::SECURITY_VERSION_CHANNEL {
-                    return Ok(());
+                if msg.channel != attome_security::SECURITY_VERSION_CHANNEL {
+                    return;
                 }
                 let security_resolver = security_resolver.clone();
-                if let Some(payload) = msg.value.as_str()
+                if let Some(payload) = msg.payload.as_deref()
                     && let Ok(user_id) = payload.parse::<uuid::Uuid>()
                 {
                     tokio::spawn(async move {
                         security_resolver.invalidate_local(user_id).await;
                     });
                 }
-                Ok(())
             });
         }
 
@@ -1416,18 +1412,17 @@ impl EngineSystemBuilder {
         {
             let state = state.clone();
             subscriber.on_message(move |msg| {
-                if &*msg.channel != attome_core::AUDIT_USER_VERSION_CHANNEL {
-                    return Ok(());
+                if msg.channel != attome_core::AUDIT_USER_VERSION_CHANNEL {
+                    return;
                 }
                 let state = state.clone();
-                if let Some(payload) = msg.value.as_str()
+                if let Some(payload) = msg.payload.as_deref()
                     && let Ok(user_id) = payload.parse::<uuid::Uuid>()
                 {
                     tokio::spawn(async move {
                         state.invalidate_audit_user_local(user_id).await;
                     });
                 }
-                Ok(())
             });
         }
 
@@ -1441,10 +1436,9 @@ impl EngineSystemBuilder {
         {
             let state = state.clone();
             subscriber.on_message(move |msg| {
-                if &*msg.channel == attome_core::FEATURE_FLAG_VERSION_CHANNEL {
+                if msg.channel == attome_core::FEATURE_FLAG_VERSION_CHANNEL {
                     state.invalidate_feature_flags_local();
                 }
-                Ok(())
             });
         }
 
@@ -1590,7 +1584,7 @@ const CATCH_UP_BATCH_LIMIT: i64 = 1000;
 /// snapshot (first boot, cold Redis, a decode failure).
 async fn pre_warm_registry(
     db: &DbPool,
-    redis: &RedisPool,
+    redis: &Store,
 ) -> Result<(EntityMetaRegistry, i64), AppError> {
     let (mut registry, mut last_id) = match attome_core::load_snapshot(redis).await {
         Ok(Some(snap)) => {
@@ -1702,10 +1696,7 @@ async fn pre_warm_registry(
 /// between makes the watermark read first slightly stale), which incremental
 /// catch-up harmlessly re-applies — patching an entity to its current state
 /// twice is a no-op, not a correctness issue.
-async fn full_rebuild(
-    db: &DbPool,
-    redis: &RedisPool,
-) -> Result<(EntityMetaRegistry, i64), AppError> {
+async fn full_rebuild(db: &DbPool, redis: &Store) -> Result<(EntityMetaRegistry, i64), AppError> {
     let watermark = attome_core::log_watermark(db).await?;
     let registry = attome_core::build_registry(db).await?;
 
@@ -1722,7 +1713,7 @@ fn spawn_debounced_catch_up(
     pending: Arc<AtomicBool>,
     entities: MetadataCache<EntityMetaRegistry>,
     db: DbPool,
-    redis: RedisPool,
+    redis: Store,
     last_applied: Arc<AtomicI64>,
 ) {
     if pending.swap(true, Ordering::AcqRel) {
@@ -1744,7 +1735,7 @@ fn spawn_debounced_catch_up(
 async fn catch_up(
     entities: &MetadataCache<EntityMetaRegistry>,
     db: &DbPool,
-    redis: &RedisPool,
+    redis: &Store,
     last_applied: &AtomicI64,
 ) {
     loop {

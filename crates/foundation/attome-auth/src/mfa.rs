@@ -30,13 +30,12 @@
 //! its *consumers* (`complete_pending_login` etc.) apply after
 //! `verify_pending_token` succeeds, not part of token verification.
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_config::KeyRing;
 use attome_db::DbPool;
 use attome_types::AppError;
 use chrono::Utc;
 use fred::interfaces::LuaInterface;
-use fred::prelude::*;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -103,12 +102,36 @@ fn challenge_marker_key(jti: Uuid) -> String {
 /// reject the attempt exactly like a bad code, never fall through as if no
 /// marker existed (D-027).
 async fn challenge_step(
-    redis: &RedisPool,
+    redis: &Store,
     jti: Uuid,
     consume: bool,
     max_attempts: u32,
 ) -> Result<bool, AppError> {
     let key = challenge_marker_key(jti);
+    // The in-process form of MFA_CHALLENGE_STEP_SCRIPT, one locked step.
+    let redis = match redis {
+        Store::Redis(pool) => pool,
+        Store::Memory(memory) => {
+            let alive = memory
+                .transaction(|ks| -> Result<bool, attome_cache::memory::WrongType> {
+                    if ks.get_str(&key)?.is_none() {
+                        return Ok(false);
+                    }
+                    if consume {
+                        ks.del(&key);
+                        return Ok(true);
+                    }
+                    let attempts = ks.incr_by(&key, 1)?;
+                    if attempts >= i64::from(max_attempts) {
+                        ks.del(&key);
+                        return Ok(false);
+                    }
+                    Ok(true)
+                })
+                .map_err(|_| AppError::Unauthorized)?;
+            return Ok(alive);
+        }
+    };
     let arg = if consume { "consume" } else { "fail" };
     let alive: i64 = tokio::time::timeout(
         MFA_MARKER_TIMEOUT,
@@ -130,12 +153,11 @@ async fn challenge_step(
 /// not advance `last_accepted_totp_step`. Fails closed like
 /// [`challenge_step`]; the atomic consume-or-fail step still runs after the
 /// verifier and remains the single-use authority.
-async fn require_live_challenge(redis: &RedisPool, jti: Uuid) -> Result<(), AppError> {
-    let alive: i64 =
-        tokio::time::timeout(MFA_MARKER_TIMEOUT, redis.exists(challenge_marker_key(jti)))
-            .await
-            .map_err(|_| AppError::Unauthorized)?
-            .map_err(|_| AppError::Unauthorized)?;
+async fn require_live_challenge(redis: &Store, jti: Uuid) -> Result<(), AppError> {
+    let alive = tokio::time::timeout(MFA_MARKER_TIMEOUT, redis.exists(&challenge_marker_key(jti)))
+        .await
+        .map_err(|_| AppError::Unauthorized)?
+        .map_err(|_| AppError::Unauthorized)?;
     if alive == 0 {
         return Err(AppError::Unauthorized);
     }
@@ -149,7 +171,7 @@ async fn require_live_challenge(redis: &RedisPool, jti: Uuid) -> Result<(), AppE
 /// and returns the original error unchanged (unless the marker check itself
 /// fails closed, which surfaces as the same `Unauthorized`).
 async fn consume_or_record_failure<T>(
-    redis: &RedisPool,
+    redis: &Store,
     jti: Uuid,
     max_attempts: u32,
     outcome: Result<T, AppError>,
@@ -290,7 +312,7 @@ fn issue_pending_token(
 /// `AppError::internal` (retried by the client) rather than a silently
 /// degraded pending token that can never satisfy the marker check below.
 pub async fn start_challenge(
-    redis: &RedisPool,
+    redis: &Store,
     user_id: Uuid,
     typ: TokenType,
     jwt_ring: &KeyRing,
@@ -300,17 +322,14 @@ pub async fn start_challenge(
     let (token, jti) = issue_pending_token(user_id, typ, jwt_ring, issuer, audience)?;
     tokio::time::timeout(
         MFA_MARKER_TIMEOUT,
-        redis.set::<(), _, _>(
-            challenge_marker_key(jti),
+        redis.set_nx(
+            &challenge_marker_key(jti),
             "0",
-            Some(Expiration::EX(PENDING_TOKEN_TTL_SECS)),
-            Some(SetOptions::NX),
-            false,
+            Some(Duration::from_secs(PENDING_TOKEN_TTL_SECS as u64)),
         ),
     )
     .await
-    .map_err(|_| AppError::internal("mfa challenge marker write timed out"))?
-    .map_err(AppError::internal)?;
+    .map_err(|_| AppError::internal("mfa challenge marker write timed out"))??;
     Ok(token)
 }
 
@@ -908,7 +927,7 @@ pub async fn regenerate_recovery_codes_with(
 pub async fn complete_pending_login(
     db: &DbPool,
     mfa_ring: &KeyRing,
-    redis: &RedisPool,
+    redis: &Store,
     pending_token: &str,
     code: &str,
     jwt_ring: &KeyRing,
@@ -939,7 +958,7 @@ pub async fn complete_pending_login(
 pub async fn complete_pending_login_recovery(
     db: &DbPool,
     pepper: &PepperRing,
-    redis: &RedisPool,
+    redis: &Store,
     pending_token: &str,
     code: &str,
     jwt_ring: &KeyRing,
@@ -1020,7 +1039,7 @@ pub async fn confirm_pending_enrollment(
     db: &DbPool,
     mfa_ring: &KeyRing,
     pepper: &PepperRing,
-    redis: &RedisPool,
+    redis: &Store,
     pending_token: &str,
     code: &str,
     jwt_ring: &KeyRing,
@@ -1050,7 +1069,7 @@ pub async fn confirm_pending_enrollment_with(
     db: &DbPool,
     mfa_ring: &KeyRing,
     pepper: &PepperRing,
-    redis: &RedisPool,
+    redis: &Store,
     pending_token: &str,
     code: &str,
     jwt_ring: &KeyRing,

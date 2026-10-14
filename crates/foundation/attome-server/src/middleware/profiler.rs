@@ -26,7 +26,7 @@
 //! independent top-level rows in the dashboard rather than being forced to
 //! nest under one another.
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_profiler::Flusher;
 use axum::{
     Router,
@@ -38,7 +38,7 @@ use axum::{
 /// `redis` is the general pool (`state.redis`), never `redis_coordination`
 /// (BPR-16). Starts one bounded `Flusher` for the layer, so must be called
 /// inside a Tokio runtime.
-pub fn apply_profiler_layer(router: Router, redis: RedisPool) -> Router {
+pub fn apply_profiler_layer(router: Router, redis: Store) -> Router {
     let flusher = Flusher::new(redis);
     router.layer(middleware::from_fn(move |matched_path, req, next| {
         profiler_middleware(flusher.clone(), matched_path, req, next)

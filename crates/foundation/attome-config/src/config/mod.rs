@@ -31,7 +31,7 @@ pub use sections::auth::{
     ApiKeyPepper, AuthSection, KdfSection, OidcProviderConfig, OidcSection, RateLimitSection,
     S2SSection, S2sSeededClient, S2sSeededPermission, cidr_contains,
 };
-pub use sections::cache::{CacheRole, CacheRoleOverride, CacheRoles, CacheSection};
+pub use sections::cache::{CacheBackend, CacheRole, CacheRoleOverride, CacheRoles, CacheSection};
 pub use sections::database::{AppSection, DatabasePoolSize, DatabasePools, DatabaseSection};
 pub use sections::docgen::DocgenSection;
 pub use sections::events::EventsSection;

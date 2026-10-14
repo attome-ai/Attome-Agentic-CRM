@@ -21,9 +21,8 @@
 
 use std::time::Duration;
 
-use attome_cache::RedisPool;
+use attome_cache::Store;
 use attome_types::AppError;
-use fred::prelude::*;
 use serde::{Deserialize, Serialize};
 use sqlx::PgConnection;
 use uuid::Uuid;
@@ -66,7 +65,7 @@ pub fn state_param(authorize_url: &str) -> Option<String> {
 
 /// Records that `state_id` was started by `portal` for `provider`.
 pub async fn bind(
-    redis: &RedisPool,
+    redis: &Store,
     state_id: &str,
     webportal_id: Uuid,
     provider: &str,
@@ -78,33 +77,26 @@ pub async fn bind(
     .map_err(AppError::internal)?;
     tokio::time::timeout(
         REDIS_TIMEOUT,
-        redis.set::<(), _, _>(
-            bind_key(state_id),
-            value,
-            Some(Expiration::EX(BIND_TTL_SECS)),
-            None,
-            false,
+        redis.set(
+            &bind_key(state_id),
+            &value,
+            Some(std::time::Duration::from_secs(BIND_TTL_SECS as u64)),
         ),
     )
     .await
-    .map_err(|_| AppError::internal("portal oidc bind timed out"))?
-    .map_err(AppError::internal)?;
+    .map_err(|_| AppError::internal("portal oidc bind timed out"))??;
     Ok(())
 }
 
 /// Consumes the binding for `state_id`; true only if it names this portal and
 /// provider. A missing binding, a Redis error or a mismatch is false.
 pub async fn take_binding(
-    redis: &RedisPool,
+    redis: &Store,
     state_id: &str,
     webportal_id: Uuid,
     provider: &str,
 ) -> bool {
-    let raw = tokio::time::timeout(
-        REDIS_TIMEOUT,
-        redis.getdel::<Option<String>, _>(bind_key(state_id)),
-    )
-    .await;
+    let raw = tokio::time::timeout(REDIS_TIMEOUT, redis.getdel(&bind_key(state_id))).await;
     let Ok(Ok(Some(raw))) = raw else {
         return false;
     };
@@ -155,40 +147,33 @@ impl std::fmt::Debug for Pending {
     }
 }
 
-pub async fn store_pending(redis: &RedisPool, pending: &Pending) -> Result<Uuid, AppError> {
+pub async fn store_pending(redis: &Store, pending: &Pending) -> Result<Uuid, AppError> {
     let id = Uuid::new_v4();
     let value = serde_json::to_string(pending).map_err(AppError::internal)?;
     tokio::time::timeout(
         REDIS_TIMEOUT,
-        redis.set::<(), _, _>(
-            pending_key(id),
-            value,
-            Some(Expiration::EX(PENDING_TTL_SECS)),
-            None,
-            false,
+        redis.set(
+            &pending_key(id),
+            &value,
+            Some(std::time::Duration::from_secs(PENDING_TTL_SECS as u64)),
         ),
     )
     .await
-    .map_err(|_| AppError::internal("portal oidc pending write timed out"))?
-    .map_err(AppError::internal)?;
+    .map_err(|_| AppError::internal("portal oidc pending write timed out"))??;
     Ok(id)
 }
 
 /// Consumes a pending step of `kind` for `webportal_id`. `None` for every
 /// miss (unknown, used, expired, another portal or kind).
 pub async fn take_pending(
-    redis: &RedisPool,
+    redis: &Store,
     id: Uuid,
     kind: PendingKind,
     webportal_id: Uuid,
 ) -> Result<Option<Pending>, AppError> {
-    let raw = tokio::time::timeout(
-        REDIS_TIMEOUT,
-        redis.getdel::<Option<String>, _>(pending_key(id)),
-    )
-    .await
-    .map_err(|_| AppError::internal("portal oidc pending read timed out"))?
-    .map_err(AppError::internal)?;
+    let raw = tokio::time::timeout(REDIS_TIMEOUT, redis.getdel(&pending_key(id)))
+        .await
+        .map_err(|_| AppError::internal("portal oidc pending read timed out"))??;
     Ok(raw
         .and_then(|r| serde_json::from_str::<Pending>(&r).ok())
         .filter(|p| p.kind == kind && p.webportal_id == webportal_id))
@@ -255,7 +240,7 @@ pub async fn link_identity(conn: &mut PgConnection, pending: &Pending) -> Result
 #[allow(clippy::too_many_arguments)]
 pub async fn resolve(
     conn: &mut PgConnection,
-    redis: &RedisPool,
+    redis: &Store,
     portal: &PortalDetail,
     policy: &AuthPolicy,
     provider: &str,
