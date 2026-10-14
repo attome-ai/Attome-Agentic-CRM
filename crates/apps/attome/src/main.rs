@@ -2,8 +2,8 @@
 //!
 //! It runs the server (`attome serve`) and the processes and tools around
 //! it, and the release gate (`attome release --check`). The install and
-//! cluster commands (`init`, `cluster`, `scale`, `build`, `pack`, `publish`)
-//! arrive with their roadmap tasks.
+//! cluster commands (`cluster`, `scale`, `build`, `pack`, `publish`) arrive
+//! with their roadmap tasks; `init` installs Solo.
 
 use std::io::Write;
 use std::process::ExitCode;
@@ -12,6 +12,7 @@ const USAGE: &str = "\
 attome: the Attome command-line tool
 
 Usage:
+  attome init                   Install Solo: write a config, apply the schema
   attome serve                  Run the server (flags: --print-openapi,
                                 --bootstrap-admin <email>)
   attome worker                 Run the job worker only
@@ -39,6 +40,7 @@ fn main() -> ExitCode {
             ExitCode::SUCCESS
         }
         ["release", "--check"] => attome_release::check(),
+        ["init", ..] => outcome(attome::cmd::init::run()),
         ["serve", ..] => outcome(attome::serve::run()),
         ["worker", ..] => outcome(attome::cmd::worker::run()),
         ["migrate", ..] => outcome(attome::cmd::migrate::run()),

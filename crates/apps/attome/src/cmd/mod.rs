@@ -3,6 +3,7 @@
 pub mod audit_chainer;
 pub mod changeset_replay;
 pub mod healthcheck;
+pub mod init;
 pub mod migrate;
 pub mod preflight;
 pub mod verify_audit_chain;

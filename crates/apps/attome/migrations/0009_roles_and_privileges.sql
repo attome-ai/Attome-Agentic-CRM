@@ -615,6 +615,33 @@ GRANT SELECT ON
     workflow_trigger_failure
 TO attome_readonly;
 
+-- Tables the explicit grants above do not name: engine tables whose v1 access
+-- came from default privileges rather than a per-table grant (the AI
+-- conversation tables, the S2S client tables, and the like). The runtime role
+-- needs ordinary DML on them; the read-only role keeps only what it was given
+-- explicitly. Partitions are reached through their parent. The v1 checkpoint
+-- ledger is the one append-only exception.
+DO $$
+DECLARE
+    rel RECORD;
+BEGIN
+    FOR rel IN
+        SELECT c.oid, c.relname
+          FROM pg_catalog.pg_class c
+         WHERE c.relnamespace = current_schema()::regnamespace
+           AND c.relkind IN ('r', 'p')
+           AND NOT c.relispartition
+           AND NOT has_table_privilege('attome_runtime', c.oid, 'SELECT')
+    LOOP
+        IF rel.relname = 'audit_v1_checkpoint' THEN
+            EXECUTE format('GRANT SELECT, INSERT ON %I TO attome_runtime', rel.relname);
+        ELSE
+            EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON %I TO attome_runtime', rel.relname);
+        END IF;
+    END LOOP;
+END
+$$;
+
 -- sqlx creates its own ledger before the first migration runs, outside every
 -- migration file, so the per-table grants above never name it. The platform
 -- reads the applied schema version from it (bundle export and plans), and the

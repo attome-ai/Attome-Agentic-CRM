@@ -82,6 +82,7 @@ tracing-opentelemetry.workspace = true
 tracing-subscriber.workspace    = true
 utoipa.workspace                = true
 uuid.workspace                  = true
+url.workspace                   = true
 
 [features]
 # Tests against a live Keycloak; run by hand with `--features keycloak-tests`.

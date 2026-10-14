@@ -95,3 +95,14 @@ figures, persistence status) report `memory` / not-applicable in Solo.
 4. Solo boot selects `Memory`; `attome init` on a machine with no Redis boots.
 5. Each port carries a test that runs the same assertions against both
    variants, so the two forms cannot drift.
+
+## `attome init`
+
+`attome init --database-url postgres://user:pass@host:5432/db` writes a Solo
+configuration (`cache.backend = "memory"`, generated secrets and role
+passwords), applies the schema and prints the next two commands. Verified on
+Windows against PostgreSQL 18: init, `attome serve --bootstrap-admin`, boot to
+ready in about 24 seconds with no Redis, login, an admin API read and a record
+create. An object store is not part of Solo's minimum: without one the server
+reports the object-storage capability unavailable and refuses only the
+operations that need it.
