@@ -402,6 +402,10 @@ fn withdraw_appends_a_new_row_and_never_touches_the_grant() {
         let purpose_key = format!("marketing-{}", Uuid::now_v7());
         let purpose_id = seed_purpose(&db, &purpose_key).await;
         let (_, cookie) = seed_consent_user(&db).await;
+        // `subject_reference` is sensitive, so writing it takes a field write
+        // grant the consent user does not hold: the grant row is set up by an
+        // administrator, and the withdrawal below is the consent user's.
+        let (_, admin_cookie) = seed_admin(&db).await;
         let app = full_app(system);
 
         let subject_reference = format!("subject-{}@example.com", Uuid::now_v7().simple());
@@ -411,7 +415,7 @@ fn withdraw_appends_a_new_row_and_never_touches_the_grant() {
         let create_req = Request::builder()
             .method("POST")
             .uri("/api/v1/audit_consent")
-            .header("cookie", &cookie)
+            .header("cookie", &admin_cookie)
             .header("content-type", "application/json")
             .header("origin", "http://localhost:4200")
             .header("sec-fetch-site", "same-origin")
