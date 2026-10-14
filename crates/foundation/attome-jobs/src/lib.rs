@@ -771,6 +771,40 @@ pub async fn apply_retry_backoff(
     Ok(())
 }
 
+/// Y12-T4: how many times one queued run may be pushed back because a table
+/// it changes stayed locked, and how far each time.
+pub const MAX_LOCK_DEFERRALS: i32 = 12;
+pub const LOCK_DEFERRAL_SECS: f64 = 300.0;
+
+/// Y12-T4: re-enqueues the row `task_id` as a fresh copy that runs
+/// [`LOCK_DEFERRAL_SECS`] from now, with the same kind, payload, priority and
+/// attempt budget. The count rides in the stored envelope's `deferrals` key,
+/// which decoding ignores. `Ok(false)`, writing nothing, once the row has
+/// been deferred [`MAX_LOCK_DEFERRALS`] times or is gone: the caller then
+/// fails the run. The caller returns success for the run that deferred, so
+/// apalis marks the original row done and the copy is the only live one.
+pub async fn defer_for_lock(pool: &attome_db::DbPool, task_id: &str) -> Result<bool, sqlx::Error> {
+    let pushed: Option<String> = sqlx::query_scalar(
+        "WITH src AS ( \
+             SELECT job_type, job, max_attempts, priority, \
+                    COALESCE((job->>'deferrals')::int, 0) AS deferrals \
+             FROM apalis.jobs WHERE id = $1) \
+         SELECT p.id FROM src CROSS JOIN LATERAL apalis.push_job( \
+             job_type => src.job_type, \
+             job => jsonb_set(src.job::jsonb, '{deferrals}', to_jsonb(src.deferrals + 1))::json, \
+             run_at => now() + make_interval(secs => $2), \
+             max_attempts => src.max_attempts, \
+             priority => src.priority) p \
+         WHERE src.deferrals < $3",
+    )
+    .bind(task_id)
+    .bind(LOCK_DEFERRAL_SECS)
+    .bind(MAX_LOCK_DEFERRALS)
+    .fetch_optional(pool)
+    .await?;
+    Ok(pushed.is_some())
+}
+
 /// True when a failure of the attempt now running would dead-letter the row —
 /// the moment a handler with its own ledger must close it out instead of
 /// leaving it for a retry that will never come (attome-email BEM-17).

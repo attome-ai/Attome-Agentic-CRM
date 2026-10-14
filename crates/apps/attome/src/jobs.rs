@@ -72,7 +72,7 @@ pub async fn handle_platform_job(
     };
     let profiler_enabled = config.observability.profiler_enabled;
     let started = std::time::Instant::now();
-    let (result, probes) = attome_profiler::scope(dispatch_platform_job(
+    let (mut result, probes) = attome_profiler::scope(dispatch_platform_job(
         job,
         db.clone(),
         db_migrator,
@@ -93,11 +93,51 @@ pub async fn handle_platform_job(
         );
     }
 
+    // Y12-T4: a run stopped by a table lock it could not get in time goes
+    // back in the queue for later instead of spending its attempts.
+    let mut deferred = false;
+    if let Err(e) = &result
+        && attome_db::is_lock_timeout(&**e)
+    {
+        match attome_jobs::defer_for_lock(&db, &task_id.to_string()).await {
+            Ok(true) => {
+                tracing::warn!(
+                    task_id = %task_id,
+                    kind = metric_kind,
+                    delay_secs = attome_jobs::LOCK_DEFERRAL_SECS,
+                    "platform job deferred: a table it changes is locked"
+                );
+                deferred = true;
+                result = Ok(());
+            }
+            Ok(false) => {
+                tracing::error!(
+                    task_id = %task_id,
+                    kind = metric_kind,
+                    reason = "lock_timeout",
+                    "platform job failed: a table it changes stayed locked through every deferral"
+                );
+                result = Err(format!(
+                    "lock_timeout: a table this job changes stayed locked through {} deferrals",
+                    attome_jobs::MAX_LOCK_DEFERRALS
+                )
+                .into());
+            }
+            Err(err) => tracing::warn!(
+                task_id = %task_id,
+                error = %err,
+                "platform job: could not defer a lock-blocked run; it fails and retries instead"
+            ),
+        }
+    }
+
     // BJB-14a — one outcome sample per run, by kind. Emitted through
     // attome-server so this crate carries no metrics dependency of its own.
     attome_server::metrics::record_platform_job_outcome(
         metric_kind,
-        if result.is_ok() {
+        if deferred {
+            "deferred"
+        } else if result.is_ok() {
             "succeeded"
         } else {
             "failed"
@@ -108,7 +148,7 @@ pub async fn handle_platform_job(
         started.elapsed().as_secs_f64(),
     );
 
-    if result.is_ok() {
+    if result.is_ok() && !deferred {
         // BJB-4d — the schedule ledger's last-success stamp: "the sweep ran and
         // succeeded", which is the signal the age gauge alerts on, as distinct
         // from "the scheduler claimed its slot". Only ever set for a

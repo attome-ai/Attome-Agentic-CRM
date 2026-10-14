@@ -156,11 +156,13 @@ pub(super) fn is_concurrent_create_race(e: &sqlx::Error) -> bool {
 /// Runs one DDL statement inside `BEGIN; SET LOCAL statement_timeout = 0; SET
 /// LOCAL lock_timeout; <pre_stmts>; <sql>; COMMIT`. `SET LOCAL` dies with the
 /// transaction, so no session state leaks back into the pooled connection.
-/// Retries SQLSTATE `55P03` (`lock_not_available`) with a small bounded
-/// backoff (3 attempts: 100ms/400ms/900ms + jitter derived from the attempt
-/// index and the statement length — deterministic, no `rand` dependency
-/// needed to just spread retries apart); any other error propagates
-/// immediately.
+/// Retries SQLSTATE `55P03` (`lock_not_available`) with exponential backoff
+/// (Y12-T4: 4 retries after 1 s, 2 s, 4 s and 8 s, plus jitter derived from
+/// the attempt index and the statement length — deterministic, no `rand`
+/// dependency needed to just spread retries apart); any other error
+/// propagates immediately. A queued run that still cannot get the lock is
+/// deferred by the worker (`attome_jobs::defer_for_lock`); a request gets
+/// its 409/500 as before. Never cancels or terminates another session.
 ///
 /// This is the fix for the boot-time-ALTER AccessExclusiveLock outage risk
 /// (P-provisioning-hardening item c): a lock request that can't be granted
@@ -187,12 +189,31 @@ pub(super) fn is_concurrent_create_race(e: &sqlx::Error) -> bool {
 /// NEVER used for `CREATE INDEX CONCURRENTLY` / `DROP INDEX CONCURRENTLY` —
 /// those cannot run inside a transaction at all (see
 /// `sync_attribute_index_on_connection`), so they stay as direct pool calls.
+/// The pause after failed attempt `attempt` (1-based): 1 s, 2 s, 4 s, 8 s,
+/// plus up to 49 ms of jitter.
+fn lock_retry_backoff_ms(attempt: u32, sql_len: usize) -> u64 {
+    let jitter_ms = (sql_len as u64 * u64::from(attempt)) % 50;
+    1000 * (1u64 << attempt.saturating_sub(1).min(3)) + jitter_ms
+}
+
+#[cfg(test)]
+mod backoff_tests {
+    use super::lock_retry_backoff_ms;
+
+    #[test]
+    fn lock_retries_back_off_exponentially() {
+        let base: Vec<u64> = (1..=4).map(|a| lock_retry_backoff_ms(a, 0)).collect();
+        assert_eq!(base, vec![1000, 2000, 4000, 8000]);
+        assert!(lock_retry_backoff_ms(2, 31) < 2050);
+    }
+}
+
 pub(super) async fn exec_ddl_locked(
     db: &DbPool,
     pre_stmts: &[&str],
     sql: &str,
 ) -> Result<(), sqlx::Error> {
-    const MAX_ATTEMPTS: u32 = 3;
+    const MAX_ATTEMPTS: u32 = 5;
     for attempt in 1..=MAX_ATTEMPTS {
         // D-104 test hook: the standalone "reseed issues zero ALTER" check
         // (attome-metadata/tests/provision.rs) has no reliable pg_stat_statements
@@ -232,8 +253,7 @@ pub(super) async fn exec_ddl_locked(
                     .and_then(|dbe| dbe.code())
                     .is_some_and(|code| code.as_ref() == "55P03");
                 if lock_not_available && attempt < MAX_ATTEMPTS {
-                    let jitter_ms = (sql.len() as u64 * attempt as u64) % 50;
-                    let backoff_ms = 100 * (attempt as u64).pow(2) + jitter_ms;
+                    let backoff_ms = lock_retry_backoff_ms(attempt, sql.len());
                     tracing::warn!(
                         attempt,
                         backoff_ms,

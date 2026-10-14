@@ -118,6 +118,39 @@ pub(crate) fn note_role_acquire_timeout(role: &str) {
     }
 }
 
+/// The `Conflict` text a `55P03` (`lock_not_available`) maps to.
+pub const LOCK_NOT_AVAILABLE: &str =
+    "the database could not acquire a lock in time; retry the request";
+
+/// Y12-T4: `true` when an error chain is a lock PostgreSQL could not grant in
+/// time (`55P03`), whichever way the caller carried it: the raw `sqlx`
+/// error, its [`classify`] `Conflict`, provisioning's `field_busy` conflict,
+/// or a masked `Internal` whose detail is PostgreSQL's lock-timeout message.
+/// The worker defers such a run instead of failing it.
+pub fn is_lock_timeout(error: &(dyn std::error::Error + 'static)) -> bool {
+    let mut current = Some(error);
+    while let Some(err) = current {
+        if let Some(app) = err.downcast_ref::<AppError>() {
+            match app {
+                AppError::Conflict(msg)
+                    if *msg == LOCK_NOT_AVAILABLE || msg.starts_with("field_busy") =>
+                {
+                    return true;
+                }
+                AppError::Internal(detail) if detail.contains("lock timeout") => return true,
+                _ => {}
+            }
+        }
+        if let Some(sql) = err.downcast_ref::<sqlx::Error>()
+            && sqlstate(sql).is_some_and(|code| code == "55P03")
+        {
+            return true;
+        }
+        current = err.source();
+    }
+    false
+}
+
 /// BDB-F6 / 3.1b — the process-wide callback run once per `57014`
 /// (`statement_timeout`) seen by [`classify`]. Same set-once, metrics-free
 /// shape as [`set_acquire_timeout_hook`]: `attome-server` installs one that
@@ -194,9 +227,7 @@ pub fn classify(error: sqlx::Error) -> AppError {
         Some("40001") | Some("40P01") => AppError::Conflict(
             "the database detected a conflicting concurrent transaction; retry the request",
         ),
-        Some("55P03") => {
-            AppError::Conflict("the database could not acquire a lock in time; retry the request")
-        }
+        Some("55P03") => AppError::Conflict(LOCK_NOT_AVAILABLE),
         Some("57014") => {
             tracing::warn!(
                 event = "db.statement_timeout",
@@ -235,6 +266,28 @@ fn is_connection_loss_sqlstate(code: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Y12-T4: every carrier of a `55P03` counts as a lock timeout, and
+    /// nothing else does.
+    #[test]
+    fn lock_timeouts_are_recognised_in_every_carrier() {
+        let classified = AppError::Conflict(LOCK_NOT_AVAILABLE);
+        assert!(is_lock_timeout(&classified));
+        let busy = AppError::Conflict("field_busy: the table is in use; retry shortly");
+        assert!(is_lock_timeout(&busy));
+        let masked = AppError::Internal(
+            "error returned from database: canceling statement due to lock timeout".into(),
+        );
+        assert!(is_lock_timeout(&masked));
+        let boxed: Box<dyn std::error::Error + Send + Sync> = Box::new(classified);
+        assert!(is_lock_timeout(&*boxed));
+        assert!(!is_lock_timeout(&AppError::Conflict(
+            "a record with this key already exists"
+        )));
+        assert!(!is_lock_timeout(&AppError::Internal(
+            "connection reset".into()
+        )));
+    }
 
     /// `sqlx::Error` variants with no underlying `DatabaseError` at all (a
     /// missing row, a driver/protocol-level failure) must still mask to

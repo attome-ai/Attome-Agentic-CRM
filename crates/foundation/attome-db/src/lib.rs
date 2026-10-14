@@ -69,8 +69,8 @@ pub mod tx;
 
 pub use checksum::{ChecksumError, verify_migration_checksums};
 pub use error::{
-    PoolPressureHooks, classify, is_unique_violation, set_acquire_timeout_hook,
-    set_pool_pressure_hooks, set_statement_timeout_hook, sqlstate,
+    LOCK_NOT_AVAILABLE, PoolPressureHooks, classify, is_lock_timeout, is_unique_violation,
+    set_acquire_timeout_hook, set_pool_pressure_hooks, set_statement_timeout_hook, sqlstate,
 };
 pub use migrate::{
     MIGRATION_LOCK_TIMEOUT, SchemaState, run_migrations, run_migrations_with_migrator_lock_budget,

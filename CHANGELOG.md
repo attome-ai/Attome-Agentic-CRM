@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- A schema change blocked by a table lock retries after 1, 2, 4 and 8 seconds; a queued one then
+  waits five minutes and tries again, up to 12 times, before failing with `lock_timeout`.
 - Solo backs up its database every day (`backup`, on by default; `attome backup now`); see
   `docs/backup.md`. `POST /api/v1/{entity}/validate` checks a record without saving it.
 - `under` and `above` filter operators for lookups into a tree; choice-value usage counts

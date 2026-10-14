@@ -566,11 +566,11 @@ async fn reseeding_issues_no_alter_table_statements_on_the_second_pass() {
 
 /// P-provisioning-hardening item (c) / D-101 — standalone scenario 2 of 3.
 /// A conflicting lock held by another session must make `exec_ddl_locked`
-/// retry SQLSTATE 55P03 (`lock_not_available`) up to its bounded budget (3
-/// attempts, 5s `lock_timeout` each) and then return a clean error — never
+/// retry SQLSTATE 55P03 (`lock_not_available`) up to its bounded budget (5
+/// attempts, 5s `lock_timeout` each, 1/2/4/8 s apart) and then return a clean error — never
 /// hang, and never silently succeed by skipping the ALTER.
 ///
-/// Deliberately pays the real ~15s cost of exercising the production
+/// Deliberately pays the real ~40s cost of exercising the production
 /// `DDL_LOCK_TIMEOUT`/retry constants end-to-end rather than injecting a
 /// shortened timeout for the test: the entire point of item (c) is the
 /// timing contract itself (a boot can be slow, but must never wedge live
@@ -601,7 +601,7 @@ async fn ddl_retries_then_errors_on_a_held_conflicting_lock() {
     .expect("acquire holder lock");
 
     // Migration 0065 sets idle_in_transaction_session_timeout = 10s on
-    // this role, but the retry budget below deliberately runs ~15s — a
+    // this role, but the retry budget below deliberately runs ~40s — a
     // holder connection sitting fully idle that whole time would get
     // killed server-side before this test ever reaches its own ROLLBACK,
     // failing on cleanup even though the retry-then-error behavior under
@@ -668,7 +668,7 @@ async fn ddl_retries_then_errors_on_a_held_conflicting_lock() {
     assert!(
         elapsed >= Duration::from_secs(9),
         "must have actually waited through the retry/backoff budget \
-         (3 attempts x 5s lock_timeout ~= 15s) rather than failing \
+         (5 attempts x 5s lock_timeout + 15s of backoff ~= 40s) rather than failing \
          immediately for an unrelated reason: elapsed={elapsed:?}"
     );
 
