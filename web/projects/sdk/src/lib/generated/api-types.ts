@@ -978,6 +978,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/business-rules/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A11-T5: why a record looks the way it does: every active rule on its
+         *     entity evaluated against the stored record, as `.../{id}/test` evaluates
+         *     one: whether it applies, its condition, the policies that fire, the
+         *     values it would set, its errors and locks, and the trace. Writes nothing.
+         */
+        get: operations["explain_rules"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/business-rules/validate": {
         parameters: {
             query?: never;
@@ -5745,6 +5767,27 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["update_view"];
+        trace?: never;
+    };
+    "/api/v1/admin/views/{id}/impact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A13-T6: who would notice a change to this view: the dashboards that show
+         *     it, the navigation that links to it, and whether it is every user's
+         *     default or a built-in one. Reads only.
+         */
+        get: operations["view_impact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/admin/webportals": {
@@ -23015,6 +23058,13 @@ export interface components {
             field?: string | null;
             message: string;
         };
+        /** @description One rule's outcome on a stored record (A11-T5). */
+        RuleExplanation: components["schemas"]["RuleTestResponse"] & {
+            kind: string;
+            name: string;
+            /** Format: uuid */
+            rule_id: string;
+        };
         /**
          * @description One business-rule `error` policy that fired (D-789 §3.3), inside a
          *     `rule_violation` body's `details.rules`. Carries names and the rule's own
@@ -23118,6 +23168,13 @@ export interface components {
             rule_id: string;
             /** @description The rule's display name (its name when it has none). */
             rule_name: string;
+        };
+        /** @description `GET /api/v1/admin/business-rules/explain`. */
+        RulesExplained: {
+            entity: string;
+            /** Format: uuid */
+            record_id: string;
+            rules: components["schemas"]["RuleExplanation"][];
         };
         RunEnqueueResponse: {
             /** Format: uuid */
@@ -25564,6 +25621,32 @@ export interface components {
              *     comment).
              */
             view_metadata: unknown;
+        };
+        /** @description What editing or removing a view would touch (A13-T6). */
+        ViewImpact: {
+            /**
+             * Format: int64
+             * @description Dashboard widgets that show it, and the dashboards they are on.
+             */
+            dashboard_widgets: number;
+            /** Format: int64 */
+            dashboards: number;
+            /** Format: uuid */
+            id: string;
+            /** @description Every user's default list for this entity. */
+            is_default: boolean;
+            name: string;
+            /** @description The layer that owns it; a `platform` view is built in. */
+            owner_layer: string;
+            /** @description `system`, `shared` or `personal`. */
+            scope: string;
+            /**
+             * Format: int64
+             * @description Navigation entries whose route names it.
+             */
+            sidebar_items: number;
+            /** @description What to tell the person about to change it. */
+            warnings: string[];
         };
         /**
          * @description Up or down, and nothing else.
@@ -28780,6 +28863,58 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    explain_rules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The entity's logical name. */
+                entity: string;
+                /** @description The record. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each active rule's outcome on the record */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RulesExplained"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or record */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -46601,6 +46736,55 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    view_impact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What depends on the view */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewImpact"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such view */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

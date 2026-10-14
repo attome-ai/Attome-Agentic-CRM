@@ -4732,6 +4732,86 @@
         }
       }
     },
+    "/api/v1/admin/business-rules/explain": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A11-T5: why a record looks the way it does: every active rule on its\nentity evaluated against the stored record, as `.../{id}/test` evaluates\none: whether it applies, its condition, the policies that fire, the\nvalues it would set, its errors and locks, and the trace. Writes nothing.",
+        "operationId": "explain_rules",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "The entity's logical name.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The record.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Each active rule's outcome on the record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulesExplained"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/business-rules/validate": {
       "post": {
         "tags": [
@@ -32009,6 +32089,76 @@
           ],
           "policy": "mandatory"
         }
+      }
+    },
+    "/api/v1/admin/views/{id}/impact": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A13-T6: who would notice a change to this view: the dashboards that show\nit, the navigation that links to it, and whether it is every user's\ndefault or a built-in one. Reads only.",
+        "operationId": "view_impact",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What depends on the view",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewImpact"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such view",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/api/v1/admin/webportals": {
@@ -88099,6 +88249,34 @@
           }
         }
       },
+      "RuleExplanation": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RuleTestResponse"
+          },
+          {
+            "type": "object",
+            "required": [
+              "rule_id",
+              "name",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "rule_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ],
+        "description": "One rule's outcome on a stored record (A11-T5)."
+      },
       "RuleFailure": {
         "type": "object",
         "description": "One business-rule `error` policy that fired (D-789 §3.3), inside a\n`rule_violation` body's `details.rules`. Carries names and the rule's own\nmessage, never a record value.",
@@ -88333,6 +88511,30 @@
           "rule_name": {
             "type": "string",
             "description": "The rule's display name (its name when it has none)."
+          }
+        }
+      },
+      "RulesExplained": {
+        "type": "object",
+        "description": "`GET /api/v1/admin/business-rules/explain`.",
+        "required": [
+          "entity",
+          "record_id",
+          "rules"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleExplanation"
+            }
           }
         }
       },
@@ -94543,6 +94745,63 @@
           "table_definition": {},
           "view_metadata": {
             "description": "D-429 — kind-specific settings, advisory only. Never a source of\nserver-side enforcement: a kanban `state_field`/`wip_limits` never\nsubstitutes for `attome-state`'s own transition checks, a\ncalendar/timeline `start_field`/`end_field` never substitutes for the\nview's own privilege/record-security gate, and a chart's\n`x_field`/`y_fields`/aggregation never substitutes for `query/execute`\nactually returning that column (see `chart_view_metadata`'s doc\ncomment)."
+          }
+        }
+      },
+      "ViewImpact": {
+        "type": "object",
+        "description": "What editing or removing a view would touch (A13-T6).",
+        "required": [
+          "id",
+          "name",
+          "scope",
+          "is_default",
+          "owner_layer",
+          "dashboard_widgets",
+          "dashboards",
+          "sidebar_items",
+          "warnings"
+        ],
+        "properties": {
+          "dashboard_widgets": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Dashboard widgets that show it, and the dashboards they are on."
+          },
+          "dashboards": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "is_default": {
+            "type": "boolean",
+            "description": "Every user's default list for this entity."
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner_layer": {
+            "type": "string",
+            "description": "The layer that owns it; a `platform` view is built in."
+          },
+          "scope": {
+            "type": "string",
+            "description": "`system`, `shared` or `personal`."
+          },
+          "sidebar_items": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Navigation entries whose route names it."
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "What to tell the person about to change it."
           }
         }
       },
