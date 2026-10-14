@@ -12,6 +12,15 @@ that makes it; the release gate's contract step refuses a release that breaks th
   PostgreSQL alone for a single server; Redis is optional.
 - The release gate (`attome-release --check`, also `attome release --check`) writes a per-OS report
   to `target/release-gate/` and checks the API contract against the previous release.
+- The metadata model: forms and other metadata kinds are stored as versioned drafts, edited with
+  `add`/`remove`/`move`/`set` commands (the same for people and agents), validated in three steps
+  and cooked into content-hashed artefacts; administrators reach it under `/api/v1/admin/model`.
+- Install and operations: `attome service install`, `attome bundle offline`, `attome sovereignty
+  report`, a sizing check in `attome init`, and the `deployment.sovereign` preset.
+- Testing and release tooling: `attome test` (tiers, a Docker test stack, flaky-test reruns,
+  quarantine, coverage, the coverage map), the SLO catalogue with `attome slo generate`, and gate
+  steps for waivers, `cargo deny`, npm licences, SBOMs, dependency intake, install time and a boot
+  smoke test.
 
 ### Breaking
 - v2 renames every table, entity and API path segment that carried v1's `xrm_` or `core_` prefix
