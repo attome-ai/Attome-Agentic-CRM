@@ -472,7 +472,7 @@ async fn scheduled_run_never_surfaces_a_row_run_as_cannot_see() {
     // ── A throwaway entity with two rows: one restricted-user-owned
     //    ("Visible Row", via implicit creator-share), one admin-owned
     //    ("Hidden Row", never shared with the restricted user). ────────────
-    let logicalname = format!("report_rls_widget_{}", Uuid::now_v7().simple());
+    let logicalname = format!("rpt_rls_{}", Uuid::now_v7().simple());
     let entity_id = provision_entity(&app, &admin_cookie, &logicalname).await;
     provision_text_field(&app, &admin_cookie, entity_id).await;
     sync_registry(&state).await;
