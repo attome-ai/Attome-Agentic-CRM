@@ -4,7 +4,7 @@ import { of } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ModelService } from '../model.service';
-import { AgentDesignerComponent, commandsFor, draftFromDoc, emptyAgent } from './agent-designer.component';
+import { AgentDesignerComponent, commandsFor, draftFromDoc, emptyAgent, newId } from './agent-designer.component';
 
 const page = <T>(items: T[]) => ({ items, total: items.length, page: 1, page_size: 50 });
 
@@ -29,6 +29,12 @@ describe('agent drafts', () => {
 
   it('fills defaults for a missing document', () => {
     expect(draftFromDoc(null)).toEqual(emptyAgent());
+  });
+
+  it('makes time-ordered version 7 ids', () => {
+    const id = newId(0x0123456789ab);
+    expect(id).toMatch(/^01234567-89ab-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(newId(1) < newId(2)).toBe(true);
   });
 });
 
