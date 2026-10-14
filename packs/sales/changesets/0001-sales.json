@@ -1,0 +1,1811 @@
+{
+  "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
+  "checksum": "sha256:c0f845de15ca5bfb19a95f6f3067abc1c7b25984fda3c9c76b88fcfa4018ccbd",
+  "closed_at": "2026-10-14T00:00:00Z",
+  "description": "The sales pack's metadata, converted from its v1 vertical bundle.",
+  "format": "attome-changeset/v1",
+  "id": "ab839a0a-c7ee-75ad-880f-c0f974152a06",
+  "layer": "product",
+  "name": "sales",
+  "opened_at": "2026-10-14T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Order",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "order",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "order"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Price List",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "price_list",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "price_list"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Price List Item",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "price_list_item",
+          "primary_name_attribute": null
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "price_list_item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Product",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "product",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "product"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Quote",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "quote",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "quote"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Quote Line",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "quote_line",
+          "primary_name_attribute": null
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "quote_line"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Territory",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "territory",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "territory"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "currency",
+          "lookup_entity": null,
+          "max_length": 10,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "order",
+        "field": "currency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "order",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Ordered On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "ordered_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "order",
+        "field": "ordered_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "confirmed",
+              "fulfilled",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "order",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "currency",
+          "lookup_entity": null,
+          "max_length": 10,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "price_list",
+        "field": "currency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Is Active List",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_active_list",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "price_list",
+        "field": "is_active_list"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "price_list",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Price",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "price",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "price_list_item",
+        "field": "price"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "product",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Is Orderable",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_orderable",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "product",
+        "field": "is_orderable"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "product",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "SKU",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "sku",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "product",
+        "field": "sku"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "currency",
+          "lookup_entity": null,
+          "max_length": 10,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "quote",
+        "field": "currency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Discount Percent",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "discount_percent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "quote",
+        "field": "discount_percent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Expires On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "expires_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "quote",
+        "field": "expires_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "quote",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "sent",
+              "accepted",
+              "rejected",
+              "expired"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "quote",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Line Total",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "line_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "quote_line",
+        "field": "line_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Quantity",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "quote_line",
+        "field": "quantity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Unit Price",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "unit_price",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "quote_line",
+        "field": "unit_price"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "territory",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "territory",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "order",
+        "field": "account_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Quote",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "quote_ref",
+          "lookup_entity": "quote",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "order",
+        "field": "quote_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Price List",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "price_list_ref",
+          "lookup_entity": "price_list",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "price_list_item",
+        "field": "price_list_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Product",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "product_ref",
+          "lookup_entity": "product",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "price_list_item",
+        "field": "product_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "quote",
+        "field": "account_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Opportunity",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "opportunity_ref",
+          "lookup_entity": "opportunity",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "quote",
+        "field": "opportunity_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Product",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "product_ref",
+          "lookup_entity": "product",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "quote_line",
+        "field": "product_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Quote",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "quote_ref",
+          "lookup_entity": "quote",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "quote_line",
+        "field": "quote_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Parent Territory",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "parent_territory_ref",
+          "lookup_entity": "territory",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "territory",
+        "field": "parent_territory_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Territory",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "territory_ref",
+          "lookup_entity": "territory",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "account",
+        "field": "territory_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Closed-Won Value by Owner",
+          "required_privilege": "opportunity.read",
+          "sql": "SELECT (array_agg(id))[1] AS id, owner_ref, SUM(amount) AS closed_won_value FROM opportunity WHERE stage = 'closed_won' AND is_active = true GROUP BY owner_ref",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Closed-Won Value by Owner"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Orders This Period",
+          "required_privilege": "order.read",
+          "sql": "SELECT id, name, status, currency, ordered_on FROM \"order\" WHERE is_active = true ORDER BY ordered_on DESC NULLS LAST",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Orders This Period"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Pipeline Value by Stage",
+          "required_privilege": "opportunity.read",
+          "sql": "SELECT (array_agg(id))[1] AS id, stage, SUM(amount) AS pipeline_value, COUNT(*) AS opportunity_count FROM opportunity WHERE is_active = true AND stage NOT IN ('closed_won','closed_lost') GROUP BY stage",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Pipeline Value by Stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Quote Total (Read-Time)",
+          "required_privilege": "quote_line.read",
+          "sql": "SELECT (array_agg(id))[1] AS id, quote_ref, SUM(line_total) AS quote_total FROM quote_line WHERE is_active = true GROUP BY quote_ref",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Quote Total (Read-Time)"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": null,
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Sales: Quote to Order Conversion",
+          "required_privilege": "quote.read",
+          "sql": "SELECT id, name, status, currency, account_ref FROM quote WHERE is_active = true AND status = 'accepted'",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "multi_entity_stored_query_with_no_primary_entity_bound",
+        "query": "Sales: Quote to Order Conversion"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "order",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Order",
+          "required_privilege": "order.read",
+          "sql": "SELECT id, \"name\" FROM \"order\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "order",
+        "query": "Active Order"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "order",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Order",
+          "required_privilege": "order.read",
+          "sql": "SELECT id, \"name\" FROM \"order\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "order",
+        "query": "Inactive Order"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "price_list",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Price List",
+          "required_privilege": "price_list.read",
+          "sql": "SELECT id, \"name\" FROM \"price_list\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "price_list",
+        "query": "Active Price List"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "price_list",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Price List",
+          "required_privilege": "price_list.read",
+          "sql": "SELECT id, \"name\" FROM \"price_list\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "price_list",
+        "query": "Inactive Price List"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "price_list_item",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Price List Item",
+          "required_privilege": "price_list_item.read",
+          "sql": "SELECT id FROM \"price_list_item\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "price_list_item",
+        "query": "Active Price List Item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "price_list_item",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Price List Item",
+          "required_privilege": "price_list_item.read",
+          "sql": "SELECT id FROM \"price_list_item\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "price_list_item",
+        "query": "Inactive Price List Item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "product",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Product",
+          "required_privilege": "product.read",
+          "sql": "SELECT id, \"name\" FROM \"product\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "product",
+        "query": "Active Product"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "product",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Product",
+          "required_privilege": "product.read",
+          "sql": "SELECT id, \"name\" FROM \"product\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "product",
+        "query": "Inactive Product"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "quote",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Quote",
+          "required_privilege": "quote.read",
+          "sql": "SELECT id, \"name\" FROM \"quote\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "quote",
+        "query": "Active Quote"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "quote",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Quote",
+          "required_privilege": "quote.read",
+          "sql": "SELECT id, \"name\" FROM \"quote\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "quote",
+        "query": "Inactive Quote"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "quote_line",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Quote Line",
+          "required_privilege": "quote_line.read",
+          "sql": "SELECT id FROM \"quote_line\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "quote_line",
+        "query": "Active Quote Line"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "quote_line",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Quote Line",
+          "required_privilege": "quote_line.read",
+          "sql": "SELECT id FROM \"quote_line\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "quote_line",
+        "query": "Inactive Quote Line"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "territory",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Territory",
+          "required_privilege": "territory.read",
+          "sql": "SELECT id, \"name\" FROM \"territory\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "territory",
+        "query": "Active Territory"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "territory",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Territory",
+          "required_privilege": "territory.read",
+          "sql": "SELECT id, \"name\" FROM \"territory\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "territory",
+        "query": "Inactive Territory"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 60,
+          "entity": null,
+          "icon": "las la-dollar-sign",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Sales"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "path": "Sales"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 4,
+          "entity": null,
+          "icon": "las la-shopping-cart",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Sales",
+            "Orders"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/order/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "path": "Sales/Orders"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "las la-tags",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Sales",
+            "Price Lists"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/price_list/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "path": "Sales/Price Lists"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "las la-box",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Sales",
+            "Products"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/product/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "path": "Sales/Products"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": "las la-file-invoice-dollar",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Sales",
+            "Quotes"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/quote/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "path": "Sales/Quotes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 5,
+          "entity": null,
+          "icon": "las la-map-marked-alt",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Sales",
+            "Territories"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/territory/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "path": "Sales/Territories"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": null,
+          "is_customized": true,
+          "name": "Territory Sales Rep",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "role": "Territory Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "privilege": "account.read",
+        "role": "Territory Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "field": "territory_ref",
+          "operator": 0,
+          "value": "01a052ee-86f9-7d1f-a7a0-51387c6c947f"
+        }
+      },
+      "op": "add_role_grant_condition",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "condition": "territory_ref|0|\"01a052ee-86f9-7d1f-a7a0-51387c6c947f\"",
+        "privilege": "account.read",
+        "role": "Territory Sales Rep"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "order",
+          "initial_state": "draft",
+          "is_active": true,
+          "name": "Order Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "order"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "confirmed",
+          "guard_expression": null,
+          "name": "Cancel Order",
+          "required_privilege": null,
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "order",
+        "transition": "confirmed->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "confirmed",
+          "guard_expression": null,
+          "name": "Fulfill Order",
+          "required_privilege": null,
+          "to_state": "fulfilled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "order",
+        "transition": "confirmed->fulfilled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Cancel Order",
+          "required_privilege": null,
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "order",
+        "transition": "draft->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Confirm Order",
+          "required_privilege": null,
+          "to_state": "confirmed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "order",
+        "transition": "draft->confirmed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "quote",
+          "initial_state": "draft",
+          "is_active": true,
+          "name": "Quote Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "quote"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Send Quote",
+          "required_privilege": null,
+          "to_state": "sent"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "quote",
+        "transition": "draft->sent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "sent",
+          "guard_expression": null,
+          "name": "Mark Accepted",
+          "required_privilege": null,
+          "to_state": "accepted"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "quote",
+        "transition": "sent->accepted"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "sent",
+          "guard_expression": null,
+          "name": "Mark Expired",
+          "required_privilege": null,
+          "to_state": "expired"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "quote",
+        "transition": "sent->expired"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "sent",
+          "guard_expression": null,
+          "name": "Mark Rejected",
+          "required_privilege": null,
+          "to_state": "rejected"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "quote",
+        "transition": "sent->rejected"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "dashboard",
+      "docgen",
+      "report",
+      "state",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 1,
+  "title": "Pack: sales"
+}

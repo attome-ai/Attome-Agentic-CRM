@@ -644,7 +644,7 @@ fn security_routes_record_one_operation_each() {
             .expect("share op");
         assert_eq!(
             share_target,
-            json!({ "entity": entity, "share": format!("user:{}:read", admin.email) })
+            json!({ "entity": entity, "share": format!("user:{}:view", admin.email) })
         );
     });
 }

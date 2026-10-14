@@ -1,0 +1,463 @@
+{
+  "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
+  "checksum": "sha256:13bd6576564e76fda7f2f5a3af06638b6add634a606f2916021741d4b1e647b8",
+  "closed_at": "2026-10-14T00:00:00Z",
+  "description": "The customer-service pack's metadata, converted from its v1 vertical bundle.",
+  "format": "attome-changeset/v1",
+  "id": "9c79ebd7-d91e-7828-a6dd-e4906a6e1ed0",
+  "layer": "product",
+  "name": "customer-service",
+  "opened_at": "2026-10-14T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: bulk mutations on customer",
+          "key": "customer.bulk",
+          "name": "customer.bulk"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "customer.bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on customer",
+          "key": "customer.create",
+          "name": "customer.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "customer.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on customer",
+          "key": "customer.delete",
+          "name": "customer.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "customer.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on customer",
+          "key": "customer.read",
+          "name": "customer.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "customer.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on customer",
+          "key": "customer.update",
+          "name": "customer.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "customer.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Customer",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "customer",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "customer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Company Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "company_name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "customer",
+        "field": "company_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Email",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "email",
+          "lookup_entity": null,
+          "max_length": 320,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "customer",
+        "field": "email"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "customer",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Phone",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "phone",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "customer",
+        "field": "phone"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Customer",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "customer_ref",
+          "lookup_entity": "customer",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "service_ticket",
+        "field": "customer_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "CS: Average CSAT",
+          "required_privilege": "service_ticket.read",
+          "sql": "SELECT AVG(csat_score)::numeric(10,2) AS avg_csat, COUNT(*) FILTER (WHERE csat_score IS NOT NULL)::bigint AS responses FROM service_ticket WHERE is_active = true",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "service_ticket",
+        "query": "CS: Average CSAT"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "CS: Open Tickets",
+          "required_privilege": "service_ticket.read",
+          "sql": "SELECT id, ticket_number, title, priority, status, customer_ref FROM service_ticket WHERE is_active = true AND status NOT IN ('resolved','closed')",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "service_ticket",
+        "query": "CS: Open Tickets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "service_ticket",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "CS: SLA Compliance",
+          "required_privilege": "service_ticket.read",
+          "sql": "SELECT COUNT(*) FILTER (WHERE sla_breached IS NOT TRUE)::bigint AS on_track, COUNT(*) FILTER (WHERE sla_breached IS TRUE)::bigint AS breached FROM service_ticket WHERE is_active = true",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "service_ticket",
+        "query": "CS: SLA Compliance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "customer",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Customer",
+          "query": {
+            "entity": "customer",
+            "name": "Active Customer"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "customer",
+        "view": "Active Customer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "customer",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Customer",
+          "query": {
+            "entity": "customer",
+            "name": "Inactive Customer"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "customer",
+        "view": "Inactive Customer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 51,
+          "entity": null,
+          "icon": "la-headset",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Customer Service"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "path": "Customer Service"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-address-card",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Customer Service",
+            "Customers"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/customer/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "path": "Customer Service/Customers"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-ticket-alt",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Customer Service",
+            "Tickets"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/service_ticket/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "path": "Customer Service/Tickets"
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "name"
+        ],
+        "values": {
+          "category": "other",
+          "default_priority": "medium",
+          "description": "Default customer service intake for general issues and requests.",
+          "fulfilment": "ticket",
+          "is_active": true,
+          "is_public": true,
+          "name": "General Support"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "service_offering",
+        "key": {
+          "name": "General Support"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "report",
+      "service"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "customer-service",
+  "seq": 1,
+  "title": "Pack: customer-service"
+}

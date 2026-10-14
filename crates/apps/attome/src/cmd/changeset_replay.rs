@@ -704,21 +704,34 @@ pub fn run() -> ExitCode {
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "warn".into()),
         )
         .init();
-    let runtime = match tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-    {
-        Ok(rt) => rt,
-        Err(e) => {
-            eprintln!("could not start the async runtime: {e}");
-            return ExitCode::from(2);
-        }
-    };
-    match runtime.block_on(replay(args)) {
-        Ok(true) => ExitCode::SUCCESS,
-        Ok(false) => ExitCode::from(1),
-        Err(e) => {
-            eprintln!("replay failed: {e}");
+    // The boot future is too large for a default thread stack in a debug
+    // build (`serve::run` runs on the same 64 MiB stack for the same reason).
+    let worker = std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(move || {
+            let runtime = match tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+            {
+                Ok(rt) => rt,
+                Err(e) => {
+                    eprintln!("could not start the async runtime: {e}");
+                    return ExitCode::from(2);
+                }
+            };
+            match runtime.block_on(replay(args)) {
+                Ok(true) => ExitCode::SUCCESS,
+                Ok(false) => ExitCode::from(1),
+                Err(e) => {
+                    eprintln!("replay failed: {e}");
+                    ExitCode::from(2)
+                }
+            }
+        });
+    match worker.map(|handle| handle.join()) {
+        Ok(Ok(code)) => code,
+        _ => {
+            eprintln!("the replay thread could not run to completion");
             ExitCode::from(2)
         }
     }

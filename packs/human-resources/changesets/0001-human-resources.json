@@ -1,0 +1,1647 @@
+{
+  "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
+  "checksum": "sha256:56a12a6a51d5adc977de090709ce146936a6786a90e40472d59243013e5a9e70",
+  "closed_at": "2026-10-14T00:00:00Z",
+  "description": "The human-resources pack's metadata, converted from its v1 vertical bundle.",
+  "format": "attome-changeset/v1",
+  "id": "066d475b-e3c8-713d-875e-89ddae476563",
+  "layer": "product",
+  "name": "human-resources",
+  "opened_at": "2026-10-14T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Approve or reject a leave request in manager review (M82 S2)",
+          "key": "leave_request.approve",
+          "name": "leave_request.approve"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "leave_request.approve"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Attendance",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "attendance",
+          "primary_name_attribute": null
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "attendance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Employee",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "employee",
+          "primary_name_attribute": "full_name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "employee"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Leave Request",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "leave_request",
+          "primary_name_attribute": null
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "leave_request"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Performance Review",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "performance_review",
+          "primary_name_attribute": null
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "performance_review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "attendance_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "attendance",
+        "field": "attendance_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "attendance_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "present",
+              "absent",
+              "half_day",
+              "remote"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "attendance",
+        "field": "attendance_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Hours Worked",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "hours_worked",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "attendance",
+        "field": "hours_worked"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "Base Salary",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "base_salary",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "employee",
+        "field": "base_salary"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "Date of Birth",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "date_of_birth",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "employee",
+        "field": "date_of_birth"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "Emergency Contact",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "emergency_contact",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "employee",
+        "field": "emergency_contact"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Employment Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "employment_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "active",
+              "on_leave",
+              "terminated"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "employee",
+        "field": "employment_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Full Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "full_name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "employee",
+        "field": "full_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Hire Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "hire_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "employee",
+        "field": "hire_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Job Title",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "job_title",
+          "lookup_entity": null,
+          "max_length": 150,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "employee",
+        "field": "job_title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "sensitive_special_category",
+          "display_name": "Medical / Accommodation Notes",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "medical_notes",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "employee",
+        "field": "medical_notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "National ID",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "national_id",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "employee",
+        "field": "national_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "End Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "end_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "leave_request",
+        "field": "end_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Leave Type",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "leave_type",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "annual",
+              "sick",
+              "unpaid",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "leave_request",
+        "field": "leave_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reason",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "leave_request",
+        "field": "reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Start Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "start_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "leave_request",
+        "field": "start_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "requested",
+              "manager_review",
+              "approved",
+              "rejected",
+              "taken"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "leave_request",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Comments",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "comments",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "performance_review",
+        "field": "comments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Due Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "due_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "performance_review",
+        "field": "due_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Overall Rating",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "overall_rating",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "exceeds",
+              "meets",
+              "below",
+              "unsatisfactory"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "performance_review",
+        "field": "overall_rating"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Review Period",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "review_period",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "performance_review",
+        "field": "review_period"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "submitted",
+              "acknowledged"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "performance_review",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Employee",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "employee_ref",
+          "lookup_entity": "employee",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "attendance",
+        "field": "employee_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "System User",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "user_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "employee",
+        "field": "user_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Employee",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "employee_ref",
+          "lookup_entity": "employee",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "leave_request",
+        "field": "employee_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Requested By",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "requested_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "leave_request",
+        "field": "requested_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Employee",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "employee_ref",
+          "lookup_entity": "employee",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "performance_review",
+        "field": "employee_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attendance",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Attendance",
+          "required_privilege": "attendance.read",
+          "sql": "SELECT id FROM \"attendance\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "attendance",
+        "query": "Active Attendance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attendance",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Attendance",
+          "required_privilege": "attendance.read",
+          "sql": "SELECT id FROM \"attendance\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "attendance",
+        "query": "Inactive Attendance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "employee",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Employee",
+          "required_privilege": "employee.read",
+          "sql": "SELECT id, \"full_name\" FROM \"employee\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "employee",
+        "query": "Active Employee"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "employee",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Employee",
+          "required_privilege": "employee.read",
+          "sql": "SELECT id, \"full_name\" FROM \"employee\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "employee",
+        "query": "Inactive Employee"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "leave_request",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Leave Request",
+          "required_privilege": "leave_request.read",
+          "sql": "SELECT id FROM \"leave_request\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "leave_request",
+        "query": "Active Leave Request"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "leave_request",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Leave Request",
+          "required_privilege": "leave_request.read",
+          "sql": "SELECT id FROM \"leave_request\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "leave_request",
+        "query": "Inactive Leave Request"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "performance_review",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Performance Review",
+          "required_privilege": "performance_review.read",
+          "sql": "SELECT id FROM \"performance_review\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "performance_review",
+        "query": "Active Performance Review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "performance_review",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Performance Review",
+          "required_privilege": "performance_review.read",
+          "sql": "SELECT id FROM \"performance_review\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "performance_review",
+        "query": "Inactive Performance Review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attendance",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Attendance",
+          "query": {
+            "entity": "attendance",
+            "name": "Active Attendance"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "attendance",
+        "view": "Active Attendance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "attendance",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Attendance",
+          "query": {
+            "entity": "attendance",
+            "name": "Inactive Attendance"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "attendance",
+        "view": "Inactive Attendance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "employee",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Employee",
+          "query": {
+            "entity": "employee",
+            "name": "Active Employee"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "employee",
+        "view": "Active Employee"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "employee",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Employee",
+          "query": {
+            "entity": "employee",
+            "name": "Inactive Employee"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "employee",
+        "view": "Inactive Employee"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "leave_request",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Leave Request",
+          "query": {
+            "entity": "leave_request",
+            "name": "Active Leave Request"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "leave_request",
+        "view": "Active Leave Request"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "leave_request",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Leave Request",
+          "query": {
+            "entity": "leave_request",
+            "name": "Inactive Leave Request"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "leave_request",
+        "view": "Inactive Leave Request"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "performance_review",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Performance Review",
+          "query": {
+            "entity": "performance_review",
+            "name": "Active Performance Review"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "performance_review",
+        "view": "Active Performance Review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "performance_review",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Performance Review",
+          "query": {
+            "entity": "performance_review",
+            "name": "Inactive Performance Review"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "performance_review",
+        "view": "Inactive Performance Review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 50,
+          "entity": null,
+          "icon": "la-users",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Human Resources"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "path": "Human Resources"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-clock",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Human Resources",
+            "Attendance"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/attendance/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "path": "Human Resources/Attendance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 0,
+          "entity": null,
+          "icon": "la-id-card",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Human Resources",
+            "Employees"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/employee/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "path": "Human Resources/Employees"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-calendar-times",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Human Resources",
+            "Leave Requests"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/leave_request/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "path": "Human Resources/Leave Requests"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": "la-star",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Human Resources",
+            "Performance Reviews"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/performance_review/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "path": "Human Resources/Performance Reviews"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Approves or rejects leave requests in manager review: leave_request read, update and approve.",
+          "is_customized": false,
+          "name": "HR Specialist",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "role": "HR Specialist"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "privilege": "leave_request.approve",
+        "role": "HR Specialist"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "privilege": "leave_request.read",
+        "role": "HR Specialist"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "privilege": "leave_request.update",
+        "role": "HR Specialist"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Approves or rejects leave requests in manager review: leave_request read, update and approve.",
+          "is_customized": false,
+          "name": "People Manager",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "role": "People Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "privilege": "leave_request.approve",
+        "role": "People Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "privilege": "leave_request.read",
+        "role": "People Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "privilege": "leave_request.update",
+        "role": "People Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "leave_request",
+          "initial_state": "requested",
+          "is_active": true,
+          "name": "Leave Request Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "leave_request"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "approved",
+          "guard_expression": null,
+          "name": "Mark Taken",
+          "required_privilege": null,
+          "to_state": "taken"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "leave_request",
+        "transition": "approved->taken"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "manager_review",
+          "guard_expression": "current_user != requested_by",
+          "name": "Approve",
+          "required_privilege": "leave_request.approve",
+          "to_state": "approved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "leave_request",
+        "transition": "manager_review->approved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "manager_review",
+          "guard_expression": "current_user != requested_by",
+          "name": "Reject",
+          "required_privilege": "leave_request.approve",
+          "to_state": "rejected"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "leave_request",
+        "transition": "manager_review->rejected"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "requested",
+          "guard_expression": null,
+          "name": "Submit for Review",
+          "required_privilege": null,
+          "to_state": "manager_review"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "leave_request",
+        "transition": "requested->manager_review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "performance_review",
+          "initial_state": "draft",
+          "is_active": true,
+          "name": "Performance Review Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "performance_review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Submit",
+          "required_privilege": null,
+          "to_state": "submitted"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "performance_review",
+        "transition": "draft->submitted"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "submitted",
+          "guard_expression": null,
+          "name": "Acknowledge",
+          "required_privilege": null,
+          "to_state": "acknowledged"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "performance_review",
+        "transition": "submitted->acknowledged"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "submitted",
+          "guard_expression": null,
+          "name": "Return For Rework",
+          "required_privilege": null,
+          "to_state": "draft"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "performance_review",
+        "transition": "submitted->draft"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "state"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "human-resources",
+  "seq": 1,
+  "title": "Pack: human-resources"
+}

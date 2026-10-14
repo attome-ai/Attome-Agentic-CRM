@@ -1,0 +1,1617 @@
+{
+  "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
+  "checksum": "sha256:7c05769d93e0525aebbb78ecafcc647955f83ac2b9b02936dbce427d0fc5a7b0",
+  "closed_at": "2026-10-14T00:00:00Z",
+  "description": "The crm pack's metadata, converted from its v1 vertical bundle.",
+  "format": "attome-changeset/v1",
+  "id": "673c4e56-0510-71cf-a2f6-df6d335ec77c",
+  "layer": "product",
+  "name": "crm",
+  "opened_at": "2026-10-14T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Account",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "account",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "account"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Activity",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "activity",
+          "primary_name_attribute": "subject"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "activity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Contact",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "contact",
+          "primary_name_attribute": "full_name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "contact"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Lead",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "lead",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "lead"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Opportunity",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "opportunity",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "opportunity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Annual Revenue",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "annual_revenue",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "account",
+        "field": "annual_revenue"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Email Domain",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "email_domain",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "account",
+        "field": "email_domain"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Industry",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "industry",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "account",
+        "field": "industry"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Account Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "account",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Phone",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "phone",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "account",
+        "field": "phone"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Website",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "website",
+          "lookup_entity": null,
+          "max_length": 255,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "account",
+        "field": "website"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Activity Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "activity_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "activity",
+        "field": "activity_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Activity Type",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "activity_type",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "call",
+              "meeting",
+              "task",
+              "email"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "activity",
+        "field": "activity_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Completed",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_completed",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "activity",
+        "field": "is_completed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Notes",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "notes",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "activity",
+        "field": "notes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Regarding Entity",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "regarding_entity",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "activity",
+        "field": "regarding_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Regarding Id",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "regarding_id",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "activity",
+        "field": "regarding_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Subject",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "subject",
+          "lookup_entity": null,
+          "max_length": 250,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "activity",
+        "field": "subject"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Email",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "email",
+          "lookup_entity": null,
+          "max_length": 255,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "contact",
+        "field": "email"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Full Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "full_name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "contact",
+        "field": "full_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Job Title",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "job_title",
+          "lookup_entity": null,
+          "max_length": 150,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "contact",
+        "field": "job_title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Phone",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "phone",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "contact",
+        "field": "phone"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Company Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "company_name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "lead",
+        "field": "company_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Email",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "email",
+          "lookup_entity": null,
+          "max_length": 255,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "lead",
+        "field": "email"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lead Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "lead_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "new",
+              "qualified",
+              "disqualified",
+              "converted"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "lead",
+        "field": "lead_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lead Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "lead",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Phone",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "phone",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "lead",
+        "field": "phone"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lead Source",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "lead",
+        "field": "source"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Amount",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "opportunity",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Expected Close Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "close_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "opportunity",
+        "field": "close_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "currency",
+          "lookup_entity": null,
+          "max_length": 10,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "opportunity",
+        "field": "currency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Opportunity Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "opportunity",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Stage",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "stage",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "prospecting",
+              "qualification",
+              "proposal",
+              "negotiation",
+              "closed_won",
+              "closed_lost"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "opportunity",
+        "field": "stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Parent Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "parent_account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "account",
+        "field": "parent_account_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "contact",
+        "field": "account_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Converted Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "converted_account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "lead",
+        "field": "converted_account_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "opportunity",
+        "field": "account_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "account",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "CRM: Active Accounts Count",
+          "required_privilege": null,
+          "sql": "SELECT COUNT(*)::bigint AS value FROM account WHERE is_active = true",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "account",
+        "query": "CRM: Active Accounts Count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "lead",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "CRM: Lead Funnel",
+          "required_privilege": null,
+          "sql": "SELECT lead_status, COUNT(*)::bigint AS count FROM lead WHERE is_active = true GROUP BY lead_status",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "lead",
+        "query": "CRM: Lead Funnel"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "CRM: Open Pipeline Value",
+          "required_privilege": null,
+          "sql": "SELECT COALESCE(SUM(amount), 0)::numeric AS value FROM opportunity WHERE is_active = true AND stage NOT IN ('closed_won', 'closed_lost')",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "opportunity",
+        "query": "CRM: Open Pipeline Value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "CRM: Opportunities by Stage",
+          "required_privilege": null,
+          "sql": "SELECT stage, COUNT(*)::bigint AS count, COALESCE(SUM(amount), 0)::numeric AS total_amount FROM opportunity WHERE is_active = true GROUP BY stage ORDER BY stage",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "opportunity",
+        "query": "CRM: Opportunities by Stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": false,
+          "name": "Opportunity Pipeline Board",
+          "required_privilege": null,
+          "sql": "SELECT id, name, account_ref, amount, currency, close_date, stage, created_at FROM opportunity WHERE is_active = true",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "opportunity",
+        "query": "Opportunity Pipeline Board"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "opportunity",
+          "icon": "las la-table",
+          "is_customized": true,
+          "is_default": false,
+          "kind": "kanban",
+          "name": "Pipeline Board",
+          "query": {
+            "entity": "opportunity",
+            "name": "Opportunity Pipeline Board"
+          },
+          "table_definition": null,
+          "view_metadata": {
+            "state_field": "stage"
+          }
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "opportunity",
+        "view": "Pipeline Board"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 55,
+          "entity": null,
+          "icon": "las la-address-book",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "CRM"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "path": "CRM"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "las la-building",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "CRM",
+            "Accounts"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/account/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "path": "CRM/Accounts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 5,
+          "entity": null,
+          "icon": "las la-tasks",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "CRM",
+            "Activities"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/activity/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "path": "CRM/Activities"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "las la-user",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "CRM",
+            "CRM Contacts"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/contact/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "path": "CRM/CRM Contacts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": "las la-user-plus",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "CRM",
+            "Leads"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/lead/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "path": "CRM/Leads"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 4,
+          "entity": null,
+          "icon": "las la-chart-line",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "CRM",
+            "Opportunities"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/opportunity/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "path": "CRM/Opportunities"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "lead",
+          "initial_state": "new",
+          "is_active": true,
+          "name": "Lead Lifecycle",
+          "state_field": "lead_status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "lead"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "new",
+          "guard_expression": null,
+          "name": "Disqualify",
+          "required_privilege": null,
+          "to_state": "disqualified"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "lead",
+        "transition": "new->disqualified"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "new",
+          "guard_expression": null,
+          "name": "Qualify",
+          "required_privilege": null,
+          "to_state": "qualified"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "lead",
+        "transition": "new->qualified"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "qualified",
+          "guard_expression": null,
+          "name": "Convert",
+          "required_privilege": null,
+          "to_state": "converted"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "lead",
+        "transition": "qualified->converted"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "qualified",
+          "guard_expression": null,
+          "name": "Disqualify",
+          "required_privilege": null,
+          "to_state": "disqualified"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "lead",
+        "transition": "qualified->disqualified"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "opportunity",
+          "initial_state": "prospecting",
+          "is_active": true,
+          "name": "Opportunity Pipeline",
+          "state_field": "stage"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "opportunity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "negotiation",
+          "guard_expression": null,
+          "name": "Mark Lost",
+          "required_privilege": null,
+          "to_state": "closed_lost"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "opportunity",
+        "transition": "negotiation->closed_lost"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "negotiation",
+          "guard_expression": null,
+          "name": "Mark Won",
+          "required_privilege": null,
+          "to_state": "closed_won"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "opportunity",
+        "transition": "negotiation->closed_won"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 7,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "proposal",
+          "guard_expression": null,
+          "name": "Mark Lost",
+          "required_privilege": null,
+          "to_state": "closed_lost"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "opportunity",
+        "transition": "proposal->closed_lost"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "proposal",
+          "guard_expression": null,
+          "name": "Advance to Negotiation",
+          "required_privilege": null,
+          "to_state": "negotiation"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "opportunity",
+        "transition": "proposal->negotiation"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "prospecting",
+          "guard_expression": null,
+          "name": "Mark Lost",
+          "required_privilege": null,
+          "to_state": "closed_lost"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "opportunity",
+        "transition": "prospecting->closed_lost"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "prospecting",
+          "guard_expression": null,
+          "name": "Advance to Qualification",
+          "required_privilege": null,
+          "to_state": "qualification"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "opportunity",
+        "transition": "prospecting->qualification"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 6,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "qualification",
+          "guard_expression": null,
+          "name": "Mark Lost",
+          "required_privilege": null,
+          "to_state": "closed_lost"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "opportunity",
+        "transition": "qualification->closed_lost"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "qualification",
+          "guard_expression": null,
+          "name": "Advance to Proposal",
+          "required_privilege": null,
+          "to_state": "proposal"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "opportunity",
+        "transition": "qualification->proposal"
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "term"
+        ],
+        "values": {
+          "definition": "A company or organization the platform tracks a relationship with — the top-level CRM entity.",
+          "primary_entity_logicalname": "account",
+          "status": "approved",
+          "term": "Account"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "glossary_term",
+        "key": {
+          "term": "Account"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "term"
+        ],
+        "values": {
+          "definition": "An unqualified prospect captured before there is a confirmed sales opportunity.",
+          "primary_entity_logicalname": "lead",
+          "status": "approved",
+          "term": "Lead"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "glossary_term",
+        "key": {
+          "term": "Lead"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "term"
+        ],
+        "values": {
+          "definition": "A qualified, in-progress sales deal moving through a pipeline of stages toward close.",
+          "primary_entity_logicalname": "opportunity",
+          "status": "approved",
+          "term": "Opportunity"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "glossary_term",
+        "key": {
+          "term": "Opportunity"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "dashboard",
+      "state",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "crm",
+  "seq": 1,
+  "title": "Pack: crm"
+}

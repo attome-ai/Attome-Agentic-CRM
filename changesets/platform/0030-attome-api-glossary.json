@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:5f1fc5ac5881feeb3dee7a59969d5488c47f3b39bec07f9a493bed7bf9c4f96f",
+  "checksum": "sha256:a1ba24c413ff21927dc04f5b1e0bac6ca8eb032a037f44723f26f163a953d18f",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-glossary.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -160,6 +160,23 @@
     {
       "args": {
         "definition": {
+          "business_key": [
+            "term"
+          ],
+          "display_name": "Glossary Term",
+          "logicalname": "glossary_term"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "glossary_term"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "entity": "glossary_term",
           "entity_mappings": [],
           "name": "Active Glossary Terms",
@@ -169,7 +186,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 9,
+      "seq": 10,
       "target": {
         "entity": "glossary_term",
         "query": "Active Glossary Terms"
@@ -189,7 +206,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 10,
+      "seq": 11,
       "target": {
         "entity": "glossary_term",
         "view": "Active Glossary Terms"

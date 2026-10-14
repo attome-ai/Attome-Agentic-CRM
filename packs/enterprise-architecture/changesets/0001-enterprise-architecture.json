@@ -1,0 +1,1817 @@
+{
+  "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
+  "checksum": "sha256:386cfd22ea6702a56ca92ec4d38cd4c7395990c1ef006840c9093904c03d0750",
+  "closed_at": "2026-10-14T00:00:00Z",
+  "description": "The enterprise-architecture pack's metadata, converted from its v1 vertical bundle.",
+  "format": "attome-changeset/v1",
+  "id": "e2cafa13-c30a-7f21-ba16-a944ca74f301",
+  "layer": "product",
+  "name": "enterprise-architecture",
+  "opened_at": "2026-10-14T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: bulk mutations on ea_application",
+          "key": "ea_application.bulk",
+          "name": "ea_application.bulk"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "ea_application.bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on ea_application",
+          "key": "ea_application.create",
+          "name": "ea_application.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "ea_application.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on ea_application",
+          "key": "ea_application.delete",
+          "name": "ea_application.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "ea_application.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on ea_application",
+          "key": "ea_application.read",
+          "name": "ea_application.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "ea_application.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on ea_application",
+          "key": "ea_application.update",
+          "name": "ea_application.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "ea_application.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: bulk mutations on ea_capability",
+          "key": "ea_capability.bulk",
+          "name": "ea_capability.bulk"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "ea_capability.bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on ea_capability",
+          "key": "ea_capability.create",
+          "name": "ea_capability.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "ea_capability.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on ea_capability",
+          "key": "ea_capability.delete",
+          "name": "ea_capability.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "ea_capability.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on ea_capability",
+          "key": "ea_capability.read",
+          "name": "ea_capability.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "ea_capability.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on ea_capability",
+          "key": "ea_capability.update",
+          "name": "ea_capability.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "ea_capability.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: bulk mutations on ea_system",
+          "key": "ea_system.bulk",
+          "name": "ea_system.bulk"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "privilege": "ea_system.bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on ea_system",
+          "key": "ea_system.create",
+          "name": "ea_system.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "ea_system.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on ea_system",
+          "key": "ea_system.delete",
+          "name": "ea_system.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "privilege": "ea_system.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on ea_system",
+          "key": "ea_system.read",
+          "name": "ea_system.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "privilege": "ea_system.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on ea_system",
+          "key": "ea_system.update",
+          "name": "ea_system.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "ea_system.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: bulk mutations on ea_technology",
+          "key": "ea_technology.bulk",
+          "name": "ea_technology.bulk"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "privilege": "ea_technology.bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on ea_technology",
+          "key": "ea_technology.create",
+          "name": "ea_technology.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "ea_technology.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on ea_technology",
+          "key": "ea_technology.delete",
+          "name": "ea_technology.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "privilege": "ea_technology.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on ea_technology",
+          "key": "ea_technology.read",
+          "name": "ea_technology.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "privilege": "ea_technology.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on ea_technology",
+          "key": "ea_technology.update",
+          "name": "ea_technology.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "privilege": "ea_technology.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Application",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "ea_application",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "ea_application"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Capability",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "ea_capability",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "ea_capability"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "System",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "ea_system",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "ea_system"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Technology",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "ea_technology",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "ea_technology"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "ea_application",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lifecycle Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "lifecycle_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "planned",
+              "active",
+              "deprecated",
+              "retired"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "ea_application",
+        "field": "lifecycle_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "ea_application",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Type",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "capability_type",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "Strategic",
+              "Core",
+              "Supporting"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "ea_capability",
+        "field": "capability_type"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "ea_capability",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "ea_capability",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "ea_system",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lifecycle Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "lifecycle_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "planned",
+              "active",
+              "deprecated",
+              "retired"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "ea_system",
+        "field": "lifecycle_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "ea_system",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "ea_technology",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "End of Support",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "end_of_support",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "ea_technology",
+        "field": "end_of_support"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lifecycle Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "lifecycle_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "planned",
+              "active",
+              "deprecated",
+              "retired"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "ea_technology",
+        "field": "lifecycle_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "ea_technology",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Vendor",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vendor",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "ea_technology",
+        "field": "vendor"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Version",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "version",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "ea_technology",
+        "field": "version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Business Capability",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "capability_ref",
+          "lookup_entity": "ea_capability",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "ea_application",
+        "field": "capability_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "owner_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "ea_application",
+        "field": "owner_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "owner_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "ea_capability",
+        "field": "owner_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Parent Capability",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "parent_ref",
+          "lookup_entity": "ea_capability",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "ea_capability",
+        "field": "parent_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Business Capability",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "capability_ref",
+          "lookup_entity": "ea_capability",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "ea_system",
+        "field": "capability_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "owner_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "ea_system",
+        "field": "owner_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Owner",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "owner_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "ea_technology",
+        "field": "owner_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_application",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Application",
+          "required_privilege": "ea_application.read",
+          "sql": "SELECT id, \"name\" FROM \"ea_application\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "ea_application",
+        "query": "Active Application"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_application",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Application",
+          "required_privilege": "ea_application.read",
+          "sql": "SELECT id, \"name\" FROM \"ea_application\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "ea_application",
+        "query": "Inactive Application"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_capability",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Capability",
+          "required_privilege": "ea_capability.read",
+          "sql": "SELECT id, \"name\" FROM \"ea_capability\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "ea_capability",
+        "query": "Active Capability"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_capability",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "EA: Capability Map",
+          "required_privilege": null,
+          "sql": "SELECT id, name, capability_type, parent_ref FROM ea_capability WHERE is_active = true ORDER BY name",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "ea_capability",
+        "query": "EA: Capability Map"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_capability",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Capability",
+          "required_privilege": "ea_capability.read",
+          "sql": "SELECT id, \"name\" FROM \"ea_capability\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "ea_capability",
+        "query": "Inactive Capability"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_system",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active System",
+          "required_privilege": "ea_system.read",
+          "sql": "SELECT id, \"name\" FROM \"ea_system\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "ea_system",
+        "query": "Active System"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_system",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive System",
+          "required_privilege": "ea_system.read",
+          "sql": "SELECT id, \"name\" FROM \"ea_system\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "ea_system",
+        "query": "Inactive System"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_technology",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Technology",
+          "required_privilege": "ea_technology.read",
+          "sql": "SELECT id, \"name\" FROM \"ea_technology\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "ea_technology",
+        "query": "Active Technology"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_technology",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Technology",
+          "required_privilege": "ea_technology.read",
+          "sql": "SELECT id, \"name\" FROM \"ea_technology\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "ea_technology",
+        "query": "Inactive Technology"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_application",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Application",
+          "query": {
+            "entity": "ea_application",
+            "name": "Active Application"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "ea_application",
+        "view": "Active Application"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_application",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Application",
+          "query": {
+            "entity": "ea_application",
+            "name": "Inactive Application"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "ea_application",
+        "view": "Inactive Application"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_capability",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Capability",
+          "query": {
+            "entity": "ea_capability",
+            "name": "Active Capability"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "ea_capability",
+        "view": "Active Capability"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_capability",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Capability",
+          "query": {
+            "entity": "ea_capability",
+            "name": "Inactive Capability"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "ea_capability",
+        "view": "Inactive Capability"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_system",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active System",
+          "query": {
+            "entity": "ea_system",
+            "name": "Active System"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "ea_system",
+        "view": "Active System"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_system",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive System",
+          "query": {
+            "entity": "ea_system",
+            "name": "Inactive System"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "ea_system",
+        "view": "Inactive System"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_technology",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Technology",
+          "query": {
+            "entity": "ea_technology",
+            "name": "Active Technology"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "ea_technology",
+        "view": "Active Technology"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "ea_technology",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Technology",
+          "query": {
+            "entity": "ea_technology",
+            "name": "Inactive Technology"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "ea_technology",
+        "view": "Inactive Technology"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": "#6366f1",
+          "display_order": 150,
+          "entity": null,
+          "icon": "las la-sitemap",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "path": "Enterprise Architecture"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": "#6366f1",
+          "display_order": 20,
+          "entity": null,
+          "icon": "las la-cube",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture",
+            "Applications"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/ea_application"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "path": "Enterprise Architecture/Applications"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": "#6366f1",
+          "display_order": 10,
+          "entity": null,
+          "icon": "las la-cube",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture",
+            "Capabilities"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/ea_capability"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "path": "Enterprise Architecture/Capabilities"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": "#6366f1",
+          "display_order": 30,
+          "entity": null,
+          "icon": "las la-cube",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture",
+            "Systems"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/ea_system"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "path": "Enterprise Architecture/Systems"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": "#6366f1",
+          "display_order": 40,
+          "entity": null,
+          "icon": "las la-cube",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Enterprise Architecture",
+            "Technologies"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/ea_technology"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "path": "Enterprise Architecture/Technologies"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "ea_application",
+          "initial_state": "planned",
+          "is_active": true,
+          "name": "Application Lifecycle",
+          "state_field": "lifecycle_status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "ea_application"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 10,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "active",
+          "guard_expression": null,
+          "name": "Deprecate",
+          "required_privilege": "system.admin",
+          "to_state": "deprecated"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "ea_application",
+        "transition": "active->deprecated"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 10,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "deprecated",
+          "guard_expression": null,
+          "name": "Retire",
+          "required_privilege": "system.admin",
+          "to_state": "retired"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "ea_application",
+        "transition": "deprecated->retired"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 10,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "planned",
+          "guard_expression": null,
+          "name": "Activate",
+          "required_privilege": null,
+          "to_state": "active"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "ea_application",
+        "transition": "planned->active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "ea_system",
+          "initial_state": "planned",
+          "is_active": true,
+          "name": "System Lifecycle",
+          "state_field": "lifecycle_status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "ea_system"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 10,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "active",
+          "guard_expression": null,
+          "name": "Deprecate",
+          "required_privilege": "system.admin",
+          "to_state": "deprecated"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "ea_system",
+        "transition": "active->deprecated"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 10,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "deprecated",
+          "guard_expression": null,
+          "name": "Retire",
+          "required_privilege": "system.admin",
+          "to_state": "retired"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "ea_system",
+        "transition": "deprecated->retired"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 10,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "planned",
+          "guard_expression": null,
+          "name": "Activate",
+          "required_privilege": null,
+          "to_state": "active"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "ea_system",
+        "transition": "planned->active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "ea_technology",
+          "initial_state": "planned",
+          "is_active": true,
+          "name": "Technology Lifecycle",
+          "state_field": "lifecycle_status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "ea_technology"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 10,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "active",
+          "guard_expression": null,
+          "name": "Deprecate",
+          "required_privilege": "system.admin",
+          "to_state": "deprecated"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "ea_technology",
+        "transition": "active->deprecated"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 10,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "deprecated",
+          "guard_expression": null,
+          "name": "Retire",
+          "required_privilege": "system.admin",
+          "to_state": "retired"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "entity": "ea_technology",
+        "transition": "deprecated->retired"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 10,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "planned",
+          "guard_expression": null,
+          "name": "Activate",
+          "required_privilege": null,
+          "to_state": "active"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "entity": "ea_technology",
+        "transition": "planned->active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "cascade": "orphan",
+          "entity_a": "ea_application",
+          "entity_b": "ea_system",
+          "is_active": true,
+          "name": "ea_application_depends_on_system",
+          "role_a": "depends_on",
+          "role_b": "depended_on_by"
+        }
+      },
+      "op": "upsert_relationship",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "relationship": "ea_application_depends_on_system"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "cascade": "orphan",
+          "entity_a": "ea_application",
+          "entity_b": "ea_capability",
+          "is_active": true,
+          "name": "ea_application_realizes_capability",
+          "role_a": "realizes",
+          "role_b": "realized_by"
+        }
+      },
+      "op": "upsert_relationship",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "relationship": "ea_application_realizes_capability"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "cascade": "orphan",
+          "entity_a": "ea_system",
+          "entity_b": "ea_technology",
+          "is_active": true,
+          "name": "ea_system_hosted_on_technology",
+          "role_a": "hosted_on",
+          "role_b": "hosts"
+        }
+      },
+      "op": "upsert_relationship",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "relationship": "ea_system_hosted_on_technology"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "state"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "enterprise-architecture",
+  "seq": 1,
+  "title": "Pack: enterprise-architecture"
+}

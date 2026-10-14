@@ -1,0 +1,1073 @@
+{
+  "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
+  "checksum": "sha256:d0bcc944230f6a5ae6bf60230ef1af0ca6b4b1805c668628221ef2f2e6c3a446",
+  "closed_at": "2026-10-14T00:00:00Z",
+  "description": "The asset-management pack's metadata, converted from its v1 vertical bundle.",
+  "format": "attome-changeset/v1",
+  "id": "9d4d2bfc-6cae-71e0-90bd-a59442f105c7",
+  "layer": "product",
+  "name": "asset-management",
+  "opened_at": "2026-10-14T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: bulk mutations on asset",
+          "key": "asset.bulk",
+          "name": "asset.bulk"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "asset.bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on asset",
+          "key": "asset.create",
+          "name": "asset.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "asset.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on asset",
+          "key": "asset.delete",
+          "name": "asset.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "asset.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on asset",
+          "key": "asset.read",
+          "name": "asset.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "asset.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on asset",
+          "key": "asset.update",
+          "name": "asset.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "asset.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: bulk mutations on location",
+          "key": "location.bulk",
+          "name": "location.bulk"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "location.bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on location",
+          "key": "location.create",
+          "name": "location.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "location.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on location",
+          "key": "location.delete",
+          "name": "location.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "location.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on location",
+          "key": "location.read",
+          "name": "location.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "location.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on location",
+          "key": "location.update",
+          "name": "location.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "location.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Asset",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "asset",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "asset"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Location",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "location",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "location"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Asset Tag",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "asset_tag",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "asset",
+        "field": "asset_tag"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Depreciation Method",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "depreciation_method",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "straight_line",
+              "declining_balance",
+              "none"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "asset",
+        "field": "depreciation_method"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Disposed On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "disposed_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "asset",
+        "field": "disposed_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lifecycle Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "lifecycle_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "ordered",
+              "in_service",
+              "under_maintenance",
+              "retired",
+              "disposed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "asset",
+        "field": "lifecycle_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "asset",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Purchase Cost",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "purchase_cost",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "asset",
+        "field": "purchase_cost"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Purchased On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "purchased_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "asset",
+        "field": "purchased_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Salvage Value",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "salvage_value",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "asset",
+        "field": "salvage_value"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Warranty Expires On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "warranty_expires_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "asset",
+        "field": "warranty_expires_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Address Line 1",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "address_line1",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "location",
+        "field": "address_line1"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "City",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "city",
+          "lookup_entity": null,
+          "max_length": 150,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "location",
+        "field": "city"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Country",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "country",
+          "lookup_entity": null,
+          "max_length": 150,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "location",
+        "field": "country"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "location",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Custodian",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "custodian_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "asset",
+        "field": "custodian_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Location",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "location_ref",
+          "lookup_entity": "location",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "asset",
+        "field": "location_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Parent Asset (Component Of)",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "parent_asset_ref",
+          "lookup_entity": "asset",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "asset",
+        "field": "parent_asset_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Parent Location",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "parent_location_ref",
+          "lookup_entity": "location",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "location",
+        "field": "parent_location_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "asset",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Asset",
+          "required_privilege": "asset.read",
+          "sql": "SELECT id, \"name\" FROM \"asset\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "asset",
+        "query": "Active Asset"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "asset",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Asset",
+          "required_privilege": "asset.read",
+          "sql": "SELECT id, \"name\" FROM \"asset\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "asset",
+        "query": "Inactive Asset"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "location",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Location",
+          "required_privilege": "location.read",
+          "sql": "SELECT id, \"name\" FROM \"location\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "location",
+        "query": "Active Location"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "location",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Location",
+          "required_privilege": "location.read",
+          "sql": "SELECT id, \"name\" FROM \"location\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "location",
+        "query": "Inactive Location"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "asset",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Asset",
+          "query": {
+            "entity": "asset",
+            "name": "Active Asset"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "asset",
+        "view": "Active Asset"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "asset",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Asset",
+          "query": {
+            "entity": "asset",
+            "name": "Inactive Asset"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "asset",
+        "view": "Inactive Asset"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "location",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Location",
+          "query": {
+            "entity": "location",
+            "name": "Active Location"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "location",
+        "view": "Active Location"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "location",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Location",
+          "query": {
+            "entity": "location",
+            "name": "Inactive Location"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "location",
+        "view": "Inactive Location"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 50,
+          "entity": null,
+          "icon": "la-boxes",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Assets"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "path": "Assets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-cube",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Assets",
+            "Assets"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/asset/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "path": "Assets/Assets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-map-marker",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Assets",
+            "Locations"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/location/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "path": "Assets/Locations"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "asset",
+          "initial_state": "ordered",
+          "is_active": true,
+          "name": "Asset Lifecycle",
+          "state_field": "lifecycle_status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "asset"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "in_service",
+          "guard_expression": null,
+          "name": "Retire",
+          "required_privilege": null,
+          "to_state": "retired"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "asset",
+        "transition": "in_service->retired"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "in_service",
+          "guard_expression": null,
+          "name": "Send For Maintenance",
+          "required_privilege": null,
+          "to_state": "under_maintenance"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "asset",
+        "transition": "in_service->under_maintenance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "ordered",
+          "guard_expression": null,
+          "name": "Put In Service",
+          "required_privilege": null,
+          "to_state": "in_service"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "asset",
+        "transition": "ordered->in_service"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "retired",
+          "guard_expression": null,
+          "name": "Dispose",
+          "required_privilege": null,
+          "to_state": "disposed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "asset",
+        "transition": "retired->disposed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "under_maintenance",
+          "guard_expression": null,
+          "name": "Return To Service",
+          "required_privilege": null,
+          "to_state": "in_service"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "asset",
+        "transition": "under_maintenance->in_service"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "under_maintenance",
+          "guard_expression": null,
+          "name": "Retire From Maintenance",
+          "required_privilege": null,
+          "to_state": "retired"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "asset",
+        "transition": "under_maintenance->retired"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "state"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "asset-management",
+  "seq": 1,
+  "title": "Pack: asset-management"
+}

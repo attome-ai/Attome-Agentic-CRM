@@ -1,0 +1,2291 @@
+{
+  "author": "packs (converted by scripts/changesets/packs-from-verticals.mjs)",
+  "checksum": "sha256:6a676f7efbe6a5800fc29dd8090a3163befc1d0f338f97ed042f846ec0d5be06",
+  "closed_at": "2026-10-14T00:00:00Z",
+  "description": "The finance pack's metadata, converted from its v1 vertical bundle.",
+  "format": "attome-changeset/v1",
+  "id": "62a75f48-2866-7843-ad04-4b5a455f2c6a",
+  "layer": "product",
+  "name": "finance",
+  "opened_at": "2026-10-14T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: bulk mutations on budget",
+          "key": "budget.bulk",
+          "name": "budget.bulk"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "budget.bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on budget",
+          "key": "budget.create",
+          "name": "budget.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "privilege": "budget.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on budget",
+          "key": "budget.delete",
+          "name": "budget.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "privilege": "budget.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on budget",
+          "key": "budget.read",
+          "name": "budget.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "privilege": "budget.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on budget",
+          "key": "budget.update",
+          "name": "budget.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "privilege": "budget.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: bulk mutations on cost_center",
+          "key": "cost_center.bulk",
+          "name": "cost_center.bulk"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "privilege": "cost_center.bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on cost_center",
+          "key": "cost_center.create",
+          "name": "cost_center.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "privilege": "cost_center.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on cost_center",
+          "key": "cost_center.delete",
+          "name": "cost_center.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "privilege": "cost_center.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on cost_center",
+          "key": "cost_center.read",
+          "name": "cost_center.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "cost_center.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on cost_center",
+          "key": "cost_center.update",
+          "name": "cost_center.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "cost_center.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Approve or reject an expense in manager review (M81 S2)",
+          "key": "expense.approve",
+          "name": "expense.approve"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "privilege": "expense.approve"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: bulk mutations on expense",
+          "key": "expense.bulk",
+          "name": "expense.bulk"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "expense.bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on expense",
+          "key": "expense.create",
+          "name": "expense.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "privilege": "expense.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on expense",
+          "key": "expense.delete",
+          "name": "expense.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "privilege": "expense.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on expense",
+          "key": "expense.read",
+          "name": "expense.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "expense.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on expense",
+          "key": "expense.update",
+          "name": "expense.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "privilege": "expense.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: bulk mutations on invoice",
+          "key": "invoice.bulk",
+          "name": "invoice.bulk"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "invoice.bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on invoice",
+          "key": "invoice.create",
+          "name": "invoice.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "privilege": "invoice.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on invoice",
+          "key": "invoice.delete",
+          "name": "invoice.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "privilege": "invoice.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on invoice",
+          "key": "invoice.read",
+          "name": "invoice.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "privilege": "invoice.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on invoice",
+          "key": "invoice.update",
+          "name": "invoice.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "privilege": "invoice.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: bulk mutations on payment",
+          "key": "payment.bulk",
+          "name": "payment.bulk"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "privilege": "payment.bulk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on payment",
+          "key": "payment.create",
+          "name": "payment.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "privilege": "payment.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: delete on payment",
+          "key": "payment.delete",
+          "name": "payment.delete"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "privilege": "payment.delete"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on payment",
+          "key": "payment.read",
+          "name": "payment.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "privilege": "payment.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on payment",
+          "key": "payment.update",
+          "name": "payment.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "privilege": "payment.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Budget",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "budget",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "budget"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Cost Center",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "cost_center",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "cost_center"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Expense",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "expense",
+          "primary_name_attribute": "description"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "expense"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Invoice",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "invoice",
+          "primary_name_attribute": "invoice_number"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "invoice"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": null,
+          "display_name": "Payment",
+          "is_append_only": false,
+          "is_audited": false,
+          "is_customized": true,
+          "logicalname": "payment",
+          "primary_name_attribute": "reference"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "payment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Budget Amount",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "budget_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "budget",
+        "field": "budget_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "budget",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Period End",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "period_end",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "budget",
+        "field": "period_end"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Period Start",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "period_start",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "budget",
+        "field": "period_start"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Code",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "code",
+          "lookup_entity": null,
+          "max_length": 40,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "cost_center",
+        "field": "code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "cost_center",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Amount",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "expense",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "expense",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Expense Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "expense_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "expense",
+        "field": "expense_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Receipt",
+          "field_type": "file",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "receipt",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "expense",
+        "field": "receipt"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "submitted",
+              "manager_review",
+              "approved",
+              "rejected",
+              "paid"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "expense",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Amount",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "invoice",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Due Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "due_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "invoice",
+        "field": "due_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "External System Id",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "external_system_id",
+          "lookup_entity": null,
+          "max_length": 120,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "invoice",
+        "field": "external_system_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Invoice Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "invoice_number",
+          "lookup_entity": null,
+          "max_length": 60,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "invoice",
+        "field": "invoice_number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Issued Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "issued_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "invoice",
+        "field": "issued_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "internal_time_billing",
+              "external_mirror"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "invoice",
+        "field": "source"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "sent",
+              "paid",
+              "overdue",
+              "void"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "invoice",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Amount",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "payment",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "External System Id",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "external_system_id",
+          "lookup_entity": null,
+          "max_length": 120,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "payment",
+        "field": "external_system_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Paid Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "paid_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "payment",
+        "field": "paid_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reference",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reference",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "payment",
+        "field": "reference"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Cost Center",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "cost_center_ref",
+          "lookup_entity": "cost_center",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "budget",
+        "field": "cost_center_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Project",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "project_ref",
+          "lookup_entity": "attome_project",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "budget",
+        "field": "project_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Parent Cost Center",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "parent_cost_center_ref",
+          "lookup_entity": "cost_center",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "cost_center",
+        "field": "parent_cost_center_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Budget",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "budget_ref",
+          "lookup_entity": "budget",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "expense",
+        "field": "budget_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Cost Center",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "cost_center_ref",
+          "lookup_entity": "cost_center",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "expense",
+        "field": "cost_center_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Submitted By",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "submitted_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "expense",
+        "field": "submitted_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Cost Center",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "cost_center_ref",
+          "lookup_entity": "cost_center",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "invoice",
+        "field": "cost_center_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Project",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "project_ref",
+          "lookup_entity": "attome_project",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "invoice",
+        "field": "project_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Invoice",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "invoice_ref",
+          "lookup_entity": "invoice",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "payment",
+        "field": "invoice_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "budget",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Budget",
+          "required_privilege": "budget.read",
+          "sql": "SELECT id, \"name\" FROM \"budget\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "budget",
+        "query": "Active Budget"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "budget",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Budget",
+          "required_privilege": "budget.read",
+          "sql": "SELECT id, \"name\" FROM \"budget\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "budget",
+        "query": "Inactive Budget"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "cost_center",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Cost Center",
+          "required_privilege": "cost_center.read",
+          "sql": "SELECT id, \"name\" FROM \"cost_center\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "cost_center",
+        "query": "Active Cost Center"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "cost_center",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Cost Center",
+          "required_privilege": "cost_center.read",
+          "sql": "SELECT id, \"name\" FROM \"cost_center\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "cost_center",
+        "query": "Inactive Cost Center"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "expense",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Expense",
+          "required_privilege": "expense.read",
+          "sql": "SELECT id, \"description\" FROM \"expense\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "expense",
+        "query": "Active Expense"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "expense",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Finance: Pending Expense Approvals",
+          "required_privilege": "expense.read",
+          "sql": "SELECT id, description, amount, expense_date, status FROM expense WHERE status = 'manager_review' AND (is_active IS NULL OR is_active = true) ORDER BY expense_date",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "expense",
+        "query": "Finance: Pending Expense Approvals"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "expense",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Expense",
+          "required_privilege": "expense.read",
+          "sql": "SELECT id, \"description\" FROM \"expense\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "expense",
+        "query": "Inactive Expense"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "invoice",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Invoice",
+          "required_privilege": "invoice.read",
+          "sql": "SELECT id, \"invoice_number\" FROM \"invoice\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "invoice",
+        "query": "Active Invoice"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "invoice",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Invoice",
+          "required_privilege": "invoice.read",
+          "sql": "SELECT id, \"invoice_number\" FROM \"invoice\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "invoice",
+        "query": "Inactive Invoice"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "payment",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Active Payment",
+          "required_privilege": "payment.read",
+          "sql": "SELECT id, \"reference\" FROM \"payment\" WHERE is_active = true",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "payment",
+        "query": "Active Payment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "payment",
+          "entity_mappings": [],
+          "is_customized": false,
+          "is_report": false,
+          "name": "Inactive Payment",
+          "required_privilege": "payment.read",
+          "sql": "SELECT id, \"reference\" FROM \"payment\" WHERE is_active = false",
+          "table_definition": null
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "payment",
+        "query": "Inactive Payment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "budget",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Budget",
+          "query": {
+            "entity": "budget",
+            "name": "Active Budget"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "budget",
+        "view": "Active Budget"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "budget",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Budget",
+          "query": {
+            "entity": "budget",
+            "name": "Inactive Budget"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "budget",
+        "view": "Inactive Budget"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "cost_center",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Cost Center",
+          "query": {
+            "entity": "cost_center",
+            "name": "Active Cost Center"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "cost_center",
+        "view": "Active Cost Center"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "cost_center",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Cost Center",
+          "query": {
+            "entity": "cost_center",
+            "name": "Inactive Cost Center"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "cost_center",
+        "view": "Inactive Cost Center"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "expense",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Expense",
+          "query": {
+            "entity": "expense",
+            "name": "Active Expense"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "expense",
+        "view": "Active Expense"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "expense",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Expense",
+          "query": {
+            "entity": "expense",
+            "name": "Inactive Expense"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "entity": "expense",
+        "view": "Inactive Expense"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "invoice",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Invoice",
+          "query": {
+            "entity": "invoice",
+            "name": "Active Invoice"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "entity": "invoice",
+        "view": "Active Invoice"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "invoice",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Invoice",
+          "query": {
+            "entity": "invoice",
+            "name": "Inactive Invoice"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "entity": "invoice",
+        "view": "Inactive Invoice"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "payment",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": true,
+          "kind": "list",
+          "name": "Active Payment",
+          "query": {
+            "entity": "payment",
+            "name": "Active Payment"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "entity": "payment",
+        "view": "Active Payment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "payment",
+          "icon": "las la-table",
+          "is_customized": false,
+          "is_default": false,
+          "kind": "list",
+          "name": "Inactive Payment",
+          "query": {
+            "entity": "payment",
+            "name": "Inactive Payment"
+          },
+          "table_definition": [],
+          "view_metadata": {}
+        }
+      },
+      "op": "upsert_view",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "entity": "payment",
+        "view": "Inactive Payment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 100,
+          "entity": null,
+          "icon": "las la-coins",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Finance"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "path": "Finance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": null,
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Finance",
+            "Budgets"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/budget/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "path": "Finance/Budgets"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 0,
+          "entity": null,
+          "icon": null,
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Finance",
+            "Cost Centers"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/cost_center/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "path": "Finance/Cost Centers"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": null,
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Finance",
+            "Expenses"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/expense/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "path": "Finance/Expenses"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": null,
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Finance",
+            "Invoices"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/invoice/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "path": "Finance/Invoices"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 4,
+          "entity": null,
+          "icon": null,
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Finance",
+            "Payments"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/payment/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "path": "Finance/Payments"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Approves or rejects expenses in manager review: expense read, update and approve. Nobody can approve or reject an expense they submitted (transition guard).",
+          "is_customized": false,
+          "name": "Finance Approver",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "role": "Finance Approver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "privilege": "expense.approve",
+        "role": "Finance Approver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "privilege": "expense.read",
+        "role": "Finance Approver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "privilege": "expense.update",
+        "role": "Finance Approver"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "expense",
+          "initial_state": "submitted",
+          "is_active": true,
+          "name": "Expense Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "entity": "expense"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "approved",
+          "guard_expression": null,
+          "name": "Mark Paid",
+          "required_privilege": null,
+          "to_state": "paid"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "entity": "expense",
+        "transition": "approved->paid"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "manager_review",
+          "guard_expression": "current_user != submitted_by",
+          "name": "Approve",
+          "required_privilege": "expense.approve",
+          "to_state": "approved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "entity": "expense",
+        "transition": "manager_review->approved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "manager_review",
+          "guard_expression": "current_user != submitted_by",
+          "name": "Reject",
+          "required_privilege": "expense.approve",
+          "to_state": "rejected"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "entity": "expense",
+        "transition": "manager_review->rejected"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "submitted",
+          "guard_expression": null,
+          "name": "Submit for Review",
+          "required_privilege": null,
+          "to_state": "manager_review"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "entity": "expense",
+        "transition": "submitted->manager_review"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "invoice",
+          "initial_state": "draft",
+          "is_active": true,
+          "name": "Invoice Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "entity": "invoice"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Send",
+          "required_privilege": null,
+          "to_state": "sent"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "entity": "invoice",
+        "transition": "draft->sent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Void",
+          "required_privilege": null,
+          "to_state": "void"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "entity": "invoice",
+        "transition": "draft->void"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "overdue",
+          "guard_expression": null,
+          "name": "Mark Paid",
+          "required_privilege": null,
+          "to_state": "paid"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "entity": "invoice",
+        "transition": "overdue->paid"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 6,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "overdue",
+          "guard_expression": null,
+          "name": "Void",
+          "required_privilege": null,
+          "to_state": "void"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "entity": "invoice",
+        "transition": "overdue->void"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "sent",
+          "guard_expression": null,
+          "name": "Mark Overdue",
+          "required_privilege": null,
+          "to_state": "overdue"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "entity": "invoice",
+        "transition": "sent->overdue"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "sent",
+          "guard_expression": null,
+          "name": "Mark Paid",
+          "required_privilege": null,
+          "to_state": "paid"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "entity": "invoice",
+        "transition": "sent->paid"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "sent",
+          "guard_expression": null,
+          "name": "Void",
+          "required_privilege": null,
+          "to_state": "void"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "entity": "invoice",
+        "transition": "sent->void"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "finance",
+  "seq": 1,
+  "title": "Pack: finance"
+}
