@@ -1197,9 +1197,12 @@ impl EngineSystemBuilder {
             // interval_secs` (default 5). The query is a single indexed
             // `MAX(id)` aggregate, negligible at this interval.
             let poll_secs = state.base.config.cache.metadata_poll_interval_secs.max(1);
+            // Y8-T5: behind on two polls in a row reads as not ready.
+            let lagging = state.base.metadata_lagging.clone();
             tokio::spawn(async move {
                 let mut interval = tokio::time::interval(Duration::from_secs(poll_secs));
                 interval.tick().await; // consume the immediate first tick — pre_warm_registry already caught up as of boot
+                let mut behind_polls: u32 = 0;
                 loop {
                     interval.tick().await;
                     let applied = watermark.load(Ordering::Acquire);
@@ -1229,6 +1232,8 @@ impl EngineSystemBuilder {
                                     entities.swap(fresh);
                                     watermark.store(fresh_watermark, Ordering::Release);
                                     metrics::gauge!("registry_watermark_lag").set(0.0);
+                                    behind_polls = 0;
+                                    lagging.store(false, Ordering::Relaxed);
                                 }
                                 Err(e) => tracing::error!(
                                     error = %e,
@@ -1240,6 +1245,12 @@ impl EngineSystemBuilder {
                         Ok(db_watermark) => {
                             let lag = db_watermark - applied;
                             metrics::gauge!("registry_watermark_lag").set(lag as f64);
+                            behind_polls = if lag > 0 {
+                                behind_polls.saturating_add(1)
+                            } else {
+                                0
+                            };
+                            lagging.store(behind_polls >= 2, Ordering::Relaxed);
                             if lag > 0 {
                                 tracing::warn!(
                                     applied,

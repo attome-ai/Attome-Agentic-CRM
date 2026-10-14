@@ -148,6 +148,11 @@ pub struct AppState {
     /// the listener is about to serve. `/health/startup` answers 503 until
     /// then. Per-node and observational, like `draining`.
     pub started: Arc<AtomicBool>,
+    /// Y8-T5 — this node's metadata registry has stayed behind the database's
+    /// change log for two polls in a row. Readiness reports the registry not
+    /// ready meanwhile, so a load balancer stops sending this node work it
+    /// would answer from stale metadata. Per-node and observational.
+    pub metadata_lagging: Arc<AtomicBool>,
     /// S3 (BSV-F15) — the same drain event as `AppState::draining`, in a form a
     /// long-lived stream can `.await`: a stream that holds the graceful-shutdown
     /// deadline open (xrm-ai's chat stream, trd-engine's quote stream) creates
@@ -204,6 +209,7 @@ impl AppState {
             configuration_version: Arc::new(ArcSwapOption::from(None)),
             draining: Arc::new(AtomicBool::new(false)),
             started: Arc::new(AtomicBool::new(false)),
+            metadata_lagging: Arc::new(AtomicBool::new(false)),
             // S3 — no receivers at construction, so the initial `send` is a
             // no-op; `shutdown_signal()` subscribes on demand.
             drain_signal: tokio::sync::watch::channel(false).0,
