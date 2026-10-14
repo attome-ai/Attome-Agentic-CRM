@@ -520,3 +520,35 @@ pub async fn find_by_name(
     .await
     .map_err(AppError::internal)
 }
+
+/// An object found by name, with its newest published version, if any.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PublishedState {
+    pub id: Uuid,
+    /// The newest published version's number and content hash.
+    pub published: Option<(i64, String)>,
+}
+
+/// The object of `kind` named `name` in `app` and its newest published
+/// version, or `None` when no such object exists. For a blueprint plan
+/// (N12-T3).
+pub async fn published_state(
+    pool: &DbPool,
+    kind: &str,
+    app: &str,
+    name: &str,
+) -> Result<Option<PublishedState>, AppError> {
+    let row: Option<(Uuid, Option<i64>, Option<String>)> = sqlx::query_as(
+        "SELECT o.id, v.version_no, v.content_hash          FROM metadata_object o          LEFT JOIN LATERAL (              SELECT version_no, content_hash FROM metadata_object_version              WHERE object_id = o.id AND state = 'published'              ORDER BY version_no DESC LIMIT 1          ) v ON true          WHERE o.kind = $1 AND o.app = $2 AND o.name = $3 AND o.is_active",
+    )
+    .bind(kind)
+    .bind(app)
+    .bind(name)
+    .fetch_optional(pool)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(row.map(|(id, version, hash)| PublishedState {
+        id,
+        published: version.zip(hash),
+    }))
+}

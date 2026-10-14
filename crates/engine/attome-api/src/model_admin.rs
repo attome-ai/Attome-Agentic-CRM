@@ -798,6 +798,347 @@ async fn form_plan(
     Ok(([(header::ETAG, etag_header)], Json(plan)).into_response())
 }
 
+/// One object of a blueprint and what applying it would do (N12-T3).
+#[derive(Serialize, ToSchema)]
+pub(crate) struct BlueprintItem {
+    path: String,
+    kind: String,
+    name: String,
+    /// The existing object's id; `null` for a new one.
+    id: Option<Uuid>,
+    /// `new` | `changed` | `same`.
+    status: String,
+    /// The version that is published now, which a rollback returns to.
+    published_version: Option<i64>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub(crate) struct BlueprintPlan {
+    items: Vec<BlueprintItem>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub(crate) struct BlueprintApplied {
+    /// Every object the apply published, with the version it published and
+    /// the one it replaced (pass these to rollback to undo).
+    items: Vec<BlueprintAppliedItem>,
+}
+
+#[derive(Serialize, Deserialize, ToSchema)]
+pub(crate) struct BlueprintAppliedItem {
+    id: Uuid,
+    kind: String,
+    version_no: i64,
+    /// `null` when the object was new.
+    previous_version: Option<i64>,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct BlueprintRollback {
+    items: Vec<BlueprintAppliedItem>,
+}
+
+/// One readable blueprint file.
+struct BlueprintObject {
+    path: String,
+    kind: &'static Arc<dyn Kind>,
+    object: attome_model::files::FileObject,
+}
+
+/// Reads blueprint files, refusing the set when any is unreadable, invalid
+/// or of an adapter kind.
+fn read_blueprint(request: &ModelFiles) -> Result<Vec<BlueprintObject>, AppError> {
+    if request.files.len() > MAX_IMPORT_FILES {
+        return Err(AppError::Validation(format!(
+            "a blueprint holds at most {MAX_IMPORT_FILES} files"
+        )));
+    }
+    let mut out = Vec::with_capacity(request.files.len());
+    let mut issues = Vec::new();
+    for file in &request.files {
+        match attome_model::files::from_file(kinds(), std::path::Path::new(&file.path), &file.text)
+        {
+            Ok(object) => {
+                let Some(kind) = kinds().get(object.kind.as_str()) else {
+                    continue;
+                };
+                if kind.adapter_table().is_some() {
+                    issues.push(Issue::new(
+                        &file.path,
+                        "adapter_kind",
+                        format!("{} objects are not part of a blueprint", object.kind),
+                    ));
+                    continue;
+                }
+                issues.extend(
+                    attome_model::validate::validate_edit(kind.as_ref(), &object.doc)
+                        .into_iter()
+                        .map(|issue| Issue {
+                            path: format!("{}{}", file.path, issue.path),
+                            ..issue
+                        }),
+                );
+                out.push(BlueprintObject {
+                    path: file.path.clone(),
+                    kind,
+                    object,
+                });
+            }
+            Err(issue) => issues.push(issue),
+        }
+    }
+    if issues.is_empty() {
+        Ok(out)
+    } else {
+        Err(attome_model::validate::publish_error(&issues))
+    }
+}
+
+/// What applying a blueprint would change, without changing anything
+/// (N12-T3): each object new, changed or the same as what is published.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/model/blueprint/plan",
+    tag = "admin",
+    request_body = ModelFiles,
+    responses(
+        (status = 200, description = "Each object's status", body = BlueprintPlan),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "A file is unreadable or invalid; the issues are listed", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(attome_audit::security::ExemptReason::ReadOnly, None, "plans a blueprint and writes nothing")))),
+)]
+async fn blueprint_plan(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Json(request): Json<ModelFiles>,
+) -> Result<Json<BlueprintPlan>, AppError> {
+    let objects = read_blueprint(&request)?;
+    let mut items = Vec::with_capacity(objects.len());
+    for BlueprintObject { path, kind, object } in objects {
+        let kind_name = kind.name();
+        let existing = store::published_state(
+            &state.base.db,
+            kind_name.as_str(),
+            &object.app,
+            &object.name,
+        )
+        .await?;
+        let hash =
+            attome_model::canonical::content_hash(&object.doc).map_err(AppError::Validation)?;
+        let (id, published_version, status) = match existing {
+            None => (None, None, "new"),
+            Some(found) => match found.published {
+                Some((version, published_hash)) if published_hash == hash => {
+                    (Some(found.id), Some(version), "same")
+                }
+                Some((version, _)) => (Some(found.id), Some(version), "changed"),
+                None => (Some(found.id), None, "changed"),
+            },
+        };
+        items.push(BlueprintItem {
+            path,
+            kind: kind_name.as_str().to_owned(),
+            name: object.name,
+            id,
+            status: status.to_owned(),
+            published_version,
+        });
+    }
+    Ok(Json(BlueprintPlan { items }))
+}
+
+/// Applies a blueprint (N12-T3): every new or changed object is saved and
+/// published in one transaction, so a blueprint lands whole or not at all.
+/// Objects already the same are left alone.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/model/blueprint/apply",
+    tag = "admin",
+    request_body = ModelFiles,
+    responses(
+        (status = 200, description = "What was published, with the versions it replaced", body = BlueprintApplied),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 409, description = "Another save of one of the objects is in progress", body = ErrorResponse),
+        (status = 422, description = "A file is invalid or an object fails the publish checks", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
+async fn blueprint_apply(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(request): Json<ModelFiles>,
+) -> Result<Json<BlueprintApplied>, AppError> {
+    let objects = read_blueprint(&request)?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let mut items = Vec::new();
+    for BlueprintObject { kind, object, .. } in &objects {
+        let kind_name = kind.name();
+        let existing = store::published_state(
+            &state.base.db,
+            kind_name.as_str(),
+            &object.app,
+            &object.name,
+        )
+        .await?;
+        let hash =
+            attome_model::canonical::content_hash(&object.doc).map_err(AppError::Validation)?;
+        let previous_version = existing
+            .as_ref()
+            .and_then(|e| e.published.as_ref())
+            .map(|p| p.0);
+        if existing
+            .as_ref()
+            .and_then(|e| e.published.as_ref())
+            .is_some_and(|(_, published_hash)| *published_hash == hash)
+        {
+            continue;
+        }
+        let id = existing.map_or_else(Uuid::now_v7, |e| e.id);
+        let spec = ObjectSpec {
+            id: ObjectId(id),
+            name: object.name.clone(),
+            app: object.app.clone(),
+            layer: if object.app == "customer" {
+                Layer::Customer
+            } else {
+                Layer::App
+            },
+        };
+        store::save_draft(
+            &mut tx,
+            kinds(),
+            kind.as_ref(),
+            &spec,
+            &object.doc,
+            Some(ctx.user_id),
+        )
+        .await?;
+        let published = attome_model::publish::publish(
+            &mut tx,
+            kinds(),
+            &attome_model::validate::CrossChecks::default(),
+            kind.as_ref(),
+            id,
+        )
+        .await?;
+        items.push(BlueprintAppliedItem {
+            id,
+            kind: kind_name.as_str().to_owned(),
+            version_no: published.version_no,
+            previous_version,
+        });
+    }
+    write_security_event(
+        &mut tx,
+        &audit_service(&state),
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "metadata_object",
+            None,
+        )
+        .named("model.blueprint.apply")
+        .comment(format!(
+            "{} object(s) published from a blueprint",
+            items.len()
+        )),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    refresh_cooked(&state).await?;
+    Ok(Json(BlueprintApplied { items }))
+}
+
+/// Rolls a blueprint back (N12-T3): each object returns to the version it
+/// had before, published again as a new version; an object the blueprint
+/// created is left as it is, for an administrator to retire.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/model/blueprint/rollback",
+    tag = "admin",
+    request_body = BlueprintRollback,
+    responses(
+        (status = 200, description = "What was republished", body = BlueprintApplied),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "An object or version is unknown", body = ErrorResponse),
+        (status = 409, description = "Another save of one of the objects is in progress", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
+async fn blueprint_rollback(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Json(request): Json<BlueprintRollback>,
+) -> Result<Json<BlueprintApplied>, AppError> {
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let mut items = Vec::new();
+    for item in &request.items {
+        let Some(previous) = item.previous_version else {
+            continue;
+        };
+        let kind = kind(&item.kind)?;
+        let old = store::read(&state.base.db, item.id, Some(previous)).await?;
+        if old.kind != kind.name().as_str() {
+            return Err(AppError::NotFound);
+        }
+        let current = store::read(&state.base.db, item.id, None).await?;
+        let spec = ObjectSpec {
+            id: ObjectId(item.id),
+            name: current.name.clone(),
+            app: "customer".to_owned(),
+            layer: Layer::Customer,
+        };
+        store::save_draft(
+            &mut tx,
+            kinds(),
+            kind.as_ref(),
+            &spec,
+            &old.doc,
+            Some(ctx.user_id),
+        )
+        .await?;
+        let published = attome_model::publish::publish(
+            &mut tx,
+            kinds(),
+            &attome_model::validate::CrossChecks::default(),
+            kind.as_ref(),
+            item.id,
+        )
+        .await?;
+        items.push(BlueprintAppliedItem {
+            id: item.id,
+            kind: item.kind.clone(),
+            version_no: published.version_no,
+            previous_version: Some(item.version_no),
+        });
+    }
+    write_security_event(
+        &mut tx,
+        &audit_service(&state),
+        SecurityEvent::new(
+            MandatoryCategory::Configuration,
+            AuditOperation::Update,
+            ctx.user_id,
+            "metadata_object",
+            None,
+        )
+        .named("model.blueprint.rollback")
+        .comment(format!("{} object(s) rolled back", items.len())),
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    refresh_cooked(&state).await?;
+    Ok(Json(BlueprintApplied { items }))
+}
+
 /// A menu as one caller sees it (A21-T2).
 #[derive(Serialize, ToSchema)]
 pub(crate) struct MenuView {
@@ -1095,6 +1436,12 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/model/navigation/{id}", get(menu))
         .route("/api/v1/admin/model/export", get(export_files))
         .route("/api/v1/admin/model/import", post(import_files))
+        .route("/api/v1/admin/model/blueprint/plan", post(blueprint_plan))
+        .route("/api/v1/admin/model/blueprint/apply", post(blueprint_apply))
+        .route(
+            "/api/v1/admin/model/blueprint/rollback",
+            post(blueprint_rollback),
+        )
         .route("/api/v1/admin/model/{kind}", get(list_objects))
         .route("/api/v1/admin/model/{kind}/{id}", get(get_object))
         .route(
@@ -1131,6 +1478,9 @@ pub fn routes() -> Router<EngineState> {
         publish,
         export_files,
         import_files,
+        blueprint_plan,
+        blueprint_apply,
+        blueprint_rollback,
         menu,
         form_plan
     ),
@@ -1150,6 +1500,11 @@ pub fn routes() -> Router<EngineState> {
         ModelFile,
         ModelFiles,
         MenuView,
+        BlueprintItem,
+        BlueprintPlan,
+        BlueprintApplied,
+        BlueprintAppliedItem,
+        BlueprintRollback,
         ImportResponse,
         FormPlan,
         FormPlanSection,

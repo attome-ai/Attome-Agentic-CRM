@@ -560,3 +560,66 @@ fn export_then_import_keeps_content_hashes() {
         assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
     });
 }
+
+/// N12-T3: a blueprint plans, applies whole, plans as unchanged afterwards,
+/// and a changed apply rolls back to the version it replaced.
+#[test]
+fn a_blueprint_plans_applies_and_rolls_back() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, cookie) = seed_admin(&db).await;
+        let app = full_app(system);
+        let entity_id: Uuid =
+            sqlx::query_scalar("SELECT id FROM entity_info WHERE is_active IS NOT FALSE LIMIT 1")
+                .fetch_one(&db)
+                .await
+                .expect("a seeded entity");
+        let name = format!("blueprint form {}", Uuid::now_v7());
+        let file = |label: &str| {
+            let text = serde_json::to_string_pretty(&serde_json::json!({
+                "kind": "form", "app": "customer", "name": name, "schema_version": 1,
+                "doc": { "entity": entity_id.to_string(), "sections": [{ "label": label, "fields": [] }] }
+            }))
+            .unwrap()
+                + "\n";
+            serde_json::json!({ "files": [{ "path": "form/customer/x.json", "text": text }] })
+        };
+        let call = |uri: &'static str, body: serde_json::Value| {
+            let app = app.clone();
+            let cookie = cookie.clone();
+            async move {
+                let resp = app.oneshot(post_req(uri, &cookie, body)).await.unwrap();
+                let status = resp.status();
+                (status, body_json(resp).await)
+            }
+        };
+
+        let (status, plan) = call("/api/v1/admin/model/blueprint/plan", file("Main")).await;
+        assert_eq!(status, StatusCode::OK, "{plan}");
+        assert_eq!(plan["items"][0]["status"], "new");
+
+        let (status, applied) = call("/api/v1/admin/model/blueprint/apply", file("Main")).await;
+        assert_eq!(status, StatusCode::OK, "{applied}");
+        assert!(applied["items"][0]["previous_version"].is_null());
+
+        let (_, plan) = call("/api/v1/admin/model/blueprint/plan", file("Main")).await;
+        assert_eq!(plan["items"][0]["status"], "same");
+
+        let (_, changed) = call("/api/v1/admin/model/blueprint/apply", file("Changed")).await;
+        let item = changed["items"][0].clone();
+        assert!(item["previous_version"].is_i64(), "{changed}");
+
+        let (status, rolled) = call(
+            "/api/v1/admin/model/blueprint/rollback",
+            serde_json::json!({ "items": [item] }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{rolled}");
+        let (_, plan) = call("/api/v1/admin/model/blueprint/plan", file("Main")).await;
+        assert_eq!(
+            plan["items"][0]["status"], "same",
+            "back to the first version"
+        );
+    });
+}
