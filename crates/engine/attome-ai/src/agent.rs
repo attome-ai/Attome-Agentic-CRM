@@ -658,20 +658,26 @@ pub fn narrow_to_agent_tools(allowed: Option<Vec<String>>, tools: &[String]) -> 
     }
 }
 
-/// The tools of the newest published version of agent object `agent`.
-async fn published_agent_tools(state: &EngineState, agent: Uuid) -> Result<Vec<String>, AppError> {
+/// The tools and daily limits of the newest published version of agent
+/// object `agent`.
+async fn published_agent(
+    state: &EngineState,
+    agent: Uuid,
+) -> Result<(Vec<String>, Option<Value>), AppError> {
     let version = attome_model::store::read_published(&state.base.db, agent).await?;
     if version.kind != attome_model::kinds::AGENT.as_str() {
         return Err(AppError::Validation(
             "`agent` must name an agent object".into(),
         ));
     }
-    Ok(version.doc["tools"]
+    let tools = version.doc["tools"]
         .as_array()
         .into_iter()
         .flatten()
         .filter_map(|tool| tool.as_str().map(str::to_owned))
-        .collect())
+        .collect();
+    let daily = version.doc["limits"].get("daily").cloned();
+    Ok((tools, daily))
 }
 
 /// Resolves the admin route's request into session constraints, refusing an
@@ -748,15 +754,33 @@ async fn start_session_from_definition(
     Json(body): Json<StartSessionRequest>,
 ) -> Result<Json<AgentSessionResponse>, AppError> {
     let mut constraints = admin_session_constraints(&body)?;
-    if let Some(agent) = body.agent {
-        let tools = published_agent_tools(&state, agent).await?;
-        constraints.allowed_action_ids = Some(narrow_to_agent_tools(
-            constraints.allowed_action_ids.take(),
-            &tools,
-        ));
-    }
+    let agent = match body.agent {
+        Some(agent) => {
+            let (tools, daily) = published_agent(&state, agent).await?;
+            constraints.allowed_action_ids = Some(narrow_to_agent_tools(
+                constraints.allowed_action_ids.take(),
+                &tools,
+            ));
+            Some((agent, daily))
+        }
+        None => None,
+    };
     // A human directly starting a session is not "retrieved content".
     let session = start_session(&state, &ctx, id, "admin", constraints, false).await?;
+    if let Some((agent, daily)) = agent
+        && let Err(error) =
+            session::attach_agent_object(&state.base.db, session.id, agent, daily).await
+    {
+        // Never leave a session running without the agent's limits.
+        let _ = session::revoke(
+            &state.base.db,
+            session.id,
+            ctx.user_id,
+            "agent limits not attached",
+        )
+        .await;
+        return Err(error);
+    }
     Ok(Json(AgentSessionResponse {
         id: session.id,
         agent_definition_ref: id,

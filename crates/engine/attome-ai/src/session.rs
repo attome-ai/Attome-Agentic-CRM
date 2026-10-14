@@ -811,16 +811,27 @@ pub async fn reserve_session_write(
         .and_utc();
 
     let mut tx = attome_db::tx::begin(db).await?;
-    let limit: Option<Option<i32>> =
-        sqlx::query_scalar("SELECT max_writes_per_day FROM agent_session WHERE id = $1 FOR UPDATE")
-            .bind(session_id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(AppError::internal)?;
-    let Some(Some(limit)) = limit else {
+    let row: Option<(Option<i32>, Option<Uuid>, Option<Value>)> = sqlx::query_as(
+        "SELECT max_writes_per_day, agent_object_ref, daily_class_limits \
+         FROM agent_session WHERE id = $1 FOR UPDATE",
+    )
+    .bind(session_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((limit, agent_object, daily)) = row else {
         tx.rollback().await.map_err(AppError::internal)?;
         return Ok(WriteReservation::Unlimited);
     };
+    // V2-D487 / AH4: the agent's own per-class daily cap, counted across all
+    // of its sessions.
+    let class_limit = agent_object.zip(daily.as_ref()).and_then(|(agent, daily)| {
+        class_cap(daily, action_id).map(|(class, cap)| (agent, class, cap))
+    });
+    if limit.is_none() && class_limit.is_none() {
+        tx.rollback().await.map_err(AppError::internal)?;
+        return Ok(WriteReservation::Unlimited);
+    }
 
     if let Some(key) = tool_call_id {
         let prior: Option<(String, Option<Value>)> = sqlx::query_as(
@@ -841,28 +852,75 @@ pub async fn reserve_session_write(
         }
     }
 
-    let used: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM action_invocation \
-          WHERE agent_session_id = $1 AND initiator = 1 AND created_at >= $2 \
-            AND outcome IN ($3, $4)",
-    )
-    .bind(session_id)
-    .bind(midnight_utc)
-    .bind(OUTCOME_COMPLETED)
-    .bind(OUTCOME_CLAIMED)
-    .fetch_one(&mut *tx)
-    .await
-    .map_err(AppError::internal)?;
-    if used >= i64::from(limit) {
-        tx.rollback().await.map_err(AppError::internal)?;
-        tracing::warn!(
-            session_id = %session_id,
-            action_id = %action_id,
-            used,
-            limit,
-            "session-wide daily write limit reached for this agent session"
-        );
-        return Ok(WriteReservation::LimitReached);
+    if let Some(limit) = limit {
+        let used: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM action_invocation \
+              WHERE agent_session_id = $1 AND initiator = 1 AND created_at >= $2 \
+                AND outcome IN ($3, $4)",
+        )
+        .bind(session_id)
+        .bind(midnight_utc)
+        .bind(OUTCOME_COMPLETED)
+        .bind(OUTCOME_CLAIMED)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        if used >= i64::from(limit) {
+            tx.rollback().await.map_err(AppError::internal)?;
+            tracing::warn!(
+                session_id = %session_id,
+                action_id = %action_id,
+                used,
+                limit,
+                "session-wide daily write limit reached for this agent session"
+            );
+            return Ok(WriteReservation::LimitReached);
+        }
+    }
+
+    if let Some((agent, class, cap)) = class_limit {
+        // Serialises this agent's reservations across its sessions, so two
+        // sessions cannot both take the last unit of a cap.
+        let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+            .bind(crate::ADVISORY_LOCK_NAMESPACE)
+            .bind(format!("attome-ai/agent-daily:{agent}"))
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+        if !locked {
+            tx.rollback().await.map_err(AppError::internal)?;
+            return Err(AppError::Conflict(
+                "another step of this agent is being reserved; retry",
+            ));
+        }
+        let ids = crate::engine::REGISTRY.ids_of_class(class);
+        let used: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM action_invocation i \
+             JOIN agent_session s ON s.id = i.agent_session_id \
+             WHERE s.agent_object_ref = $1 AND i.action_id = ANY($2) \
+               AND i.created_at >= $3 AND i.outcome IN ($4, $5)",
+        )
+        .bind(agent)
+        .bind(&ids)
+        .bind(midnight_utc)
+        .bind(OUTCOME_COMPLETED)
+        .bind(OUTCOME_CLAIMED)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        if used >= cap {
+            tx.rollback().await.map_err(AppError::internal)?;
+            tracing::warn!(
+                session_id = %session_id,
+                agent = %agent,
+                action_id = %action_id,
+                ?class,
+                used,
+                cap,
+                "the agent's daily limit for this kind of step is reached"
+            );
+            return Ok(WriteReservation::LimitReached);
+        }
     }
 
     // The session row lock serializes every reservation for this session, so
@@ -891,6 +949,49 @@ pub async fn reserve_session_write(
     };
     tx.commit().await.map_err(AppError::internal)?;
     Ok(WriteReservation::Reserved(id))
+}
+
+/// The agent definition's daily cap for `action_id`'s limit class, when it
+/// sets one (V2-D487): `daily_class_limits` is the agent object's
+/// `limits.daily`, snapshotted at start.
+fn class_cap(daily: &Value, action_id: ActionId) -> Option<(crate::descriptor::LimitClass, i64)> {
+    use crate::descriptor::LimitClass;
+    let class = crate::engine::REGISTRY.resolve(action_id.0)?.limit_class();
+    let key = match class {
+        LimitClass::None => return None,
+        LimitClass::RecordChange => "record_changes",
+        LimitClass::Delete => "deletes",
+        LimitClass::MessageSend => "messages",
+        LimitClass::ExternalCall => "external_calls",
+    };
+    let cap = daily.get(key)?.as_u64()?;
+    Some((class, i64::try_from(cap).unwrap_or(i64::MAX)))
+}
+
+/// Records the agent object a session runs under and snapshots its daily
+/// limits (V2-D487), right after the session starts. A later edit of the
+/// agent never reaches a running session.
+pub async fn attach_agent_object(
+    db: &PgPool,
+    session_id: Uuid,
+    agent: Uuid,
+    daily: Option<Value>,
+) -> Result<(), AppError> {
+    let updated = sqlx::query(
+        "UPDATE agent_session SET agent_object_ref = $2, daily_class_limits = $3 WHERE id = $1",
+    )
+    .bind(session_id)
+    .bind(agent)
+    .bind(daily)
+    .execute(db)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected();
+    if updated == 1 {
+        Ok(())
+    } else {
+        Err(AppError::internal("the new agent session row is missing"))
+    }
 }
 
 /// Revokes a session. Idempotent: the first revocation stands.
@@ -1179,7 +1280,7 @@ impl std::fmt::Debug for InvocationRecord<'_> {
 /// loser would have produced. `ON CONFLICT DO NOTHING` rather than a
 /// check-then-insert, because the check-then-insert has a window and a retrying
 /// tool loop is precisely the thing that would find it.
-/// How many of `action_ids` ran today (UTC) for agent definition `agent`,
+/// How many of `action_ids` ran today (UTC) for agent object `agent`,
 /// across all of its sessions (AH4-T2): a limit belongs to the agent, not to
 /// one session. Only invocations that ran count, not refusals or approval
 /// requests. Pair with [`crate::registry::ActionRegistry::ids_of_class`].
@@ -1190,7 +1291,7 @@ pub async fn used_today(db: &PgPool, agent: Uuid, action_ids: &[String]) -> Resu
     sqlx::query_scalar(
         "SELECT COUNT(*) FROM action_invocation i \
          JOIN agent_session s ON s.id = i.agent_session_id \
-         WHERE s.agent_definition_ref = $1 \
+         WHERE s.agent_object_ref = $1 \
            AND i.action_id = ANY($2) \
            AND i.outcome IN ('completed', 'executed') \
            AND i.created_at >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'",
