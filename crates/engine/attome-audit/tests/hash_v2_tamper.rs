@@ -819,11 +819,14 @@ type VectorInput = (
     CanonicalEvent,
 );
 
+// The inputs keep v1's entity names on purpose: they are arbitrary data, and
+// keeping them leaves the published vector (D-539 ruling 8) byte-identical to
+// the one v1 published, so an outside verifier checks both with one file.
 fn vector_inputs() -> Vec<VectorInput> {
     let v1 = V1Inputs {
         prev_hash: String::new(),
         operation: 1,
-        entity_name: Some("contact".into()),
+        entity_name: Some("xrm_contact".into()),
         record_id: Some(uuid(3)),
         user_id: uuid(2),
         changed_on_millis: 1_788_999_999_000,
@@ -860,7 +863,7 @@ fn vector_inputs() -> Vec<VectorInput> {
             None,
             CanonicalEvent {
                 header: CanonicalHeader {
-                    entity_name: Some("contact".into()),
+                    entity_name: Some("xrm_contact".into()),
                     event_name: Some("تمت الموافقة — é 😀".into()),
                     ..keys_only_header()
                 },
@@ -890,7 +893,7 @@ fn vector_inputs() -> Vec<VectorInput> {
             None,
             CanonicalEvent {
                 header: CanonicalHeader {
-                    entity_name: Some("contact".into()),
+                    entity_name: Some("xrm_contact".into()),
                     record_id: Some(uuid(3)),
                     version_after: Some(7),
                     ..keys_only_header()
@@ -967,7 +970,7 @@ fn vector_inputs() -> Vec<VectorInput> {
                     category: Some(0),
                     operation: Some(1),
                     source: Some(1),
-                    entity_name: Some("contact".into()),
+                    entity_name: Some("xrm_contact".into()),
                     record_id: Some(uuid(3)),
                     version_before: Some(4),
                     version_after: Some(5),
@@ -1002,9 +1005,9 @@ fn vector_inputs() -> Vec<VectorInput> {
                     new_value: Some("********".into()),
                     old_display_value: None,
                     new_display_value: None,
-                    old_lookup_entity: Some("user_account".into()),
+                    old_lookup_entity: Some("xrm_core_systemuser".into()),
                     old_lookup_name: Some("old".into()),
-                    new_lookup_entity: Some("user_account".into()),
+                    new_lookup_entity: Some("xrm_core_systemuser".into()),
                     new_lookup_name: Some("new".into()),
                     is_sensitive: Some(true),
                 }],
