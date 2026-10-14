@@ -275,7 +275,7 @@ impl HijriCalendar {
 
     /// The Gregorian day of a Hijri date; a day past the month's end is an
     /// error.
-    pub fn from_hijri(&self, date: HijriDate) -> Result<NaiveDate, CalendarError> {
+    pub fn to_gregorian(&self, date: HijriDate) -> Result<NaiveDate, CalendarError> {
         let index = month_index(date.year, date.month)?;
         let length = self.starts[index + 1] - self.starts[index];
         if date.day == 0 || i32::from(date.day) > length {
@@ -323,7 +323,7 @@ pub fn to_hijri(date: NaiveDate) -> Result<HijriDate, CalendarError> {
 
 /// The Gregorian day of a Hijri date, in the published table.
 pub fn from_hijri(date: HijriDate) -> Result<NaiveDate, CalendarError> {
-    HijriCalendar::umm_al_qura().from_hijri(date)
+    HijriCalendar::umm_al_qura().to_gregorian(date)
 }
 
 /// A month's first day and the day after its last, in the published table.
@@ -500,7 +500,7 @@ mod tests {
         );
         assert_eq!(
             corrected
-                .from_hijri(HijriDate::new(1447, month, 1))
+                .to_gregorian(HijriDate::new(1447, month, 1))
                 .unwrap(),
             moved
         );
