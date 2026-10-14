@@ -23,6 +23,7 @@ fn registered_kinds() -> Vec<Arc<dyn Kind>> {
         Arc::new(attome_model::kinds::AgentKind),
         Arc::new(attome_model::kinds::NavigationKind),
         Arc::new(attome_model::kinds::EvalSuiteKind),
+        Arc::new(attome_model::kinds::PromptOverrideKind),
     ];
     for adapter in crate::kinds::ADAPTER_KINDS {
         kinds.push(Arc::new(adapter));
