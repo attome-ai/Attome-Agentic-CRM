@@ -22,6 +22,7 @@ import { FileVersionsComponent } from '../file-versions/file-versions.component'
 import { UploadPipeline } from '../upload-pipeline';
 import { MultiAttachmentComponent } from '../multi-attachment/multi-attachment.component';
 import { RichTextEditorComponent } from '../rich-text-editor/rich-text-editor.component';
+import { FieldHistoryComponent } from '../field-history/field-history.component';
 import { ImageUploadComponent } from '../image-upload/image-upload.component';
 
 @Component({
@@ -30,7 +31,7 @@ import { ImageUploadComponent } from '../image-upload/image-upload.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule, TranslatePipe, MultiAttachmentComponent, FileVersionsComponent,
-    RichTextEditorComponent, ImageUploadComponent,
+    RichTextEditorComponent, ImageUploadComponent, FieldHistoryComponent,
   ],
   viewProviders: [{ provide: ControlContainer, useExisting: FormGroupDirective }],
   // The grid item is this host element, not the .xf-field inside it, so the
@@ -72,6 +73,17 @@ export class FieldInputComponent implements OnInit, OnDestroy {
     return calendar === 'hijri' || calendar === 'both';
   });
   readonly hijriMonths = Array.from({ length: 12 }, (_, i) => i + 1);
+
+  /** B2-T3: fields whose past values the history popover can put back. */
+  readonly hasHistory = computed(() =>
+    !!this.recordId() && !!this.entityName()
+    && !['file', 'image', 'formula'].includes(this.field().field_type));
+
+  /** Puts a past value back into the control; saving the form writes it. */
+  restoreValue(value: unknown): void {
+    this.ctrl.setValue(value);
+    this.ctrl.markAsDirty();
+  }
 
   /** The Hijri date the control holds, if any. */
   hijriValue(): HijriParts | null {

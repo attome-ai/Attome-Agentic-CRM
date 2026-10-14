@@ -5,6 +5,10 @@
   <div class="xf-label-row">
     <label [for]="field().name">{{ field().display_name || field().name }}</label>
     @if (field().is_required) { <span class="xf-required">Required</span> }
+    @if (hasHistory() && !policyDisabled()) {
+      <attome-field-history [entityName]="entityName()!" [recordId]="recordId()!" [field]="field()"
+                            (restored)="restoreValue($event)" />
+    }
     @if (policyDisabled()) {
       <span class="xf-lock-note" [id]="lockNoteId()">
         <i class="las la-lock" aria-hidden="true"></i>

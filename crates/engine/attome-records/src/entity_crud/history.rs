@@ -96,6 +96,9 @@ pub struct RecordHistoryQuery {
     pub cursor: Option<String>,
     /// Changes per page, 1..=200 (default 50); larger values are clamped.
     pub page_size: Option<i64>,
+    /// B2-T3: only the changes to this one field (its logical name). A field
+    /// the caller may not read, or that does not exist, has no history.
+    pub field: Option<String>,
 }
 
 type HeaderRow = (
@@ -149,14 +152,28 @@ pub async fn record_history(
     require_record_read(state, ctx, entity_id, &entity_name, record_id).await?;
     require_live_record(state, &entity_name, is_append_only, record_id).await?;
 
-    // The field filter, resolved once: every readable attribute by name.
+    // The field filter, resolved once: every readable attribute by name (or
+    // just the one asked for).
+    let only = query
+        .field
+        .as_deref()
+        .map(str::trim)
+        .filter(|f| !f.is_empty());
     let readable: HashMap<&str, &attome_core::AttrInfo> = attrs
         .iter()
+        .filter(|a| only.is_none_or(|f| a.logicalname == f))
         .filter_map(|a| {
             readable_attr(ctx, &entity_name, &attrs, &a.logicalname)
                 .map(|a| (a.logicalname.as_str(), a))
         })
         .collect();
+    // A change with no field rows (a delete, a restore) belongs to the whole
+    // record, not to one field.
+    let fieldless = if only.is_some() {
+        ""
+    } else {
+        "NOT EXISTS (SELECT 1 FROM audit_detail d WHERE d.audit_ref = h.id) OR "
+    };
     let readable_names: Vec<String> = readable.keys().map(|s| (*s).to_owned()).collect();
 
     let keyset = if cursor.is_some() {
@@ -170,8 +187,7 @@ pub async fn record_history(
                 h.user_id, h.user_display_name \
          FROM audit_header h \
          WHERE h.entity_name = $1 AND h.record_id = $2 AND h.changed_on IS NOT NULL \
-           AND ( NOT EXISTS (SELECT 1 FROM audit_detail d WHERE d.audit_ref = h.id) \
-              OR EXISTS (SELECT 1 FROM audit_detail d \
+           AND ( {fieldless}EXISTS (SELECT 1 FROM audit_detail d \
                           WHERE d.audit_ref = h.id AND d.field_name = ANY($4) \
                             AND (COALESCE(d.old_value, '') <> '' OR COALESCE(d.new_value, '') <> '' \
                               OR COALESCE(d.old_display_value, '') <> '' \

@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- A history clock beside each field on a saved record lists that field's past values and puts one
+  back into the form (saved through the normal update, with its row version);
+  `GET /api/v1/{entity}/{id}/history?field=` returns one field's changes.
 - CSV and XLSX exports write date columns in the exporting person's calendar and digits
   (`core.calendar`, `core.digits`); JSON exports keep ISO dates.
 - Reports and dashboards group dates by `hijri_month` and `hijri_year` (Umm al-Qura, with the

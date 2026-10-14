@@ -1,0 +1,40 @@
+<button type="button" class="fh-trigger" [attr.aria-label]="label()" [title]="label()"
+        [attr.aria-expanded]="open()" (click)="toggle()" data-testid="field-history-toggle">
+  <i class="las la-history" aria-hidden="true"></i>
+</button>
+
+@if (open()) {
+  <div class="fh-panel" role="dialog" [attr.aria-label]="label()">
+    @if (loading()) {
+      <p class="fh-muted">{{ 'fieldInput.loading' | translate }}</p>
+    } @else if (failed()) {
+      <p class="fh-muted" role="alert">{{ 'fieldInput.historyFailed' | translate }}</p>
+    } @else if (!entries().length) {
+      <p class="fh-muted">{{ 'fieldInput.historyEmpty' | translate }}</p>
+    } @else {
+      <ul class="fh-list">
+        @for (entry of entries(); track entry.auditId) {
+          <li class="fh-entry" data-testid="field-history-entry">
+            <div class="fh-meta">
+              <span>{{ entry.changedOn | localDate: { dateStyle: 'medium', timeStyle: 'short' } }}</span>
+              @if (entry.who) { <span class="fh-who">{{ entry.who }}</span> }
+            </div>
+            @if (entry.masked) {
+              <div class="fh-values fh-muted">{{ 'fieldInput.historyMasked' | translate }}</div>
+            } @else {
+              <div class="fh-values">
+                <span class="fh-old">{{ entry.oldText ?? '—' }}</span>
+                <i class="las la-arrow-right fh-arrow" aria-hidden="true"></i>
+                <span class="fh-new">{{ entry.newText ?? '—' }}</span>
+              </div>
+              <button type="button" class="fh-restore" (click)="restore(entry)"
+                      data-testid="field-history-restore">
+                {{ 'fieldInput.historyRestore' | translate }}
+              </button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </div>
+}

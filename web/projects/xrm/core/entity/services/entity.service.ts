@@ -191,6 +191,18 @@ export class EntityService {
     return this.api.delete(`/api/v1/${entityName}/${id}`);
   }
 
+  /** B2-T3: one field's change history on a record, newest first. */
+  fieldHistory(
+    entityName: string,
+    id: string,
+    field: string,
+  ): Observable<ApiComponents['schemas']['CursorPage_RecordHistoryChange']> {
+    return this.api.get<ApiComponents['schemas']['CursorPage_RecordHistoryChange']>(
+      `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(id)}/history`,
+      { field, page_size: '50' },
+    );
+  }
+
   restore(entityName: string, id: string): Observable<EntityRecordResponse> {
     return this.api.post<EntityRecordResponse>(`/api/v1/${entityName}/${id}/restore`, {});
   }

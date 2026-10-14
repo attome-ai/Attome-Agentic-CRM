@@ -848,6 +848,49 @@ async fn history_drops_ungranted_fields_and_masks_sensitive_ones() {
     assert!(secret.masked);
     assert!(secret.old_value.is_none() && secret.new_value.is_none());
 
+    // B2-T3: one field's history only, and none for a field the caller may
+    // not read.
+    let name_only = record_history(
+        &state,
+        &caller,
+        &entity,
+        record,
+        &RecordHistoryQuery {
+            field: Some("name".into()),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("one field's history");
+    let ids: Vec<Uuid> = name_only.items.iter().map(|c| c.audit_id).collect();
+    assert_eq!(
+        ids,
+        vec![update],
+        "the delete has no field rows; it is not name's history"
+    );
+    let names: Vec<&str> = name_only.items[0]
+        .fields
+        .iter()
+        .map(|f| f.field_name.as_str())
+        .collect();
+    assert_eq!(names, vec!["name"]);
+    let hidden = record_history(
+        &state,
+        &caller,
+        &entity,
+        record,
+        &RecordHistoryQuery {
+            field: Some("secret_b".into()),
+            ..Default::default()
+        },
+    )
+    .await
+    .expect("a hidden field's history");
+    assert!(
+        hidden.items.is_empty(),
+        "a field the caller cannot read has no history"
+    );
+
     // The timeline's audit entries follow the same field filter.
     let timeline = record_timeline(&state, &caller, &entity, record, &opts(200, None))
         .await
@@ -871,6 +914,7 @@ async fn history_drops_ungranted_fields_and_masks_sensitive_ones() {
         &RecordHistoryQuery {
             cursor: None,
             page_size: Some(1),
+            ..Default::default()
         },
     )
     .await
@@ -884,6 +928,7 @@ async fn history_drops_ungranted_fields_and_masks_sensitive_ones() {
         &RecordHistoryQuery {
             cursor: first.next_cursor.clone(),
             page_size: Some(1),
+            ..Default::default()
         },
     )
     .await
