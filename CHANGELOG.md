@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `record.transitions` and `record.transition`: agents move a record through its state model on the
+  ordinary update path, approvals included.
 - `agent.delegate`: a supervisor agent hands a subtask to a specialist through the specialist's
   typed `handoff` contract; the specialist runs read-only in a child session (migration 0016,
   `agent_session.parent_session_ref`).
