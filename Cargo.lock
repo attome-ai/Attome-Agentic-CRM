@@ -1063,16 +1063,19 @@ dependencies = [
 name = "attome-model"
 version = "0.1.0"
 dependencies = [
+ "arc-swap",
  "attome-db",
  "attome-testkit",
  "attome-types",
  "chrono",
  "hex",
+ "metrics",
  "serde",
  "serde_json",
  "sha2 0.10.9",
  "sqlx",
  "tokio",
+ "tracing",
  "uuid",
 ]
 

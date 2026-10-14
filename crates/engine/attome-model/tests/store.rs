@@ -245,3 +245,48 @@ async fn migration_creates_metadata_store_tables() {
     draft(1).await.expect("the first draft");
     assert!(draft(2).await.is_err(), "a second open draft is refused");
 }
+
+#[tokio::test]
+async fn stale_base_hash_is_version_conflict() {
+    use attome_model::commands::{self, Command};
+    let Some(pool) = pool().await else {
+        return;
+    };
+    let object = spec();
+    let saved = save(&pool, &object, json!({ "title": "one" })).await;
+    let edit = [Command::Set {
+        path: "/title".to_owned(),
+        value: json!("two"),
+    }];
+
+    let mut tx = pool.begin().await.unwrap();
+    let stale = commands::apply_commands(
+        &mut tx,
+        &registry(),
+        &NoteKind,
+        &object,
+        "not-the-hash",
+        &edit,
+        None,
+    )
+    .await;
+    assert!(matches!(stale, Err(AppError::VersionConflict)), "{stale:?}");
+    tx.rollback().await.unwrap();
+
+    let mut tx = pool.begin().await.unwrap();
+    let applied = commands::apply_commands(
+        &mut tx,
+        &registry(),
+        &NoteKind,
+        &object,
+        &saved.content_hash,
+        &edit,
+        None,
+    )
+    .await
+    .expect("an edit on the current hash applies");
+    tx.commit().await.unwrap();
+    assert_ne!(applied.content_hash, saved.content_hash);
+    let read = store::read(&pool, object.id.0, None).await.unwrap();
+    assert_eq!(read.doc["title"], "two");
+}

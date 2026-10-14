@@ -13,10 +13,12 @@
 //! engine that owns them, and HTTP routes live in `attome-api`.
 
 pub mod canonical;
+pub mod commands;
 pub mod cooker;
 pub mod identity;
 pub mod kind;
 pub mod references;
+pub mod runtime;
 pub mod store;
 pub mod validate;
 
