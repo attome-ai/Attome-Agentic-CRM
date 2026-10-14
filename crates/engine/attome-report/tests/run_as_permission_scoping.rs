@@ -484,8 +484,10 @@ async fn scheduled_run_never_surfaces_a_row_run_as_cannot_see() {
     // "read")` is a flat table-level privilege check, not a per-record one;
     // record-level scope for the underlying data is what `{logicalname}`'s
     // None-tier role enforces).
+    // `create` too: the user creates the row they may see (their creator
+    // share), which the create privilege gates.
     let (restricted_id, restricted_cookie, widget_role_id) =
-        seed_user_with_privileges(&db, &logicalname, &["read"]).await;
+        seed_user_with_privileges(&db, &logicalname, &["read", "create"]).await;
     scope_role_for_entity(
         &db,
         &security,
