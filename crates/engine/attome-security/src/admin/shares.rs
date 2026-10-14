@@ -405,19 +405,54 @@ pub(super) async fn reassign_owner(
     ctx: Authorized<Admin>,
     Json(body): Json<ReassignOwnerBody>,
 ) -> Result<Json<OwnerItem>, AppError> {
+    let done = reassign_owner_for(
+        &state,
+        ctx.user_id,
+        &body.entity,
+        body.record_id,
+        body.user_email.as_deref(),
+        body.team_name.as_deref(),
+    )
+    .await?;
+    Ok(Json(OwnerItem {
+        record_id: done.record_id,
+        owner_type: done.owner_type,
+        owner_id: done.owner_id,
+        entity: done.entity,
+    }))
+}
+
+/// The new owner of a reassigned record (N6-T2: `reassign_owner_for` is the
+/// one implementation the admin route and the agent action share).
+#[derive(Debug, Clone)]
+pub struct Reassigned {
+    pub record_id: Uuid,
+    /// `user` | `team`.
+    pub owner_type: &'static str,
+    pub owner_id: Uuid,
+    pub entity: String,
+}
+
+/// Reassigns a record's owner to a user (by email) or a team (by name), with
+/// an action share for the new owner, audited as an owner change in the same
+/// transaction. The caller has already checked that `actor` may do this.
+pub async fn reassign_owner_for(
+    state: &EngineState,
+    actor: Uuid,
+    entity: &str,
+    record_id: Uuid,
+    user_email: Option<&str>,
+    team_name: Option<&str>,
+) -> Result<Reassigned, AppError> {
     // Resolved via the DB's own stored copy of the logicalname, not the raw
     // request string — `canonical_entity` is what reaches dynamic SQL below,
     // never `body.entity` (guidelines §4: dynamic identifiers come from
     // validated metadata, not the request). See
     // `resolve_entity_ref_and_name`'s doc comment.
     let (entity_ref, canonical_entity) =
-        resolve_entity_ref_and_name(&state.base.db, &body.entity).await?;
-    let (principal_type, principal_id) = resolve_principal(
-        &state.base.db,
-        body.user_email.as_deref(),
-        body.team_name.as_deref(),
-    )
-    .await?;
+        resolve_entity_ref_and_name(&state.base.db, entity).await?;
+    let (principal_type, principal_id) =
+        resolve_principal(&state.base.db, user_email, team_name).await?;
 
     // `canonical_entity` is the DB's own stored `entity_info.logicalname`
     // for this row (`resolve_entity_ref_and_name` above) — the only path that
@@ -431,11 +466,11 @@ pub(super) async fn reassign_owner(
     let table = attome_core::quote_ident(&canonical_entity);
 
     let mut tx = super::shared::access_tx(
-        &state,
+        state,
         AuditOperation::OwnerChange,
-        ctx.user_id,
+        actor,
         &canonical_entity,
-        Some(body.record_id),
+        Some(record_id),
     )
     .await?;
 
@@ -447,8 +482,8 @@ pub(super) async fn reassign_owner(
     ))
     .bind(principal_id)
     .bind(principal_type)
-    .bind(ctx.user_id)
-    .bind(body.record_id)
+    .bind(actor)
+    .bind(record_id)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?
@@ -475,11 +510,11 @@ pub(super) async fn reassign_owner(
          ON CONFLICT (record_id, entity_ref, principal_type, principal_id, capability) \
          DO UPDATE SET granted_by = EXCLUDED.granted_by",
     )
-    .bind(body.record_id)
+    .bind(record_id)
     .bind(entity_ref)
     .bind(principal_type)
     .bind(principal_id)
-    .bind(ctx.user_id)
+    .bind(actor)
     .execute(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -492,12 +527,12 @@ pub(super) async fn reassign_owner(
         state.base.security.invalidate_sync(principal_id).await?;
     }
 
-    Ok(Json(OwnerItem {
-        record_id: body.record_id,
+    Ok(Reassigned {
+        record_id,
         owner_type: if principal_type == 0 { "user" } else { "team" },
         owner_id: principal_id,
         entity: canonical_entity,
-    }))
+    })
 }
 
 #[utoipa::path(

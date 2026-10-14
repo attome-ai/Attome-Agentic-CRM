@@ -15,6 +15,7 @@
 pub mod agent_playground;
 pub mod agent_supervise;
 pub mod bot_handoff;
+pub mod business;
 pub mod classify;
 pub mod draft_article;
 pub mod graph;
@@ -45,6 +46,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(record_schema::descriptor());
     all.push(record_schema::validate_descriptor());
     all.push(record_update_field::descriptor());
+    all.extend(business::descriptors());
     all.extend(record_write::descriptors());
     all.push(search_records::descriptor());
     all.extend(workflow::descriptors());
@@ -73,6 +75,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(record_schema::RecordSchema));
     all.push(Box::new(record_schema::RecordValidate));
     all.push(Box::new(record_update_field::RecordUpdateField));
+    all.extend(business::executors());
     all.extend(record_write::executors());
     all.push(Box::new(search_records::SearchRecords));
     all.extend(workflow::executors());

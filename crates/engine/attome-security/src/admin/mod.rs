@@ -36,6 +36,7 @@ mod roles;
 mod sessions;
 mod shared;
 mod shares;
+pub use shares::{Reassigned, reassign_owner_for};
 mod teams;
 mod user_roles;
 mod users;
