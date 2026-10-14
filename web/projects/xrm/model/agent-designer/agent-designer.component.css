@@ -52,3 +52,6 @@
 .ad-channels { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 .ad-issues { margin: 0; padding-inline-start: 1.25rem; color: var(--danger-color, #b42318); }
 .ad-actions { display: flex; align-items: center; gap: 0.75rem; }
+.ad-usage { display: flex; flex-direction: column; gap: 0.25rem; }
+.ad-usage h4 { margin-block: 0; font-size: 0.95rem; }
+.ad-usage-row { display: flex; justify-content: space-between; gap: 1rem; }

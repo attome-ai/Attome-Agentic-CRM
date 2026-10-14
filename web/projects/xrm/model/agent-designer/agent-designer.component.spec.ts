@@ -61,6 +61,7 @@ describe('AgentDesignerComponent', () => {
       })),
       saveDraft: vi.fn().mockReturnValue(of({ id: 'a1', version_no: 2, content_hash: 'h2', issues: [] })),
       publish: vi.fn().mockReturnValue(of({ id: 'a1', version_no: 2 })),
+      agentUsage: vi.fn().mockReturnValue(of({ items: [{ class: 'deletes', used: 2, limit: 5 }] })),
     };
     TestBed.configureTestingModule({
       imports: [AgentDesignerComponent],
@@ -78,6 +79,8 @@ describe('AgentDesignerComponent', () => {
     expect(fixture.nativeElement.querySelectorAll('[data-agent]').length).toBe(1);
 
     cmp.open(cmp.agents()[0]);
+    expect(svc['agentUsage']).toHaveBeenCalledWith('a1');
+    expect(cmp.usage()).toEqual([{ class: 'deletes', used: 2, limit: 5 }]);
     cmp.toggle('tools', 'records.read', true);
     cmp.save();
     expect(svc['saveDraft']).toHaveBeenCalledWith('agent', 'a1', 'h1', null, expect.any(Array));

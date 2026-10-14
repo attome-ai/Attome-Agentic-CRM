@@ -110,6 +110,13 @@ export interface DraftSaved {
   issues:       ModelIssue[];
 }
 
+/** One limit class's use today (`GET /api/v1/admin/ai/agents/{agent}/usage`). */
+export interface AgentUsage {
+  class: string;
+  used:  number;
+  limit: number | null;
+}
+
 /** An action an agent may be given (`GET /api/v1/actions`). */
 export interface ActionSummary {
   id:          string;
@@ -221,6 +228,13 @@ export class ModelService {
     return this.api.post<{ id: string; version_no: number }>(
       `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/publish`,
       {},
+    );
+  }
+
+  /** What a published agent did today against its daily limits (AH4-T4). */
+  agentUsage(agent: string): Observable<{ items: AgentUsage[] }> {
+    return this.api.get<{ items: AgentUsage[] }>(
+      `/api/v1/admin/ai/agents/${encodeURIComponent(agent)}/usage`,
     );
   }
 

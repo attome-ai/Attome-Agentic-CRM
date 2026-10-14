@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ApiError, TranslatePipe } from '@attome/base';
 
-import { ActionSummary, ModelCommand, ModelIssue, ModelService, ObjectSummary } from '../model.service';
+import { ActionSummary, AgentUsage, ModelCommand, ModelIssue, ModelService, ObjectSummary } from '../model.service';
 
 /** The editable parts of an agent document (`attome_model::kinds::agent`). */
 export interface AgentDraft {
@@ -120,6 +120,8 @@ export class AgentDesignerComponent implements OnInit {
   readonly saving    = signal(false);
   readonly status    = signal<'saved' | 'published' | null>(null);
   readonly error     = signal<string | null>(null);
+  /** Today's use against the daily limits; empty until the agent is published. */
+  readonly usage     = signal<AgentUsage[]>([]);
 
   readonly editing = computed(() => this.selected() !== null);
   readonly canPublish = computed(() => this.baseHash() !== '' && !this.saving());
@@ -157,8 +159,18 @@ export class AgentDesignerComponent implements OnInit {
         this.baseHash.set(version.content_hash);
         this.issues.set([]);
         this.status.set(null);
+        this.loadUsage(agent.id);
       },
       error: (e: ApiError) => this.error.set(e.message),
+    });
+  }
+
+  /** Usage exists only for a published agent; a draft-only one shows none. */
+  loadUsage(id: string): void {
+    this.usage.set([]);
+    this.model.agentUsage(id).subscribe({
+      next: result => this.usage.set(result.items),
+      error: () => this.usage.set([]),
     });
   }
 
@@ -197,7 +209,7 @@ export class AgentDesignerComponent implements OnInit {
     this.saving.set(true);
     this.error.set(null);
     this.model.publish('agent', id).subscribe({
-      next: () => { this.saving.set(false); this.status.set('published'); this.loadAgents(); },
+      next: () => { this.saving.set(false); this.status.set('published'); this.loadAgents(); this.loadUsage(id); },
       error: (e: ApiError) => { this.error.set(e.message); this.saving.set(false); },
     });
   }

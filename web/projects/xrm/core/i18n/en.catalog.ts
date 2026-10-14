@@ -159,6 +159,7 @@ export const xrmEn = {
     runAs: 'Runs as', runAsCaller: 'The person using it', runAsService: 'Its own service identity',
     channels: 'Channels', save: 'Save draft', publish: 'Publish', saved: 'Draft saved', published: 'Published',
     channel: { chat: 'Chat', web: 'Web', whatsapp: 'WhatsApp', sms: 'SMS', email: 'Email' },
+    usage: 'Used today', noLimit: 'no limit',
     dailyHint: 'Per day, across all of this agent\'s sessions. Leave blank for no limit.',
     daily: { record_changes: 'Records changed', deletes: 'Deletes', messages: 'Messages sent', external_calls: 'Outside calls' },
   },

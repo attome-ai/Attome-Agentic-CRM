@@ -98,6 +98,18 @@
           </div>
         </fieldset>
 
+        @if (usage().length > 0) {
+          <section class="ad-usage" [attr.aria-label]="'agentDesigner.usage' | translate">
+            <h4>{{ 'agentDesigner.usage' | translate }}</h4>
+            @for (u of usage(); track u.class) {
+              <div class="ad-usage-row" [attr.data-class]="u.class">
+                <span>{{ ('agentDesigner.daily.' + u.class) | translate }}</span>
+                <span>{{ u.used }} / {{ u.limit ?? ('agentDesigner.noLimit' | translate) }}</span>
+              </div>
+            }
+          </section>
+        }
+
         @if (issues().length > 0) {
           <ul class="ad-issues" role="status">
             @for (issue of issues(); track $index) {
