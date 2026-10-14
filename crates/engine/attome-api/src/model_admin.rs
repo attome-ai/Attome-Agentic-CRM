@@ -580,6 +580,9 @@ async fn apply_commands(
 pub(crate) struct PublishResponse {
     id: Uuid,
     version_no: i64,
+    /// Reasons to look again that did not stop the publish, such as an eval
+    /// suite whose score fell (N23-T2). Empty when there are none.
+    warnings: Vec<String>,
 }
 
 /// Publishes an object's open draft once it passes the publish checks, and
@@ -595,7 +598,7 @@ pub(crate) struct PublishResponse {
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 404, description = "No such kind, or no open draft", body = ErrorResponse),
         (status = 409, description = "Another save is in progress", body = ErrorResponse),
-        (status = 422, description = "The draft fails the publish checks; the issues are listed", body = ErrorResponse),
+        (status = 422, description = "The draft fails the publish checks, or an eval suite's newest run fails a safety case; the issues are listed", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, AuditOperation::Update)])))),
@@ -606,6 +609,12 @@ async fn publish(
     Path((kind_name, id)): Path<(String, Uuid)>,
 ) -> Result<Json<PublishResponse>, AppError> {
     let kind = kind(&kind_name)?;
+    // N23-T2: an agent or prompt publishes only while its eval suites' newest
+    // runs pass every safety case.
+    let gate = attome_ai::publish_gate::check(&state.base.db, kind.name().as_str(), id).await?;
+    if !gate.blocked.is_empty() {
+        return Err(AppError::Validation(gate.blocked.join("; ")));
+    }
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let published = attome_model::publish::publish(
         &mut tx,
@@ -638,6 +647,7 @@ async fn publish(
     Ok(Json(PublishResponse {
         id,
         version_no: published.version_no,
+        warnings: gate.warnings,
     }))
 }
 
