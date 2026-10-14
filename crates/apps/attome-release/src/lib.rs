@@ -31,6 +31,7 @@
 mod contract;
 pub mod parity;
 pub mod release;
+pub mod sbom;
 pub mod slo;
 pub mod slo_report;
 pub mod supply;
@@ -138,6 +139,7 @@ pub fn check_with(options: &Options) -> ExitCode {
         ("waivers", waivers as Step),
         ("cargo_deny", cargo_deny as Step),
         ("npm_licences", supply::npm_licences_step as Step),
+        ("sbom", sbom_step as Step),
         ("slo", slo_step as Step),
         ("rules", rules_step as Step),
         ("install_timing", install_timing as Step),
@@ -680,6 +682,22 @@ fn web(root: &Path) -> Result<(), String> {
     if run(&mut host_tests, &web, "npm test").is_err() {
         failed.push("test".to_owned());
     }
+    // AC7-T4: the web app's SBOM, from npm itself (production packages).
+    match Command::new(npm_program("npm"))
+        .args(["sbom", "--sbom-format", "cyclonedx", "--omit", "dev"])
+        .current_dir(&web)
+        .output()
+    {
+        Ok(out) if out.status.success() => {
+            let path = gate_dir(root).join("sbom-web.cdx.json");
+            if std::fs::create_dir_all(gate_dir(root)).is_err()
+                || std::fs::write(&path, &out.stdout).is_err()
+            {
+                failed.push("sbom".to_owned());
+            }
+        }
+        _ => failed.push("npm sbom".to_owned()),
+    }
     // AC7-T1: the npm advisory thresholds (moderate for production
     // dependencies, high for development ones); waivers live in
     // web/audit-waivers.yaml and are checked by the `waivers` step.
@@ -871,6 +889,29 @@ fn install_timing(root: &Path) -> Result<(), String> {
         ));
     }
     Ok(())
+}
+
+/// AC7-T4: `target/release-gate/sbom-rust.cdx.json` from `Cargo.lock`. The
+/// serial number is derived from the commit, so the same commit always
+/// produces the same document apart from its timestamp.
+fn sbom_step(root: &Path) -> Result<(), String> {
+    let commit = command_output(root, "git", &["rev-parse", "HEAD"]).unwrap_or_default();
+    let hex: String = commit
+        .chars()
+        .filter(char::is_ascii_hexdigit)
+        .chain(std::iter::repeat('0'))
+        .take(32)
+        .collect();
+    let serial = format!(
+        "{}-{}-{}-{}-{}",
+        &hex[..8],
+        &hex[8..12],
+        &hex[12..16],
+        &hex[16..20],
+        &hex[20..32]
+    );
+    let timestamp = format!("{}T00:00:00Z", test_flaky::date_from_unix(unix_seconds()));
+    sbom::write_rust_sbom(root, &gate_dir(root), &serial, &timestamp)
 }
 
 /// AC7-T2: every waiver is owned and in date (see [`supply`]).
