@@ -102,6 +102,17 @@ pub fn all_versions() -> Vec<PromptEntry> {
             text: crate::actions::knowledge_answer::answer_system_prompt(),
         },
         PromptEntry {
+            action_id: crate::actions::translate::TEXT_TRANSLATE,
+            version: crate::actions::translate::TRANSLATE_PROMPT_VERSION,
+            // Rendered into Arabic with no glossary; at runtime the terms
+            // found in the text are appended.
+            text: crate::actions::translate::translate_system_prompt(
+                None,
+                "ar",
+                &std::collections::BTreeMap::new(),
+            ),
+        },
+        PromptEntry {
             // Not a registered action: the conversational turn itself
             // (`turn::run`). Its version keys C10-C's live-evaluation
             // baselines, so an admin comparing a quality change needs to see

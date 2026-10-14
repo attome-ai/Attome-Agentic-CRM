@@ -50,7 +50,8 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 - Questions: `query.plan` turns a question into a checked query (entity, filters, order, limit) and
   returns the issues to fix, or a description for the person and the `query.execute` arguments that
   run it. The model never writes SQL.
-- Communication: `email.draft` files a draft; sending stays a person's step.
+- Communication: `email.draft` files a draft; sending stays a person's step. `text.translate`
+  translates text keeping names, numbers and the deployment's terms (`inference.translation.glossary`).
 - Building: `model.<kind>.describe|list|edit` for every metadata kind, found over MCP with
   `tools.search`; edits are drafts a person confirms.
 

@@ -38,7 +38,7 @@ pub use sections::events::EventsSection;
 pub use sections::fleet::FleetSection;
 pub use sections::inference::{
     AiEnablement, AiSurface, InferenceEndpoint, InferenceSection, ModelPrice, SpendSection,
-    endpoint_is_in_deployment,
+    TranslationSection, endpoint_is_in_deployment,
 };
 pub use sections::integration::IntegrationSection;
 pub use sections::metadata::{

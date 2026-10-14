@@ -1186,6 +1186,7 @@ mod tests {
                 "route_classify.rs",
                 include_str!("actions/route_classify.rs"),
             ),
+            ("translate.rs", include_str!("actions/translate.rs")),
         ] {
             let code: String = source
                 .lines()

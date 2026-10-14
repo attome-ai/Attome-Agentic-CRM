@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `text.translate` with a deployment glossary (`inference.translation.glossary`) and a 30-day cache
+  keyed by the text, languages, glossary and model.
 - `record.transitions` and `record.transition`: agents move a record through its state model on the
   ordinary update path, approvals included.
 - `agent.delegate`: a supervisor agent hands a subtask to a specialist through the specialist's

@@ -144,6 +144,7 @@ impl std::fmt::Debug for InferenceSection {
                 &self.knowledge_article_data_source,
             )
             .field("spend", &self.spend)
+            .field("translation", &self.translation)
             .finish()
     }
 }
@@ -264,6 +265,10 @@ pub struct InferenceSection {
     /// no money budgets, only the token budgets apply.
     #[serde(default)]
     pub spend: SpendSection,
+
+    /// N20-T1 — the deployment's translation glossary.
+    #[serde(default)]
+    pub translation: TranslationSection,
 }
 
 /// D-489 — the canonical KB article, so the case→draft loop runs unconfigured.
@@ -291,6 +296,7 @@ impl Default for InferenceSection {
             knowledge_article_entity: default_knowledge_article_entity(),
             knowledge_article_data_source: None,
             spend: SpendSection::default(),
+            translation: TranslationSection::default(),
         }
     }
 }
@@ -328,6 +334,17 @@ pub struct SpendSection {
     /// The output ceiling near a cap; unset leaves generations unshortened.
     #[serde(default)]
     pub degraded_max_output_tokens: Option<u32>,
+}
+
+/// N20-T1 — how `text.translate` renders the deployment's own terms:
+/// `glossary` maps a term to its translation per language code, e.g.
+/// `{ "Purchase order": { "ar": "أمر شراء" } }`. A term found in the text
+/// is given to the model with its required translation.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TranslationSection {
+    #[serde(default)]
+    pub glossary: std::collections::BTreeMap<String, std::collections::BTreeMap<String, String>>,
 }
 
 /// One model's price per million tokens.
