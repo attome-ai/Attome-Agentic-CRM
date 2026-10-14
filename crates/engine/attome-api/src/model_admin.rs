@@ -798,6 +798,108 @@ async fn form_plan(
     Ok(([(header::ETAG, etag_header)], Json(plan)).into_response())
 }
 
+/// A menu as one caller sees it (A21-T2).
+#[derive(Serialize, ToSchema)]
+pub(crate) struct MenuView {
+    id: Uuid,
+    name: String,
+    #[schema(value_type = Vec<Object>)]
+    groups: Vec<Value>,
+    /// `<group>/<item>` of this caller's landing page, when the menu sets one.
+    landing: Option<String>,
+}
+
+/// The groups and landing page `roles` may see: an item limited to roles
+/// shows only to a holder of one of them (an administrator sees all), and a
+/// group left with no items is dropped. Visibility never grants access to
+/// what an item opens; that stays the target's own check.
+pub(crate) fn menu_for(
+    menu: &Value,
+    roles: &[Uuid],
+    is_admin: bool,
+) -> (Vec<Value>, Option<String>) {
+    let may_see = |item: &Value| {
+        is_admin
+            || match item["roles"].as_array() {
+                None => true,
+                Some(list) if list.is_empty() => true,
+                Some(list) => list.iter().any(|r| {
+                    r.as_str()
+                        .and_then(|t| Uuid::parse_str(t).ok())
+                        .is_some_and(|id| roles.contains(&id))
+                }),
+            }
+    };
+    let groups: Vec<Value> = menu["groups"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|group| {
+            let items: Vec<Value> = group["items"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter(|item| may_see(item))
+                .map(|item| {
+                    let mut item = item.clone();
+                    if let Some(object) = item.as_object_mut() {
+                        object.remove("roles");
+                    }
+                    item
+                })
+                .collect();
+            (!items.is_empty())
+                .then(|| serde_json::json!({ "label": group["label"], "items": items }))
+        })
+        .collect();
+    let landing = menu["landing"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|entry| {
+            entry["role"]
+                .as_str()
+                .and_then(|t| Uuid::parse_str(t).ok())
+                .is_some_and(|id| roles.contains(&id))
+        })
+        .and_then(|entry| entry["item"].as_str().map(str::to_owned));
+    (groups, landing)
+}
+
+/// A published menu, filtered to what the caller may see (A21-T2).
+#[utoipa::path(
+    get,
+    path = "/api/v1/model/navigation/{id}",
+    tag = "model",
+    params(("id" = Uuid, Path, description = "Menu (navigation object) id")),
+    responses(
+        (status = 200, description = "The menu as this caller sees it", body = MenuView),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No published menu with this id", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn menu(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<MenuView>, AppError> {
+    if cooked().snapshot().version == 0 {
+        refresh_cooked(&state).await?;
+    }
+    let cooked_menu = cooked()
+        .get::<Value>("navigation", &format!("navigation:{id}"))
+        .ok_or(AppError::NotFound)?;
+    let roles = ctx.role_ids.clone().unwrap_or_default();
+    let (groups, landing) = menu_for(&cooked_menu, &roles, ctx.is_admin);
+    Ok(Json(MenuView {
+        id,
+        name: cooked_menu["name"].as_str().unwrap_or_default().to_owned(),
+        groups,
+        landing,
+    }))
+}
+
 /// One object as a readable text file (Y1-T10).
 #[derive(Serialize, Deserialize, ToSchema)]
 pub(crate) struct ModelFile {
@@ -990,6 +1092,7 @@ async fn import_files(
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/model/kinds", get(list_kinds))
+        .route("/api/v1/model/navigation/{id}", get(menu))
         .route("/api/v1/admin/model/export", get(export_files))
         .route("/api/v1/admin/model/import", post(import_files))
         .route("/api/v1/admin/model/{kind}", get(list_objects))
@@ -1028,6 +1131,7 @@ pub fn routes() -> Router<EngineState> {
         publish,
         export_files,
         import_files,
+        menu,
         form_plan
     ),
     components(schemas(
@@ -1045,6 +1149,7 @@ pub fn routes() -> Router<EngineState> {
         PublishResponse,
         ModelFile,
         ModelFiles,
+        MenuView,
         ImportResponse,
         FormPlan,
         FormPlanSection,
@@ -1055,4 +1160,40 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod menu_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn a_menu_shows_each_role_only_its_items_and_landing() {
+        let (sales, support) = (Uuid::now_v7(), Uuid::now_v7());
+        let menu = json!({
+            "groups": [
+                { "label": "Sales", "items": [
+                    { "label": "Accounts", "kind": "url", "url": "/a", "roles": [sales.to_string()] },
+                    { "label": "Help", "kind": "url", "url": "/h" }
+                ] },
+                { "label": "Support", "items": [
+                    { "label": "Cases", "kind": "url", "url": "/c", "roles": [support.to_string()] }
+                ] }
+            ],
+            "landing": [{ "role": support.to_string(), "item": "Support/Cases" }]
+        });
+        let (groups, landing) = menu_for(&menu, &[sales], false);
+        assert_eq!(groups.len(), 1, "the support group has nothing for sales");
+        assert_eq!(groups[0]["items"].as_array().map(Vec::len), Some(2));
+        assert!(
+            groups[0]["items"][0].get("roles").is_none(),
+            "roles are not sent"
+        );
+        assert_eq!(landing, None);
+        let (groups, landing) = menu_for(&menu, &[support], false);
+        assert_eq!(groups.len(), 2);
+        assert_eq!(landing.as_deref(), Some("Support/Cases"));
+        let (groups, _) = menu_for(&menu, &[], true);
+        assert_eq!(groups.len(), 2, "an administrator sees everything");
+    }
 }
