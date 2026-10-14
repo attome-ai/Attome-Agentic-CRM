@@ -200,11 +200,11 @@ fn admin_context(user_id: Uuid) -> SecurityContext {
     }
 }
 
-/// A minimal throwaway entity with no extra attributes — this suite only
-/// needs a row to exist, not any particular field on it.
+/// A minimal throwaway entity with one text field: this suite only needs a
+/// row to exist, and a write must name at least one field.
 async fn provision_test_entity(state: &EngineState) -> String {
     let logicalname = format!("ring_test_{}", Uuid::now_v7().simple());
-    attome_metadata::provision::ensure_entity(
+    let entity_id = attome_metadata::provision::ensure_entity(
         &state.base.db,
         &logicalname,
         "C-10 Mutation Ring Test Entity",
@@ -213,6 +213,21 @@ async fn provision_test_entity(state: &EngineState) -> String {
     )
     .await
     .expect("provision test entity");
+    attome_metadata::provision::ensure_attribute(
+        &state.base.db,
+        entity_id,
+        "title",
+        "Title",
+        "text",
+        false,
+        false,
+        false,
+        false,
+        None,
+        None,
+    )
+    .await
+    .expect("provision the title field");
     state.entities.swap(
         attome_core::build_registry(&state.base.db)
             .await
@@ -245,7 +260,8 @@ async fn commit_mutation_on_create_writes_the_creator_share_row() {
     let mut tx = attome_db::tx::begin(&state.base.db)
         .await
         .expect("begin tx");
-    let obj = serde_json::Map::new();
+    let mut obj = serde_json::Map::new();
+    obj.insert("title".into(), serde_json::json!("ring"));
     let mutation = attome_records::entity_mutation::create_one(
         &mut tx,
         &state,
@@ -322,7 +338,8 @@ async fn commit_mutation_on_update_does_not_grant_a_second_share_row() {
     let mut tx = attome_db::tx::begin(&state.base.db)
         .await
         .expect("begin tx");
-    let obj = serde_json::Map::new();
+    let mut obj = serde_json::Map::new();
+    obj.insert("title".into(), serde_json::json!("ring"));
     let mutation = attome_records::entity_mutation::create_one(
         &mut tx,
         &state,
@@ -368,7 +385,8 @@ async fn commit_mutation_on_update_does_not_grant_a_second_share_row() {
     let mut tx = attome_db::tx::begin(&state.base.db)
         .await
         .expect("begin tx");
-    let update_obj = serde_json::Map::new();
+    let mut update_obj = serde_json::Map::new();
+    update_obj.insert("title".into(), serde_json::json!("ring, updated"));
     let mutation = attome_records::entity_mutation::update_one(
         &mut tx,
         &state,
