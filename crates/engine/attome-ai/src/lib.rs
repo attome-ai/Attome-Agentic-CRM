@@ -105,7 +105,6 @@ pub mod mcp;
 pub mod mcp_client;
 pub mod model_drift;
 pub mod model_registry;
-pub mod publish_gate;
 pub mod orchestrate;
 pub mod outcome;
 /// C11 B5 (P-5) — the runtime AI switch's audited admin routes. The read side
@@ -129,6 +128,7 @@ pub mod provider_credential;
 /// The outbound "fetch available models" call, and the untrusted parse of what
 /// comes back.
 pub mod provider_models;
+pub mod publish_gate;
 pub mod quality_monitor;
 pub mod registry;
 pub mod runtime_switch;

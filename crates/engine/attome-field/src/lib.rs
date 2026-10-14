@@ -167,14 +167,12 @@ pub fn normalize(field_type: &FieldType, value: &Value, options: Option<&Value>)
         }
         FieldType::Number | FieldType::Currency => {
             let western = western_digits(text.trim()).replace(',', "");
-            match western
-                .parse::<f64>()
-                .ok()
-                .and_then(serde_json::Number::from_f64)
-            {
-                Some(n) => Value::Number(n),
-                None => return None,
-            }
+            Value::Number(
+                western
+                    .parse::<f64>()
+                    .ok()
+                    .and_then(serde_json::Number::from_f64)?,
+            )
         }
         FieldType::Choice => Value::String(text.trim().to_owned()),
         _ => return None,

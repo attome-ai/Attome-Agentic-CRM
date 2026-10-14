@@ -588,7 +588,10 @@ pub fn descriptors() -> Vec<ActionDescriptor> {
         ActionDescriptor::new(
             MCP_CALL_READ,
             "Call an enabled outside tool whose tier is read.",
-            RiskTier::Read,
+            // The arguments leave the deployment, so even a read-only outside
+            // tool ranks above Read: an agent runs it unless the context
+            // carries retrieved text, which a person confirms first.
+            RiskTier::Reversible,
             Effect::External,
             RetryClass::Idempotent,
             MODULE_AI,
@@ -781,7 +784,7 @@ mod tests {
     fn the_call_actions_carry_their_tier_and_count_as_outside_calls() {
         let all = descriptors();
         let find = |id: &str| all.iter().find(|d| d.id.as_str() == id).unwrap();
-        assert_eq!(find(MCP_CALL_READ).risk, RiskTier::Read);
+        assert_eq!(find(MCP_CALL_READ).risk, RiskTier::Reversible);
         assert_eq!(find(MCP_CALL_REVERSIBLE).risk, RiskTier::Reversible);
         assert_eq!(find(MCP_CALL_CONSEQUENTIAL).risk, RiskTier::Consequential);
         assert_eq!(

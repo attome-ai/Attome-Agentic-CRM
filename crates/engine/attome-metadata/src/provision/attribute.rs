@@ -147,6 +147,25 @@ pub async fn sync_attribute_index_on_connection(
         ));
     }
 
+    // A partitioned table (the audit detail store) cannot take a concurrent
+    // index, and its own migrations index it; an attribute on it gets none.
+    let partitioned: bool = sqlx::query_scalar(
+        "SELECT COALESCE((SELECT relkind = 'p' FROM pg_class \
+         WHERE oid = to_regclass(quote_ident($1))), false)",
+    )
+    .bind(entity_logicalname)
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    if partitioned {
+        tracing::debug!(
+            entity = %entity_logicalname,
+            field = %field_logicalname,
+            "attribute index skipped: the table is partitioned"
+        );
+        return Ok(());
+    }
+
     let build_in_progress: bool = sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM pg_stat_progress_create_index p JOIN pg_class c ON c.oid = p.index_relid WHERE c.relname = $1)",
     )
