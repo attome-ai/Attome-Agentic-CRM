@@ -87,7 +87,7 @@ fn require_test_database() -> Option<TestDatabase> {
         .to_owned();
     let safe_name = name.to_ascii_lowercase();
     assert!(
-        safe_name.contains("test") || safe_name.contains("e2e"),
+        safe_name.contains("test") || safe_name.contains("e2e") || safe_name.starts_with("attome_t_"),
         "refusing to run query_exec against database {name:?}; use a dedicated test database"
     );
 

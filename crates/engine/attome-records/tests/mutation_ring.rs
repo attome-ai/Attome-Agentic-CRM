@@ -120,6 +120,9 @@ async fn seed_platform(db: &attome_db::DbPool) {
             attome_audit::seed(db)
                 .await
                 .expect("seed audit entity metadata");
+            attome_metadata::autovalue::seed_for_tests(db)
+                .await
+                .expect("seed autovalue entity + table");
         })
         .await;
 }

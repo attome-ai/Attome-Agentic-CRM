@@ -54,7 +54,7 @@ fn test_ring() -> KeyRing {
 async fn seed_systemuser(db: &DbPool) -> Uuid {
     let id = Uuid::now_v7();
     sqlx::query(
-        "INSERT INTO user_account (id, email, display_name, is_active) \
+        "INSERT INTO user_account (id, email, user_name, is_active) \
          VALUES ($1, $2, 'Integration Test Principal', true)",
     )
     .bind(id)

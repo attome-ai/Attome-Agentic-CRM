@@ -80,25 +80,34 @@ pub async fn seed_utilization(db: &DbPool) -> Result<(), AppError> {
 /// in `entity_info` by the time attributes are added and lookups
 /// are resolved by logicalname.
 pub async fn seed_for_tests(db: &DbPool) -> Result<(), AppError> {
-    // Skipped when this bundle's content is stamped and its entities, attribute
-    // rows and tables are all still live (see `attome_metadata::provision::fixture_gate`).
-    attome_metadata::provision::run_bundle_fixture(
-        db,
-        "tests:attome-project",
-        include_str!("../../../../platform-bundles/attome-project.json"),
-        || seed_for_tests_walk(db),
-    )
-    .await
+    // `resource_skill` and `resource_availability` live in attome-api's
+    // resource bundle; the capacity queries read them, so they come first.
+    for (name, json) in [
+        (
+            "tests:attome-api-resource",
+            include_str!("../../../../platform-bundles/attome-api-resource.json"),
+        ),
+        (
+            "tests:attome-project",
+            include_str!("../../../../platform-bundles/attome-project.json"),
+        ),
+    ] {
+        // Skipped when this bundle's content is stamped and its entities, attribute
+        // rows and tables are all still live (see `attome_metadata::provision::fixture_gate`).
+        attome_metadata::provision::run_bundle_fixture(db, name, json, || {
+            seed_for_tests_walk(db, name, json)
+        })
+        .await?;
+    }
+    Ok(())
 }
 
-async fn seed_for_tests_walk(db: &DbPool) -> Result<(), AppError> {
-    let bundle: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../../platform-bundles/attome-project.json"
-    ))
-    .map_err(|e| AppError::internal(format!("platform-bundles/attome-project.json: {e}")))?;
-    let entities = bundle["entities"].as_array().ok_or_else(|| {
-        AppError::internal("platform-bundles/attome-project.json: \"entities\" is not an array")
-    })?;
+async fn seed_for_tests_walk(db: &DbPool, name: &str, json: &str) -> Result<(), AppError> {
+    let bundle: serde_json::Value =
+        serde_json::from_str(json).map_err(|e| AppError::internal(format!("{name}: {e}")))?;
+    let entities = bundle["entities"]
+        .as_array()
+        .ok_or_else(|| AppError::internal(format!("{name}: \"entities\" is not an array")))?;
 
     let mut entity_ids = std::collections::HashMap::new();
     for entity in entities {

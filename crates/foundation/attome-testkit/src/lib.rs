@@ -86,10 +86,11 @@ pub async fn connect(url: &str, max_connections: u32) -> sqlx::PgPool {
         .unwrap_or_else(|error| panic!("attome-testkit: connect to the test database: {error}"))
 }
 
-/// A one-connection pool: proves a code path never needs a second connection
-/// while its own transaction holds the first.
+/// A one-connection pool on this process's migrated database: proves a code
+/// path never needs a second connection while its own transaction holds the
+/// first.
 pub async fn single_connection_pool() -> Option<sqlx::PgPool> {
-    test_pool(1).await
+    migrated_pool(1).await
 }
 
 /// The remedy printed on every `SKIP` line.

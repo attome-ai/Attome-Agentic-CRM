@@ -234,7 +234,7 @@ pub async fn link_google_account(
         // UPDATE branch never touches it (P-account-state-enforcement).
         "INSERT INTO user_account (id, email, google_sub, created_at, last_login, is_active, email_verified)
          VALUES (uuidv7(), $1, $2, now(), now(), true, true)
-         ON CONFLICT (email) WHERE (is_active IS NULL OR is_active = TRUE) DO UPDATE
+         ON CONFLICT (email) WHERE is_active DO UPDATE
              SET google_sub     = EXCLUDED.google_sub,
                  last_login     = now(),
                  email_verified = true
@@ -693,7 +693,7 @@ async fn link_external_identity(
             let user_id: Uuid = sqlx::query_scalar(
                 "INSERT INTO user_account (id, email, created_at, last_login, is_active, email_verified)
                  VALUES (uuidv7(), $1, now(), now(), true, true)
-                 ON CONFLICT (email) WHERE (is_active IS NULL OR is_active = TRUE) DO UPDATE
+                 ON CONFLICT (email) WHERE is_active DO UPDATE
                      SET last_login = now(), email_verified = true
                  RETURNING id",
             )
