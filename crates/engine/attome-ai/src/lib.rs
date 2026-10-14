@@ -47,6 +47,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 25;
 
 pub mod actions;
 pub mod agent;
+pub mod ai_status;
 /// C10-B — deployment-wide chatbot figures (`/admin/ai/bot-analytics`).
 pub mod analytics;
 pub mod approval;
@@ -185,6 +186,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(spend_report::openapi_fragment());
     doc.merge(prompt_preview::openapi_fragment());
     doc.merge(eval_capture::openapi_fragment());
+    doc.merge(ai_status::openapi_fragment());
     doc
 }
 

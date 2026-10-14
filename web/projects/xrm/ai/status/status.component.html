@@ -1,0 +1,60 @@
+<section class="st">
+  <h2>{{ 'aiStatus.title' | translate }}</h2>
+  @if (error(); as message) {
+    <p class="st-error" role="alert">{{ message }}</p>
+  }
+  @if (status(); as s) {
+    @let state = overall(s);
+    <p class="st-headline" [attr.data-state]="state">{{ ('aiStatus.states.' + state) | translate }}</p>
+
+    <h3>{{ 'aiStatus.model' | translate }}</h3>
+    @if (s.generation_model) {
+      <p><code dir="ltr">{{ s.generation_model }}</code> · {{ (s.model_approved ? 'aiStatus.approved' : 'aiStatus.notApproved') | translate }}</p>
+    } @else {
+      <p class="st-muted">{{ 'aiStatus.noModel' | translate }}</p>
+    }
+    @for (card of s.model_cards; track card.id) {
+      <dl class="st-card" [attr.data-card]="card.id">
+        <dt>{{ 'aiStatus.name' | translate }}</dt><dd>{{ card.name }} {{ card.version }}</dd>
+        @if (card.context_window) {
+          <dt>{{ 'aiStatus.contextWindow' | translate }}</dt><dd dir="ltr">{{ card.context_window }}</dd>
+        }
+        @if (card.knowledge_cutoff) {
+          <dt>{{ 'aiStatus.cutoff' | translate }}</dt><dd>{{ card.knowledge_cutoff | localDate }}</dd>
+        }
+        @if (card.description) {
+          <dt>{{ 'aiStatus.about' | translate }}</dt><dd>{{ card.description }}</dd>
+        }
+      </dl>
+    }
+
+    <h3>{{ 'aiStatus.lastDay' | translate }}</h3>
+    @if (s.turns_last_day.length === 0) {
+      <p class="st-muted">{{ 'aiStatus.noTurns' | translate }}</p>
+    } @else {
+      <ul class="st-list">
+        @for (t of s.turns_last_day; track t.terminal_state) {
+          <li><code dir="ltr">{{ t.terminal_state }}</code>: {{ t.turns }}</li>
+        }
+      </ul>
+    }
+
+    <h3>{{ 'aiStatus.timeline' | translate }} ({{ s.switched_off }} {{ 'aiStatus.off' | translate }})</h3>
+    @if (s.timeline.length === 0) {
+      <p class="st-muted">{{ 'aiStatus.noIncidents' | translate }}</p>
+    } @else {
+      <ul class="st-list">
+        @for (e of s.timeline; track e.scope_kind + '/' + e.scope_key) {
+          <li [class.st-off]="!e.enabled">
+            {{ e.changed_at | localDate }} · {{ ('aiSwitches.kinds.' + e.scope_kind) | translate }}
+            <code dir="ltr">{{ e.scope_key }}</code>
+            {{ (e.enabled ? 'aiSwitches.on' : 'aiSwitches.off') | translate }} · {{ ('aiSwitches.causes.' + e.cause) | translate }}
+            @if (e.reason) {
+              <span class="st-muted">{{ e.reason }}</span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>

@@ -161,6 +161,14 @@ export const xrmEn = {
   },
   // N20-T2 — translate a note or reply.
   translateText: { translate: 'Translate', working: 'Translating…', hide: 'Hide translation', failed: 'Translation is not available.' },
+  // N31-T2 — the AI status page.
+  aiStatus: {
+    title: 'AI status', model: 'Model', approved: 'approved', notApproved: 'not approved: generation is refused',
+    noModel: 'No generation model is configured.', name: 'Name', contextWindow: 'Context window',
+    cutoff: 'Knowledge cutoff', about: 'About', lastDay: 'Turns in the last day', noTurns: 'No turns in the last day.',
+    timeline: 'Switch changes', off: 'off now', noIncidents: 'Nothing has been switched.',
+    states: { up: 'AI is working.', degraded: 'AI is working with some parts switched off.', down: 'AI is not available.' },
+  },
   // N24-T2 — AI spend.
   aiSpend: {
     title: 'AI spend', intro: 'This month against each cap, for', days: 'days',

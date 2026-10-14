@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `GET /api/v1/admin/ai/status` and the AI status screen (`/ai/status`): the model in use and its card,
+  what is switched off, how turns ended over the last day, and the switch timeline.
 - `POST /api/v1/admin/ai/eval-suites/{suite}/cases/from-message`: an answer that went wrong becomes
   a case in the suite's draft, its input taken from the question it answered.
 - `POST /api/v1/admin/ai/preview/summary`: exactly what a model would receive for a record summary,

@@ -113,6 +113,8 @@ impl EngineModel for ActionModel {
             .merge(crate::prompt_preview::routes())
             // N23-T3 — a bad answer becomes an eval case.
             .merge(crate::eval_capture::routes())
+            // N31-T2 — the AI status page.
+            .merge(crate::ai_status::routes())
     }
 
     // D-435, simplified by D-491 — `ai_model` (the AI Model catalog,

@@ -534,6 +534,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/ai').then(m => m.AiScopeSwitchesComponent),
           },
           {
+            // N31-T2: the AI status page (the API refuses non-administrators).
+            path: 'ai/status',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/ai').then(m => m.AiStatusComponent),
+          },
+          {
             // N24-T2: AI spend against the money caps (the API refuses
             // non-administrators).
             path: 'ai/spend',
