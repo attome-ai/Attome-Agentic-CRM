@@ -500,8 +500,88 @@ async fn enqueue(
     Path(entity_input): Path<String>,
     Json(body): Json<BulkRequestBody>,
 ) -> Result<(StatusCode, Json<BulkOperationResponse>), AppError> {
+    let response = enqueue_inner(
+        &state,
+        &ctx,
+        claims.sub,
+        &entity_input,
+        body,
+        idempotency_handle.map(|Extension(handle)| handle),
+    )
+    .await?;
+    Ok((StatusCode::ACCEPTED, Json(response)))
+}
+
+/// One record of a bulk submission made in code ([`submit_bulk`]): the
+/// record's id (for update and delete), the row version it was read at
+/// (optional), and its values (for create and update).
+#[derive(Debug, Clone)]
+pub struct BulkItem {
+    pub id: Option<Uuid>,
+    pub expected_row_version: Option<i64>,
+    pub data: Value,
+}
+
+/// What [`submit_bulk`] accepted: the operation to follow with
+/// [`bulk_status`].
+#[derive(Debug, Clone, Serialize)]
+pub struct BulkSubmitted {
+    pub id: Uuid,
+    pub total: i32,
+}
+
+/// `POST /api/v1/{entity}/bulk` without the transport (roadmap N6-T3): the
+/// same shape checks, preflight, item ledger, durable job and audit event,
+/// for a caller in code such as an agent action. Checks `{entity}.bulk` and
+/// the operation's own privilege, and refuses (503) while no batch worker
+/// can run the job, as the route's extractors do.
+pub async fn submit_bulk(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    operation: &str,
+    items: Vec<BulkItem>,
+    atomic: bool,
+) -> Result<BulkSubmitted, AppError> {
+    state
+        .base
+        .capabilities
+        .ensure_available(attome_server::capability::Capability::BatchJobs)?;
+    let body = BulkRequestBody {
+        operation: operation.to_owned(),
+        strict: None,
+        batch_mode: Some(if atomic { "atomic" } else { "partial" }.to_owned()),
+        mapping_ref: None,
+        mode: None,
+        records: items
+            .into_iter()
+            .map(|item| BulkRecordEnvelope {
+                id: item.id,
+                expected_row_version: item.expected_row_version,
+                data: item.data,
+            })
+            .collect(),
+    };
+    let response = enqueue_inner(state, ctx, ctx.user_id, entity_input, body, None).await?;
+    Ok(BulkSubmitted {
+        id: response.id,
+        total: response.total,
+    })
+}
+
+async fn enqueue_inner(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    user_id: Uuid,
+    entity_input: &str,
+    body: BulkRequestBody,
+    idempotency_handle: Option<idempotency_durable::DurableIdempotencyHandle>,
+) -> Result<BulkOperationResponse, AppError> {
+    let state = state.clone();
     let (entity_id, entity_name, attrs, is_append_only) =
-        entity_crud::resolve_entity(&state, &entity_input).await?;
+        entity_crud::resolve_entity(&state, entity_input).await?;
+    // The route's extractor checks this too; a caller in code has none.
+    ctx.require(&entity_name, "bulk")?;
     validate_request_shape(&body)?;
     if body.mapping_ref.is_some() {
         return Err(AppError::Validation(
@@ -551,7 +631,7 @@ async fn enqueue(
     .bind(&entity_name)
     .bind(&body.operation)
     .bind(total)
-    .bind(claims.sub)
+    .bind(user_id)
     .bind(&batch_mode)
     .execute(&mut *tx)
     .await
@@ -605,7 +685,7 @@ async fn enqueue(
                 entity_logicalname: entity_name.clone(),
                 operation: body.operation.clone(),
                 records: Vec::new(),
-                user_id: claims.sub,
+                user_id,
             },
         ),
     )
@@ -622,7 +702,7 @@ async fn enqueue(
     // same transaction as the job enqueue above: if this transaction rolls
     // back, no parent event and no operation exists. Category/entity match
     // the per-record events this batch will write (`apply_ledgered_item`).
-    let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(&state, claims.sub).await;
+    let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(&state, user_id).await;
     let accepted_event = AuditEvent {
         organization_ref: org_ref,
         category: AuditCategory::Entity,
@@ -650,7 +730,7 @@ async fn enqueue(
         &audit_service,
         &mut tx,
         accepted_event,
-        Attribution::user(claims.sub),
+        Attribution::user(user_id),
         total,
     )
     .await?;
@@ -661,7 +741,7 @@ async fn enqueue(
     // record marked completed" cannot be torn apart by a crash between two
     // separate writes. A no-op (via `Option`) when this route isn't in
     // `idempotency.mandatory_operations`.
-    if let Some(Extension(handle)) = idempotency_handle {
+    if let Some(handle) = idempotency_handle {
         let response_bytes = serde_json::to_vec(&response_body).map_err(AppError::internal)?;
         idempotency_durable::complete_in_tx(
             &mut tx,
@@ -677,7 +757,7 @@ async fn enqueue(
 
     attome_db::tx::commit(tx).await?;
 
-    Ok((StatusCode::ACCEPTED, Json(response_body)))
+    Ok(response_body)
 }
 
 #[utoipa::path(
@@ -704,7 +784,57 @@ async fn get_status(
     Path((entity_input, bulk_op_id)): Path<(String, Uuid)>,
     Query(query): Query<BulkStatusQuery>,
 ) -> Result<Json<BulkOperationStatus>, AppError> {
-    let (_, entity_name, _, _) = entity_crud::resolve_entity(&state, &entity_input).await?;
+    status_inner(
+        &state,
+        claims.sub,
+        ctx.is_admin,
+        &entity_input,
+        bulk_op_id,
+        &query,
+    )
+    .await
+    .map(Json)
+}
+
+/// A bulk operation's progress and, with `include_items`, its per-record
+/// results (the first `page_size` items, up to 100 by default), for a caller
+/// in code (roadmap N6-T3). Visible to its creator and to administrators,
+/// as on `GET /api/v1/{entity}/bulk/{id}`.
+pub async fn bulk_status(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    bulk_op_id: Uuid,
+    include_items: bool,
+) -> Result<Value, AppError> {
+    ctx.require(
+        &entity_crud::resolve_entity(state, entity_input).await?.1,
+        "read",
+    )?;
+    let status = status_inner(
+        state,
+        ctx.user_id,
+        ctx.is_admin,
+        entity_input,
+        bulk_op_id,
+        &BulkStatusQuery {
+            include_items: Some(include_items),
+            ..BulkStatusQuery::default()
+        },
+    )
+    .await?;
+    serde_json::to_value(status).map_err(AppError::internal)
+}
+
+async fn status_inner(
+    state: &EngineState,
+    user_id: Uuid,
+    is_admin: bool,
+    entity_input: &str,
+    bulk_op_id: Uuid,
+    query: &BulkStatusQuery,
+) -> Result<BulkOperationStatus, AppError> {
+    let (_, entity_name, _, _) = entity_crud::resolve_entity(state, entity_input).await?;
     let row: Option<BulkOperationStatusRow> = sqlx::query_as(
         "SELECT id, entity_logicalname, operation, status, total, succeeded, failed, rejected, errors
          FROM automation_bulk_operation
@@ -713,8 +843,8 @@ async fn get_status(
     )
     .bind(bulk_op_id)
     .bind(&entity_name)
-    .bind(claims.sub)
-    .bind(ctx.is_admin)
+    .bind(user_id)
+    .bind(is_admin)
     .fetch_optional(&state.base.db)
     .await
     .map_err(AppError::internal)?;
@@ -754,7 +884,7 @@ async fn get_status(
         .map_err(AppError::internal)?;
         status.items = Some(items);
     }
-    Ok(Json(status))
+    Ok(status)
 }
 
 pub fn routes() -> Router<EngineState> {

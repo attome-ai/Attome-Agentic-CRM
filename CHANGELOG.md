@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- Agent bulk actions: `record.bulk.preview`, `record.bulk.update`, `record.bulk.delete` and
+  `record.bulk.status`, over the bulk engine (`attome_records::bulk::submit_bulk`, `bulk_status`).
 - `GET /api/v1/admin/ai/spend` and the AI spend screen (`/ai/spend`): this month's spend per
   deployment, feature and agent against each cap, with the month forecast.
 - Money budgets for AI (`inference.spend`): prices per model and monthly caps per deployment, person,

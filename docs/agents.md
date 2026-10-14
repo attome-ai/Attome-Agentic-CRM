@@ -42,6 +42,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 
 - Records: `record.get`, `search.records`, `query.execute`, `record.schema` (an entity's typed input),
   `record.validate` (a dry run of a create), `record.create|update|delete|restore`, `record.assign`.
+- Many records: `record.bulk.preview` (count, a sample of what changes, problems), then
+  `record.bulk.update|delete` (up to 500, run by the bulk engine, approved by a second person) and
+  `record.bulk.status` (each record's result). A replayed call never applies twice.
 - Questions: `query.plan` turns a question into a checked query (entity, filters, order, limit) and
   returns the issues to fix, or a description for the person and the `query.execute` arguments that
   run it. The model never writes SQL.
