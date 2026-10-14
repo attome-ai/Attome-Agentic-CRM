@@ -1,0 +1,45 @@
+# P-observability-completion — reference OpenTelemetry Collector config.
+#
+# Minimal "receive OTLP, print it" pipeline out of the box (the `debug`
+# exporter) so a deployment that flips `observability.enable_distributed_tracing
+# = true` has somewhere to point `observability.otlp_endpoint` at immediately,
+# without first standing up a full trace-storage backend — same "reference
+# recipe, adopt per deployment" posture as observability/vector/vector.toml's
+# commented sink alternatives. Swap the commented `otlp` exporter block below
+# for whichever backend (Grafana Tempo, Jaeger, an upstream SaaS collector)
+# this deployment actually wants to retain traces in; this file's own `debug`
+# exporter is not a retention story, just proof the pipe is connected.
+#
+# `crates/server`'s exporter (`opentelemetry-otlp`, http-proto transport — see
+# root Cargo.toml's "Observability" block) sends to this collector's `4318`
+# HTTP receiver, not `4317` (gRPC) — this collector's `otlp` receiver accepts
+# both simultaneously by default, so either transport choice on the app side
+# works against this same config unchanged.
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch: {}
+
+exporters:
+  debug:
+    verbosity: basic
+  # Uncomment and point at a real backend once one is stood up for this
+  # deployment — e.g. Grafana Tempo's own OTLP-ingest port:
+  # otlp:
+  #   endpoint: tempo:4317
+  #   tls:
+  #     insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

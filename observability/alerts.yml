@@ -1,0 +1,1889 @@
+# P-observability-bcdr Track A — reference Prometheus alerting rules.
+#
+# Scoped to exactly what this deployment instruments today (see
+# attome-base/crates/attome-server/src/metrics.rs and
+# attome-xrm/crates/attome-api/src/metrics.rs). One rule below,
+# ReplicaLagHigh (P-ha-failover-hardening item (e), D-125), is newer
+# than this file's original scoping note and is the first replication-lag
+# rule this platform has — see its own comment for the metric source and a
+# real caveat about what it can and can't detect today.
+#
+# `axum_http_requests_total` / `axum_http_requests_duration_seconds` are
+# axum-prometheus's default metric names (`.with_default_metrics()`, no custom
+# prefix) — confirm the exact names/labels against a live `curl :{metrics_port}/metrics`
+# for the axum-prometheus version actually in Cargo.lock before relying on this
+# in production; label conventions have changed between that crate's versions.
+#
+# This file is a *definition*. The reference stack that runs it is the
+# `observability` compose profile's prometheus/alertmanager/grafana services
+# (M86 O3; observability/prometheus.yml loads this file unchanged). Two
+# groups: `attome-platform` (threshold rules) and `attome-slo` (M86 O1 —
+# per-class recording rules and multi-window burn-rate alerts on the
+# runtime-performance §1.1 SLO table; see that group's header).
+#
+# Two rules (BackupTooOld, WalArchiveLagHigh — P-backup-immutability, D-115)
+# are the one exception to "scoped to what this deployment instruments
+# today": their metrics come from a Prometheus TEXTFILE
+# (deploy/pgbackrest/emit-backup-metrics.sh), not from this app's own
+# axum-prometheus /metrics endpoint — scrape them via a host-level
+# node_exporter's textfile collector pointed at docker-compose.backup.yml's
+# backup-metrics volume. See each rule's own comment for the scrape-source
+# distinction and the once-a-night-not-continuous staleness caveat.
+
+groups:
+  - name: attome-platform
+    rules:
+      - alert: HighHttpErrorRate
+        expr: |
+          sum(rate(axum_http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(axum_http_requests_total[5m]))
+          > 0.02
+        for: 5m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#highhttperrorrate"
+          summary: "5xx rate above 2% over 5m"
+          description: >
+            {{ $value | humanizePercentage }} of requests are failing with a 5xx
+            status. Check request-id-tagged logs for the affected path.
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#redisdown"
+          summary: "Redis/Dragonfly unreachable"
+          description: >
+            attome_server::metrics's pool-gauge refresh loop could not ping Redis.
+            Per D-027, S2S/session calls fail closed while this is true — this
+            is a full-outage-class alert, not a degraded-mode one.
+
+      - alert: RedisCoordinationDown
+        # P-redis-security-ha, closes ENTERPRISE-AUDIT-2026-07-24.md finding
+        # #31. Keyed to `redis_coordination_up` (attome_server::metrics::refresh_once,
+        # added by this same plan) rather than reusing `RedisDown`'s `redis_up` —
+        # `state.redis_coordination` is a clone of `state.redis` unless a
+        # deployment has set `cache.roles.coordination` (D-027), so on a
+        # deployment that HASN'T split the role this fires in lockstep with
+        # RedisDown (harmless duplicate page, same root cause). On a
+        # deployment that HAS split the role, this is the only signal that
+        # fires when just the coordination-role endpoint is down while the
+        # general cache endpoint stays healthy — exactly the gap finding #31
+        # named ("zero dedicated observability on the pool that actually
+        # gates S2S/rate-limit traffic").
+        expr: redis_coordination_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#rediscoordinationdown"
+          summary: "Coordination-role Redis/Dragonfly unreachable"
+          description: >
+            attome_server::metrics's pool-gauge refresh loop could not ping
+            `state.redis_coordination` — the pool `cache.roles.coordination`
+            gates. Per D-027, S2S nonce/rate-limit calls, the general HTTP
+            rate limiter, and the idempotency gate all fail closed while this
+            is true (S2S 401s/500s, ordinary requests 429/500s) even if
+            `RedisDown` is NOT also firing.
+
+      - alert: RedisCoordinationLatencyHigh
+        # Early-warning half of the same pair: half of the 300ms fail-closed
+        # budget (`GUARD_TIMEOUT`/`CHECK_TIMEOUT`, attome-s2s::rate_limit /
+        # attome-auth::revocation) being consumed by ping latency alone is the
+        # leading indicator that the next real request is one slow network
+        # hop from timing out and being rejected — should page before that
+        # happens, not after. `severity: warning` at the halfway point;
+        # a second rule below, same alert name, escalates to `critical` once
+        # latency is at-or-past the actual timeout budget.
+        expr: redis_coordination_ping_ms > 150
+        for: 2m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#rediscoordinationlatencyhigh"
+          summary: "Coordination-role Redis latency above 150ms (half of the 300ms fail-closed budget) for 2m"
+          description: >
+            {{ printf "%.0f" $value }}ms average ping latency to the
+            coordination-role Redis pool, sustained 2 minutes. This pool gates
+            S2S nonce/rate-limit, the general HTTP rate limiter, and the
+            idempotency gate (D-027) behind a 300ms fail-closed timeout —
+            latency this high means real requests are getting close to that
+            budget and starting to reject.
+
+      - alert: RedisCoordinationLatencyHigh
+        expr: redis_coordination_ping_ms > 300
+        for: 1m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#rediscoordinationlatencyhigh"
+          summary: "Coordination-role Redis latency at/above the 300ms fail-closed timeout budget for 1m"
+          description: >
+            {{ printf "%.0f" $value }}ms average ping latency to the
+            coordination-role Redis pool — at or past `GUARD_TIMEOUT`/
+            `CHECK_TIMEOUT`'s 300ms budget, sustained 1 minute. Real
+            S2S/rate-limit/idempotency calls are very likely timing out and
+            being rejected closed right now, not just approaching the edge.
+
+      - alert: DbPoolNearExhaustion
+        expr: (db_pool_size - db_pool_idle) / db_pool_size > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          owner: db
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#dbpoolnearexhaustion"
+          summary: "Main DB pool >90% utilized for 5m"
+          description: >
+            Fewer than 10% of the primary Postgres pool's connections are idle.
+            Check for a slow-query regression or an undersized
+            database.connection_number for current load.
+
+      - alert: ApalisBacklogGrowing
+        # P-job-queue-hardening (D-165) split this into one rule per queue —
+        # apalis_pending_jobs gained a "queue" label (fast/batch) when the
+        # single worker became two. A legitimate large bulk/import run can
+        # push the batch queue's backlog well past the fast queue's
+        # threshold for its whole duration without anything being wrong, so
+        # the batch queue gets a much higher bar.
+        expr: apalis_pending_jobs{queue="fast"} > 100
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#apalisbackloggrowing"
+          summary: "apalis fast-queue pending-job backlog above 100 for 10m"
+          description: >
+            The platform-job-worker isn't keeping up (or is down). Check
+            worker_concurrency (config.jobs) and the worker's own logs.
+
+      - alert: ApalisBatchBacklogGrowing
+        expr: apalis_pending_jobs{queue="batch"} > 1000
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#apalisbatchbackloggrowing"
+          summary: "apalis batch-queue pending-job backlog above 1000 for 10m"
+          description: >
+            The platform-job-batch-worker (BulkEntityOperation/
+            ApplyStagedImport/RewrapSecrets) isn't keeping up, or a very
+            large import/rewrap is legitimately in flight — check
+            batch_worker_concurrency (config.jobs) and whether
+            ApalisWorkerStale{queue="batch"} is also firing before assuming
+            this is a real problem.
+
+      - alert: ApalisDeadLetterGrowing
+        # A Killed row (attempts exhausted, apalis-sql 0.7.4's terminal
+        # state) never auto-resolves — apalis's own `get_jobs` never selects
+        # it again — so any sustained nonzero count is actionable: someone
+        # needs to look at GET /api/v1/admin/jobs/dead-letter and either
+        # replay or investigate.
+        expr: apalis_dead_letter_jobs > 0
+        for: 30m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#apalisdeadlettergrowing"
+          summary: "{{ $labels.queue }} queue has dead-lettered jobs"
+          description: >
+            {{ $value }} job(s) in the {{ $labels.queue }} queue have
+            exhausted their retry budget and are sitting in `Killed` state.
+            Review via GET /api/v1/admin/jobs/dead-letter?queue={{ $labels.queue }}
+            (last_error explains the failure) and replay
+            (POST .../admin/jobs/{id}/replay) once the underlying cause is fixed.
+
+      - alert: ApalisWorkerStale
+        # apalis already self-heals individual orphaned job rows
+        # (reenqueue_orphaned, driven by apalis.workers.last_seen
+        # heartbeats) as long as *some* worker process of that queue is
+        # alive — so this, not a per-row "stuck" gauge, is the correct
+        # signal for the one failure mode that defeats that self-healing:
+        # the whole worker process for a queue being down. keep_alive
+        # defaults to a 30s heartbeat; 90s is 3 missed beats.
+        expr: apalis_worker_last_seen_age_seconds > 90
+        for: 2m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#apalisworkerstale"
+          summary: "No {{ $labels.queue }}-queue apalis worker heartbeat in over 90s"
+          description: >
+            The platform-job{{ if eq $labels.queue "batch" }}-batch{{ end }}-worker
+            hasn't reported to apalis.workers recently — it's likely crashed
+            or the whole server process is down. Jobs in this queue will
+            stop progressing (and existing Running-locked rows won't be
+            reclaimed) until a worker of this type comes back.
+
+      - alert: ApalisWorkerNeverSeen
+        # ApalisWorkerStale above only fires once a worker of this queue has
+        # registered at least once (worker_last_seen_age_seconds is a query
+        # over apalis.workers, MAX(last_seen) — NULL, i.e. no time series at
+        # all, until the first heartbeat; attome-server/metrics.rs's
+        # refresh_apalis_gauges_once deliberately leaves the gauge unset
+        # rather than publish a fabricated 0 in that case). That makes
+        # ApalisWorkerStale blind to the "worker was never deployed at all"
+        # failure mode — e.g. `docker compose up -d` without
+        # `--profile worker-split` while config.jobs.run_worker_inline=false
+        # (validate_production_profile's required production setting) —
+        # which looks identical to a healthy idle queue: zero pending jobs,
+        # zero dead-letter, no stale-heartbeat series to even evaluate.
+        # `for: 10m` clears a normal deploy's migrate -> pull -> boot window
+        # (worker's own heartbeat gauge updates every 15s once it's up, per
+        # spawn_pool_gauge_refresh's interval).
+        expr: absent(apalis_worker_last_seen_age_seconds{queue="fast"}) or absent(apalis_worker_last_seen_age_seconds{queue="batch"})
+        for: 10m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#apalisworkerneverseen"
+          summary: "No apalis worker has ever reported a heartbeat for one or both queues"
+          description: >
+            No row in apalis.workers exists yet for the fast and/or batch
+            queue, more than 10 minutes after this alert rule was last
+            evaluated healthy. Background jobs (verification/password-reset
+            email, file scanning, retention, scheduled maintenance, retries)
+            are not being processed at all. Most likely cause: the `worker`
+            service was never started (check `docker compose ps` for a
+            `worker-split` profile deployment) or
+            config.jobs.run_worker_inline is false with no standalone worker
+            running anywhere.
+
+      - alert: AuditChainerLagHigh
+        expr: audit_chainer_lag_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+          owner: security
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#auditchainerlaghigh"
+          summary: "Audit chainer more than 5 minutes behind"
+          description: >
+            audit.chainer_enabled defaults to true and is required under
+            app.deployment_profile = "production" (D-316), so on a real
+            deployment this is the primary liveness signal for the
+            audit_chainer process — it has no HTTP surface and therefore no
+            healthcheck of its own (docker-compose.yml's audit_chainer
+            service). Per D-029 there is no automatic fallback to the sync
+            path: a stopped or wedged chainer leaves events durably captured
+            in audit_ingest but never chained into audit_header, and
+            nothing else reports that until this fires. Left unattended the
+            backlog eventually crosses audit.ingest_backlog_threshold and the
+            server's mutation gate starts answering 503 on writes.
+
+      - alert: PartitionedTableDeadTupleRatioHigh
+        # P-db-maintenance item (d). attome-api/src/metrics.rs's
+        # spawn_partition_bloat_refresh sums dead/live tuples across every leaf
+        # partition of each of the four tables migrations/0026_audit_partitioning.sql
+        # created — this is the first labeled metric in the platform (by `table`);
+        # see that file's doc comment before adding a second one.
+        expr: db_bloat_dead_tuples / clamp_min(db_bloat_dead_tuples + db_bloat_live_tuples, 1) > 0.2
+        for: 30m
+        labels:
+          severity: warning
+          owner: db
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#partitionedtabledeadtupleratiohigh"
+          summary: "A partitioned audit/access-log table is >20% dead tuples for 30m"
+          description: >
+            {{ $labels.table }} has a dead-tuple ratio above 20% sustained for 30
+            minutes. Check `last_autovacuum` (the companion size/recency panel) —
+            if autovacuum is running but losing ground, attome-metadata::provision's
+            APPEND_ONLY_STORAGE_PARAMS / migration 0026's storage parameters need
+            re-tuning against real load, not just this plan's stated placeholder
+            numbers (see DECISIONS.md).
+
+      - alert: BackupTooOld
+        # P-backup-immutability (D-115). attome_backup_last_success_timestamp_seconds
+        # has TWO producers depending on the deployment's Postgres posture;
+        # this one rule covers both, because both emit the same metric name to
+        # a Prometheus textfile scraped by a host-level node_exporter (NOT
+        # axum-prometheus/this app's own /metrics endpoint — this signal has
+        # nothing to do with the app process):
+        #   - single-primary: deploy/pgbackrest/emit-backup-metrics.sh, written
+        #     after every nightly cron backup attempt, success OR failure (see
+        #     that script's comment), into docker-compose.backup.yml's
+        #     `backup-metrics` volume.
+        #   - production-ha/Patroni (D-348): the pgbackrest-monitor sidecar,
+        #     which derives the timestamp from the REPO rather than from a
+        #     local file, every BACKUP_MONITOR_INTERVAL_SECS, into
+        #     docker-compose.yml's `pgbackrest-monitor-metrics` volume. Reading
+        #     the repo is what keeps this alert correct across a leader change:
+        #     a per-node textfile would vanish from the scraper's view the
+        #     moment the leader moved, firing this rule for a backup that is
+        #     in fact fine.
+        # Point node_exporter at whichever volume applies; never at both.
+        # 26h threshold gives one full day's schedule slack past the default
+        # nightly 02:00 BACKUP_SCHEDULE before firing — tune down for a
+        # deployment on a tighter schedule, per that compose file's RETENTION
+        # header note about BACKUP_SCHEDULE not being nightly by default.
+        expr: (time() - attome_backup_last_success_timestamp_seconds) > 26 * 3600
+        for: 0m
+        labels:
+          severity: critical
+          owner: db
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#backuptooold"
+          summary: "No successful backup in over 26 hours"
+          description: >
+            {{ $labels.instance }}'s last successful pgbackrest backup was
+            more than 26 hours ago. On the single-primary posture, check
+            /var/log/pgbackrest-cron.log inside postgres-primary for the
+            nightly cron job's output, and confirm the cron.d entry itself
+            still exists (docker compose exec postgres-primary cat
+            /etc/cron.d/pgbackrest). On production-ha/Patroni (D-348), the
+            cron entry exists on all three nodes but only the LEADER acts on
+            it — find the leader first (docker compose exec haproxy wget -qO-
+            http://patroni1:8008/), then read /var/log/pgbackrest-cron.log and
+            /etc/cron.d/pgbackrest-patroni inside THAT container; check
+            attome_backup_repo_reachable too, since a repo the monitor cannot
+            read produces this same alert for a different reason. Either way,
+            an un-drilled, un-alerted backup that silently stopped running is
+            functionally no backup at all.
+
+      - alert: WalArchiveLagHigh
+        # P-backup-immutability (D-115). Same textfile sources as BackupTooOld
+        # above — attome_wal_archive_lag_seconds is pg_stat_archiver's own
+        # last_archived_time. How CURRENT that reading is differs by posture,
+        # and it changes how to read this alert:
+        #   - single-primary: re-measured at every cron tick (nightly by
+        #     default), NOT a continuous metric — a real archive_command stall
+        #     between ticks can take up to one BACKUP_SCHEDULE interval to
+        #     surface. This is the honest limit of the "no Postgres exporter in
+        #     this recipe yet" cheapest-path decision (plan §4(e)); a
+        #     continuous pg_stat_archiver scrape (postgres_exporter or similar)
+        #     would catch it sooner and should replace it once that exporter
+        #     exists in the stack.
+        #   - production-ha/Patroni (D-348): re-measured every
+        #     BACKUP_MONITOR_INTERVAL_SECS (default 300s) by the
+        #     pgbackrest-monitor sidecar, which queries the current leader
+        #     through HAProxy's leader-only listener. The 15-minute threshold
+        #     below finally means what it says on this posture. A 0 reading is
+        #     ambiguous by design (collection failure also yields 0) —
+        #     attome_backup_monitor_pg_reachable disambiguates it.
+        expr: attome_wal_archive_lag_seconds > 15 * 60
+        for: 0m
+        labels:
+          severity: warning
+          owner: db
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#walarchivelaghigh"
+          summary: "WAL archiving lag above 15 minutes (as of last cron check)"
+          description: >
+            {{ $labels.instance }}'s pg_stat_archiver.last_archived_time is
+            more than 15 minutes old, as of the last nightly metrics-emission
+            tick. archive_timeout (D-067, default 60s) means a HEALTHY
+            deployment's WAL should archive continuously — a lag this large
+            usually means archive_command itself is failing (check
+            postgres-primary's own logs for "archive_command failed") or the
+            repo bucket/credentials are unreachable (see
+            deploy/backup/README.md if credentials were recently rotated
+            under the new least-privilege producer policy).
+
+      - alert: ReplicaLagHigh
+        # P-ha-failover-hardening item (e), D-125.
+        # attome_server::metrics::spawn_replica_lag_refresh, only spawned when
+        # `database.readonly` is configured (dark otherwise, same convention
+        # as every other gauge this alerts file already covers). KNOWN GAP
+        # this rule inherits from that gauge (see its own doc comment): the
+        # gauge reads 0 (not "unknown"/absent) whenever `db_readonly` answers
+        # but isn't actually a Postgres standby (`pg_is_in_recovery()` false)
+        # — today's `ReadonlyDbCredentials` has no host/port/dbname override
+        # of its own, so a deployment that hasn't separately arranged for the
+        # readonly pool to terminate at a real replica will see this alert
+        # never fire, not because lag is healthy but because there's no
+        # replica behind the reading at all. Treat a permanently-silent
+        # ReplicaLagHigh as a prompt to confirm db_readonly is wired to a
+        # real standby, not as proof of a healthy one.
+        expr: db_replica_lag_seconds > 30
+        for: 30s
+        labels:
+          severity: warning
+          owner: db
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#replicalaghigh"
+          summary: "Read-replica lag above 30s"
+          description: >
+            {{ $value | humanizeDuration }} of replication lag on the pool
+            `AppState.read_pool` routes reads to. Escalates to critical at 5m
+            sustained (see ReplicaLagCritical) — the sticky-primary pin
+            (P1.12, ~5s default TTL) only protects a user's OWN just-written
+            data from looking stale; other readers routed to this pool can
+            see up to this much staleness on affected surfaces.
+
+      - alert: ReplicaLagCritical
+        expr: db_replica_lag_seconds > 30
+        for: 5m
+        labels:
+          severity: critical
+          owner: db
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#replicalagcritical"
+          summary: "Read-replica lag above 30s, sustained for 5m"
+          description: >
+            Same signal as ReplicaLagHigh, escalated: 5 minutes of sustained
+            lag past the 30s threshold means this isn't a transient blip.
+            Check the replica's own logs/host resources (`docker compose
+            logs postgres-replica`) and consider manually routing reads back
+            to the primary until it recovers — `database.replica_max_lag_secs`
+            (reserved, attome-config) is the config hook a future
+            P-read-your-writes-lsn cutover will use to do this automatically;
+            it is not wired to any routing decision yet.
+
+      - alert: PartitionBloatMetricMissing
+        # This gauge is refreshed every 60s (spawn_partition_bloat_refresh) whenever
+        # observability.metrics_port is enabled — a gap this long means either the
+        # refresh loop errored repeatedly (see its warn! logs) or the table itself
+        # is missing/renamed. Indirect signal for "is partition maintenance healthy"
+        # — there is no direct "days until next partition boundary" metric today.
+        expr: absent_over_time(db_bloat_total_bytes[1h])
+        for: 0m
+        labels:
+          severity: warning
+          owner: db
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#partitionbloatmetricmissing"
+          summary: "No partition-bloat metric sample for over an hour"
+          description: >
+            None of the four P-db-maintenance partitioned tables have reported a
+            db_bloat_total_bytes sample in over an hour. Check the server logs for
+            "metrics refresh: partition bloat query failed" and confirm
+            `attome_core::jobs::EngineJob::EnsureAuditPartitions` is still running
+            (server::jobs::spawn_partition_maintenance_scheduler).
+
+      # ── P-observability-completion additions below ──────────────────────────
+      # (ApalisDeadLetterGrowing above already existed before this plan — it
+      # was NOT one of this plan's additions, despite the plan doc that
+      # scoped this work claiming otherwise; see that plan file's Status note.)
+
+      - alert: ObjectStorageDown
+        # attome_server::metrics's pool-gauge refresh loop (15s tick), reusing
+        # attome_storage::health_check's own bounded HEAD probe. Parallel to
+        # RedisDown/RedisCoordinationDown above.
+        expr: object_storage_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#objectstoragedown"
+          summary: "Object storage (S3/RustFS) unreachable"
+          description: >
+            The configured storage.s3_endpoint has failed a HEAD probe for 2
+            minutes straight. File upload/download and anything reading a
+            previously-uploaded object will fail while this is true — check
+            RustFS/MinIO's own health and storage.s3_endpoint connectivity
+            from this node.
+
+      # ── attome-storage plan Phase 2/3 (BST-10, 2026-09-25) ──────────────────
+      # Both metrics are recorded by attome_storage itself — the presign failure
+      # counter in presign.rs, the latency gauge by health_check — so every
+      # caller (the metrics refresh loop, /health/dependencies, preflight)
+      # emits them, not just one code path.
+
+      - alert: StoragePresignFailures
+        expr: increase(storage_presign_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#storagepresignfailures"
+          summary: "Presigned URL signing is failing"
+          description: >
+            Every failure here is a 500 on the upload/download routes
+            (attome_storage::presign). Check the S3 credentials (D-549 rotation
+            is restart-applied), the configured expiry range, and key
+            traversal validation for the key being signed.
+
+      - alert: ObjectStorageProbeLatencyHigh
+        expr: object_storage_probe_latency_seconds > 1.5
+        for: 5m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#objectstorageprobelatencyhigh"
+          summary: "Object-storage probe approaching its 2s hard timeout"
+          description: >
+            attome_storage::health_check records this for every outcome. The
+            probe is hard-capped at HEALTH_CHECK_TIMEOUT (2s, below the
+            smallest request_timeout_secs of 5s), so a probe this slow is one
+            hiccup away from reporting timeout and closing D-344's
+            ObjectStorage capability gate.
+
+      - alert: UploadScanBacklogStale
+        expr: upload_scan_backlog_oldest_seconds > 900
+        for: 5m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#uploadscanbacklogstale"
+          summary: "A file upload has waited over 15 minutes to be scanned"
+          description: >
+            Runbook: confirm storage.clamd_address points at a live clamd (the
+            docker-compose 'clamav' profile brings one up) and that the worker
+            processing scan jobs is running. A session whose scan never
+            completes is rejected by the 24-hour sweep, so this alert is the
+            warning before that happens.
+
+      # ── attome-cache plan BCA-22 / BCA-F4 (2026-09-25) ──────────────────────
+      # Both gauges come from attome_server's 15s loop, which probes the
+      # coordination store's INFO memory.
+
+      - alert: RedisCoordinationMemoryHigh
+        expr: |
+          redis_coordination_maxmemory_bytes > 0
+          and
+          redis_coordination_used_memory_bytes / redis_coordination_maxmemory_bytes > 0.8
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#rediscoordinationmemoryhigh"
+          summary: "Coordination Redis is over 80% of its memory ceiling"
+          description: >
+            The coordination store holds nonces, rate limits, sessions and the
+            drain watch, and attome-cache's fail-closed controls depend on their
+            keys still being there. The store runs noeviction, so at its ceiling
+            writes fail and those controls refuse requests - check what grew
+            (the profiler keyspace is the usual runaway), then raise the ceiling
+            or delete deliberately before it fills.
+
+      - alert: RedisCoordinationNoMemoryCeiling
+        expr: redis_coordination_maxmemory_bytes == 0
+        for: 1h
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#rediscoordinationnomemoryceiling"
+          summary: "Coordination Redis runs without a memory ceiling"
+          description: >
+            maxmemory is unset, so the instance grows until the host kills it
+            (BCA-F4). Set it on the coordination service, and note that while it
+            is unset the 80% rule above cannot fire at all.
+
+      # ── attome-jobs plan §1 (BJB-14a/14b, 2026-09-25) ───────────────────────
+      # One alert per published job signal. All three metrics come from the
+      # 15s refresh loop in attome_server::metrics (or the scheduler wrapper in
+      # crates/server/src/jobs.rs for the counter), so every node emits them.
+
+      - alert: PlatformJobFailures
+        expr: |
+          sum by (kind) (rate(platform_jobs_total{outcome="failed"}[15m])) > 0
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#platformjobfailures"
+          summary: "A platform job kind is failing repeatedly"
+          description: >
+            A job kind has failed at least once every few minutes for 15
+            minutes. Check the worker's logs for that kind (the job's own
+            outcome error is logged with its kind and schedule name), and
+            whether its payload is one this build's envelope cannot decode -
+            an unknown variant settles as Killed rather than retrying forever.
+
+      - alert: ApalisOldestPendingAgeHigh
+        expr: apalis_oldest_pending_age_seconds > 900
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#apalisoldestpendingagehigh"
+          summary: "A queued job has been pending for over 15 minutes"
+          description: >
+            The oldest Pending row in a queue is older than 15 minutes, which
+            means the worker is not draining it - check that the worker process
+            is running and that its concurrency is not saturated by a slow kind.
+            The queue label names the interactive or batch namespace.
+
+      - alert: JobScheduleStale
+        expr: job_schedule_last_success_age_seconds > 2 * 3600
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#jobschedulestale"
+          summary: "A periodic sweep has not succeeded in a long time"
+          description: >
+            A schedule's last success is older than two hours. The intended
+            threshold is twice the schedule's own interval; the generic rule
+            above uses two hours as the floor, so narrow it per schedule in the
+            deployment overlay where the interval is known. A schedule that has
+            never succeeded emits no sample, so silence here can also mean
+            "never ran" - check job_schedule.
+
+      - alert: WorkflowTriggerDeadLettered
+        # attome-workflow's entity-trigger dispatcher (entity_trigger.rs) counts
+        # an event it gave up on after MAX_ATTEMPTS failures over at least
+        # DEAD_LETTER_AFTER_SECS. The event is skipped for good, so the
+        # workflows it should have started or resumed never ran: every
+        # increment is actionable, hence no `for`. The counter is per process
+        # and starts at zero on restart, so an increment just before a
+        # restart can be missed; workflow_trigger_failure keeps every
+        # dead letter regardless.
+        expr: increase(workflow_trigger_dead_letters_total[1h]) > 0
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#workflowtriggerdeadlettered"
+          summary: "A workflow entity-trigger event was dead-lettered"
+          description: >
+            An entity change event failed workflow dispatch repeatedly and was
+            skipped, so the workflows it matched did not start or resume.
+            GET /api/v1/workflow/trigger-dead-letters names the record and
+            last_error; replay it once the cause is fixed.
+
+      - alert: DiskSpaceLow
+        # Sourced from node_exporter's own built-in node_filesystem_avail_bytes
+        # (no textfile needed, unlike BackupTooOld/WalArchiveLagHigh above) —
+        # this app process cannot measure host disk space itself, so this rule
+        # only fires on a deployment that actually scrapes a host-level
+        # node_exporter. Excludes tmpfs/overlay pseudo-filesystems, which are
+        # frequently near-100%-of-a-tiny-quota by design and not a real signal.
+        expr: >
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}
+          < 0.10
+        for: 10m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#diskspacelow"
+          summary: "{{ $labels.mountpoint }} on {{ $labels.instance }} below 10% free space"
+          description: >
+            Less than 10% free space on {{ $labels.mountpoint }} for 10
+            minutes. Postgres/RustFS/the audit partition tables all write to
+            local disk — running out here is a hard outage, not a
+            degradation. Escalates to critical at 5% (DiskSpaceCritical).
+
+      - alert: DiskSpaceCritical
+        expr: >
+          node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}
+          < 0.05
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#diskspacecritical"
+          summary: "{{ $labels.mountpoint }} on {{ $labels.instance }} below 5% free space"
+          description: >
+            Same signal as DiskSpaceLow, escalated: under 5% free for 5
+            minutes. Postgres will refuse writes once its own data directory's
+            filesystem fills — treat this as an imminent-outage page, not a
+            capacity-planning ticket.
+
+      - alert: SecurityAnomalyRateHigh
+        # security_rejection_total{reason=...} — incremented at four rejection
+        # call sites (attome_s2s::rate_limit::check_with_nonce's replay/rate-limit
+        # branches, attome_server::middleware::rate_limit's 429 branch,
+        # attome_server::middleware::csrf::csrf_protect's enforced-403 branch,
+        # attome_server::middleware::auth::authn's revoked-token/epoch-stale
+        # branches). Burst detection (a sustained rate increase), not an
+        # absolute threshold — a single rejection of any of these kinds is
+        # normal background noise (an expired session, a stale tab replaying
+        # a revoked cookie), a sustained climb across a 5-minute window is the
+        # signal (credential stuffing, a compromised client replaying a
+        # revoked token, a CSRF probe).
+        expr: |
+          sum by (reason) (rate(security_rejection_total[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          owner: security
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#securityanomalyratehigh"
+          summary: "Sustained rise in {{ $labels.reason }} rejections"
+          description: >
+            {{ $labels.reason }}-classified security rejections have
+            sustained over 5/s for 5 minutes. Check request-id-tagged logs
+            (tracing::warn! sits next to every one of this counter's
+            increment sites) for the source IP/client pattern before assuming
+            malicious intent — a misconfigured integration replaying a
+            revoked token looks identical to an attacker at this signal
+            alone.
+
+      # ── D-344 — durability-capability gate (amends D-167) ──────────────────
+      #
+      # These are NOT readiness alerts. /health/ready still watches only
+      # DB/Redis/registry/schema (D-167), so none of the dependencies below
+      # can evict a node from load-balancer rotation. What they report is the
+      # route-level gate: capability_state is 0 unknown / 1 available /
+      # 2 unavailable / 3 disabled, maintained by
+      # attome_api::spawn_capability_refresh.
+      - alert: CapabilityUnavailable
+        # `for: 5m` on top of the gate's own hysteresis (2 consecutive failed
+        # probes at 30s, so ~1m to trip): a dependency that flaps back inside
+        # five minutes has already stopped rejecting requests by the time
+        # anyone could read the page.
+        expr: capability_state == 2
+        for: 5m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#capabilityunavailable"
+          summary: "Capability {{ $labels.capability }} is unavailable on at least one node"
+          description: >
+            Operations that cannot durably complete without
+            {{ $labels.capability }} are being refused with 503
+            capability_unavailable on the routes that declare it — uploads
+            (object_storage), bulk/staged imports (batch_jobs), or mail
+            resend (email/fast_jobs). Ordinary CRUD is deliberately
+            unaffected, and this node is still serving and still in
+            rotation. GET /health/dependencies shows both the live probe and
+            what the gate is enforcing; they can differ by one probe interval
+            after a recovery. Escalate on the underlying dependency, not on
+            this node.
+
+      - alert: CapabilityRejectingTraffic
+        # The pair that separates "a dependency is down" from "a dependency is
+        # down and customers are hitting it". Any sustained rejection rate is
+        # actionable — these routes are low-volume by nature, so this is not a
+        # noisy signal at 0.1/s.
+        expr: |
+          sum by (capability) (rate(capability_rejections_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#capabilityrejectingtraffic"
+          summary: "Requests are being refused because {{ $labels.capability }} is down"
+          description: >
+            Callers are actively being turned away on {{ $labels.capability }}
+            routes. This is CapabilityUnavailable plus real demand, which is
+            the difference between a dependency outage nobody noticed and a
+            customer-visible one. Fix the dependency; capability.
+            enforcement_enabled = false is the kill switch if the probe
+            itself is proven wrong, and it stops the rejections without
+            stopping the reporting.
+
+      # ── D-356 / TODO-007 — audit-durability alarms for the coordination
+      # store ────────────────────────────────────────────────────────────────
+      #
+      # The gauges these read have existed since D-355 and
+      # attome-server/src/metrics.rs has said in its own doc comment that they
+      # "feed RedisPersistenceDisabled/RedisSnapshotStale in
+      # observability/alerts.yml" — while no such rules existed. Metrics
+      # nobody alerts on are a dashboard, not a control, and the review's
+      # finding H-8 asked specifically for lag and loss alarms. These are
+      # them.
+      #
+      # Scoped to `redis_coordination` because that is the pool holding the
+      # S2S replay nonces and the unflushed access-log stream: the only Redis
+      # state whose loss is a security or audit event rather than a cold
+      # cache.
+      - alert: RedisPersistenceDisabled
+        # No `for:` clause, unlike almost everything else here. This is not a
+        # transient condition that might self-resolve — it reports a
+        # configuration fact, and every second it is true is a second in which
+        # a restart silently discards in-window replay nonces and any
+        # access-log entry not yet flushed to PostgreSQL. Waiting five minutes
+        # to say so buys nothing and loses evidence.
+        #
+        # The gauge is deliberately left UNSET when the probe itself fails, so
+        # this cannot fire on a probe outage — that surfaces through
+        # redis_coordination_up instead.
+        expr: redis_coordination_persistence_policy_configured == 0
+        labels:
+          severity: critical
+          owner: security
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#redispersistencedisabled"
+          summary: "The coordination Redis/Dragonfly has no persistence policy"
+          description: >
+            This instance is running purely in memory: no Dragonfly
+            `snapshot_cron`, no Redis `save`, no `appendonly`. A restart or
+            failover drops the whole keyspace, which for THIS pool means
+            in-window S2S replay nonces (an accepted request could be
+            replayed) and any `s2s_access_log` entry XADDed but not yet
+            flushed (an accepted machine request with no surviving access
+            record). Set `--snapshot_cron` on the Dragonfly service, or
+            `save`/`appendonly` on Redis, and restart it. Note the honest
+            ceiling even once set: Dragonfly has no AOF and does not
+            implement WAIT, so the guarantee is "loss bounded by the snapshot
+            interval", never "nothing is lost" — anything needing a real
+            per-write guarantee belongs in PostgreSQL.
+
+      - alert: RedisSnapshotStale
+        # Compose ships `--snapshot_cron=*/1 * * * *`, so a healthy instance
+        # saves every minute. Ten minutes is ten missed windows: long enough
+        # that a slow snapshot on a large keyspace or one skipped tick cannot
+        # trip it, short enough that the unsaved window is still bounded when
+        # someone reads the page.
+        #
+        # This is the "configured but failing" case, which needs a different
+        # operator response from "no policy at all" — hence a separate rule
+        # rather than one combined expression.
+        expr: redis_coordination_persistence_last_save_age_seconds > 600
+        for: 5m
+        labels:
+          severity: warning
+          owner: security
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#redissnapshotstale"
+          summary: "The coordination store has not completed a snapshot in over 10 minutes"
+          description: >
+            A persistence policy IS configured but saves are not completing —
+            check disk space and permissions on the Dragonfly/Redis `--dir`
+            volume, and `redis_coordination_persistence_changes_since_save`
+            for how much has accumulated. Everything written since the last
+            successful save is lost on restart, and for this pool that is
+            replay nonces and unflushed access-log entries.
+
+      - alert: S2sAccessLogBacklogGrowing
+        # The lag half of H-8. `s2s_access_log_stream_pending` is the
+        # consumer group's XPENDING depth — entries XADDed but not yet
+        # committed to `s2s_access_log`. The flusher runs every 30s
+        # (main.rs's `flush_interval`), so a healthy stream is near zero
+        # between ticks and a sustained four-figure backlog means the
+        # consumer is wedged, not merely busy.
+        #
+        # Why this matters beyond throughput: pending entries are exactly the
+        # window in which a Redis loss becomes an audit gap. A growing
+        # backlog widens that window, so this is an audit-integrity signal
+        # that happens to look like a queue-depth one.
+        expr: s2s_access_log_stream_pending > 1000
+        for: 10m
+        labels:
+          severity: warning
+          owner: security
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#s2saccesslogbackloggrowing"
+          summary: "S2S access-log entries are accumulating unflushed in Redis"
+          description: >
+            Entries are being XADDed faster than the 30s flusher commits them
+            to `s2s_access_log`, or the flusher has stopped. Every
+            pending entry is an accepted S2S request whose access record
+            exists only in Redis — if the instance is lost before the flush,
+            so is the record. Check the server logs for
+            "s2s access-log flush" errors and confirm the PostgreSQL write
+            path is healthy. Cross-check RedisPersistenceDisabled: a backlog
+            on a non-persistent instance is the full H-8 failure mode.
+
+      # ── attome-email plan BEM-10 (2026-09-25) ───────────────────────────────
+      # All three metrics are recorded inside attome_email itself
+      # (sender.rs / suppression.rs), so the worker's SendEmail job and the
+      # notification engine's direct send (M51) both emit them. Labels are
+      # bounded: `outcome` is SendError::label's nine values plus `sent`,
+      # `reason` is SuppressionReason's three — never a recipient. Runbooks
+      # are in deploy/email/README.md.
+      #
+      # email_send_duration_seconds is a bare `metrics::histogram!`. The
+      # recorder (axum-prometheus's PrometheusMetricLayerBuilder) configures
+      # buckets only for its own HTTP histogram, so this one is exported as a
+      # SUMMARY with `quantile` labels — hence the quantile selector below and
+      # not histogram_quantile over `_bucket`. If buckets are ever configured
+      # for it, rewrite EmailSendSlow as histogram_quantile.
+
+      - alert: EmailRelayFailureRatioHigh
+        # Relay-side failures only: 4xx/connection faults (`transient`) and
+        # 5xx replies that are NOT recipient-attributable (`permanent_relay`,
+        # e.g. a 535 after a password rotation, 5.7.x). `suppressed` and
+        # `disabled` never reach the relay, so they are out of the
+        # denominator. The volume floor keeps one failure out of two sends
+        # from paging a quiet deployment.
+        expr: |
+          (
+            sum(rate(email_send_total{outcome=~"transient|permanent_relay"}[15m]))
+            /
+            sum(rate(email_send_total{outcome!~"suppressed|disabled"}[15m]))
+          ) > 0.2
+          and
+          sum(increase(email_send_total{outcome!~"suppressed|disabled"}[15m])) >= 5
+        for: 10m
+        labels:
+          severity: warning
+          owner: integration
+        annotations:
+          summary: "More than 20% of email sends are failing at the relay"
+          description: >
+            {{ $value | humanizePercentage }} of SMTP sends over 15m ended
+            transient or permanent_relay. Run preflight against the relay and
+            check its credentials and sender policy.
+          runbook_url: "deploy/email/README.md#relay-outage"
+
+      - alert: EmailSendOutcomeUnknown
+        # A timeout at or after DATA: the relay may have accepted the mail, so
+        # attome-email never retries it. Every one needs a human (plan §5:
+        # "`unknown` > 0 in 15 min pages").
+        expr: sum(increase(email_send_total{outcome="unknown"}[15m])) > 0
+        for: 0m
+        labels:
+          severity: critical
+          owner: integration
+        annotations:
+          summary: "An email send ended with an unknown outcome"
+          description: >
+            At least one send timed out at or after DATA in the last 15m and
+            was not retried. Check the relay's logs for each ledger row with
+            status=unknown and resend only what it did not accept.
+          runbook_url: "deploy/email/README.md#unknown-outcome-triage"
+
+      - alert: EmailSuppressionSpike
+        # Automatic suppressions only (hard_bounce, complaint); admin_manual
+        # adds are deliberate. D-661 already refuses to suppress on relay-side
+        # codes, so a spike is either a real list-quality problem or a relay
+        # answering its own fault with a recipient-shaped code — the runbook
+        # tells them apart and undoes the second.
+        expr: sum(increase(email_suppression_added_total{reason=~"hard_bounce|complaint"}[1h])) > 25
+        for: 0m
+        labels:
+          severity: warning
+          owner: integration
+        annotations:
+          summary: "More than 25 addresses auto-suppressed in the last hour"
+          description: >
+            {{ $value | printf "%.0f" }} recipients were added to the suppression list by
+            hard_bounce/complaint in 1h. Group the suppressions by detail; one
+            identical relay reply across many addresses is a false
+            suppression.
+          runbook_url: "deploy/email/README.md#mass-false-suppression"
+
+      - alert: EmailSendSlow
+        # Half of the 120 s whole-send deadline. Plan §5 names this metric as
+        # the trigger to revisit SMTP connection pooling.
+        expr: max(email_send_duration_seconds{quantile="0.95"}) > 60
+        for: 10m
+        labels:
+          severity: warning
+          owner: integration
+        annotations:
+          summary: "Email send p95 above 60s"
+          description: >
+            The p95 SMTP send duration is {{ $value }}s, half of the 120s
+            whole-send deadline. Sends that cross it end as unknown and are
+            not retried.
+          runbook_url: "deploy/email/README.md#slow-sends"
+
+      # ── Portal (web-portal-users §5) and event bus (M62 §4.3, M86 O5) ───────
+      # Rules on signals built 2026-09-28. Every label is a closed set; none
+      # carries a portal, user or subscription id.
+
+      # web-portal-users §5 "Visibility" (Phase 13 step 5): portal_auth_total{outcome}
+      # is success | bad_credentials | locked | mfa_required, password login only
+      # (crates/engine/attome-portal/src/telemetry.rs). mfa_required is a step, not a
+      # failure, so it is in the denominator only. The volume floor keeps a quiet
+      # portal (two typos on a Sunday) from paging. The five portal_* rejection
+      # reasons ride on security_rejection_total and are already covered by
+      # SecurityAnomalyRateHigh (by reason); this rule is the login-outcome half.
+      - alert: PortalLoginFailureRatioHigh
+        expr: |
+          (
+            sum(rate(portal_auth_total{outcome=~"bad_credentials|locked"}[15m]))
+            /
+            sum(rate(portal_auth_total[15m]))
+          ) > 0.5
+          and
+          sum(increase(portal_auth_total[15m])) >= 20
+        for: 10m
+        labels:
+          severity: warning
+          owner: security
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#portalloginfailureratiohigh"
+          summary: "More than half of portal password logins are failing"
+          description: >
+            Over 15 minutes, more than 50% of portal password logins ended
+            bad_credentials or locked, across at least 20 attempts. A spike concentrated
+            on few accounts is credential stuffing or a forgotten password; a spike
+            across every account after a release is a login defect. Read the
+            portal_request spans and warn logs for the source before acting.
+
+      # web-portal-users §5: portal_plan_match_nothing_total counts a grant whose
+      # condition no longer renders (unknown operator, drifted field). A null
+      # value_ref is not drift and is not counted, so every increment is a grant
+      # an admin must fix: portal users silently see nothing through it.
+      - alert: PortalGrantDrift
+        expr: sum(increase(portal_plan_match_nothing_total[1h])) > 0
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#portalgrantdrift"
+          summary: "A portal access grant no longer matches anything"
+          description: >
+            At least one portal grant condition stopped rendering in the last hour, so
+            the portal users it covers see no rows through it. The warn log next to each
+            increment names the role and the grant; fix the condition through the portal
+            admin API.
+
+      # web-portal-users §4.2 / §5: after a committed portal admin write the
+      # access-version bump failed, so other nodes may serve the previous grant for
+      # up to 30s (the cache TTL). Self-healing, but a revoked grant staying live
+      # for 30s is an access-control fact the security owner should see.
+      - alert: PortalCacheInvalidationFailed
+        expr: sum(increase(portal_cache_invalidation_failed_total[15m])) > 0
+        labels:
+          severity: warning
+          owner: security
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#portalcacheinvalidationfailed"
+          summary: "A portal access-cache invalidation failed after an admin write"
+          description: >
+            A portal admin change committed but the access-version bump on the cache
+            Redis failed, so other nodes may keep serving the previous grant for up to
+            30 seconds. Check RedisDown and the cache pool; repeat failures mean every
+            revocation lags by the cache TTL.
+
+      # M62 §4.3/§8 (lag alert) and M86 O5 (named EventDeliveryBacklogGrowing, the
+      # outbound twin of S2sAccessLogBacklogGrowing, same 1000/10m shape).
+      # events_subscription_lag_max{kind} is set by whichever node ran the webhook
+      # dispatch tick, hence max by (kind); it saturates at 10000 (LAG_CAP).
+      - alert: EventDeliveryBacklogGrowing
+        expr: max by (kind) (events_subscription_lag_max) > 1000
+        for: 10m
+        labels:
+          severity: warning
+          owner: integration
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#eventdeliverybackloggrowing"
+          summary: "A {{ $labels.kind }} event subscription is more than 1000 rows behind"
+          description: >
+            An active {{ $labels.kind }} subscription has had more than 1000 unread feed
+            rows for 10 minutes, so dispatch is not keeping up or has stopped. Check the
+            worker, events_dispatch_failures_total for a stuck subscription, and the
+            per-subscription lag at GET
+            /api/v1/admin/events/subscriptions/{id}/deliveries. A value pinned at 10000
+            is the gauge cap: at least that far behind.
+
+      # M62 §4.3 (DLQ count is a monitored signal), mirroring
+      # WorkflowTriggerDeadLettered. subscription_gone / subscription_inactive are
+      # the expected result of an admin change and never page; the four remaining
+      # reasons are a receiver down past every retry or a misconfigured target.
+      - alert: EventDeliveryDeadLettered
+        expr: |
+          sum by (kind, reason) (
+            increase(events_dead_lettered_total{reason=~"attempts_exhausted|bad_url|ssrf_rejected|no_target"}[1h])
+          ) > 0
+        labels:
+          severity: warning
+          owner: integration
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#eventdeliverydeadlettered"
+          summary: "{{ $labels.kind }} event deliveries were dead-lettered ({{ $labels.reason }})"
+          description: >
+            At least one {{ $labels.kind }} delivery gave up with reason
+            {{ $labels.reason }} in the last hour, so its receiver never got the event.
+            attempts_exhausted means the receiver was down past every retry; bad_url,
+            ssrf_rejected and no_target mean the subscription target is wrong. Find the
+            rows through the deliveries route and fix the subscription through the admin
+            API.
+
+
+  # ══ SLOs — M86 O1 / runtime-performance-opt-review.md §1.1 ═══════════════
+  #
+  # One recording block per S-class (the `attome:slo_class` extension point:
+  # a new class is one more block here, one k6 tag, one §1.1 row) and five
+  # class-generic alerts that pick every block up through the `slo_class`
+  # label. Objectives: latency = 99% of requests within the class p99 budget
+  # (1% error budget), availability = < 0.1% 5xx. Multi-window, multi-burn-
+  # rate (Google SRE workbook ch. 5): page at 14.4x over 1h AND 5m, ticket
+  # at 6x over 6h AND 30m, each with the plan's minimum-traffic guard
+  # (> 1 req/s over the short window, M86 §8).
+  #
+  # Class = (method, matched `endpoint`) — axum-prometheus labels by
+  # MatchedPath, so `{entity}` stays literal. S7 is POST in the code
+  # (attome-notification admin.rs, loadtest notification_poll.js), not GET as the
+  # §1.1 table once said. S8 (search) has no numbers in §1.1 (owned by
+  # P-search-and-retrieval §5) and D1/D2 are DB-time evidence tests, so none
+  # of the three has a rule here.
+  #
+  # M86 O1: `attome_server::metrics::HTTP_DURATION_BUCKETS` exports an
+  # explicit bucket at every class's p99 budget (S1 60, S3 40, S5 300, S6 200,
+  # S2 500, S4/S7 100 ms), so each class records an exact latency ratio.
+  # SloLatencyBucketMissing stays as the guard: it fires if a build ever
+  # stops exporting one of these edges. The `le` strings below are the
+  # exporter's rendering of those boundaries (non-integers, so Prometheus
+  # 3.x's le normalisation leaves them unchanged). MutatingWriteP99OverBudget
+  # was retired in the same change; S6's burn-rate rules replace it.
+  - name: attome-slo
+    rules:
+      # S1 — authenticated read, no DB work; p99 budget 60 ms
+      - record: attome:slo_requests:rate5m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami"}[5m]))
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_requests:rate30m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami"}[30m]))
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_latency_bad:ratio_rate5m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/admin/security/whoami",le="0.06"}[5m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami"}[5m]))
+          )
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_latency_bad:ratio_rate30m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/admin/security/whoami",le="0.06"}[30m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami"}[30m]))
+          )
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_latency_bad:ratio_rate1h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/admin/security/whoami",le="0.06"}[1h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami"}[1h]))
+          )
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_latency_bad:ratio_rate6h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/admin/security/whoami",le="0.06"}[6h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami"}[6h]))
+          )
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_errors:ratio_rate5m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami",status=~"5.."}[5m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami"}[5m]))
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_errors:ratio_rate30m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami",status=~"5.."}[30m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami"}[30m]))
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_errors:ratio_rate1h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami",status=~"5.."}[1h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami"}[1h]))
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_errors:ratio_rate6h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami",status=~"5.."}[6h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami"}[6h]))
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      # S2 — login (password KDF); p99 budget 500 ms
+      - record: attome:slo_requests:rate5m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/auth/login"}[5m]))
+        labels:
+          slo_class: S2
+          slo_route: "POST /api/v1/auth/login"
+          slo_p99_ms: "500"
+      - record: attome:slo_requests:rate30m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/auth/login"}[30m]))
+        labels:
+          slo_class: S2
+          slo_route: "POST /api/v1/auth/login"
+          slo_p99_ms: "500"
+      - record: attome:slo_latency_bad:ratio_rate5m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/auth/login",le="0.5"}[5m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/auth/login"}[5m]))
+          )
+        labels:
+          slo_class: S2
+          slo_route: "POST /api/v1/auth/login"
+          slo_p99_ms: "500"
+      - record: attome:slo_latency_bad:ratio_rate30m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/auth/login",le="0.5"}[30m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/auth/login"}[30m]))
+          )
+        labels:
+          slo_class: S2
+          slo_route: "POST /api/v1/auth/login"
+          slo_p99_ms: "500"
+      - record: attome:slo_latency_bad:ratio_rate1h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/auth/login",le="0.5"}[1h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/auth/login"}[1h]))
+          )
+        labels:
+          slo_class: S2
+          slo_route: "POST /api/v1/auth/login"
+          slo_p99_ms: "500"
+      - record: attome:slo_latency_bad:ratio_rate6h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/auth/login",le="0.5"}[6h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/auth/login"}[6h]))
+          )
+        labels:
+          slo_class: S2
+          slo_route: "POST /api/v1/auth/login"
+          slo_p99_ms: "500"
+      - record: attome:slo_errors:ratio_rate5m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/auth/login",status=~"5.."}[5m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/auth/login"}[5m]))
+        labels:
+          slo_class: S2
+          slo_route: "POST /api/v1/auth/login"
+          slo_p99_ms: "500"
+      - record: attome:slo_errors:ratio_rate30m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/auth/login",status=~"5.."}[30m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/auth/login"}[30m]))
+        labels:
+          slo_class: S2
+          slo_route: "POST /api/v1/auth/login"
+          slo_p99_ms: "500"
+      - record: attome:slo_errors:ratio_rate1h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/auth/login",status=~"5.."}[1h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/auth/login"}[1h]))
+        labels:
+          slo_class: S2
+          slo_route: "POST /api/v1/auth/login"
+          slo_p99_ms: "500"
+      - record: attome:slo_errors:ratio_rate6h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/auth/login",status=~"5.."}[6h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/auth/login"}[6h]))
+        labels:
+          slo_class: S2
+          slo_route: "POST /api/v1/auth/login"
+          slo_p99_ms: "500"
+      # S3 — metadata read; p99 budget 40 ms
+      - record: attome:slo_requests:rate5m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/schema/{logicalname}"}[5m]))
+        labels:
+          slo_class: S3
+          slo_route: "GET /api/v1/schema/{logicalname}"
+          slo_p99_ms: "40"
+      - record: attome:slo_requests:rate30m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/schema/{logicalname}"}[30m]))
+        labels:
+          slo_class: S3
+          slo_route: "GET /api/v1/schema/{logicalname}"
+          slo_p99_ms: "40"
+      - record: attome:slo_latency_bad:ratio_rate5m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/schema/{logicalname}",le="0.04"}[5m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/schema/{logicalname}"}[5m]))
+          )
+        labels:
+          slo_class: S3
+          slo_route: "GET /api/v1/schema/{logicalname}"
+          slo_p99_ms: "40"
+      - record: attome:slo_latency_bad:ratio_rate30m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/schema/{logicalname}",le="0.04"}[30m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/schema/{logicalname}"}[30m]))
+          )
+        labels:
+          slo_class: S3
+          slo_route: "GET /api/v1/schema/{logicalname}"
+          slo_p99_ms: "40"
+      - record: attome:slo_latency_bad:ratio_rate1h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/schema/{logicalname}",le="0.04"}[1h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/schema/{logicalname}"}[1h]))
+          )
+        labels:
+          slo_class: S3
+          slo_route: "GET /api/v1/schema/{logicalname}"
+          slo_p99_ms: "40"
+      - record: attome:slo_latency_bad:ratio_rate6h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/schema/{logicalname}",le="0.04"}[6h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/schema/{logicalname}"}[6h]))
+          )
+        labels:
+          slo_class: S3
+          slo_route: "GET /api/v1/schema/{logicalname}"
+          slo_p99_ms: "40"
+      - record: attome:slo_errors:ratio_rate5m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/schema/{logicalname}",status=~"5.."}[5m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/schema/{logicalname}"}[5m]))
+        labels:
+          slo_class: S3
+          slo_route: "GET /api/v1/schema/{logicalname}"
+          slo_p99_ms: "40"
+      - record: attome:slo_errors:ratio_rate30m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/schema/{logicalname}",status=~"5.."}[30m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/schema/{logicalname}"}[30m]))
+        labels:
+          slo_class: S3
+          slo_route: "GET /api/v1/schema/{logicalname}"
+          slo_p99_ms: "40"
+      - record: attome:slo_errors:ratio_rate1h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/schema/{logicalname}",status=~"5.."}[1h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/schema/{logicalname}"}[1h]))
+        labels:
+          slo_class: S3
+          slo_route: "GET /api/v1/schema/{logicalname}"
+          slo_p99_ms: "40"
+      - record: attome:slo_errors:ratio_rate6h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/schema/{logicalname}",status=~"5.."}[6h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/schema/{logicalname}"}[6h]))
+        labels:
+          slo_class: S3
+          slo_route: "GET /api/v1/schema/{logicalname}"
+          slo_p99_ms: "40"
+      # S4 — record read; p99 budget 100 ms
+      - record: attome:slo_requests:rate5m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/{entity}/{id}"}[5m]))
+        labels:
+          slo_class: S4
+          slo_route: "GET /api/v1/{entity}/{id}"
+          slo_p99_ms: "100"
+      - record: attome:slo_requests:rate30m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/{entity}/{id}"}[30m]))
+        labels:
+          slo_class: S4
+          slo_route: "GET /api/v1/{entity}/{id}"
+          slo_p99_ms: "100"
+      - record: attome:slo_latency_bad:ratio_rate5m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/{entity}/{id}",le="0.1"}[5m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/{entity}/{id}"}[5m]))
+          )
+        labels:
+          slo_class: S4
+          slo_route: "GET /api/v1/{entity}/{id}"
+          slo_p99_ms: "100"
+      - record: attome:slo_latency_bad:ratio_rate30m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/{entity}/{id}",le="0.1"}[30m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/{entity}/{id}"}[30m]))
+          )
+        labels:
+          slo_class: S4
+          slo_route: "GET /api/v1/{entity}/{id}"
+          slo_p99_ms: "100"
+      - record: attome:slo_latency_bad:ratio_rate1h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/{entity}/{id}",le="0.1"}[1h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/{entity}/{id}"}[1h]))
+          )
+        labels:
+          slo_class: S4
+          slo_route: "GET /api/v1/{entity}/{id}"
+          slo_p99_ms: "100"
+      - record: attome:slo_latency_bad:ratio_rate6h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/{entity}/{id}",le="0.1"}[6h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/{entity}/{id}"}[6h]))
+          )
+        labels:
+          slo_class: S4
+          slo_route: "GET /api/v1/{entity}/{id}"
+          slo_p99_ms: "100"
+      - record: attome:slo_errors:ratio_rate5m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/{entity}/{id}",status=~"5.."}[5m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/{entity}/{id}"}[5m]))
+        labels:
+          slo_class: S4
+          slo_route: "GET /api/v1/{entity}/{id}"
+          slo_p99_ms: "100"
+      - record: attome:slo_errors:ratio_rate30m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/{entity}/{id}",status=~"5.."}[30m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/{entity}/{id}"}[30m]))
+        labels:
+          slo_class: S4
+          slo_route: "GET /api/v1/{entity}/{id}"
+          slo_p99_ms: "100"
+      - record: attome:slo_errors:ratio_rate1h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/{entity}/{id}",status=~"5.."}[1h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/{entity}/{id}"}[1h]))
+        labels:
+          slo_class: S4
+          slo_route: "GET /api/v1/{entity}/{id}"
+          slo_p99_ms: "100"
+      - record: attome:slo_errors:ratio_rate6h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/{entity}/{id}",status=~"5.."}[6h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/{entity}/{id}"}[6h]))
+        labels:
+          slo_class: S4
+          slo_route: "GET /api/v1/{entity}/{id}"
+          slo_p99_ms: "100"
+      # S5 — list page, cursor; p99 budget 300 ms
+      - record: attome:slo_requests:rate5m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/query/execute"}[5m]))
+        labels:
+          slo_class: S5
+          slo_route: "POST /api/v1/query/execute"
+          slo_p99_ms: "300"
+      - record: attome:slo_requests:rate30m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/query/execute"}[30m]))
+        labels:
+          slo_class: S5
+          slo_route: "POST /api/v1/query/execute"
+          slo_p99_ms: "300"
+      - record: attome:slo_latency_bad:ratio_rate5m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/query/execute",le="0.3"}[5m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/query/execute"}[5m]))
+          )
+        labels:
+          slo_class: S5
+          slo_route: "POST /api/v1/query/execute"
+          slo_p99_ms: "300"
+      - record: attome:slo_latency_bad:ratio_rate30m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/query/execute",le="0.3"}[30m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/query/execute"}[30m]))
+          )
+        labels:
+          slo_class: S5
+          slo_route: "POST /api/v1/query/execute"
+          slo_p99_ms: "300"
+      - record: attome:slo_latency_bad:ratio_rate1h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/query/execute",le="0.3"}[1h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/query/execute"}[1h]))
+          )
+        labels:
+          slo_class: S5
+          slo_route: "POST /api/v1/query/execute"
+          slo_p99_ms: "300"
+      - record: attome:slo_latency_bad:ratio_rate6h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/query/execute",le="0.3"}[6h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/query/execute"}[6h]))
+          )
+        labels:
+          slo_class: S5
+          slo_route: "POST /api/v1/query/execute"
+          slo_p99_ms: "300"
+      - record: attome:slo_errors:ratio_rate5m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/query/execute",status=~"5.."}[5m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/query/execute"}[5m]))
+        labels:
+          slo_class: S5
+          slo_route: "POST /api/v1/query/execute"
+          slo_p99_ms: "300"
+      - record: attome:slo_errors:ratio_rate30m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/query/execute",status=~"5.."}[30m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/query/execute"}[30m]))
+        labels:
+          slo_class: S5
+          slo_route: "POST /api/v1/query/execute"
+          slo_p99_ms: "300"
+      - record: attome:slo_errors:ratio_rate1h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/query/execute",status=~"5.."}[1h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/query/execute"}[1h]))
+        labels:
+          slo_class: S5
+          slo_route: "POST /api/v1/query/execute"
+          slo_p99_ms: "300"
+      - record: attome:slo_errors:ratio_rate6h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/query/execute",status=~"5.."}[6h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/query/execute"}[6h]))
+        labels:
+          slo_class: S5
+          slo_route: "POST /api/v1/query/execute"
+          slo_p99_ms: "300"
+      # S6 — mutating write; p99 budget 200 ms
+      - record: attome:slo_requests:rate5m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="PATCH",endpoint="/api/v1/{entity}/{id}"}[5m]))
+        labels:
+          slo_class: S6
+          slo_route: "PATCH /api/v1/{entity}/{id}"
+          slo_p99_ms: "200"
+      - record: attome:slo_requests:rate30m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="PATCH",endpoint="/api/v1/{entity}/{id}"}[30m]))
+        labels:
+          slo_class: S6
+          slo_route: "PATCH /api/v1/{entity}/{id}"
+          slo_p99_ms: "200"
+      - record: attome:slo_latency_bad:ratio_rate5m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="PATCH",endpoint="/api/v1/{entity}/{id}",le="0.2"}[5m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="PATCH",endpoint="/api/v1/{entity}/{id}"}[5m]))
+          )
+        labels:
+          slo_class: S6
+          slo_route: "PATCH /api/v1/{entity}/{id}"
+          slo_p99_ms: "200"
+      - record: attome:slo_latency_bad:ratio_rate30m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="PATCH",endpoint="/api/v1/{entity}/{id}",le="0.2"}[30m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="PATCH",endpoint="/api/v1/{entity}/{id}"}[30m]))
+          )
+        labels:
+          slo_class: S6
+          slo_route: "PATCH /api/v1/{entity}/{id}"
+          slo_p99_ms: "200"
+      - record: attome:slo_latency_bad:ratio_rate1h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="PATCH",endpoint="/api/v1/{entity}/{id}",le="0.2"}[1h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="PATCH",endpoint="/api/v1/{entity}/{id}"}[1h]))
+          )
+        labels:
+          slo_class: S6
+          slo_route: "PATCH /api/v1/{entity}/{id}"
+          slo_p99_ms: "200"
+      - record: attome:slo_latency_bad:ratio_rate6h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="PATCH",endpoint="/api/v1/{entity}/{id}",le="0.2"}[6h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="PATCH",endpoint="/api/v1/{entity}/{id}"}[6h]))
+          )
+        labels:
+          slo_class: S6
+          slo_route: "PATCH /api/v1/{entity}/{id}"
+          slo_p99_ms: "200"
+      - record: attome:slo_errors:ratio_rate5m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="PATCH",endpoint="/api/v1/{entity}/{id}",status=~"5.."}[5m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="PATCH",endpoint="/api/v1/{entity}/{id}"}[5m]))
+        labels:
+          slo_class: S6
+          slo_route: "PATCH /api/v1/{entity}/{id}"
+          slo_p99_ms: "200"
+      - record: attome:slo_errors:ratio_rate30m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="PATCH",endpoint="/api/v1/{entity}/{id}",status=~"5.."}[30m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="PATCH",endpoint="/api/v1/{entity}/{id}"}[30m]))
+        labels:
+          slo_class: S6
+          slo_route: "PATCH /api/v1/{entity}/{id}"
+          slo_p99_ms: "200"
+      - record: attome:slo_errors:ratio_rate1h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="PATCH",endpoint="/api/v1/{entity}/{id}",status=~"5.."}[1h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="PATCH",endpoint="/api/v1/{entity}/{id}"}[1h]))
+        labels:
+          slo_class: S6
+          slo_route: "PATCH /api/v1/{entity}/{id}"
+          slo_p99_ms: "200"
+      - record: attome:slo_errors:ratio_rate6h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="PATCH",endpoint="/api/v1/{entity}/{id}",status=~"5.."}[6h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="PATCH",endpoint="/api/v1/{entity}/{id}"}[6h]))
+        labels:
+          slo_class: S6
+          slo_route: "PATCH /api/v1/{entity}/{id}"
+          slo_p99_ms: "200"
+      # S7 — notification poll; p99 budget 100 ms
+      - record: attome:slo_requests:rate5m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/notification/poll"}[5m]))
+        labels:
+          slo_class: S7
+          slo_route: "POST /api/v1/notification/poll"
+          slo_p99_ms: "100"
+      - record: attome:slo_requests:rate30m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/notification/poll"}[30m]))
+        labels:
+          slo_class: S7
+          slo_route: "POST /api/v1/notification/poll"
+          slo_p99_ms: "100"
+      - record: attome:slo_latency_bad:ratio_rate5m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/notification/poll",le="0.1"}[5m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/notification/poll"}[5m]))
+          )
+        labels:
+          slo_class: S7
+          slo_route: "POST /api/v1/notification/poll"
+          slo_p99_ms: "100"
+      - record: attome:slo_latency_bad:ratio_rate30m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/notification/poll",le="0.1"}[30m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/notification/poll"}[30m]))
+          )
+        labels:
+          slo_class: S7
+          slo_route: "POST /api/v1/notification/poll"
+          slo_p99_ms: "100"
+      - record: attome:slo_latency_bad:ratio_rate1h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/notification/poll",le="0.1"}[1h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/notification/poll"}[1h]))
+          )
+        labels:
+          slo_class: S7
+          slo_route: "POST /api/v1/notification/poll"
+          slo_p99_ms: "100"
+      - record: attome:slo_latency_bad:ratio_rate6h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="POST",endpoint="/api/v1/notification/poll",le="0.1"}[6h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/notification/poll"}[6h]))
+          )
+        labels:
+          slo_class: S7
+          slo_route: "POST /api/v1/notification/poll"
+          slo_p99_ms: "100"
+      - record: attome:slo_errors:ratio_rate5m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/notification/poll",status=~"5.."}[5m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/notification/poll"}[5m]))
+        labels:
+          slo_class: S7
+          slo_route: "POST /api/v1/notification/poll"
+          slo_p99_ms: "100"
+      - record: attome:slo_errors:ratio_rate30m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/notification/poll",status=~"5.."}[30m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/notification/poll"}[30m]))
+        labels:
+          slo_class: S7
+          slo_route: "POST /api/v1/notification/poll"
+          slo_p99_ms: "100"
+      - record: attome:slo_errors:ratio_rate1h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/notification/poll",status=~"5.."}[1h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/notification/poll"}[1h]))
+        labels:
+          slo_class: S7
+          slo_route: "POST /api/v1/notification/poll"
+          slo_p99_ms: "100"
+      - record: attome:slo_errors:ratio_rate6h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/notification/poll",status=~"5.."}[6h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="POST",endpoint="/api/v1/notification/poll"}[6h]))
+        labels:
+          slo_class: S7
+          slo_route: "POST /api/v1/notification/poll"
+          slo_p99_ms: "100"
+
+      # Class-generic burn alerts: each reads every class's recorded series.
+
+      - alert: SloLatencyBurnFast
+        expr: |
+          (
+            attome:slo_latency_bad:ratio_rate1h > (14.4 * 0.01)
+            and on (slo_class)
+            attome:slo_latency_bad:ratio_rate5m > (14.4 * 0.01)
+          )
+          and on (slo_class)
+          attome:slo_requests:rate5m > 1
+        for: 2m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#slolatencyburnfast"
+          summary: "{{ $labels.slo_class }} is burning its latency budget at 14.4x"
+          description: >
+            More than 14.4% of {{ $labels.slo_route }} requests took longer than the
+            {{ $labels.slo_class }} p99 budget of {{ $labels.slo_p99_ms }}ms over both
+            the last hour and the last 5 minutes. The objective is 99% within budget
+            (runtime-performance §1.1); at this rate the 30-day budget is gone in about
+            two days.
+
+      - alert: SloLatencyBurnSlow
+        expr: |
+          (
+            attome:slo_latency_bad:ratio_rate6h > (6 * 0.01)
+            and on (slo_class)
+            attome:slo_latency_bad:ratio_rate30m > (6 * 0.01)
+          )
+          and on (slo_class)
+          attome:slo_requests:rate30m > 1
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#slolatencyburnslow"
+          summary: "{{ $labels.slo_class }} is burning its latency budget at 6x"
+          description: >
+            More than 6% of {{ $labels.slo_route }} requests took longer than the
+            {{ $labels.slo_class }} p99 budget of {{ $labels.slo_p99_ms }}ms over both
+            the last 6 hours and the last 30 minutes. The objective is 99% within
+            budget; at this rate the 30-day budget is gone in about five days. Ticket,
+            not page.
+
+      - alert: SloErrorBurnFast
+        expr: |
+          (
+            attome:slo_errors:ratio_rate1h > (14.4 * 0.001)
+            and on (slo_class)
+            attome:slo_errors:ratio_rate5m > (14.4 * 0.001)
+          )
+          and on (slo_class)
+          attome:slo_requests:rate5m > 1
+        for: 2m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#sloerrorburnfast"
+          summary: "{{ $labels.slo_class }} is burning its 5xx budget at 14.4x"
+          description: >
+            More than 1.44% of {{ $labels.slo_route }} requests returned 5xx over both
+            the last hour and the last 5 minutes. The objective is under 0.1% 5xx over
+            30 days (runtime-performance Y1); at this rate the budget is gone in about
+            two days.
+
+      - alert: SloErrorBurnSlow
+        expr: |
+          (
+            attome:slo_errors:ratio_rate6h > (6 * 0.001)
+            and on (slo_class)
+            attome:slo_errors:ratio_rate30m > (6 * 0.001)
+          )
+          and on (slo_class)
+          attome:slo_requests:rate30m > 1
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#sloerrorburnslow"
+          summary: "{{ $labels.slo_class }} is burning its 5xx budget at 6x"
+          description: >
+            More than 0.6% of {{ $labels.slo_route }} requests returned 5xx over both
+            the last 6 hours and the last 30 minutes. The objective is under 0.1% 5xx
+            over 30 days; at this rate the budget is gone in about five days. Ticket,
+            not page.
+
+      - alert: SloLatencyBucketMissing
+        expr: |
+          attome:slo_requests:rate30m > 0
+          unless on (slo_class)
+          attome:slo_latency_bad:ratio_rate30m
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#slolatencybucketmissing"
+          summary: "{{ $labels.slo_class }} latency SLO cannot be measured: no {{ $labels.slo_p99_ms }}ms bucket"
+          description: >
+            {{ $labels.slo_route }} is serving traffic but the request histogram has no
+            le bucket at the {{ $labels.slo_p99_ms }}ms p99 budget, so the latency burn
+            alerts for {{ $labels.slo_class }} are blind. The bucket list
+            (attome_server::metrics::HTTP_DURATION_BUCKETS) and the SLO budgets
+            have drifted apart: add the missing boundary.

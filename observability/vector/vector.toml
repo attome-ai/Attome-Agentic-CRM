@@ -1,0 +1,115 @@
+# P-observability-bcdr Track B — reference log-collector config.
+#
+# Collector choice: Vector (D-066) — see attome-base/document/DECISIONS.md.
+# This file is the pipeline definition; it is not itself "the SIEM" — it
+# ships every `server`-container stdout line (already structured JSON, see
+# main.rs's `tracing_subscriber::fmt().json()`) to one of three destinations
+# a customer picks per deployment: a local file (default, air-gap friendly),
+# a syslog-speaking relay, or an OTLP logs collector. Only the file sink is
+# enabled by default; the other two are commented reference blocks — pick
+# one, uncomment it, delete/disable the file sink if you don't want both.
+#
+# Confirm behavior against the exact Vector image tag pinned in
+# docker-compose.observability.yml before relying on this in production —
+# same caveat style as alerts.yml's axum-prometheus label-name warning.
+
+[sources.server_logs]
+type = "docker_logs"
+# Filters by the `com.docker.compose.service` label Compose stamps on every
+# container it creates, NOT by container name — verified empirically
+# against Vector 0.46.1 (the pinned image below) that `include_containers`
+# matches a container's name/ID exactly, not as a substring. Compose's
+# default container naming is "<project>-server-<n>" (the project name
+# varies per checkout/deployment, and --scale server=N adds a replica
+# suffix), so a name-based filter would silently match nothing in every
+# real deployment — the label is the only stable match target. Override
+# VECTOR_APP_COMPOSE_SERVICE if you renamed the `server` service in
+# docker-compose.yml.
+include_labels = ["com.docker.compose.service=${VECTOR_APP_COMPOSE_SERVICE:-server}"]
+
+# Alternative source for environments where mounting the Docker socket is
+# disallowed (docker_logs above needs it, and a socket mount is effectively
+# root-equivalent host access — flag this to whoever approves the overlay).
+# Tails the json-file log driver's on-disk files directly instead:
+#
+# [sources.server_logs]
+# type = "file"
+# include = ["/var/lib/docker/containers/*/*-json.log"]
+# read_from = "end"
+
+[transforms.parse_app_json]
+type = "remap"
+inputs = ["server_logs"]
+source = '''
+  # `.message` is the raw stdout line Vector captured; the app already wrote
+  # it as one JSON object per line (main.rs: tracing_subscriber .json()).
+  # Reparse it into structured fields — if a line isn't valid JSON (a panic
+  # backtrace, a dependency that logs plain text), keep it as-is under
+  # `.raw_message` rather than dropping it, so nothing silently vanishes.
+  parsed, err = parse_json(.message)
+  if err == null {
+    . = merge(., object!(parsed))
+  } else {
+    .raw_message = .message
+  }
+'''
+
+# ── Sink 1: local file (DEFAULT — enabled) ─────────────────────────────────
+# Air-gap friendly: no outbound network dependency. Rotate/retain via the
+# host's own logrotate (or your object-store-backup schedule, see Track C)
+# — Vector's file sink appends, it does not rotate.
+[sinks.file_export]
+type = "file"
+inputs = ["parse_app_json"]
+path = "/var/log/attome/app.ndjson.log"
+encoding.codec = "json"
+
+# ── Sink 2: syslog-speaking relay (reference — uncomment to use) ──────────
+# Most customer SIEMs (Splunk, QRadar, a syslog-ng/rsyslog relay) accept
+# newline-delimited JSON over a plain TCP socket just as readily as strict
+# RFC5424 framing — this avoids taking on an RFC5424 encoder dependency for
+# a format most ingestion pipelines don't actually require. If your SIEM
+# insists on RFC5424 syslog framing specifically, front this socket with a
+# local syslog-ng/rsyslog relay that reframes it — do not hand-roll RFC5424
+# construction here.
+#
+# Vector expands variable references (dollar-brace syntax) as a raw-text
+# pass before TOML parsing — even inside a commented-out block, and even
+# inside this sentence if written literally, which is why this comment
+# avoids showing the syntax directly. Below, these use safe placeholder
+# defaults (dash-default, never the question-mark "required" form) so
+# validation never fails on an unset var; replace the placeholders and
+# delete the "#" comment markers to enable this sink.
+#
+# [sinks.syslog_export]
+# type = "socket"
+# inputs = ["parse_app_json"]
+# address = "${SIEM_SYSLOG_HOST:-siem.example.com}:${SIEM_SYSLOG_PORT:-6514}"
+# mode = "tcp"
+# encoding.codec = "json"
+
+# ── Sink 3: OTLP logs collector (reference — uncomment to use) ────────────
+# Requires a Vector build whose `opentelemetry` sink supports logs — this
+# has moved between Vector releases; verify against the pinned image tag's
+# changelog before enabling. Point `endpoint` at your OTLP collector
+# (upstream of whatever the customer's SIEM ingests OTLP from).
+#
+# [sinks.otlp_export]
+# type = "opentelemetry"
+# inputs = ["parse_app_json"]
+# protocol.type = "http"
+# protocol.uri = "${OTLP_LOGS_ENDPOINT:-http://otel-collector:4318/v1/logs}"
+# protocol.encoding = "json"
+
+# ── Self-monitoring (optional — pairs with Track A's Grafana, not required) ─
+# Uncomment both blocks to scrape Vector's own health/throughput alongside
+# the app's /metrics (Track A). Internal-only, same "never through nginx"
+# rule as the app's metrics listener.
+#
+# [sources.vector_internal_metrics]
+# type = "internal_metrics"
+#
+# [sinks.vector_metrics_export]
+# type = "prometheus_exporter"
+# inputs = ["vector_internal_metrics"]
+# address = "0.0.0.0:9598"

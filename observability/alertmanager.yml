@@ -1,0 +1,36 @@
+# M86 O3 — reference Alertmanager configuration. It ships a null receiver on
+# purpose: the platform does no in-app alerting and routing belongs to the
+# customer (M86 §4 "Rejected: in-app alerting"). Replace `null` with real
+# receivers and route on the `owner` label (platform, db, security,
+# integration — observability/RUNBOOK.md "Owners and escalation") and on
+# `severity` (critical pages, warning tickets).
+
+route:
+  receiver: "null"
+  group_by: ["alertname", "owner", "slo_class"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  # Example routing, disabled:
+  # routes:
+  #   - matchers: ['severity="critical"']
+  #     receiver: pager
+  #   - matchers: ['owner="security"']
+  #     receiver: security-oncall
+
+receivers:
+  - name: "null"
+
+inhibit_rules:
+  # One alert name at two severities (RedisCoordinationLatencyHigh): the
+  # critical one silences its warning twin.
+  - source_matchers: ['severity="critical"']
+    target_matchers: ['severity="warning"']
+    equal: ["alertname"]
+  # A fast-burn page silences the slow-burn ticket for the same class.
+  - source_matchers: ['alertname="SloLatencyBurnFast"']
+    target_matchers: ['alertname="SloLatencyBurnSlow"']
+    equal: ["slo_class"]
+  - source_matchers: ['alertname="SloErrorBurnFast"']
+    target_matchers: ['alertname="SloErrorBurnSlow"']
+    equal: ["slo_class"]

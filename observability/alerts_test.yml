@@ -1,0 +1,983 @@
+# P-backup-immutability (D-115) — promtool unit test for the two backup
+# alerts added to alerts.yml (BackupTooOld, WalArchiveLagHigh). Per that
+# plan's §6 testing note: "fake a stale backup_last_success_timestamp and
+# confirm BackupTooOld fires in a local Prometheus (promtool test rules unit
+# file checked in beside alerts.yml)."
+#
+# P-ha-failover-hardening item (e), D-125 — same file, new test group
+# below for ReplicaLagHigh/ReplicaLagCritical (that plan's own §6 testing
+# note: "promtool test rules unit for ReplicaLagHigh").
+#
+# P-redis-security-ha, closes ENTERPRISE-AUDIT-2026-07-24.md finding #31 —
+# same file, new test group below for RedisCoordinationDown and the two
+# RedisCoordinationLatencyHigh rules (warning threshold >150ms/2m, critical
+# threshold >300ms/1m — same alert name, two severities, deliberately
+# allowed to co-fire once latency crosses both thresholds; see alerts.yml's
+# own comment on that rule for why it's shaped this way instead of a
+# distinctly-named "...Critical" variant like ReplicaLagCritical).
+#
+# D-356 / TODO-007 — same file, final test group below for
+# RedisPersistenceDisabled, RedisSnapshotStale and S2sAccessLogBacklogGrowing,
+# the loss/lag alarms for the coordination store.
+#
+# Run: promtool test rules observability/alerts_test.yml
+#   (no local binary needed:
+#    docker run --rm --entrypoint promtool -v "$PWD/observability:/w" -w /w \
+#      prom/prometheus:v3.1.0 test rules alerts_test.yml)
+#
+# **First actually run 2026-08-12 — SUCCESS.** This header previously said the
+# file had never been executed because no promtool was available, and that
+# caveat had outlived its truth by long enough to hide real problems: on the
+# first real run, ALL TEN assertions failed. None of them was a fault in the
+# alerting rules' logic; every one was a fault in this file, which is exactly
+# what an unrun test file accumulates. Three distinct causes, all now fixed:
+#
+#   1. `exp_annotations` must reproduce the COMPLETE annotation map. promtool
+#      compares it with a deep equality, so listing only `summary` and
+#      omitting `description` fails every alert that has both. Practical
+#      consequence for anyone editing alerts.yml: changing an alert's
+#      description text breaks this file, deliberately — re-run promtool and
+#      paste the rendered text back.
+#   2. Templated annotations must be written as RENDERED, not as source.
+#      `{{ $labels.instance }}` has to appear here as `postgres-primary`, and
+#      `{{ $value | ... }}` as the value at that evaluation.
+#   3. `interval:` in a test group is the input-series resolution, NOT the
+#      rule evaluation cadence — that comes from `evaluation_interval` below.
+#      The ReplicaLagHigh case asserted a state at 75s, a moment at which the
+#      rule is never evaluated at all.
+#
+# Running it also found a real defect in alerts.yml itself, which no amount of
+# reading had caught: RedisCoordinationLatencyHigh rendered its latency
+# through `humanizeDuration`, a helper that expects SECONDS, against a gauge
+# in MILLISECONDS — so a 320ms ping reached the on-call engineer as
+# "5m 20sms average ping latency". Now `{{ printf "%.0f" $value }}ms`.
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # --- BackupTooOld -----------------------------------------------------
+  - interval: 1h
+    input_series:
+      # A backup succeeded at t=0 and nothing since — by hour 26 this alert
+      # must be firing; at hour 20 it must NOT be (still inside the window).
+      - series: 'attome_backup_last_success_timestamp_seconds{instance="postgres-primary"}'
+        values: "0x30"   # constant value 0 (the timestamp never advances) for 30 steps of 1h
+
+    alert_rule_test:
+      - eval_time: 20h
+        alertname: BackupTooOld
+        exp_alerts: []   # 20h < 26h threshold — must not fire yet
+
+      - eval_time: 27h
+        alertname: BackupTooOld
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: db
+              instance: postgres-primary
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#backuptooold"
+              description: "postgres-primary's last successful pgbackrest backup was more than 26 hours ago. On the single-primary posture, check /var/log/pgbackrest-cron.log inside postgres-primary for the nightly cron job's output, and confirm the cron.d entry itself still exists (docker compose exec postgres-primary cat /etc/cron.d/pgbackrest). On production-ha/Patroni (D-348), the cron entry exists on all three nodes but only the LEADER acts on it — find the leader first (docker compose exec haproxy wget -qO- http://patroni1:8008/), then read /var/log/pgbackrest-cron.log and /etc/cron.d/pgbackrest-patroni inside THAT container; check attome_backup_repo_reachable too, since a repo the monitor cannot read produces this same alert for a different reason. Either way, an un-drilled, un-alerted backup that silently stopped running is functionally no backup at all.\n"
+              summary: "No successful backup in over 26 hours"
+
+  # --- WalArchiveLagHigh --------------------------------------------------
+  - interval: 1m
+    input_series:
+      # Lag climbs linearly from 0 to well past the 15-minute (900s)
+      # threshold over 20 minutes, then holds — models a stalled
+      # archive_command being caught on the next cron-driven metrics tick.
+      - series: 'attome_wal_archive_lag_seconds{instance="postgres-primary",stanza="main"}'
+        values: "0+60x20"   # 0, 60, 120, ... up to 1200 at minute 20, then flat
+
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: WalArchiveLagHigh
+        exp_alerts: []   # 600s < 900s threshold
+
+      - eval_time: 16m
+        alertname: WalArchiveLagHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: db
+              instance: postgres-primary
+              stanza: main
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#walarchivelaghigh"
+              description: "postgres-primary's pg_stat_archiver.last_archived_time is more than 15 minutes old, as of the last nightly metrics-emission tick. archive_timeout (D-067, default 60s) means a HEALTHY deployment's WAL should archive continuously — a lag this large usually means archive_command itself is failing (check postgres-primary's own logs for \"archive_command failed\") or the repo bucket/credentials are unreachable (see deploy/backup/README.md if credentials were recently rotated under the new least-privilege producer policy).\n"
+              summary: "WAL archiving lag above 15 minutes (as of last cron check)"
+
+  # --- ReplicaLagHigh / ReplicaLagCritical (P-ha-failover-hardening, D-125) ---
+  - interval: 15s
+    input_series:
+      # Lag climbs past the 30s threshold at t=45s and holds there — models
+      # spawn_replica_lag_refresh's 15s tick reporting a stuck/slow replica.
+      - series: 'db_replica_lag_seconds{}'
+        values: "0 0 0 45x40" # 0,0,0 for the first three 15s ticks, then 45s flat for 40 more ticks (10m)
+
+    alert_rule_test:
+      - eval_time: 30s
+        alertname: ReplicaLagHigh
+        exp_alerts: [] # still under threshold
+
+      # 2m, not the 75s this originally asserted. `interval:` above is the
+      # INPUT-SERIES resolution; rules are evaluated at the file-level
+      # `evaluation_interval` (1m), so the evaluations are at 0/1m/2m and no
+      # amount of 15s-resolution data changes that. The condition first holds
+      # at the 1m evaluation, which starts the 30s `for`, and the next
+      # evaluation that can promote pending -> firing is 2m. Asserting 75s
+      # asked for a state at a moment the rule was never evaluated — the
+      # alert was pending, and promtool correctly returned no alerts.
+      - eval_time: 2m
+        alertname: ReplicaLagHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: db
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#replicalaghigh"
+              description: "45s of replication lag on the pool `AppState.read_pool` routes reads to. Escalates to critical at 5m sustained (see ReplicaLagCritical) — the sticky-primary pin (P1.12, ~5s default TTL) only protects a user's OWN just-written data from looking stale; other readers routed to this pool can see up to this much staleness on affected surfaces.\n"
+              summary: "Read-replica lag above 30s"
+
+      - eval_time: 75s
+        alertname: ReplicaLagCritical
+        exp_alerts: [] # only 30s past the 45s lag reading started — under the 5m `for`
+
+      - eval_time: 6m
+        alertname: ReplicaLagCritical
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: db
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#replicalagcritical"
+              description: "Same signal as ReplicaLagHigh, escalated: 5 minutes of sustained lag past the 30s threshold means this isn't a transient blip. Check the replica's own logs/host resources (`docker compose logs postgres-replica`) and consider manually routing reads back to the primary until it recovers — `database.replica_max_lag_secs` (reserved, attome-config) is the config hook a future P-read-your-writes-lsn cutover will use to do this automatically; it is not wired to any routing decision yet.\n"
+              summary: "Read-replica lag above 30s, sustained for 5m"
+
+  # --- RedisCoordinationDown (P-redis-security-ha, D-027/finding #31) --------
+  - interval: 1m
+    input_series:
+      # Coordination pool pings healthy (1) for the first two ticks, then
+      # drops to 0 (unreachable) and stays there — models
+      # attome_server::metrics::refresh_once's redis_coordination_up gauge
+      # during a coordination-only outage.
+      - series: 'redis_coordination_up{}'
+        values: "1 1 0x10"
+
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: RedisCoordinationDown
+        exp_alerts: [] # still healthy
+
+      - eval_time: 2m
+        alertname: RedisCoordinationDown
+        exp_alerts: [] # just dropped to 0 this tick — `for: 1m` not satisfied yet
+
+      - eval_time: 3m
+        alertname: RedisCoordinationDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: platform
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#rediscoordinationdown"
+              description: "attome_server::metrics's pool-gauge refresh loop could not ping `state.redis_coordination` — the pool `cache.roles.coordination` gates. Per D-027, S2S nonce/rate-limit calls, the general HTTP rate limiter, and the idempotency gate all fail closed while this is true (S2S 401s/500s, ordinary requests 429/500s) even if `RedisDown` is NOT also firing.\n"
+              summary: "Coordination-role Redis/Dragonfly unreachable"
+
+  # --- RedisCoordinationLatencyHigh (warning + critical, same alert name) ---
+  - interval: 1m
+    input_series:
+      # Ping latency climbs past the 150ms warning threshold at t=2m, holds
+      # there through t=4m (2m sustained -> warning fires), then climbs past
+      # the 300ms critical threshold at t=5m and holds through t=6m (1m
+      # sustained -> critical fires, alongside the still-true warning
+      # condition — both severities co-fire once latency clears 300ms).
+      - series: 'redis_coordination_ping_ms{}'
+        values: "100 100 220 220 220 320 320"
+
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: RedisCoordinationLatencyHigh
+        exp_alerts: [] # only 1m past the 150ms threshold being crossed — under the 2m `for`
+
+      - eval_time: 4m
+        alertname: RedisCoordinationLatencyHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#rediscoordinationlatencyhigh"
+              description: "220ms average ping latency to the coordination-role Redis pool, sustained 2 minutes. This pool gates S2S nonce/rate-limit, the general HTTP rate limiter, and the idempotency gate (D-027) behind a 300ms fail-closed timeout — latency this high means real requests are getting close to that budget and starting to reject.\n"
+              summary: "Coordination-role Redis latency above 150ms (half of the 300ms fail-closed budget) for 2m"
+
+      - eval_time: 5m
+        alertname: RedisCoordinationLatencyHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#rediscoordinationlatencyhigh"
+              description: "320ms average ping latency to the coordination-role Redis pool, sustained 2 minutes. This pool gates S2S nonce/rate-limit, the general HTTP rate limiter, and the idempotency gate (D-027) behind a 300ms fail-closed timeout — latency this high means real requests are getting close to that budget and starting to reject.\n"
+              summary: "Coordination-role Redis latency above 150ms (half of the 300ms fail-closed budget) for 2m"
+          # critical threshold (300ms) just crossed this tick — `for: 1m` not satisfied yet
+
+      - eval_time: 6m
+        alertname: RedisCoordinationLatencyHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#rediscoordinationlatencyhigh"
+              description: "320ms average ping latency to the coordination-role Redis pool, sustained 2 minutes. This pool gates S2S nonce/rate-limit, the general HTTP rate limiter, and the idempotency gate (D-027) behind a 300ms fail-closed timeout — latency this high means real requests are getting close to that budget and starting to reject.\n"
+              summary: "Coordination-role Redis latency above 150ms (half of the 300ms fail-closed budget) for 2m"
+          - exp_labels:
+              severity: critical
+              owner: platform
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#rediscoordinationlatencyhigh"
+              description: "320ms average ping latency to the coordination-role Redis pool — at or past `GUARD_TIMEOUT`/ `CHECK_TIMEOUT`'s 300ms budget, sustained 1 minute. Real S2S/rate-limit/idempotency calls are very likely timing out and being rejected closed right now, not just approaching the edge.\n"
+              summary: "Coordination-role Redis latency at/above the 300ms fail-closed timeout budget for 1m"
+
+  # --- RedisPersistenceDisabled / RedisSnapshotStale (D-356, TODO-007) ------
+  #
+  # The loss half of finding H-8: the gauges existed and metrics.rs claimed
+  # these rules existed, but they did not. These tests pin both the firing
+  # condition and the two non-firing ones that matter — a configured instance
+  # must stay silent, and the "no policy" rule must not also fire when the
+  # policy is merely stale.
+  - interval: 1m
+    input_series:
+      # Configured for the first three minutes, then the policy disappears
+      # (someone redeployed the Dragonfly service without --snapshot_cron —
+      # exactly the regression this rule exists to catch).
+      - series: 'redis_coordination_persistence_policy_configured{}'
+        values: "1 1 1 0 0 0"
+
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: RedisPersistenceDisabled
+        exp_alerts: [] # policy present — silent
+
+      # No `for:` on this rule: it reports a configuration fact, so it fires
+      # on the first evaluation that sees it. That immediacy is the behaviour
+      # under test here, not an accident of the series.
+      - eval_time: 3m
+        alertname: RedisPersistenceDisabled
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: security
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#redispersistencedisabled"
+              description: "This instance is running purely in memory: no Dragonfly `snapshot_cron`, no Redis `save`, no `appendonly`. A restart or failover drops the whole keyspace, which for THIS pool means in-window S2S replay nonces (an accepted request could be replayed) and any `s2s_access_log` entry XADDed but not yet flushed (an accepted machine request with no surviving access record). Set `--snapshot_cron` on the Dragonfly service, or `save`/`appendonly` on Redis, and restart it. Note the honest ceiling even once set: Dragonfly has no AOF and does not implement WAIT, so the guarantee is \"loss bounded by the snapshot interval\", never \"nothing is lost\" — anything needing a real per-write guarantee belongs in PostgreSQL.\n"
+              summary: "The coordination Redis/Dragonfly has no persistence policy"
+
+  - interval: 1m
+    input_series:
+      # Save age climbs past the 600s threshold at t=11m and stays there.
+      # `for: 5m` means the alert must not fire until t=16m.
+      - series: 'redis_coordination_persistence_last_save_age_seconds{}'
+        values: "60 120 180 240 300 360 420 480 540 590 601 661 721 781 841 901 961"
+
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: RedisSnapshotStale
+        exp_alerts: [] # 540s — under the threshold
+
+      - eval_time: 13m
+        alertname: RedisSnapshotStale
+        exp_alerts: [] # over the threshold, but only 2m of it — under the 5m `for`
+
+      - eval_time: 16m
+        alertname: RedisSnapshotStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: security
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#redissnapshotstale"
+              description: "A persistence policy IS configured but saves are not completing — check disk space and permissions on the Dragonfly/Redis `--dir` volume, and `redis_coordination_persistence_changes_since_save` for how much has accumulated. Everything written since the last successful save is lost on restart, and for this pool that is replay nonces and unflushed access-log entries.\n"
+              summary: "The coordination store has not completed a snapshot in over 10 minutes"
+
+  # --- S2sAccessLogBacklogGrowing (D-356, TODO-007) -------------------------
+  #
+  # The lag half of H-8. The interesting case is the second one: a burst that
+  # the 30s flusher drains must NOT page, or the alert gets muted and the real
+  # wedged-consumer case goes with it.
+  - interval: 1m
+    input_series:
+      # A spike to 5000 that drains back to near zero within four minutes.
+      - series: 's2s_access_log_stream_pending{}'
+        values: "0 5000 4000 900 20 0 0 0 0 0 0 0"
+
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: S2sAccessLogBacklogGrowing
+        exp_alerts: [] # above the threshold, but nowhere near the 10m `for`
+
+      - eval_time: 11m
+        alertname: S2sAccessLogBacklogGrowing
+        exp_alerts: [] # drained long ago — a transient burst must not page
+
+  - interval: 1m
+    input_series:
+      # A wedged consumer: the backlog crosses the threshold at t=2m and never
+      # comes back, so the alert fires once 10m have elapsed (t=12m).
+      - series: 's2s_access_log_stream_pending{}'
+        values: "0 400 1200 2000 2800 3600 4400 5200 6000 6800 7600 8400 9200"
+
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: S2sAccessLogBacklogGrowing
+        exp_alerts: [] # 9m sustained — one minute short of the `for`
+
+      - eval_time: 12m
+        alertname: S2sAccessLogBacklogGrowing
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: security
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#s2saccesslogbackloggrowing"
+              description: "Entries are being XADDed faster than the 30s flusher commits them to `s2s_access_log`, or the flusher has stopped. Every pending entry is an accepted S2S request whose access record exists only in Redis — if the instance is lost before the flush, so is the record. Check the server logs for \"s2s access-log flush\" errors and confirm the PostgreSQL write path is healthy. Cross-check RedisPersistenceDisabled: a backlog on a non-persistent instance is the full H-8 failure mode.\n"
+              summary: "S2S access-log entries are accumulating unflushed in Redis"
+
+  - interval: 1m
+    input_series:
+      # A sweep whose last success is frozen: it crosses the two-hour floor at
+      # t=2m and never recovers, so the 15m `for` fires at t=17m.
+      - series: 'job_schedule_last_success_age_seconds{name="nightly_prune"}'
+        values: "0 0 8000 8000 8000 8000 8000 8000 8000 8000 8000 8000 8000 8000 8000 8000 8000 8000 8000"
+
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: JobScheduleStale
+        exp_alerts: [] # 14m sustained - one minute short of the for
+
+      - eval_time: 17m
+        alertname: JobScheduleStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              name: nightly_prune
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#jobschedulestale"
+              description: "A schedule's last success is older than two hours. The intended threshold is twice the schedule's own interval; the generic rule above uses two hours as the floor, so narrow it per schedule in the deployment overlay where the interval is known. A schedule that has never succeeded emits no sample, so silence here can also mean \"never ran\" - check job_schedule.\n"
+              summary: "A periodic sweep has not succeeded in a long time"
+
+  - interval: 1m
+    input_series:
+      # The oldest queued job crosses 900s at t=2m and stays there, so the 10m
+      # `for` fires at t=12m.
+      - series: 'apalis_oldest_pending_age_seconds{queue="interactive"}'
+        values: "0 0 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000"
+
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: ApalisOldestPendingAgeHigh
+        exp_alerts: [] # 9m sustained - one minute short of the for
+
+      - eval_time: 12m
+        alertname: ApalisOldestPendingAgeHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              queue: interactive
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#apalisoldestpendingagehigh"
+              description: "The oldest Pending row in a queue is older than 15 minutes, which means the worker is not draining it - check that the worker process is running and that its concurrency is not saturated by a slow kind. The queue label names the interactive or batch namespace.\n"
+              summary: "A queued job has been pending for over 15 minutes"
+
+  - interval: 1m
+    input_series:
+      # One failing kind, one failure a minute: the 15m rate is positive from
+      # t=1m, so the 15m `for` fires at t=16m.
+      - series: 'platform_jobs_total{kind="SendEmail",outcome="failed"}'
+        values: "0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22"
+
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: PlatformJobFailures
+        exp_alerts: [] # 13m sustained - short of the 15m for
+
+      - eval_time: 17m
+        alertname: PlatformJobFailures
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+              kind: SendEmail
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#platformjobfailures"
+              description: "A job kind has failed at least once every few minutes for 15 minutes. Check the worker's logs for that kind (the job's own outcome error is logged with its kind and schedule name), and whether its payload is one this build's envelope cannot decode - an unknown variant settles as Killed rather than retrying forever.\n"
+              summary: "A platform job kind is failing repeatedly"
+
+  - interval: 1m
+    input_series:
+      # One failed presign: `increase` needs two samples, so the very first
+      # step fires the alert (its `for` is 0m).
+      - series: 'storage_presign_failures_total{}'
+        values: "0 1 1 1 1 1 1"
+
+    alert_rule_test:
+      - eval_time: 0m
+        alertname: StoragePresignFailures
+        exp_alerts: [] # a single sample is no increase yet
+
+      - eval_time: 1m
+        alertname: StoragePresignFailures
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#storagepresignfailures"
+              description: "Every failure here is a 500 on the upload/download routes (attome_storage::presign). Check the S3 credentials (D-549 rotation is restart-applied), the configured expiry range, and key traversal validation for the key being signed.\n"
+              summary: "Presigned URL signing is failing"
+
+  - interval: 1m
+    input_series:
+      # A probe that crosses 1.5s at t=1m and stays slow: the 5m `for` fires at
+      # t=6m.
+      - series: 'object_storage_probe_latency_seconds{}'
+        values: "0 2 2 2 2 2 2 2"
+
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ObjectStorageProbeLatencyHigh
+        exp_alerts: [] # 4m sustained - one minute short of the for
+
+      - eval_time: 6m
+        alertname: ObjectStorageProbeLatencyHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#objectstorageprobelatencyhigh"
+              description: "attome_storage::health_check records this for every outcome. The probe is hard-capped at HEALTH_CHECK_TIMEOUT (2s, below the smallest request_timeout_secs of 5s), so a probe this slow is one hiccup away from reporting timeout and closing D-344's ObjectStorage capability gate.\n"
+              summary: "Object-storage probe approaching its 2s hard timeout"
+
+  - interval: 1m
+    input_series:
+      # A queued upload crosses 900s at t=1m and stays: the 5m `for` fires at
+      # t=6m.
+      - series: 'upload_scan_backlog_oldest_seconds{}'
+        values: "0 1000 1000 1000 1000 1000 1000 1000"
+
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: UploadScanBacklogStale
+        exp_alerts: [] # 4m sustained - one minute short of the for
+
+      - eval_time: 6m
+        alertname: UploadScanBacklogStale
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#uploadscanbacklogstale"
+              description: "Runbook: confirm storage.clamd_address points at a live clamd (the docker-compose 'clamav' profile brings one up) and that the worker processing scan jobs is running. A session whose scan never completes is rejected by the 24-hour sweep, so this alert is the warning before that happens.\n"
+              summary: "A file upload has waited over 15 minutes to be scanned"
+
+  - interval: 1m
+    input_series:
+      # A ceiling is configured and the instance sits at 90% of it from t=1m,
+      # so the 10m `for` fires at t=11m.
+      - series: 'redis_coordination_maxmemory_bytes{}'
+        values: "1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000 1000"
+      - series: 'redis_coordination_used_memory_bytes{}'
+        values: "0 900 900 900 900 900 900 900 900 900 900 900 900"
+
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: RedisCoordinationMemoryHigh
+        exp_alerts: [] # 9m sustained - one minute short of the for
+
+      - eval_time: 11m
+        alertname: RedisCoordinationMemoryHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#rediscoordinationmemoryhigh"
+              description: "The coordination store holds nonces, rate limits, sessions and the drain watch, and attome-cache's fail-closed controls depend on their keys still being there. The store runs noeviction, so at its ceiling writes fail and those controls refuse requests - check what grew (the profiler keyspace is the usual runaway), then raise the ceiling or delete deliberately before it fills.\n"
+              summary: "Coordination Redis is over 80% of its memory ceiling"
+
+  - interval: 5m
+    input_series:
+      # No ceiling at all, which is the failure mode the 80% rule cannot see:
+      # the `for` is 1h, so this fires at t=60m.
+      - series: 'redis_coordination_maxmemory_bytes{}'
+        values: "0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+
+    alert_rule_test:
+      - eval_time: 55m
+        alertname: RedisCoordinationNoMemoryCeiling
+        exp_alerts: [] # 55m - short of the 1h for
+
+      - eval_time: 60m
+        alertname: RedisCoordinationNoMemoryCeiling
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#rediscoordinationnomemoryceiling"
+              description: "maxmemory is unset, so the instance grows until the host kills it (BCA-F4). Set it on the coordination service, and note that while it is unset the 80% rule above cannot fire at all.\n"
+              summary: "Coordination Redis runs without a memory ceiling"
+
+  # ── attome-email plan BEM-10 (2026-09-25) ─────────────────────────────────
+  - interval: 1m
+    input_series:
+      # 10 sent + 5 transient per minute: a third of relay attempts fail,
+      # above the 20% ratio and the 5-send volume floor. `suppressed` is
+      # present to prove it stays out of the denominator.
+      - series: 'email_send_total{outcome="sent"}'
+        values: "0+10x30"
+      - series: 'email_send_total{outcome="transient"}'
+        values: "0+5x30"
+      - series: 'email_send_total{outcome="suppressed"}'
+        values: "0+100x30"
+
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: EmailRelayFailureRatioHigh
+        exp_alerts: [] # condition true, still inside the 10m for
+
+      - eval_time: 20m
+        alertname: EmailRelayFailureRatioHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: integration
+            exp_annotations:
+              summary: "More than 20% of email sends are failing at the relay"
+              description: "33.33% of SMTP sends over 15m ended transient or permanent_relay. Run preflight against the relay and check its credentials and sender policy.\n"
+              runbook_url: "deploy/email/README.md#relay-outage"
+
+  - interval: 1m
+    input_series:
+      # Healthy relay: sent only. Must stay silent.
+      - series: 'email_send_total{outcome="sent"}'
+        values: "0+10x30"
+      - series: 'email_send_total{outcome="transient"}'
+        values: "0x30"
+
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: EmailRelayFailureRatioHigh
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      # One send ends `unknown` at t=3m.
+      - series: 'email_send_total{outcome="unknown"}'
+        values: "0 0 0 1 1 1 1 1 1 1"
+
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: EmailSendOutcomeUnknown
+        exp_alerts: []
+
+      - eval_time: 5m
+        alertname: EmailSendOutcomeUnknown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              owner: integration
+            exp_annotations:
+              summary: "An email send ended with an unknown outcome"
+              description: "At least one send timed out at or after DATA in the last 15m and was not retried. Check the relay's logs for each ledger row with status=unknown and resend only what it did not accept.\n"
+              runbook_url: "deploy/email/README.md#unknown-outcome-triage"
+
+  - interval: 5m
+    input_series:
+      # 10 hard bounces every 5 minutes (~120/h) fires; a large admin_manual
+      # import alone must not.
+      - series: 'email_suppression_added_total{reason="hard_bounce"}'
+        values: "0+10x12"
+      - series: 'email_suppression_added_total{reason="admin_manual"}'
+        values: "0+100x12"
+
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: EmailSuppressionSpike
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: integration
+            exp_annotations:
+              summary: "More than 25 addresses auto-suppressed in the last hour"
+              description: "120 recipients were added to the suppression list by hard_bounce/complaint in 1h. Group the suppressions by detail; one identical relay reply across many addresses is a false suppression.\n"
+              runbook_url: "deploy/email/README.md#mass-false-suppression"
+
+  - interval: 5m
+    input_series:
+      - series: 'email_suppression_added_total{reason="admin_manual"}'
+        values: "0+100x12"
+
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: EmailSuppressionSpike
+        exp_alerts: [] # deliberate admin adds never page
+
+  - interval: 1m
+    input_series:
+      # The summary quantile the recorder exports sits at 70s.
+      - series: 'email_send_duration_seconds{quantile="0.95"}'
+        values: "70x20"
+      - series: 'email_send_duration_seconds{quantile="0.5"}'
+        values: "2x20"
+
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: EmailSendSlow
+        exp_alerts: [] # inside the 10m for
+
+      - eval_time: 15m
+        alertname: EmailSendSlow
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: integration
+            exp_annotations:
+              summary: "Email send p95 above 60s"
+              description: "The p95 SMTP send duration is 70s, half of the 120s whole-send deadline. Sends that cross it end as unknown and are not retried.\n"
+              runbook_url: "deploy/email/README.md#slow-sends"
+
+  - interval: 1m
+    input_series:
+      # One event is dead-lettered at t=3m; the counter never moves again.
+      - series: 'workflow_trigger_dead_letters_total'
+        values: "0 0 0 1 1 1 1 1"
+
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: WorkflowTriggerDeadLettered
+        exp_alerts: [] # nothing dead-lettered yet
+
+      - eval_time: 5m
+        alertname: WorkflowTriggerDeadLettered
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              owner: platform
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#workflowtriggerdeadlettered"
+              summary: "A workflow entity-trigger event was dead-lettered"
+              description: "An entity change event failed workflow dispatch repeatedly and was skipped, so the workflows it matched did not start or resume. GET /api/v1/workflow/trigger-dead-letters names the record and last_error; replay it once the cause is fixed.\n"
+
+  # ══ SLO burn-rate rules (M86 O1, runtime-performance §1.1) ═══════════════
+  # Generated together with the rules (the descriptions are written once), so
+  # the rendered text below is the rule text with its labels substituted.
+
+  # --- S4 at 50% over budget, 10 req/s: fast and slow latency burns fire ---
+  - interval: 1m
+    input_series:
+      - series: 'axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/{entity}/{id}",status="200"}'
+        values: "0+600x30"
+      - series: 'axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/{entity}/{id}",status="200",le="0.1"}'
+        values: "0+300x30"
+      - series: 'axum_http_requests_total{method="GET",endpoint="/api/v1/{entity}/{id}",status="200"}'
+        values: "0+600x30"
+    promql_expr_test:
+      - expr: attome:slo_latency_bad:ratio_rate5m{slo_class="S4"}
+        eval_time: 10m
+        exp_samples:
+          - labels: 'attome:slo_latency_bad:ratio_rate5m{slo_class="S4",slo_p99_ms="100",slo_route="GET /api/v1/{entity}/{id}"}'
+            value: 0.5
+      - expr: attome:slo_errors:ratio_rate1h{slo_class="S4"}
+        eval_time: 10m
+        exp_samples:
+          # no 5xx series at all: the `or vector(0)` keeps the ratio at 0, not absent
+          - labels: 'attome:slo_errors:ratio_rate1h{slo_class="S4",slo_p99_ms="100",slo_route="GET /api/v1/{entity}/{id}"}'
+            value: 0
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SloLatencyBurnFast
+        exp_alerts:
+          - exp_labels:
+              severity: "critical"
+              owner: "platform"
+              slo_class: "S4"
+              slo_route: "GET /api/v1/{entity}/{id}"
+              slo_p99_ms: "100"
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#slolatencyburnfast"
+              summary: "S4 is burning its latency budget at 14.4x"
+              description: "More than 14.4% of GET /api/v1/{entity}/{id} requests took longer than the S4 p99 budget of 100ms over both the last hour and the last 5 minutes. The objective is 99% within budget (runtime-performance §1.1); at this rate the 30-day budget is gone in about two days.\n"
+      - eval_time: 20m
+        alertname: SloLatencyBurnSlow
+        exp_alerts:
+          - exp_labels:
+              severity: "warning"
+              owner: "platform"
+              slo_class: "S4"
+              slo_route: "GET /api/v1/{entity}/{id}"
+              slo_p99_ms: "100"
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#slolatencyburnslow"
+              summary: "S4 is burning its latency budget at 6x"
+              description: "More than 6% of GET /api/v1/{entity}/{id} requests took longer than the S4 p99 budget of 100ms over both the last 6 hours and the last 30 minutes. The objective is 99% within budget; at this rate the 30-day budget is gone in about five days. Ticket, not page.\n"
+      - eval_time: 10m
+        alertname: SloErrorBurnFast
+        exp_alerts: []
+
+  # --- S4 healthy: 99.5% within budget, no 5xx — every burn rule silent ----
+  - interval: 1m
+    input_series:
+      - series: 'axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/{entity}/{id}",status="200"}'
+        values: "0+600x40"
+      - series: 'axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/{entity}/{id}",status="200",le="0.1"}'
+        values: "0+597x40"
+      - series: 'axum_http_requests_total{method="GET",endpoint="/api/v1/{entity}/{id}",status="200"}'
+        values: "0+600x40"
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: SloLatencyBurnFast
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: SloLatencyBurnSlow
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: SloErrorBurnFast
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: SloErrorBurnSlow
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: SloLatencyBucketMissing
+        exp_alerts: []
+
+  # --- Quiet deployment: S4 50% over budget but 0.5 req/s — the traffic ----
+  # guard keeps both latency burns from paging.
+  - interval: 1m
+    input_series:
+      - series: 'axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/{entity}/{id}",status="200"}'
+        values: "0+30x40"
+      - series: 'axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/{entity}/{id}",status="200",le="0.1"}'
+        values: "0+15x40"
+      - series: 'axum_http_requests_total{method="GET",endpoint="/api/v1/{entity}/{id}",status="200"}'
+        values: "0+30x40"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SloLatencyBurnFast
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: SloLatencyBurnSlow
+        exp_alerts: []
+
+  # --- S6 (PATCH) at 5% 5xx, all fast: both error burns fire, latency ------
+  # stays silent (le="0.2" is the S6 budget bucket M86 O1 adds).
+  - interval: 1m
+    input_series:
+      - series: 'axum_http_requests_duration_seconds_count{method="PATCH",endpoint="/api/v1/{entity}/{id}",status="200"}'
+        values: "0+600x30"
+      - series: 'axum_http_requests_duration_seconds_bucket{method="PATCH",endpoint="/api/v1/{entity}/{id}",status="200",le="0.2"}'
+        values: "0+600x30"
+      - series: 'axum_http_requests_total{method="PATCH",endpoint="/api/v1/{entity}/{id}",status="200"}'
+        values: "0+570x30"
+      - series: 'axum_http_requests_total{method="PATCH",endpoint="/api/v1/{entity}/{id}",status="500"}'
+        values: "0+30x30"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SloErrorBurnFast
+        exp_alerts:
+          - exp_labels:
+              severity: "critical"
+              owner: "platform"
+              slo_class: "S6"
+              slo_route: "PATCH /api/v1/{entity}/{id}"
+              slo_p99_ms: "200"
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#sloerrorburnfast"
+              summary: "S6 is burning its 5xx budget at 14.4x"
+              description: "More than 1.44% of PATCH /api/v1/{entity}/{id} requests returned 5xx over both the last hour and the last 5 minutes. The objective is under 0.1% 5xx over 30 days (runtime-performance Y1); at this rate the budget is gone in about two days.\n"
+      - eval_time: 20m
+        alertname: SloErrorBurnSlow
+        exp_alerts:
+          - exp_labels:
+              severity: "warning"
+              owner: "platform"
+              slo_class: "S6"
+              slo_route: "PATCH /api/v1/{entity}/{id}"
+              slo_p99_ms: "200"
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#sloerrorburnslow"
+              summary: "S6 is burning its 5xx budget at 6x"
+              description: "More than 0.6% of PATCH /api/v1/{entity}/{id} requests returned 5xx over both the last 6 hours and the last 30 minutes. The objective is under 0.1% 5xx over 30 days; at this rate the budget is gone in about five days. Ticket, not page.\n"
+      - eval_time: 10m
+        alertname: SloLatencyBurnFast
+        exp_alerts: []
+
+  # --- Default buckets: S1 has traffic but no 60 ms bucket (only 50/100) ---
+  # so SloLatencyBucketMissing fires for S1 alone; S4's 100 ms bucket exists.
+  - interval: 1m
+    input_series:
+      - series: 'axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami",status="200"}'
+        values: "0+600x30"
+      - series: 'axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/admin/security/whoami",status="200",le="0.05"}'
+        values: "0+500x30"
+      - series: 'axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/admin/security/whoami",status="200",le="0.1"}'
+        values: "0+600x30"
+      - series: 'axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/{entity}/{id}",status="200"}'
+        values: "0+600x30"
+      - series: 'axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/{entity}/{id}",status="200",le="0.1"}'
+        values: "0+600x30"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SloLatencyBucketMissing
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: SloLatencyBucketMissing
+        exp_alerts:
+          - exp_labels:
+              severity: "warning"
+              owner: "platform"
+              slo_class: "S1"
+              slo_route: "GET /api/v1/admin/security/whoami"
+              slo_p99_ms: "60"
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#slolatencybucketmissing"
+              summary: "S1 latency SLO cannot be measured: no 60ms bucket"
+              description: "GET /api/v1/admin/security/whoami is serving traffic but the request histogram has no le bucket at the 60ms p99 budget, so the latency burn alerts for S1 are blind. The bucket list (attome_server::metrics::HTTP_DURATION_BUCKETS) and the SLO budgets have drifted apart: add the missing boundary.\n"
+
+  # ══ Portal (web-portal-users §5) ═════════════════════════════════════════
+  # --- 80% of 10 logins/min fail: fires after the 10m for -----------------
+  - interval: 1m
+    input_series:
+      - series: 'portal_auth_total{outcome="bad_credentials"}'
+        values: "0+8x30"
+      - series: 'portal_auth_total{outcome="success"}'
+        values: "0+2x30"
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: PortalLoginFailureRatioHigh
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: PortalLoginFailureRatioHigh
+        exp_alerts:
+          - exp_labels:
+              severity: "warning"
+              owner: "security"
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#portalloginfailureratiohigh"
+              summary: "More than half of portal password logins are failing"
+              description: "Over 15 minutes, more than 50% of portal password logins ended bad_credentials or locked, across at least 20 attempts. A spike concentrated on few accounts is credential stuffing or a forgotten password; a spike across every account after a release is a login defect. Read the portal_request spans and warn logs for the source before acting.\n"
+
+  # --- Healthy portal (1 in 11 fails) and a quiet one (all fail, ~15 in ---
+  # 15m, under the 20-attempt floor) both stay silent.
+  - interval: 1m
+    input_series:
+      - series: 'portal_auth_total{outcome="bad_credentials"}'
+        values: "0+1x30"
+      - series: 'portal_auth_total{outcome="success"}'
+        values: "0+10x30"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: PortalLoginFailureRatioHigh
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'portal_auth_total{outcome="bad_credentials"}'
+        values: "0+1x30"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: PortalLoginFailureRatioHigh
+        exp_alerts: []
+
+  # --- One drifted grant at t=3m; one failed cache bump at t=3m -----------
+  - interval: 1m
+    input_series:
+      - series: 'portal_plan_match_nothing_total'
+        values: "0 0 0 1 1 1 1 1"
+      - series: 'portal_cache_invalidation_failed_total'
+        values: "0 0 0 1 1 1 1 1"
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: PortalGrantDrift
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: PortalGrantDrift
+        exp_alerts:
+          - exp_labels:
+              severity: "warning"
+              owner: "platform"
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#portalgrantdrift"
+              summary: "A portal access grant no longer matches anything"
+              description: "At least one portal grant condition stopped rendering in the last hour, so the portal users it covers see no rows through it. The warn log next to each increment names the role and the grant; fix the condition through the portal admin API.\n"
+      - eval_time: 2m
+        alertname: PortalCacheInvalidationFailed
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: PortalCacheInvalidationFailed
+        exp_alerts:
+          - exp_labels:
+              severity: "warning"
+              owner: "security"
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#portalcacheinvalidationfailed"
+              summary: "A portal access-cache invalidation failed after an admin write"
+              description: "A portal admin change committed but the access-version bump on the cache Redis failed, so other nodes may keep serving the previous grant for up to 30 seconds. Check RedisDown and the cache pool; repeat failures mean every revocation lags by the cache TTL.\n"
+
+  # ══ Event bus (M62 §4.3, M86 O5) ═════════════════════════════════════════
+  # --- webhook lag 5000 on one node, audit 10: only webhook fires ---------
+  - interval: 1m
+    input_series:
+      - series: 'events_subscription_lag_max{kind="webhook",instance="node-a"}'
+        values: "5000x20"
+      - series: 'events_subscription_lag_max{kind="webhook",instance="node-b"}'
+        values: "0x20"
+      - series: 'events_subscription_lag_max{kind="audit",instance="node-a"}'
+        values: "10x20"
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: EventDeliveryBacklogGrowing
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: EventDeliveryBacklogGrowing
+        exp_alerts:
+          - exp_labels:
+              severity: "warning"
+              owner: "integration"
+              kind: "webhook"
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#eventdeliverybackloggrowing"
+              summary: "A webhook event subscription is more than 1000 rows behind"
+              description: "An active webhook subscription has had more than 1000 unread feed rows for 10 minutes, so dispatch is not keeping up or has stopped. Check the worker, events_dispatch_failures_total for a stuck subscription, and the per-subscription lag at GET /api/v1/admin/events/subscriptions/{id}/deliveries. A value pinned at 10000 is the gauge cap: at least that far behind.\n"
+
+  # --- attempts_exhausted at t=3m pages; subscription_gone never does -----
+  - interval: 1m
+    input_series:
+      - series: 'events_dead_lettered_total{kind="webhook",reason="attempts_exhausted"}'
+        values: "0 0 0 1 1 1 1 1"
+      - series: 'events_dead_lettered_total{kind="webhook",reason="subscription_gone"}'
+        values: "0 0 5 5 5 5 5 5"
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: EventDeliveryDeadLettered
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: EventDeliveryDeadLettered
+        exp_alerts:
+          - exp_labels:
+              severity: "warning"
+              owner: "integration"
+              kind: "webhook"
+              reason: "attempts_exhausted"
+            exp_annotations:
+              runbook_url: "observability/RUNBOOK.md#eventdeliverydeadlettered"
+              summary: "webhook event deliveries were dead-lettered (attempts_exhausted)"
+              description: "At least one webhook delivery gave up with reason attempts_exhausted in the last hour, so its receiver never got the event. attempts_exhausted means the receiver was down past every retry; bad_url, ssrf_rejected and no_target mean the subscription target is wrong. Find the rows through the deliveries route and fix the subscription through the admin API.\n"

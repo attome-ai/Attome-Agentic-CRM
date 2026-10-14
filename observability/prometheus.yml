@@ -1,0 +1,54 @@
+# M86 O3 — reference Prometheus configuration, the template a deployment
+# copies. Run by the `prometheus` service of docker-compose.yml's
+# `observability` profile (dark unless that profile is started):
+#
+#   docker compose --profile observability up -d prometheus alertmanager grafana
+#
+# Scrape targets are the per-process metrics listeners
+# (`observability.metrics_port`, 9464 in every config template; D-064). They
+# bind inside the compose network only and are never proxied through nginx.
+# DNS service discovery (type A) finds every replica of a scaled service, so
+# `docker compose up --scale server=3` needs no edit here. A `worker` that is
+# not running (no `worker-split` profile) resolves to no targets rather than
+# a down target; ApalisWorkerNeverSeen covers that case.
+#
+# `evaluation_interval` matches observability/alerts_test.yml, so the
+# promtool timings (`for:` durations, burn windows) hold as tested.
+
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 1m
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: attome-server
+    dns_sd_configs:
+      - names: ["server"]
+        type: A
+        port: 9464
+
+  - job_name: attome-worker
+    dns_sd_configs:
+      - names: ["worker"]
+        type: A
+        port: 9464
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Host-level signals (DiskSpaceLow/Critical, BackupTooOld, WalArchiveLagHigh)
+  # come from a node_exporter on the host with its textfile collector pointed
+  # at the backup-metrics volume. This profile does not run one; add a job
+  # like the following where it exists.
+  # - job_name: node
+  #   static_configs:
+  #     - targets: ["host.docker.internal:9100"]

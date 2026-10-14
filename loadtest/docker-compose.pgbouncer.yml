@@ -1,0 +1,21 @@
+# P1.8d step 5 — overlay adding a pgbouncer in front of postgres-loadtest,
+# for the P1.12 "does a transaction pooler keep Postgres connection count
+# down at N=20+ app nodes" exercise. Not part of the base loadtest stack
+# (docker-compose.loadtest.yml) because most of steps 1-6 don't need it —
+# only run this overlay for the pgbouncer side of the step-5 comparison.
+#
+# Usage:
+#   docker compose -f docker-compose.loadtest.yml -f docker-compose.pgbouncer.yml up -d pgbouncer-loadtest
+#
+# Host port 6433 (not 6432 — that's the real P1.12 recipe's port; keeping
+# them numerically distinct is a guard against ever pointing a real
+# deployment's config at this throwaway one by copy-paste accident).
+services:
+  pgbouncer-loadtest:
+    build:
+      context: ./pgbouncer
+    ports:
+      - "6433:6432"
+    depends_on:
+      postgres-loadtest:
+        condition: service_healthy

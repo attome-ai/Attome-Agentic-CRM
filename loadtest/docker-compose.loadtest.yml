@@ -1,0 +1,41 @@
+# P1.8d — isolated infrastructure for the load-testing harness.
+#
+# Deliberately NOT docker-compose.dev.yml and NOT docker-compose.yml: this is
+# its own Postgres + Dragonfly pair, on non-default ports, with its own
+# volumes, so a load run can never touch attomedb/attome_dev (the shared dev
+# database) or a real deployment. Database name contains "loadtest" on
+# purpose — scripts/common.ps1's safety guard checks for that substring
+# before doing anything destructive/heavy.
+#
+# Usage: docker compose -f docker-compose.loadtest.yml up -d
+#        docker compose -f docker-compose.loadtest.yml down -v   # wipe between runs
+
+services:
+  postgres-loadtest:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: attome_loadtest
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: loadtest-throwaway-pw
+    ports:
+      - "5556:5432"
+    volumes:
+      # Postgres 18's image expects a mount at the parent dir (it manages
+      # its own major-version-specific subdirectory now) — mounting at
+      # .../data directly trips its "unused mount/volume" guard.
+      - pg-loadtest-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  dragonfly-loadtest:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    ports:
+      - "6380:6379"
+    ulimits:
+      memlock: -1
+
+volumes:
+  pg-loadtest-data:

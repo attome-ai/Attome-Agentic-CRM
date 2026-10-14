@@ -1,0 +1,5 @@
+# Generated per-run node configs (throwaway secrets, real ports) and process logs/pids —
+# regenerated every time scripts/start-nodes.ps1 runs, never hand-edited, never committed.
+.generated/
+logs/
+results/

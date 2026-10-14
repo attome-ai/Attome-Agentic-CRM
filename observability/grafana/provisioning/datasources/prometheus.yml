@@ -1,0 +1,14 @@
+# M86 O3 — Grafana datasource for the reference stack (`observability`
+# compose profile). observability/dashboard.json selects its datasource
+# through a `${datasource}` variable of type prometheus, so this default
+# datasource is picked up without editing the dashboard.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    uid: attome-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false

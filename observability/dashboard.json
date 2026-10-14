@@ -1,0 +1,230 @@
+{
+  "title": "Attome Platform — Overview (P-observability-bcdr Track A)",
+  "uid": "attome-platform-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "timezone": "utc",
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "tags": ["attome", "track-a"],
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "HTTP request rate (by status class)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(axum_http_requests_total[5m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP error rate (5xx / total)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "targets": [
+        {
+          "expr": "sum(rate(axum_http_requests_total{status=~\"5..\"}[5m])) / sum(rate(axum_http_requests_total[5m]))",
+          "legendFormat": "5xx rate"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Request latency P50 / P99 (by matched path — group into guidelines §14.5 classes via the Grafana legend/regex, not a Rust-side label)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(axum_http_requests_duration_seconds_bucket[5m])) by (le, path))",
+          "legendFormat": "P50 {{path}}"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(axum_http_requests_duration_seconds_bucket[5m])) by (le, path))",
+          "legendFormat": "P99 {{path}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "DB pool utilization (main)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "db_pool_size", "legendFormat": "size" },
+        { "expr": "db_pool_idle", "legendFormat": "idle" },
+        { "expr": "db_pool_size - db_pool_idle", "legendFormat": "in use" }
+      ]
+    },
+    {
+      "id": 5,
+      "title": "DB pool utilization (readonly)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        { "expr": "db_readonly_pool_size", "legendFormat": "size" },
+        { "expr": "db_readonly_pool_idle", "legendFormat": "idle" },
+        { "expr": "db_readonly_pool_size - db_readonly_pool_idle", "legendFormat": "in use" }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Redis reachability",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 24 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ]
+        }
+      },
+      "targets": [{ "expr": "redis_up" }]
+    },
+    {
+      "id": 7,
+      "title": "Redis ping latency",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 24 },
+      "fieldConfig": { "defaults": { "unit": "ms" } },
+      "targets": [{ "expr": "redis_ping_ms", "legendFormat": "ping" }]
+    },
+    {
+      "id": 8,
+      "title": "apalis pending jobs",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 24 },
+      "targets": [{ "expr": "apalis_pending_jobs", "legendFormat": "pending" }]
+    },
+    {
+      "id": 9,
+      "title": "Audit chainer lag",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 24 },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "description": "Only meaningful once audit.chainer_enabled = true (D-029) and audit_chainer is deployed as its own process.",
+      "targets": [
+        { "expr": "audit_chainer_lag_seconds", "legendFormat": "lag" },
+        { "expr": "audit_chainer_pending_ingest", "legendFormat": "pending ingest rows" }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "Metadata registry catch-up rate",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "targets": [
+        { "expr": "rate(registry_catchup_entities_total[5m])", "legendFormat": "entities patched/s" }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Audit chain batch throughput",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "targets": [
+        { "expr": "rate(audit_chain_batch_events_total[5m])", "legendFormat": "events chained/s" }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Partitioned table dead-tuple ratio (P-db-maintenance)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 40 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "description": "Summed across every leaf partition of each table (migrations/0026_audit_partitioning.sql). A climbing ratio despite autovacuum running (see the panel below) means the storage parameters in attome-metadata::provision / migration 0026 need re-tuning, not that something is broken.",
+      "targets": [
+        {
+          "expr": "db_bloat_dead_tuples / clamp_min(db_bloat_dead_tuples + db_bloat_live_tuples, 1)",
+          "legendFormat": "{{table}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "title": "Partitioned table size + autovacuum recency (P-db-maintenance)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 40 },
+      "fieldConfig": { "defaults": { "unit": "bytes" } },
+      "targets": [
+        { "expr": "db_bloat_total_bytes", "legendFormat": "{{table}} total bytes" },
+        { "expr": "db_bloat_seconds_since_last_autovacuum", "legendFormat": "{{table}} seconds since last autovacuum" }
+      ]
+    },
+    {
+      "id": 15,
+      "title": "Object storage reachability",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 48 },
+      "fieldConfig": { "defaults": { "unit": "bool_yes_no" } },
+      "targets": [
+        { "expr": "object_storage_up", "legendFormat": "reachable" }
+      ]
+    },
+    {
+      "id": 16,
+      "title": "Security rejections by reason",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 56 },
+      "description": "s2s_replay / s2s_rate_limit / rate_limit / csrf / revoked_token / epoch_stale — see SecurityAnomalyRateHigh's own alert-rule comment for the four call sites this counter is incremented from.",
+      "targets": [
+        { "expr": "sum by (reason) (rate(security_rejection_total[5m]))", "legendFormat": "{{reason}}" }
+      ]
+    },
+    {
+      "id": 17,
+      "title": "SLO latency: share of requests over the class p99 budget (1h)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 64 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "description": "attome-slo recording rules (M86 O1, runtime-performance §1.1). The objective is 1% or less; SloLatencyBurnFast pages at 14.4% over 1h and 5m. A class with no line has no histogram bucket at its budget (SloLatencyBucketMissing).",
+      "targets": [
+        { "expr": "attome:slo_latency_bad:ratio_rate1h", "legendFormat": "{{slo_class}} {{slo_route}} (p99 {{slo_p99_ms}}ms)" }
+      ]
+    },
+    {
+      "id": 18,
+      "title": "SLO availability: 5xx share per class (1h)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 64 },
+      "fieldConfig": { "defaults": { "unit": "percentunit" } },
+      "description": "attome-slo recording rules. The objective is under 0.1%; SloErrorBurnFast pages at 1.44% over 1h and 5m.",
+      "targets": [
+        { "expr": "attome:slo_errors:ratio_rate1h", "legendFormat": "{{slo_class}} {{slo_route}}" }
+      ]
+    }
+  ]
+}
