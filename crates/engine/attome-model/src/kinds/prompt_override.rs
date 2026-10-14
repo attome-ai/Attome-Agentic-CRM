@@ -87,8 +87,9 @@ fn slots_in(text: &str) -> Vec<&str> {
 pub fn render(locked: &str, doc: &Value, values: &BTreeMap<String, String>) -> String {
     let mut out = String::from(locked.trim_end());
     for section in doc["sections"].as_array().into_iter().flatten() {
-        let mut text = section["text"].as_str().unwrap_or_default().to_owned();
-        for name in slots_in(&section["text"].as_str().unwrap_or_default().to_owned()) {
+        let source = section["text"].as_str().unwrap_or_default();
+        let mut text = source.to_owned();
+        for name in slots_in(source) {
             let raw = values.get(name).cloned().unwrap_or_default();
             let trusted = doc["slots"][name]["trusted"].as_bool().unwrap_or(false);
             let filled = if trusted {
