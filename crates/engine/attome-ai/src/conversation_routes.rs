@@ -584,6 +584,127 @@ async fn send_message(
     Ok(Json(turn_response(outcome, grounding)))
 }
 
+/// Body of `POST /api/v1/ai/conversations/{id}/runs` (N7-T1).
+#[derive(Debug, serde::Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct StartRunRequest {
+    /// What the agent is to do.
+    pub task: String,
+    /// The most tool steps the run may take (capped by the platform's own
+    /// bound); omitted: the platform's bound.
+    #[serde(default)]
+    pub max_steps: Option<usize>,
+}
+
+/// What a started run returns at once (N7-T1).
+#[derive(Debug, Serialize, ToSchema)]
+pub struct RunStarted {
+    pub conversation_id: Uuid,
+    /// `running`: follow `GET /api/v1/ai/conversations/{id}/stream` for its
+    /// steps and its end state.
+    pub status: String,
+}
+
+/// `POST /api/v1/ai/conversations/{id}/runs` — gives the agent a task and
+/// returns at once while it works through it in the background (N7-T1):
+/// the same turn loop, gate and ledger as a chat message, bounded by
+/// `max_steps`, ending in one of the turn's terminal states (completed,
+/// awaiting confirmation or approval, a limit, a failure). Its steps and end
+/// state are on the conversation's stream.
+#[utoipa::path(
+    post,
+    path = "/api/v1/ai/conversations/{id}/runs",
+    tag = "action",
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Ai, attome_audit::AuditOperation::Create)])))),
+    params(("id" = Uuid, Path, description = "The conversation")),
+    request_body = StartRunRequest,
+    responses(
+        (status = 202, description = "Running; follow the conversation's stream", body = RunStarted),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No such conversation for this caller", body = ErrorResponse),
+        (status = 409, description = "The conversation has ended", body = ErrorResponse),
+        (status = 422, description = "The task is empty or too long", body = ErrorResponse),
+        (status = 429, description = "Too many turns for this user or conversation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn start_run(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<StartRunRequest>,
+) -> Result<(axum::http::StatusCode, Json<RunStarted>), AppError> {
+    let task = body.task.trim().to_owned();
+    if task.is_empty() {
+        return Err(AppError::Validation("task must not be empty".into()));
+    }
+    if task.chars().count() > MAX_MESSAGE_CHARS {
+        return Err(AppError::Validation(format!(
+            "task must be at most {MAX_MESSAGE_CHARS} characters"
+        )));
+    }
+    let conv = owned(&state, id, ctx.user_id).await?;
+    if conv.ended_at.is_some() {
+        return Err(AppError::Conflict("the conversation has ended"));
+    }
+    rate_limit(
+        &state,
+        format!("attome-ai:rl:chat-turn:user:{}", ctx.user_id),
+        TURNS_PER_USER_PER_MINUTE,
+    )
+    .await?;
+    rate_limit(
+        &state,
+        format!("attome-ai:rl:chat-turn:conversation:{}", conv.id),
+        TURNS_PER_CONVERSATION_PER_MINUTE,
+    )
+    .await?;
+    let governance = crate::session::load_governance(&state.base.db, conv.agent_session_id)
+        .await?
+        .ok_or_else(|| AppError::internal("a conversation's agent session row is missing"))?;
+    let security = ctx.into_inner();
+    let conversation_id = conv.id;
+    let run_state = state.clone();
+    let max_steps = body.max_steps;
+    // Not awaited: the caller follows the stream. A process that dies mid-run
+    // is the case the lease sweep and the held claims already cover, as for a
+    // chat turn whose client went away (`run_detached`).
+    drop(tokio::spawn(async move {
+        let outcome = crate::turn::run(
+            &run_state,
+            &crate::engine::REGISTRY,
+            &crate::engine::EXECUTORS,
+            &TurnInputs {
+                session: &governance.session,
+                security,
+                conversation_id,
+                step_budget: max_steps,
+            },
+            &task,
+        )
+        .await;
+        match outcome {
+            Ok(outcome) => tracing::info!(
+                conversation_id = %conversation_id,
+                terminal_state = outcome.terminal_state.as_str(),
+                "background agent run ended"
+            ),
+            Err(error) => tracing::warn!(
+                conversation_id = %conversation_id,
+                %error,
+                "background agent run failed"
+            ),
+        }
+    }));
+    Ok((
+        axum::http::StatusCode::ACCEPTED,
+        Json(RunStarted {
+            conversation_id,
+            status: "running".into(),
+        }),
+    ))
+}
+
 /// Runs a turn or a confirmation to completion whether or not its client is
 /// still waiting.
 ///
@@ -1401,6 +1522,7 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/ai/conversations/{id}/stream",
             get(stream_conversation),
         )
+        .route("/api/v1/ai/conversations/{id}/runs", post(start_run))
         .route(
             "/api/v1/ai/conversations/{id}/turns/{turn_id}/cancel",
             post(cancel_turn),
@@ -1408,20 +1530,24 @@ pub fn routes() -> Router<EngineState> {
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(
-    start_conversation,
-    list_conversations,
-    get_conversation,
-    send_message,
-    list_messages,
-    put_feedback,
-    list_tool_calls,
-    confirm_tool_call,
-    reject_tool_call,
-    end_conversation,
-    stream_conversation,
-    cancel_turn,
-))]
+#[openapi(
+    paths(
+        start_conversation,
+        list_conversations,
+        get_conversation,
+        send_message,
+        list_messages,
+        put_feedback,
+        list_tool_calls,
+        confirm_tool_call,
+        reject_tool_call,
+        end_conversation,
+        stream_conversation,
+        cancel_turn,
+        start_run,
+    ),
+    components(schemas(StartRunRequest, RunStarted))
+)]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
