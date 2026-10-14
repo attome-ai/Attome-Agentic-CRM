@@ -15,6 +15,7 @@
 pub mod agent;
 pub mod canonical;
 pub mod commands;
+pub mod contract;
 pub mod cooker;
 pub mod files;
 pub mod identity;

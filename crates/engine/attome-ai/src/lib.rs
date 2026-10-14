@@ -94,6 +94,7 @@ pub mod inference_client;
 /// is `dispatch`, and nothing is added to the closed catalogue (I-5).
 pub mod mcp;
 pub mod model_registry;
+pub mod orchestrate;
 pub mod outcome;
 /// C11 B5 (P-5) — the runtime AI switch's audited admin routes. The read side
 /// is `attome_core::ai_runtime_switch`.

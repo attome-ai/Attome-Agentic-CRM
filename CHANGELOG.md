@@ -8,6 +8,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `agent.delegate`: a supervisor agent hands a subtask to a specialist through the specialist's
+  typed `handoff` contract; the specialist runs read-only in a child session (migration 0016,
+  `agent_session.parent_session_ref`).
 - Agent bulk actions: `record.bulk.preview`, `record.bulk.update`, `record.bulk.delete` and
   `record.bulk.status`, over the bulk engine (`attome_records::bulk::submit_bulk`, `bulk_status`).
 - `GET /api/v1/admin/ai/spend` and the AI spend screen (`/ai/spend`): this month's spend per

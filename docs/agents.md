@@ -52,6 +52,23 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 - Building: `model.<kind>.describe|list|edit` for every metadata kind, found over MCP with
   `tools.search`; edits are drafts a person confirms.
 
+## Delegating to a specialist
+
+An agent object may declare a typed contract other agents hand it work through:
+
+```json
+"handoff": {
+  "input":  { "type": "object", "required": ["account_id"], "properties": { "account_id": { "type": "string" } } },
+  "output": { "type": "object", "required": ["risk"], "properties": { "risk": { "enum": ["low", "medium", "high"] } } }
+}
+```
+
+A supervisor calls `agent.delegate` with the specialist's id and an input that matches. The
+specialist runs in a child session of the supervisor's (one run tree: `parent_session_ref`), with
+only its read tools and at most ten steps, and its answer comes back as a JSON object checked against
+the output contract. Specialists never write and never delegate again; the supervisor composes the
+answers and proposes any change through its own gate.
+
 ## Running
 
 - In chat: `POST /api/v1/ai/conversations/{id}/messages`.

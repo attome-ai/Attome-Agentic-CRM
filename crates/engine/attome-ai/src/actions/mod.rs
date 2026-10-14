@@ -62,6 +62,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(route_classify::descriptor());
     all.extend(agent_supervise::descriptors());
     all.push(agent_playground::descriptor());
+    all.push(crate::orchestrate::descriptor());
     all
 }
 
@@ -94,5 +95,6 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(route_classify::RouteClassify));
     all.extend(agent_supervise::executors());
     all.push(Box::new(agent_playground::AgentPlaygroundComplete));
+    all.push(Box::new(crate::orchestrate::AgentDelegate));
     all
 }

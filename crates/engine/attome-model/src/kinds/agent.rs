@@ -15,7 +15,10 @@
 //! `limits.daily` optionally caps what the agent does per day across all its
 //! sessions, by limit class (`record_changes`, `deletes`, `messages`,
 //! `external_calls`, V2-D487); `persona` is the optional model and voice
-//! configuration that v1 kept on `ai_agent`.
+//! configuration that v1 kept on `ai_agent`. `handoff` (N8-T1) is the
+//! typed contract a supervisor delegates to this agent through:
+//! `{ "input": <schema>, "output": <schema> }`, each an object schema in the
+//! subset `crate::contract` checks.
 //!
 //! Checked on every edit: the tools are action ids the AI engine knows (the
 //! engine hands its list over at boot through [`set_known_tools`]; without
@@ -54,7 +57,7 @@ pub const DAILY_CLASSES: [&str; 4] = ["record_changes", "deletes", "messages", "
 const RUN_AS: [&str; 2] = ["caller", "service"];
 const TRIGGER_KINDS: [&str; 3] = ["manual", "record_change", "schedule"];
 const CHANNELS: [&str; 5] = ["chat", "web", "whatsapp", "sms", "email"];
-const PROPERTIES: [&str; 9] = [
+const PROPERTIES: [&str; 10] = [
     "role",
     "instructions",
     "tools",
@@ -64,6 +67,7 @@ const PROPERTIES: [&str; 9] = [
     "triggers",
     "channels",
     "persona",
+    "handoff",
 ];
 
 static KNOWN_TOOLS: OnceLock<BTreeSet<String>> = OnceLock::new();
@@ -155,7 +159,16 @@ impl Kind for AgentKind {
                         }
                     }
                 },
-                "channels": { "type": "array", "items": { "enum": CHANNELS } }
+                "channels": { "type": "array", "items": { "enum": CHANNELS } },
+                "handoff": {
+                    "type": "object",
+                    "required": ["input", "output"],
+                    "additionalProperties": false,
+                    "properties": {
+                        "input": { "type": "object" },
+                        "output": { "type": "object" }
+                    }
+                }
             }
         })
     }
@@ -301,6 +314,43 @@ impl Kind for AgentKind {
                                 "invalid",
                                 format!("`{key}` is not valid here"),
                             ));
+                        }
+                    }
+                }
+            }
+        }
+        if let Some(handoff) = doc.get("handoff") {
+            match handoff.as_object() {
+                None => issues.push(Issue::new(
+                    "/handoff",
+                    "invalid",
+                    "a handoff is an object with an input and an output contract",
+                )),
+                Some(handoff) => {
+                    for key in handoff.keys() {
+                        if key != "input" && key != "output" {
+                            issues.push(Issue::new(
+                                format!("/handoff/{key}"),
+                                "unknown_property",
+                                format!("a handoff has no `{key}`"),
+                            ));
+                        }
+                    }
+                    for side in ["input", "output"] {
+                        match handoff.get(side) {
+                            None => issues.push(Issue::new(
+                                format!("/handoff/{side}"),
+                                "required",
+                                format!("a handoff names its {side} contract"),
+                            )),
+                            Some(schema) => {
+                                for (path, message) in crate::contract::schema_issues(
+                                    schema,
+                                    &format!("/handoff/{side}"),
+                                ) {
+                                    issues.push(Issue::new(path, "invalid", message));
+                                }
+                            }
                         }
                     }
                 }
