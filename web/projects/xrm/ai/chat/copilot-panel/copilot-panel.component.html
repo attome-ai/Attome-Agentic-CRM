@@ -44,6 +44,14 @@
           <option value="consequential">{{ 'aiChat.ceiling.consequential' | translate }}</option>
         </select>
       </label>
+      <label class="field">
+        <span>{{ 'aiChat.panel.mode' | translate }}</span>
+        <select [ngModel]="mode()" (ngModelChange)="mode.set($event)">
+          <option value="">{{ 'aiChat.mode.any' | translate }}</option>
+          <option value="develop">{{ 'aiChat.mode.develop' | translate }}</option>
+          <option value="run">{{ 'aiChat.mode.run' | translate }}</option>
+        </select>
+      </label>
       @if (agentsLoaded() && agents().length === 0) {
         <p class="copilot__hint">{{ 'aiChat.panel.noAgents' | translate }}</p>
       }

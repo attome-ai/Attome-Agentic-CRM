@@ -914,6 +914,7 @@ export const xrmAr = {
       agent: 'المساعد',
       chooseAgent: 'اختر مساعدًا',
       ceiling: 'يمكنه تنفيذ إجراءات حتى',
+      mode: 'الغرض',
       noAgents: 'لا يتوفر لك أي مساعد.',
       empty: 'اطرح سؤالًا للبدء.',
       thinking: 'جارٍ العمل…',
@@ -923,6 +924,11 @@ export const xrmAr = {
       stop: 'إيقاف',
       stopping: 'جارٍ الإيقاف…',
       answering: 'المساعد يجيب',
+    },
+    mode: {
+      any: 'كل ما هو مسموح',
+      develop: 'بناء: مسودات تغييرات على التطبيق',
+      run: 'تشغيل: العمل على السجلات',
     },
     ceiling: {
       read: 'قراءة فقط',

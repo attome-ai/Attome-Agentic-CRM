@@ -8,6 +8,7 @@ export { CopilotPanelComponent } from './copilot-panel/copilot-panel.component';
 export { ChatService } from './services/chat.service';
 export type {
   AgentOption,
+  ChatMode,
   CitationView,
   ConfirmResult,
   ConversationDetail,

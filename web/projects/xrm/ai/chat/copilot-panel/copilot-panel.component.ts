@@ -14,7 +14,7 @@ import type { ConfirmCardResult } from '../confirm-card/confirm-card.component';
 import { recordContextFromUrl } from '../record-context';
 import { ChatService } from '../services/chat.service';
 import type {
-  AgentOption, ConversationDetail, MessagePage, MessageView, RiskCeiling, ToolCallPage, ToolCallView, Vote,
+  AgentOption, ChatMode, ConversationDetail, MessagePage, MessageView, RiskCeiling, ToolCallPage, ToolCallView, Vote,
 } from '../services/chat.service';
 import { CHAT_EVENT_SOURCE, ChatStream, DeltaBuffer } from '../services/chat-stream';
 import type { StreamDelta, StreamEvent } from '../services/chat-stream';
@@ -71,6 +71,7 @@ export class CopilotPanelComponent implements OnInit {
   readonly agentsLoaded = signal(false);
   readonly selectedAgentId = signal('');
   readonly riskCeiling = signal<RiskCeiling>('reversible');
+  readonly mode = signal<ChatMode>('');
   readonly conversation = signal<ConversationDetail | null>(null);
   readonly messages = signal<MessageView[]>([]);
   readonly toolCalls = signal<ToolCallView[]>([]);
@@ -207,7 +208,7 @@ export class CopilotPanelComponent implements OnInit {
 
     const conversation$ = this.conversation()
       ? of(this.conversation() as ConversationDetail)
-      : this.chat.start(this.selectedAgentId(), this.riskCeiling());
+      : this.chat.start(this.selectedAgentId(), this.riskCeiling(), this.mode());
 
     conversation$
       .pipe(

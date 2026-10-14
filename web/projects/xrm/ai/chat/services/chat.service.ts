@@ -26,6 +26,13 @@ export type Vote = Schemas['FeedbackRequest']['vote'];
 /** `200` ran it now; `202` requested four-eyes approval. Told apart by `outcome`. */
 export type ConfirmResult = ConfirmExecuted | ConfirmApprovalRequested;
 
+/**
+ * What a conversation is for (N1-T1): `develop` builds (metadata tools and
+ * reads; every change is a draft), `run` acts (everything but the metadata
+ * edit tools). Empty: no narrowing.
+ */
+export type ChatMode = 'develop' | 'run' | '';
+
 /** The session ceiling a conversation is started with. The agent policy still bounds it. */
 export type RiskCeiling = 'read' | 'reversible' | 'consequential';
 
@@ -69,10 +76,11 @@ export class ChatService {
       );
   }
 
-  start(agentDefinitionId: string, riskCeiling: RiskCeiling): Observable<ConversationDetail> {
+  start(agentDefinitionId: string, riskCeiling: RiskCeiling, mode: ChatMode = ''): Observable<ConversationDetail> {
     const body: Schemas['StartConversationRequest'] = {
       agent_definition_id: agentDefinitionId,
       risk_ceiling: riskCeiling,
+      ...(mode ? { mode } : {}),
     };
     return this.api.post<ConversationDetail>(BASE, body);
   }

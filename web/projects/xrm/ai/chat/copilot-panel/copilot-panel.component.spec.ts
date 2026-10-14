@@ -79,7 +79,7 @@ describe('CopilotPanelComponent', () => {
     const panel = create();
     panel.draft.set('who is this?');
     panel.send();
-    expect(chat['start']).toHaveBeenCalledWith('agent-1', 'reversible');
+    expect(chat['start']).toHaveBeenCalledWith('agent-1', 'reversible', '');
     expect(chat['send']).toHaveBeenCalledWith('conv-1', 'who is this?', {
       entity: 'contact',
       record_id: RECORD,

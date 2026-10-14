@@ -988,6 +988,7 @@ export const xrmEn = {
       agent: 'Assistant',
       chooseAgent: 'Choose an assistant',
       ceiling: 'May take actions up to',
+      mode: 'Purpose',
       noAgents: 'No assistant is available to you.',
       empty: 'Ask a question to start.',
       thinking: 'Working…',
@@ -997,6 +998,11 @@ export const xrmEn = {
       stop: 'Stop',
       stopping: 'Stopping…',
       answering: 'The assistant is answering',
+    },
+    mode: {
+      any: 'Anything allowed',
+      develop: 'Build: draft changes to the app',
+      run: 'Run: work with records',
     },
     ceiling: {
       read: 'Read only',
