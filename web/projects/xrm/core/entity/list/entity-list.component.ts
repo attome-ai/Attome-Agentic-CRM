@@ -11,7 +11,7 @@ import type { Observable, Subscription } from 'rxjs';
 import { ApiError, CurrencyService, LangService, TranslatePipe } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityRecord, FieldType, ListFilter, LookupMeta } from '@attome/xrm';
-import { EntityService } from '../services/entity.service';
+import { EntityService, type DeleteImpact } from '../services/entity.service';
 import { logicalToUrlPath } from '../services/entity-url.utils';
 import { EntityRouteRegistry } from '../entity-route-registry.service';
 import type { SelectionAction } from '../entity-route-registry.service';
@@ -950,12 +950,60 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   canDeactivateSelection(): boolean { return this.selectionHasState(true); }
   canActivateSelection(): boolean { return this.selectionHasState(false); }
 
-  deactivateSelected(): void {
-    // A18-T9: one operation id for the whole selection, so Undo restores it.
+  /**
+   * A18-T9: shows what the delete would take with it (or what blocks it),
+   * asks for a reason when the entity requires one, then deletes the
+   * selection as one operation so Undo restores it.
+   */
+  async deactivateSelected(): Promise<void> {
+    const ids = [...this.selectedRecordIds()];
+    if (!ids.length || this.bulkActionRunning()) return;
+    const entity = this.entityName();
+    let impact: DeleteImpact | null = null;
+    try {
+      impact = await firstValueFrom(this.entitySvc.deleteImpact(entity, ids));
+    } catch {
+      impact = null; // The preview is a courtesy; the delete still checks everything.
+    }
+    if (impact?.blocked_by.length) {
+      this.dialogSvc.error({
+        title: this.lang.translate('entityList.actionFailedTitle'),
+        message: this.lang.translate('entityList.deleteBlocked', {
+          details: impact.blocked_by.map(b => `${b.entity} (${b.count})`).join(', '),
+        }),
+      });
+      return;
+    }
+    const question = this.lang.translate('entityList.deactivateRecordConfirm', { count: ids.length });
+    const cascades = impact?.cascades.length
+      ? ' ' + this.lang.translate('entityList.deleteCascades', {
+        details: impact.cascades.map(c => `${c.entity} (${c.count})`).join(', '),
+      })
+      : '';
+    let reason: string | undefined;
+    if (impact?.reason_required) {
+      const given = await this.dialogSvc.prompt({
+        title: this.lang.translate('entityList.deactivateSelected'),
+        message: question + cascades,
+        label: this.lang.translate('entityList.deleteReason'),
+        confirmText: this.lang.translate('entityList.confirmButtonDelete'),
+        validator: value => value.trim() ? null : this.lang.translate('entityList.deleteReasonRequired'),
+      });
+      if (given === null || !given.trim()) return;
+      reason = given.trim();
+    } else {
+      const confirmed = await this.dialogSvc.confirm({
+        message: question + cascades,
+        variant: 'danger',
+        confirmText: this.lang.translate('entityList.confirmButtonDelete'),
+      });
+      if (!confirmed) return;
+    }
+    // One operation id for the whole selection, so Undo restores it.
     const operationId = newOperationId();
-    this.runBulk(
-      'entityList.deactivateRecordConfirm',
-      id => this.entitySvc.delete(this.entityName(), id, { operationId }),
+    await this.runBulk(
+      undefined,
+      id => this.entitySvc.delete(entity, id, { operationId, reason }),
       succeeded => { if (succeeded > 0) this.offerUndo(operationId, succeeded); },
     );
   }

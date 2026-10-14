@@ -45,6 +45,15 @@ export type TransitionResult         = ApiComponents['schemas']['TransitionResul
 export type PaginatedAvailableTransitions =
   ApiComponents['schemas']['PaginatedResponse_AvailableTransition'];
 
+/** `recycle_bin::DeleteImpact` (A18-T4). */
+export interface DeleteImpact {
+  cascades: { entity: string; field: string; count: number }[];
+  blocked_by: { entity: string; field: string; count: number }[];
+  orphaned: { entity: string; field: string; count: number }[];
+  hidden_dependents: boolean;
+  reason_required: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class EntityService {
   private readonly api   = inject(ApiService);
@@ -196,6 +205,11 @@ export class EntityService {
     const reason = options.reason?.trim();
     const query = reason ? `?reason=${encodeURIComponent(reason)}` : '';
     return this.api.delete(`/api/v1/${entityName}/${id}${query}`, { operationId: options.operationId });
+  }
+
+  /** A18-T4: what deleting `ids` would cascade to or be blocked by; changes nothing. */
+  deleteImpact(entityName: string, ids: string[]): Observable<DeleteImpact> {
+    return this.api.post<DeleteImpact>(`/api/v1/${entityName}/delete-impact`, { ids });
   }
 
   /** A18: restores every record one delete operation put in the bin. */
