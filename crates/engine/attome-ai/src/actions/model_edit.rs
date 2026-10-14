@@ -9,6 +9,11 @@
 //! is published. An agent never saves on its own: every agent invocation
 //! stops at confirmation and the human applies it (`agent_must_confirm`), so
 //! a run-mode agent cannot change metadata.
+//!
+//! Beside them (N12-T1), two read tools per kind: `model.<kind>.describe`
+//! (the kind's description and document schema, for every kind) and
+//! `model.<kind>.list` (the objects of a kind stored in the model, paged).
+//! They read what the admin API reads, under the same administrator rule.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -66,7 +71,71 @@ fn tools() -> &'static [ModelTool] {
     })
 }
 
+/// What a read tool does.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ReadOp {
+    Describe,
+    List,
+}
+
+/// One generated read tool.
+#[derive(Debug)]
+struct ReadTool {
+    id: &'static str,
+    kind: &'static str,
+    op: ReadOp,
+    description: &'static str,
+}
+
+const DESCRIBE_SCHEMA: &str = r#"{"type":"object","properties":{},"additionalProperties":false}"#;
+const LIST_SCHEMA: &str = r#"{"type":"object","properties":{"page":{"type":"integer","minimum":1}},"additionalProperties":false}"#;
+
+fn read_tools() -> &'static [ReadTool] {
+    static TOOLS: OnceLock<Vec<ReadTool>> = OnceLock::new();
+    TOOLS.get_or_init(|| {
+        let mut out = Vec::new();
+        for kind in attome_metadata::model_edit::registry().iter() {
+            let name = kind.name().as_str();
+            out.push(ReadTool {
+                id: leak(format!("model.{name}.describe")),
+                kind: name,
+                op: ReadOp::Describe,
+                description: leak(format!(
+                    "Describe the {name} kind: what it is and its document's JSON Schema."
+                )),
+            });
+            if kind.adapter_table().is_none() {
+                out.push(ReadTool {
+                    id: leak(format!("model.{name}.list")),
+                    kind: name,
+                    op: ReadOp::List,
+                    description: leak(format!(
+                        "List the {name} objects by name, a page at a time, with their ids, \
+                         newest version and content hash."
+                    )),
+                });
+            }
+        }
+        out
+    })
+}
+
 pub fn descriptors() -> Vec<ActionDescriptor> {
+    let reads = read_tools().iter().map(|tool| {
+        ActionDescriptor::new(
+            tool.id,
+            tool.description,
+            RiskTier::Read,
+            Effect::Read,
+            RetryClass::Idempotent,
+            attome_modules::MODULE_AI,
+            &[],
+        )
+        .input_schema(match tool.op {
+            ReadOp::Describe => DESCRIBE_SCHEMA,
+            ReadOp::List => LIST_SCHEMA,
+        })
+    });
     tools()
         .iter()
         .map(|tool| {
@@ -85,6 +154,7 @@ pub fn descriptors() -> Vec<ActionDescriptor> {
             .input_schema(tool.input_schema)
             .agent_must_confirm()
         })
+        .chain(reads)
         .collect()
 }
 
@@ -92,7 +162,65 @@ pub fn executors() -> Vec<Box<dyn Action>> {
     tools()
         .iter()
         .map(|tool| Box::new(ModelEdit { tool }) as Box<dyn Action>)
+        .chain(
+            read_tools()
+                .iter()
+                .map(|tool| Box::new(ModelRead { tool }) as Box<dyn Action>),
+        )
         .collect()
+}
+
+/// The executor for one kind's read tool.
+#[derive(Debug)]
+pub struct ModelRead {
+    tool: &'static ReadTool,
+}
+
+impl Action for ModelRead {
+    fn id(&self) -> ActionId {
+        ActionId(self.tool.id)
+    }
+
+    fn execute<'a>(
+        &'a self,
+        state: &'a EngineState,
+        ctx: &'a ActionContext,
+        args: &'a Value,
+    ) -> Pin<Box<dyn Future<Output = Result<ActionResult, AppError>> + Send + 'a>> {
+        Box::pin(async move {
+            if !ctx.security.is_admin {
+                return Err(AppError::Forbidden);
+            }
+            let kind = attome_metadata::model_edit::registry()
+                .get(self.tool.kind)
+                .ok_or(AppError::NotFound)?;
+            let value = match self.tool.op {
+                ReadOp::Describe => json!({
+                    "name": kind.name().as_str(),
+                    "schema_version": kind.schema_version(),
+                    "description": kind.agent_tool_description(),
+                    "stored_in_model": kind.adapter_table().is_none(),
+                    "json_schema": kind.json_schema(),
+                }),
+                ReadOp::List => {
+                    let page = args["page"].as_u64().unwrap_or(1).max(1);
+                    let query: attome_types::OnePageQuery =
+                        serde_json::from_value(json!({ "page": page }))
+                            .map_err(|error| AppError::Validation(error.to_string()))?;
+                    let found =
+                        attome_model::store::list_objects(&state.base.db, self.tool.kind, &query)
+                            .await?;
+                    json!({
+                        "items": found.items,
+                        "total": found.total,
+                        "page": found.page,
+                        "page_size": found.page_size,
+                    })
+                }
+            };
+            Ok(ActionResult::plain(value))
+        })
+    }
 }
 
 /// The executor for one kind's edit tool.
@@ -204,12 +332,23 @@ mod tests {
             .collect();
         let descriptors = descriptors();
         let ids: Vec<&str> = descriptors.iter().map(|d| d.id.0).collect();
+        let edits: Vec<&str> = ids
+            .iter()
+            .copied()
+            .filter(|id| id.ends_with(".edit"))
+            .collect();
         let expected: Vec<String> = stored.iter().map(|k| format!("model.{k}.edit")).collect();
-        assert_eq!(ids, expected);
+        assert_eq!(edits, expected);
         assert!(ids.contains(&"model.form.edit"));
+        // N12-T1: every kind can be described; stored kinds can be listed.
+        assert!(ids.contains(&"model.entity.describe"));
+        assert!(ids.contains(&"model.form.list"));
+        assert!(!ids.contains(&"model.entity.list"));
         for descriptor in &descriptors {
             assert!(
-                descriptor.agent_must_confirm,
+                descriptor.agent_must_confirm
+                    || descriptor.id.0.ends_with(".describe")
+                    || descriptor.id.0.ends_with(".list"),
                 "an agent only proposes edits"
             );
             assert!(
