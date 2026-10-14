@@ -120,6 +120,8 @@ pub mod metrics;
 /// `data_export`/`data_profile_admin`.
 pub mod migration;
 pub mod model_admin;
+/// A1-T11 — `/api/v1/admin/model/health`.
+pub mod model_health;
 /// Dashboard 10/10 Phase 6 — `GET /api/v1/my-work/*` aggregation route over
 /// every registered `MyWorkProvider`. `pub` only for `openapi_fragment`/
 /// `routes`, same shape as `omnichannel_metrics` below.

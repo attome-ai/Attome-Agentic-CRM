@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `GET /api/v1/admin/model/health`: broken references, duplicate-looking attributes, entities and
+  attributes nobody uses, and index proposals, from the registry and PostgreSQL statistics.
 - `knowledge.answer` checks each sentence against its cited passages (content words and every
   number) and returns `claims` with the unsupported sentences flagged and a checked answer.
 - A local prompt-injection classifier (English, Arabic, Arabizi) marks untrusted text that reads like

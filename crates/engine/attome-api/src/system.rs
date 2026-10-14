@@ -145,6 +145,8 @@ impl EngineSystem {
             .merge(crate::view_admin::routes())
             // Y1-T9: the metadata model's admin API (admin-gated in each handler).
             .merge(crate::model_admin::routes())
+            // A1-T11: model-health findings (admin-gated in the handler).
+            .merge(crate::model_health::routes())
             .merge(crate::live::routes())
             .merge(crate::calendar_admin::routes())
             // M65 Phase 1 — Application Builder: same "core, always-on,
