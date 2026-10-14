@@ -1564,7 +1564,9 @@ fn relationship_cascade_wire_spelling_round_trips_through_bundle_apply() {
             ("legacy_underscore", "cascade_deactivate"),
             ("canonical_hyphen", "cascade-deactivate"),
         ] {
-            let name = format!("bndlrelcascade_{tag}_{}", Uuid::now_v7().simple());
+            // A relationship name is at most 48 characters.
+            let suffix = Uuid::now_v7().simple().to_string();
+            let name = format!("bndlrc_{tag}_{}", &suffix[suffix.len() - 12..]);
             let before = export_bundle(db).await.expect("export before");
             let mut desired = before.clone();
             desired.relationships.push(RelationshipDef {
