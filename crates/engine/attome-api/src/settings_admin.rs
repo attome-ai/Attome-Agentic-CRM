@@ -37,6 +37,11 @@ use crate::admin::{audit_service, pin_write_best_effort, simple_field_change};
 pub(crate) struct SettingValueView {
     key: String,
     description: String,
+    /// U10-T1: the admin console area (`general`, `security`, `features`,
+    /// `ai`, `channels`).
+    area: String,
+    /// U10-T1: the description in Arabic.
+    description_ar: Option<String>,
     schema: serde_json::Value,
     allowed_scopes: Vec<String>,
     boot_time_only: bool,
@@ -195,6 +200,8 @@ pub(crate) async fn write_setting(
 
     Ok(SettingValueView {
         key: descriptor.key.to_owned(),
+        area: attome_core::setting_descriptor::area(descriptor.key).to_owned(),
+        description_ar: attome_core::setting_descriptor::description_ar(descriptor.key).map(str::to_owned),
         description: descriptor.description.to_owned(),
         schema,
         allowed_scopes: descriptor
@@ -253,6 +260,8 @@ async fn list_admin_settings(
                 .find(|r| r.scope == "deployment" && r.scope_ref.is_none());
             SettingValueView {
                 key: d.key.to_owned(),
+                area: attome_core::setting_descriptor::area(d.key).to_owned(),
+                description_ar: attome_core::setting_descriptor::description_ar(d.key).map(str::to_owned),
                 description: d.description.to_owned(),
                 schema: (d.schema)(),
                 allowed_scopes: d
@@ -335,6 +344,8 @@ async fn get_my_settings(
             let (value, source) = snapshot.resolve(d, Some(ctx.user_id), Some(org_ref));
             SettingValueView {
                 key: d.key.to_owned(),
+                area: attome_core::setting_descriptor::area(d.key).to_owned(),
+                description_ar: attome_core::setting_descriptor::description_ar(d.key).map(str::to_owned),
                 description: d.description.to_owned(),
                 schema: (d.schema)(),
                 allowed_scopes: d

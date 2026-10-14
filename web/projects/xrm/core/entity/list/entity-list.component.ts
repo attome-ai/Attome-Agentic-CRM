@@ -1014,6 +1014,11 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
     this.undoTimer = setTimeout(() => { this.undoOffer.set(null); this.undoTimer = null; }, UNDO_SECONDS * 1000);
   }
 
+  /** A18-T9: this entity's recycle bin. */
+  openBin(): void {
+    void this.router.navigate(['/xrm/bin', this.entityName()]);
+  }
+
   /** A18-T9: puts the last delete's records back. */
   undoDelete(): void {
     const offer = this.undoOffer();
