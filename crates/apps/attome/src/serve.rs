@@ -446,6 +446,10 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     // delay now elapses *inside* this window instead of in front of it.
     let shutdown_deadline = SHUTDOWN_DEADLINE.max(config.request_timeout()) + drain_delay;
 
+    // U9-T1: every boot step is done; /health/startup now answers 200.
+    base_state
+        .started
+        .store(true, std::sync::atomic::Ordering::Relaxed);
     let server_fut = axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),

@@ -321,12 +321,36 @@ pub async fn health_ready(State(state): State<AppState>) -> (StatusCode, Json<Va
     ready_response(verdict)
 }
 
+/// U9-T1 — the startup probe: 200 once this node has finished booting
+/// (migrations, seeds, pre-warm), 503 before. An orchestrator holds liveness
+/// and readiness checks until it passes, so a slow first boot is not killed
+/// as a hung one. Never reads a dependency: readiness does that.
+#[utoipa::path(
+    get,
+    path = "/health/startup",
+    tag = "operations",
+    responses(
+        (status = 200, description = "This node has finished booting", body = serde_json::Value),
+        (status = 503, description = "Still booting", body = serde_json::Value),
+    ),
+)]
+pub async fn health_startup(State(state): State<AppState>) -> (StatusCode, Json<Value>) {
+    if state.started.load(Ordering::Relaxed) {
+        (StatusCode::OK, Json(json!({ "status": "started" })))
+    } else {
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(json!({ "status": "starting" })),
+        )
+    }
+}
+
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
 /// because `#[utoipa::path]` generates a `__path_*` type with the handler's
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(health_check, version, health_ready))]
+#[openapi(paths(health_check, version, health_ready, health_startup))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

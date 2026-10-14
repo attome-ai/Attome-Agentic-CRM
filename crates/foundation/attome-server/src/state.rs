@@ -144,6 +144,10 @@ pub struct AppState {
     /// draining node is alive, it just doesn't want work. Per-node,
     /// observational, never shared: same class as `registry_ready`.
     pub draining: Arc<AtomicBool>,
+    /// U9-T1 — every boot step (migrations, seeds, pre-warm) has finished and
+    /// the listener is about to serve. `/health/startup` answers 503 until
+    /// then. Per-node and observational, like `draining`.
+    pub started: Arc<AtomicBool>,
     /// S3 (BSV-F15) — the same drain event as `AppState::draining`, in a form a
     /// long-lived stream can `.await`: a stream that holds the graceful-shutdown
     /// deadline open (xrm-ai's chat stream, trd-engine's quote stream) creates
@@ -199,6 +203,7 @@ impl AppState {
             capabilities: Arc::new(crate::capability::CapabilityRegistry::inert()),
             configuration_version: Arc::new(ArcSwapOption::from(None)),
             draining: Arc::new(AtomicBool::new(false)),
+            started: Arc::new(AtomicBool::new(false)),
             // S3 — no receivers at construction, so the initial `send` is a
             // no-op; `shutdown_signal()` subscribes on demand.
             drain_signal: tokio::sync::watch::channel(false).0,

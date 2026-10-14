@@ -28,6 +28,8 @@ pub const EXACT_BYPASS_PATHS: &[&str] = &[
     "/api/v1/auth/mfa/pending-confirm",
     "/health",
     "/health/ready",
+    // U9-T1: the startup probe, same unauthenticated convention.
+    "/health/startup",
     // P-health-readiness: diagnostic-only (storage/jobs/email/audit
     // reachability) — never gates traffic, always 200, same unauthenticated
     // convention as the other two /health paths above.

@@ -66,6 +66,7 @@ where
     Router::new()
         .route("/health", get(health::health_check))
         .route("/health/ready", get(health::health_ready))
+        .route("/health/startup", get(health::health_startup))
 }
 
 /// Explicit CORS allow-list built from `config.cors.allowed_origins` (falls back to

@@ -173,6 +173,11 @@ const CALLER_SCOPED_ROUTES: &[(&str, &str, &str)] = &[
     ),
     (
         "GET",
+        "/health/startup",
+        "Startup probe: 200 once this node has finished booting. Public by design so an orchestrator can poll it; it reads no dependency and returns no data.",
+    ),
+    (
+        "GET",
         "/health",
         "Liveness probe, mounted via with_liveness_routes so it never touches Redis/DB and a dependency blip cannot cause a restart storm.",
     ),
