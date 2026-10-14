@@ -1,0 +1,71 @@
+name: web-check
+
+# The web app's gate (web/): install from the lockfile, build every library
+# and the app in dependency order, lint, and run the unit tests. Separate from
+# release-check so a web-only change does not wait on the Rust suite and a
+# Rust push does not cancel a web run.
+
+on:
+  push:
+    paths:
+      - "web/**"
+      - ".github/workflows/web-check.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/web-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: web build, lint, test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: install
+        run: npm ci
+      - name: build (base, xrm, sdk, app)
+        run: npm run build:all 2>&1 | tee ../web-check.log; exit ${PIPESTATUS[0]}
+        shell: bash
+      - name: lint
+        run: |
+          set -o pipefail
+          { npm run lint:base && npm run lint:xrm && npm run lint:sdk && npx ng lint attome-website; } 2>&1 | tee -a ../web-check.log
+        shell: bash
+      - name: test
+        run: |
+          set -o pipefail
+          { npm run test:base && npm run test:xrm && npm run test:sdk && npm test; } 2>&1 | tee -a ../web-check.log
+        shell: bash
+      # One annotation list with every failure, readable through the public
+      # checks API (GitHub shows at most 10 annotations per step).
+      - name: summarize failures
+        if: failure()
+        shell: bash
+        working-directory: .
+        run: |
+          sed -e 's/\x1b\[[0-9;]*m//g' web-check.log \
+            | grep -E -A2 'error TS|ERROR|✘|FAIL|Error:|AssertionError|expected' \
+            | head -360 > failures.txt || true
+          total=$(wc -l < failures.txt); start=1; part=1
+          while [ "$start" -le "$total" ] && [ "$part" -le 9 ]; do
+            body=$(sed -n "${start},$((start + 119))p" failures.txt | sed -e 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=web check failures ${part}::${body}"
+            start=$((start + 120)); part=$((part + 1))
+          done
