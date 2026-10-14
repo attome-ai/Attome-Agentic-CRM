@@ -283,3 +283,75 @@ fn admin_lists_kinds_and_an_unknown_kind_is_404() {
         assert_eq!(resp.status(), StatusCode::NOT_FOUND);
     });
 }
+
+fn post_req(uri: &str, cookie: &str, body: serde_json::Value) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri(uri)
+        .header("cookie", cookie)
+        .header("origin", "http://localhost:4200")
+        .header("sec-fetch-site", "same-origin")
+        .header("content-type", "application/json")
+        .body(Body::from(body.to_string()))
+        .unwrap()
+}
+
+#[test]
+fn commands_create_a_form_and_report_a_missing_attribute() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, cookie) = seed_admin(&db).await;
+        let app = full_app(system);
+        // A real entity and one of its attributes.
+        let (entity_id, attribute_id): (Uuid, Uuid) = sqlx::query_as(
+            "SELECT e.id, a.id FROM entity_info e JOIN attribute_info a ON a.entity_ref = e.id \
+             WHERE e.is_active IS NOT FALSE LIMIT 1",
+        )
+        .fetch_one(&db)
+        .await
+        .expect("a seeded entity with an attribute");
+        let form_id = Uuid::now_v7();
+        let missing = Uuid::now_v7();
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/form/{form_id}/commands"),
+                &cookie,
+                serde_json::json!({
+                    "base_hash": "",
+                    "name": format!("test form {form_id}"),
+                    "commands": [
+                        { "op": "set", "path": "/entity", "value": entity_id.to_string() },
+                        { "op": "set", "path": "/sections", "value": [
+                            { "label": "Main", "fields": [attribute_id.to_string(), missing.to_string()] }
+                        ]}
+                    ]
+                }),
+            ))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let body = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let issues = body["issues"].as_array().expect("issues");
+        assert_eq!(
+            issues.len(),
+            1,
+            "only the made-up attribute dangles: {body}"
+        );
+        assert_eq!(issues[0]["code"], "dangling_reference");
+
+        let resp = app
+            .oneshot(get_req(
+                &format!("/api/v1/admin/model/form/{form_id}"),
+                &cookie,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let read = body_json(resp).await;
+        assert_eq!(read["doc"]["entity"], entity_id.to_string());
+        assert_eq!(read["state"], "draft");
+    });
+}

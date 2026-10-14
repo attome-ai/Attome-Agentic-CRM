@@ -17,6 +17,7 @@ pub mod commands;
 pub mod cooker;
 pub mod identity;
 pub mod kind;
+pub mod kinds;
 pub mod references;
 pub mod runtime;
 pub mod store;

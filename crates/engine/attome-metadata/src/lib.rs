@@ -1,4 +1,5 @@
 pub mod autovalue;
+pub mod kinds;
 pub mod provision;
 pub mod purge;
 

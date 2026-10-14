@@ -32,9 +32,14 @@ use serde_json::{Value, json};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
-/// The kinds every engine registers (Y1-T13 adds the first ones).
+/// The kinds every engine registers: forms (stored in the model) and the
+/// entity and attribute adapters over their own tables (Y1-T13).
 fn registered_kinds() -> Vec<Arc<dyn Kind>> {
-    Vec::new()
+    vec![
+        Arc::new(attome_model::kinds::FormKind),
+        Arc::new(attome_metadata::kinds::ENTITY_KIND),
+        Arc::new(attome_metadata::kinds::ATTRIBUTE_KIND),
+    ]
 }
 
 /// The process-wide kind registry.

@@ -1015,6 +1015,7 @@ dependencies = [
  "attome-core",
  "attome-db",
  "attome-jobs",
+ "attome-model",
  "attome-testkit",
  "attome-types",
  "chrono",
