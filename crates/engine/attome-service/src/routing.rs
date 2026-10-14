@@ -320,8 +320,25 @@ mod tests {
     async fn display_order_picks_the_first_non_null_match() {
         let db = skip_if_no_db!(test_db().await);
         let prefix = Uuid::now_v7();
-        seed_routing_rule(&db, &format!("second-{prefix}"), "\"second-queue\"", 10).await;
-        seed_routing_rule(&db, &format!("first-{prefix}"), "\"first-queue\"", 0).await;
+        // Scoped to this test's own request type: the table is shared with
+        // every other test in the binary, and an unconditional rule would
+        // route their requests too.
+        let only_mine =
+            |queue: &str| format!("if(request_type == \"dupe_test_{prefix}\", \"{queue}\", null)");
+        seed_routing_rule(
+            &db,
+            &format!("second-{prefix}"),
+            &only_mine("second-queue"),
+            10,
+        )
+        .await;
+        seed_routing_rule(
+            &db,
+            &format!("first-{prefix}"),
+            &only_mine("first-queue"),
+            0,
+        )
+        .await;
 
         let ctx = RoutingContext {
             request_type: &format!("dupe_test_{prefix}"),
@@ -344,7 +361,13 @@ mod tests {
         let db = skip_if_no_db!(test_db().await);
         let prefix = Uuid::now_v7();
         seed_routing_rule(&db, &format!("broken-{prefix}"), "amount >>> 1", 0).await;
-        seed_routing_rule(&db, &format!("fallback-{prefix}"), "\"fallback-queue\"", 10).await;
+        seed_routing_rule(
+            &db,
+            &format!("fallback-{prefix}"),
+            &format!("if(request_type == \"broken_test_{prefix}\", \"fallback-queue\", null)"),
+            10,
+        )
+        .await;
 
         let ctx = RoutingContext {
             request_type: &format!("broken_test_{prefix}"),
