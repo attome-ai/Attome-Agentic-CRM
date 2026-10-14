@@ -7,6 +7,12 @@
 //! call returns the same URL. Each crate's tests apply the migrations they
 //! need themselves.
 //!
+//! **Migrated databases are copies of a template.** The first process that
+//! needs a migrated database on a server builds `attome_tmpl_<hash>` (every
+//! migration applied, the hash over the migrations' versions and checksums);
+//! every process then gets `CREATE DATABASE ... TEMPLATE` of it, which takes a
+//! fraction of a second instead of a full migration run.
+//!
 //! **Two databases, both empty of data.** [`test_db_url`] is bare: crates that
 //! test schema machinery (attome-db's migrator) apply their own fixtures to
 //! it. [`migrated_db_url`] is a second one with every migration in
@@ -180,6 +186,29 @@ static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("../../apps/attome/mig
 /// Server-wide advisory lock key serializing test-database migrations.
 const MIGRATE_LOCK_KEY: i64 = 0x41_54_54_4f_4d_45_01;
 
+/// The name of the migrated template database for this set of migrations:
+/// `attome_tmpl_` and an FNV-1a hash of every migration's version and
+/// checksum, so a changed or added migration gets a new template.
+fn template_name() -> String {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for migration in MIGRATOR.iter() {
+        for byte in migration
+            .version
+            .to_le_bytes()
+            .iter()
+            .chain(migration.checksum.iter())
+        {
+            hash ^= u64::from(*byte);
+            hash = hash.wrapping_mul(0x0100_0000_01b3);
+        }
+    }
+    format!("attome_tmpl_{hash:016x}")
+}
+
+/// Creates `name` on the server. With `migrate_url`, the database is a copy
+/// of the migrated template (built once per migration set and server, under
+/// a server-wide advisory lock), which is much faster than migrating every
+/// test process's database from scratch.
 fn create_database(admin_url: &str, name: &str, migrate_url: Option<&str>) -> Result<(), String> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -189,41 +218,83 @@ fn create_database(admin_url: &str, name: &str, migrate_url: Option<&str>) -> Re
         let mut conn = PgConnection::connect(admin_url)
             .await
             .map_err(|error| format!("connect DATABASE_URL: {error}"))?;
-        sqlx::query(&format!("CREATE DATABASE \"{name}\""))
+        if migrate_url.is_none() {
+            sqlx::query(&format!("CREATE DATABASE \"{name}\""))
+                .execute(&mut conn)
+                .await
+                .map_err(|error| format!("CREATE DATABASE {name}: {error}"))?;
+            return conn
+                .close()
+                .await
+                .map_err(|error| format!("close: {error}"));
+        }
+
+        // Migration 0009 creates and alters cluster-wide roles, which two
+        // processes migrating at once race on ("tuple concurrently
+        // updated"), and the template must be built once. One session lock on
+        // the server, held while the template is checked, built and copied,
+        // serializes all of it; closing the session releases it.
+        sqlx::query("SELECT pg_advisory_lock($1)")
+            .bind(MIGRATE_LOCK_KEY)
             .execute(&mut conn)
             .await
-            .map_err(|error| format!("CREATE DATABASE {name}: {error}"))?;
+            .map_err(|error| format!("lock for migration: {error}"))?;
+        let template = template_name();
+        // A finished template is marked `datistemplate`; one without the mark
+        // is left over from a run that died while building it.
+        let state: Option<bool> =
+            sqlx::query_scalar("SELECT datistemplate FROM pg_database WHERE datname = $1")
+                .bind(&template)
+                .fetch_optional(&mut conn)
+                .await
+                .map_err(|error| format!("look up {template}: {error}"))?;
+        if state != Some(true) {
+            if state.is_some() {
+                sqlx::query(&format!("DROP DATABASE \"{template}\" WITH (FORCE)"))
+                    .execute(&mut conn)
+                    .await
+                    .map_err(|error| format!("DROP DATABASE {template}: {error}"))?;
+            }
+            sqlx::query(&format!("CREATE DATABASE \"{template}\""))
+                .execute(&mut conn)
+                .await
+                .map_err(|error| format!("CREATE DATABASE {template}: {error}"))?;
+            let mut template_url = url::Url::parse(admin_url)
+                .map_err(|error| format!("DATABASE_URL is not a URL: {error}"))?;
+            template_url.set_path(&format!("/{template}"));
+            let mut migrating = PgConnection::connect(template_url.as_str())
+                .await
+                .map_err(|error| format!("connect {template}: {error}"))?;
+            MIGRATOR
+                .run(&mut migrating)
+                .await
+                .map_err(|error| format!("migrate {template}: {error}"))?;
+            migrating
+                .close()
+                .await
+                .map_err(|error| format!("close: {error}"))?;
+            sqlx::query(&format!("ALTER DATABASE \"{template}\" IS_TEMPLATE true"))
+                .execute(&mut conn)
+                .await
+                .map_err(|error| format!("mark {template} as a template: {error}"))?;
+        }
+        sqlx::query(&format!(
+            "CREATE DATABASE \"{name}\" TEMPLATE \"{template}\""
+        ))
+        .execute(&mut conn)
+        .await
+        .map_err(|error| format!("CREATE DATABASE {name} from {template}: {error}"))?;
+        // Database-level grants are not copied with the template; restore the
+        // one migration 0009 makes.
+        sqlx::query(&format!(
+            "GRANT CONNECT ON DATABASE \"{name}\" TO attome_readonly, attome_migrator, attome_runtime"
+        ))
+        .execute(&mut conn)
+        .await
+        .map_err(|error| format!("grant connect on {name}: {error}"))?;
         conn.close()
             .await
-            .map_err(|error| format!("close: {error}"))?;
-        if let Some(url) = migrate_url {
-            // Migration 0009 creates and alters cluster-wide roles, which two
-            // processes migrating at once race on ("tuple concurrently
-            // updated"). One session lock on the server, held for the
-            // migration, serializes them; closing the session releases it.
-            let mut lock = PgConnection::connect(admin_url)
-                .await
-                .map_err(|error| format!("connect DATABASE_URL: {error}"))?;
-            sqlx::query("SELECT pg_advisory_lock($1)")
-                .bind(MIGRATE_LOCK_KEY)
-                .execute(&mut lock)
-                .await
-                .map_err(|error| format!("lock for migration: {error}"))?;
-            let mut conn = PgConnection::connect(url)
-                .await
-                .map_err(|error| format!("connect {name}: {error}"))?;
-            MIGRATOR
-                .run(&mut conn)
-                .await
-                .map_err(|error| format!("migrate {name}: {error}"))?;
-            conn.close()
-                .await
-                .map_err(|error| format!("close: {error}"))?;
-            lock.close()
-                .await
-                .map_err(|error| format!("close: {error}"))?;
-        }
-        Ok(())
+            .map_err(|error| format!("close: {error}"))
     })
 }
 
