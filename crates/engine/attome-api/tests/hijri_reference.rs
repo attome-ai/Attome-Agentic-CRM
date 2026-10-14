@@ -310,3 +310,98 @@ async fn sighting_correction_moves_month_start() {
     let (status, _) = send(&app, "PUT", &path, Some(&admin_cookie), Some(back)).await;
     assert_eq!(status, StatusCode::OK);
 }
+
+#[tokio::test]
+async fn eid_recurring_creates_one_holiday_per_year() {
+    let system = skip_if_no_db!(test_system().await);
+    let db = system.state().base.db.clone();
+    let app = full_app(system);
+    let (_, admin_cookie) = seed_admin(&db).await;
+
+    let (status, calendar) = send(
+        &app,
+        "POST",
+        "/api/v1/admin/calendars",
+        Some(&admin_cookie),
+        Some(json!({
+            "name": format!("ag1-eid-{}", Uuid::now_v7().simple()),
+            "tz": "Asia/Riyadh",
+            "working_days": [],
+            "hours": {},
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{calendar}");
+    let id = calendar["id"].as_str().unwrap().to_owned();
+    let path = format!("/api/v1/admin/calendars/{id}/holidays/hijri-recurring");
+
+    let (status, holidays) = send(
+        &app,
+        "POST",
+        &path,
+        Some(&admin_cookie),
+        Some(json!({"name": "Eid al-Fitr", "hijri_month": 10, "hijri_day": 1, "from_year": 1446, "to_year": 1448})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{holidays}");
+    let days: Vec<&str> = holidays
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|h| h["holiday_date"].as_str().unwrap())
+        .collect();
+    assert_eq!(days.len(), 3);
+    assert_eq!(days[0], "2025-03-30", "1 Shawwal 1446");
+    assert_eq!(
+        holidays[0]["hijri_date"],
+        json!({"year": 1446, "month": 10, "day": 1})
+    );
+
+    // The same days again conflict, and nothing more is written.
+    let (status, _) = send(
+        &app,
+        "POST",
+        &path,
+        Some(&admin_cookie),
+        Some(json!({"name": "Eid again", "hijri_month": 10, "hijri_day": 1, "from_year": 1446, "to_year": 1446})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CONFLICT);
+
+    // A single holiday by its Hijri date; out of the table is a 422.
+    let one = format!("/api/v1/admin/calendars/{id}/holidays");
+    let (status, holiday) = send(
+        &app,
+        "POST",
+        &one,
+        Some(&admin_cookie),
+        Some(
+            json!({"name": "Founding Day eve", "hijri_date": {"year": 1447, "month": 9, "day": 1}}),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED, "{holiday}");
+    assert_eq!(holiday["holiday_date"], "2026-02-18");
+    let (status, _) = send(
+        &app,
+        "POST",
+        &one,
+        Some(&admin_cookie),
+        Some(json!({"name": "Too late", "hijri_date": {"year": 1501, "month": 1, "day": 1}})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    let (status, _) = send(
+        &app,
+        "POST",
+        &path,
+        Some(&admin_cookie),
+        Some(json!({"name": "Too long", "hijri_month": 1, "hijri_day": 1, "from_year": 1440, "to_year": 1480})),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "more than 30 years"
+    );
+}

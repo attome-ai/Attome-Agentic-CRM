@@ -489,14 +489,93 @@ pub(crate) struct HolidayDetail {
     /// differ from its calendar's: a project may add a holiday to a platform
     /// calendar). Only a changeset of that layer may remove it.
     owner_layer: String,
+    /// AG1-T6: the same day in the deployment's Umm al-Qura calendar.
+    #[sqlx(skip)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    hijri_date: Option<HijriDateBody>,
+}
+
+/// A Hijri date on the wire (AG1-T6).
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, ToSchema)]
+pub(crate) struct HijriDateBody {
+    year: u16,
+    /// 1 (Muharram) to 12 (Dhu al-Hijjah).
+    month: u8,
+    day: u8,
+}
+
+impl HolidayDetail {
+    /// Fills `hijri_date` from the deployment's calendar.
+    fn with_hijri(mut self, state: &EngineState) -> Self {
+        self.hijri_date = state
+            .hijri
+            .load()
+            .to_hijri(self.holiday_date)
+            .ok()
+            .map(|h| HijriDateBody {
+                year: h.year,
+                month: h.month,
+                day: h.day,
+            });
+        self
+    }
+}
+
+/// The Gregorian day of a Hijri date in the deployment's calendar; a date
+/// outside the Umm al-Qura table, or a day the month does not have, is a 422.
+fn gregorian_of(state: &EngineState, hijri: HijriDateBody) -> Result<NaiveDate, AppError> {
+    state
+        .hijri
+        .load()
+        .to_gregorian(attome_core::calendar::hijri::HijriDate::new(
+            hijri.year,
+            hijri.month,
+            hijri.day,
+        ))
+        .map_err(|_| {
+            AppError::Validation(format!(
+                "{}-{:02}-{:02} is not a day of the Umm al-Qura calendar (1356 to 1500 AH)",
+                hijri.year, hijri.month, hijri.day
+            ))
+        })
 }
 
 #[derive(Deserialize, ToSchema)]
 pub(crate) struct HolidayBody {
     name: String,
-    #[schema(value_type = String, format = "date")]
-    holiday_date: NaiveDate,
+    /// The Gregorian day. Give this or `hijri_date`.
+    #[serde(default)]
+    #[schema(value_type = Option<String>, format = "date")]
+    holiday_date: Option<NaiveDate>,
+    /// AG1-T6: the day as a Hijri date, stored as its Gregorian day.
+    #[serde(default)]
+    hijri_date: Option<HijriDateBody>,
 }
+
+impl HolidayBody {
+    fn date(&self, state: &EngineState) -> Result<NaiveDate, AppError> {
+        match (self.holiday_date, self.hijri_date) {
+            (Some(date), None) => Ok(date),
+            (None, Some(hijri)) => gregorian_of(state, hijri),
+            _ => Err(AppError::Validation(
+                "give exactly one of holiday_date or hijri_date".into(),
+            )),
+        }
+    }
+}
+
+/// `POST /api/v1/admin/calendars/{id}/holidays/hijri-recurring`.
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct HijriRecurringBody {
+    name: String,
+    hijri_month: u8,
+    hijri_day: u8,
+    from_year: u16,
+    to_year: u16,
+}
+
+/// The most Hijri years one recurring request may cover.
+const MAX_RECURRING_YEARS: u16 = 30;
 
 const HOLIDAY_SELECT: &str =
     "SELECT id, calendar_id, name, holiday_date, owner_layer FROM calendar_holiday";
@@ -521,12 +600,12 @@ async fn list_holidays(
     let sql = format!(
         "{HOLIDAY_SELECT} WHERE calendar_id = $1 AND is_active = true ORDER BY holiday_date"
     );
-    let rows = sqlx::query_as(&sql)
+    let rows: Vec<HolidayDetail> = sqlx::query_as(&sql)
         .bind(calendar_id)
         .fetch_all(&state.base.db)
         .await
         .map_err(AppError::internal)?;
-    Ok(Json(rows))
+    Ok(Json(rows.into_iter().map(|r| r.with_hijri(&state)).collect()))
 }
 
 #[utoipa::path(
@@ -555,6 +634,7 @@ async fn create_holiday(
     if body.name.trim().is_empty() {
         return Err(AppError::Validation("holiday name is required".into()));
     }
+    let holiday_date = body.date(&state)?;
     let exists: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM calendar WHERE id = $1 AND is_active = true)",
     )
@@ -570,7 +650,7 @@ async fn create_holiday(
         "calendar_exception",
         "exception_date",
         calendar_id,
-        body.holiday_date,
+        holiday_date,
     )
     .await?
     {
@@ -581,7 +661,15 @@ async fn create_holiday(
     // D-785: resolve the changeset (or refuse) before any write.
     recording.preflight(&state.base.db).await?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
-    let row = add_holiday_in_tx(&mut tx, &recording, calendar_id, ctx.user_id, &body).await?;
+    let row = add_holiday_in_tx(
+        &mut tx,
+        &recording,
+        calendar_id,
+        ctx.user_id,
+        body.name.trim(),
+        holiday_date,
+    )
+    .await?;
     let op = holiday_op(&mut tx, Op::AddCalendarHoliday, &row).await?;
     recording.record(&mut tx, op).await?;
     tx.commit().await.map_err(AppError::internal)?;
@@ -591,10 +679,129 @@ async fn create_holiday(
         calendar_id,
         AuditOperation::Update,
         "calendar.holiday_added",
-        &format!("holiday {} added", body.holiday_date),
+        &format!("holiday {holiday_date} added"),
     )
     .await;
-    Ok((StatusCode::CREATED, Json(row)))
+    Ok((StatusCode::CREATED, Json(row.with_hijri(&state))))
+}
+
+/// AG1-T6: a holiday that falls on the same Hijri date every year (Eid
+/// al-Fitr is 1 Shawwal), entered once: one holiday per Hijri year from
+/// `from_year` to `to_year` (at most 30 years), each on its Gregorian day
+/// in the deployment's Umm al-Qura calendar, all in one transaction. A 30th
+/// in a year whose month has 29 days falls on the next day, the 1st of the
+/// following month, as announced holidays do. Refused whole when any day
+/// already has a holiday or an exception.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/calendars/{id}/holidays/hijri-recurring",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    request_body = HijriRecurringBody,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
+    responses(
+        (status = 201, description = "One holiday per year", body = Vec<HolidayDetail>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such calendar", body = ErrorResponse),
+        (status = 409, description = "A day already has a holiday or an exception", body = ErrorResponse),
+        (status = 422, description = "A date outside the Umm al-Qura calendar, or more than 30 years", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn create_hijri_recurring_holidays(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    recording: RecordingCtx,
+    Path(calendar_id): Path<Uuid>,
+    Json(body): Json<HijriRecurringBody>,
+) -> Result<(StatusCode, Json<Vec<HolidayDetail>>), AppError> {
+    let name = body.name.trim();
+    if name.is_empty() {
+        return Err(AppError::Validation("holiday name is required".into()));
+    }
+    if body.to_year < body.from_year || body.to_year - body.from_year >= MAX_RECURRING_YEARS {
+        return Err(AppError::Validation(format!(
+            "from_year to to_year must cover 1 to {MAX_RECURRING_YEARS} years"
+        )));
+    }
+    if !(1..=12).contains(&body.hijri_month) || !(1..=30).contains(&body.hijri_day) {
+        return Err(AppError::Validation(
+            "hijri_month must be 1 to 12 and hijri_day 1 to 30".into(),
+        ));
+    }
+    let mut dates = Vec::new();
+    for year in body.from_year..=body.to_year {
+        let first = gregorian_of(
+            &state,
+            HijriDateBody {
+                year,
+                month: body.hijri_month,
+                day: 1,
+            },
+        )?;
+        // The month's own day, or the day after its 29th for a missing 30th.
+        let date = first
+            .checked_add_days(chrono::Days::new(u64::from(body.hijri_day - 1)))
+            .ok_or_else(|| AppError::Validation("the date is out of range".into()))?;
+        dates.push(date);
+    }
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM calendar WHERE id = $1 AND is_active = true)",
+    )
+    .bind(calendar_id)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if !exists {
+        return Err(AppError::NotFound);
+    }
+    for date in &dates {
+        if date_is_taken(
+            &state.base.db,
+            "calendar_exception",
+            "exception_date",
+            calendar_id,
+            *date,
+        )
+        .await?
+        {
+            return Err(AppError::Conflict(
+                "one of these dates already has an exception; remove it first",
+            ));
+        }
+    }
+    recording.preflight(&state.base.db).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let mut rows = Vec::with_capacity(dates.len());
+    for date in &dates {
+        let row =
+            add_holiday_in_tx(&mut tx, &recording, calendar_id, ctx.user_id, name, *date).await?;
+        let op = holiday_op(&mut tx, Op::AddCalendarHoliday, &row).await?;
+        recording.record(&mut tx, op).await?;
+        rows.push(row);
+    }
+    tx.commit().await.map_err(AppError::internal)?;
+    audit_calendar_change(
+        &state,
+        ctx.user_id,
+        calendar_id,
+        AuditOperation::Create,
+        "calendar.holiday_added",
+        &format!(
+            "{} holidays added for Hijri {}-{} ({} to {})",
+            rows.len(),
+            body.hijri_month,
+            body.hijri_day,
+            body.from_year,
+            body.to_year
+        ),
+    )
+    .await;
+    Ok((
+        StatusCode::CREATED,
+        Json(rows.into_iter().map(|r| r.with_hijri(&state)).collect()),
+    ))
 }
 
 /// The calendar's name (its logical key), read inside `tx` for an op's
@@ -644,7 +851,8 @@ pub(crate) async fn add_holiday_in_tx(
     recording: &Recording,
     calendar_id: Uuid,
     actor: Uuid,
-    body: &HolidayBody,
+    name: &str,
+    holiday_date: NaiveDate,
 ) -> Result<HolidayDetail, AppError> {
     let layer = recording.stamp()?;
     let id = Uuid::now_v7();
@@ -652,7 +860,7 @@ pub(crate) async fn add_holiday_in_tx(
         "INSERT INTO calendar_holiday (id, calendar_id, name, holiday_date, is_active, created_at, created_by, owner_layer) \
          VALUES ($1, $2, $3, $4, true, NOW(), $5, $6)",
     )
-    .bind(id).bind(calendar_id).bind(body.name.trim()).bind(body.holiday_date).bind(actor)
+    .bind(id).bind(calendar_id).bind(name).bind(holiday_date).bind(actor)
     .bind(layer.as_str())
     .execute(&mut **tx).await.map_err(map_unique_violation)?;
     let sql = format!("{HOLIDAY_SELECT} WHERE id = $1");
@@ -1498,6 +1706,10 @@ pub fn routes() -> Router<EngineState> {
             get(list_holidays).post(create_holiday),
         )
         .route(
+            "/api/v1/admin/calendars/{id}/holidays/hijri-recurring",
+            axum::routing::post(create_hijri_recurring_holidays),
+        )
+        .route(
             "/api/v1/admin/calendars/{id}/holidays/{holiday_id}",
             axum::routing::delete(delete_holiday),
         )
@@ -1629,6 +1841,7 @@ async fn correct_hijri_month(
     delete_calendar,
     list_holidays,
     create_holiday,
+    create_hijri_recurring_holidays,
     delete_holiday,
     list_exceptions,
     create_exception,
