@@ -592,9 +592,11 @@ mod agent_step_governance_tests {
             scheduler.contains("agent_step_allowed_action_ids(&node.config)"),
             "runtime session start must use the shared allow-list resolver"
         );
+        // rustfmt may wrap the call, so compare with whitespace removed.
+        let compact: String = scheduler.split_whitespace().collect();
         assert!(
-            scheduler.contains(
-                "attome_ai::agent::start_session(state, ctx, definition_ref, \"workflow\", constraints, tainted)"
+            compact.contains(
+                "attome_ai::agent::start_session(state,ctx,definition_ref,\"workflow\",constraints,tainted"
             ),
             "runtime session start must combine the node with the definition's policy"
         );
