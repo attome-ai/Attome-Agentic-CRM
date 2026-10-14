@@ -18,6 +18,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Metadata as files: `GET /api/v1/admin/model/export` and `POST /api/v1/admin/model/import`, with
   `attome model export --out <dir>` and `attome model import --dir <dir>`, move objects as one
   readable JSON file each; import saves drafts and never publishes.
+- Agents as metadata: the `agent` kind (role, instructions, tools, identity, limits, triggers,
+  channels) with an agent designer at `/model/agents`, a metadata explorer at `/model/explorer`,
+  and `model.<kind>.edit|describe|list` agent tools generated from the kind registry.
+- One-command install: `scripts/install.sh` (Linux, installing PostgreSQL 18 with pgvector when no
+  database is given) and `scripts/install.ps1` (Windows), release archives with the web app, which
+  `attome serve` now serves itself, and `attome init --admin <email> --service`.
+- Form render plans carry a content ETag; the web app loads each plan once per version.
 - Install and operations: `attome service install`, `attome bundle offline`, `attome sovereignty
   report`, a sizing check in `attome init`, and the `deployment.sovereign` preset.
 - Testing and release tooling: `attome test` (tiers, a Docker test stack, flaky-test reruns,
