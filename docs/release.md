@@ -12,6 +12,11 @@ machine does not count as either), at the same commit:
 cargo run -p attome-release -- --check --web
 ```
 
+The steps are format, clippy, tests, the API contract, the SLO outputs (`attome slo generate
+--check`, see [slo.md](slo.md)) and the Prometheus rules (`promtool check rules` and `promtool test
+rules`; install Prometheus's `promtool`, or point `ATTOME_PROMTOOL` at it), plus the web app with
+`--web`.
+
 Each run writes `target/release-gate/gate-<os>.json`: the commit, the OS, the toolchain and every
 step's outcome. CI does the same on every push and keeps the report as the `release-gate-<os>`
 artifact of the run.

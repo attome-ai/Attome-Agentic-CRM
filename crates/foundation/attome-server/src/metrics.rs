@@ -555,3 +555,40 @@ async fn refresh_replica_lag_once(state: &AppState) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::HTTP_DURATION_BUCKETS;
+
+    /// AA13-T3: every SLO class's p99 budget in the catalogue is an exact
+    /// histogram edge, so its latency burn rules read a real `le` bucket
+    /// (SloLatencyBucketMissing is the runtime guard; this is the build-time
+    /// one).
+    #[test]
+    fn every_catalogue_p99_has_a_histogram_bucket() {
+        let catalogue: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../observability/slo-catalogue.json"
+        ))
+        .unwrap();
+        let classes = catalogue["classes"].as_array().unwrap();
+        assert!(!classes.is_empty());
+        for class in classes {
+            if class["kind"] != "http" {
+                continue;
+            }
+            for (profile, target) in class["targets"].as_object().unwrap() {
+                let Some(p99_ms) = target["p99_ms"].as_f64() else {
+                    continue;
+                };
+                let seconds = p99_ms / 1000.0;
+                assert!(
+                    HTTP_DURATION_BUCKETS
+                        .iter()
+                        .any(|edge| (edge - seconds).abs() < 1e-9),
+                    "{} ({profile}) p99 {p99_ms} ms has no bucket in HTTP_DURATION_BUCKETS",
+                    class["id"]
+                );
+            }
+        }
+    }
+}

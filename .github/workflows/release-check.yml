@@ -84,6 +84,11 @@ jobs:
             aws --endpoint-url http://127.0.0.1:9000 s3 mb s3://attomebase && break
             sleep 2
           done
+      - name: install promtool
+        shell: bash
+        run: |
+          curl -sSL https://github.com/prometheus/prometheus/releases/download/v3.5.0/prometheus-3.5.0.linux-amd64.tar.gz | tar -xz
+          echo "ATTOME_PROMTOOL=$PWD/prometheus-3.5.0.linux-amd64/promtool" >> "$GITHUB_ENV"
       - name: attome release --check
         shell: bash
         run: |
@@ -115,6 +120,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - name: install promtool
+        shell: bash
+        run: |
+          curl -sSL -o prometheus.zip https://github.com/prometheus/prometheus/releases/download/v3.5.0/prometheus-3.5.0.windows-amd64.zip
+          unzip -q prometheus.zip 'prometheus-3.5.0.windows-amd64/promtool.exe'
+          echo "ATTOME_PROMTOOL=$(cygpath -w "$PWD/prometheus-3.5.0.windows-amd64/promtool.exe")" >> "$GITHUB_ENV"
       - name: attome release --check
         shell: bash
         run: |

@@ -124,6 +124,7 @@ pub fn check_with(options: &Options) -> ExitCode {
         ("tests", tests as Step),
         ("contract", contract_step as Step),
         ("slo", slo_step as Step),
+        ("rules", rules_step as Step),
     ];
     if options.web {
         steps.push(("web", web as Step));
@@ -344,6 +345,24 @@ fn slo_step(root: &Path) -> Result<(), String> {
         "generated SLO files are out of date ({}); run `attome slo generate`",
         names.join(", ")
     ))
+}
+
+/// The Prometheus rules load and their unit tests pass (AA13-T3): `promtool
+/// check rules` and `promtool test rules`. `ATTOME_PROMTOOL` names the binary
+/// when it is not `promtool` on the PATH.
+fn rules_step(root: &Path) -> Result<(), String> {
+    let promtool = std::env::var("ATTOME_PROMTOOL").unwrap_or_else(|_| "promtool".to_owned());
+    let observability = root.join("observability");
+    run(
+        Command::new(&promtool).args(["check", "rules", "alerts.yml"]),
+        &observability,
+        "promtool check rules",
+    )?;
+    run(
+        Command::new(&promtool).args(["test", "rules", "alerts_test.yml"]),
+        &observability,
+        "promtool test rules",
+    )
 }
 
 /// `attome release import-report <path>`: brings the other OS's gate report

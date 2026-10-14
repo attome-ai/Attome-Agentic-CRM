@@ -24,7 +24,8 @@ Usage:
   attome changeset-replay       Replay changesets against a database
   attome release --check [--web] [--override <step>=<reason> --by <name>]
                                 Run the release gate: format, clippy, tests, the
-                                API contract (and the web app with --web)
+                                API contract, SLO outputs, Prometheus rules (and
+                                the web app with --web)
   attome release import-report <path>
                                 Bring in the other OS's gate report
   attome release tag <version>  Tag this commit when both OS reports are green
