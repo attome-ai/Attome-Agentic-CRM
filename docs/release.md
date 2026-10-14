@@ -21,7 +21,8 @@ previous tag needs an entry in `docs/dependencies/intake.json`: reason, licence,
 rules`; install Prometheus's `promtool`, or point `ATTOME_PROMTOOL` at it), the install time
 (`attome init` into the empty database `ATTOME_INSTALL_DATABASE_URL` names, under ten minutes; not
 measured when it is unset), plus the web app with
-`--web`.
+`--web` and, with `--reproducible`, two release builds whose `attome` binaries must hash the same
+(`target/release-gate/repro.json`).
 
 Each run writes `target/release-gate/gate-<os>.json`: the commit, the OS, the toolchain and every
 step's outcome. CI does the same on every push and keeps the report as the `release-gate-<os>`

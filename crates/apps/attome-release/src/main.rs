@@ -6,7 +6,7 @@ use std::process::ExitCode;
 
 const USAGE: &str = "\
 usage:
-  attome-release --check [--web] [--slo-evidence] [--override <step>=<reason>]... [--by <name>]
+  attome-release --check [--web] [--slo-evidence] [--reproducible] [--override <step>=<reason>]... [--by <name>]
   attome-release import-report <path>
   attome-release tag <version>
   attome-release slo generate [--check]

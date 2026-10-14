@@ -33,6 +33,7 @@ mod contract;
 pub mod intake;
 pub mod parity;
 pub mod release;
+pub mod repro;
 pub mod sbom;
 pub mod slo;
 pub mod slo_report;
@@ -61,6 +62,8 @@ pub struct Options {
     /// Also run the load-test matrix and write the SLO report (AA13-T6);
     /// needs Docker, PowerShell and the load-test stack.
     pub slo_evidence: bool,
+    /// Also build the release binary twice and compare (AC7-T7).
+    pub reproducible: bool,
     /// Named overrides of failing steps.
     pub overrides: Vec<Override>,
     /// The person taking responsibility for the overrides.
@@ -150,6 +153,9 @@ pub fn check_with(options: &Options) -> ExitCode {
     ];
     if options.web {
         steps.push(("web", web as Step));
+    }
+    if options.reproducible {
+        steps.push(("reproducible", repro::step as Step));
     }
     if options.slo_evidence {
         steps.push(("slo_evidence", slo_evidence as Step));
@@ -388,6 +394,7 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
                 match arg.as_str() {
                     "--web" => options.web = true,
                     "--slo-evidence" => options.slo_evidence = true,
+                    "--reproducible" => options.reproducible = true,
                     "--by" => options.by = Some(rest.next()?.clone()),
                     "--override" => match parse_override(rest.next()?) {
                         Ok(item) => options.overrides.push(item),
@@ -1090,6 +1097,7 @@ mod tests {
         Options {
             web: false,
             slo_evidence: false,
+            reproducible: false,
             overrides: overrides
                 .iter()
                 .map(|(step, reason)| Override {
