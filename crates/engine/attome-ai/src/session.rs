@@ -1179,6 +1179,29 @@ impl std::fmt::Debug for InvocationRecord<'_> {
 /// loser would have produced. `ON CONFLICT DO NOTHING` rather than a
 /// check-then-insert, because the check-then-insert has a window and a retrying
 /// tool loop is precisely the thing that would find it.
+/// How many of `action_ids` ran today (UTC) for agent definition `agent`,
+/// across all of its sessions (AH4-T2): a limit belongs to the agent, not to
+/// one session. Only invocations that ran count, not refusals or approval
+/// requests. Pair with [`crate::registry::ActionRegistry::ids_of_class`].
+pub async fn used_today(db: &PgPool, agent: Uuid, action_ids: &[String]) -> Result<i64, AppError> {
+    if action_ids.is_empty() {
+        return Ok(0);
+    }
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM action_invocation i \
+         JOIN agent_session s ON s.id = i.agent_session_id \
+         WHERE s.agent_definition_ref = $1 \
+           AND i.action_id = ANY($2) \
+           AND i.outcome IN ('completed', 'executed') \
+           AND i.created_at >= date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'",
+    )
+    .bind(agent)
+    .bind(action_ids)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)
+}
+
 pub async fn record_invocation(db: &PgPool, rec: InvocationRecord<'_>) -> Result<bool, AppError> {
     let InvocationRecord {
         session_id,

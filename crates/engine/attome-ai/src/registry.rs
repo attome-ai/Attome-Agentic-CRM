@@ -65,6 +65,14 @@ impl ActionRegistry {
         self.actions.values()
     }
 
+    /// The ids of every action that counts against `class` (AH4-T2).
+    pub fn ids_of_class(&self, class: crate::descriptor::LimitClass) -> Vec<String> {
+        self.all()
+            .filter(|descriptor| descriptor.limit_class() == class)
+            .map(|descriptor| descriptor.id.0.to_owned())
+            .collect()
+    }
+
     /// The set a given caller may see, in a given situation.
     ///
     /// Filtered by **license AND privilege AND (for an agent façade) risk
@@ -151,6 +159,25 @@ mod tests {
     use crate::context::{ActionContext, tests::security_context};
     use crate::descriptor::RiskTier;
     use attome_config::{AiEnablement, AiSurface};
+
+    /// AH4-T2: record writes, deletes and reads land in their classes.
+    #[test]
+    fn actions_fall_into_their_limit_classes() {
+        use crate::descriptor::LimitClass;
+        let registry = ActionRegistry::new();
+        let class = |id: &str| {
+            registry
+                .resolve(id)
+                .map(|d| d.limit_class())
+                .unwrap_or_else(|| panic!("{id} is registered"))
+        };
+        assert_eq!(class("record.delete"), LimitClass::Delete);
+        assert_eq!(class("record.update"), LimitClass::RecordChange);
+        assert_eq!(class("record.get"), LimitClass::None);
+        let deletes = registry.ids_of_class(LimitClass::Delete);
+        assert!(deletes.contains(&"record.delete".to_owned()));
+        assert!(!deletes.contains(&"record.update".to_owned()));
+    }
 
     fn all_on() -> AiEnablement {
         AiEnablement {

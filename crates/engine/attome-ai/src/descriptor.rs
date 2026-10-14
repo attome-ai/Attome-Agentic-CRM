@@ -196,7 +196,45 @@ pub const NO_ARGUMENTS: &str = r#"{"type":"object","properties":{},"additionalPr
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Sealed;
 
+/// Which per-agent limit an invocation counts against (roadmap AH4-T2).
+///
+/// Derived from the descriptor rather than stored with each invocation, so
+/// a ledger row can never disagree with the action it ran: usage is counted
+/// by action id at read time ([`crate::session::used_today`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LimitClass {
+    /// Counts against no limit (reads, and writes that change no record).
+    None,
+    /// Creates, updates or restores a record.
+    RecordChange,
+    /// Deletes a record.
+    Delete,
+    /// Sends a message to a person (email, WhatsApp, SMS).
+    MessageSend,
+    /// Reaches a service outside the deployment.
+    ExternalCall,
+}
+
 impl ActionDescriptor {
+    /// The limit this action counts against: an outside call by its effect,
+    /// otherwise by what its id says it does.
+    pub fn limit_class(&self) -> LimitClass {
+        let id = self.id.0;
+        match self.effect {
+            Effect::Read => LimitClass::None,
+            Effect::External => LimitClass::ExternalCall,
+            Effect::Write if id.ends_with(".send") || id.starts_with("message.") => {
+                LimitClass::MessageSend
+            }
+            Effect::Write if id.ends_with(".delete") && id.starts_with("record.") => {
+                LimitClass::Delete
+            }
+            Effect::Write if id.starts_with("record.") => LimitClass::RecordChange,
+            Effect::Write => LimitClass::None,
+        }
+    }
+
     /// The only constructor. `pub(crate)` — see [`ActionDescriptor`].
     #[allow(clippy::too_many_arguments)]
     pub(crate) const fn new(
