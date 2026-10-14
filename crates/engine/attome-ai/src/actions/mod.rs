@@ -24,6 +24,7 @@ pub mod knowledge;
 pub mod knowledge_answer;
 pub mod memory;
 pub mod model_edit;
+pub mod nl_query;
 pub mod read;
 pub mod record_schema;
 pub mod record_update_field;
@@ -51,6 +52,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(business::descriptors());
     all.extend(record_write::descriptors());
     all.push(search_records::descriptor());
+    all.push(nl_query::descriptor());
     all.extend(workflow::descriptors());
     all.extend(memory::descriptors());
     all.extend(model_edit::descriptors());
@@ -81,6 +83,7 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(business::executors());
     all.extend(record_write::executors());
     all.push(Box::new(search_records::SearchRecords));
+    all.push(Box::new(nl_query::QueryPlan));
     all.extend(workflow::executors());
     all.extend(memory::executors());
     all.extend(model_edit::executors());

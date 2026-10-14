@@ -42,6 +42,9 @@ agent's tools as one more allow-list and its `limits.daily` as per-day caps.
 
 - Records: `record.get`, `search.records`, `query.execute`, `record.schema` (an entity's typed input),
   `record.validate` (a dry run of a create), `record.create|update|delete|restore`, `record.assign`.
+- Questions: `query.plan` turns a question into a checked query (entity, filters, order, limit) and
+  returns the issues to fix, or a description for the person and the `query.execute` arguments that
+  run it. The model never writes SQL.
 - Communication: `email.draft` files a draft; sending stays a person's step.
 - Building: `model.<kind>.describe|list|edit` for every metadata kind, found over MCP with
   `tools.search`; edits are drafts a person confirms.

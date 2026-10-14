@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `query.plan`: a question becomes a query model checked against the metadata (fields, operators,
+  value types, sensitive-field grants) before `query.execute` runs it.
 - The `library-core` pack: party, person (four-part Arabic name, national id, iqama, Emirates ID),
   organisation, Saudi national address, work item and agreement.
 - Attome v2: one `attome` binary (`attome init`, `attome serve` and the operator commands) on
