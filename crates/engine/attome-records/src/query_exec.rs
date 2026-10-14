@@ -1799,6 +1799,14 @@ pub async fn execute_stored_query_with_definition(
     // continues a cursor.
     let use_cursor =
         body.after_id.is_some() || (!body.include_total && cursor_default && !qrow.is_report);
+    // AA4-T3: an offset page reads and discards every row before it; past the
+    // configured depth, keyset paging is the only answer.
+    let max_offset = state.base.config.query.max_offset_rows.max(0);
+    if !use_cursor && offset > max_offset {
+        return Err(AppError::Validation(format!(
+            "offset paging stops at row {max_offset}; page with after_id (the last id you have) instead"
+        )));
+    }
 
     let (mut records, total, total_pages, next_cursor): (
         Vec<Value>,

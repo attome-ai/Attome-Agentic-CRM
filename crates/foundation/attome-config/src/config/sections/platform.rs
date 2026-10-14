@@ -253,6 +253,12 @@ pub struct QuerySection {
     /// always gets `COUNT(*) OVER()` totals regardless of this flag.
     #[serde(default = "default_query_cursor_default")]
     pub cursor_default: bool,
+    /// AA4-T3: the deepest row an offset page may start at. OFFSET reads and
+    /// throws away every row before it, so a deep page costs as much as
+    /// reading them all; past this a request is refused with a pointer to
+    /// `after_id` (keyset paging), which costs the same at any depth.
+    #[serde(default = "default_query_max_offset_rows")]
+    pub max_offset_rows: i64,
 }
 
 impl Default for QuerySection {
@@ -260,12 +266,17 @@ impl Default for QuerySection {
         Self {
             validate_on_execute: false,
             cursor_default: true,
+            max_offset_rows: default_query_max_offset_rows(),
         }
     }
 }
 
 fn default_query_cursor_default() -> bool {
     true
+}
+
+fn default_query_max_offset_rows() -> i64 {
+    10_000
 }
 
 // ── Change feed section (M01 §7 C-04 — outbox retention) ────────────────────
