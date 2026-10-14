@@ -1,0 +1,25 @@
+[package]
+name         = "attome-model"
+description  = "Attome's metadata model: one Kind trait and registry, one versioned object store, references, validation and the content-hashed cooker (roadmap Y1)."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+attome-types.workspace = true
+serde.workspace        = true
+serde_json.workspace   = true
+uuid.workspace         = true
+
+[dev-dependencies]
+attome-testkit.workspace = true
+sqlx.workspace           = true
+tokio.workspace          = true
+
+[lints]
+workspace = true

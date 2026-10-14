@@ -21,6 +21,7 @@ members = [
     "crates/engine/attome-core",
     "crates/engine/attome-metadata",
     "crates/engine/attome-field",
+    "crates/engine/attome-model",
     "crates/engine/attome-audit",
     "crates/engine/attome-security",
     "crates/engine/attome-records",
@@ -88,6 +89,7 @@ attome-modules   = { path = "crates/engine/attome-modules" }
 attome-core      = { path = "crates/engine/attome-core" }
 attome-metadata  = { path = "crates/engine/attome-metadata" }
 attome-field     = { path = "crates/engine/attome-field" }
+attome-model     = { path = "crates/engine/attome-model" }
 attome-audit     = { path = "crates/engine/attome-audit" }
 attome-security  = { path = "crates/engine/attome-security" }
 attome-records   = { path = "crates/engine/attome-records" }

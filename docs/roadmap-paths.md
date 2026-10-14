@@ -14,6 +14,7 @@ guess.
 | `crates/xrm/xrm-foundation` | `crates/engine/attome-core` |
 | `crates/xrm/xrm-entity` | `crates/engine/attome-metadata` |
 | `crates/xrm/xrm-entity-engine` | `crates/engine/attome-records` |
+| `crates/xrm/xrm-metadata` (new in Y1: the metadata model) | `crates/engine/attome-model` (`attome-metadata` is the ported xrm-entity) |
 | `crates/xrm/xrm-server` | `crates/engine/attome-api` |
 | `crates/xrm/xrm-license` | `crates/engine/attome-modules` (module switches only) |
 | `crates/xrm/xrm-<name>` (every other engine) | `crates/engine/attome-<name>` |
