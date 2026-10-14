@@ -5812,6 +5812,24 @@ export interface paths {
         patch: operations["update_transition"];
         trace?: never;
     };
+    "/api/v1/admin/tag-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** B4-T2: tag groups. */
+        get: operations["list_tag_groups"];
+        put?: never;
+        /** B4-T2: creates a tag group with its create policy. Administrators only. */
+        post: operations["create_tag_group"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/usage": {
         parameters: {
             query?: never;
@@ -9559,6 +9577,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tags/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** B4-T2: tags starting with what was typed, most used first. */
+        get: operations["suggest_tags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tags/{tag_id}/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** B4-T4: every record carrying a tag that the caller may read. */
+        get: operations["list_tagged_records"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/teams/{team_id}/favourites/lists": {
         parameters: {
             query?: never;
@@ -10676,6 +10728,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/{id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** B4-T1: the tags on a record the caller may see. */
+        get: operations["list_record_tags"];
+        put?: never;
+        /**
+         * B4-T1: puts a tag on a record (an existing one, or one found or created
+         *     by name).
+         */
+        post: operations["add_record_tag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/{id}/tags/{tag_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** B4-T1: takes a tag off a record. */
+        delete: operations["remove_record_tag"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/{id}/timeline": {
         parameters: {
             query?: never;
@@ -11696,6 +11786,23 @@ export interface components {
         AddSuppressionBody: {
             detail?: string | null;
             email: string;
+        };
+        /**
+         * @description `POST /api/v1/{entity}/{id}/tags`: an existing tag, or a name to find or
+         *     create.
+         */
+        AddTag: {
+            colour?: string | null;
+            /**
+             * Format: uuid
+             * @description The group a new shared tag joins (only with `name`).
+             */
+            group_id?: string | null;
+            name?: string | null;
+            /** @description A new personal tag (only with `name`). */
+            personal?: boolean;
+            /** Format: uuid */
+            tag_id?: string | null;
         };
         AddTeamMemberBody: {
             user_email: string;
@@ -20959,6 +21066,75 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_TagGroup: {
+            items: {
+                colour?: string | null;
+                create_policy: string;
+                create_privilege?: string | null;
+                /** Format: uuid */
+                id: string;
+                name: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_TagSuggestion: {
+            items: {
+                colour?: string | null;
+                /** Format: uuid */
+                id: string;
+                name: string;
+                personal: boolean;
+                /** Format: int64 */
+                uses: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_TagView: {
+            items: {
+                colour?: string | null;
+                /** Format: uuid */
+                group_id?: string | null;
+                /** Format: uuid */
+                id: string;
+                name: string;
+                /** @description Only the caller sees it. */
+                personal: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_TaggedRecord: {
+            items: {
+                entity: string;
+                label?: string | null;
+                /** Format: uuid */
+                record_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_TargetListItem: {
             items: {
                 /** Format: date-time */
@@ -24908,6 +25084,51 @@ export interface components {
             kind: string;
             name: string;
             status: string;
+        };
+        TagGroup: {
+            colour?: string | null;
+            create_policy: string;
+            create_privilege?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /** @description `POST /api/v1/admin/tag-groups`. */
+        TagGroupInput: {
+            colour?: string | null;
+            /** @description `anyone`, `privilege` or `nobody`. */
+            create_policy?: string;
+            /** @description The privilege key `privilege` needs. */
+            create_privilege?: string | null;
+            name: string;
+        };
+        /** @description A suggestion: the tag and how many records carry it. */
+        TagSuggestion: {
+            colour?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            personal: boolean;
+            /** Format: int64 */
+            uses: number;
+        };
+        /** @description One tag as the caller sees it. */
+        TagView: {
+            colour?: string | null;
+            /** Format: uuid */
+            group_id?: string | null;
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** @description Only the caller sees it. */
+            personal: boolean;
+        };
+        /** @description One record carrying a tag, as the caller may see it. */
+        TaggedRecord: {
+            entity: string;
+            label?: string | null;
+            /** Format: uuid */
+            record_id: string;
         };
         TargetListItem: {
             /** Format: date-time */
@@ -47083,6 +47304,104 @@ export interface operations {
             };
         };
     };
+    list_tag_groups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every tag group */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_TagGroup"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_tag_group: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagGroupInput"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagGroup"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A group with this name exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid name, colour or policy */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     usage: {
         parameters: {
             query?: never;
@@ -58254,6 +58573,81 @@ export interface operations {
             };
         };
     };
+    suggest_tags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description What the person has typed; matched from the start of the name,
+                 *     ignoring case, Arabic diacritics and letter forms.
+                 */
+                q: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matching tags */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_TagSuggestion"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_tagged_records: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Records carrying the tag */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_TaggedRecord"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such tag for the caller */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     create_team_list: {
         parameters: {
             query?: never;
@@ -62315,6 +62709,170 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_record_tags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record's tags */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_TagView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the entity's read privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller cannot read it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    add_record_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddTag"];
+            };
+        };
+        responses: {
+            /** @description The record's tags after the change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_TagView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No update access for a shared tag, or the group is closed */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record or tag */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid tag, or too many tags */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    remove_record_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+                tag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The record's tags after the change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_TagView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No update access for a shared tag */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, tag or link */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

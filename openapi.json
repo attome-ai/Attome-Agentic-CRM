@@ -32009,6 +32009,141 @@
         }
       }
     },
+    "/api/v1/admin/tag-groups": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "B4-T2: tag groups.",
+        "operationId": "list_tag_groups",
+        "responses": {
+          "200": {
+            "description": "Every tag group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TagGroup"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "B4-T2: creates a tag group with its create policy. Administrators only.",
+        "operationId": "create_tag_group",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagGroupInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagGroup"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A group with this name exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid name, colour or policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "create"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
     "/api/v1/admin/usage": {
       "get": {
         "tags": [
@@ -48990,6 +49125,116 @@
         ]
       }
     },
+    "/api/v1/tags/suggest": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B4-T2: tags starting with what was typed, most used first.",
+        "operationId": "suggest_tags",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "path",
+            "description": "What the person has typed; matched from the start of the name,\nignoring case, Arabic diacritics and letter forms.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching tags",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TagSuggestion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tags/{tag_id}/records": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B4-T4: every record carrying a tag that the caller may read.",
+        "operationId": "list_tagged_records",
+        "parameters": [
+          {
+            "name": "tag_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Records carrying the tag",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TaggedRecord"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such tag for the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/teams/{team_id}/favourites/lists": {
       "post": {
         "tags": [
@@ -55578,6 +55823,285 @@
         }
       }
     },
+    "/api/v1/{entity}/{id}/tags": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B4-T1: the tags on a record the caller may see.",
+        "operationId": "list_record_tags",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The record's tags",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TagView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the entity's read privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or the caller cannot read it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B4-T1: puts a tag on a record (an existing one, or one found or created\nby name).",
+        "operationId": "add_record_tag",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddTag"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The record's tags after the change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TagView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No update access for a shared tag, or the group is closed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record or tag",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid tag, or too many tags",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/{entity}/{id}/tags/{tag_id}": {
+      "delete": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B4-T1: takes a tag off a record.",
+        "operationId": "remove_record_tag",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "tag_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The record's tags after the change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_TagView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "No update access for a shared tag",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, tag or link",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/{entity}/{id}/timeline": {
       "get": {
         "tags": [
@@ -59756,6 +60280,43 @@
           },
           "email": {
             "type": "string"
+          }
+        }
+      },
+      "AddTag": {
+        "type": "object",
+        "description": "`POST /api/v1/{entity}/{id}/tags`: an existing tag, or a name to find or\ncreate.",
+        "properties": {
+          "colour": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "group_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The group a new shared tag joins (only with `name`)."
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "personal": {
+            "type": "boolean",
+            "description": "A new personal tag (only with `name`)."
+          },
+          "tag_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -83844,6 +84405,236 @@
           }
         }
       },
+      "PaginatedResponse_TagGroup": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name",
+                "create_policy"
+              ],
+              "properties": {
+                "colour": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "create_policy": {
+                  "type": "string"
+                },
+                "create_privilege": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_TagSuggestion": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A suggestion: the tag and how many records carry it.",
+              "required": [
+                "id",
+                "name",
+                "personal",
+                "uses"
+              ],
+              "properties": {
+                "colour": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "personal": {
+                  "type": "boolean"
+                },
+                "uses": {
+                  "type": "integer",
+                  "format": "int64"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_TagView": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One tag as the caller sees it.",
+              "required": [
+                "id",
+                "name",
+                "personal"
+              ],
+              "properties": {
+                "colour": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "group_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "personal": {
+                  "type": "boolean",
+                  "description": "Only the caller sees it."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_TaggedRecord": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One record carrying a tag, as the caller may see it.",
+              "required": [
+                "entity",
+                "record_id"
+              ],
+              "properties": {
+                "entity": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "record_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_TargetListItem": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -93575,6 +94366,157 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "TagGroup": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "create_policy"
+        ],
+        "properties": {
+          "colour": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "create_policy": {
+            "type": "string"
+          },
+          "create_privilege": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "TagGroupInput": {
+        "type": "object",
+        "description": "`POST /api/v1/admin/tag-groups`.",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "colour": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "create_policy": {
+            "type": "string",
+            "description": "`anyone`, `privilege` or `nobody`."
+          },
+          "create_privilege": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The privilege key `privilege` needs."
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "TagSuggestion": {
+        "type": "object",
+        "description": "A suggestion: the tag and how many records carry it.",
+        "required": [
+          "id",
+          "name",
+          "personal",
+          "uses"
+        ],
+        "properties": {
+          "colour": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "personal": {
+            "type": "boolean"
+          },
+          "uses": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "TagView": {
+        "type": "object",
+        "description": "One tag as the caller sees it.",
+        "required": [
+          "id",
+          "name",
+          "personal"
+        ],
+        "properties": {
+          "colour": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "group_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "personal": {
+            "type": "boolean",
+            "description": "Only the caller sees it."
+          }
+        }
+      },
+      "TaggedRecord": {
+        "type": "object",
+        "description": "One record carrying a tag, as the caller may see it.",
+        "required": [
+          "entity",
+          "record_id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
