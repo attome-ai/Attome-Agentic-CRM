@@ -110,7 +110,7 @@ async fn spend_report(
 ) -> Result<Json<SpendReport>, AppError> {
     let spend = &state.base.config.inference.spend;
     let model = state.base.config.inference.generation.model.clone();
-    let priced = spend.prices.contains_key(&model);
+    let priced = crate::budget_guard::model_price(&state).await?.is_some();
     let mut windows: Vec<SpendWindow> = Vec::new();
     // The deployment's own window is the one every generation shares.
     windows.extend(

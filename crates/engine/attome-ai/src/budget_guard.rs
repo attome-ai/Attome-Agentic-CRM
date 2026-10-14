@@ -450,6 +450,45 @@ pub fn spend_windows(
     windows
 }
 
+/// The generation model's price: `inference.spend.prices` when it names the
+/// model, otherwise the approved, live `ai_model` catalogue entry's
+/// `input_cost`/`output_cost` when they are priced per token
+/// ([`price_from_catalogue`]). `None` when neither prices it.
+pub async fn model_price(state: &EngineState) -> Result<Option<ModelPrice>, AppError> {
+    let model = &state.base.config.inference.generation.model;
+    if let Some(price) = state.base.config.inference.spend.prices.get(model) {
+        return Ok(Some(*price));
+    }
+    if model.is_empty() {
+        return Ok(None);
+    }
+    let rows: Vec<(Option<String>, Option<f64>, Option<f64>)> = sqlx::query_as(
+        "SELECT cost_unit, input_cost::float8, output_cost::float8 FROM ai_model          WHERE provider_model_id = $1 AND approval_status = 'approved'            AND (is_active IS NULL OR is_active = true)          ORDER BY id LIMIT 5",
+    )
+    .bind(model)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .find_map(|(unit, input, output)| price_from_catalogue(unit.as_deref()?, input?, output?)))
+}
+
+/// A catalogue price as a price per million tokens; `None` for a unit that is
+/// not per token or an amount that is not a finite, non-negative number.
+pub fn price_from_catalogue(unit: &str, input: f64, output: f64) -> Option<ModelPrice> {
+    let scale = match unit {
+        "per_1m_tokens" => 1.0,
+        "per_1k_tokens" => 1_000.0,
+        _ => return None,
+    };
+    let valid = |v: f64| v.is_finite() && v >= 0.0;
+    (valid(input) && valid(output)).then_some(ModelPrice {
+        prompt_per_million: input * scale,
+        completion_per_million: output * scale,
+    })
+}
+
 /// Whether `consumed` has reached `percent` of `limit`.
 pub fn near_cap(consumed: u64, limit: u64, percent: u8) -> bool {
     u128::from(consumed) * 100 >= u128::from(limit) * u128::from(percent)
@@ -473,11 +512,7 @@ async fn plan_spend(
     if !spend.has_caps() {
         return Ok(None);
     }
-    let Some(price) = spend
-        .prices
-        .get(&state.base.config.inference.generation.model)
-        .copied()
-    else {
+    let Some(price) = model_price(state).await? else {
         return Ok(None);
     };
     // The agent a session was started with, only when agents have a cap.
@@ -1114,6 +1149,22 @@ mod tests {
         // 200 completion tokens at 15 per million = 0.003 = 3,000.
         assert_eq!(cost_micros(&price, 1_000, 200), 6_000);
         assert_eq!(cost_micros(&price, 0, 0), 0);
+    }
+
+    #[test]
+    fn a_catalogue_price_is_read_per_million_tokens() {
+        let per_1k = price_from_catalogue("per_1k_tokens", 0.003, 0.015).unwrap();
+        assert!((per_1k.prompt_per_million - 3.0).abs() < 1e-9);
+        assert!((per_1k.completion_per_million - 15.0).abs() < 1e-9);
+        assert_eq!(
+            price_from_catalogue("per_1m_tokens", 3.0, 15.0),
+            Some(ModelPrice {
+                prompt_per_million: 3.0,
+                completion_per_million: 15.0
+            })
+        );
+        assert_eq!(price_from_catalogue("per_response", 1.0, 1.0), None);
+        assert_eq!(price_from_catalogue("per_1m_tokens", -1.0, 1.0), None);
     }
 
     #[test]
