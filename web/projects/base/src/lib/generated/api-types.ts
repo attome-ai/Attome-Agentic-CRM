@@ -16149,7 +16149,9 @@ export interface components {
              *     any of a non-empty string array by typed equality (not valid for a
              *     multi-select Choice). `is_null` takes no value and matches a stored
              *     NULL — the only way to express a NULL bucket (dashboard 10/10 Phase 0
-             *     spike S1).
+             *     spike S1). `under` and `above` (A17-T2) take a record id for a lookup
+             *     into a tree (an entity with one parent lookup to itself) and match
+             *     that record and everything below it, or above it, up to 32 levels.
              * @example eq
              */
             op: string;
