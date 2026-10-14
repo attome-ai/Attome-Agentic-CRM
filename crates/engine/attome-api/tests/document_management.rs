@@ -459,6 +459,11 @@ async fn upload_clean_file(
 /// mirror rather than leaving it behind.
 #[tokio::test]
 async fn file_field_write_mirrors_into_xrm_document_and_clearing_it_soft_deletes_the_mirror() {
+    // A real `clean` scan needs a running clamd; CI runs none.
+    if std::env::var("TEST_CLAMD_ADDRESS").is_err() {
+        eprintln!("SKIP: set TEST_CLAMD_ADDRESS to a running clamd to run this test");
+        return;
+    }
     let system = skip_if_no_db!(test_system().await);
     let (_admin_id, admin_cookie) = seed_admin(&system).await;
     let attome_state = system.state().clone();
@@ -547,6 +552,11 @@ async fn file_field_write_mirrors_into_xrm_document_and_clearing_it_soft_deletes
 /// whole transaction back, so this cleanup code was previously unreachable.
 #[tokio::test]
 async fn hard_delete_removes_the_storage_object_behind_a_file_field() {
+    // A real `clean` scan needs a running clamd; CI runs none.
+    if std::env::var("TEST_CLAMD_ADDRESS").is_err() {
+        eprintln!("SKIP: set TEST_CLAMD_ADDRESS to a running clamd to run this test");
+        return;
+    }
     let system = skip_if_no_db!(test_system().await);
     let (_admin_id, admin_cookie) = seed_admin(&system).await;
     let attome_state = system.state().clone();
