@@ -507,7 +507,7 @@ mod tests {
             doc: agent(),
         };
         let one = AgentKind.cook(std::slice::from_ref(&input)).unwrap();
-        let two = AgentKind.cook(&[input.clone()]).unwrap();
+        let two = AgentKind.cook(std::slice::from_ref(&input)).unwrap();
         assert_eq!(one, two);
         let cooked: Value = serde_json::from_slice(&one[0].payload).unwrap();
         assert_eq!(cooked["name"], "triage");

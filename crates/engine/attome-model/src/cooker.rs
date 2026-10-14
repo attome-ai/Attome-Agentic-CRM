@@ -60,7 +60,7 @@ pub fn cook(
     registry: &KindRegistry,
 ) -> Result<Cooked, AppError> {
     let mut objects: Vec<_> = set.objects.iter().collect();
-    objects.sort_by(|a, b| (a.kind, a.id).cmp(&(b.kind, b.id)));
+    objects.sort_by_key(|o| (o.kind, o.id));
 
     // Every document in its kind's current shape (Y1-T12): an older stored
     // row is upgraded here, never rewritten.
