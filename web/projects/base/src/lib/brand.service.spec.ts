@@ -30,13 +30,14 @@ describe('BrandService (B13-T8)', () => {
 
   it('points the favicon at the published one', () => {
     const get = vi.fn().mockReturnValue(of({
-      variables: {}, hide_vendor_name: false, favicon_url: '/api/v1/branding/asset?kind=favicon&v=abc',
+      variables: {}, hide_vendor_name: false, favicon_url: '/api/v1/branding/asset?kind=favicon&v=abc', app_name: 'Acme CRM',
     }));
     const { brand } = create(get);
     brand.loadPublic();
     const link = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
     expect(link?.href).toBe('http://api.test/api/v1/branding/asset?kind=favicon&v=abc');
     expect(brand.current()?.favicon_url).toContain('kind=favicon');
+    expect(document.title).toBe('Acme CRM');
   });
 
   it('asks for the caller\'s brand with the app, and ignores a failure', () => {

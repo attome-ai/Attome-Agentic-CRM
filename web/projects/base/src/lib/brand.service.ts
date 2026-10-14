@@ -48,6 +48,7 @@ export class BrandService {
         this.current.set(brand);
         this.theme.setBrand(brand.variables);
         if (brand.favicon_url) this.setFavicon(`${this.config.apiUrl}${brand.favicon_url}`);
+        if (brand.app_name) this.doc.title = brand.app_name;
       },
       error: () => undefined,
     });

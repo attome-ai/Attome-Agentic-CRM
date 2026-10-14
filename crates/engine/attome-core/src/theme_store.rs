@@ -653,6 +653,16 @@ fn version_tag(used: &str) -> String {
     hex::encode(&digest[..8])
 }
 
+/// One theme version.
+pub async fn get(db: &attome_db::DbPool, id: Uuid) -> Result<ThemeRow, AppError> {
+    sqlx::query_as(&format!("SELECT {COLUMNS} FROM theme WHERE id = $1"))
+        .bind(id)
+        .fetch_optional(db)
+        .await
+        .map_err(attome_db::classify)?
+        .ok_or(AppError::NotFound)
+}
+
 /// A page of themes, newest version first.
 pub async fn list(
     db: &attome_db::DbPool,

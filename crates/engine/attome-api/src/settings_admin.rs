@@ -515,6 +515,28 @@ async fn create_theme(
     Ok((axum::http::StatusCode::CREATED, Json(row)))
 }
 
+/// B13-T4: one theme version.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/themes/{id}",
+    tag = "settings",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "The version", body = ThemeRow),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No such theme", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn get_theme(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<ThemeRow>, AppError> {
+    Ok(Json(theme_store::get(&state.base.db, id).await?))
+}
+
 /// B13-T4: replaces a draft's tokens. `If-Match: "<row_version>"` is required.
 #[utoipa::path(
     patch,
@@ -1014,7 +1036,7 @@ pub fn routes() -> Router<EngineState> {
         )
         .route(
             "/api/v1/admin/themes/{id}",
-            axum::routing::patch(update_theme),
+            get(get_theme).patch(update_theme),
         )
         .route(
             "/api/v1/admin/themes/{id}/publish",
@@ -1043,6 +1065,7 @@ pub fn routes() -> Router<EngineState> {
     list_themes,
     create_theme,
     update_theme,
+    get_theme,
     publish_theme,
     preview_theme,
     rollback_theme,
