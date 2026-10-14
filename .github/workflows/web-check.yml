@@ -71,7 +71,7 @@ jobs:
           # the annotation budget before the real failures.
           sed -e 's/\x1b\[[0-9;]*m//g' web-check.log \
             | grep -v -E 'ICU message formatting is unavailable|^[[:space:]]+at ' \
-            | grep -E -A2 'error TS|ERROR|✘|FAIL|Error:|AssertionError|expected' \
+            | grep -E -B1 -A2 'error TS|ERROR|✘|FAIL|Error:|AssertionError|expected|[0-9]+:[0-9]+ +error' \
             | head -360 > failures.txt || true
           total=$(wc -l < failures.txt); start=1; part=1
           while [ "$start" -le "$total" ] && [ "$part" -le 9 ]; do
