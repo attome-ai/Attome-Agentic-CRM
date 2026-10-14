@@ -25,6 +25,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   database is given) and `scripts/install.ps1` (Windows), release archives with the web app, which
   `attome serve` now serves itself, and `attome init --admin <email> --service`.
 - Form render plans carry a content ETag; the web app loads each plan once per version.
+- Agent daily limits: an agent's `limits.daily` caps record changes, deletes, messages and outside
+  calls per day across all its sessions; a session started with `agent` (a published agent object)
+  is held to them and to the agent's tools, and `GET /api/v1/admin/ai/agents/{agent}/usage` reports
+  today's use.
+- MCP: `tools/list` returns a core set plus `tools.search`; `initialize` carries a playbook.
+- The live channel `GET /api/v1/live` tells the web app when published metadata changes.
 - Install and operations: `attome service install`, `attome bundle offline`, `attome sovereignty
   report`, a sizing check in `attome init`, and the `deployment.sovereign` preset.
 - Testing and release tooling: `attome test` (tiers, a Docker test stack, flaky-test reruns,
