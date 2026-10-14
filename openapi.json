@@ -54692,8 +54692,18 @@
               }
             }
           },
-          "422": {
-            "description": "Request failed validation",
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
             "content": {
               "application/json": {
                 "schema": {
@@ -54702,7 +54712,15 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/health/ready": {
@@ -54724,6 +54742,33 @@
           },
           "503": {
             "description": "Not ready, or draining for shutdown",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/startup": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "U9-T1 — the startup probe: 200 once this node has finished booting\n(migrations, seeds, pre-warm), 503 before. An orchestrator holds liveness\nand readiness checks until it passes, so a slow first boot is not killed\nas a hung one. Never reads a dependency: readiness does that.",
+        "operationId": "health_startup",
+        "responses": {
+          "200": {
+            "description": "This node has finished booting",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "503": {
+            "description": "Still booting",
             "content": {
               "application/json": {
                 "schema": {}

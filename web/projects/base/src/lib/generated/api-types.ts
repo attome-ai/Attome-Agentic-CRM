@@ -10505,6 +10505,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/health/startup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * U9-T1 — the startup probe: 200 once this node has finished booting
+         *     (migrations, seeds, pre-warm), 503 before. An orchestrator holds liveness
+         *     and readiness checks until it passes, so a slow first boot is not killed
+         *     as a hung one. Never reads a dependency: readiness does that.
+         */
+        get: operations["health_startup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/version": {
         parameters: {
             query?: never;
@@ -61095,8 +61117,17 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Request failed validation */
-            422: {
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -61125,6 +61156,35 @@ export interface operations {
                 };
             };
             /** @description Not ready, or draining for shutdown */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    health_startup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description This node has finished booting */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Still booting */
             503: {
                 headers: {
                     [name: string]: unknown;
