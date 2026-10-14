@@ -11,6 +11,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- `attome restore <archive|latest> --yes` puts the database back to a backup, after writing a
+  backup of the current one, in one transaction.
 - Tags under a record's title: suggestions while typing, a new tag on Enter, personal tags marked.
 - Tags on any record (migration 0022): shared or personal, matched ignoring case and Arabic
   diacritics; `GET/POST /api/v1/{entity}/{id}/tags`, `DELETE .../tags/{tag_id}`,

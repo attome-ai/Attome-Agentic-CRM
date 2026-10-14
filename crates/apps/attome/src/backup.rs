@@ -161,7 +161,8 @@ pub fn spawn_daily(config: std::sync::Arc<AppConfig>) {
     // same database; they use pgBackRest or the database host's backups.
     if config.cache.backend != attome_config::CacheBackend::Memory {
         tracing::info!(
-            "backup: the daily local backup runs on Solo only; this deployment uses              pgBackRest or its database host's backups"
+            "backup: the daily local backup runs on Solo only; this deployment uses \
+             pgBackRest or its database host's backups"
         );
         return;
     }
@@ -216,10 +217,196 @@ pub async fn run_now() -> std::process::ExitCode {
     }
 }
 
+/// The `pg_restore` beside the configured `pg_dump`, or the one on the PATH.
+pub fn pg_restore_program(config: &AppConfig) -> String {
+    match config.backup.pg_dump.as_deref().map(Path::new) {
+        Some(dump) if dump.parent().is_some_and(|p| !p.as_os_str().is_empty()) => {
+            let name = if cfg!(windows) {
+                "pg_restore.exe"
+            } else {
+                "pg_restore"
+            };
+            dump.with_file_name(name).display().to_string()
+        }
+        _ => "pg_restore".to_owned(),
+    }
+}
+
+/// The `pg_restore` arguments: the archive replaces what the database holds,
+/// all or nothing.
+pub fn pg_restore_args(config: &AppConfig, file: &Path) -> Vec<String> {
+    let db = &config.database;
+    vec![
+        "--clean".into(),
+        "--if-exists".into(),
+        "--no-owner".into(),
+        "--single-transaction".into(),
+        "--exit-on-error".into(),
+        format!("--host={}", db.host),
+        format!("--port={}", db.port),
+        format!("--username={}", db.user),
+        format!("--dbname={}", db.dbname),
+        file.display().to_string(),
+    ]
+}
+
+/// The newest archive among `names` (archives sort by their time).
+pub fn latest_archive(names: &[String]) -> Option<&String> {
+    names
+        .iter()
+        .filter(|n| n.starts_with("attome-") && n.ends_with(".dump"))
+        .max()
+}
+
+/// Which archive `target` names: `latest`, a path, or a file in `backup.dir`.
+async fn archive_for(config: &AppConfig, target: &str) -> Result<PathBuf, String> {
+    let dir = backup_dir(config);
+    if target == "latest" {
+        let mut entries = tokio::fs::read_dir(&dir)
+            .await
+            .map_err(|e| format!("cannot read {}: {e}", dir.display()))?;
+        let mut names = Vec::new();
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            names.push(entry.file_name().to_string_lossy().into_owned());
+        }
+        return latest_archive(&names)
+            .map(|n| dir.join(n))
+            .ok_or_else(|| format!("no backup in {}", dir.display()));
+    }
+    let given = PathBuf::from(target);
+    if tokio::fs::metadata(&given).await.is_ok() {
+        return Ok(given);
+    }
+    let in_dir = dir.join(target);
+    if tokio::fs::metadata(&in_dir).await.is_ok() {
+        return Ok(in_dir);
+    }
+    Err(format!(
+        "no backup named {target} here or in {}",
+        dir.display()
+    ))
+}
+
+/// `attome restore <archive | latest> --yes` (roadmap U6-T2): puts the
+/// database back to a backup. Stop the server first. A backup of the
+/// database as it is now is written before anything changes, and
+/// `pg_restore` runs in one transaction, so a failure leaves the database
+/// as it was.
+#[allow(
+    clippy::print_stdout,
+    reason = "a command-line command reports to standard output"
+)]
+#[tokio::main]
+pub async fn run_restore(args: Vec<String>) -> std::process::ExitCode {
+    let confirmed = args.iter().any(|a| a == "--yes");
+    let Some(target) = args.iter().find(|a| !a.starts_with("--")) else {
+        eprintln!("usage: attome restore <archive | latest> --yes");
+        return std::process::ExitCode::from(2);
+    };
+    let config = match AppConfig::from_file() {
+        Ok(config) => config,
+        Err(error) => {
+            eprintln!("attome restore: cannot read the configuration: {error}");
+            return std::process::ExitCode::FAILURE;
+        }
+    };
+    let archive = match archive_for(&config, target).await {
+        Ok(archive) => archive,
+        Err(error) => {
+            eprintln!("attome restore: {error}");
+            return std::process::ExitCode::FAILURE;
+        }
+    };
+    if !confirmed {
+        println!(
+            "This replaces everything in database {} with {}.\n\
+             Stop the Attome server first, then run again with --yes.",
+            config.database.dbname,
+            archive.display()
+        );
+        return std::process::ExitCode::from(2);
+    }
+    match run_once(&config).await {
+        Ok(safety) => println!("the database as it was: {}", safety.display()),
+        Err(error) => {
+            eprintln!("attome restore: the safety backup failed, nothing was changed: {error}");
+            return std::process::ExitCode::FAILURE;
+        }
+    }
+    let program = pg_restore_program(&config);
+    let mut command = tokio::process::Command::new(&program);
+    command
+        .args(pg_restore_args(&config, &archive))
+        .kill_on_drop(true);
+    if let Some(password) = config.database.password.as_deref() {
+        command.env("PGPASSWORD", password);
+    }
+    let output = match tokio::time::timeout(BACKUP_TIMEOUT, command.output()).await {
+        Ok(Ok(output)) => output,
+        Ok(Err(error)) => {
+            eprintln!("attome restore: cannot run {program}: {error}");
+            return std::process::ExitCode::FAILURE;
+        }
+        Err(_) => {
+            eprintln!("attome restore: pg_restore did not finish within two hours");
+            return std::process::ExitCode::FAILURE;
+        }
+    };
+    if !output.status.success() {
+        let reason = String::from_utf8_lossy(&output.stderr);
+        eprintln!(
+            "attome restore: pg_restore failed ({}); the database is unchanged: {}",
+            output.status,
+            reason.lines().last().unwrap_or_default()
+        );
+        return std::process::ExitCode::FAILURE;
+    }
+    println!(
+        "restored {} into {}",
+        archive.display(),
+        config.database.dbname
+    );
+    std::process::ExitCode::SUCCESS
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use chrono::TimeZone;
+
+    #[test]
+    fn restore_picks_the_newest_archive_and_replaces_in_one_transaction() {
+        let names: Vec<String> = [
+            "attome-20261010-0200.dump",
+            "attome-20261014-0200.dump",
+            "attome-20261012-0200.dump",
+            "attome-20261015-0200.dump.partial",
+            "notes.txt",
+        ]
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect();
+        assert_eq!(
+            latest_archive(&names).map(String::as_str),
+            Some("attome-20261014-0200.dump")
+        );
+        assert_eq!(latest_archive(&[]), None);
+
+        let config: AppConfig =
+            serde_json::from_str(include_str!("../../../../config.example.json")).unwrap();
+        let args = pg_restore_args(&config, Path::new("a.dump"));
+        for flag in [
+            "--clean",
+            "--if-exists",
+            "--single-transaction",
+            "--exit-on-error",
+        ] {
+            assert!(args.contains(&flag.to_owned()), "{flag}");
+        }
+        assert_eq!(args.last().map(String::as_str), Some("a.dump"));
+        assert!(!args.iter().any(|a| a.contains("password")));
+        assert_eq!(pg_restore_program(&config), "pg_restore");
+    }
 
     #[test]
     fn archives_are_named_by_time_and_the_oldest_are_pruned() {

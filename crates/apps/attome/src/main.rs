@@ -36,6 +36,9 @@ Usage:
   attome doctor                 The same checks, with what to do about each failure
   attome backup now             Write a database backup now (pg_dump custom format;
                                 restore one with pg_restore into an empty database)
+  attome restore <archive|latest> --yes
+                                Put the database back to a backup (stop the server
+                                first; the current database is backed up before)
   attome status [--url <url>]...
                                 Each node's version, schema, and whether it has
                                 started and is ready
@@ -119,6 +122,9 @@ fn main() -> ExitCode {
         ["preflight", ..] => attome::cmd::preflight::run(),
         ["doctor", ..] => attome::cmd::preflight::run_doctor(),
         ["backup", "now"] => attome::backup::run_now(),
+        ["restore", rest @ ..] => {
+            attome::backup::run_restore(rest.iter().map(|arg| (*arg).to_owned()).collect())
+        }
         ["status", rest @ ..] => {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             attome::cmd::status::run(&rest)

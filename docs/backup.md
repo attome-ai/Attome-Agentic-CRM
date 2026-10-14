@@ -30,3 +30,17 @@ pg_restore -U postgres --no-owner --dbname attome_restored backups/attome-202610
 A deployment with several servers does not run the built-in backup (each node would dump the
 same database). Use pgBackRest (full weekly, differential daily, WAL archiving, point-in-time
 recovery) or the backups of the managed database host.
+
+## Restoring
+
+Stop the Attome server, then:
+
+```sh
+attome restore latest --yes          # the newest archive in backup.dir
+attome restore attome-20261014-0200.dump --yes
+```
+
+Without `--yes` the command only says what it would replace. Before anything changes it writes a
+backup of the database as it is now (named like any other archive), then runs `pg_restore` in one
+transaction: if it fails, the database is unchanged. It restores the database only; files in object
+storage are not part of a backup yet.
