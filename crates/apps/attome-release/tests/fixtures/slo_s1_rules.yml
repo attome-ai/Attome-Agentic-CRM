@@ -1,0 +1,93 @@
+      # S1 — authenticated read, no DB work; p99 budget 60 ms
+      - record: attome:slo_requests:rate5m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami"}[5m]))
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_requests:rate30m
+        expr: sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami"}[30m]))
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_latency_bad:ratio_rate5m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/admin/security/whoami",le="0.06"}[5m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami"}[5m]))
+          )
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_latency_bad:ratio_rate30m
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/admin/security/whoami",le="0.06"}[30m]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami"}[30m]))
+          )
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_latency_bad:ratio_rate1h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/admin/security/whoami",le="0.06"}[1h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami"}[1h]))
+          )
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_latency_bad:ratio_rate6h
+        expr: |
+          1 - (
+            sum(rate(axum_http_requests_duration_seconds_bucket{method="GET",endpoint="/api/v1/admin/security/whoami",le="0.06"}[6h]))
+            /
+            sum(rate(axum_http_requests_duration_seconds_count{method="GET",endpoint="/api/v1/admin/security/whoami"}[6h]))
+          )
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_errors:ratio_rate5m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami",status=~"5.."}[5m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami"}[5m]))
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_errors:ratio_rate30m
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami",status=~"5.."}[30m])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami"}[30m]))
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_errors:ratio_rate1h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami",status=~"5.."}[1h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami"}[1h]))
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"
+      - record: attome:slo_errors:ratio_rate6h
+        expr: |
+          (sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami",status=~"5.."}[6h])) or vector(0))
+          /
+          sum(rate(axum_http_requests_total{method="GET",endpoint="/api/v1/admin/security/whoami"}[6h]))
+        labels:
+          slo_class: S1
+          slo_route: "GET /api/v1/admin/security/whoami"
+          slo_p99_ms: "60"

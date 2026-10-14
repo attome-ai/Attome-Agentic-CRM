@@ -30,6 +30,7 @@
 
 mod contract;
 pub mod parity;
+pub mod slo;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
@@ -122,6 +123,7 @@ pub fn check_with(options: &Options) -> ExitCode {
         ("clippy", clippy as Step),
         ("tests", tests as Step),
         ("contract", contract_step as Step),
+        ("slo", slo_step as Step),
     ];
     if options.web {
         steps.push(("web", web as Step));
@@ -290,6 +292,13 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
             Some([version]) => Some(tag(version)),
             _ => None,
         },
+        Some("slo") => match args.get(1..) {
+            Some([generate]) if generate == "generate" => Some(slo_generate(false)),
+            Some([generate, check]) if generate == "generate" && check == "--check" => {
+                Some(slo_generate(true))
+            }
+            _ => None,
+        },
         Some("--check") => {
             let mut options = Options::default();
             let mut rest = args[1..].iter();
@@ -311,6 +320,30 @@ pub fn dispatch(args: &[String]) -> Option<ExitCode> {
         }
         _ => None,
     }
+}
+
+/// `attome slo generate [--check]`, from the workspace root.
+fn slo_generate(check: bool) -> ExitCode {
+    match workspace_root() {
+        Ok(root) => slo::generate(&root, check),
+        Err(error) => {
+            eprintln!("attome slo generate: {error}");
+            ExitCode::from(2)
+        }
+    }
+}
+
+/// The SLO outputs match the catalogue (AA13-T2).
+fn slo_step(root: &Path) -> Result<(), String> {
+    let stale = slo::drift(root)?;
+    if stale.is_empty() {
+        return Ok(());
+    }
+    let names: Vec<String> = stale.iter().map(|p| p.display().to_string()).collect();
+    Err(format!(
+        "generated SLO files are out of date ({}); run `attome slo generate`",
+        names.join(", ")
+    ))
 }
 
 /// `attome release import-report <path>`: brings the other OS's gate report

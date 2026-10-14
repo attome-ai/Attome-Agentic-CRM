@@ -8,7 +8,8 @@ const USAGE: &str = "\
 usage:
   attome-release --check [--web] [--override <step>=<reason>]... [--by <name>]
   attome-release import-report <path>
-  attome-release tag <version>";
+  attome-release tag <version>
+  attome-release slo generate [--check]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();

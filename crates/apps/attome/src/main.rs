@@ -28,6 +28,9 @@ Usage:
   attome release import-report <path>
                                 Bring in the other OS's gate report
   attome release tag <version>  Tag this commit when both OS reports are green
+  attome slo generate [--check]
+                                Regenerate the SLO rules, k6 thresholds and table
+                                from observability/slo-catalogue.json
   attome version           Print the version
   attome help              Print this help
 ";
@@ -48,6 +51,13 @@ fn main() -> ExitCode {
             let rest: Vec<String> = rest.iter().map(|arg| (*arg).to_owned()).collect();
             attome_release::dispatch(&rest).unwrap_or_else(|| {
                 eprintln!("attome release: unknown arguments\n\n{USAGE}");
+                ExitCode::from(2)
+            })
+        }
+        ["slo", ..] => {
+            let all: Vec<String> = args.iter().map(|arg| (*arg).to_owned()).collect();
+            attome_release::dispatch(&all).unwrap_or_else(|| {
+                eprintln!("attome slo: unknown arguments\n\n{USAGE}");
                 ExitCode::from(2)
             })
         }

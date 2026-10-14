@@ -1123,6 +1123,7 @@ groups:
   # exporter's rendering of those boundaries (non-integers, so Prometheus
   # 3.x's le normalisation leaves them unchanged). MutatingWriteP99OverBudget
   # was retired in the same change; S6's burn-rate rules replace it.
+  # BEGIN GENERATED attome-slo (attome slo generate)
   - name: attome-slo
     rules:
       # S1 — authenticated read, no DB work; p99 budget 60 ms
@@ -1497,7 +1498,7 @@ groups:
           slo_class: S4
           slo_route: "GET /api/v1/{entity}/{id}"
           slo_p99_ms: "100"
-      # S5 — list page, cursor; p99 budget 300 ms
+      # S5 — list page, cursor, up to 100 rows; p99 budget 300 ms
       - record: attome:slo_requests:rate5m
         expr: sum(rate(axum_http_requests_duration_seconds_count{method="POST",endpoint="/api/v1/query/execute"}[5m]))
         labels:
@@ -1887,3 +1888,4 @@ groups:
             alerts for {{ $labels.slo_class }} are blind. The bucket list
             (attome_server::metrics::HTTP_DURATION_BUCKETS) and the SLO budgets
             have drifted apart: add the missing boundary.
+  # END GENERATED attome-slo

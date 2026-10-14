@@ -1,0 +1,111 @@
+
+      # Class-generic burn alerts: each reads every class's recorded series.
+
+      - alert: SloLatencyBurnFast
+        expr: |
+          (
+            attome:slo_latency_bad:ratio_rate1h > (14.4 * 0.01)
+            and on (slo_class)
+            attome:slo_latency_bad:ratio_rate5m > (14.4 * 0.01)
+          )
+          and on (slo_class)
+          attome:slo_requests:rate5m > 1
+        for: 2m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#slolatencyburnfast"
+          summary: "{{ $labels.slo_class }} is burning its latency budget at 14.4x"
+          description: >
+            More than 14.4% of {{ $labels.slo_route }} requests took longer than the
+            {{ $labels.slo_class }} p99 budget of {{ $labels.slo_p99_ms }}ms over both
+            the last hour and the last 5 minutes. The objective is 99% within budget
+            (runtime-performance §1.1); at this rate the 30-day budget is gone in about
+            two days.
+
+      - alert: SloLatencyBurnSlow
+        expr: |
+          (
+            attome:slo_latency_bad:ratio_rate6h > (6 * 0.01)
+            and on (slo_class)
+            attome:slo_latency_bad:ratio_rate30m > (6 * 0.01)
+          )
+          and on (slo_class)
+          attome:slo_requests:rate30m > 1
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#slolatencyburnslow"
+          summary: "{{ $labels.slo_class }} is burning its latency budget at 6x"
+          description: >
+            More than 6% of {{ $labels.slo_route }} requests took longer than the
+            {{ $labels.slo_class }} p99 budget of {{ $labels.slo_p99_ms }}ms over both
+            the last 6 hours and the last 30 minutes. The objective is 99% within
+            budget; at this rate the 30-day budget is gone in about five days. Ticket,
+            not page.
+
+      - alert: SloErrorBurnFast
+        expr: |
+          (
+            attome:slo_errors:ratio_rate1h > (14.4 * 0.001)
+            and on (slo_class)
+            attome:slo_errors:ratio_rate5m > (14.4 * 0.001)
+          )
+          and on (slo_class)
+          attome:slo_requests:rate5m > 1
+        for: 2m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#sloerrorburnfast"
+          summary: "{{ $labels.slo_class }} is burning its 5xx budget at 14.4x"
+          description: >
+            More than 1.44% of {{ $labels.slo_route }} requests returned 5xx over both
+            the last hour and the last 5 minutes. The objective is under 0.1% 5xx over
+            30 days (runtime-performance Y1); at this rate the budget is gone in about
+            two days.
+
+      - alert: SloErrorBurnSlow
+        expr: |
+          (
+            attome:slo_errors:ratio_rate6h > (6 * 0.001)
+            and on (slo_class)
+            attome:slo_errors:ratio_rate30m > (6 * 0.001)
+          )
+          and on (slo_class)
+          attome:slo_requests:rate30m > 1
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#sloerrorburnslow"
+          summary: "{{ $labels.slo_class }} is burning its 5xx budget at 6x"
+          description: >
+            More than 0.6% of {{ $labels.slo_route }} requests returned 5xx over both
+            the last 6 hours and the last 30 minutes. The objective is under 0.1% 5xx
+            over 30 days; at this rate the budget is gone in about five days. Ticket,
+            not page.
+
+      - alert: SloLatencyBucketMissing
+        expr: |
+          attome:slo_requests:rate30m > 0
+          unless on (slo_class)
+          attome:slo_latency_bad:ratio_rate30m
+        for: 15m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#slolatencybucketmissing"
+          summary: "{{ $labels.slo_class }} latency SLO cannot be measured: no {{ $labels.slo_p99_ms }}ms bucket"
+          description: >
+            {{ $labels.slo_route }} is serving traffic but the request histogram has no
+            le bucket at the {{ $labels.slo_p99_ms }}ms p99 budget, so the latency burn
+            alerts for {{ $labels.slo_class }} are blind. The bucket list
+            (attome_server::metrics::HTTP_DURATION_BUCKETS) and the SLO budgets
+            have drifted apart: add the missing boundary.
