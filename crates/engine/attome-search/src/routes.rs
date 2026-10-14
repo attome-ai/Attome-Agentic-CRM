@@ -951,6 +951,38 @@ struct GapQuery {
     page_size: Option<i64>,
 }
 
+/// Why a question retrieves what it does (roadmap N15-T4): its terms, the
+/// words dropped, and each passage's matched terms in rank order. Admin-only,
+/// retrieved under the administrator's own permissions, and never recorded as
+/// demand or as a gap.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/knowledge/explain",
+    tag = "search",
+    params(KnowledgeParams),
+    responses(
+        (status = 200, description = "The question's terms and why each passage ranked", body = crate::knowledge::KnowledgeExplanation),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege, or Search is not licensed", body = ErrorResponse),
+        (status = 422, description = "Query outside the documented caps", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn explain_knowledge(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Query(params): Query<KnowledgeParams>,
+) -> Result<Json<crate::knowledge::KnowledgeExplanation>, AppError> {
+    let q = validate_query(&params.q)?;
+    let limit = params
+        .limit
+        .unwrap_or(DEFAULT_KNOWLEDGE_LIMIT)
+        .clamp(1, MAX_KNOWLEDGE_LIMIT);
+    Ok(Json(
+        crate::knowledge::explain(&state.base.db, &ctx, &q, limit).await?,
+    ))
+}
+
 /// The authors' gap queue (M37 Phase 2, D-452; the front door added by D-489).
 ///
 /// Admin-only: the phrases are classified `Personal` (D-452), so the queue has
@@ -1110,6 +1142,7 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/search", get(search))
         .route("/api/v1/search/knowledge", get(knowledge_search))
         .route("/api/v1/search/knowledge/related", get(related_knowledge))
+        .route("/api/v1/admin/knowledge/explain", get(explain_knowledge))
         .route("/api/v1/admin/knowledge/gaps", get(list_gaps))
         .route("/api/v1/admin/knowledge/gaps/{id}", patch(triage_gap))
         .route("/api/v1/admin/knowledge/coverage", get(knowledge_coverage))
@@ -1126,6 +1159,7 @@ pub fn routes() -> Router<EngineState> {
     search,
     knowledge_search,
     related_knowledge,
+    explain_knowledge,
     list_gaps,
     triage_gap,
     knowledge_coverage,

@@ -923,6 +923,115 @@ pub async fn search_knowledge_recorded(
     Ok(hits)
 }
 
+/// Why a retrieval returned what it did, for an administrator (roadmap
+/// N15-T4): the terms the question was reduced to, the words dropped as
+/// function words, and for each passage, in rank order, which terms it
+/// matched. Retrieved under the administrator's own permissions, lexical
+/// mode, and never recorded as demand or as a gap: explaining a question is
+/// not asking it.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct KnowledgeExplanation {
+    /// The content terms, normalised and stemmed as the index stores them.
+    pub terms: Vec<String>,
+    /// Words dropped before matching (function words).
+    pub dropped: Vec<String>,
+    pub passages: Vec<ExplainedPassage>,
+    /// Set when nothing was found: `no_terms` (only function words),
+    /// `no_readable_collection` or `no_match`.
+    pub empty_reason: Option<String>,
+}
+
+/// One retrieved passage and the terms that brought it.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ExplainedPassage {
+    /// 1 is the strongest (ranked by `ts_rank_cd`).
+    pub rank: usize,
+    pub item_id: Uuid,
+    pub title: String,
+    pub heading_path: Vec<String>,
+    /// Terms found in the title, headings or passage.
+    pub matched_terms: Vec<String>,
+    pub unmatched_terms: Vec<String>,
+}
+
+/// Splits `terms` into those `text` contains (compared as the index compares
+/// them: Arabic-normalised and stemmed) and those it does not.
+pub fn match_terms(terms: &[String], text: &str) -> (Vec<String>, Vec<String>) {
+    // Letters and digits only: a query term keeps any punctuation it was
+    // typed with (`policy?`), a passage word is split on it.
+    let key = |t: &str| {
+        t.chars()
+            .filter(|c| c.is_alphanumeric())
+            .collect::<String>()
+    };
+    let words: std::collections::HashSet<String> = crate::lang::normalize_ar(text)
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(|w| key(&crate::project::index_text(w)))
+        .collect();
+    terms
+        .iter()
+        .cloned()
+        .partition(|term| words.contains(&key(term)))
+}
+
+/// See [`KnowledgeExplanation`].
+pub async fn explain(
+    db: &sqlx::PgPool,
+    ctx: &SecurityContext,
+    query: &str,
+    limit: i64,
+) -> Result<KnowledgeExplanation, AppError> {
+    let terms = knowledge_query_terms(query);
+    let dropped: Vec<String> = crate::lang::normalize_ar(query)
+        .split_whitespace()
+        .filter(|token| crate::telemetry::is_function_word(token))
+        .map(str::to_owned)
+        .collect();
+    if terms.is_empty() {
+        return Ok(KnowledgeExplanation {
+            terms,
+            dropped,
+            passages: Vec::new(),
+            empty_reason: Some("no_terms".to_owned()),
+        });
+    }
+    let Retrieval {
+        hits,
+        searched_readable_collections,
+    } = retrieve(db, ctx, query, limit, RetrievalMode::Lexical, None, None).await?;
+    let passages: Vec<ExplainedPassage> = hits
+        .into_iter()
+        .enumerate()
+        .map(|(i, hit)| {
+            let c = hit.citation;
+            let text = format!("{} {} {}", c.title, c.heading_path.join(" "), c.passage);
+            let (matched_terms, unmatched_terms) = match_terms(&terms, &text);
+            ExplainedPassage {
+                rank: i + 1,
+                item_id: c.item_id,
+                title: c.title,
+                heading_path: c.heading_path,
+                matched_terms,
+                unmatched_terms,
+            }
+        })
+        .collect();
+    let empty_reason = if !passages.is_empty() {
+        None
+    } else if searched_readable_collections {
+        Some("no_match".to_owned())
+    } else {
+        Some("no_readable_collection".to_owned())
+    };
+    Ok(KnowledgeExplanation {
+        terms,
+        dropped,
+        passages,
+        empty_reason,
+    })
+}
+
 /// Upper bound on the terms one knowledge query ORs together: the route's own
 /// cap, applied here as well because the `search.knowledge` action reaches
 /// this function without the route's validation, and every OR-ed term adds a
@@ -1064,6 +1173,17 @@ fn rebuild_chunks(rows: &[(i32, Vec<String>, String)]) -> Vec<ArticleChunk> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn explain_matches_terms_as_the_index_stems_them() {
+        let terms = knowledge_query_terms("what is our refund policy");
+        assert!(!terms.is_empty());
+        let (matched, unmatched) = match_terms(&terms, "The refund policy, for returning goods.");
+        assert_eq!(unmatched, Vec::<String>::new(), "matched {matched:?}");
+        let (matched, unmatched) = match_terms(&terms, "Shipping times");
+        assert!(matched.is_empty());
+        assert_eq!(unmatched.len(), terms.len());
+    }
     use attome_server::security::{AccessLevel, SecurityContext};
     use std::collections::HashSet;
 
