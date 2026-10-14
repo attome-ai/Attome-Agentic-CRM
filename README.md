@@ -60,6 +60,10 @@ On Windows (an elevated PowerShell), against an existing PostgreSQL 18 database 
 Either way the server and the web app answer on `http://localhost:7865/`; sign in with the one-time
 password the install prints.
 
+Both install the `crm` pack (accounts, contacts, leads, opportunities and activities); choose others
+with `--packs crm,sales` (Linux) or `-Packs crm,sales` (Windows), or none with an empty list. A pack
+is applied at every start through the changeset ledger, so starting again changes nothing.
+
 ## Building and running
 
 Rust 1.97 (pinned in `rust-toolchain.toml`) on Windows or Linux, and PostgreSQL 18 with the `pgvector`
