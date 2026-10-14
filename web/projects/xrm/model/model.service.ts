@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable, defer, from, map, of, switchMap, tap } from 'rxjs';
 import { ApiService } from '@attome/base';
 
-import { StoredPlan, readPlan, writePlan } from './plan-store';
+import { PlanStore, StoredPlan } from './plan-store';
 
 // ── Wire types (mirror attome_api::model_admin's FormPlan exactly) ──
 
@@ -92,6 +92,7 @@ export interface PatchOp {
 @Injectable({ providedIn: 'root' })
 export class ModelService {
   private readonly api = inject(ApiService);
+  private readonly store = inject(PlanStore);
 
   /** Plans already current in this session, by form id. */
   private readonly plans = new Map<string, StoredPlan<FormPlan>>();
@@ -107,7 +108,7 @@ export class ModelService {
     const current = this.plans.get(formId);
     if (current) return of(current.plan);
     const path = `/api/v1/model/forms/${encodeURIComponent(formId)}/plan`;
-    return defer(() => from(readPlan<FormPlan>(formId))).pipe(
+    return defer(() => from(this.store.read<FormPlan>(formId))).pipe(
       switchMap(stored => this.api.getIfChanged<FormPlan>(path, stored?.etag ?? null).pipe(
         map(({ body, etag }) => {
           if (body === null && stored) return stored;
@@ -117,7 +118,7 @@ export class ModelService {
       )),
       tap(fresh => {
         this.plans.set(formId, fresh);
-        if (fresh.etag) void writePlan(formId, fresh);
+        if (fresh.etag) void this.store.write(formId, fresh);
       }),
       map(fresh => fresh.plan),
     );
