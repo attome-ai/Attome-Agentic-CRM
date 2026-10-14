@@ -78,6 +78,9 @@ answers and proposes any change through its own gate.
 
 ## Running
 
+- Over MCP: `initialize` with `"params": { "agent": "<agent object id>" }` runs the connection as
+  that agent (its tools and daily limits, under the connecting person's own privileges).
+
 - In chat: `POST /api/v1/ai/conversations/{id}/messages`.
 - In the background: `POST /api/v1/ai/conversations/{id}/runs` returns at once; follow
   `GET /api/v1/ai/conversations/{id}/stream`.

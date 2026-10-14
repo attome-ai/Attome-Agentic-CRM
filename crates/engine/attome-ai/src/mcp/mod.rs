@@ -370,7 +370,7 @@ async fn mcp_endpoint(
         // legacy host asking for one is asking for something that did not
         // exist in the revision it speaks.
         "server/discover" if is_modern => Ok(discover_result()),
-        "initialize" => initialize(&state, security).await,
+        "initialize" => initialize(&state, security, request.params.as_ref()).await,
         "ping" => Ok(json!({})),
         "tools/list" => tools_list(&state, security, &headers).await,
         "tools/call" => tools_call(&state, security, &headers, request.params).await,
@@ -597,24 +597,44 @@ fn sanitized(error: &AppError) -> String {
 
 /// Opens an agent session and returns the handshake.
 ///
+/// **As an agent (N12-T4).** `params.agent` may name a published agent
+/// object: the session then runs as that agent, its tools one more
+/// allow-list and its `limits.daily` the per-day caps (V2-D487), on top of
+/// the connecting person's own privileges and this surface's ceiling. It
+/// only narrows; without it the session is the person's own, as before.
+///
 /// The session id comes back in `result.sessionId` rather than only as a
 /// header because a JSON-RPC client reading a response body is guaranteed;
 /// a client preserving response *headers* across calls is not.
 async fn initialize(
     state: &EngineState,
     security: Arc<SecurityContext>,
+    params: Option<&Value>,
 ) -> Result<Value, AppError> {
+    let agent = match params.and_then(|p| p.get("agent")) {
+        None | Some(Value::Null) => None,
+        Some(value) => {
+            let id = value
+                .as_str()
+                .and_then(|s| Uuid::parse_str(s).ok())
+                .ok_or_else(|| AppError::Validation("agent must be an agent object id".into()))?;
+            let (tools, daily) = crate::agent::published_agent(state, id).await?;
+            Some((id, tools, daily))
+        }
+    };
+    let allowed_action_ids = agent
+        .as_ref()
+        .map(|(_, tools, _)| crate::agent::narrow_to_agent_tools(None, tools));
     let session = session::start(
         &state.base.db,
         &attome_audit::audit_service(state),
         SessionStart {
             owner_user_id: security.user_id,
             risk_ceiling: SESSION_CEILING,
-            // `None`, not `Some(vec![])` — ceiling-bounded rather than
-            // nothing-allowed. `session.rs`'s own doc calls that distinction
-            // out as deliberate, and `Some(vec![])` here would produce a
-            // session that lists tools and refuses every one of them.
-            allowed_action_ids: None,
+            // Without an agent, `None`, not `Some(vec![])` — ceiling-bounded
+            // rather than nothing-allowed. `session.rs`'s own doc calls that
+            // distinction out as deliberate. With one, its tools.
+            allowed_action_ids,
             surface: MCP_SURFACE,
             agent_definition_ref: None,
             integration_system_id: None,
@@ -625,6 +645,20 @@ async fn initialize(
         },
     )
     .await?;
+    if let Some((agent, _, daily)) = agent
+        && let Err(error) =
+            session::attach_agent_object(&state.base.db, session.id, agent, daily).await
+    {
+        // Never leave a session running without the agent's limits.
+        let _ = session::revoke(
+            &state.base.db,
+            session.id,
+            security.user_id,
+            "agent limits not attached",
+        )
+        .await;
+        return Err(error);
+    }
 
     tracing::info!(
         session_id = %session.id,

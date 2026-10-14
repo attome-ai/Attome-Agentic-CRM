@@ -660,7 +660,7 @@ pub fn narrow_to_agent_tools(allowed: Option<Vec<String>>, tools: &[String]) -> 
 
 /// The tools and daily limits of the newest published version of agent
 /// object `agent`.
-async fn published_agent(
+pub(crate) async fn published_agent(
     state: &EngineState,
     agent: Uuid,
 ) -> Result<(Vec<String>, Option<Value>), AppError> {
