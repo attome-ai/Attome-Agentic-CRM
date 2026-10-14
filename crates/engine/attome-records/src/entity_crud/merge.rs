@@ -669,6 +669,10 @@ pub async fn do_merge_core_with_version(
         duplicate_id,
         actor_user_id,
         None,
+        &crate::entity_mutation::DeleteOrigin::with_id(
+            crate::entity_mutation::DeleteKind::Merge,
+            format!("merge:{duplicate_id}"),
+        ),
     )
     .await?;
 

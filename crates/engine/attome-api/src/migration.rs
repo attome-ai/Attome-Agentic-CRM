@@ -1072,6 +1072,10 @@ async fn rollback_one_item(
             record_id,
             user_id,
             Some(applied_row_version),
+            &entity_mutation::DeleteOrigin::with_id(
+                entity_mutation::DeleteKind::Migration,
+                item_id.to_string(),
+            ),
         )
         .await?
     } else {

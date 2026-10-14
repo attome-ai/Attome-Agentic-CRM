@@ -1099,7 +1099,16 @@ pub async fn plan_delete(
     }
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     fetch_in_scope(state, &mut tx, plan, &attrs, id, true).await?;
-    delete_one_as(&mut tx, &plan.entity, &[], id, None, expected_row_version).await?;
+    delete_one_as(
+        &mut tx,
+        &plan.entity,
+        &[],
+        id,
+        None,
+        expected_row_version,
+        &crate::entity_mutation::DeleteOrigin::new(crate::entity_mutation::DeleteKind::Portal),
+    )
+    .await?;
     audit(
         state,
         &mut tx,

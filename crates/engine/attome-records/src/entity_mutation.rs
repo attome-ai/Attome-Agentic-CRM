@@ -3459,6 +3459,130 @@ pub async fn run_cascade_deactivate_job(
     Ok(())
 }
 
+/// What removed a record (A18-T2): the kind of operation, its id (so a whole
+/// action can be restored at once) and the reason given.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeleteOrigin {
+    pub kind: DeleteKind,
+    /// The request, bulk batch, run or merge the delete belonged to; at most
+    /// 64 characters.
+    pub operation_id: String,
+    pub reason: Option<String>,
+}
+
+/// `deletion.operation_kind`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeleteKind {
+    Request,
+    Agent,
+    Flow,
+    Bulk,
+    Import,
+    Merge,
+    Portal,
+    Migration,
+}
+
+impl DeleteKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Request => "request",
+            Self::Agent => "agent",
+            Self::Flow => "flow",
+            Self::Bulk => "bulk",
+            Self::Import => "import",
+            Self::Merge => "merge",
+            Self::Portal => "portal",
+            Self::Migration => "migration",
+        }
+    }
+}
+
+/// The longest reason kept.
+pub const MAX_DELETE_REASON_CHARS: usize = 500;
+
+impl DeleteOrigin {
+    /// A delete of `kind` with a fresh operation id and no reason.
+    pub fn new(kind: DeleteKind) -> Self {
+        Self::with_id(kind, Uuid::now_v7().to_string())
+    }
+
+    /// A delete belonging to an operation the caller names (cut to 64
+    /// characters).
+    pub fn with_id(kind: DeleteKind, operation_id: impl Into<String>) -> Self {
+        let operation_id: String = operation_id.into().trim().chars().take(64).collect();
+        Self {
+            kind,
+            operation_id: if operation_id.is_empty() {
+                Uuid::now_v7().to_string()
+            } else {
+                operation_id
+            },
+            reason: None,
+        }
+    }
+
+    /// Adds the reason given (blank means none; cut to
+    /// [`MAX_DELETE_REASON_CHARS`]).
+    pub fn reason(mut self, reason: Option<&str>) -> Self {
+        self.reason = reason
+            .map(str::trim)
+            .filter(|r| !r.is_empty())
+            .map(|r| r.chars().take(MAX_DELETE_REASON_CHARS).collect());
+        self
+    }
+}
+
+/// A18-T2: refuses a delete without a reason when the entity's bin setting
+/// requires one; only people give reasons, so other kinds pass.
+async fn require_delete_reason(
+    tx: &mut Transaction<'_, Postgres>,
+    entity: &str,
+    origin: &DeleteOrigin,
+) -> Result<(), AppError> {
+    if origin.reason.is_some() || origin.kind != DeleteKind::Request {
+        return Ok(());
+    }
+    let required: Option<bool> =
+        sqlx::query_scalar("SELECT require_reason FROM bin_setting WHERE entity = $1")
+            .bind(entity)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(AppError::internal)?;
+    if required == Some(true) {
+        return Err(AppError::Validation(
+            "delete_reason_required: give a reason to delete this record".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// A18-T2: the bin's ledger row for a record this transaction removed.
+async fn record_deletion(
+    tx: &mut Transaction<'_, Postgres>,
+    entity: &str,
+    record_id: Uuid,
+    deleted_by: Option<Uuid>,
+    origin: &DeleteOrigin,
+) -> Result<(), AppError> {
+    sqlx::query(
+        "INSERT INTO deletion (id, entity, record_id, deleted_by, reason, operation_kind, operation_id) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7) \
+         ON CONFLICT (entity, record_id) WHERE restored_at IS NULL AND purged_at IS NULL DO NOTHING",
+    )
+    .bind(Uuid::now_v7())
+    .bind(entity)
+    .bind(record_id)
+    .bind(deleted_by)
+    .bind(origin.reason.as_deref())
+    .bind(origin.kind.as_str())
+    .bind(&origin.operation_id)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
 pub async fn delete_one(
     tx: &mut Transaction<'_, Postgres>,
     target_entity_name: &str,
@@ -3466,6 +3590,7 @@ pub async fn delete_one(
     record_id: Uuid,
     user_id: Uuid,
     expected_row_version: Option<i64>,
+    origin: &DeleteOrigin,
 ) -> Result<MutationResult, AppError> {
     delete_one_as(
         tx,
@@ -3474,12 +3599,13 @@ pub async fn delete_one(
         record_id,
         Some(user_id),
         expected_row_version,
+        origin,
     )
     .await
 }
 
 /// [`delete_one`] with an optional `modified_by` (`None` for a portal user,
-/// D-579).
+/// D-579). Writes the bin's ledger row in the same transaction (A18-T2).
 pub async fn delete_one_as(
     tx: &mut Transaction<'_, Postgres>,
     target_entity_name: &str,
@@ -3487,7 +3613,9 @@ pub async fn delete_one_as(
     record_id: Uuid,
     modified_by: Option<Uuid>,
     expected_row_version: Option<i64>,
+    origin: &DeleteOrigin,
 ) -> Result<MutationResult, AppError> {
+    require_delete_reason(tx, target_entity_name, origin).await?;
     let policy = apply_dependents_on_delete(
         tx,
         target_entity_name,
@@ -3497,6 +3625,7 @@ pub async fn delete_one_as(
         expected_row_version,
     )
     .await?;
+    record_deletion(tx, target_entity_name, record_id, modified_by, origin).await?;
     Ok(MutationResult {
         record_id,
         old_row: None,
@@ -3620,6 +3749,17 @@ pub async fn restore_one(
     let Some(new_row) = new_row else {
         return Err(AppError::VersionConflict);
     };
+    // A18-T3: the bin's ledger row for this record is closed.
+    sqlx::query(
+        "UPDATE deletion SET restored_at = NOW(), restored_by = $3 \
+         WHERE entity = $1 AND record_id = $2 AND restored_at IS NULL AND purged_at IS NULL",
+    )
+    .bind(entity_name)
+    .bind(record_id)
+    .bind(user_id)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
 
     // D-358: the restored record's own change-feed row. The cascade's
     // dependents get theirs inside `reactivate_dependents_on_restore` below;
@@ -3740,6 +3880,16 @@ pub async fn hard_delete_one(
             "hard delete: erased the record's recovery-archive values"
         );
     }
+    // A18: the record is gone, so its bin entry (if it was in the bin) is
+    // closed as purged rather than left restorable.
+    sqlx::query(
+        "UPDATE deletion SET purged_at = NOW()          WHERE entity = $1 AND record_id = $2 AND restored_at IS NULL AND purged_at IS NULL",
+    )
+    .bind(entity_name)
+    .bind(record_id)
+    .execute(&mut **tx)
+    .await
+    .map_err(AppError::internal)?;
 
     attome_core::change_feed::emit_tx(
         tx,

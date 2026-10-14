@@ -373,6 +373,9 @@ impl Action for RecordDelete {
                 &args.entity,
                 args.record_id,
                 args.row_version,
+                &attome_records::entity_mutation::DeleteOrigin::new(
+                    attome_records::entity_mutation::DeleteKind::Agent,
+                ),
             )
             .await?;
             Ok(ActionResult::plain(json!({

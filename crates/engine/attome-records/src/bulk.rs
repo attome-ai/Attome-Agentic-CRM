@@ -1319,6 +1319,16 @@ async fn apply_ledgered_item(
                 record_id,
                 user_id,
                 record.expected_row_version,
+                &match migration_run_id {
+                    Some(run) => entity_mutation::DeleteOrigin::with_id(
+                        entity_mutation::DeleteKind::Import,
+                        run.to_string(),
+                    ),
+                    None => entity_mutation::DeleteOrigin::with_id(
+                        entity_mutation::DeleteKind::Bulk,
+                        batch_id.to_string(),
+                    ),
+                },
             )
             .await?
         }
@@ -2010,6 +2020,9 @@ async fn dry_run_one(
                 .await
                 {
                     Ok(()) => {
+                        // A dry run rolls back; the origin is never stored.
+                        let origin =
+                            entity_mutation::DeleteOrigin::new(entity_mutation::DeleteKind::Bulk);
                         entity_mutation::delete_one(
                             &mut tx,
                             entity_name,
@@ -2017,6 +2030,7 @@ async fn dry_run_one(
                             record_id,
                             user_id,
                             record.expected_row_version,
+                            &origin,
                         )
                         .await
                     }

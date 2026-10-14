@@ -1084,6 +1084,36 @@ pub(super) async fn update_record(
     Ok(Json(response))
 }
 
+/// `DELETE /api/v1/{entity}/{id}?reason=`.
+#[derive(Debug, serde::Deserialize)]
+pub(super) struct DeleteQuery {
+    reason: Option<String>,
+}
+
+/// A18-T2: a request's delete belongs to the operation its
+/// `Attome-Operation-Id` header names, else to the request itself.
+pub fn request_delete_origin(
+    headers: &axum::http::HeaderMap,
+) -> crate::entity_mutation::DeleteOrigin {
+    let named = |name: &str| {
+        headers
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(str::to_owned)
+    };
+    match named("attome-operation-id").or_else(|| named("x-request-id")) {
+        Some(id) => crate::entity_mutation::DeleteOrigin::with_id(
+            crate::entity_mutation::DeleteKind::Request,
+            id,
+        ),
+        None => {
+            crate::entity_mutation::DeleteOrigin::new(crate::entity_mutation::DeleteKind::Request)
+        }
+    }
+}
+
 /// Soft-deletes a record, given an **already-authorized** caller — the
 /// non-HTTP-caller counterpart to the `DELETE /api/v1/{entity}/{id}` handler,
 /// added for C5's `record.delete` action (guidelines §9 — reuse the engine's
@@ -1104,6 +1134,7 @@ pub async fn delete_record_for(
     entity_input: &str,
     record_id: uuid::Uuid,
     expected_row_version: Option<i64>,
+    origin: &crate::entity_mutation::DeleteOrigin,
 ) -> Result<(), AppError> {
     let (entity_id, entity_name, attrs, is_append_only) =
         resolve_entity(state, entity_input).await?;
@@ -1140,6 +1171,7 @@ pub async fn delete_record_for(
         record_id,
         acting_user_id,
         expected_row_version,
+        origin,
     )
     .await?;
 
@@ -1191,6 +1223,12 @@ pub async fn delete_record_for(
          description = "Optional row_version for optimistic concurrency (DATA-7). \
                         Omitted, the delete is unguarded as before; supplied and stale, \
                         the response is 409."),
+        ("reason" = Option<String>, Query,
+         description = "Why the record is deleted (A18); required when the entity's bin \
+                        setting says so, else 422 delete_reason_required."),
+        ("Attome-Operation-Id" = Option<String>, Header,
+         description = "Groups deletes into one action the bin can restore at once; \
+                        defaults to the request id."),
     ),
     responses(
         (status = 204, description = "Success"),
@@ -1208,10 +1246,12 @@ pub(super) async fn delete_record(
     Extension(claims): Extension<SessionClaims>,
     Path((entity_input, record_id)): Path<(String, Uuid)>,
     headers: axum::http::HeaderMap,
+    axum::extract::Query(query): axum::extract::Query<DeleteQuery>,
 ) -> Result<StatusCode, AppError> {
     // C5: the whole sequence lives in `delete_record_for`; header parsing is
     // the one thing it cannot do for itself — same split `update_record`
     // makes with `update_record_for`.
+    let origin = request_delete_origin(&headers).reason(query.reason.as_deref());
     delete_record_for(
         &state,
         &ctx,
@@ -1219,6 +1259,7 @@ pub(super) async fn delete_record(
         &entity_input,
         record_id,
         optional_expected_row_version(&headers)?,
+        &origin,
     )
     .await?;
     Ok(StatusCode::NO_CONTENT)
