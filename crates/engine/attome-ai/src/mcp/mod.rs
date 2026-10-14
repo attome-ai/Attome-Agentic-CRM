@@ -640,6 +640,7 @@ async fn initialize(
         "capabilities": server_capabilities(),
         "serverInfo": { "name": "attome-xrm", "version": env!("CARGO_PKG_VERSION") },
         "sessionId": session.id,
+        "instructions": PLAYBOOK,
     }))
 }
 
@@ -697,6 +698,19 @@ fn context_for(security: Arc<SecurityContext>, session: &session::AgentSession) 
 /// The visible tool set, filtered by exactly the conditions the gate applies
 /// to an invocation — the session's allow-list included, because
 /// `ActionContext::for_session` carries it and `visible_to` asks the gate.
+/// How to work with Attome over MCP (N12-T2), sent as the `initialize`
+/// result's `instructions`: how to find tools, how building works, and the
+/// rules every call is held to.
+pub const PLAYBOOK: &str = "Attome is a CRM whose data and screens are defined by metadata. \
+`tools/list` gives the everyday tools; call `tools.search` with what you want to do to find the \
+rest, including the metadata building tools. Building: `model.<kind>.describe` explains a kind \
+and its document schema, `model.<kind>.list` shows what exists, and `model.<kind>.edit` saves a \
+draft from add/remove/move/set commands against the draft's content hash (an empty hash for a new \
+object). Edits are proposals: a person confirms each one, and nothing goes live until it is \
+published. Rules: you act as the signed-in person and never beyond their permissions; \
+consequential actions wait for a second person's approval; a refusal is a result to report, not \
+an error to work around.";
+
 /// The one tool that is not an action (N12-T2): searches the tools this
 /// caller may use. `tools/list` returns a small core set plus this, so a
 /// host is not handed every generated metadata tool up front.
@@ -1039,6 +1053,13 @@ mod tests {
 
     /// Tool names are action ids verbatim. A sanitising transformation is how
     /// two distinct actions collide onto one name — see the module doc.
+    #[test]
+    fn the_playbook_names_the_search_tool_and_the_rules() {
+        assert!(PLAYBOOK.contains(SEARCH_TOOL));
+        assert!(PLAYBOOK.contains("model.<kind>.edit"));
+        assert!(PLAYBOOK.contains("approval"));
+    }
+
     #[test]
     fn search_finds_tools_by_name_before_description() {
         let tools = vec![
