@@ -87,7 +87,10 @@
     "_comment": "P-data-protection-governance §4 (data_region) / P-environment-promotion §5 step 23 (bundle_ref, bundle_signing_public_key). Every field here is optional and null (omitted) is 'not configured' — this whole block can be left out of a deployment's config entirely, today's behavior. bundle_ref is a file path or https:// URL to a signed attome-bundle/v1 artifact ({\"bundle\": <canonical bundle JSON>, \"signature\": \"<base64 Ed25519 over the canonical bundle bytes>\"}), fetched and verified at boot (first boot only — a deployment that already has a succeeded bundle-apply plan never re-pulls automatically) and on POST /api/v1/admin/metadata/sync; this is the F273 vertical-seed loader generalized. bundle_signing_public_key is the base64 Ed25519 public key that artifact's signature must verify against — set BOTH or NEITHER (AppConfig::validate is a boot error on one without the other); an unverified bundle is never applied.",
     "data_region": null,
     "bundle_ref": null,
-    "bundle_signing_public_key": null
+    "bundle_signing_public_key": null,
+    "_sovereign_comment": "U1-T5: true refuses at boot any configured destination outside this deployment (object store, SMTP relay, model servers, identity providers, trace collector, render service) and any outside AI provider. sovereign_allowed_hosts names hosts that are yours although not on this network, such as the organisation's mail relay.",
+    "sovereign": false,
+    "sovereign_allowed_hosts": []
   },
   "auth": {
     "_jwt_secret_comment": "P-key-rotation-and-jwt (a)/(c) — a bare string (as below) is wrapped into a single-key ring. To rotate without a fleet-wide forced logout, switch to the full shape instead: {\"keys\": {\"v1\": \"<old secret>\", \"v2\": \"<new secret>\"}, \"active_key_id\": \"v2\"} — new tokens are signed+kid-tagged under v2; a v1-signed token already in a browser still verifies as long as v1 stays in `keys`. Drop v1 once every outstanding token has expired past `access_token_expiry_mins`.",

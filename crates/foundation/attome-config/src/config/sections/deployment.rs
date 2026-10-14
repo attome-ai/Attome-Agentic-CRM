@@ -52,6 +52,18 @@ pub struct DeploymentSection {
     /// the production profile, and on **no** host in it.
     #[serde(default)]
     pub portal_hosts: Vec<String>,
+    /// U1-T5, the sovereign preset: when true, boot refuses any configured
+    /// destination outside this deployment (object store, SMTP relay, model
+    /// servers, identity providers, trace collector, render service) and any
+    /// outside AI provider, so the deployment makes no outbound connection
+    /// its operator did not name. See `AppConfig::sovereign_violations`.
+    #[serde(default)]
+    pub sovereign: bool,
+    /// Host names a sovereign deployment may still reach although they are
+    /// not on its own network: the organisation's own mail relay or identity
+    /// provider, for example. Exact, lowercase host names.
+    #[serde(default)]
+    pub sovereign_allowed_hosts: Vec<String>,
 }
 
 impl DeploymentSection {

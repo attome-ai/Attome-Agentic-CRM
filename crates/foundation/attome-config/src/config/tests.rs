@@ -4246,3 +4246,47 @@ fn validate_checks_the_release_report_notify_roles() {
             .contains("metadata.release_report.notify_roles")
     );
 }
+
+/// U1-T5 — the sovereign preset is off by default, and once on it refuses any
+/// destination outside the deployment while allowing the operator's own.
+#[test]
+fn sovereign_preset_refuses_outside_destinations() {
+    let mut config = minimal_valid_config();
+    assert!(!config.deployment.sovereign);
+    config.google_ai.api_key = String::new();
+    // Everything in the minimal config is local except nothing: clean.
+    assert_eq!(
+        config.sovereign_violations(),
+        Vec::<(String, String)>::new()
+    );
+
+    config.deployment.sovereign = true;
+    config.inference.generation.base_url = "https://api.openai.com/v1".into();
+    let err = config.validate().unwrap_err();
+    assert!(format!("{err}").contains("inference.generation.base_url"));
+
+    // A model server on the private network is inside.
+    config.inference.generation.base_url = "http://10.0.0.5:8000/v1".into();
+    config.email.enabled = true;
+    config.email.smtp_host = "mail.example.gov".into();
+    let fields: Vec<String> = config
+        .sovereign_violations()
+        .into_iter()
+        .map(|(field, _)| field)
+        .collect();
+    assert_eq!(fields, ["email.smtp_host"]);
+
+    // Unless the operator names that relay as theirs.
+    config.deployment.sovereign_allowed_hosts = vec!["mail.example.gov".into()];
+    assert!(config.sovereign_violations().is_empty());
+
+    // An empty S3 endpoint is AWS, and an outside AI key is refused.
+    config.storage.s3_endpoint = String::new();
+    config.google_ai.api_key = "k".into();
+    let fields: Vec<String> = config
+        .sovereign_violations()
+        .into_iter()
+        .map(|(field, _)| field)
+        .collect();
+    assert_eq!(fields, ["storage.s3_endpoint", "google_ai.api_key"]);
+}

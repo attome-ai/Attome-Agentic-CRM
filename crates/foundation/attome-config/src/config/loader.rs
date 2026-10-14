@@ -522,7 +522,114 @@ impl AppConfig {
     /// Fail-fast validation for signing/encryption secrets. MUST run right
     /// after `expand_env_vars`, before any pool/state is built — an operator
     /// forgetting an env var must never boot the app on a known-constant key.
+    /// U1-T5: every configured destination outside this deployment, as
+    /// `(field, reason)`. Inside means what
+    /// [`endpoint_is_in_deployment`](super::sections::inference::endpoint_is_in_deployment)
+    /// says (loopback, private ranges, single-label and `.local` names), or a
+    /// host on `deployment.sovereign_allowed_hosts`. `validate` refuses the
+    /// first one when `deployment.sovereign` is on.
+    pub fn sovereign_violations(&self) -> Vec<(String, String)> {
+        let allowed = &self.deployment.sovereign_allowed_hosts;
+        let inside = |target: &str| {
+            let url = if target.contains("://") {
+                target.to_owned()
+            } else {
+                format!("http://{target}")
+            };
+            let host = url::Url::parse(&url)
+                .ok()
+                .and_then(|parsed| parsed.host_str().map(str::to_ascii_lowercase));
+            host.is_some_and(|host| allowed.iter().any(|a| a.eq_ignore_ascii_case(&host)))
+                || super::sections::inference::endpoint_is_in_deployment(&url)
+        };
+        let check = |field: &str, target: &str| -> Option<(String, String)> {
+            let target = target.trim();
+            (!target.is_empty() && !inside(target)).then(|| {
+                (
+                    field.to_owned(),
+                    format!(
+                        "{target} is outside this deployment; a sovereign deployment only reaches \
+                         its own network (or deployment.sovereign_allowed_hosts)"
+                    ),
+                )
+            })
+        };
+        let mut out: Vec<(String, String)> = Vec::new();
+        // An empty S3 endpoint means AWS S3 itself.
+        if self.storage.s3_endpoint.trim().is_empty() {
+            out.push((
+                "storage.s3_endpoint".to_owned(),
+                "empty means AWS S3; a sovereign deployment names its own object store".to_owned(),
+            ));
+        } else {
+            out.extend(check("storage.s3_endpoint", &self.storage.s3_endpoint));
+        }
+        if let Some(anchor) = &self.audit.anchor_store {
+            if anchor.s3_endpoint.trim().is_empty() {
+                out.push((
+                    "audit.anchor_store.s3_endpoint".to_owned(),
+                    "empty means AWS S3; a sovereign deployment names its own object store"
+                        .to_owned(),
+                ));
+            } else {
+                out.extend(check("audit.anchor_store.s3_endpoint", &anchor.s3_endpoint));
+            }
+        }
+        if self.email.enabled {
+            out.extend(check("email.smtp_host", &self.email.smtp_host));
+        }
+        out.extend(check(
+            "inference.generation.base_url",
+            &self.inference.generation.base_url,
+        ));
+        out.extend(check(
+            "inference.embedding.base_url",
+            &self.inference.embedding.base_url,
+        ));
+        if let Some(endpoint) = &self.observability.otlp_endpoint {
+            out.extend(check("observability.otlp_endpoint", endpoint));
+        }
+        out.extend(check(
+            "docgen.render_service_url",
+            &self.docgen.render_service_url,
+        ));
+        for (name, provider) in &self.oidc.providers {
+            out.extend(check(
+                &format!("oidc.providers.{name}.issuer"),
+                &provider.issuer,
+            ));
+        }
+        if self.inference.allow_external_provider {
+            out.push((
+                "inference.allow_external_provider".to_owned(),
+                "a sovereign deployment uses only its own model servers".to_owned(),
+            ));
+        }
+        if !self.google_ai.api_key.trim().is_empty() {
+            out.push((
+                "google_ai.api_key".to_owned(),
+                "Google AI is an outside service; leave the key empty".to_owned(),
+            ));
+        }
+        if !self.auth.oauth_google_client_id.trim().is_empty() {
+            out.push((
+                "auth.oauth_google_client_id".to_owned(),
+                "Google sign-in is an outside service; use an identity provider on your own \
+                 network"
+                    .to_owned(),
+            ));
+        }
+        out
+    }
+
     pub fn validate(&self) -> Result<(), ConfigError> {
+        // U1-T5 — the sovereign preset refuses outside destinations first, so
+        // the operator sees that before any other complaint.
+        if self.deployment.sovereign
+            && let Some((field, reason)) = self.sovereign_violations().into_iter().next()
+        {
+            return Err(ConfigError::Insecure { field, reason });
+        }
         // BCF-3/BCF-D1 — the shipped-template denylist is a production-profile
         // rule: config.example.json deliberately ships throwaway secrets for
         // the dev stack, and only a declared production node must refuse them.
@@ -548,7 +655,9 @@ impl AppConfig {
         {
             return Err(ConfigError::Invalid {
                 field: "cache.backend".into(),
-                reason: "\"memory\" needs jobs.run_worker_inline = true: the in-process store                          cannot be shared with a separate worker process. Use \"redis\" for a                          split or multi-node deployment."
+                reason: "\"memory\" needs jobs.run_worker_inline = true: the in-process store \
+                         cannot be shared with a separate worker process. Use \"redis\" for a \
+                         split or multi-node deployment."
                     .into(),
             });
         }
