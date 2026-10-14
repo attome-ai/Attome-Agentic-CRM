@@ -62,10 +62,35 @@ pub fn cook(
     let mut objects: Vec<_> = set.objects.iter().collect();
     objects.sort_by(|a, b| (a.kind, a.id).cmp(&(b.kind, b.id)));
 
+    // Every document in its kind's current shape (Y1-T12): an older stored
+    // row is upgraded here, never rewritten.
+    let mut docs: BTreeMap<ObjectRef, serde_json::Value> = BTreeMap::new();
+    for object in &objects {
+        let kind = registry
+            .get(object.kind.as_str())
+            .ok_or_else(|| AppError::Validation(format!("no metadata kind `{}`", object.kind)))?;
+        let doc = crate::upgrade::upgrade_to_current(
+            kind.as_ref(),
+            object.schema_version,
+            object.doc.clone(),
+        )?;
+        docs.insert(
+            ObjectRef {
+                kind: object.kind,
+                id: object.id,
+            },
+            doc,
+        );
+    }
+
     // Content hash of every object in the version, for input hashing.
     let mut hashes: BTreeMap<ObjectRef, String> = BTreeMap::new();
     for object in &objects {
-        let hash = content_hash(&object.doc).map_err(AppError::Validation)?;
+        let me = ObjectRef {
+            kind: object.kind,
+            id: object.id,
+        };
+        let hash = content_hash(&docs[&me]).map_err(AppError::Validation)?;
         hashes.insert(
             ObjectRef {
                 kind: object.kind,
@@ -87,7 +112,7 @@ pub fn cook(
         };
         let mut inputs: Vec<String> = vec![format!("{}:{}={}", me.kind, me.id, hashes[&me])];
         let mut targets: Vec<ObjectRef> = kind
-            .references(&object.doc)
+            .references(&docs[&me])
             .into_iter()
             .map(|r| r.target)
             .collect();
@@ -122,7 +147,7 @@ pub fn cook(
         let cooked = kind.cook(&[CookInput {
             id: object.id,
             name: object.name.clone(),
-            doc: object.doc.clone(),
+            doc: docs[&me].clone(),
         }])?;
         for (index, artefact) in cooked.into_iter().enumerate() {
             // The first artefact of an object takes its key; any further ones
@@ -235,6 +260,7 @@ mod tests {
             kind: KindName("test_page"),
             id,
             name: title.to_owned(),
+            schema_version: 1,
             doc: json!({
                 "title": title,
                 "reads": reads.iter().map(ToString::to_string).collect::<Vec<_>>()

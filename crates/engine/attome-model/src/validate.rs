@@ -77,6 +77,8 @@ pub struct VersionObject {
     pub id: ObjectId,
     pub name: String,
     pub doc: Value,
+    /// The kind schema version the document was written with.
+    pub schema_version: u32,
 }
 
 /// Every object document of one version, plus the adapter-kind objects
@@ -255,6 +257,7 @@ mod tests {
             id: ObjectId::new(),
             name: name.to_owned(),
             doc,
+            schema_version: 1,
         }
     }
 
