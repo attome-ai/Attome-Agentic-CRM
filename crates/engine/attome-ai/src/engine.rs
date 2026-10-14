@@ -111,6 +111,8 @@ impl EngineModel for ActionModel {
             .merge(crate::spend_report::routes())
             // N28-T3 — what a model would receive, admin-only.
             .merge(crate::prompt_preview::routes())
+            // N23-T3 — a bad answer becomes an eval case.
+            .merge(crate::eval_capture::routes())
     }
 
     // D-435, simplified by D-491 — `ai_model` (the AI Model catalog,

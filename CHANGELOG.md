@@ -8,6 +8,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- `POST /api/v1/admin/ai/eval-suites/{suite}/cases/from-message`: an answer that went wrong becomes
+  a case in the suite's draft, its input taken from the question it answered.
 - `POST /api/v1/admin/ai/preview/summary`: exactly what a model would receive for a record summary,
   built by the same code, without generating.
 - A Translate button under notes and replies translates them into the viewer's language.
