@@ -9,7 +9,8 @@ them. Each entry says what to run and what to commit. Delete an entry once it is
 New or changed routes since the last regeneration: the metadata model admin API
 (`/api/v1/admin/model/...`, roadmap Y1-T9, including `.../publish`), its file export and import
 (`GET /api/v1/admin/model/export`, `POST /api/v1/admin/model/import`, Y1-T10), and the form render
-plan (`GET /api/v1/model/forms/{id}/plan`, now with an `If-None-Match` header and a 304, Y14-T2).
+plan (`GET /api/v1/model/forms/{id}/plan`, now with an `If-None-Match` header and a 304, Y14-T2),
+and the live channel (`GET /api/v1/live`, Y14-T3).
 
 ```sh
 cd web
