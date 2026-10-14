@@ -94888,6 +94888,7 @@
         "required": [
           "key",
           "description",
+          "area",
           "schema",
           "allowed_scopes",
           "boot_time_only",
@@ -94901,11 +94902,22 @@
               "type": "string"
             }
           },
+          "area": {
+            "type": "string",
+            "description": "U10-T1: the admin console area (`general`, `security`, `features`,\n`ai`, `channels`)."
+          },
           "boot_time_only": {
             "type": "boolean"
           },
           "description": {
             "type": "string"
+          },
+          "description_ar": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "U10-T1: the description in Arabic."
           },
           "key": {
             "type": "string"

@@ -24986,8 +24986,15 @@ export interface components {
         SettingScope: "user" | "organization" | "deployment";
         SettingValueView: {
             allowed_scopes: string[];
+            /**
+             * @description U10-T1: the admin console area (`general`, `security`, `features`,
+             *     `ai`, `channels`).
+             */
+            area: string;
             boot_time_only: boolean;
             description: string;
+            /** @description U10-T1: the description in Arabic. */
+            description_ar?: string | null;
             key: string;
             schema: unknown;
             source: string;
