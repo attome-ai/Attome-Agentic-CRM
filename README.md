@@ -7,8 +7,8 @@ rules, dashboards), operate it (triage, follow-up, updates) and look after it (d
 reviews, cost), while people describe, review and approve. Anything an agent can do, a person can do,
 through the same API and the same permissions.
 
-> **Status: early development.** This repository is being built in the open. It is not ready for use
-> yet: there is no installable release.
+> **Status: early development.** This repository is being built in the open. It runs, but it is not
+> ready for production use, and there is no packaged release yet.
 
 ## Principles
 
@@ -39,13 +39,42 @@ through the same API and the same permissions.
 Dependencies point one way: foundation → engine → sdk → packs → apps. See
 [`docs/architecture.md`](docs/architecture.md).
 
-## Building
+## Building and running
 
-Rust 1.97 (pinned in `rust-toolchain.toml`) on Windows or Linux:
+Rust 1.97 (pinned in `rust-toolchain.toml`) on Windows or Linux, and PostgreSQL 18 with the `pgvector`
+extension. Nothing else: a single server (Solo) keeps its caches, rate limits and coordination in
+process memory instead of Redis ([`docs/solo-memory-backend.md`](docs/solo-memory-backend.md)).
 
 ```sh
-cargo build --workspace
-cargo run -p attome -- release --check   # the release gate: format, clippy, tests
+cargo build --release -p attome
+
+# Install Solo on an existing, empty PostgreSQL database: writes config.json with fresh secrets
+# and applies the schema.
+attome init --database-url postgres://postgres:secret@localhost:5432/attome
+
+attome serve --bootstrap-admin you@example.com   # once: creates the first admin, prints its password
+attome serve                                      # the server, on port 7865
+```
+
+`attome help` lists the other commands (`worker`, `migrate`, `preflight`, `healthcheck`, and the
+audit tools).
+
+The release gate, the same one CI runs on Windows and Linux:
+
+```sh
+cargo run -p attome-release -- --check   # format, clippy (warnings are errors), tests
+```
+
+Tests that need PostgreSQL, Redis or an object store skip without them; point `DATABASE_URL` at a
+throwaway PostgreSQL server (never a real database) to run them.
+
+The web application (Node 22):
+
+```sh
+cd web
+npm ci
+npm run build:all   # libraries first, then the app
+npm start           # development server on port 4199
 ```
 
 ## Licence
