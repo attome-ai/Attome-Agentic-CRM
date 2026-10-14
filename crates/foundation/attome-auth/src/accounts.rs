@@ -156,7 +156,7 @@ pub async fn register_in_tx(
     .await
     .map_err(|e| match e {
         sqlx::Error::Database(ref db)
-            if db.constraint() == Some("core_systemuser_email_unique") =>
+            if db.constraint() == Some("user_account_email_active_unique") =>
         {
             AppError::Conflict("email already registered")
         }
