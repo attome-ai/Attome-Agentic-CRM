@@ -1,6 +1,7 @@
-//! The entity and attribute adapter kinds (roadmap Y1-T13): the metadata
-//! model sees entities and attributes through their existing tables
-//! (`entity_info`, `attribute_info`), which stay the source of truth. Writes
+//! The adapter kinds (roadmap Y1-T13): the metadata model sees entities,
+//! attributes, rules, state models and relationships through their existing
+//! tables (`entity_info`, `attribute_info`, `rule`, `state_model`,
+//! `relationship_info`), which stay the source of truth. Writes
 //! go through this crate's provisioning, never through the model's store, so
 //! these kinds only answer "does it exist" (via [`Kind::adapter_table`]) and
 //! describe themselves; they have no document shape of their own to edit.
@@ -31,6 +32,36 @@ pub const ATTRIBUTE_KIND: AdapterKind = AdapterKind {
     table: "attribute_info",
     description: "An attribute: one field of an entity. Create and change attributes through the schema API.",
 };
+
+/// Rules, over `rule`.
+pub const RULE_KIND: AdapterKind = AdapterKind {
+    name: KindName("rule"),
+    table: "rule",
+    description: "A rule: a validation, calculation or default on an entity. Change rules through the rules API.",
+};
+
+/// State models, over `state_model`.
+pub const STATE_MODEL_KIND: AdapterKind = AdapterKind {
+    name: KindName("state_model"),
+    table: "state_model",
+    description: "A state model: the states and transitions of an entity's records. Change it through the state model API.",
+};
+
+/// Relationships, over `relationship_info`.
+pub const RELATIONSHIP_KIND: AdapterKind = AdapterKind {
+    name: KindName("relationship"),
+    table: "relationship_info",
+    description: "A relationship: a many-to-many link between two entities. Change it through the schema API.",
+};
+
+/// Every adapter kind, in registration order.
+pub const ADAPTER_KINDS: [AdapterKind; 5] = [
+    ENTITY_KIND,
+    ATTRIBUTE_KIND,
+    RULE_KIND,
+    STATE_MODEL_KIND,
+    RELATIONSHIP_KIND,
+];
 
 impl Kind for AdapterKind {
     fn name(&self) -> KindName {
@@ -88,5 +119,11 @@ mod tests {
         assert_eq!(ENTITY_KIND.adapter_table(), Some("entity_info"));
         assert_eq!(ATTRIBUTE_KIND.adapter_table(), Some("attribute_info"));
         assert!(ENTITY_KIND.validate_shape(&json!({})).is_err());
+        let names: Vec<&str> = ADAPTER_KINDS.iter().map(|k| k.name().as_str()).collect();
+        assert_eq!(
+            names,
+            ["entity", "attribute", "rule", "state_model", "relationship"]
+        );
+        assert_eq!(RELATIONSHIP_KIND.adapter_table(), Some("relationship_info"));
     }
 }

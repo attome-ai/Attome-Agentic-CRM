@@ -37,13 +37,14 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 /// The kinds every engine registers: forms (stored in the model) and the
-/// entity and attribute adapters over their own tables (Y1-T13).
+/// entity, attribute, rule, state model and relationship adapters over their
+/// own tables (Y1-T13).
 fn registered_kinds() -> Vec<Arc<dyn Kind>> {
-    vec![
-        Arc::new(attome_model::kinds::FormKind),
-        Arc::new(attome_metadata::kinds::ENTITY_KIND),
-        Arc::new(attome_metadata::kinds::ATTRIBUTE_KIND),
-    ]
+    let mut kinds: Vec<Arc<dyn Kind>> = vec![Arc::new(attome_model::kinds::FormKind)];
+    for adapter in attome_metadata::kinds::ADAPTER_KINDS {
+        kinds.push(Arc::new(adapter));
+    }
+    kinds
 }
 
 /// The process-wide kind registry.

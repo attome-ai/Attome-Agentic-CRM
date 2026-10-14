@@ -276,6 +276,25 @@ fn admin_lists_kinds_and_an_unknown_kind_is_404() {
         let body = body_json(resp).await;
         assert!(body["items"].is_array(), "a paginated list: {body}");
         assert_eq!(body["page"], 1);
+        // Y1-T13: the six first kinds.
+        let mut names: Vec<&str> = body["items"]
+            .as_array()
+            .expect("items")
+            .iter()
+            .filter_map(|kind| kind["name"].as_str())
+            .collect();
+        names.sort_unstable();
+        assert_eq!(
+            names,
+            [
+                "attribute",
+                "entity",
+                "form",
+                "relationship",
+                "rule",
+                "state_model"
+            ]
+        );
         let resp = app
             .oneshot(get_req("/api/v1/admin/model/no_such_kind", &cookie))
             .await
