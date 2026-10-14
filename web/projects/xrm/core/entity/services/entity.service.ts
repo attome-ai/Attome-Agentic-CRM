@@ -187,8 +187,20 @@ export class EntityService {
     return this.api.patch<EntityRecordResponse>(`/api/v1/${entityName}/${id}`, patch, rowVersion);
   }
 
-  delete(entityName: string, id: string): Observable<void> {
-    return this.api.delete(`/api/v1/${entityName}/${id}`);
+  /**
+   * Soft-deletes a record into the recycle bin. A18: `operationId` groups
+   * deletes so {@link restoreOperation} can undo them together; `reason` is
+   * kept with the deletion (and required when the entity's bin setting says so).
+   */
+  delete(entityName: string, id: string, options: { operationId?: string; reason?: string } = {}): Observable<void> {
+    const reason = options.reason?.trim();
+    const query = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+    return this.api.delete(`/api/v1/${entityName}/${id}${query}`, { operationId: options.operationId });
+  }
+
+  /** A18: restores every record one delete operation put in the bin. */
+  restoreOperation(operationId: string): Observable<{ restored: number; failed: { entity: string; id: string; code: string }[] }> {
+    return this.api.post(`/api/v1/bin/operations/${encodeURIComponent(operationId)}/restore`, {});
   }
 
   /** B7-T3: copies a record through the ordinary create; returns the copy's id. */

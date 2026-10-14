@@ -54,6 +54,8 @@ export const xrmEn = {
     // they are not recoverable by re-activating: re-enabling an account does
     // not restore the API keys disabling it turned off.
     deactivateSelected: 'Deactivate',
+    deletedCount: '{count} moved to the recycle bin.', undo: 'Undo',
+    undoPartial: '{count} could not be restored; open the recycle bin to see why.',
     activateSelected: 'Activate',
     deactivateConfirm: '{count, plural, one {Deactivate # selected account? Its sessions and API keys are revoked, and re-activating does not restore the keys.} other {Deactivate # selected accounts? Their sessions and API keys are revoked, and re-activating does not restore the keys.}}',
     activateConfirm: '{count, plural, one {Re-activate # selected account?} other {Re-activate # selected accounts?}}',

@@ -1,5 +1,14 @@
 <div class="list-container" [class.list-container--compact]="compact()">
   <div class="list-toolbar">
+    @if (undoOffer(); as offer) {
+    <div class="undo-bar" role="status" data-undo>
+      <span>{{ 'entityList.deletedCount' | translate: { count: offer.count } }}</span>
+      <button type="button" class="btn btn-text" (click)="undoDelete()">{{ 'entityList.undo' | translate }}</button>
+      <button type="button" class="btn btn-text" [attr.aria-label]="'entityList.cancel' | translate" (click)="dismissUndo()">
+        <i class="las la-times" aria-hidden="true"></i>
+      </button>
+    </div>
+    }
     @if (showSelectionMode()) {
     <div class="toolbar-selection-mode">
       <div class="selection-summary">

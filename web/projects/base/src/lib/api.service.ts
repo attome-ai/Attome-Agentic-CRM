@@ -26,6 +26,11 @@ export interface WriteOptions {
   idempotencyKey?: string;
   /** A `row_version` sent as `If-Match` on a POST that guards one (a publish, say). */
   ifMatch?: number;
+  /**
+   * A18: sent as `Attome-Operation-Id`, grouping several deletes into one
+   * operation the recycle bin can restore at once (the undo after a delete).
+   */
+  operationId?: string;
 }
 
 /** `If-Match` from `etag`, plus the idempotency key. */
@@ -33,6 +38,7 @@ function writeHeaders(options: WriteOptions, etag?: number): Record<string, stri
   const headers: Record<string, string> = {};
   if (options.idempotencyKey) headers['x-idempotency-key'] = options.idempotencyKey;
   if (etag !== undefined) headers['If-Match'] = `"${etag}"`;
+  if (options.operationId) headers['Attome-Operation-Id'] = options.operationId;
   return headers;
 }
 

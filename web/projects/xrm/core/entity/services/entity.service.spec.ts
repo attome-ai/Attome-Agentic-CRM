@@ -117,3 +117,43 @@ describe('EntityService schema cache', () => {
     fetchAndFlush('account');
   });
 });
+
+describe('EntityService recycle bin (A18)', () => {
+  const API = 'http://localhost:7865';
+
+  function setUp() {
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ATTOME_CONFIG, useValue: { apiUrl: API } },
+        { provide: LangService, useValue: { intlLocale: () => 'en-US' } },
+      ],
+    });
+    return { service: TestBed.inject(EntityService), httpMock: TestBed.inject(HttpTestingController) };
+  }
+
+  it('sends the operation id and reason with a delete, and undoes the operation', () => {
+    const { service, httpMock } = setUp();
+    service.delete('account', 'a1', { operationId: 'op-1', reason: ' duplicate ' }).subscribe();
+    const del = httpMock.expectOne(`${API}/api/v1/account/a1?reason=duplicate`);
+    expect(del.request.method).toBe('DELETE');
+    expect(del.request.headers.get('Attome-Operation-Id')).toBe('op-1');
+    del.flush(null);
+
+    service.restoreOperation('op-1').subscribe();
+    const undo = httpMock.expectOne(`${API}/api/v1/bin/operations/op-1/restore`);
+    expect(undo.request.method).toBe('POST');
+    undo.flush({ restored: 1, failed: [] });
+    httpMock.verify();
+  });
+
+  it('sends a plain delete without them', () => {
+    const { service, httpMock } = setUp();
+    service.delete('account', 'a2').subscribe();
+    const del = httpMock.expectOne(`${API}/api/v1/account/a2`);
+    expect(del.request.headers.has('Attome-Operation-Id')).toBe(false);
+    del.flush(null);
+    httpMock.verify();
+  });
+});

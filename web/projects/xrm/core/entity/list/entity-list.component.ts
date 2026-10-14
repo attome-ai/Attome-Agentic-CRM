@@ -46,6 +46,14 @@ import { ImageThumbComponent } from '../field/image-thumb/image-thumb.component'
 /** A lowercase or uppercase hyphenated UUID. */
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/** A18-T9: how long "Deleted. Undo" stays offered. */
+export const UNDO_SECONDS = 8;
+
+/** A fresh id for one delete operation. */
+function newOperationId(): string {
+  return globalThis.crypto?.randomUUID?.() ?? `op-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
 // `Col`/filter re-exports live in `column-filters.ts` now (C-28) — nothing
 // outside this file's own template needs the filter grammar through the
 // component barrel, so it is imported here, not re-exported. Bulk-edit's own
@@ -247,6 +255,9 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   readonly selectedRecordIds = signal<Set<string>>(new Set());
   /** B4-T4: `?tag=<id>` from the tag page: only records carrying that tag. */
   readonly tagFilter = signal<string | null>(null);
+  /** A18-T9: the delete that can still be undone, for {@link UNDO_SECONDS}. */
+  readonly undoOffer = signal<{ operationId: string; count: number } | null>(null);
+  private undoTimer: ReturnType<typeof setTimeout> | null = null;
 
   /** U12 Phase A (D-607) — the advanced-find conditions in force, as wire
    * filters: set by the builder's Apply, or by opening a view that saved
@@ -940,10 +951,46 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   canActivateSelection(): boolean { return this.selectionHasState(false); }
 
   deactivateSelected(): void {
+    // A18-T9: one operation id for the whole selection, so Undo restores it.
+    const operationId = newOperationId();
     this.runBulk(
       'entityList.deactivateRecordConfirm',
-      id => this.entitySvc.delete(this.entityName(), id),
+      id => this.entitySvc.delete(this.entityName(), id, { operationId }),
+      succeeded => { if (succeeded > 0) this.offerUndo(operationId, succeeded); },
     );
+  }
+
+  private offerUndo(operationId: string, count: number): void {
+    if (this.undoTimer) clearTimeout(this.undoTimer);
+    this.undoOffer.set({ operationId, count });
+    this.undoTimer = setTimeout(() => { this.undoOffer.set(null); this.undoTimer = null; }, UNDO_SECONDS * 1000);
+  }
+
+  /** A18-T9: puts the last delete's records back. */
+  undoDelete(): void {
+    const offer = this.undoOffer();
+    if (!offer) return;
+    if (this.undoTimer) { clearTimeout(this.undoTimer); this.undoTimer = null; }
+    this.undoOffer.set(null);
+    this.entitySvc.restoreOperation(offer.operationId).subscribe({
+      next: result => {
+        this.load();
+        if (result.failed.length) {
+          this.dialogSvc.error({
+            title: this.lang.translate('entityList.actionFailedTitle'),
+            message: this.lang.translate('entityList.undoPartial', { count: result.failed.length }),
+          });
+        }
+      },
+      error: (err: ApiError) => this.dialogSvc.error({
+        title: this.lang.translate('entityList.actionFailedTitle'), message: err.message,
+      }),
+    });
+  }
+
+  dismissUndo(): void {
+    if (this.undoTimer) { clearTimeout(this.undoTimer); this.undoTimer = null; }
+    this.undoOffer.set(null);
   }
 
   activateSelected(): void {
@@ -978,6 +1025,7 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   private async runBulk(
     confirmKey: string | undefined,
     op: (id: string) => Observable<unknown>,
+    done?: (succeeded: number) => void,
   ): Promise<void> {
     const ids = [...this.selectedRecordIds()];
     if (!ids.length || this.bulkActionRunning()) return;
@@ -1002,6 +1050,7 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
       this.bulkActionRunning.set(false);
       this.clearSelection();
       this.load();
+      done?.(ids.length - failures.length);
       if (failures.length) {
         this.dialogSvc.error({
           title: this.lang.translate('entityList.actionFailedTitle'),
