@@ -556,7 +556,7 @@ export const xrmEn = {
     // U15 — the profile menu's link to the approver's own inbox.
     myWork: 'My work', myApprovals: 'My approvals',
     // U5 (D-602) — the profile menu's link to the notification preferences.
-    notificationSettings: 'Notification settings',
+    notificationSettings: 'Notification settings', mySettings: 'Settings',
   },
 
   // ── Chatbot plan C8 (2026-09-22): the knowledge operator surface ──
@@ -1399,6 +1399,24 @@ export const xrmEn = {
   },
 
   // ── U5 (basic-units-10-10 §4.5, D-602): the user's own notification preferences ──
+  settingsPage: {
+    title: 'Settings',
+    subtitle: 'How Attome looks and behaves for you. Each change applies at once.',
+    loading: 'Loading your settings…',
+    saved: 'Saved',
+    locale: 'Language', time_zone: 'Time zone', calendar: 'Calendar', digits: 'Digits',
+    date_format: 'Date order', start_page: 'Start page', theme: 'Theme', text_size: 'Text size',
+    reduced_motion: 'Reduce motion',
+    source: { organization: 'Set by your organization', deployment: 'Set for everyone' },
+    option: {
+      en_US: 'English', ar_SA: 'العربية',
+      gregorian: 'Gregorian', hijri: 'Hijri (Umm al-Qura)', both: 'Both',
+      latn: 'Western (0-9)', arab: 'Arabic-Indic (٠-٩)',
+      dmy: 'Day, month, year', mdy: 'Month, day, year', ymd: 'Year, month, day',
+      auto: 'Follow the device', light: 'Light', dark: 'Dark',
+      normal: 'Normal', large: 'Large',
+    },
+  },
   notificationPrefs: {
     title: 'Notifications',
     subtitle: 'Choose how you are told about each kind of notification. Turning a channel off only stops that channel.',

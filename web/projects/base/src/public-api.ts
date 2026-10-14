@@ -28,9 +28,10 @@ export { CurrencyService }                 from './lib/currency.service';
 export type { CurrencyRate }               from './lib/currency.service';
 export { LangService }                     from './lib/lang.service';
 export { TranslatePipe }                   from './lib/translate.pipe';
-export { LocalDatePipe }                   from './lib/local-date.pipe';
+export { LocalDatePipe, localeTag }        from './lib/local-date.pipe';
 export { LocalNumberPipe }                 from './lib/local-number.pipe';
 export { UserPreferencesService, isValidTimeZone } from './lib/user-preferences.service';
+export type { DisplayCalendar, DisplayDigits } from './lib/user-preferences.service';
 export { initGoogleIdentityOnce }          from './lib/google-identity';
 export type { GoogleIdentityGlobal }       from './lib/google-identity';
 

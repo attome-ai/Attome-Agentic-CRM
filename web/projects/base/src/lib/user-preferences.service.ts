@@ -15,9 +15,27 @@ import { Injectable, signal } from '@angular/core';
  * `null` means "no preference set" — `LocalDatePipe` falls back to the
  * browser's own timezone exactly as it did before this service existed.
  */
+export type DisplayCalendar = 'gregorian' | 'hijri' | 'both';
+export type DisplayDigits = 'latn' | 'arab';
+
 @Injectable({ providedIn: 'root' })
 export class UserPreferencesService {
   readonly timezone = signal<string | null>(null);
+  /**
+   * AG1-T8 / B11 — the calendar dates are shown in. `null` follows the
+   * language's own default (Umm al-Qura for Arabic, Gregorian for English).
+   */
+  readonly calendar = signal<DisplayCalendar | null>(null);
+  /** The digits dates are written with; `null` follows the language. */
+  readonly digits = signal<DisplayDigits | null>(null);
+
+  setCalendar(calendar: string | null | undefined): void {
+    this.calendar.set(calendar === 'gregorian' || calendar === 'hijri' || calendar === 'both' ? calendar : null);
+  }
+
+  setDigits(digits: string | null | undefined): void {
+    this.digits.set(digits === 'latn' || digits === 'arab' ? digits : null);
+  }
 
   /**
    * NGB-F26. An unknown IANA zone used to be stored verbatim and then thrown

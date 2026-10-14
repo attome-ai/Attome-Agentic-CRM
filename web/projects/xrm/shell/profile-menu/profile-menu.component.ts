@@ -7,6 +7,7 @@ import {
 } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityService } from '@attome/xrm/core/entity';
+import { PersonalSettingsService } from '../settings/personal-settings.service';
 
 /**
  * The header's avatar button and its profile dropdown — theme, language and
@@ -45,6 +46,7 @@ export class ProfileMenuComponent {
   private readonly entityService = inject(EntityService);
   private readonly userPrefs     = inject(UserPreferencesService);
   private readonly dialog        = inject(DialogService);
+  private readonly personal      = inject(PersonalSettingsService);
 
   readonly isOpen = signal(false);
   readonly profilePanelRef = viewChild<ElementRef<HTMLElement>>('profilePanel');
@@ -70,7 +72,12 @@ export class ProfileMenuComponent {
       }
       this.lastTimezoneFetchFor = userId;
       this.entityService.get('user_account', userId).subscribe({
-        next: record => this.userPrefs.setTimezone(record.data['timezone'] as string | undefined),
+        // B11: a time zone chosen in Settings wins over the account's own.
+        next: record => {
+          if (!this.personal.isSet('core.time_zone')) {
+            this.userPrefs.setTimezone(record.data['timezone'] as string | undefined);
+          }
+        },
         error: () => this.userPrefs.setTimezone(null),
       });
     });

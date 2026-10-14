@@ -1,0 +1,55 @@
+<section class="admin-page settings-page">
+  <header class="page-header">
+    <h1>{{ 'settingsPage.title' | translate }}</h1>
+    <p class="page-subtitle">{{ 'settingsPage.subtitle' | translate }}</p>
+  </header>
+
+  @if (error()) {
+    <p class="settings-error" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="settings-muted">{{ 'settingsPage.loading' | translate }}</p>
+  } @else {
+    <ul class="settings-list">
+      @for (row of rows(); track row.key) {
+        <li class="settings-row" [attr.data-testid]="'setting-' + row.key">
+          <div class="settings-label">
+            <label [attr.for]="'setting-' + row.key">{{ row.label | translate }}</label>
+            @if (row.source !== 'user' && row.source !== 'default') {
+              <span class="settings-source">{{ ('settingsPage.source.' + row.source) | translate }}</span>
+            }
+            @if (savedKey() === row.key) {
+              <span class="settings-saved" aria-live="polite">{{ 'settingsPage.saved' | translate }}</span>
+            }
+          </div>
+          @switch (row.control.kind) {
+            @case ('choice') {
+              <select [id]="'setting-' + row.key" [disabled]="busyKey() === row.key"
+                      [ngModel]="row.value" (ngModelChange)="save(row.key, $event)">
+                @if (row.control.kind === 'choice') {
+                  @for (option of row.control.options; track option) {
+                    <option [value]="option">{{ optionKey(option) | translate }}</option>
+                  }
+                }
+              </select>
+            }
+            @case ('text') {
+              <input [id]="'setting-' + row.key" type="text" dir="ltr"
+                     [disabled]="busyKey() === row.key"
+                     [value]="row.value ?? ''"
+                     [placeholder]="row.control.kind === 'text' ? row.control.placeholder : ''"
+                     (change)="saveText(row.key, $event)" />
+            }
+            @case ('toggle') {
+              <input [id]="'setting-' + row.key" type="checkbox"
+                     [disabled]="busyKey() === row.key"
+                     [checked]="row.value === true"
+                     (change)="save(row.key, $any($event.target).checked)" />
+            }
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

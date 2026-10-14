@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiError, AuthService, LangService, ThemeService } from '@attome/base';
+import { ApiError, ApiService, AuthService, LangService, ThemeService } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityService } from '@attome/xrm/core/entity';
 import { of, throwError } from 'rxjs';
@@ -21,6 +21,7 @@ describe('ProfileMenuComponent sign-out', () => {
         provideRouter([]),
         { provide: AuthService, useValue: { userId: signal<string | null>(null), logout } },
         { provide: EntityService, useValue: { get: () => of({ data: {} }) } },
+        { provide: ApiService, useValue: { get: () => of({ items: [] }) } },
         { provide: DialogService, useValue: { confirm } },
         { provide: ThemeService, useValue: { mode: signal('light'), setMode: vi.fn() } },
         { provide: LangService, useValue: { current: signal('en'), set: vi.fn(), translate: (key: string) => key } },

@@ -519,7 +519,7 @@ export const xrmAr = {
     // U15 — انظر en.catalog.ts
     myWork: 'أعمالي', myApprovals: 'موافقاتي',
     // U5 (D-602)
-    notificationSettings: 'إعدادات الإشعارات',
+    notificationSettings: 'إعدادات الإشعارات', mySettings: 'الإعدادات',
   },
 
   // ── Chatbot plan C8 (2026-09-22): the knowledge operator surface ──
@@ -1322,6 +1322,24 @@ export const xrmAr = {
   },
 
   // ── U5 — تفضيلات الإشعارات الخاصة بالمستخدم (D-602) ──
+  settingsPage: {
+    title: 'الإعدادات',
+    subtitle: 'كيف يظهر Attome ويعمل لك. يُطبَّق كل تغيير فوراً.',
+    loading: 'جاري تحميل إعداداتك…',
+    saved: 'تم الحفظ',
+    locale: 'اللغة', time_zone: 'المنطقة الزمنية', calendar: 'التقويم', digits: 'الأرقام',
+    date_format: 'ترتيب التاريخ', start_page: 'صفحة البداية', theme: 'المظهر', text_size: 'حجم النص',
+    reduced_motion: 'تقليل الحركة',
+    source: { organization: 'حددته جهتك', deployment: 'محدد للجميع' },
+    option: {
+      en_US: 'English', ar_SA: 'العربية',
+      gregorian: 'ميلادي', hijri: 'هجري (أم القرى)', both: 'كلاهما',
+      latn: 'غربية (0-9)', arab: 'عربية (٠-٩)',
+      dmy: 'يوم، شهر، سنة', mdy: 'شهر، يوم، سنة', ymd: 'سنة، شهر، يوم',
+      auto: 'حسب الجهاز', light: 'فاتح', dark: 'داكن',
+      normal: 'عادي', large: 'كبير',
+    },
+  },
   notificationPrefs: {
     title: 'الإشعارات',
     subtitle: 'اختر طريقة إبلاغك بكل نوع من الإشعارات. إيقاف قناة يوقف تلك القناة فقط.',

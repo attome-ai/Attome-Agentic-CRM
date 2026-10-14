@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
-import { LocalDatePipe } from './local-date.pipe';
+import { LocalDatePipe, localeTag } from './local-date.pipe';
 import { UserPreferencesService } from './user-preferences.service';
 import { ATTOME_CONFIG } from './config';
 import { provideAttomeI18n } from './provide';
@@ -73,6 +73,29 @@ describe('LocalDatePipe', () => {
     const formatted = pipe.transform(instant, { hour: 'numeric', hourCycle: 'h23', timeZone: 'Not/AZone' });
     expect(formatted).toBeTruthy();
     expect(formatted).not.toBe('');
+  });
+
+  it('AG1-T8 shows the Umm al-Qura date for a Hijri viewer, with Arabic digits when asked', () => {
+    const { pipe, prefs } = setUp();
+    const ramadan = '2026-02-18T12:00:00Z'; // 1 Ramadan 1447
+    const opts: Intl.DateTimeFormatOptions = { timeZone: 'UTC', year: 'numeric', month: 'numeric', day: 'numeric' };
+    prefs.setCalendar('hijri');
+    expect(pipe.transform(ramadan, opts)).toContain('1447');
+    prefs.setDigits('arab');
+    expect(pipe.transform(ramadan, opts)).toContain('١٤٤٧');
+    prefs.setDigits('latn');
+    prefs.setCalendar('both');
+    const both = pipe.transform(ramadan, opts);
+    expect(both).toContain('2026');
+    expect(both).toContain('1447');
+    // An attribute's own display calendar wins over the viewer's.
+    expect(pipe.transform(ramadan, opts, 'gregorian')).not.toContain('1447');
+  });
+
+  it('localeTag adds only the extensions the viewer chose', () => {
+    expect(localeTag('en-US', null, null)).toBe('en-US');
+    expect(localeTag('ar-SA', 'hijri', 'arab')).toBe('ar-SA-u-ca-islamic-umalqura-nu-arab');
+    expect(localeTag('ar-SA-u-nu-latn', 'gregorian', null)).toBe('ar-SA-u-ca-gregory');
   });
 
   it('setTimezone(null) clears the preference back to browser-default behavior', () => {

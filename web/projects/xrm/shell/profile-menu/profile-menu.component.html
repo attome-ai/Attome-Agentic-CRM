@@ -18,6 +18,12 @@
       <i class="las la-clipboard-check" aria-hidden="true"></i>
       {{ 'shell.myApprovals' | translate }}
     </a>
+    <!-- B11-T2 — the user's own settings. -->
+    <a class="pp-link" routerLink="/xrm/me/settings" (click)="isOpen.set(false)"
+       data-testid="profile-settings">
+      <i class="las la-cog" aria-hidden="true"></i>
+      {{ 'shell.mySettings' | translate }}
+    </a>
     <!-- U5 (D-602) — the user's own notification preferences. -->
     <a class="pp-link" routerLink="/xrm/me/notifications" (click)="isOpen.set(false)"
        data-testid="profile-notification-settings">

@@ -362,7 +362,7 @@ const COMPRESS_MIN_BYTES: u64 = 1024;
 /// body under 1 KB, an already-compressed type (images, video, zip, PDF,
 /// octet-stream), gRPC, server-sent events and every non-2xx response go out
 /// raw.
-fn compression_layer() -> CompressionLayer<impl Predicate + Clone> {
+fn compression_layer() -> CompressionLayer<impl Predicate> {
     let predicate = SizeAbove::new(COMPRESS_MIN_BYTES)
         .and(NotForContentType::GRPC)
         .and(NotForContentType::SSE)

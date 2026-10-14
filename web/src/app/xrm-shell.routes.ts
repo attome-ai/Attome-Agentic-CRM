@@ -511,6 +511,14 @@ export const xrmShellRoutes: Routes = [
             // U5 (D-602) — the signed-in user's own notification
             // preferences, reached from the profile menu. Literal segments,
             // ahead of the entity wildcard below (same rule as above).
+            path: 'me/settings',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('@attome/xrm/shell').then(m => m.PersonalSettingsPageComponent),
+          },
+          {
+            // B11-T2 — the signed-in person's own settings, from the profile
+            // menu. Literal segments, ahead of the entity wildcard below.
             path: 'me/notifications',
             canActivate: [authGuard],
             loadComponent: () =>

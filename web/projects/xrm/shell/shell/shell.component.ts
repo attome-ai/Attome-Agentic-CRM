@@ -13,6 +13,7 @@ import { ChangesetIndicatorComponent } from '../changeset-indicator/changeset-in
 import { CopilotLauncherComponent } from '../copilot-launcher/copilot-launcher.component';
 import { FavouritesComponent } from '../favourites/favourites.component';
 import { FavouriteItem, FavouritesService } from '../favourites/favourites.service';
+import { PersonalSettingsService } from '../settings/personal-settings.service';
 import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
 import { ProfileMenuComponent } from '../profile-menu/profile-menu.component';
 import { ShellSidebarComponent } from '../shell-sidebar/shell-sidebar.component';
@@ -109,6 +110,7 @@ export class ShellComponent implements OnInit {
   private readonly admin  = inject(AdminService);
   private readonly router = inject(Router);
   protected readonly favourites = inject(FavouritesService);
+  private readonly personalSettings = inject(PersonalSettingsService);
 
   // ── Sidebar data (owned here because quick search searches the same tree) ──
   readonly sidebarItems   = signal<SidebarItem[]>([]);
@@ -218,6 +220,18 @@ export class ShellComponent implements OnInit {
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.favourites.start();
+    // B11-T2: the person's settings apply at once; a chosen start page opens
+    // when they land on the app's front door.
+    this.personalSettings.load().subscribe({
+      next: () => {
+        const page = this.personalSettings.startPage();
+        const here = this.router.url.split('?')[0];
+        if (page && page !== here && ['/', '/xrm', '/xrm/'].includes(here)) {
+          void this.router.navigateByUrl(page);
+        }
+      },
+      error: () => undefined,
+    });
     this.admin.getSidebar().subscribe({
       next:  items => {
         this.sidebarItems.set(this.normalizeSidebar(items));

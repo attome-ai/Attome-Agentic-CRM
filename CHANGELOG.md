@@ -7,7 +7,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
 
 ## [Unreleased]
 
+### Security
+- rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
+
 ### Added
+- A Settings page (profile menu): language, time zone, calendar, digits, date order, start page,
+  theme, text size and motion, applied at once. Dates show in Hijri (Umm al-Qura), Gregorian or both,
+  with Western or Arabic-Indic digits.
 - Personal settings in `/api/v1/settings/me`: `core.time_zone`, `core.calendar` (gregorian, hijri,
   both), `core.digits`, `core.date_format`, `core.start_page`, `core.theme`, `core.text_size` and
   `core.reduced_motion`, with organization and deployment defaults. A date attribute takes a

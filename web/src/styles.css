@@ -80,6 +80,15 @@ button { font-family: inherit; }
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+/* B11-T2: the person's own text size and motion settings. */
+html.attome-text-large { font-size: 112.5%; }
+html.attome-reduced-motion *,
+html.attome-reduced-motion *::before,
+html.attome-reduced-motion *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
 @media (prefers-reduced-motion: reduce) {
   .xrm-main > router-outlet + *,
   .xrm-main attome-metadata-list,
