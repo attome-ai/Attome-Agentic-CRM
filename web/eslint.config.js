@@ -80,7 +80,7 @@ module.exports = defineConfig([
     rules: {
       "@angular-eslint/directive-selector": [
         "error",
-        { type: "attribute", prefix: "xrm", style: "camelCase" },
+        { type: "attribute", prefix: ["xrm", "attome"], style: "camelCase" },
       ],
       // D-314: an ng-packagr entry point compiles to one flat FESM module, so
       // importing a sibling's component barrel to reach a *service* drags that
@@ -110,7 +110,7 @@ module.exports = defineConfig([
       ],
       "@angular-eslint/component-selector": [
         "error",
-        { type: "element", prefix: "xrm", style: "kebab-case" },
+        { type: "element", prefix: ["xrm", "attome"], style: "kebab-case" },
       ],
     },
   },

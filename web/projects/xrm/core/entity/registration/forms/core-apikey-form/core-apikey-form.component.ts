@@ -27,7 +27,7 @@ import type { EntitySchema, FieldSchema } from '@attome/xrm';
  * *presentation* moved to hand-written code.
  */
 @Component({
-  selector:   'xrm-core-api_key-form',
+  selector:   'xrm-core-api-key-form',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ReactiveFormsModule, TranslatePipe, XrmBaseFormComponent, XrmTabDirective, FieldInputComponent],
