@@ -13,9 +13,12 @@ on:
 permissions:
   contents: read
 
-# No concurrency group: every push gets its own complete run (free on this
-# public repository), so pushing often never cancels the report of the
-# previous push.
+# A running check is never cancelled, so every check that starts reports in
+# full; pushes made while one runs wait, and only the newest of them is kept
+# (GitHub replaces an older pending run in the group with a newer one).
+concurrency:
+  group: release-check-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
