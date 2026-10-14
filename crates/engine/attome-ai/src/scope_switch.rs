@@ -30,7 +30,6 @@ use axum::{
     routing::{get, put},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sqlx::PgPool;
 use utoipa::ToSchema;
 use uuid::Uuid;
