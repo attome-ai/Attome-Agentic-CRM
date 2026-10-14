@@ -8,6 +8,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Added
+- A star in the header keeps pages and records at hand: lists you reorder by dragging, up to nine
+  pinned items opened with Ctrl+1..9, team lists, and the records you opened lately (also shown in
+  quick search before you type).
 - Recent records and favourites: `GET/POST/DELETE /api/v1/me/recent`, `GET /api/v1/me/favourites`,
   personal lists under `/api/v1/me/favourites/lists` and team lists under
   `/api/v1/teams/{team_id}/favourites/lists` (audited), each saved whole with up to nine pins.

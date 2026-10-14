@@ -11,6 +11,8 @@ import type { OmniSelection } from '@attome/xrm/search/omni';
 import { AppSwitcherComponent } from '../app-switcher/app-switcher.component';
 import { ChangesetIndicatorComponent } from '../changeset-indicator/changeset-indicator.component';
 import { CopilotLauncherComponent } from '../copilot-launcher/copilot-launcher.component';
+import { FavouritesComponent } from '../favourites/favourites.component';
+import { FavouriteItem, FavouritesService } from '../favourites/favourites.service';
 import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
 import { ProfileMenuComponent } from '../profile-menu/profile-menu.component';
 import { ShellSidebarComponent } from '../shell-sidebar/shell-sidebar.component';
@@ -71,7 +73,10 @@ function routeLogicalname(route: string): string | null {
 
 type QsItem =
   | { kind: 'entity'; id: string; name: string; sub: string; icon: string; logicalname: string }
-  | { kind: 'nav';    id: string; name: string; sub: string; icon: string; route: string };
+  | { kind: 'nav';    id: string; name: string; sub: string; icon: string; route: string }
+  // B9-T3: a pinned or recent item, shown while the query is empty.
+  | { kind: 'fav';    id: string; name: string; sub: string; icon: string;
+      target: Pick<FavouriteItem, 'kind' | 'entity' | 'ref'> };
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -92,7 +97,7 @@ type QsItem =
   imports: [
     RouterOutlet, FormsModule, TranslatePipe,
     ShellSidebarComponent, NotificationBellComponent, ProfileMenuComponent, AppSwitcherComponent,
-    CopilotLauncherComponent, OmniSearchComponent, ChangesetIndicatorComponent,
+    CopilotLauncherComponent, OmniSearchComponent, ChangesetIndicatorComponent, FavouritesComponent,
   ],
   host: {
     '(window:keydown)': 'onKeydown($event)',
@@ -103,6 +108,7 @@ type QsItem =
 export class ShellComponent implements OnInit {
   private readonly admin  = inject(AdminService);
   private readonly router = inject(Router);
+  protected readonly favourites = inject(FavouritesService);
 
   // ── Sidebar data (owned here because quick search searches the same tree) ──
   readonly sidebarItems   = signal<SidebarItem[]>([]);
@@ -168,7 +174,7 @@ export class ShellComponent implements OnInit {
 
   readonly qsResults = computed((): QsItem[] => {
     const q = this.qsQuery().trim().toLowerCase();
-    if (!q) return [];
+    if (!q) return this.favouriteResults();
     const results: QsItem[] = [];
     const firstRoute = (item: SidebarItem): string => {
       if (item.route) return item.route;
@@ -192,8 +198,26 @@ export class ShellComponent implements OnInit {
 
   readonly iconFor = iconFor;
 
+  /** B9-T3: pinned items, then recent records, for an empty quick search. */
+  private favouriteResults(): QsItem[] {
+    const pinned: QsItem[] = this.favourites.pinned().map((item, i) => ({
+      kind: 'fav', id: `pin-${item.id}`, name: item.label || item.ref, sub: `Ctrl+${i + 1}`,
+      icon: 'las la-flag', target: item,
+    }));
+    const recent: QsItem[] = this.favourites.recent()
+      .filter(item => !item.deleted)
+      .slice(0, 8)
+      .map(item => ({
+        kind: 'fav', id: `recent-${item.entity}-${item.record_id}`,
+        name: item.label || item.record_id.slice(0, 8), sub: item.entity, icon: 'las la-history',
+        target: { kind: 'record', entity: item.entity, ref: item.record_id },
+      }));
+    return [...pinned, ...recent];
+  }
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   ngOnInit(): void {
+    this.favourites.start();
     this.admin.getSidebar().subscribe({
       next:  items => {
         this.sidebarItems.set(this.normalizeSidebar(items));
@@ -234,6 +258,11 @@ export class ShellComponent implements OnInit {
   }
 
   navigateTo(item: QsItem): void {
+    if (item.kind === 'fav') {
+      this.favourites.open(item.target);
+      this.closeQuickSearch();
+      return;
+    }
     const commands = item.kind === 'entity'
       ? entityListRoute(item.logicalname)
       : [item.route];
@@ -243,6 +272,14 @@ export class ShellComponent implements OnInit {
 
   // ── Keyboard ──────────────────────────────────────────────────────────────
   onKeydown(e: KeyboardEvent): void {
+    // B9-T3: Ctrl+1..9 opens the pinned item with that number.
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && /^[1-9]$/.test(e.key)) {
+      if (this.favourites.openPinned(Number(e.key))) {
+        e.preventDefault();
+        this.closeQuickSearch();
+      }
+      return;
+    }
     if (e.key === 'Shift') {
       if (e.repeat) return;
       if (!this.quickSearchOpen()) {

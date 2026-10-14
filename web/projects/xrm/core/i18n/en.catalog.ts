@@ -536,6 +536,12 @@ export const xrmEn = {
     brand: 'Attome XRM', collapseSidebar: 'Collapse sidebar', expandSidebar: 'Expand sidebar',
     filterPlaceholder: 'Filter…', closeSection: 'Close section',
     quickSearch: 'Quick search (double Shift)', search: 'Search', searchEntities: 'Search entities…',
+    // B9-T3 — favourites and recent records.
+    favourites: 'Favourites', addThisPage: 'Add this page', pinned: 'Pinned', teamList: 'Team',
+    listEmpty: 'Nothing here yet', noFavourites: 'Add a page or a record to keep it at hand.',
+    reorderHint: 'Drag, or Alt+Up and Alt+Down, to reorder', deletedRecord: 'deleted',
+    pin: 'Pin (Ctrl+1–9)', unpin: 'Unpin', removeFavourite: 'Remove',
+    recent: 'Recent', clearRecent: 'Clear', noRecent: 'Records you open appear here.',
     notifications: 'Notifications', markAsRead: 'Mark as read', clearAll: 'Clear all',
     caughtUp: "You're all caught up", noNotifications: 'No notifications right now',
     theme: 'Theme', language: 'Language',

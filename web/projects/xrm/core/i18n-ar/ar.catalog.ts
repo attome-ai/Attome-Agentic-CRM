@@ -499,6 +499,12 @@ export const xrmAr = {
     brand: 'Attome XRM', collapseSidebar: 'طي الشريط الجانبي', expandSidebar: 'توسيع الشريط الجانبي',
     filterPlaceholder: 'تصفية…', closeSection: 'إغلاق القسم',
     quickSearch: 'بحث سريع (Shift مرتين)', search: 'بحث', searchEntities: 'البحث في الكيانات…',
+    // B9-T3 — favourites and recent records.
+    favourites: 'المفضلة', addThisPage: 'إضافة هذه الصفحة', pinned: 'المثبتة', teamList: 'الفريق',
+    listEmpty: 'لا شيء هنا بعد', noFavourites: 'أضف صفحة أو سجلاً لتبقيه في متناول يدك.',
+    reorderHint: 'اسحب، أو استخدم Alt+أعلى وAlt+أسفل، لإعادة الترتيب', deletedRecord: 'محذوف',
+    pin: 'تثبيت (Ctrl+1–9)', unpin: 'إلغاء التثبيت', removeFavourite: 'إزالة',
+    recent: 'الأخيرة', clearRecent: 'مسح', noRecent: 'تظهر هنا السجلات التي تفتحها.',
     notifications: 'الإشعارات', markAsRead: 'تعليم كمقروء', clearAll: 'مسح الكل',
     caughtUp: 'لا جديد لديك', noNotifications: 'لا توجد إشعارات حالياً',
     theme: 'المظهر', language: 'اللغة',

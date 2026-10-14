@@ -1,0 +1,107 @@
+<button class="icon-btn" type="button" (click)="toggle()"
+        [class.active]="isOpen()" [title]="'shell.favourites' | translate"
+        [attr.aria-label]="'shell.favourites' | translate" [attr.aria-expanded]="isOpen()"
+        data-testid="favourites-toggle">
+  <i class="las la-star" aria-hidden="true"></i>
+</button>
+
+<div class="hdr-panel fav-panel" [class.open]="isOpen()">
+  <div class="panel-header">
+    <span class="panel-title">{{ 'shell.favourites' | translate }}</span>
+    <button type="button" class="panel-action" (click)="addCurrent()" data-testid="favourites-add-current">
+      <i class="las la-plus" aria-hidden="true"></i> {{ 'shell.addThisPage' | translate }}
+    </button>
+  </div>
+
+  <div class="fav-body">
+    @if (favourites.pinned().length) {
+      <section class="fav-section">
+        <h3 class="fav-heading">{{ 'shell.pinned' | translate }}</h3>
+        <ul class="fav-items">
+          @for (item of favourites.pinned(); track item.id; let i = $index) {
+            <li>
+              <button type="button" class="fav-open" (click)="open(item)">
+                <i [class]="icon(item)" aria-hidden="true"></i>
+                <span class="fav-label">{{ itemLabel(item) }}</span>
+                <kbd>Ctrl+{{ i + 1 }}</kbd>
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @for (list of favourites.lists(); track list.id) {
+      <section class="fav-section">
+        <h3 class="fav-heading">
+          {{ list.name }}
+          @if (list.team_id) { <span class="fav-team">{{ 'shell.teamList' | translate }}</span> }
+        </h3>
+        @if (!list.items.length) {
+          <p class="fav-empty">{{ 'shell.listEmpty' | translate }}</p>
+        }
+        <ul class="fav-items" role="list">
+          @for (item of list.items; track item.id; let i = $index) {
+            <li class="fav-row" draggable="true"
+                [class.dragging]="dragging()?.listId === list.id && dragging()?.index === i"
+                (dragstart)="onDragStart(list, i, $event)"
+                (dragover)="onDragOver(list, $event)"
+                (drop)="onDrop(list, i, $event)"
+                (dragend)="dragging.set(null)">
+              <i class="las la-grip-lines fav-grip" aria-hidden="true"></i>
+              <button type="button" class="fav-open" [class.fav-deleted]="item.deleted"
+                      [title]="'shell.reorderHint' | translate"
+                      (click)="open(item)" (keydown)="onItemKeydown(list, i, $event)">
+                <i [class]="icon(item)" aria-hidden="true"></i>
+                <span class="fav-label">{{ itemLabel(item) }}</span>
+                @if (item.deleted) { <span class="fav-flag">{{ 'shell.deletedRecord' | translate }}</span> }
+              </button>
+              <button type="button" class="fav-icon" [class.on]="item.pinned"
+                      [disabled]="!canPin(list, item)"
+                      [title]="(item.pinned ? 'shell.unpin' : 'shell.pin') | translate"
+                      [attr.aria-label]="(item.pinned ? 'shell.unpin' : 'shell.pin') | translate"
+                      (click)="favourites.togglePin(list, item)">
+                <i class="las la-flag" aria-hidden="true"></i>
+              </button>
+              <button type="button" class="fav-icon"
+                      [title]="'shell.removeFavourite' | translate"
+                      [attr.aria-label]="'shell.removeFavourite' | translate"
+                      (click)="favourites.remove(list, item)">
+                <i class="las la-times" aria-hidden="true"></i>
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (!favourites.lists().length) {
+      <p class="fav-empty">{{ 'shell.noFavourites' | translate }}</p>
+    }
+
+    <section class="fav-section">
+      <h3 class="fav-heading">
+        {{ 'shell.recent' | translate }}
+        @if (favourites.recent().length) {
+          <button type="button" class="panel-action" (click)="favourites.clearRecent()">
+            {{ 'shell.clearRecent' | translate }}
+          </button>
+        }
+      </h3>
+      @if (!favourites.recent().length) {
+        <p class="fav-empty">{{ 'shell.noRecent' | translate }}</p>
+      }
+      <ul class="fav-items">
+        @for (item of favourites.recent(); track item.entity + item.record_id) {
+          <li class="fav-row">
+            <button type="button" class="fav-open" [class.fav-deleted]="item.deleted" (click)="openRecent(item)">
+              <i class="las la-history" aria-hidden="true"></i>
+              <span class="fav-label">{{ recentLabel(item) }}</span>
+              @if (item.deleted) { <span class="fav-flag">{{ 'shell.deletedRecord' | translate }}</span> }
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
+</div>
