@@ -96,6 +96,7 @@ pub mod feedback;
 pub mod gate;
 /// BIN-FX1 — the pooled generation client, built once per config.
 pub mod inference_client;
+pub mod injection;
 /// M101 slice 2 — the Model Context Protocol surface over the existing
 /// registry. A transport adapter: `tools/list` is `visible_to`, `tools/call`
 /// is `dispatch`, and nothing is added to the closed catalogue (I-5).

@@ -97,6 +97,9 @@ answers and proposes any change through its own gate.
 
 - Untrusted text (records, documents, tool results) is cleaned of hidden characters and hidden HTML
   before the model sees it, and wrapped as data.
+- Untrusted text that reads like instructions ("ignore previous instructions", «تجاهل التعليمات»,
+  role markers, tool-call or exfiltration requests) is marked with a warning naming the signals; it
+  stays visible as data, so a summary still contains its record.
 - An answer never carries record data to another host: outside images and data-carrying links are
   removed before it is stored.
 - Prompt overrides (`prompt_override` kind) change editable sections only; the locked safety text
