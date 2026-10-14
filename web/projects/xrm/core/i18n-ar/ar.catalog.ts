@@ -128,6 +128,13 @@ export const xrmAr = {
     loading: 'جارٍ تحميل النموذج…', required: 'مطلوب',
     save: 'حفظ', saving: 'جارٍ الحفظ…', saved: 'تم الحفظ',
   },
+  // Y1-T15 — مستكشف البيانات الوصفية، انظر en.catalog.ts
+  metadataExplorer: {
+    title: 'مستكشف البيانات الوصفية', kinds: 'الأنواع', objects: 'العناصر', history: 'السجل',
+    noObjects: 'لا توجد عناصر من هذا النوع بعد.', previous: 'السابق', next: 'التالي',
+    from: 'من', to: 'إلى', diff: 'التغييرات', noChanges: 'النسختان متطابقتان.',
+    state: { draft: 'مسودة', published: 'منشور' },
+  },
   activitiesPanel: {
     type: 'نوع النشاط', task: 'مهمة', phoneCall: 'مكالمة هاتفية',
     subject: 'الموضوع', dueAt: 'الاستحقاق', direction: 'الاتجاه',

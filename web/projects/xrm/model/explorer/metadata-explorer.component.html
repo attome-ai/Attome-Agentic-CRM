@@ -1,0 +1,108 @@
+<section class="mx">
+  <h2 class="mx-title">{{ 'metadataExplorer.title' | translate }}</h2>
+  @if (error(); as message) {
+    <p class="mx-error" role="alert">{{ message }}</p>
+  }
+
+  <div class="mx-columns">
+    <nav class="mx-panel" [attr.aria-label]="'metadataExplorer.kinds' | translate">
+      <h3>{{ 'metadataExplorer.kinds' | translate }}</h3>
+      <ul class="mx-list">
+        @for (k of kinds(); track k.name) {
+          <li>
+            <button type="button" class="mx-item" [class.mx-selected]="kind() === k.name"
+                    [attr.data-kind]="k.name" [title]="k.description" (click)="selectKind(k.name)">
+              {{ k.name }}
+            </button>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    @if (kind()) {
+      <div class="mx-panel">
+        <h3>{{ 'metadataExplorer.objects' | translate }}</h3>
+        @if (objects().length === 0) {
+          <p class="mx-muted">{{ 'metadataExplorer.noObjects' | translate }}</p>
+        }
+        <ul class="mx-list">
+          @for (o of objects(); track o.id) {
+            <li>
+              <button type="button" class="mx-item" [class.mx-selected]="object()?.id === o.id"
+                      [attr.data-object]="o.id" (click)="selectObject(o)">
+                <span>{{ o.name }}</span>
+                <span class="mx-muted">v{{ o.version_no }} · {{ ('metadataExplorer.state.' + o.state) | translate }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+        @if (pages() > 1) {
+          <div class="mx-pager">
+            <button type="button" [disabled]="page() <= 1" (click)="loadObjects(page() - 1)">
+              {{ 'metadataExplorer.previous' | translate }}
+            </button>
+            <span>{{ page() }} / {{ pages() }}</span>
+            <button type="button" [disabled]="page() >= pages()" (click)="loadObjects(page() + 1)">
+              {{ 'metadataExplorer.next' | translate }}
+            </button>
+          </div>
+        }
+      </div>
+    }
+
+    @if (object(); as o) {
+      <div class="mx-panel">
+        <h3>{{ 'metadataExplorer.history' | translate }}</h3>
+        <ol class="mx-list">
+          @for (v of versions(); track v.version_no) {
+            <li class="mx-version">
+              v{{ v.version_no }} · {{ ('metadataExplorer.state.' + v.state) | translate }}
+              <span class="mx-muted">{{ v.created_at }}</span>
+            </li>
+          }
+        </ol>
+        @if (versions().length >= 2) {
+          <div class="mx-choose">
+            <label for="mx-from">{{ 'metadataExplorer.from' | translate }}</label>
+            <select #fromSel id="mx-from" (change)="setFrom(fromSel.value)">
+              @for (v of versions(); track v.version_no) {
+                <option [value]="v.version_no" [selected]="from() === v.version_no">v{{ v.version_no }}</option>
+              }
+            </select>
+            <label for="mx-to">{{ 'metadataExplorer.to' | translate }}</label>
+            <select #toSel id="mx-to" (change)="setTo(toSel.value)">
+              @for (v of versions(); track v.version_no) {
+                <option [value]="v.version_no" [selected]="to() === v.version_no">v{{ v.version_no }}</option>
+              }
+            </select>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @if (comparing()) {
+    <section class="mx-diff" [attr.aria-label]="'metadataExplorer.diff' | translate">
+      <h3>{{ 'metadataExplorer.diff' | translate }}</h3>
+      @if (ops().length === 0) {
+        <p class="mx-muted">{{ 'metadataExplorer.noChanges' | translate }}</p>
+      } @else {
+        <ul class="mx-ops">
+          @for (op of ops(); track $index) {
+            <li><code>{{ op.op }} {{ op.path }}</code></li>
+          }
+        </ul>
+      }
+      <div class="mx-sides">
+        <div class="mx-side">
+          <h4>v{{ from() }}</h4>
+          <pre dir="ltr">{{ pretty(left()) }}</pre>
+        </div>
+        <div class="mx-side">
+          <h4>v{{ to() }}</h4>
+          <pre dir="ltr">{{ pretty(right()) }}</pre>
+        </div>
+      </div>
+    </section>
+  }
+</section>

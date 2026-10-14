@@ -571,6 +571,14 @@ export const xrmShellRoutes: Routes = [
               import('@attome/xrm/dashboard/registration').then(m => m.PAGE_EDITOR_ROUTES),
           },
           {
+            // Y1-T15: the metadata explorer (kinds, objects, history,
+            // diff). The admin model API refuses non-administrators.
+            path: 'model/explorer',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('@attome/xrm/model').then(m => m.MetadataExplorerComponent),
+          },
+          {
             // Y14 (first step): a published form drawn by the generic
             // renderer; `formId` and `recordId` bind from the path.
             path: 'model/forms/:formId/:recordId',

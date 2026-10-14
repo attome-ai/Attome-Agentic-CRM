@@ -33,6 +33,59 @@ export interface RecordView {
   data:        Record<string, unknown>;
 }
 
+// ── Admin model API (attome_api::model_admin, `/api/v1/admin/model`) ──
+
+/** `base_types::PaginatedResponse<T>`. */
+export interface Page<T> {
+  items:     T[];
+  total:     number;
+  page:      number;
+  page_size: number;
+}
+
+export interface KindView {
+  name:           string;
+  schema_version: number;
+  description:    string;
+}
+
+export interface ObjectSummary {
+  id:            string;
+  name:          string;
+  app:           string;
+  owner_layer:   string;
+  version_no:    number;
+  state:         string;
+  content_hash:  string;
+}
+
+export interface VersionSummary {
+  version_no:   number;
+  state:        string;
+  content_hash: string;
+  created_by:   string | null;
+  created_at:   string;
+}
+
+export interface ObjectVersion {
+  id:                  string;
+  kind:                string;
+  name:                string;
+  version_no:          number;
+  kind_schema_version: number;
+  state:               string;
+  doc:                 unknown;
+  content_hash:        string;
+  created_at:          string;
+}
+
+/** One RFC 6902 operation. */
+export interface PatchOp {
+  op:     string;
+  path:   string;
+  value?: unknown;
+}
+
 /** The published metadata model, as the renderer reads it (roadmap Y14). */
 @Injectable({ providedIn: 'root' })
 export class ModelService {
@@ -53,6 +106,38 @@ export class ModelService {
       `/api/v1/${encodeURIComponent(entity)}/${encodeURIComponent(id)}`,
       values,
       rowVersion,
+    );
+  }
+
+  // ── Admin: the metadata explorer (roadmap Y1-T15) ──
+
+  kinds(): Observable<Page<KindView>> {
+    return this.api.get<Page<KindView>>('/api/v1/admin/model/kinds');
+  }
+
+  objects(kind: string, page: number): Observable<Page<ObjectSummary>> {
+    return this.api.get<Page<ObjectSummary>>(
+      `/api/v1/admin/model/${encodeURIComponent(kind)}`,
+      { page: String(page) },
+    );
+  }
+
+  history(kind: string, id: string): Observable<Page<VersionSummary>> {
+    return this.api.get<Page<VersionSummary>>(
+      `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/history`,
+    );
+  }
+
+  version(kind: string, id: string, version: number): Observable<ObjectVersion> {
+    return this.api.get<ObjectVersion>(
+      `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/versions/${version}`,
+    );
+  }
+
+  diff(kind: string, id: string, from: number, to: number): Observable<Page<PatchOp>> {
+    return this.api.get<Page<PatchOp>>(
+      `/api/v1/admin/model/${encodeURIComponent(kind)}/${encodeURIComponent(id)}/diff`,
+      { from: String(from), to: String(to) },
     );
   }
 }

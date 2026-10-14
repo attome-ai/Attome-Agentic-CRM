@@ -151,6 +151,13 @@ export const xrmEn = {
     loading: 'Loading the form…', required: 'Required',
     save: 'Save', saving: 'Saving…', saved: 'Saved',
   },
+  // Y1-T15 — the metadata explorer (kinds, objects, history, diff).
+  metadataExplorer: {
+    title: 'Metadata explorer', kinds: 'Kinds', objects: 'Objects', history: 'History',
+    noObjects: 'No objects of this kind yet.', previous: 'Previous', next: 'Next',
+    from: 'From', to: 'To', diff: 'Changes', noChanges: 'The two versions are the same.',
+    state: { draft: 'Draft', published: 'Published' },
+  },
   activitiesPanel: {
     type: 'Activity type', task: 'Task', phoneCall: 'Phone call',
     subject: 'Subject', dueAt: 'Due', direction: 'Direction',
