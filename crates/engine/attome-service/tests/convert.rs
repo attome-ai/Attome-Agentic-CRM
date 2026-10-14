@@ -7,8 +7,9 @@
 //!
 //! M70 Phase 1 acceptance (S1): per route, the destination and the work
 //! request each get a change-feed row and an `Entity` audit event, the
-//! route's declared `Configuration` event is written, and a calculation rule
-//! on `service_ticket` is computed on conversion.
+//! route's declared `Configuration` event is written. (The calculation-rule
+//! check left with v1's `calculation` rules: v2 computes values with formula
+//! fields and business-rule policies, D-789.)
 
 #![allow(
     clippy::expect_used,
@@ -21,7 +22,6 @@ mod support;
 use attome_testkit::skip_if_no_db;
 
 use attome_audit::{AuditCategory, AuditOperation};
-use attome_core::EngineState;
 use attome_db::DbPool;
 use attome_service::convert::{
     convert_work_request_to_project, convert_work_request_to_task, convert_work_request_to_ticket,
@@ -140,31 +140,10 @@ async fn assert_engine_evidence(db: &DbPool, target: &str, record_id: Uuid, work
     );
 }
 
-/// A `calculation` rule on `service_ticket`, loaded into this state's
-/// rule snapshot only — no `rule` row, so no other test sees it.
-fn register_ticket_calculation_rule(state: &EngineState) {
-    use attome_core::rule_registry::{RuleDef, RuleRegistry};
-    state.rules.swap(RuleRegistry::from_entries(vec![RuleDef {
-        id: Uuid::now_v7(),
-        entity_logicalname: "service_ticket".into(),
-        name: "Resolution code from title".into(),
-        kind: "calculation".into(),
-        target_field: Some("resolution_code".into()),
-        expression: "upper(title)".into(),
-        message: None,
-        severity: "error".into(),
-        is_active: true,
-        display_order: 0,
-        version: 1,
-        row_version: 0,
-    }]));
-}
-
 #[tokio::test]
 async fn converting_a_new_work_request_creates_a_ticket_through_the_engine() {
     let state = skip_if_no_db!(test_state().await);
     let db = &state.base.db;
-    register_ticket_calculation_rule(&state);
 
     let actor = insert_systemuser(db).await;
     let requester = insert_systemuser(db).await;
@@ -174,15 +153,14 @@ async fn converting_a_new_work_request_creates_a_ticket_through_the_engine() {
         .await
         .expect("convert_work_request_to_ticket");
 
-    let (title, status, channel, requester_id, resolution_code, created_by): (
+    let (title, status, channel, requester_id, created_by): (
         String,
         String,
         Option<String>,
         Option<Uuid>,
-        Option<String>,
         Option<Uuid>,
     ) = sqlx::query_as(
-        "SELECT title, status, channel, requester_id, resolution_code, created_by \
+        "SELECT title, status, channel, requester_id, created_by \
          FROM service_ticket WHERE id = $1",
     )
     .bind(response.ticket_id)
@@ -194,11 +172,6 @@ async fn converting_a_new_work_request_creates_a_ticket_through_the_engine() {
     assert_eq!(channel.as_deref(), Some("portal"), "channel carried over");
     assert_eq!(requester_id, Some(requester));
     assert_eq!(created_by, Some(actor), "stamped with the caller");
-    assert_eq!(
-        resolution_code.as_deref(),
-        Some("CONVERT ME"),
-        "the ticket's calculation rule must run on conversion (D-604)"
-    );
     assert!(response.ticket_number.starts_with("TKT-"));
 
     let (status, resolved_entity_name, resolved_record_id) =
