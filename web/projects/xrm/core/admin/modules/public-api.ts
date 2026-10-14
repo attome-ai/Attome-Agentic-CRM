@@ -9,3 +9,4 @@ export { ModuleManagementComponent }  from './module-management/module-managemen
 export { FeatureFlagsAdminComponent } from './feature-flags/feature-flags-admin.component';
 export { UsageComponent } from './usage/usage.component';
 export { LatencyComponent } from './latency/latency.component';
+export { BrandingComponent } from './branding/branding.component';

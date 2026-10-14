@@ -1369,6 +1369,19 @@ async fn seed_body(db: &DbPool) -> Result<(), AppError> {
     )
     .await?;
 
+    // B13-T9: the deployment's brand theme.
+    upsert_sidebar(
+        db,
+        "Branding",
+        Some("/xrm/admin/branding"),
+        "las la-adjust",
+        "#f59e0b",
+        Some(modules_group),
+        45,
+        None,
+    )
+    .await?;
+
     // AA1-T7: per-route latency on this node.
     upsert_sidebar(
         db,

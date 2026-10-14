@@ -24,6 +24,8 @@ export interface WriteOptions {
    * non-GET once after a refresh.
    */
   idempotencyKey?: string;
+  /** A `row_version` sent as `If-Match` on a POST that guards one (a publish, say). */
+  ifMatch?: number;
 }
 
 /** `If-Match` from `etag`, plus the idempotency key. */
@@ -256,7 +258,7 @@ export class ApiService {
    */
   post<T>(path: string, body: unknown, options: WriteOptions = {}): Observable<T> {
     return this.http.post<T>(this.url(path), body, {
-      headers: this.mutationHeaders(options),
+      headers: this.mutationHeaders(options, options.ifMatch),
       withCredentials: true,
     }).pipe(catchError(this.handleError));
   }

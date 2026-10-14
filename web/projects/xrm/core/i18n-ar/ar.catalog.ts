@@ -142,6 +142,21 @@ export const xrmAr = {
     share: 'نسبة المستخدمين (من 1 إلى 100)', save: 'حفظ المسودة', publish: 'نشر', saved: 'حُفظت المسودة', published: 'نُشرت',
     tryOn: 'جرّبها على سجل', entity: 'الكيان', record: 'معرّف السجل', show: 'اعرض ما يتلقاه النموذج',
   },
+  brandingPage: {
+    title: 'الهوية البصرية', colours: 'الألوان', radius: 'استدارة الزوايا (بكسل)',
+    hideVendor: 'إخفاء اسم Attome', previewTitle: 'معاينة',
+    previewText: 'نص على لون السطح.', previewButton: 'زر أساسي', previewLink: 'رابط مميز',
+    contrastPass: 'كل أزواج الألوان مقروءة بوضوح.',
+    saveDraft: 'حفظ كمسودة', publish: 'نشر', rollback: 'إعادة النشر', edit: 'تعديل', changes: 'التغييرات',
+    versions: 'الإصدارات', version: 'الإصدار', status: 'الحالة', actions: 'الإجراءات',
+    noVersions: 'لم يُحفظ أي سمة بعد؛ تُطبَّق ألوان المنتج.',
+    changesFor: 'ما يتغير مقارنة بالسمة المنشورة: الإصدار', noChanges: 'لا يتغير شيء.',
+    statusName: { draft: 'مسودة', published: 'منشور', retired: 'متقاعد' },
+    token: {
+      primary: 'الأساسي', accent: 'المميز', surface: 'السطح', surface_dark: 'السطح (داكن)',
+      text: 'النص', text_dark: 'النص (داكن)', success: 'نجاح', warning: 'تحذير', danger: 'خطر', info: 'معلومة',
+    },
+  },
   latencyPage: {
     title: 'زمن الاستجابة', refresh: 'تحديث', filter: 'تصفية المسارات', route: 'المسار', count: 'الطلبات',
     disabled: 'المقاييس متوقفة على هذا الخادم (observability.metrics_port قيمته 0).',

@@ -417,6 +417,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.ModuleManagementComponent),
           },
           {
+            // B13-T9: the deployment's brand theme.
+            path: 'branding',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.BrandingComponent),
+          },
+          {
             // AA1-T7: per-route latency on this node.
             path: 'license/latency',
             canActivate: [authGuard],

@@ -184,6 +184,21 @@ export const xrmEn = {
     none: 'No route matches.',
     note: 'This server only, since it last started. Highlighted rows have a p95 of 500 ms or more.',
   },
+  brandingPage: {
+    title: 'Branding', colours: 'Colours', radius: 'Corner radius (px)',
+    hideVendor: 'Hide the Attome name', previewTitle: 'Preview',
+    previewText: 'Body text on the surface colour.', previewButton: 'Primary button', previewLink: 'Accent link',
+    contrastPass: 'Every colour pair reads clearly.',
+    saveDraft: 'Save draft', publish: 'Publish', rollback: 'Publish again', edit: 'Edit', changes: 'Changes',
+    versions: 'Versions', version: 'Version', status: 'Status', actions: 'Actions',
+    noVersions: 'No theme saved yet; the product colours apply.',
+    changesFor: 'What changes against the published theme: version', noChanges: 'Nothing changes.',
+    statusName: { draft: 'Draft', published: 'Published', retired: 'Retired' },
+    token: {
+      primary: 'Primary', accent: 'Accent', surface: 'Surface', surface_dark: 'Surface (dark)',
+      text: 'Text', text_dark: 'Text (dark)', success: 'Success', warning: 'Warning', danger: 'Danger', info: 'Info',
+    },
+  },
   usagePage: {
     title: 'Usage', usersActive: 'People who can sign in', usersRecent: 'Signed in during the last 30 days',
     contract: 'Contract reference', noContract: 'Not set', modules: 'Modules on',

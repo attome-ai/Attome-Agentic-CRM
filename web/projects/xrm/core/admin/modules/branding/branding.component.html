@@ -1,0 +1,110 @@
+<section class="br">
+  <header class="br-head">
+    <h2>{{ 'brandingPage.title' | translate }}</h2>
+  </header>
+  @if (error(); as message) {
+    <p class="br-error" role="alert">{{ message }}</p>
+  }
+
+  <div class="br-grid">
+    <fieldset class="br-colours">
+      <legend>{{ 'brandingPage.colours' | translate }}</legend>
+      @for (token of colourTokens; track token) {
+        <label class="br-colour" [attr.data-token]="token">
+          <span>{{ 'brandingPage.token.' + token | translate }}</span>
+          <input type="color" [value]="tokens()[token] ?? '#000000'" (input)="setColour(token, $any($event.target).value)" />
+          <input #hex type="text" dir="ltr" size="8" maxlength="7" placeholder="#RRGGBB"
+                 [value]="tokens()[token] ?? ''" (change)="setColour(token, hex.value.trim())" />
+        </label>
+      }
+      <label class="br-colour">
+        <span>{{ 'brandingPage.radius' | translate }}</span>
+        <input #radius type="number" min="0" max="24" [value]="tokens().radius_px ?? ''" (change)="setRadius(radius.value)" />
+      </label>
+      <label class="br-check">
+        <input #vendor type="checkbox" [checked]="tokens().hide_vendor_name === true" (change)="setHideVendor(vendor.checked)" />
+        <span>{{ 'brandingPage.hideVendor' | translate }}</span>
+      </label>
+    </fieldset>
+
+    <div class="br-side">
+      <div class="br-preview" data-preview
+           [style.background]="preview().surface" [style.color]="preview().text" [style.border-radius]="preview().radius">
+        <strong>{{ 'brandingPage.previewTitle' | translate }}</strong>
+        <p>{{ 'brandingPage.previewText' | translate }}</p>
+        <span class="br-preview-button" [style.background]="preview().primary" [style.border-radius]="preview().radius">
+          {{ 'brandingPage.previewButton' | translate }}
+        </span>
+        <span class="br-preview-link" [style.color]="preview().accent">{{ 'brandingPage.previewLink' | translate }}</span>
+      </div>
+
+      @if (report(); as r) {
+        @if (r.passed) {
+          <p class="br-pass" data-contrast="pass">{{ 'brandingPage.contrastPass' | translate }}</p>
+        } @else {
+          <ul class="br-fail" data-contrast="fail" role="status">
+            @for (f of r.failures; track f.pair + f.mode) {
+              <li>{{ f.pair }} ({{ f.mode }}): {{ f.ratio.toFixed(2) }} / {{ f.required }}</li>
+            }
+          </ul>
+        }
+      }
+
+      <div class="br-actions">
+        <button type="button" [disabled]="busy()" (click)="saveDraft()">{{ 'brandingPage.saveDraft' | translate }}</button>
+        @if (saved(); as row) {
+          <button type="button" [disabled]="busy() || report()?.passed === false" (click)="publish(row)">
+            {{ 'brandingPage.publish' | translate }}
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <h3>{{ 'brandingPage.versions' | translate }}</h3>
+  @if (deploymentVersions().length === 0) {
+    <p class="br-muted">{{ 'brandingPage.noVersions' | translate }}</p>
+  } @else {
+    <table class="br-table">
+      <thead>
+        <tr>
+          <th scope="col">{{ 'brandingPage.version' | translate }}</th>
+          <th scope="col">{{ 'brandingPage.status' | translate }}</th>
+          <th scope="col"><span class="br-sr">{{ 'brandingPage.actions' | translate }}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of deploymentVersions(); track row.id) {
+          <tr [attr.data-version]="row.version">
+            <td>{{ row.version }}</td>
+            <td>{{ 'brandingPage.statusName.' + row.status | translate }}</td>
+            <td class="br-row-actions">
+              <button type="button" (click)="edit(row)">{{ 'brandingPage.edit' | translate }}</button>
+              <button type="button" (click)="showChanges(row)">{{ 'brandingPage.changes' | translate }}</button>
+              @if (row.status === 'draft') {
+                <button type="button" [disabled]="busy()" (click)="publish(row)">{{ 'brandingPage.publish' | translate }}</button>
+              } @else if (row.status === 'retired') {
+                <button type="button" [disabled]="busy()" (click)="rollback(row)">{{ 'brandingPage.rollback' | translate }}</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+
+  @if (changes(); as c) {
+    <section class="br-changes" data-changes>
+      <h4>{{ 'brandingPage.changesFor' | translate }} {{ c.version }}</h4>
+      @if (c.changes.length === 0) {
+        <p class="br-muted">{{ 'brandingPage.noChanges' | translate }}</p>
+      } @else {
+        <ul>
+          @for (change of c.changes; track change.field) {
+            <li><code>{{ change.field }}</code>: <span dir="ltr">{{ display(change.before) }} → {{ display(change.after) }}</span></li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</section>

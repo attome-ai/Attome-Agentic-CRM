@@ -1,0 +1,21 @@
+/* Logical properties only (inline/block), so right-to-left needs nothing extra. */
+:host { display: block; }
+.br { display: flex; flex-direction: column; gap: 0.75rem; }
+.br-head h2 { margin-block: 0; font-size: 1.25rem; }
+.br-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: flex-start; }
+.br-colours { display: flex; flex-direction: column; gap: 0.5rem; border: 1px solid var(--border-color, #d0d5dd); padding: 0.75rem; min-inline-size: 0; }
+.br-colour { display: grid; grid-template-columns: 9rem auto auto; align-items: center; gap: 0.5rem; }
+.br-check { display: flex; align-items: center; gap: 0.5rem; }
+.br-side { display: flex; flex-direction: column; gap: 0.75rem; flex: 1 1 16rem; min-inline-size: 0; }
+.br-preview { padding: 1rem; border: 1px solid var(--border-color, #d0d5dd); display: flex; flex-direction: column; gap: 0.5rem; }
+.br-preview p { margin-block: 0; }
+.br-preview-button { align-self: flex-start; color: #ffffff; padding-block: 0.375rem; padding-inline: 0.75rem; }
+.br-preview-link { text-decoration: underline; }
+.br-pass { color: var(--success-color, #067647); }
+.br-fail { color: var(--danger-color, #b42318); margin-block: 0; padding-inline-start: 1.25rem; }
+.br-actions, .br-row-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.br-table { border-collapse: collapse; font-size: 0.875rem; }
+.br-table th, .br-table td { padding-block: 0.25rem; padding-inline: 0.5rem; text-align: start; border-block-end: 1px solid var(--border-color, #d0d5dd); }
+.br-muted { color: var(--muted-color, #5b6472); font-size: 0.875rem; }
+.br-error { color: var(--danger-color, #b42318); }
+.br-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
