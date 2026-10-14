@@ -354,6 +354,7 @@ async fn start_conversation(
     let constraints = crate::agent::admin_session_constraints(&StartSessionRequest {
         risk_ceiling: body.risk_ceiling,
         allowed_action_ids: body.allowed_action_ids,
+        agent: None,
     })?;
     // C11 B3: have the delta fan-out connected before the first answer.
     crate::delta_stream::warm(state.base.redis.clone(), state.base.config.clone());

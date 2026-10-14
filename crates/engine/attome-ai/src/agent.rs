@@ -642,6 +642,36 @@ pub struct StartSessionRequest {
     /// means the session may invoke nothing.
     #[serde(default)]
     pub allowed_action_ids: Option<Vec<String>>,
+    /// Optional (V2-D487): a published `agent` metadata object whose tools
+    /// become one more allow-list. It only narrows: with
+    /// `allowed_action_ids` too, the session gets the actions in both.
+    #[serde(default)]
+    pub agent: Option<Uuid>,
+}
+
+/// `allowed` narrowed to `tools` (V2-D487): an agent's tool list is one more
+/// allow-list, so the result never holds an action outside either.
+pub fn narrow_to_agent_tools(allowed: Option<Vec<String>>, tools: &[String]) -> Vec<String> {
+    match allowed {
+        None => tools.to_vec(),
+        Some(ids) => ids.into_iter().filter(|id| tools.contains(id)).collect(),
+    }
+}
+
+/// The tools of the newest published version of agent object `agent`.
+async fn published_agent_tools(state: &EngineState, agent: Uuid) -> Result<Vec<String>, AppError> {
+    let version = attome_model::store::read_published(&state.base.db, agent).await?;
+    if version.kind != attome_model::kinds::AGENT.as_str() {
+        return Err(AppError::Validation(
+            "`agent` must name an agent object".into(),
+        ));
+    }
+    Ok(version.doc["tools"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|tool| tool.as_str().map(str::to_owned))
+        .collect())
 }
 
 /// Resolves the admin route's request into session constraints, refusing an
@@ -717,7 +747,14 @@ async fn start_session_from_definition(
     Path(id): Path<Uuid>,
     Json(body): Json<StartSessionRequest>,
 ) -> Result<Json<AgentSessionResponse>, AppError> {
-    let constraints = admin_session_constraints(&body)?;
+    let mut constraints = admin_session_constraints(&body)?;
+    if let Some(agent) = body.agent {
+        let tools = published_agent_tools(&state, agent).await?;
+        constraints.allowed_action_ids = Some(narrow_to_agent_tools(
+            constraints.allowed_action_ids.take(),
+            &tools,
+        ));
+    }
     // A human directly starting a session is not "retrieved content".
     let session = start_session(&state, &ctx, id, "admin", constraints, false).await?;
     Ok(Json(AgentSessionResponse {
@@ -845,6 +882,7 @@ mod tests {
             let request = StartSessionRequest {
                 risk_ceiling: raw.to_owned(),
                 allowed_action_ids: None,
+                agent: None,
             };
             assert!(admin_session_constraints(&request).is_err(), "{raw:?}");
         }
@@ -1057,12 +1095,29 @@ mod tests {
         assert_eq!(allowed(None, Some(vec![])), list(&[]));
     }
 
+    /// V2-D487: an agent's tools only narrow what the request allows.
+    #[test]
+    fn agent_tools_only_narrow() {
+        let tools = vec!["record.get".to_owned(), "record.update".to_owned()];
+        assert_eq!(narrow_to_agent_tools(None, &tools), tools);
+        assert_eq!(
+            narrow_to_agent_tools(
+                Some(vec!["record.get".to_owned(), "record.delete".to_owned()]),
+                &tools
+            ),
+            vec!["record.get".to_owned()]
+        );
+        assert!(narrow_to_agent_tools(Some(vec![]), &tools).is_empty());
+        assert!(narrow_to_agent_tools(None, &[]).is_empty());
+    }
+
     /// An explicit empty list stays "nothing", never "unrestricted".
     #[test]
     fn an_explicit_empty_allow_list_stays_empty() {
         let request = StartSessionRequest {
             risk_ceiling: "read".to_owned(),
             allowed_action_ids: Some(vec![" ".to_owned()]),
+            agent: None,
         };
         assert_eq!(
             admin_session_constraints(&request)
@@ -1073,6 +1128,7 @@ mod tests {
         let request = StartSessionRequest {
             risk_ceiling: "read".to_owned(),
             allowed_action_ids: Some(vec![" record.get ".to_owned()]),
+            agent: None,
         };
         assert_eq!(
             admin_session_constraints(&request)

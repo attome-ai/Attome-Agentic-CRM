@@ -455,6 +455,25 @@ mod tests {
     }
 }
 
+/// An object's newest published version (V2-D487: what a session started
+/// from an agent object reads). `NotFound` when it has none.
+pub async fn read_published(pool: &DbPool, object_id: Uuid) -> Result<ObjectVersion, AppError> {
+    let row: Option<ObjectVersion> = sqlx::query_as(
+        "SELECT o.id AS object_id, o.kind, o.name, v.version_no, v.kind_schema_version, v.state, \
+                v.doc, v.content_hash, v.created_at \
+         FROM metadata_object o \
+         JOIN metadata_object_version v ON v.object_id = o.id \
+         WHERE o.id = $1 AND o.is_active AND v.state = 'published' \
+         ORDER BY v.version_no DESC \
+         LIMIT 1",
+    )
+    .bind(object_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(AppError::internal)?;
+    row.ok_or(AppError::NotFound)
+}
+
 /// One object's newest version, as a file export writes it (Y1-T10).
 #[derive(Debug, Clone, PartialEq, sqlx::FromRow)]
 pub struct ExportRow {
