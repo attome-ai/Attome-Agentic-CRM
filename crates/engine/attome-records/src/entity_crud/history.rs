@@ -918,7 +918,10 @@ pub(super) async fn search_history_route(
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(get_record_history, restore_history_route, search_history_route))]
+#[openapi(
+    paths(get_record_history, restore_history_route, search_history_route),
+    components(schemas(HistoryCompare))
+)]
 struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -985,7 +988,10 @@ mod tests {
     fn history_search_compares_numbers_and_text() {
         let gt = compare_sql("d.new_value", Some(HistoryCompare::Gt), true, 7);
         assert!(gt.contains("::numeric END) > $7::numeric"), "{gt}");
-        assert_eq!(compare_sql("d.old_value", None, true, 6), "$6::text IS NULL");
+        assert_eq!(
+            compare_sql("d.old_value", None, true, 6),
+            "$6::text IS NULL"
+        );
         let eq = compare_sql("d.old_value", Some(HistoryCompare::Eq), false, 6);
         assert_eq!(eq, "d.old_value = $6::text");
         assert!(compare_value(Some(HistoryCompare::Gt), Some("abc"), true, "new").is_err());
