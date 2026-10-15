@@ -187,6 +187,12 @@ export const xrmEn = {
     tryOn: 'Try on a record', entity: 'Entity', record: 'Record id', show: 'Show what the model receives',
   },
   // N30-T5/T9 — AI governance.
+  optionSets: {
+    title: 'Option sets', new: 'New option set', name: 'Name', code: 'Code', labelEn: 'English label',
+    labelAr: 'Arabic label', colour: 'Colour', order: 'Order', retired: 'Retired', addValue: 'Add a value',
+    saveDraft: 'Save draft', publish: 'Publish', saved: 'Draft saved', published: 'Published',
+    lowContrast_light: 'Hard to read in the light theme', lowContrast_dark: 'Hard to read in the dark theme',
+  },
   labelWorkbench: {
     title: 'Translations', language: 'Language', show: 'Show', all: 'All', count: '{count} labels',
     source: 'Original', translation: 'Translation', statusHeader: 'Status', save: 'Save',

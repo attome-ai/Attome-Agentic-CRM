@@ -167,6 +167,12 @@ export const xrmAr = {
       text: 'النص', text_dark: 'النص (داكن)', success: 'نجاح', warning: 'تحذير', danger: 'خطر', info: 'معلومة',
     },
   },
+  optionSets: {
+    title: 'مجموعات الخيارات', new: 'مجموعة خيارات جديدة', name: 'الاسم', code: 'الرمز', labelEn: 'التسمية بالإنجليزية',
+    labelAr: 'التسمية بالعربية', colour: 'اللون', order: 'الترتيب', retired: 'متقاعد', addValue: 'إضافة قيمة',
+    saveDraft: 'حفظ المسودة', publish: 'نشر', saved: 'تم حفظ المسودة', published: 'تم النشر',
+    lowContrast_light: 'صعب القراءة في المظهر الفاتح', lowContrast_dark: 'صعب القراءة في المظهر الداكن',
+  },
   labelWorkbench: {
     title: 'الترجمات', language: 'اللغة', show: 'عرض', all: 'الكل', count: '{count} تسمية',
     source: 'الأصل', translation: 'الترجمة', statusHeader: 'الحالة', save: 'حفظ',

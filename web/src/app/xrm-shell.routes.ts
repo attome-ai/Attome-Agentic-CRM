@@ -667,6 +667,13 @@ export const xrmShellRoutes: Routes = [
               import('@attome/xrm/model').then(m => m.AgentDesignerComponent),
           },
           {
+            // A5-T4: shared option sets (values, labels, colours, retirement).
+            path: 'model/option-sets',
+            canActivate: [authGuard],
+            loadComponent: () =>
+              import('@attome/xrm/model').then(m => m.OptionSetEditorComponent),
+          },
+          {
             // N10-T4: the prompt editor (overrides, rollout, try-on).
             path: 'model/prompts',
             canActivate: [authGuard],
