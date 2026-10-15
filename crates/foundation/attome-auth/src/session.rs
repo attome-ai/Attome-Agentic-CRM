@@ -21,6 +21,11 @@ pub enum TokenType {
     /// `Session`), so it can never authenticate a staff route; the portal's
     /// own authn uses [`crate::jwt::validate_typed_session_token`].
     PortalSession,
+    /// A session of an AI agent acting under its own identity (Z4-T2).
+    /// `validate_session_token` refuses it exactly as it refuses
+    /// `PortalSession`; only a validator asking for `AgentSession` by name
+    /// ([`crate::jwt::validate_typed_session_token`]) accepts it.
+    AgentSession,
 }
 
 /// JWT claims embedded in the `session_token` HttpOnly cookie.
