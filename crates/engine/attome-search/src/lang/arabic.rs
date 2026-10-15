@@ -23,91 +23,9 @@
 //! is the tripwire for that; the live-Postgres half lives in the integration
 //! test.
 
-/// Folds Arabic orthographic variation, strips diacritics, converts
-/// Arabic-Indic digits, lowercases, and collapses whitespace.
-///
-/// Ordering matters and is not arbitrary: diacritics and tatweel come out
-/// first so that a fold never has to reason about a combining mark sitting
-/// between two letters, and whitespace is collapsed last so that removals
-/// earlier in the pass cannot leave doubled spaces behind.
-pub fn normalize_ar(input: &str) -> String {
-    let mut out = String::with_capacity(input.len());
-
-    for ch in input.chars() {
-        // 1. Drop what carries no lexical meaning at all.
-        if is_tashkeel(ch) || ch == TATWEEL {
-            continue;
-        }
-
-        // 2. Fold orthographic variants onto one representative.
-        let folded = fold_letter(ch);
-
-        // 3. Arabic-Indic and Eastern Arabic-Indic digits to ASCII. Both
-        //    ranges are in live use across the GCC — an invoice number typed
-        //    ١٢٣ must find a record storing 123.
-        let folded = fold_digit(folded);
-
-        out.push(folded);
-    }
-
-    // 4. Lowercase for the Latin half. `to_lowercase` is a no-op for Arabic
-    //    (it is unicameral), so this is safe to apply to the whole string
-    //    rather than segmenting first.
-    let lowered = out.to_lowercase();
-
-    // 5. Collapse whitespace LAST, so that removing a tatweel or a harakat
-    //    cannot leave a doubled space behind. Any Unicode whitespace becomes a
-    //    single ASCII space — a non-breaking space pasted from a document is
-    //    not a meaningful difference between two names.
-    lowered.split_whitespace().collect::<Vec<_>>().join(" ")
-}
-
-const TATWEEL: char = '\u{0640}';
-
-/// Arabic diacritics: the harakat block (U+064B–U+0652), the superscript alef
-/// and its neighbours (U+0653–U+065F), the Quranic annotation marks
-/// (U+06D6–U+06ED), and the standalone sukun/shadda variants.
-///
-/// Deliberately a range check rather than a match on named characters: the
-/// block is contiguous by design, and enumerating it invites a missed
-/// codepoint that then silently breaks matching for whatever word contains it.
-fn is_tashkeel(ch: char) -> bool {
-    matches!(ch,
-        '\u{064B}'..='\u{065F}'   // fathatan … wavy hamza below
-        | '\u{0670}'              // superscript alef
-        | '\u{06D6}'..='\u{06ED}' // Quranic annotation
-    )
-}
-
-/// The letter folds.
-///
-/// Each of these is a pair that native typists interchange in practice, not a
-/// linguistic equivalence. Folding them is what makes `احمد` find `أحمد` —
-/// the single highest-value normalization for name search, because a name is
-/// what people search for and a name is exactly where the hamza is dropped.
-fn fold_letter(ch: char) -> char {
-    match ch {
-        // Alef with any hamza or madda, and the Quranic wasla, all to bare alef.
-        '\u{0622}' | '\u{0623}' | '\u{0625}' | '\u{0671}' => '\u{0627}',
-        // Alef maksura to ya — ى and ي are interchanged constantly.
-        '\u{0649}' => '\u{064A}',
-        // Taa marbuta to haa — ة is commonly typed ه word-final.
-        '\u{0629}' => '\u{0647}',
-        // Hamza carriers to the bare hamza.
-        '\u{0624}' | '\u{0626}' => '\u{0621}',
-        other => other,
-    }
-}
-
-fn fold_digit(ch: char) -> char {
-    match ch {
-        // Arabic-Indic ٠-٩
-        '\u{0660}'..='\u{0669}' => char::from(b'0' + (ch as u32 - 0x0660) as u8),
-        // Eastern Arabic-Indic ۰-۹ (Persian/Urdu forms, also seen in the Gulf)
-        '\u{06F0}'..='\u{06F9}' => char::from(b'0' + (ch as u32 - 0x06F0) as u8),
-        other => other,
-    }
-}
+/// A15-T2: the fold itself lives in `attome-core` so duplicate matching
+/// uses exactly what search indexes and queries with.
+pub use attome_core::match_normalize::normalize_ar;
 
 #[cfg(test)]
 mod tests {

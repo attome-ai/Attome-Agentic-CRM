@@ -113,6 +113,7 @@ pub mod model;
 /// Dashboard 10/10 Phase 6 — the `MyWorkProvider` trait every
 /// actionable-work-owning engine implements, and the types the aggregation
 /// route composes across them.
+pub mod match_normalize;
 pub mod my_work;
 pub mod partition_maintenance;
 pub mod reconcile;
