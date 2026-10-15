@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { compareText, textCollator, textDirection } from './text-direction';
 
 describe('textDirection', () => {
