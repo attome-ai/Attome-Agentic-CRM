@@ -23369,12 +23369,19 @@ export interface components {
          *     [`PolicyDef::effect`] for the typed view.
          */
         PolicyDef: {
+            /**
+             * Format: date
+             * @description A3-T4: with `stage: enforce`, the first day the check refuses writes;
+             *     before it the check warns.
+             */
+            enforce_from?: string | null;
             /** @description A `set_value` `attome-rules` expression over the entity's own fields. */
             expression?: string | null;
             field?: string | null;
             message?: string | null;
             mode?: null | components["schemas"]["SetMode"];
             severity?: null | components["schemas"]["Severity"];
+            stage?: null | components["schemas"]["Stage"];
             type: components["schemas"]["PolicyType"];
             /** @description A `set_value` literal. */
             value?: unknown;
@@ -26204,6 +26211,14 @@ export interface components {
              */
             window_days: number;
         };
+        /**
+         * @description A3-T4: how a refusing check (`error`, `required`, `allowed_values`) is
+         *     rolled out. `Report` only logs a failure, `Warn` lets the write through
+         *     with a warning, `Enforce` refuses it — from `enforce_from` when set, and
+         *     as a warning before that date.
+         * @enum {string}
+         */
+        Stage: "report" | "warn" | "enforce";
         StagedImportResponse: {
             /** Format: int32 */
             failed: number;

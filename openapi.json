@@ -91980,6 +91980,14 @@
           "type"
         ],
         "properties": {
+          "enforce_from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "A3-T4: with `stage: enforce`, the first day the check refuses writes;\nbefore it the check warns."
+          },
           "expression": {
             "type": [
               "string",
@@ -92016,6 +92024,17 @@
               },
               {
                 "$ref": "#/components/schemas/Severity"
+              }
+            ]
+          },
+          "stage": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Stage",
+                "description": "A3-T4: how this check is rolled out; absent means its severity decides."
               }
             ]
           },
@@ -98818,6 +98837,15 @@
             "minimum": 0
           }
         }
+      },
+      "Stage": {
+        "type": "string",
+        "description": "A3-T4: how a refusing check (`error`, `required`, `allowed_values`) is\nrolled out. `Report` only logs a failure, `Warn` lets the write through\nwith a warning, `Enforce` refuses it — from `enforce_from` when set, and\nas a warning before that date.",
+        "enum": [
+          "report",
+          "warn",
+          "enforce"
+        ]
       },
       "StagedImportResponse": {
         "type": "object",
