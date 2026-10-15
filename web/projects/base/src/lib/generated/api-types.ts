@@ -10243,6 +10243,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/telemetry/web-vitals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * AA12-T1: records a browser's LCP or INP in the metrics registry, so the
+         *     built-in metrics store keeps its sum and count per minute
+         *     (`attome_web_vital_ms`).
+         */
+        post: operations["web_vital"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ticket/sla/recalculate-unresolved": {
         parameters: {
             query?: never;
@@ -28092,6 +28113,18 @@ export interface components {
              *     in the last 30 days.
              */
             conversations_last_30_days: number;
+        };
+        /** @description AA12-T1: one Web Vitals measurement from a browser. */
+        WebVital: {
+            /** @description The screen's first path segment (e.g. `xrm`, `admin`), for grouping. */
+            area?: string | null;
+            /** @description `LCP` (largest contentful paint) or `INP` (interaction to next paint). */
+            name: string;
+            /**
+             * Format: double
+             * @description The measurement in milliseconds.
+             */
+            value: number;
         };
         WebhookAcceptedResponse: {
             accepted: number;
@@ -57631,7 +57664,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Server-Sent Events: `hello` with the current model version, then `model-version` whenever published metadata changes (each `data` is `{model_version}`), and `records` for changes to records of the watched entities (`{changes: [{entity, id, op}]}`, or `{overflow: true}` when there were too many) */
+            /** @description Server-Sent Events: `hello` with the current model version, then `model-version` whenever published metadata changes (each `data` is `{model_version}`), `records` for changes to records of the watched entities (`{changes: [{entity, id, op}]}`, or `{overflow: true}` when there were too many), and `notifications` when the caller's inbox changes (`{unread}`) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -62344,6 +62377,46 @@ export interface operations {
             };
             /** @description No such list of the caller's teams */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    web_vital: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebVital"];
+            };
+        };
+        responses: {
+            /** @description Recorded */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not LCP or INP, or not a time from 0 to 10 minutes */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

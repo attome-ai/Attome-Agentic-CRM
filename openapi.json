@@ -45008,7 +45008,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Server-Sent Events: `hello` with the current model version, then `model-version` whenever published metadata changes (each `data` is `{model_version}`), and `records` for changes to records of the watched entities (`{changes: [{entity, id, op}]}`, or `{overflow: true}` when there were too many)",
+            "description": "Server-Sent Events: `hello` with the current model version, then `model-version` whenever published metadata changes (each `data` is `{model_version}`), `records` for changes to records of the watched entities (`{changes: [{entity, id, op}]}`, or `{overflow: true}` when there were too many), and `notifications` when the caller's inbox changes (`{unread}`)",
             "content": {
               "text/event-stream": {}
             }
@@ -52153,6 +52153,63 @@
             }
           ],
           "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/telemetry/web-vitals": {
+      "post": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "AA12-T1: records a browser's LCP or INP in the metrics registry, so the\nbuilt-in metrics store keeps its sum and count per minute\n(`attome_web_vital_ms`).",
+        "operationId": "web_vital",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebVital"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Recorded"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Not LCP or INP, or not a time from 0 to 10 minutes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "a browser's page-speed measurement; no business or security effect",
+          "reason": "telemetry",
+          "via": null
         }
       }
     },
@@ -103596,6 +103653,32 @@
             "type": "integer",
             "format": "int64",
             "description": "Distinct conversations started (`communication` rows with\n`channel = 'web_chat', direction = 'inbound', in_reply_to IS NULL`)\nin the last 30 days."
+          }
+        }
+      },
+      "WebVital": {
+        "type": "object",
+        "description": "AA12-T1: one Web Vitals measurement from a browser.",
+        "required": [
+          "name",
+          "value"
+        ],
+        "properties": {
+          "area": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The screen's first path segment (e.g. `xrm`, `admin`), for grouping."
+          },
+          "name": {
+            "type": "string",
+            "description": "`LCP` (largest contentful paint) or `INP` (interaction to next paint)."
+          },
+          "value": {
+            "type": "number",
+            "format": "double",
+            "description": "The measurement in milliseconds."
           }
         }
       },
