@@ -8,6 +8,7 @@ import { RecordAccessActionsComponent } from '../../record-access/record-access-
 import { RecordTabPanelsComponent } from '../../record-tabs/record-tab-panels.component';
 import { RemindMeComponent } from '../../reminders/remind-me.component';
 import { RecordTagsComponent } from '../../record-tags/record-tags.component';
+import { RecordAncestorsComponent } from '../../record-tree/record-ancestors.component';
 import { EngineFormBase } from '../xrm-form.base';
 import { XrmTabDirective } from './xrm-tab.directive';
 
@@ -53,6 +54,7 @@ import { XrmTabDirective } from './xrm-tab.directive';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    RecordAncestorsComponent,
     NgTemplateOutlet, TranslatePipe, DuplicateBannerComponent, PredictionBannerComponent,
     RecordAccessActionsComponent, RecordTabPanelsComponent, RemindMeComponent, RecordTagsComponent,
   ],

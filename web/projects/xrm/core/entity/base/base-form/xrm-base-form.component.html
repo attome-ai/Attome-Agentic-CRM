@@ -24,6 +24,10 @@
           </div>
           <h1 class="xf-title">{{ (f.isEdit() ? 'xrmForm.edit' : 'xrmForm.new') | translate }} {{ schema.name }}</h1>
         }
+        <!-- A17-T5 — where the record sits in its entity's tree. -->
+        @if (f.isEdit() && f.id(); as treeRecordId) {
+          <xrm-record-ancestors [entity]="f.name()" [recordId]="treeRecordId" />
+        }
         <ng-content select="[xrmHeaderMeta]" />
         <!-- B4-T4 — the record's tags (shared, and the person's own). -->
         @if (f.isEdit() && f.id(); as tagRecordId) {

@@ -11,6 +11,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Record forms show where a record sits in its entity's tree (a breadcrumb of its ancestors, each a
+  link), for entities with a self-referencing lookup.
 - Honest totals: `query/execute` with `include_total` counts a matching set only when the planner
   expects fewer than 100,000 rows; past that it returns the planner's estimate with
   `total_estimated: true`.

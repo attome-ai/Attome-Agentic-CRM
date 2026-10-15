@@ -289,6 +289,7 @@ export const xrmAr = {
     loadMore: 'تحميل المزيد',
   },
   // U6 (D-601) — انظر en.catalog.ts
+  recordTree: { path: 'الموقع في الشجرة' },
   recordHistory: {
     group_batch: 'استيراد أو تغيير جماعي', group_agent: 'تشغيل وكيل', group_run: 'تشغيل سير عمل',
     by: 'بواسطة {user}',

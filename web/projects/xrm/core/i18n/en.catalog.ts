@@ -323,6 +323,7 @@ export const xrmEn = {
     loadMore: 'Load more',
   },
   // U6 (D-601) — <xrm-record-history-panel>.
+  recordTree: { path: 'Place in the tree' },
   recordHistory: {
     group_batch: 'Import or bulk change', group_agent: 'Agent run', group_run: 'Flow run',
     by: 'by {user}',
