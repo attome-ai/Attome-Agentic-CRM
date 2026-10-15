@@ -80,21 +80,6 @@ pub const REMOVED_WITH_CONTENT: &[&str] = &["script", "style", "noscript"];
 /// into the page that opened it nor leak it as a referrer.
 const LINK_REL: &str = "noopener noreferrer nofollow";
 
-fn rich_text_builder() -> Builder<'static> {
-    let mut tag_attributes: HashMap<&'static str, HashSet<&'static str>> = HashMap::new();
-    tag_attributes.insert("a", ["href", "title"].into_iter().collect());
-    let mut builder = Builder::empty();
-    builder
-        .tags(RICH_TEXT_TAGS.iter().copied().collect())
-        .clean_content_tags(REMOVED_WITH_CONTENT.iter().copied().collect())
-        .tag_attributes(tag_attributes)
-        .url_schemes(RICH_TEXT_URL_SCHEMES.iter().copied().collect())
-        .url_relative(UrlRelative::Deny)
-        .link_rel(Some(LINK_REL))
-        .strip_comments(true);
-    builder
-}
-
 fn text_only_builder() -> Builder<'static> {
     let mut builder = Builder::empty();
     builder
@@ -107,7 +92,93 @@ fn text_only_builder() -> Builder<'static> {
 /// safe to store and to render as HTML. Idempotent: sanitizing an already
 /// sanitized value returns it unchanged.
 pub fn sanitize_rich_text(input: &str) -> String {
-    rich_text_builder().clean(input).to_string()
+    sanitize(input, SanitizeProfile::RichText)
+}
+
+/// Z13-T1: which allow-list a piece of HTML is cleaned against. Every
+/// profile removes scripts, styles and `noscript` with their content,
+/// every event-handler attribute, comments, and any URL that is not
+/// `http:`, `https:`, `mailto:` or `tel:` (relative URLs too).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SanitizeProfile {
+    /// A rich-text field: basic formatting and links ([`RICH_TEXT_TAGS`]).
+    RichText,
+    /// An email received from outside: rich text plus tables, and images
+    /// only when the reader chose to load remote images (a remote image is a
+    /// read receipt for the sender).
+    InboundEmail { allow_remote_images: bool },
+    /// A portal page an administrator wrote: rich text plus all headings,
+    /// tables, figures and images.
+    PortalPage,
+    /// Text inside a custom component: a fixed handful of text-level tags,
+    /// no links, no attributes.
+    CustomComponent,
+}
+
+/// Table elements the email and portal profiles add.
+const TABLE_TAGS: &[&str] = &[
+    "caption", "col", "colgroup", "table", "tbody", "td", "tfoot", "th", "thead", "tr",
+];
+
+/// The only elements a custom component's text may hold.
+const COMPONENT_TAGS: &[&str] = &[
+    "b", "br", "em", "i", "li", "ol", "p", "span", "strong", "u", "ul",
+];
+
+fn profile_builder(profile: SanitizeProfile) -> Builder<'static> {
+    let mut tags: HashSet<&'static str> = RICH_TEXT_TAGS.iter().copied().collect();
+    let mut tag_attributes: HashMap<&'static str, HashSet<&'static str>> = HashMap::new();
+    tag_attributes.insert("a", ["href", "title"].into_iter().collect());
+    let images = |tags: &mut HashSet<&'static str>,
+                  attrs: &mut HashMap<&'static str, HashSet<&'static str>>| {
+        tags.insert("img");
+        attrs.insert(
+            "img",
+            ["src", "alt", "width", "height"].into_iter().collect(),
+        );
+    };
+    match profile {
+        SanitizeProfile::RichText => {}
+        SanitizeProfile::InboundEmail {
+            allow_remote_images,
+        } => {
+            tags.extend(TABLE_TAGS.iter().copied());
+            for cell in ["td", "th"] {
+                tag_attributes.insert(cell, ["colspan", "rowspan"].into_iter().collect());
+            }
+            if allow_remote_images {
+                images(&mut tags, &mut tag_attributes);
+            }
+        }
+        SanitizeProfile::PortalPage => {
+            tags.extend(TABLE_TAGS.iter().copied());
+            tags.extend(["h5", "h6", "figure", "figcaption"]);
+            for cell in ["td", "th"] {
+                tag_attributes.insert(cell, ["colspan", "rowspan"].into_iter().collect());
+            }
+            images(&mut tags, &mut tag_attributes);
+        }
+        SanitizeProfile::CustomComponent => {
+            tags = COMPONENT_TAGS.iter().copied().collect();
+            tag_attributes.clear();
+        }
+    }
+    let mut builder = Builder::empty();
+    builder
+        .tags(tags)
+        .clean_content_tags(REMOVED_WITH_CONTENT.iter().copied().collect())
+        .tag_attributes(tag_attributes)
+        .url_schemes(RICH_TEXT_URL_SCHEMES.iter().copied().collect())
+        .url_relative(UrlRelative::Deny)
+        .link_rel(Some(LINK_REL))
+        .strip_comments(true);
+    builder
+}
+
+/// Z13-T1: cleans `input` against `profile`'s allow-list. The result is safe
+/// to store and to render as HTML.
+pub fn sanitize(input: &str, profile: SanitizeProfile) -> String {
+    profile_builder(profile).clean(input).to_string()
 }
 
 /// The visible text of an HTML fragment: every tag removed, `<script>`/
@@ -260,6 +331,90 @@ mod tests {
         );
         assert_eq!(html_to_text("1 &lt; 2 &#65;&#x42;"), "1 < 2 AB");
         assert_eq!(html_to_text(""), "");
+    }
+
+    const HOSTILE: &str = r#"<p>ok</p><script>alert(1)</script><img src="https://img.example/a.png" onerror="alert(1)"><a href="javascript:alert(1)">x</a>"#;
+
+    fn assert_safe(out: &str) {
+        assert!(!out.contains("script"), "{out}");
+        assert!(!out.contains("onerror"), "{out}");
+        assert!(!out.contains("javascript"), "{out}");
+        assert!(out.contains("<p>ok</p>"), "{out}");
+    }
+
+    /// Z13-T1: every profile removes scripts, handlers and script URLs.
+    #[test]
+    fn every_profile_removes_script_handlers_and_script_urls() {
+        for profile in [
+            SanitizeProfile::RichText,
+            SanitizeProfile::InboundEmail {
+                allow_remote_images: false,
+            },
+            SanitizeProfile::InboundEmail {
+                allow_remote_images: true,
+            },
+            SanitizeProfile::PortalPage,
+            SanitizeProfile::CustomComponent,
+        ] {
+            assert_safe(&sanitize(HOSTILE, profile));
+        }
+    }
+
+    #[test]
+    fn rich_text_profile_is_todays_rules() {
+        assert_eq!(
+            sanitize(HOSTILE, SanitizeProfile::RichText),
+            sanitize_rich_text(HOSTILE)
+        );
+    }
+
+    #[test]
+    fn inbound_email_loads_remote_images_only_when_chosen() {
+        let blocked = sanitize(
+            HOSTILE,
+            SanitizeProfile::InboundEmail {
+                allow_remote_images: false,
+            },
+        );
+        assert!(!blocked.contains("<img"), "{blocked}");
+        let allowed = sanitize(
+            HOSTILE,
+            SanitizeProfile::InboundEmail {
+                allow_remote_images: true,
+            },
+        );
+        assert!(
+            allowed.contains(r#"<img src="https://img.example/a.png">"#),
+            "{allowed}"
+        );
+        let table = sanitize(
+            "<style>td{color:red}</style><table><tr><td colspan=\"2\">x</td></tr></table>",
+            SanitizeProfile::InboundEmail {
+                allow_remote_images: false,
+            },
+        );
+        assert!(!table.contains("color"), "{table}");
+        assert!(table.contains(r#"<td colspan="2">x</td>"#), "{table}");
+    }
+
+    #[test]
+    fn portal_page_keeps_headings_tables_and_images() {
+        let out = sanitize(
+            r#"<h6>t</h6><figure><img src="https://img.example/a.png" alt="a"><figcaption>c</figcaption></figure><table><tr><th>h</th></tr></table>"#,
+            SanitizeProfile::PortalPage,
+        );
+        for kept in ["<h6>", "<figure>", "<figcaption>", "<img", "<th>"] {
+            assert!(out.contains(kept), "{kept} missing: {out}");
+        }
+    }
+
+    #[test]
+    fn custom_component_keeps_only_text_tags() {
+        let out = sanitize(
+            r#"<p class="x">a <strong>b</strong> <a href="https://x.example">l</a></p><h1>h</h1>"#,
+            SanitizeProfile::CustomComponent,
+        );
+        assert_eq!(out, "<p>a <strong>b</strong> l</p>h");
     }
 
     /// Owner decision 4: `<noscript>` goes with its content — including
