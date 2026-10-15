@@ -367,7 +367,9 @@ async fn execute_decision(
             let reason = match &e {
                 AppError::NotFound => "action not found, unlicensed, or disabled",
                 AppError::Forbidden => "caller lacks the required privilege for this action",
-                AppError::Validation(_) => "the option's arguments failed validation",
+                AppError::Validation(_) | AppError::FieldValidation(_) => {
+                    "the option's arguments failed validation"
+                }
                 AppError::Conflict(_) => "conflict while executing this action",
                 _ => "action execution failed",
             };

@@ -190,6 +190,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Knowledge retrieval fuses keyword and vector results and reranks with `inference.rerank`.
 
 ### Changed
+- A record write with bad fields answers with every failing field at once: one 422 whose `details`
+  lists each field with a code (`unknown_field`, `required`, `invalid`, `too_long`). The dry run
+  (`POST /api/v1/{entity}/validate`) returns the same list as `failures`.
 - `/health/dependencies` needs an administrator and no longer lists the modules on.
 - `document.extract`: invoice and receipt fields (VAT number, invoice number, date, total, VAT) from
   text with a confidence each, the exact fields of a ZATCA QR code, and the fields to review.

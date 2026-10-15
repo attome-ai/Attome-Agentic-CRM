@@ -238,7 +238,10 @@ pub fn apply_defaults(
     out
 }
 
-/// Runs semantic and schema validation before any SQL is built.
+/// Runs semantic and schema validation before any SQL is built, and answers
+/// with every failing field at once (A3-T1): one `FieldValidation` 422 whose
+/// `details` names each field, its `code` (`unknown_field`, `required`,
+/// `invalid`, `too_long`) and the message.
 ///
 /// `pub` (not `pub(crate)`) — R-07 (`document/module-master-plans/
 /// M26-dashboard-remediation.md`): `attome-dashboard`'s `layout.rs` writes its
@@ -257,54 +260,55 @@ pub fn validate_body(
     require_all: bool,
 ) -> Result<(), AppError> {
     let known: HashSet<&str> = attrs.iter().map(|a| a.logicalname.as_str()).collect();
-    let unknown: Vec<&str> = obj
-        .keys()
-        .map(String::as_str)
-        .filter(|name| !known.contains(name))
-        .collect();
-    if !unknown.is_empty() {
-        return Err(AppError::Validation(format!(
-            "unknown field(s): {}",
-            unknown.join(", ")
-        )));
+    let mut failures = Vec::new();
+    let mut fail = |field: &str, code: &str, message: String| {
+        failures.push(attome_types::types::FieldError {
+            field: field.to_owned(),
+            code: code.to_owned(),
+            message,
+        });
+    };
+    for name in obj.keys().filter(|name| !known.contains(name.as_str())) {
+        fail(name, "unknown_field", format!("{name}: unknown field"));
     }
 
     for attr in attrs {
-        let value = obj.get(&attr.logicalname);
+        let name = attr.logicalname.as_str();
+        let value = obj.get(name);
         if attr.is_required
             && (value.is_some_and(Value::is_null) || (require_all && value.is_none()))
         {
-            return Err(AppError::Validation(format!(
-                "{}: field is required",
-                attr.logicalname
-            )));
+            fail(name, "required", format!("{name}: field is required"));
+            continue;
         }
-        if let Some(val) = value
-            && !val.is_null()
+        let Some(val) = value.filter(|v| !v.is_null()) else {
+            continue;
+        };
+        match attome_field::validate(
+            &attome_core::FieldType::from_int(attr.field_type_int)
+                .unwrap_or(attome_core::FieldType::Text),
+            val,
+            attr.options.as_ref(),
+        ) {
+            Ok(()) => {}
+            Err(AppError::Validation(msg)) => fail(name, "invalid", format!("{name}: {msg}")),
+            Err(other) => return Err(other),
+        }
+        if let (Some(max), Some(text)) = (attr.max_length, val.as_str())
+            && text.chars().count() > max as usize
         {
-            attome_field::validate(
-                &attome_core::FieldType::from_int(attr.field_type_int)
-                    .unwrap_or(attome_core::FieldType::Text),
-                val,
-                attr.options.as_ref(),
-            )
-            .map_err(|e| match e {
-                AppError::Validation(msg) => {
-                    AppError::Validation(format!("{}: {msg}", attr.logicalname))
-                }
-                other => other,
-            })?;
-            if let (Some(max), Some(text)) = (attr.max_length, val.as_str())
-                && text.chars().count() > max as usize
-            {
-                return Err(AppError::Validation(format!(
-                    "{}: length must not exceed {max}",
-                    attr.logicalname
-                )));
-            }
+            fail(
+                name,
+                "too_long",
+                format!("{name}: length must not exceed {max}"),
+            );
         }
     }
-    Ok(())
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::FieldValidation(failures))
+    }
 }
 
 /// P-field-write-security (D-141, widened by D-507): rejects the whole

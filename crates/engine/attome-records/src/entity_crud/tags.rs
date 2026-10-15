@@ -830,10 +830,12 @@ pub async fn bulk_tag(
                 id,
                 code: "forbidden",
             }),
-            Err(AppError::Validation(_)) => result.failed.push(BulkTagFailure {
-                id,
-                code: "invalid",
-            }),
+            Err(AppError::Validation(_) | AppError::FieldValidation(_)) => {
+                result.failed.push(BulkTagFailure {
+                    id,
+                    code: "invalid",
+                })
+            }
             Err(error) => {
                 tracing::warn!(%error, record_id = %id, "bulk tag could not change a record");
                 result.failed.push(BulkTagFailure { id, code: "failed" });

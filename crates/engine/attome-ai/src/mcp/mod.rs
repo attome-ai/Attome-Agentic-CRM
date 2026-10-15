@@ -571,7 +571,7 @@ fn discover_result() -> Value {
 /// it by leaking which of the two happened.
 fn json_rpc_code(error: &AppError) -> i32 {
     match error {
-        AppError::Validation(_) => code::INVALID_PARAMS,
+        AppError::Validation(_) | AppError::FieldValidation(_) => code::INVALID_PARAMS,
         AppError::NotFound => code::INVALID_REQUEST,
         _ => code::INTERNAL,
     }
@@ -587,6 +587,7 @@ fn json_rpc_code(error: &AppError) -> i32 {
 fn sanitized(error: &AppError) -> String {
     match error {
         AppError::Validation(message) => message.clone(),
+        AppError::FieldValidation(errors) => attome_types::types::FieldError::summary(errors),
         AppError::Conflict(message) => (*message).to_string(),
         AppError::NotFound => "unknown or unavailable".to_string(),
         _ => "the request could not be completed".to_string(),

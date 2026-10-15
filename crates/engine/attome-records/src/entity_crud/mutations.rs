@@ -465,6 +465,8 @@ pub struct CreateCheck {
     pub valid: bool,
     /// Why it would not, as the create would say it.
     pub error: Option<String>,
+    /// A3-T1: every failing field, when the create failed on its fields.
+    pub failures: Vec<attome_types::types::FieldError>,
     /// Business-rule warnings the create would raise.
     pub warnings: Vec<CreateCheckWarning>,
 }
@@ -508,6 +510,7 @@ pub async fn validate_create(
         Ok(result) => Ok(CreateCheck {
             valid: true,
             error: None,
+            failures: Vec::new(),
             warnings: result
                 .warnings
                 .iter()
@@ -518,6 +521,12 @@ pub async fn validate_create(
                 })
                 .collect(),
         }),
+        Err(AppError::FieldValidation(failures)) => Ok(CreateCheck {
+            valid: false,
+            error: Some(attome_types::types::FieldError::summary(&failures)),
+            failures,
+            warnings: Vec::new(),
+        }),
         Err(
             error @ (AppError::Validation(_)
             | AppError::Conflict(_)
@@ -526,6 +535,7 @@ pub async fn validate_create(
         ) => Ok(CreateCheck {
             valid: false,
             error: Some(error.to_string()),
+            failures: Vec::new(),
             warnings: Vec::new(),
         }),
         Err(other) => Err(other),

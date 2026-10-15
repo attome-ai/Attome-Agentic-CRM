@@ -49,6 +49,18 @@ pub struct FieldError {
     pub message: String,
 }
 
+impl FieldError {
+    /// Every failure's message in one line, for a caller that shows text
+    /// (A3-T1): a single failure reads exactly as its own message.
+    pub fn summary(errors: &[FieldError]) -> String {
+        errors
+            .iter()
+            .map(|e| e.message.as_str())
+            .collect::<Vec<_>>()
+            .join("; ")
+    }
+}
+
 /// One business-rule `error` policy that fired (D-789 §3.3), inside a
 /// `rule_violation` body's `details.rules`. Carries names and the rule's own
 /// message, never a record value.

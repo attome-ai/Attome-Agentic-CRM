@@ -1631,6 +1631,9 @@ async fn batch_decide(
                 status: None,
                 error: Some(match &error {
                     AppError::Validation(m) => m.clone(),
+                    AppError::FieldValidation(errors) => {
+                        attome_types::types::FieldError::summary(errors)
+                    }
                     AppError::Conflict(m) => (*m).to_string(),
                     AppError::Forbidden => "not allowed to decide this request".to_owned(),
                     AppError::NotFound => "no such request".to_owned(),

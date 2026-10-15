@@ -1276,8 +1276,13 @@ pub async fn run(
                             // return for the same input (coding-guidelines
                             // section 6), so the model can correct the call.
                             count_call(call.name.as_str(), CallMetric::Invalid);
+                            let summary;
                             let detail = match &e {
                                 AppError::Validation(detail) => detail.as_str(),
+                                AppError::FieldValidation(errors) => {
+                                    summary = attome_types::types::FieldError::summary(errors);
+                                    summary.as_str()
+                                }
                                 _ => "",
                             };
                             record_invalid(

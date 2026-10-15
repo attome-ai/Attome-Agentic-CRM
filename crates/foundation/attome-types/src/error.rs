@@ -59,7 +59,7 @@ pub enum AppError {
     /// (BTY-D6) rather than publishing a second code: a client that already
     /// handles `validation_error` needs no change, and `details` carries the
     /// structure. `Validation(String)`'s 1,000-odd call sites are untouched.
-    #[error("validation error: {} field(s) failed", .0.len())]
+    #[error("validation error: {}", crate::types::FieldError::summary(.0))]
     FieldValidation(Vec<crate::types::FieldError>),
 
     /// A feature this deployment has switched off outright — **permanent for

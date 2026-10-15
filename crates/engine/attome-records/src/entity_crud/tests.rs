@@ -122,30 +122,63 @@ fn validation_rejects_unknown_missing_required_and_overlong_fields() {
     required.logicalname = "name".to_owned();
     required.is_required = true;
     required.max_length = Some(4);
+    let codes = |result: Result<(), AppError>| match result {
+        Err(AppError::FieldValidation(failures)) => failures
+            .into_iter()
+            .map(|f| (f.field, f.code))
+            .collect::<Vec<_>>(),
+        other => panic!("expected FieldValidation, got {other:?}"),
+    };
 
     let missing = serde_json::Map::new();
-    assert!(matches!(
-        validate_body(&[required.clone()], &missing, true),
-        Err(AppError::Validation(_))
-    ));
+    assert_eq!(
+        codes(validate_body(&[required.clone()], &missing, true)),
+        [("name".to_owned(), "required".to_owned())]
+    );
 
     let unknown = serde_json::json!({"name": "ok", "typo": 1})
         .as_object()
         .unwrap()
         .clone();
-    assert!(matches!(
-        validate_body(&[required.clone()], &unknown, true),
-        Err(AppError::Validation(_))
-    ));
+    assert_eq!(
+        codes(validate_body(&[required.clone()], &unknown, true)),
+        [("typo".to_owned(), "unknown_field".to_owned())]
+    );
 
     let long = serde_json::json!({"name": "abcde"})
         .as_object()
         .unwrap()
         .clone();
-    assert!(matches!(
-        validate_body(&[required], &long, true),
-        Err(AppError::Validation(_))
-    ));
+    assert_eq!(
+        codes(validate_body(&[required], &long, true)),
+        [("name".to_owned(), "too_long".to_owned())]
+    );
+}
+
+/// A3-T1: a record with three bad fields hears about all three at once.
+#[test]
+fn validation_reports_every_failing_field_at_once() {
+    let mut name = attr(3, None);
+    name.logicalname = "name".to_owned();
+    name.is_required = true;
+    let mut code = attr(3, None);
+    code.logicalname = "code".to_owned();
+    code.max_length = Some(2);
+    let body = serde_json::json!({"code": "abc", "typo": 1})
+        .as_object()
+        .unwrap()
+        .clone();
+    let Err(AppError::FieldValidation(failures)) = validate_body(&[name, code], &body, true) else {
+        panic!("expected every failure at once");
+    };
+    let mut fields: Vec<_> = failures.iter().map(|f| f.field.as_str()).collect();
+    fields.sort_unstable();
+    assert_eq!(fields, ["code", "name", "typo"]);
+    let error = AppError::FieldValidation(failures);
+    assert!(
+        error.to_string().contains("name: field is required"),
+        "{error}"
+    );
 }
 
 #[test]
