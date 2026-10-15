@@ -1197,6 +1197,7 @@ pub async fn wait_for_shutdown_signal() {
         tokio::signal::ctrl_c()
             .await
             .expect("failed to install CTRL+C handler");
+        "Ctrl+C"
     };
 
     #[cfg(unix)]
@@ -1205,16 +1206,34 @@ pub async fn wait_for_shutdown_signal() {
             .expect("failed to install SIGTERM handler")
             .recv()
             .await;
+        "SIGTERM"
     };
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
+    // AB7-T1: Windows' own stops drain like SIGTERM: Ctrl+Break, closing
+    // the console window and a system shutdown. (A service stop arrives
+    // through `EXTERNAL_STOP` below.)
+    #[cfg(windows)]
+    let terminate = async {
+        use tokio::signal::windows;
+        let mut ctrl_break = windows::ctrl_break().expect("failed to install Ctrl+Break handler");
+        let mut ctrl_close =
+            windows::ctrl_close().expect("failed to install console-close handler");
+        let mut ctrl_shutdown =
+            windows::ctrl_shutdown().expect("failed to install system-shutdown handler");
+        tokio::select! {
+            _ = ctrl_break.recv() => "Ctrl+Break",
+            _ = ctrl_close.recv() => "console close",
+            _ = ctrl_shutdown.recv() => "system shutdown",
+        }
+    };
+    #[cfg(not(any(unix, windows)))]
+    let terminate = std::future::pending::<&'static str>();
 
-    tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
-        _ = EXTERNAL_STOP.notified() => {},
-    }
-    tracing::info!("shutdown signal received");
+    let source = tokio::select! {
+        source = ctrl_c => source,
+        source = terminate => source,
+        _ = EXTERNAL_STOP.notified() => "stop request (service control)",
+    };
+    tracing::info!(source, "shutdown signal received");
 }
 
 pub async fn wait_for_shutdown(mut rx: tokio::sync::watch::Receiver<bool>) {
@@ -1574,6 +1593,19 @@ pub fn register_engines(
 
 #[cfg(test)]
 mod tests {
+    /// AB7-T1: a stop requested from outside the signals (the Windows
+    /// service stop) starts the drain at once.
+    #[tokio::test]
+    async fn notify_trigger_starts_drain() {
+        super::request_stop();
+        tokio::time::timeout(
+            std::time::Duration::from_millis(100),
+            super::wait_for_shutdown_signal(),
+        )
+        .await
+        .expect("a stop request ends the wait at once");
+    }
+
     /// Z2-T1: the split roles when configured, else the bootstrap user.
     #[test]
     fn expected_identities_match_config() {

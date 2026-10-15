@@ -67,6 +67,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   (`platform-job-worker@{host}:{pid}`).
 - While a server drains for a restart, MCP calls answer a retryable 503 with `Retry-After: 2` and
   JSON-RPC error -32000, so an agent retries on the next process.
+- On Windows, Ctrl+Break, closing the console and a system shutdown start the same graceful drain as
+  SIGTERM on Linux; the log names which stop started it.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE
