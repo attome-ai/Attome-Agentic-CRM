@@ -12,3 +12,4 @@ export { LatencyComponent } from './latency/latency.component';
 export { BrandingComponent } from './branding/branding.component';
 export { OpsMetricsComponent } from './metrics/metrics.component';
 export { OpsOverviewComponent } from './ops-overview/ops-overview.component';
+export { LabelWorkbenchComponent } from './label-workbench/label-workbench.component';

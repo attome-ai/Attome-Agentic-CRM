@@ -423,6 +423,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.BrandingComponent),
           },
           {
+            // A20-T3: every label's translation and status, by language.
+            path: 'translations',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.LabelWorkbenchComponent),
+          },
+          {
             // U4-T4: nodes by health and a page of charts per area.
             path: 'ops',
             canActivate: [authGuard],

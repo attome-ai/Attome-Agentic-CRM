@@ -187,6 +187,11 @@ export const xrmEn = {
     tryOn: 'Try on a record', entity: 'Entity', record: 'Record id', show: 'Show what the model receives',
   },
   // N30-T5/T9 — AI governance.
+  labelWorkbench: {
+    title: 'Translations', language: 'Language', show: 'Show', all: 'All', count: '{count} labels',
+    source: 'Original', translation: 'Translation', statusHeader: 'Status', save: 'Save',
+    status: { untranslated: 'Not translated', stale: 'Original changed', draft: 'Draft', reviewed: 'Reviewed' },
+  },
   opsOverview: {
     title: 'Operations', nodes: 'Nodes', healthy: 'Healthy', silent: 'Silent for over 3 minutes',
     noNodes: 'No node has stored metrics in the last day. The built-in metrics store runs on single-server deployments (observability.builtin_store).',

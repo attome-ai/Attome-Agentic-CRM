@@ -167,6 +167,11 @@ export const xrmAr = {
       text: 'النص', text_dark: 'النص (داكن)', success: 'نجاح', warning: 'تحذير', danger: 'خطر', info: 'معلومة',
     },
   },
+  labelWorkbench: {
+    title: 'الترجمات', language: 'اللغة', show: 'عرض', all: 'الكل', count: '{count} تسمية',
+    source: 'الأصل', translation: 'الترجمة', statusHeader: 'الحالة', save: 'حفظ',
+    status: { untranslated: 'غير مترجمة', stale: 'تغيّر الأصل', draft: 'مسودة', reviewed: 'تمت المراجعة' },
+  },
   opsOverview: {
     title: 'التشغيل', nodes: 'العقد', healthy: 'سليمة', silent: 'صامتة منذ أكثر من 3 دقائق',
     noNodes: 'لم تخزّن أي عقدة مقاييس خلال اليوم الأخير. يعمل مخزن المقاييس المدمج على النشر بخادم واحد (observability.builtin_store).',
