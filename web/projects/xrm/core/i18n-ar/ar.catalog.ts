@@ -191,6 +191,12 @@ export const xrmAr = {
       email: 'البريد', models: 'نماذج الذكاء الاصطناعي', other: 'أخرى',
     },
   },
+  deploysPage: {
+    title: 'عمليات النشر الأخيرة', none: 'لم يُسجَّل أي تشغيل أو إيقاف بعد.',
+    node: 'العقدة', version: 'الإصدار', kind: 'الخطوة', startedAt: 'البدء', duration: 'المدة',
+    startedBy: 'بدأها', failed: 'الطلبات الفاشلة',
+    kinds: { start: 'تشغيل', drain: 'إيقاف تدريجي', restart: 'إعادة تشغيل' },
+  },
   metricsPage: {
     title: 'المقاييس', metric: 'المقياس', choose: 'اختر مقياسًا',
     empty: 'لم يُسجَّل شيء خلال الساعة الأخيرة. يعمل مخزن المقاييس المدمج على النشر بخادم واحد (observability.builtin_store).',

@@ -23,6 +23,7 @@ describe('OpsOverviewComponent (U4-T4)', () => {
         ] });
       }
       if (path.endsWith('/names')) return of({ items: ['http_requests_total', 'apalis_pending_jobs'] });
+      if (path.endsWith('/deploys')) return of({ items: [] });
       return of({ items: [{ at: '2026-10-15T08:00:00Z', value: 3 }, { at: '2026-10-15T08:01:00Z', value: 5 }] });
     });
     TestBed.configureTestingModule({

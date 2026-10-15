@@ -211,6 +211,12 @@ export const xrmEn = {
       email: 'Email', models: 'AI models', other: 'Other',
     },
   },
+  deploysPage: {
+    title: 'Recent deploys', none: 'No start or drain recorded yet.',
+    node: 'Node', version: 'Version', kind: 'Step', startedAt: 'Started', duration: 'Took',
+    startedBy: 'Started by', failed: 'Failed requests',
+    kinds: { start: 'Start', drain: 'Drain', restart: 'Restart' },
+  },
   metricsPage: {
     title: 'Metrics', metric: 'Metric', choose: 'Choose a metric',
     empty: 'Nothing sampled in the last hour. The built-in metrics store runs on single-server deployments (observability.builtin_store).',

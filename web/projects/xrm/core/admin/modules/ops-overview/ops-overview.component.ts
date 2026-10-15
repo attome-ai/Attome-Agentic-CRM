@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ApiError, ApiService, LangService, LocalDatePipe, TranslatePipe } from '@attome/base';
 
+import { DeploysComponent } from '../deploys/deploys.component';
 import { MetricInfo, MetricPoint, polyline } from '../metrics/metrics.component';
 
 /** `system_health::OpsNode`. */
@@ -50,7 +51,7 @@ interface Chart {
   selector: 'xrm-ops-overview',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LocalDatePipe, TranslatePipe],
+  imports: [DeploysComponent, LocalDatePipe, TranslatePipe],
   template: `
     <section class="oo">
       <h2>{{ 'opsOverview.title' | translate }}</h2>
@@ -72,6 +73,8 @@ interface Chart {
           }
         </ul>
       }
+
+      <xrm-deploys />
 
       <div class="oo-tabs" role="tablist">
         @for (a of areas; track a) {
