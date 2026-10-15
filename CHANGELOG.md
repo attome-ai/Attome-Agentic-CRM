@@ -9,7 +9,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
 
 ### Security
 - A new password found in an offline breached-password set is refused (a small list ships;
-  `auth.breached_passwords_file` loads the full Have I Been Pwned SHA-1 download, checked locally), and
+  `auth.breach_list_file` loads the full Have I Been Pwned SHA-1 download, checked locally), and
   a password reset may not reuse the current password or any of the last five (migration `0040`).
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 

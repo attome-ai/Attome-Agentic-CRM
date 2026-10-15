@@ -6,7 +6,7 @@
 //! outside service). A small seed list ships in the binary
 //! (`data/breached-passwords.sha1`); a deployment loads the full offline set
 //! (the Have I Been Pwned download, `HASH` or `HASH:COUNT` per line) with
-//! `auth.breached_passwords_file`, and replaces the file to update it.
+//! `auth.breach_list_file`, and replaces the file to update it.
 //! [`crate::password::validate_policy`] runs the check, so every path that
 //! sets a password goes through it.
 //!

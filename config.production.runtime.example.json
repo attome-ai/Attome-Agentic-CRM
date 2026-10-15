@@ -36,6 +36,8 @@
     "password": null,
     "schema": "attome_prod",
     "connection_number": 10,
+    "_comment_node_count": "Z2-T2: how many server and worker processes share this database; above 1, pools without a pools entry share 80% of the connection budget across the nodes.",
+    "node_count": 1,
     "timeout": 5.0,
     "_comment_readonly": "REQUIRED outside APP_ENV=debug regardless of deployment_profile (D-038) — create the role via migrations/0010_readonly_query_role.sql first.",
     "readonly": {

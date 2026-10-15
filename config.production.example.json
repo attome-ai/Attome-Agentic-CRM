@@ -35,6 +35,8 @@
     "password": "${DB_PASSWORD}",
     "schema": "attome_prod",
     "connection_number": 10,
+    "_comment_node_count": "Z2-T2: how many server and worker processes share this database. Above 1 (or with max_server_connections set), each pool without a pools entry takes its share of 80% of the database's connection budget, split across the nodes.",
+    "node_count": 1,
     "timeout": 5.0,
     "_comment_pools": "Optional per-pool sizes (attome-db hardening Phase 2.3): add \"pools\": {\"runtime\": {\"max_connections\": N}} (keys: runtime, readonly, readonly_primary, migrator) to size one pool; any pool left out uses connection_number above. Each value must be 1..=1000. The direct (schema bootstrap) pool is fixed at 2. Every pool opens its own connections, so size them against the database's max_connections (or the pgbouncer pool) across all app nodes.",
     "_comment_readonly": "REQUIRED outside APP_ENV=debug regardless of deployment_profile (D-038) — create the role via migrations/0010_readonly_query_role.sql first.",

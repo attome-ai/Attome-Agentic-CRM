@@ -166,7 +166,7 @@ pub struct AuthSection {
     /// when a password is set. Unset, only the small built-in list applies.
     /// Replace the file and restart to update it.
     #[serde(default)]
-    pub breached_passwords_file: Option<String>,
+    pub breach_list_file: Option<String>,
 }
 
 /// `auth.kdf` — see [`AuthSection::kdf`]. Every default is the value the
