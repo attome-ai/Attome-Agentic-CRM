@@ -2755,7 +2755,22 @@ pub async fn update_one_as(
         }
         None => Vec::new(),
     };
-    let with_computed = overlay(obj, &computed);
+    let mut with_computed = overlay(obj, &computed);
+    // A4-T3: a number its rule held back until a condition is met (status
+    // becoming issued) is given by the update that meets it, on this
+    // transaction.
+    for (field, value) in attome_metadata::autovalue::generate_for_update(
+        &mut **tx,
+        entity_name,
+        record_id,
+        attrs,
+        &with_computed,
+        attome_core::calendar::deployment_now(state.base.config.app.time_zone.as_deref()),
+    )
+    .await?
+    {
+        with_computed.to_mut().insert(field, Value::String(value));
+    }
     let sanitized = sanitize_rich_text_fields(attrs, &with_computed);
     let obj: &serde_json::Map<String, Value> = &sanitized;
 

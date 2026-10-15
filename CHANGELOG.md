@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Autonumber rules gain a `sequence_key` (`{branch}`: one counter per branch, per period), a
+  `hijri_yearly` reset, `{field}` and `{lookup.field}` tokens in the format, and `assign_when`
+  (`status = issued`): the number is given when a create or an update first meets it
+  (migration `0056`).
 - A text or number field may be an external id: `options.external_id: {"system": "<name>"}` makes
   its value unique among the entity's live records (a unique index built online); an entity may hold
   ids for several systems.

@@ -86,6 +86,8 @@ async fn concurrent_allocation_across_two_connections_is_distinct_and_gap_free()
         format: "{SEQ}".to_owned(),
         initial_value: 1,
         reset_scope: ResetScope::Never,
+        sequence_key: String::new(),
+        assign_when: None,
     };
 
     let url = attome_testkit::migrated_db_url().expect("checked by skip_if_no_db above");
@@ -139,5 +141,59 @@ async fn concurrent_allocation_across_two_connections_is_distinct_and_gap_free()
     assert_eq!(
         all_values, expected,
         "1,000 allocations from initial_value 1 must be exactly 1..=1000 with no gap"
+    );
+}
+
+/// A4-T3: a rule with a sequence key keeps one counter per key and period:
+/// two branches each number from the initial value, and a new Hijri year
+/// starts each branch again.
+#[tokio::test]
+async fn autonumber_type_counts_per_branch_and_hijri_year() {
+    let db = skip_if_no_db!(test_db().await);
+    attome_metadata::autovalue::seed_for_tests(&db)
+        .await
+        .expect("seed the autovalue entity");
+    let rule = AutoValue {
+        id: Uuid::now_v7(),
+        entity_logicalname: "test_autovalue_target".to_owned(),
+        attribute_logicalname: "code".to_owned(),
+        format: "INV-{branch}-{hyyyy}-{SEQ:4}".to_owned(),
+        initial_value: 1,
+        reset_scope: ResetScope::HijriYearly,
+        sequence_key: "{branch}".to_owned(),
+        assign_when: None,
+    };
+    let mut conn = db.acquire().await.expect("connection");
+    // 2026-03-01 is in Hijri 1447, 2026-08-01 in 1448.
+    let in_1447 = chrono::DateTime::parse_from_rfc3339("2026-03-01T10:00:00+03:00").unwrap();
+    let in_1448 = chrono::DateTime::parse_from_rfc3339("2026-08-01T10:00:00+03:00").unwrap();
+    let mut values = attome_metadata::autovalue::TokenValues::new();
+    let mut next = |branch: &str| {
+        values.insert("branch".to_owned(), branch.to_owned());
+        values.clone()
+    };
+    let ruh = next("RUH");
+    let jed = next("JED");
+    let mut issued = Vec::new();
+    for (key, values, now) in [
+        ("RUH", &ruh, in_1447),
+        ("RUH", &ruh, in_1447),
+        ("JED", &jed, in_1447),
+        ("RUH", &ruh, in_1448),
+    ] {
+        issued.push(
+            rule.allocate_keyed(&mut conn, now, key, values)
+                .await
+                .expect("allocate"),
+        );
+    }
+    assert_eq!(
+        issued,
+        [
+            "INV-RUH-1447-0001",
+            "INV-RUH-1447-0002",
+            "INV-JED-1447-0001",
+            "INV-RUH-1448-0001",
+        ]
     );
 }

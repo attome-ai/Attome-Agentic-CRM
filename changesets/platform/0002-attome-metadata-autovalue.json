@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:19e4f74d79b4255dc077f9a4966bba901de851cc0e59dc7c7917ab690d9166ab",
+  "checksum": "sha256:ecf8c9aca1aedbf9bce9e6f3b3874b9ae7955906b2504fb42486c2a7e31e6ff3",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-metadata-autovalue.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -140,6 +140,7 @@
             "choices": [
               "never",
               "yearly",
+              "hijri_yearly",
               "monthly",
               "daily"
             ],
@@ -175,16 +176,50 @@
     {
       "args": {
         "definition": {
+          "display_name": "Sequence Key (e.g. {branch})",
+          "field_type": "text",
+          "is_sortable": true,
+          "logicalname": "sequence_key"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "autovalue",
+        "field": "sequence_key"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Number When (e.g. status = issued)",
+          "field_type": "text",
+          "is_sortable": true,
+          "logicalname": "assign_when"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "autovalue",
+        "field": "assign_when"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "entity": "autovalue",
           "entity_mappings": [],
           "name": "All Auto Values",
           "required_privilege": "autovalue.read",
-          "sql": "SELECT id, name, entity_logicalname, attribute_logicalname, format, initial_value, next_value, reset_scope, scope_key, row_version, created_at, modified_at FROM autovalue WHERE is_active = TRUE"
+          "sql": "SELECT id, name, entity_logicalname, attribute_logicalname, format, initial_value, next_value, reset_scope, scope_key, sequence_key, assign_when, row_version, created_at, modified_at FROM autovalue WHERE is_active = TRUE"
         }
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 10,
+      "seq": 12,
       "target": {
         "entity": "autovalue",
         "query": "All Auto Values"
@@ -204,7 +239,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 11,
+      "seq": 13,
       "target": {
         "entity": "autovalue",
         "view": "All Auto Values"

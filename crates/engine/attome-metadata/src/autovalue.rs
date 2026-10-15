@@ -33,6 +33,18 @@
 //! | `{YY-MM-DD}`, `{YYYY}` | the current local date/time, by pattern    |
 //! | `{LUHN}`, `{MOD11}`    | a check digit over the sequence (A4-T4)    |
 //! | `{hyyyy}`, `{hmm}`, `{hdd}` | the Umm al-Qura Hijri year, month, day (AG1-T5) |
+//! | `{branch}`, `{branch.code}` | a value of the record, or of the record a lookup points at (A4-T3) |
+//!
+//! # Sequences, periods and when a number is given (A4-T3)
+//!
+//! A rule's `sequence_key` is a format too (`{branch}-{doc_type}`): each
+//! value it renders to keeps its own counter, one per period of the rule's
+//! `reset_scope` (`never`, `yearly`, `hijri_yearly`, `monthly`, `daily`), in
+//! `autovalue_counter`. A rule without one keeps its single counter on the
+//! rule row. `assign_when` (`status = issued`) holds the number back until
+//! the record meets it: a create that does not is left unnumbered, and the
+//! update that makes it true numbers it. Set `options.unique` on the numbered
+//! field (A3-T6) so the database refuses a repeated number too.
 //!
 //! The `D`-vs-day ambiguity in the motivating example `AVG-{DDDD}-{YY-MM-DD}`
 //! is resolved structurally, not by guessing: a token made of *nothing but*
@@ -84,6 +96,8 @@ pub enum ResetScope {
     #[default]
     Never,
     Yearly,
+    /// A4-T3: the Umm al-Qura year of the deployment-local day.
+    HijriYearly,
     Monthly,
     Daily,
 }
@@ -93,6 +107,7 @@ impl ResetScope {
         match self {
             Self::Never => "never",
             Self::Yearly => "yearly",
+            Self::HijriYearly => "hijri_yearly",
             Self::Monthly => "monthly",
             Self::Daily => "daily",
         }
@@ -104,6 +119,7 @@ impl ResetScope {
     pub fn parse(raw: Option<&str>) -> Self {
         match raw.unwrap_or("").trim().to_ascii_lowercase().as_str() {
             "yearly" => Self::Yearly,
+            "hijri_yearly" => Self::HijriYearly,
             "monthly" => Self::Monthly,
             "daily" => Self::Daily,
             _ => Self::Never,
@@ -115,6 +131,10 @@ impl ResetScope {
         match self {
             Self::Never => String::new(),
             Self::Yearly => format!("{:04}", now.year()),
+            Self::HijriYearly => format!(
+                "H{:04}",
+                attome_core::calendar::hijri::to_hijri(now.date_naive()).map_or(0, |d| d.year)
+            ),
             Self::Monthly => format!("{:04}-{:02}", now.year(), now.month()),
             Self::Daily => format!("{:04}-{:02}-{:02}", now.year(), now.month(), now.day()),
         }
@@ -139,12 +159,60 @@ pub struct AutoValue {
     /// Where the counter starts, and where it restarts on a scope rollover.
     pub initial_value: i64,
     pub reset_scope: ResetScope,
+    /// A4-T3: a format whose rendered value picks the counter (empty: one
+    /// counter for the rule).
+    pub sequence_key: String,
+    /// A4-T3: `field = value`; the number is given only once the record
+    /// meets it.
+    pub assign_when: Option<String>,
 }
+
+/// A4-T3: record values a format's `{field}` / `{lookup.field}` tokens read.
+pub type TokenValues = std::collections::HashMap<String, String>;
 
 impl AutoValue {
     /// Renders this rule's format with `seq` and `now`. Pure — no I/O.
     pub fn render(&self, seq: i64, now: DateTime<FixedOffset>) -> String {
         render_format(&self.format, seq, now)
+    }
+
+    /// A4-T3: renders with the record values the format's tokens read.
+    pub fn render_with(
+        &self,
+        seq: i64,
+        now: DateTime<FixedOffset>,
+        values: &TokenValues,
+    ) -> String {
+        render_format_with(&self.format, seq, now, values)
+    }
+
+    /// A4-T3: claims the next number of the counter `sequence_key` and the
+    /// period of `now` select, creating that counter at `initial_value`,
+    /// on the caller's transaction (the counter row stays locked to its
+    /// end, so numbers are gap-free).
+    pub async fn allocate_keyed(
+        &self,
+        conn: &mut PgConnection,
+        now: DateTime<FixedOffset>,
+        sequence_key: &str,
+        values: &TokenValues,
+    ) -> Result<String, AppError> {
+        let period = self.reset_scope.scope_key(now);
+        let seq: i64 = sqlx::query_scalar(
+            "INSERT INTO autovalue_counter (rule_id, sequence_key, period_key, next_value) \
+             VALUES ($1, $2, $3, $4 + 1) \
+             ON CONFLICT (rule_id, sequence_key, period_key) \
+             DO UPDATE SET next_value = autovalue_counter.next_value + 1, updated_at = now() \
+             RETURNING (next_value - 1)::bigint",
+        )
+        .bind(self.id)
+        .bind(sequence_key)
+        .bind(&period)
+        .bind(self.initial_value)
+        .fetch_one(conn)
+        .await
+        .map_err(AppError::internal)?;
+        Ok(self.render_with(seq, now, values))
     }
 
     /// Claims the next sequence number for this rule and returns the rendered
@@ -176,6 +244,18 @@ impl AutoValue {
         conn: &mut PgConnection,
         now: DateTime<FixedOffset>,
     ) -> Result<Option<String>, AppError> {
+        Ok(self
+            .allocate_seq(conn, now)
+            .await?
+            .map(|seq| self.render(seq, now)))
+    }
+
+    /// The number [`AutoValue::allocate`] claims, before rendering.
+    pub async fn allocate_seq(
+        &self,
+        conn: &mut PgConnection,
+        now: DateTime<FixedOffset>,
+    ) -> Result<Option<i64>, AppError> {
         let scope_key = self.reset_scope.scope_key(now);
         let seq: Option<i64> = sqlx::query_scalar(
             "UPDATE autovalue \
@@ -194,7 +274,7 @@ impl AutoValue {
         .await
         .map_err(AppError::internal)?;
 
-        Ok(seq.map(|seq| self.render(seq, now)))
+        Ok(seq)
     }
 }
 
@@ -205,6 +285,16 @@ impl AutoValue {
 /// rather than erroring, because a rule is applied on the create path and a
 /// typo in a format must not make an entity un-creatable.
 fn render_format(format: &str, seq: i64, now: DateTime<FixedOffset>) -> String {
+    render_format_with(format, seq, now, &TokenValues::new())
+}
+
+/// [`render_format`] with the record values the format's tokens read (A4-T3).
+fn render_format_with(
+    format: &str,
+    seq: i64,
+    now: DateTime<FixedOffset>,
+    values: &TokenValues,
+) -> String {
     let mut out = String::with_capacity(format.len() + 8);
     let mut chars = format.chars().peekable();
 
@@ -229,7 +319,7 @@ fn render_format(format: &str, seq: i64, now: DateTime<FixedOffset>) -> String {
                     token.push(tc);
                 }
                 if closed {
-                    out.push_str(&render_token(&token, seq, now));
+                    out.push_str(&render_token(&token, seq, now, values));
                 } else {
                     // Unterminated — emit what we consumed, verbatim.
                     out.push('{');
@@ -247,8 +337,14 @@ fn render_format(format: &str, seq: i64, now: DateTime<FixedOffset>) -> String {
 /// the test for "is this a sequence" is structural (`D`/`#` only, or a `SEQ`
 /// prefix) so that `{DDDD}` and `{YY-MM-DD}` can coexist in one format — see
 /// the module docs.
-fn render_token(token: &str, seq: i64, now: DateTime<FixedOffset>) -> String {
+fn render_token(token: &str, seq: i64, now: DateTime<FixedOffset>, values: &TokenValues) -> String {
     let trimmed = token.trim();
+    // A4-T3: a record value, unless the token is a time unit.
+    if !matches!(trimmed, "mm" | "ss")
+        && let Some(value) = values.get(trimmed)
+    {
+        return value.clone();
+    }
 
     if !trimmed.is_empty() && trimmed.chars().all(|c| c == 'D' || c == '#') {
         return pad(seq, trimmed.chars().count());
@@ -442,7 +538,15 @@ pub async fn generate_for_create(
             continue;
         }
 
-        let Some(value) = rule.allocate(&mut *conn, now).await? else {
+        // A4-T3: a rule with a condition numbers the record once it is met.
+        if rule
+            .assign_when
+            .as_deref()
+            .is_some_and(|condition| !condition_met(condition, supplied))
+        {
+            continue;
+        }
+        let Some(value) = allocate_for(&rule, &mut *conn, attrs, supplied, now).await? else {
             tracing::debug!(
                 rule_id = %rule.id,
                 entity = %entity_logicalname,
@@ -469,6 +573,8 @@ struct RuleRow {
     format: Option<String>,
     initial_value: Option<i64>,
     reset_scope: Option<String>,
+    sequence_key: Option<String>,
+    assign_when: Option<String>,
 }
 
 /// Loads the active rules targeting one entity, oldest first so a multi-rule
@@ -500,7 +606,7 @@ async fn load_rules(
     // cast in SQL rather than decoding a decimal and rounding in Rust.
     let rows: Vec<RuleRow> = sqlx::query_as(
         "SELECT id, attribute_logicalname, format, \
-                initial_value::bigint AS initial_value, reset_scope \
+                initial_value::bigint AS initial_value, reset_scope, sequence_key, assign_when \
            FROM autovalue \
           WHERE entity_logicalname = $1 \
             AND is_active = TRUE \
@@ -525,8 +631,224 @@ async fn load_rules(
             format: row.format.unwrap_or_else(|| "{SEQ}".to_owned()),
             initial_value: row.initial_value.unwrap_or(1),
             reset_scope: ResetScope::parse(row.reset_scope.as_deref()),
+            sequence_key: row
+                .sequence_key
+                .map(|k| k.trim().to_owned())
+                .unwrap_or_default(),
+            assign_when: row
+                .assign_when
+                .map(|c| c.trim().to_owned())
+                .filter(|c| !c.is_empty()),
         })
         .collect())
+}
+
+/// A4-T3: the tokens of a format that may name record values (lowercase
+/// identifiers, optionally `lookup.field`), in order, without repeats.
+fn value_tokens(format: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut rest = format;
+    while let Some(open) = rest.find('{') {
+        let after = &rest[open + 1..];
+        if after.starts_with('{') {
+            rest = &after[1..];
+            continue;
+        }
+        let Some(close) = after.find('}') else { break };
+        let token = after[..close].trim();
+        let is_name = !token.is_empty()
+            && token.split('.').count() <= 2
+            && token.split('.').all(|part| {
+                !part.is_empty()
+                    && part
+                        .chars()
+                        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
+            })
+            && !matches!(
+                token,
+                "mm" | "ss" | "hyyyy" | "hmm" | "hdd" | "luhn" | "mod11" | "seq"
+            );
+        if is_name && !found.iter().any(|f| f == token) {
+            found.push(token.to_owned());
+        }
+        rest = &after[close + 1..];
+    }
+    found
+}
+
+/// A record value as a token renders it.
+fn value_text(value: &Value) -> Option<String> {
+    match value {
+        Value::Null => None,
+        Value::String(s) => Some(s.clone()),
+        Value::Bool(b) => Some(b.to_string()),
+        Value::Number(n) => Some(n.to_string()),
+        other => Some(other.to_string()),
+    }
+}
+
+/// A4-T3: resolves the record-value tokens of `formats` against `record`:
+/// `{field}` from the record itself, `{lookup.field}` from the record the
+/// lookup points at (one read each). A token naming no field renders as
+/// written; an empty value as an empty string.
+async fn token_values(
+    conn: &mut PgConnection,
+    attrs: &[AttrInfo],
+    record: &serde_json::Map<String, Value>,
+    formats: &[&str],
+) -> Result<TokenValues, AppError> {
+    let mut values = TokenValues::new();
+    for token in formats.iter().flat_map(|f| value_tokens(f)) {
+        if values.contains_key(&token) {
+            continue;
+        }
+        match token.split_once('.') {
+            None => {
+                if attrs.iter().any(|a| a.logicalname == token) {
+                    let text = record.get(&token).and_then(value_text).unwrap_or_default();
+                    values.insert(token, text);
+                }
+            }
+            Some((lookup, field)) => {
+                let Some(attr) = attrs.iter().find(|a| a.logicalname == lookup) else {
+                    continue;
+                };
+                let Some(target_ref) = attr.lookup_entity_ref else {
+                    continue;
+                };
+                let target_id = record
+                    .get(lookup)
+                    .and_then(Value::as_str)
+                    .and_then(|s| Uuid::parse_str(s).ok());
+                let mut text = String::new();
+                if let Some(target_id) = target_id {
+                    let target: Option<String> =
+                        sqlx::query_scalar("SELECT logicalname FROM entity_info WHERE id = $1")
+                            .bind(target_ref)
+                            .fetch_optional(&mut *conn)
+                            .await
+                            .map_err(AppError::internal)?;
+                    if let Some(target) = target.filter(|t| crate::provision::valid_identifier(t))
+                        && crate::provision::valid_identifier(field)
+                    {
+                        let found: Option<Option<String>> = sqlx::query_scalar(&format!(
+                            "SELECT {}::text FROM {} WHERE id = $1",
+                            attome_core::quote_ident(field),
+                            attome_core::quote_ident(&target)
+                        ))
+                        .bind(target_id)
+                        .fetch_optional(&mut *conn)
+                        .await
+                        .map_err(AppError::internal)?;
+                        text = found.flatten().unwrap_or_default();
+                    }
+                }
+                values.insert(token, text);
+            }
+        }
+    }
+    Ok(values)
+}
+
+/// A4-T3: whether `record` meets an `assign_when` condition: `field = value`
+/// (quotes around the value optional). A condition that does not parse is
+/// never met, so a mistyped one holds numbers back rather than numbering
+/// every record.
+pub fn condition_met(condition: &str, record: &serde_json::Map<String, Value>) -> bool {
+    let Some((field, wanted)) = condition.split_once('=') else {
+        return false;
+    };
+    let field = field.trim();
+    let wanted = wanted.trim().trim_matches(['\'', '"']);
+    record
+        .get(field)
+        .and_then(value_text)
+        .is_some_and(|value| value == wanted)
+}
+
+/// A4-T3: allocates one rule's number for `record` (a keyed counter when the
+/// rule has a sequence key, else the rule row's own counter).
+async fn allocate_for(
+    rule: &AutoValue,
+    conn: &mut PgConnection,
+    attrs: &[AttrInfo],
+    record: &serde_json::Map<String, Value>,
+    now: DateTime<FixedOffset>,
+) -> Result<Option<String>, AppError> {
+    let values = token_values(
+        &mut *conn,
+        attrs,
+        record,
+        &[&rule.format, &rule.sequence_key],
+    )
+    .await?;
+    if rule.sequence_key.is_empty() {
+        let seq = rule.allocate_seq(&mut *conn, now).await?;
+        return Ok(seq.map(|seq| rule.render_with(seq, now, &values)));
+    }
+    let key = render_format_with(&rule.sequence_key, 0, now, &values);
+    rule.allocate_keyed(&mut *conn, now, &key, &values)
+        .await
+        .map(Some)
+}
+
+/// A4-T3: the numbers an update gives: a rule with `assign_when` numbers a
+/// record that has no number yet when the update makes the record meet the
+/// condition (`status` becoming `issued`). `patch` is the update's own
+/// values; the stored record is read only when such a rule exists. Returns
+/// `(attribute, value)` pairs to add to the update.
+pub async fn generate_for_update(
+    conn: &mut PgConnection,
+    entity_logicalname: &str,
+    record_id: Uuid,
+    attrs: &[AttrInfo],
+    patch: &serde_json::Map<String, Value>,
+    now: DateTime<FixedOffset>,
+) -> Result<Vec<(String, String)>, AppError> {
+    let rules: Vec<AutoValue> = load_rules(&mut *conn, entity_logicalname)
+        .await?
+        .into_iter()
+        .filter(|r| r.assign_when.is_some())
+        .filter(|r| {
+            attrs
+                .iter()
+                .any(|a| a.logicalname == r.attribute_logicalname)
+        })
+        .collect();
+    if rules.is_empty() {
+        return Ok(Vec::new());
+    }
+    let stored: Option<Value> = sqlx::query_scalar(&format!(
+        "SELECT to_jsonb(t) FROM {} t WHERE id = $1",
+        attome_core::quote_ident(entity_logicalname)
+    ))
+    .bind(record_id)
+    .fetch_optional(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(Value::Object(mut record)) = stored else {
+        return Ok(Vec::new());
+    };
+    for (field, value) in patch {
+        record.insert(field.clone(), value.clone());
+    }
+    let mut generated = Vec::new();
+    for rule in rules {
+        let field = rule.attribute_logicalname.as_str();
+        let numbered = record
+            .get(field)
+            .and_then(value_text)
+            .is_some_and(|v| !v.is_empty());
+        let condition = rule.assign_when.as_deref().unwrap_or_default();
+        if numbered || !condition_met(condition, &record) {
+            continue;
+        }
+        if let Some(value) = allocate_for(&rule, &mut *conn, attrs, &record, now).await? {
+            record.insert(field.to_owned(), Value::String(value.clone()));
+            generated.push((field.to_owned(), value));
+        }
+    }
+    Ok(generated)
 }
 
 // ── Seed ─────────────────────────────────────────────────────────────────────
@@ -566,6 +888,39 @@ mod tests {
             .with_ymd_and_hms(y, m, d, 13, 4, 5)
             .unwrap()
             .fixed_offset()
+    }
+
+    /// A4-T3: per-key counters, a Hijri-year reset and record tokens.
+    #[test]
+    fn autonumber_type_tokens_and_hijri_reset() {
+        let tokens = value_tokens("INV-{branch}-{customer.code}-{DDDD}-{YYYY}-{mm}-{{x}}");
+        assert_eq!(tokens, ["branch", "customer.code"]);
+        let mut values = TokenValues::new();
+        values.insert("branch".into(), "RUH".into());
+        assert_eq!(
+            render_format_with("INV-{branch}-{DDDD}", 7, at(2026, 10, 15), &values),
+            "INV-RUH-0007"
+        );
+        // 2026-03-01 falls in Hijri year 1447 (Ramadan), 2026-08-01 in 1448.
+        let before = ResetScope::HijriYearly.scope_key(at(2026, 3, 1));
+        let after = ResetScope::HijriYearly.scope_key(at(2026, 8, 1));
+        assert_eq!(before, "H1447");
+        assert_eq!(after, "H1448");
+        assert_eq!(
+            ResetScope::parse(Some("hijri_yearly")),
+            ResetScope::HijriYearly
+        );
+    }
+
+    #[test]
+    fn autonumber_type_assign_condition() {
+        let issued = serde_json::json!({ "status": "issued", "total": 5 });
+        let issued = issued.as_object().unwrap();
+        assert!(condition_met("status = issued", issued));
+        assert!(condition_met("status = 'issued'", issued));
+        assert!(condition_met("total=5", issued));
+        assert!(!condition_met("status = draft", issued));
+        assert!(!condition_met("status issued", issued));
     }
 
     #[test]

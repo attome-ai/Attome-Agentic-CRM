@@ -18,13 +18,15 @@
         { "logicalname": "format", "display_name": "Format (e.g. AVG-{DDDD}-{YY-MM-DD})", "field_type": "text", "is_sortable": true },
         { "logicalname": "initial_value", "display_name": "Initial Value", "field_type": "number", "is_sortable": true },
         { "logicalname": "next_value", "display_name": "Next Value", "field_type": "number", "is_sortable": true },
-        { "logicalname": "reset_scope", "display_name": "Reset Counter", "field_type": "choice", "is_sortable": true, "options": { "choices": ["never", "yearly", "monthly", "daily"], "multi": false } },
-        { "logicalname": "scope_key", "display_name": "Current Period", "field_type": "text", "is_sortable": true }
+        { "logicalname": "reset_scope", "display_name": "Reset Counter", "field_type": "choice", "is_sortable": true, "options": { "choices": ["never", "yearly", "hijri_yearly", "monthly", "daily"], "multi": false } },
+        { "logicalname": "scope_key", "display_name": "Current Period", "field_type": "text", "is_sortable": true },
+        { "logicalname": "sequence_key", "display_name": "Sequence Key (e.g. {branch})", "field_type": "text", "is_sortable": true },
+        { "logicalname": "assign_when", "display_name": "Number When (e.g. status = issued)", "field_type": "text", "is_sortable": true }
       ]
     }
   ],
   "queries": [
-    { "entity": "autovalue", "name": "All Auto Values", "sql": "SELECT id, name, entity_logicalname, attribute_logicalname, format, initial_value, next_value, reset_scope, scope_key, row_version, created_at, modified_at FROM autovalue WHERE is_active = TRUE", "required_privilege": "autovalue.read" }
+    { "entity": "autovalue", "name": "All Auto Values", "sql": "SELECT id, name, entity_logicalname, attribute_logicalname, format, initial_value, next_value, reset_scope, scope_key, sequence_key, assign_when, row_version, created_at, modified_at FROM autovalue WHERE is_active = TRUE", "required_privilege": "autovalue.read" }
   ],
   "views": [
     { "entity": "autovalue", "name": "All Auto Values", "query": { "entity": "autovalue", "name": "All Auto Values" }, "is_default": true }
