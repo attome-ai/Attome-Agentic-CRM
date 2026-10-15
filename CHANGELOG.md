@@ -78,6 +78,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   prune moves past it instead of keeping the whole feed.
 - An attribute's `options.scan` (formats, GS1 batch and expiry fields, what an unknown code does) is
   validated: only on text, number and lookup fields, with known formats, else 422.
+- `parseGs1` reads a GS1 code's GTIN, batch, expiry and serial, and `isValidGtinCheckDigit` checks a
+  GTIN, in `@attome/base`.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE

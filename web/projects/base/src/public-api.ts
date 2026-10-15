@@ -39,6 +39,9 @@ export type { CurrencyRate }               from './lib/currency.service';
 export { LangService }                     from './lib/lang.service';
 // AA12-T1: the next screens' code loads while the browser is idle.
 export { IdlePreloading, IDLE_PRELOAD_TIMEOUT_MS, preloadAllowed } from './lib/idle-preloading';
+// B16-T2: GS1 element strings and GTIN check digits, for scanning.
+export { FNC1, isValidGtinCheckDigit, parseGs1 } from './lib/scan/gs1';
+export type { Gs1Fields } from './lib/scan/gs1';
 export { TranslatePipe }                   from './lib/translate.pipe';
 export { LocalDatePipe, localeTag, localDay } from './lib/local-date.pipe';
 export {
