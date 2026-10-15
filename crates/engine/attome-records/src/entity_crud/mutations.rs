@@ -1265,6 +1265,10 @@ pub(super) async fn delete_record(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// A18-T6: the approval action a permanent delete waits on when its
+/// entity's bin setting asks for one.
+pub const ACTION_RECORD_HARD_DELETE: &str = "record.hard_delete";
+
 /// Permanently removes a record. This is intentionally separate from the
 /// conventional DELETE route, whose public contract is a reversible
 /// deactivation. A physical delete is refused while *any* record still points
@@ -1292,10 +1296,6 @@ pub(super) async fn delete_record(
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::HardDelete)])))),
 )]
-/// A18-T6: the approval action a permanent delete waits on when its
-/// entity's bin setting asks for one.
-pub const ACTION_RECORD_HARD_DELETE: &str = "record.hard_delete";
-
 pub(super) async fn hard_delete_record(
     State(state): State<EngineState>,
     ctx: Authorized<RecordScoped<Delete>>,
