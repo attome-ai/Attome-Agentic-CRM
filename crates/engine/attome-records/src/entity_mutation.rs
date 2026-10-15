@@ -194,26 +194,9 @@ pub fn normalize_body(
     out
 }
 
-tokio::task_local! {
-    /// A28-T3: set while an import that asked for no defaults creates its
-    /// records.
-    static SKIP_DEFAULTS: bool;
-}
-
-/// A28-T3: runs `fut` with attribute defaults applied to empty fields on
-/// create (`apply` true, the normal case) or left empty (an import that
-/// asked for its cells exactly as given).
-pub async fn with_defaults<F: std::future::Future>(apply: bool, fut: F) -> F::Output {
-    if apply {
-        fut.await
-    } else {
-        SKIP_DEFAULTS.scope(true, fut).await
-    }
-}
-
-fn defaults_skipped() -> bool {
-    SKIP_DEFAULTS.try_with(|skip| *skip).unwrap_or(false)
-}
+use attome_core::defaults_scope::defaults_skipped;
+/// A28-T3: see [`attome_core::defaults_scope`].
+pub use attome_core::defaults_scope::with_defaults;
 
 /// A28-T1: the body with each empty attribute that declares a default
 /// (`options.default`) filled, or `None` when nothing changes. A default is

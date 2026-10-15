@@ -82,6 +82,7 @@ pub mod credential_columns;
 pub mod crud;
 pub mod data_definition;
 pub mod data_domain;
+pub mod defaults_scope;
 /// M95/D-430 — the closed `FeatureFlag` catalogue. Split from
 /// `feature_flag_catalog` (the hand-written list) the same way
 /// `setting_descriptor`/`setting_catalog` are split, for the same reason:

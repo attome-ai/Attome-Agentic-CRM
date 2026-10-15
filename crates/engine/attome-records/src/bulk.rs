@@ -572,6 +572,7 @@ pub async fn submit_bulk(
         batch_mode: Some(if atomic { "atomic" } else { "partial" }.to_owned()),
         mapping_ref: None,
         mode: None,
+        apply_defaults: None,
         records: items
             .into_iter()
             .map(|item| BulkRecordEnvelope {
