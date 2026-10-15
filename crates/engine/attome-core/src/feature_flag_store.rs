@@ -202,6 +202,12 @@ pub fn validate_flag_dependencies(
     Ok(())
 }
 
+/// E13-T1: a policy's value for the deployment as a whole: on only when
+/// switched on for everyone, with no partial percentage rollout.
+fn deployment_value(policy: &FeatureFlagPolicy) -> bool {
+    policy.deployment && policy.percentage.is_none_or(|p| p >= 100)
+}
+
 /// Borrowed accessor returned by `EngineState::feature_flags()` — a thin
 /// wrapper so the call reads `state.feature_flags().is_on(key, ctx)`, the
 /// shape the M95 plan names (`FeatureFlags::is_on(key, &SecurityContext)`).
@@ -251,6 +257,27 @@ impl<'a> FeatureFlags<'a> {
 
         self.state.feature_flags.insert(cache_key, value).await;
         value
+    }
+
+    /// E13-T1: whether `key` is on for the deployment as a whole, for work
+    /// with no signed-in user (a background job). The module gate applies
+    /// first, then the policy's deployment value. Per-user and per-role
+    /// overrides do not apply (there is no user), and a partial percentage
+    /// rollout counts as off, since there is no user to place in a bucket.
+    /// Reads the settings snapshot; not cached.
+    pub fn is_on_for_deployment(&self, key: &str) -> bool {
+        let Some(flag) = flag_registry().get(key) else {
+            return false;
+        };
+        if !self.state.modules.load().has(flag.module) {
+            return false;
+        }
+        let snapshot = self.state.settings.load();
+        deployment_value(&FeatureFlagPolicy::from_settings(
+            &snapshot,
+            &flag.setting_key(),
+            flag.default,
+        ))
     }
 
     /// Every registered flag, evaluated for `ctx` — the effective-flags map
@@ -304,6 +331,35 @@ mod tests {
             row_version: 0,
             updated_at: chrono::Utc::now(),
         }])
+    }
+
+    /// E13-T1: a job with no user sees only the deployment-wide value.
+    #[test]
+    fn deployment_value_ignores_user_targeting_and_partial_rollouts() {
+        let on = FeatureFlagPolicy {
+            deployment: true,
+            ..Default::default()
+        };
+        assert!(deployment_value(&on));
+        assert!(!deployment_value(&FeatureFlagPolicy::default()));
+        let partial = FeatureFlagPolicy {
+            deployment: true,
+            percentage: Some(30),
+            ..Default::default()
+        };
+        assert!(!deployment_value(&partial));
+        let full = FeatureFlagPolicy {
+            deployment: true,
+            percentage: Some(100),
+            ..Default::default()
+        };
+        assert!(deployment_value(&full));
+        let user_only = FeatureFlagPolicy {
+            deployment: false,
+            user_overrides: HashMap::from([(Uuid::now_v7().to_string(), true)]),
+            ..Default::default()
+        };
+        assert!(!deployment_value(&user_only));
     }
 
     #[test]

@@ -60,6 +60,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - The release gate refuses new hard-coded interface text: `npm run check:i18n` counts the text in each
   template that does not come from the catalogue and fails when a template holds more than its baseline.
   A pseudo-language (`pseudoCatalog`) shows text that skips the catalogue and layouts that break.
+- `FeatureFlags::is_on_for_deployment` lets a background job read a feature flag without a signed-in
+  user: the deployment-wide value, with a partial rollout counting as off.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE
