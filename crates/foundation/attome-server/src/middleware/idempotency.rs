@@ -27,6 +27,33 @@ use crate::state::AppState;
 /// key is a new request.
 const TTL_SECS: i64 = 24 * 60 * 60;
 const HEADER: &str = "x-idempotency-key";
+/// S9-T1: the standard name (IETF `Idempotency-Key`), accepted beside
+/// [`HEADER`]. It is outside the S2S signature, so a signed request's copy
+/// is ignored: there only `x-idempotency-key` counts, as before.
+pub const STANDARD_HEADER: &str = "idempotency-key";
+
+/// The request's idempotency key from either header. Both, with different
+/// values, is the caller's mistake and answers 422.
+pub fn request_key(headers: &axum::http::HeaderMap) -> Result<Option<String>, AppError> {
+    let read = |name: &str| {
+        headers
+            .get(name)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned)
+    };
+    let legacy = read(HEADER);
+    let standard = if headers.contains_key("x-s2s-client-id") {
+        None
+    } else {
+        read(STANDARD_HEADER)
+    };
+    match (legacy, standard) {
+        (Some(a), Some(b)) if a != b => Err(AppError::Validation(
+            "x-idempotency-key and Idempotency-Key carry different keys; send one".into(),
+        )),
+        (a, b) => Ok(a.or(b)),
+    }
+}
 /// Every Redis call on this gate is bounded (guidelines §10). A failed acquire
 /// or duplicate lookup refuses the request; a failed post-handler write leaves
 /// the key `pending`, which is answered as outcome unknown once stale.
@@ -125,11 +152,10 @@ pub async fn idempotency(State(state): State<AppState>, req: Request, next: Next
         .iter()
         .any(|op| op == &operation);
 
-    let idem_key = req
-        .headers()
-        .get(HEADER)
-        .and_then(|v| v.to_str().ok())
-        .map(str::to_owned);
+    let idem_key = match request_key(req.headers()) {
+        Ok(key) => key,
+        Err(error) => return error.into_response(),
+    };
 
     if mandatory && idem_key.is_none() {
         return AppError::Validation(format!("{HEADER} header is required for {operation}"))
@@ -754,6 +780,54 @@ fn base64_decode(s: &str) -> Option<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// S9-T1: either header name carries the key; two different keys are
+    /// refused; a signed S2S request's standard header is not read.
+    #[test]
+    fn the_standard_header_name_is_accepted_beside_the_legacy_one() {
+        use axum::http::{HeaderMap, HeaderValue};
+        let with = |pairs: &[(&'static str, &'static str)]| {
+            let mut headers = HeaderMap::new();
+            for (name, value) in pairs {
+                headers.insert(*name, HeaderValue::from_static(value));
+            }
+            headers
+        };
+        assert_eq!(request_key(&with(&[])).ok().flatten(), None);
+        assert_eq!(
+            request_key(&with(&[("idempotency-key", "k1")]))
+                .ok()
+                .flatten()
+                .as_deref(),
+            Some("k1")
+        );
+        assert_eq!(
+            request_key(&with(&[
+                ("x-idempotency-key", "k1"),
+                ("idempotency-key", "k1")
+            ]))
+            .ok()
+            .flatten()
+            .as_deref(),
+            Some("k1")
+        );
+        assert!(
+            request_key(&with(&[
+                ("x-idempotency-key", "k1"),
+                ("idempotency-key", "k2")
+            ]))
+            .is_err()
+        );
+        assert_eq!(
+            request_key(&with(&[
+                ("x-s2s-client-id", "c"),
+                ("idempotency-key", "k1")
+            ]))
+            .ok()
+            .flatten(),
+            None
+        );
+    }
     use std::collections::HashMap;
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex};

@@ -16,7 +16,7 @@ function isIdempotent(req: HttpRequest<unknown>): boolean {
  * still never retried automatically.
  */
 function isRetryable(req: HttpRequest<unknown>): boolean {
-  return isIdempotent(req) || req.headers.has('x-idempotency-key');
+  return isIdempotent(req) || req.headers.has('x-idempotency-key') || req.headers.has('idempotency-key');
 }
 
 // Endpoints where a 401 is itself the answer (bad credentials, an expired

@@ -94,6 +94,13 @@ const CLASSIFIED: &[(&str, Coverage, &str)] = &[
          reinterpreting signed bytes",
     ),
     (
+        "idempotency-key",
+        UnsignedButInert,
+        "the standard name of x-idempotency-key (S9-T1). The idempotency gate \
+         does not read it on a request carrying x-s2s-client-id, so on the S2S \
+         path only the classified x-idempotency-key counts: fail-closed",
+    ),
+    (
         "if-match",
         UnsignedAndBehavioural,
         "optimistic concurrency. D-079 makes it MANDATORY on PATCH, so stripping \

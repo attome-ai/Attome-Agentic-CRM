@@ -176,7 +176,8 @@ const ALLOWED_METHODS: [Method; 7] = [
 /// - `authorization` — `middleware::auth::extract_api_key`'s `ApiKey <pub>:<secret>`.
 /// - `if-match` — the entity `row_version` OCC contract; the Angular client
 ///   sends it on every PATCH (`angular/projects/base/src/lib/api.service.ts`).
-/// - `x-idempotency-key` — `middleware::idempotency`'s `HEADER`.
+/// - `x-idempotency-key` — `middleware::idempotency`'s `HEADER`, and
+///   `idempotency-key`, its standard name (S9-T1).
 /// - `traceparent` — `middleware::trace_context` (W3C trace context).
 /// - `x-request-id` — client-supplied correlation id, echoed by
 ///   `PropagateRequestIdLayer`.
@@ -193,7 +194,7 @@ const ALLOWED_METHODS: [Method; 7] = [
 /// `signed_header_coverage.rs` checks every header here is classified against
 /// the S2S canonical message. A copy of this list would drift, and a drifted
 /// copy is a test that silently stops testing.
-pub fn allowed_request_headers() -> [HeaderName; 10] {
+pub fn allowed_request_headers() -> [HeaderName; 11] {
     [
         header::ACCEPT,
         header::ACCEPT_LANGUAGE,
@@ -202,6 +203,7 @@ pub fn allowed_request_headers() -> [HeaderName; 10] {
         header::IF_MATCH,
         HeaderName::from_static("traceparent"),
         HeaderName::from_static("x-idempotency-key"),
+        HeaderName::from_static("idempotency-key"),
         HeaderName::from_static("x-request-id"),
         HeaderName::from_static("x-attome-changeset"),
         HeaderName::from_static("x-override-reason"),

@@ -463,7 +463,10 @@ async fn session_claims(
         *req.method(),
         Method::POST | Method::PUT | Method::PATCH | Method::DELETE
     );
-    if mutating && req.headers().contains_key("x-idempotency-key") {
+    if mutating
+        && (req.headers().contains_key("x-idempotency-key")
+            || req.headers().contains_key("idempotency-key"))
+    {
         let keyword = keyword_of(&req);
         if let Ok(portal) = portal_for(&state, &keyword).await {
             let names = session::cookie_names(&portal.keyword, secure_cookies(&state));

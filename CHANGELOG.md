@@ -44,6 +44,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   email, phone and website, a contact draft, and the email and phone to match an existing contact on.
 - Reply templates (`reply_template` model kind): a folder, who sees it (everyone, a user, team, role
   or queue), a body with `{{field}}` merge fields, and short SMS and WhatsApp variants.
+- The standard `Idempotency-Key` header is accepted beside `x-idempotency-key`; both with different
+  keys answer 422. On signed S2S requests only `x-idempotency-key` counts.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE
