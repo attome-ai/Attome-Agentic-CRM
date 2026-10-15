@@ -10,6 +10,13 @@ We aim to acknowledge a report within three working days and will keep you infor
 Please give us reasonable time to release a fix before you disclose the problem publicly; we will credit
 you in the release notes unless you prefer otherwise.
 
+## Threat model and testing
+
+What each surface must withstand, and the control that stops each threat, is in
+[docs/security/threat-model.md](docs/security/threat-model.md). Penetration testers start from
+[docs/security/pentest-scope.md](docs/security/pentest-scope.md): what is in scope, the rules of
+engagement and how findings are tracked.
+
 ## Supported versions
 
 Attome has no release yet. Until the first release, fixes go into the `main` branch only.
