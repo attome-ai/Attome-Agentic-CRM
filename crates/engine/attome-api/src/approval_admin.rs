@@ -116,6 +116,7 @@ pub const KNOWN_ACTION_TYPES: &[&str] = &[
     crate::admin::ACTION_ENTITY_DELETE,
     crate::admin::ACTION_ENTITY_HARD_DELETE,
     attome_compliance::dsr_admin::ACTION_DSR_FULFILL_ERASURE,
+    attome_records::entity_crud::ACTION_RECORD_HARD_DELETE,
     crate::bundle::ACTION_BUNDLE_APPLY,
     crate::bundle::ACTION_BREAK_GLASS,
     // Solution 7 Phase 1 (D-785): applying changesets, the counterpart of
@@ -654,6 +655,29 @@ async fn dispatch_approved(
             )
             .await?;
             serde_json::to_value(&result).map_err(AppError::internal)?
+        }
+        attome_records::entity_crud::ACTION_RECORD_HARD_DELETE => {
+            // A18-T6: run as the approver, who holds the privilege the
+            // requester was waiting on a second person for.
+            #[derive(serde::Deserialize)]
+            struct RecordHardDeletePayload {
+                entity: String,
+                record_id: Uuid,
+                expected_version: Option<i64>,
+            }
+            let payload: RecordHardDeletePayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let ctx = state.base.security.resolve(approver_id).await?;
+            attome_records::entity_crud::hard_delete_record_for(
+                state,
+                &ctx,
+                approver_id,
+                &payload.entity,
+                payload.record_id,
+                payload.expected_version,
+            )
+            .await?;
+            serde_json::json!({ "entity": payload.entity, "record_id": payload.record_id })
         }
         attome_compliance::dsr_admin::ACTION_DSR_FULFILL_ERASURE => {
             // `approver_id`, not `request.requested_by` — same reasoning as

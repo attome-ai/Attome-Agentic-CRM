@@ -60,3 +60,9 @@ purged.
 `{entity}.hard_delete` privilege as well as `delete` (administrators hold every privilege), is
 refused while any record points at the target, and is refused for a record under legal hold, by
 anyone.
+
+When the entity's bin setting has `hard_delete_needs_approval`, the route answers `202` with
+`approval_request_id` instead: the delete waits for a second administrator, and runs as that
+approver once approved (approval action `record.hard_delete`, which an approval policy can also
+require for any entity).
+

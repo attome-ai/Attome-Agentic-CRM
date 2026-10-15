@@ -76,7 +76,21 @@ pub async fn gate(
     payload: Value,
     requester: Uuid,
 ) -> Result<Option<ApprovalRequest>, AppError> {
-    gate_regarding(state, action_type, payload, requester, None).await
+    gate_inner(state, action_type, payload, requester, None, false).await
+}
+
+/// [`gate`], with `required` forcing approval even when no policy and no
+/// `approval.required_actions` entry asks for it (a per-record setting, such
+/// as an entity whose bin setting wants a second person for permanent
+/// deletes, A18-T6).
+pub async fn gate_required(
+    state: &EngineState,
+    action_type: &str,
+    payload: Value,
+    requester: Uuid,
+    required: bool,
+) -> Result<Option<ApprovalRequest>, AppError> {
+    gate_inner(state, action_type, payload, requester, None, required).await
 }
 
 /// [`gate`] with a "regarding" record pointer (Dashboard 10/10 Phase 6
@@ -95,6 +109,17 @@ pub async fn gate_regarding(
     requester: Uuid,
     regarding: Option<(&str, Uuid)>,
 ) -> Result<Option<ApprovalRequest>, AppError> {
+    gate_inner(state, action_type, payload, requester, regarding, false).await
+}
+
+async fn gate_inner(
+    state: &EngineState,
+    action_type: &str,
+    payload: Value,
+    requester: Uuid,
+    regarding: Option<(&str, Uuid)>,
+    required: bool,
+) -> Result<Option<ApprovalRequest>, AppError> {
     // M45 Phase 3 (REVIEW-2026-09-02 finding #8): a policy that matched by
     // `action_type` is dropped back to "no policy" when its `condition`
     // does not permit this specific payload — the fallback below (the flat
@@ -110,7 +135,7 @@ pub async fn gate_regarding(
         .required_actions
         .iter()
         .any(|a| a == action_type);
-    if !config_required && policy.is_none() {
+    if !config_required && !required && policy.is_none() {
         return Ok(None);
     }
 

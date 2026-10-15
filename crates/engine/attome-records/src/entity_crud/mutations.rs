@@ -1284,6 +1284,7 @@ pub(super) async fn delete_record(
     ),
     responses(
         (status = 204, description = "Record permanently deleted"),
+        (status = 202, description = "The entity's bin setting asks for approval: the request was submitted"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the entity's hard_delete privilege", body = ErrorResponse),
         (status = 409, description = "Record is referenced, under legal hold, or the If-Match row_version did not match", body = ErrorResponse),
@@ -1291,22 +1292,82 @@ pub(super) async fn delete_record(
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::HardDelete)])))),
 )]
+/// A18-T6: the approval action a permanent delete waits on when its
+/// entity's bin setting asks for one.
+pub const ACTION_RECORD_HARD_DELETE: &str = "record.hard_delete";
+
 pub(super) async fn hard_delete_record(
     State(state): State<EngineState>,
     ctx: Authorized<RecordScoped<Delete>>,
     Extension(claims): Extension<SessionClaims>,
     Path((entity_input, record_id)): Path<(String, Uuid)>,
     headers: axum::http::HeaderMap,
-) -> Result<StatusCode, AppError> {
+) -> Result<axum::response::Response, AppError> {
+    use axum::response::IntoResponse;
+    let expected_version = optional_expected_row_version(&headers)?;
+    let (_, entity_name, _, _) = resolve_entity(&state, &entity_input).await?;
+    let needs_approval: bool =
+        sqlx::query_scalar("SELECT hard_delete_needs_approval FROM bin_setting WHERE entity = $1")
+            .bind(&entity_name)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(attome_db::classify)?
+            .unwrap_or(false);
+    if let Some(request) = attome_audit::approval::gate_required(
+        &state,
+        ACTION_RECORD_HARD_DELETE,
+        serde_json::json!({
+            "entity": entity_name,
+            "record_id": record_id,
+            "expected_version": expected_version,
+        }),
+        claims.sub,
+        needs_approval,
+    )
+    .await?
+    {
+        return Ok((
+            StatusCode::ACCEPTED,
+            Json(serde_json::json!({
+                "approval_pending": true,
+                "approval_request_id": request.id,
+            })),
+        )
+            .into_response());
+    }
+    hard_delete_record_for(
+        &state,
+        &ctx,
+        claims.sub,
+        &entity_name,
+        record_id,
+        expected_version,
+    )
+    .await?;
+    Ok(StatusCode::NO_CONTENT.into_response())
+}
+
+/// The permanent delete itself, for a caller already through the route's
+/// checks or an approved request (A18-T6): access, the entity's
+/// `hard_delete` privilege, legal holds, the physical DELETE, audit and file
+/// cleanup.
+pub async fn hard_delete_record_for(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    acting_user: Uuid,
+    entity_input: &str,
+    record_id: Uuid,
+    expected_version: Option<i64>,
+) -> Result<(), AppError> {
     let (entity_id, entity_name, attrs, is_append_only) =
-        resolve_entity(&state, &entity_input).await?;
+        resolve_entity(state, entity_input).await?;
     if is_append_only {
         return Err(AppError::Forbidden);
     }
-    crate::entity_mutation::require_metadata_table_unlocked(&state, &ctx, &entity_name).await?;
+    crate::entity_mutation::require_metadata_table_unlocked(state, ctx, &entity_name).await?;
     require_record_access_any_active_state(
-        &state,
-        &ctx,
+        state,
+        ctx,
         entity_id,
         &entity_name,
         record_id,
@@ -1314,7 +1375,7 @@ pub(super) async fn hard_delete_record(
         false,
     )
     .await?;
-    require_child_parent_access(&state, &ctx, &entity_name, record_id).await?;
+    require_child_parent_access(state, ctx, &entity_name, record_id).await?;
     // A18-T6: past the recycle bin is its own privilege, not `delete`.
     ctx.require(
         &entity_name,
@@ -1337,13 +1398,12 @@ pub(super) async fn hard_delete_record(
     // physical DELETE, and the change-feed emit now live in
     // `entity_mutation::hard_delete_one`, same signature family as
     // `delete_one`.
-    let expected_version = optional_expected_row_version(&headers)?;
     let mutation = crate::entity_mutation::hard_delete_one(
         &mut tx,
         &entity_name,
         &dependents,
         record_id,
-        claims.sub,
+        acting_user,
         expected_version,
     )
     .await?;
@@ -1368,7 +1428,7 @@ pub(super) async fn hard_delete_record(
         .flatten()
         .and_then(|s| Uuid::parse_str(s).ok());
 
-    let actor = MutationActor::fetch(&state, claims.sub).await;
+    let actor = MutationActor::fetch(state, acting_user).await;
     let mut audit = MutationAudit::new();
     audit.event_comment = Some("record permanently deleted from list action".to_owned());
     // Audit 10/10 plan item 5.3 (D-540 ruling 3): the snapshot is a whole-row
@@ -1393,10 +1453,10 @@ pub(super) async fn hard_delete_record(
     // `GrantInvalidation::ByUser` (not `ByRow`) because the row is already
     // physically gone — there is nothing left for `ByRow`'s live-table
     // fallback SELECT to find.
-    MutationRing::new(&state)
+    MutationRing::new(state)
         .commit_mutation(
             tx,
-            &ctx,
+            ctx,
             entity_id,
             &entity_name,
             &attrs,
@@ -1427,7 +1487,7 @@ pub(super) async fn hard_delete_record(
         }
     }
 
-    Ok(StatusCode::NO_CONTENT)
+    Ok(())
 }
 
 /// D-540 ruling 3 (plan 5.3): strips `NotCaptured` (credential) columns from
