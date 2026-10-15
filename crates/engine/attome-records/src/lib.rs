@@ -32,6 +32,9 @@
 
 pub mod access_plan;
 pub mod bulk;
+/// B5-T1: `POST /api/v1/{entity}/bulk-edit`, per-attribute operations over
+/// many records, applied by the bulk engine.
+pub mod bulk_edit;
 mod bulk_graph;
 pub mod business_rules;
 pub mod data_mapping;
@@ -71,6 +74,7 @@ pub const FILES_ADVISORY_LOCK_NAMESPACE: i32 = 9;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = entity_crud::openapi();
     doc.merge(bulk::openapi_fragment());
+    doc.merge(bulk_edit::openapi_fragment());
     doc.merge(query_exec::openapi_fragment());
     doc.merge(query_admin::openapi_fragment());
     doc

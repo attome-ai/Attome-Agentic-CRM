@@ -11,6 +11,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- `POST /api/v1/{entity}/bulk-edit` changes the same attributes on up to 500 records, picked by id or
+  by list filters: `set`, `clear`, `add`/`remove` (multi-select choices) and `increment`. Each record's
+  new values are computed from its current ones and applied by the bulk engine through the normal
+  update path with the record's row version, so a record changed in between is reported, not
+  overwritten.
 - `query/execute` takes `seek`: a keyset page that starts at a sort value ("jump to M"), bound and
   type-checked like a filter, with a `next_cursor`; not together with `after_id` (422).
 - While the AI model is confirmed down, a conversation turn is refused up front with

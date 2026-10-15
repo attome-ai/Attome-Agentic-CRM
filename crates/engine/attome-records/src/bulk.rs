@@ -912,6 +912,7 @@ async fn status_inner(
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/{entity}/bulk", post(enqueue))
+        .merge(crate::bulk_edit::routes())
         .route("/api/v1/{entity}/bulk/{id}", get(get_status))
         .route("/api/v1/{entity}/staged-import", post(staged_import))
         .route(

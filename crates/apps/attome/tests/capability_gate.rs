@@ -74,6 +74,12 @@ const GATED_HANDLERS: &[(&str, &str, &str)] = &[
          (EngineJob::is_batch). With no live batch worker, 'later' is never.",
     ),
     (
+        "bulk_edit",
+        "BatchJobs",
+        "Returns 202 for a bulk update the batch worker applies (B5-T1); with no worker the \
+         edit is accepted and never applied.",
+    ),
+    (
         "enqueue_bulk_transform",
         "BatchJobs",
         "Returns 202 'durably accepted, applied later' for a bulk transform job. With no live batch worker, 'later' is never.",
