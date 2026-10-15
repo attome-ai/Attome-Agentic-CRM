@@ -112,17 +112,34 @@ pub enum Capability {
     /// exactly the "2xx for work that will never happen" this module exists
     /// to stop.
     BatchJobs,
+    /// AB5-T1: the configured AI model endpoint. Its features (AI actions,
+    /// agents) stop while it is down; no record save waits on it.
+    AiModel,
+    /// AB5-T1: the search index's drain. Down means search answers from an
+    /// index that is falling behind.
+    SearchIndex,
+    /// AB5-T1: clamd. Uploads wait for a scan while it is down.
+    VirusScanner,
+    /// AB5-T1: the cache store. Reads fall back to the database, slower.
+    Cache,
+    /// AB5-T1: outside systems reached through connectors.
+    Connectors,
 }
 
 impl Capability {
     /// Every capability, in declaration order. Indexing into
     /// [`CapabilityRegistry`]'s slot array is by [`Self::index`], which must
     /// stay consistent with this.
-    pub const ALL: [Capability; 4] = [
+    pub const ALL: [Capability; 9] = [
         Capability::ObjectStorage,
         Capability::Email,
         Capability::FastJobs,
         Capability::BatchJobs,
+        Capability::AiModel,
+        Capability::SearchIndex,
+        Capability::VirusScanner,
+        Capability::Cache,
+        Capability::Connectors,
     ];
 
     /// Stable snake_case name — the `capability` metric label, the
@@ -135,6 +152,11 @@ impl Capability {
             Capability::Email => "email",
             Capability::FastJobs => "fast_jobs",
             Capability::BatchJobs => "batch_jobs",
+            Capability::AiModel => "ai_model",
+            Capability::SearchIndex => "search_index",
+            Capability::VirusScanner => "virus_scanner",
+            Capability::Cache => "cache",
+            Capability::Connectors => "connectors",
         }
     }
 
@@ -146,6 +168,11 @@ impl Capability {
             Capability::Email => &["email"],
             Capability::FastJobs => &["email", "notifications"],
             Capability::BatchJobs => &["imports", "bulk"],
+            Capability::AiModel => &["ai"],
+            Capability::SearchIndex => &["search"],
+            Capability::VirusScanner => &["scanning"],
+            Capability::Cache => &["performance"],
+            Capability::Connectors => &["integrations"],
         }
     }
 
@@ -160,6 +187,11 @@ impl Capability {
             Capability::Email => 1,
             Capability::FastJobs => 2,
             Capability::BatchJobs => 3,
+            Capability::AiModel => 4,
+            Capability::SearchIndex => 5,
+            Capability::VirusScanner => 6,
+            Capability::Cache => 7,
+            Capability::Connectors => 8,
         }
     }
 }
@@ -265,7 +297,7 @@ impl CapabilityRegistry {
     /// can have meant.
     pub fn new(failure_threshold: u32, enforced: bool) -> Self {
         Self {
-            slots: [Slot::new(), Slot::new(), Slot::new(), Slot::new()],
+            slots: std::array::from_fn(|_| Slot::new()),
             failure_threshold: failure_threshold.max(1),
             enforced: AtomicBool::new(enforced),
         }

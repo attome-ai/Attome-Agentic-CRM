@@ -138,6 +138,119 @@ async fn probe_once(state: &EngineState, worker_stale_after: f64) {
         worker_outcome(&batch, worker_stale_after),
         None,
     );
+
+    // AB5-T1: the five report-and-degrade capabilities.
+    let (cache, scanner, search, ai) = tokio::join!(
+        tokio::time::timeout(PROBE_TIMEOUT, state.base.redis.ping()),
+        probe_virus_scanner(state),
+        probe_search_index(state),
+        probe_ai_model(state),
+    );
+    record(
+        state,
+        Capability::Cache,
+        match cache {
+            Ok(true) => ProbeOutcome::Reachable,
+            Ok(false) | Err(_) => ProbeOutcome::Unreachable,
+        },
+        None,
+    );
+    record(state, Capability::VirusScanner, scanner, None);
+    record(state, Capability::SearchIndex, search, None);
+    record(state, Capability::AiModel, ai, None);
+    // No connector-wide probe exists yet; each connector reports its own
+    // failures. Indeterminate keeps the capability `Unknown`, which admits.
+    record(
+        state,
+        Capability::Connectors,
+        ProbeOutcome::Indeterminate,
+        None,
+    );
+}
+
+/// Each AB5-T1 probe's bound, like the others' (D-167).
+const PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
+
+/// The search drain counts as down once its oldest unread event is this old.
+const SEARCH_LAG_DOWN_SECS: f64 = 600.0;
+
+/// clamd answers, or scanning is switched off (`storage.clamd_address`
+/// empty).
+async fn probe_virus_scanner(state: &EngineState) -> ProbeOutcome {
+    let address = state.base.config.storage.clamd_address.trim();
+    if address.is_empty() {
+        return ProbeOutcome::Disabled;
+    }
+    if attome_storage::clamav_health_check(address).await.reachable {
+        ProbeOutcome::Reachable
+    } else {
+        ProbeOutcome::Unreachable
+    }
+}
+
+/// The search index drain is keeping up: its change-feed cursor is less than
+/// [`SEARCH_LAG_DOWN_SECS`] behind. Not registered yet says nothing.
+async fn probe_search_index(state: &EngineState) -> ProbeOutcome {
+    match attome_core::change_feed::consumer_health(&state.base.db).await {
+        Ok(consumers) => search_outcome(&consumers),
+        Err(_) => ProbeOutcome::Indeterminate,
+    }
+}
+
+fn search_outcome(consumers: &[attome_core::change_feed::ConsumerHealth]) -> ProbeOutcome {
+    match consumers
+        .iter()
+        .find(|c| c.consumer == attome_search::drain::CONSUMER)
+    {
+        Some(c) if c.status == "active" && c.lag_seconds < SEARCH_LAG_DOWN_SECS => {
+            ProbeOutcome::Reachable
+        }
+        Some(_) => ProbeOutcome::Unreachable,
+        None => ProbeOutcome::Indeterminate,
+    }
+}
+
+/// The generation endpoint accepts a connection, or AI is switched off or
+/// not configured.
+async fn probe_ai_model(state: &EngineState) -> ProbeOutcome {
+    let inference = &state.base.config.inference;
+    let Some(target) = (inference.ai.enabled)
+        .then(|| host_port(&inference.generation.base_url))
+        .flatten()
+    else {
+        return ProbeOutcome::Disabled;
+    };
+    match tokio::time::timeout(PROBE_TIMEOUT, tokio::net::TcpStream::connect(target)).await {
+        Ok(Ok(_)) => ProbeOutcome::Reachable,
+        Ok(Err(_)) | Err(_) => ProbeOutcome::Unreachable,
+    }
+}
+
+/// `host:port` of an `http(s)://host[:port]/...` URL, with the scheme's
+/// default port; `None` for an empty or unusable URL.
+fn host_port(url: &str) -> Option<String> {
+    let url = url.trim();
+    let (rest, default_port) = if let Some(rest) = url.strip_prefix("https://") {
+        (rest, 443)
+    } else if let Some(rest) = url.strip_prefix("http://") {
+        (rest, 80)
+    } else {
+        return None;
+    };
+    let authority = rest.split(['/', '?', '#']).next()?;
+    let authority = authority.rsplit('@').next()?;
+    if authority.is_empty() {
+        return None;
+    }
+    let has_port = authority
+        .rsplit_once(':')
+        .is_some_and(|(_, port)| !port.is_empty() && port.chars().all(|c| c.is_ascii_digit()))
+        && !authority.ends_with(']');
+    Some(if has_port {
+        authority.to_owned()
+    } else {
+        format!("{authority}:{default_port}")
+    })
 }
 
 /// Maps a queue's worker heartbeat age onto a probe outcome.
@@ -201,6 +314,55 @@ fn record(state: &EngineState, capability: Capability, outcome: ProbeOutcome, er
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// AB5-T1: the AI endpoint's host and port, defaulted by scheme.
+    #[test]
+    fn host_port_reads_the_endpoint() {
+        assert_eq!(
+            host_port("http://127.0.0.1:8000/v1").as_deref(),
+            Some("127.0.0.1:8000")
+        );
+        assert_eq!(
+            host_port("https://models.example/v1").as_deref(),
+            Some("models.example:443")
+        );
+        assert_eq!(
+            host_port("http://[::1]:9000/").as_deref(),
+            Some("[::1]:9000")
+        );
+        assert_eq!(host_port("http://[::1]/").as_deref(), Some("[::1]:80"));
+        assert_eq!(host_port(""), None);
+        assert_eq!(host_port("ftp://x"), None);
+    }
+
+    /// AB5-T1: the search drain is down when expired or far behind, and
+    /// unknown until it has registered.
+    #[test]
+    fn search_index_follows_the_drain_cursor() {
+        let consumer = |status: &str, lag_seconds: f64| attome_core::change_feed::ConsumerHealth {
+            consumer: attome_search::drain::CONSUMER.to_owned(),
+            kind: "internal".to_owned(),
+            status: status.to_owned(),
+            lag_events: 0,
+            lag_seconds,
+            last_read_at: chrono::Utc::now(),
+            last_event_at: None,
+            max_lag_hours: 720,
+        };
+        assert_eq!(
+            search_outcome(&[consumer("active", 5.0)]),
+            ProbeOutcome::Reachable
+        );
+        assert_eq!(
+            search_outcome(&[consumer("active", 900.0)]),
+            ProbeOutcome::Unreachable
+        );
+        assert_eq!(
+            search_outcome(&[consumer("expired", 0.0)]),
+            ProbeOutcome::Unreachable
+        );
+        assert_eq!(search_outcome(&[]), ProbeOutcome::Indeterminate);
+    }
 
     /// The whole reason this helper exists rather than an inline `>` on the
     /// age: two of the four cases must NOT become `Unreachable`.

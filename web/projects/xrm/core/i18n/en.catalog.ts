@@ -353,6 +353,11 @@ export const xrmEn = {
     notifications: 'Notifications are delayed.',
     imports: 'Imports wait until the service is back.',
     bulk: 'Bulk changes wait until the service is back.',
+    ai: 'AI actions and agents are paused; everything else works.',
+    search: 'Search may miss the latest changes for now.',
+    scanning: 'Uploaded files wait for their virus scan.',
+    performance: 'Pages may load more slowly for now.',
+    integrations: 'Some connected systems are not answering; their syncs will catch up.',
   },
   recordTree: { path: 'Place in the tree' },
   recordHistory: {
