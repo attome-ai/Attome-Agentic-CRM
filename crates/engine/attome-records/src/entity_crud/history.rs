@@ -31,21 +31,27 @@
 //! **Groups (B2-T1).** Each change names the save, import, flow run or agent
 //! session it belonged to (`group_id`), who made it (`actor`) and through
 //! what (`source`), so a client can fold one run's many changes into one.
+//!
+//! **Restore (B2-T2).** `POST /api/v1/{entity}/{id}/history/restore` puts
+//! back the values a change (or a whole change set) replaced, through the
+//! ordinary update with `If-Match`, so validation, rules and audit run as for
+//! any edit. A withheld (sensitive or encrypted) value cannot be restored.
 
 use std::collections::HashMap;
 
 use attome_core::{EngineState, FieldType};
 use attome_security::SecurityContextExt;
-use attome_security::record_action::Read;
+use attome_security::record_action::{Read, Update};
 use attome_server::authz::{Authorized, RecordScoped};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, CursorPage, ErrorResponse};
 use axum::{
-    Json,
+    Extension, Json,
     extract::{Path, Query, State},
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
@@ -441,8 +447,216 @@ pub(super) async fn get_record_history(
     ))
 }
 
+/// `POST /api/v1/{entity}/{id}/history/restore`: name one change
+/// (`audit_id`) or one change set (`group_id`); `fields` narrows it.
+#[derive(Debug, Default, Deserialize, ToSchema)]
+pub struct HistoryRestoreRequest {
+    pub audit_id: Option<Uuid>,
+    /// A `group_id` from the history: every change of that set to this record
+    /// is undone, each field going back to its value before the set began.
+    pub group_id: Option<String>,
+    /// Only these fields (logical names); all the change touched when absent.
+    #[serde(default)]
+    pub fields: Vec<String>,
+}
+
+/// The newest changes a group restore looks through.
+const MAX_GROUP_SCAN: i64 = 1000;
+
+/// A field's value as the update path takes it, from the text the audit
+/// stored: numbers and booleans parsed, a date cut to the day, empty as null.
+pub fn restore_value(field_type: Option<FieldType>, raw: Option<&str>) -> Value {
+    let Some(raw) = raw.filter(|r| !r.is_empty()) else {
+        return Value::Null;
+    };
+    match field_type {
+        Some(FieldType::Number | FieldType::Currency) => raw
+            .parse::<f64>()
+            .ok()
+            .and_then(serde_json::Number::from_f64)
+            .map_or_else(|| Value::String(raw.to_owned()), Value::Number),
+        Some(FieldType::Bool) => Value::Bool(raw == "true"),
+        Some(FieldType::Date) => Value::String(raw.chars().take(10).collect()),
+        _ => Value::String(raw.to_owned()),
+    }
+}
+
+/// The values a change, or a change set, replaced on this record, as an
+/// update body: for each field, its value before the earliest of them.
+async fn values_before(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_name: &str,
+    attrs: &[attome_core::AttrInfo],
+    record_id: Uuid,
+    request: &HistoryRestoreRequest,
+) -> Result<Map<String, Value>, AppError> {
+    let headers: Vec<HeaderRow> = sqlx::query_as(
+        "SELECT h.id, h.operation::int AS operation, h.changed_on, \
+                (EXTRACT(EPOCH FROM h.changed_on) * 1000000)::bigint AS micros, \
+                h.user_id, h.user_display_name, h.initiator::int AS initiator, \
+                h.source::int AS source, h.batch_id, h.agent_session_id, h.correlation_id, \
+                h.request_id \
+         FROM audit_header h \
+         WHERE h.entity_name = $1 AND h.record_id = $2 AND h.changed_on IS NOT NULL \
+           AND ($3::uuid IS NULL OR h.id = $3) \
+         ORDER BY h.changed_on DESC, h.id DESC LIMIT $4",
+    )
+    .bind(entity_name)
+    .bind(record_id)
+    .bind(request.audit_id)
+    .bind(MAX_GROUP_SCAN)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut chosen: Vec<&HeaderRow> = match (&request.audit_id, request.group_id.as_deref()) {
+        (Some(_), None) => headers.iter().collect(),
+        (None, Some(group)) => headers
+            .iter()
+            .filter(|h| {
+                change_group(
+                    h.batch_id,
+                    h.agent_session_id,
+                    h.correlation_id,
+                    h.request_id.as_deref(),
+                    h.id,
+                ) == group.trim()
+            })
+            .collect(),
+        _ => {
+            return Err(AppError::Validation(
+                "name either audit_id or group_id".into(),
+            ));
+        }
+    };
+    if chosen.is_empty() {
+        return Err(AppError::NotFound);
+    }
+    // Oldest first, so the first value seen for a field is the one before
+    // the set began.
+    chosen.sort_by_key(|h| (h.changed_on, h.id));
+    let ids: Vec<Uuid> = chosen.iter().map(|h| h.id).collect();
+    let order: HashMap<Uuid, usize> = ids.iter().enumerate().map(|(i, id)| (*id, i)).collect();
+
+    let wanted: Vec<&str> = request.fields.iter().map(|f| f.trim()).collect();
+    let readable: HashMap<&str, &attome_core::AttrInfo> = attrs
+        .iter()
+        .filter(|a| wanted.is_empty() || wanted.contains(&a.logicalname.as_str()))
+        .filter_map(|a| {
+            readable_attr(ctx, entity_name, attrs, &a.logicalname)
+                .map(|a| (a.logicalname.as_str(), a))
+        })
+        .collect();
+    let mut rows: Vec<(Uuid, String, Option<String>, Option<bool>, Option<i16>)> = sqlx::query_as(
+        "SELECT d.audit_ref, d.field_name::text, d.old_value, d.is_sensitive, d.value_mode \
+             FROM audit_detail d WHERE d.audit_ref = ANY($1) ORDER BY d.id",
+    )
+    .bind(&ids)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    rows.sort_by_key(|row| order.get(&row.0).copied().unwrap_or(usize::MAX));
+
+    let mut body = Map::new();
+    for (_, field, old_value, row_sensitive, value_mode) in rows {
+        if body.contains_key(&field) {
+            continue;
+        }
+        let Some(attr) = readable.get(field.as_str()) else {
+            continue;
+        };
+        if attr.is_sensitive || row_sensitive.unwrap_or(false) || value_mode.is_some() {
+            return Err(AppError::Validation(format!(
+                "{field}: a withheld value cannot be restored"
+            )));
+        }
+        let value = restore_value(
+            FieldType::from_int(attr.field_type_int),
+            old_value.as_deref(),
+        );
+        body.insert(field, value);
+    }
+    if body.is_empty() {
+        return Err(AppError::Validation(
+            "that change has no field values to restore".into(),
+        ));
+    }
+    Ok(body)
+}
+
+/// B2-T2: restores the values a change or change set replaced, through the
+/// ordinary update (`row_version` as `If-Match`).
+pub async fn restore_from_history(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    acting_user: Uuid,
+    entity_input: &str,
+    record_id: Uuid,
+    expected_version: i64,
+    request: &HistoryRestoreRequest,
+) -> Result<super::response::EntityRecordResponse, AppError> {
+    let (entity_id, entity_name, attrs, _) = resolve_entity(state, entity_input).await?;
+    ctx.require(&entity_name, "update")?;
+    require_record_read(state, ctx, entity_id, &entity_name, record_id).await?;
+    let body = values_before(state, ctx, &entity_name, &attrs, record_id, request).await?;
+    super::update_record_for(
+        state,
+        ctx,
+        acting_user,
+        &entity_name,
+        record_id,
+        expected_version,
+        Value::Object(body),
+    )
+    .await
+}
+
+/// B2-T2: puts back the values one change (`audit_id`) or one change set
+/// (`group_id`, an import, run or agent session) replaced on this record,
+/// through the ordinary update: `If-Match` is required and validation, rules
+/// and audit run as for any edit.
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/{id}/history/restore",
+    tag = "entity",
+    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    request_body = HistoryRestoreRequest,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The record with the values restored", body = super::response::EntityRecordResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not update this record", body = ErrorResponse),
+        (status = 404, description = "No such record or change", body = ErrorResponse),
+        (status = 409, description = "The record changed since the If-Match version", body = ErrorResponse),
+        (status = 422, description = "No If-Match, both or neither of audit_id and group_id, a withheld value, or the restored values fail validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn restore_history_route(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Update>>,
+    Extension(claims): Extension<attome_auth::SessionClaims>,
+    Path((entity_input, record_id)): Path<(String, Uuid)>,
+    headers: axum::http::HeaderMap,
+    Json(request): Json<HistoryRestoreRequest>,
+) -> Result<Json<super::response::EntityRecordResponse>, AppError> {
+    let expected = super::row_version::expected_row_version(&headers)?;
+    Ok(Json(
+        restore_from_history(
+            &state,
+            &ctx,
+            claims.sub,
+            &entity_input,
+            record_id,
+            expected,
+            &request,
+        )
+        .await?,
+    ))
+}
+
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(get_record_history))]
+#[openapi(paths(get_record_history, restore_history_route))]
 struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -480,6 +694,28 @@ mod tests {
         assert_eq!(
             change_group(None, None, None, Some(""), audit),
             format!("change:{audit}")
+        );
+    }
+
+    #[test]
+    fn history_restore_values_take_the_field_type() {
+        assert_eq!(
+            restore_value(Some(FieldType::Number), Some("12.5")),
+            serde_json::json!(12.5)
+        );
+        assert_eq!(
+            restore_value(Some(FieldType::Bool), Some("true")),
+            Value::Bool(true)
+        );
+        assert_eq!(
+            restore_value(Some(FieldType::Date), Some("2026-10-01T00:00:00Z")),
+            Value::String("2026-10-01".into())
+        );
+        assert_eq!(restore_value(Some(FieldType::Text), Some("")), Value::Null);
+        assert_eq!(restore_value(None, None), Value::Null);
+        assert_eq!(
+            restore_value(Some(FieldType::Number), Some("n/a")),
+            Value::String("n/a".into())
         );
     }
 

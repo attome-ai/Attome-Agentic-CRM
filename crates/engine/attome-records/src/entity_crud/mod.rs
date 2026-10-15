@@ -276,6 +276,10 @@ pub fn routes() -> Router<EngineState> {
             get(timeline::export_record_timeline),
         )
         .route(
+            "/api/v1/{entity}/{id}/history/restore",
+            axum::routing::post(history::restore_history_route),
+        )
+        .route(
             "/api/v1/{entity}/{id}/history",
             get(history::get_record_history),
         )

@@ -3126,6 +3126,123 @@ fn clone_routes_bulk_clone_and_undo() {
     })
 }
 
+/// B2-T2: a value an edit replaced comes back through the history restore,
+/// which needs `If-Match` like any update; the history names each change's
+/// change set and actor (B2-T1).
+#[test]
+fn history_restore_puts_back_a_replaced_value() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let (logicalname, admin_cookie, app) = provision_test_entity(system, "histrestore").await;
+        let send =
+            |method: &str, uri: String, if_match: Option<i64>, body: Option<serde_json::Value>| {
+                let mut req = Request::builder()
+                    .method(method)
+                    .uri(uri)
+                    .header("cookie", &admin_cookie)
+                    .header("content-type", "application/json");
+                if let Some(version) = if_match {
+                    req = req.header("if-match", format!("\"{version}\""));
+                }
+                req.body(body.map_or_else(Body::empty, |b| Body::from(b.to_string())))
+                    .unwrap()
+            };
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                format!("/api/v1/{logicalname}"),
+                None,
+                Some(serde_json::json!({"title": "first"})),
+            ))
+            .await
+            .expect("create");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let created = body_json(res).await;
+        let id = created["id"].as_str().expect("id").to_owned();
+        let version = created["row_version"].as_i64().expect("version");
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "PATCH",
+                format!("/api/v1/{logicalname}/{id}"),
+                Some(version),
+                Some(serde_json::json!({"title": "second"})),
+            ))
+            .await
+            .expect("edit");
+        assert_eq!(res.status(), StatusCode::OK);
+        let version = body_json(res).await["row_version"]
+            .as_i64()
+            .expect("version");
+        // The audit chainer turns captured events into the headers the
+        // history reads.
+        attome_audit::chainer::run_once(&state.base.db, state.audit_signer.as_deref(), 1000, None)
+            .await
+            .expect("drain the audit ingest queue");
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "GET",
+                format!("/api/v1/{logicalname}/{id}/history?field=title"),
+                None,
+                None,
+            ))
+            .await
+            .expect("history");
+        assert_eq!(res.status(), StatusCode::OK);
+        let history = body_json(res).await;
+        let edit = history["items"]
+            .as_array()
+            .and_then(|items| {
+                items.iter().find(|c| {
+                    c["fields"][0]["new_value"] == "second"
+                        && c["fields"][0]["field_name"] == "title"
+                })
+            })
+            .cloned()
+            .expect("the edit is in the history");
+        assert!(edit["group_id"].is_string(), "{edit}");
+        assert_eq!(edit["actor"], "user", "{edit}");
+        let audit_id = edit["audit_id"].as_str().expect("audit id").to_owned();
+
+        let restore_uri = format!("/api/v1/{logicalname}/{id}/history/restore");
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                restore_uri.clone(),
+                None,
+                Some(serde_json::json!({"audit_id": audit_id})),
+            ))
+            .await
+            .expect("restore without If-Match");
+        assert_eq!(
+            res.status(),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "If-Match is required"
+        );
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                restore_uri,
+                Some(version),
+                Some(serde_json::json!({"audit_id": audit_id})),
+            ))
+            .await
+            .expect("restore");
+        assert_eq!(res.status(), StatusCode::OK);
+        let restored = body_json(res).await;
+        assert_eq!(restored["data"]["title"], "first", "{restored}");
+    })
+}
+
 /// F026 (P2.2): `POST .../restore` undeletes a soft-deleted record. Delete
 /// now also bumps `row_version` (P-data-lifecycle's `on_target_delete` work
 /// stamps `modified_by`/`modified_at`/`row_version` on every soft-delete, not
