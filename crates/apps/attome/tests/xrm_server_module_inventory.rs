@@ -98,6 +98,9 @@ const BASELINE: &[&str] = &[
     "approval_metrics",
     "approval_policy_admin",
     "audit_read",
+    // A4-T5: the gap report reads the autonumber sequence tables directly;
+    // attome-metadata has no route or admin-guard dependency to host it.
+    "autonumber_admin",
     "bootstrap_admin",
     "bulk_transform",
     "bundle",

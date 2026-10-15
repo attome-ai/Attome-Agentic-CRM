@@ -247,7 +247,7 @@ pub struct ReauthRequiredResponse {
 #[serde(untagged)]
 pub enum UnauthorizedResponse {
     ReauthRequired(ReauthRequiredResponse),
-    Unauthorized(ErrorResponse),
+    Unauthorized(Box<ErrorResponse>),
 }
 
 impl<T> PaginatedResponse<T> {
