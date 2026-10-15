@@ -1617,6 +1617,8 @@ fn check_policy(
     };
 
     match policy.policy_type {
+        // Checked, and returned from, above.
+        PolicyType::AddTag | PolicyType::RemoveTag => {}
         PolicyType::Hidden | PolicyType::Disabled => {}
         PolicyType::Error => {
             if policy.severity.is_none() {
