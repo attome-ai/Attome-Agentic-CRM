@@ -7251,6 +7251,67 @@
         ]
       }
     },
+    "/api/v1/admin/conflicts": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "A16-T7: version conflicts of the last `days` days by entity and source\n(`api`, `bulk`, `import`), most first: where people overwrite each other.",
+        "operationId": "conflicts",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "description": "How many days back, today included: 1 to 366, default 30.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conflict totals by entity and source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ConflictCount"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/content/pages": {
       "get": {
         "tags": [
@@ -70985,6 +71046,28 @@
         },
         "additionalProperties": false
       },
+      "ConflictCount": {
+        "type": "object",
+        "description": "A16-T7: the conflicts of the last `days` days, by entity and source.",
+        "required": [
+          "entity",
+          "source",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "description": "`api`, `bulk` or `import`."
+          }
+        }
+      },
       "ConsentBody": {
         "type": "object",
         "properties": {
@@ -84308,6 +84391,55 @@
                     "string",
                     "null"
                   ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_ConflictCount": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A16-T7: the conflicts of the last `days` days, by entity and source.",
+              "required": [
+                "entity",
+                "source",
+                "count"
+              ],
+              "properties": {
+                "count": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string",
+                  "description": "`api`, `bulk` or `import`."
                 }
               }
             }

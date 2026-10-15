@@ -1365,6 +1365,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/conflicts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A16-T7: version conflicts of the last `days` days by entity and source
+         *     (`api`, `bulk`, `import`), most first: where people overwrite each other.
+         */
+        get: operations["conflicts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/content/pages": {
         parameters: {
             query?: never;
@@ -15428,6 +15448,14 @@ export interface components {
         ConfirmToolCallRequest: {
             arguments_hash: string;
         };
+        /** @description A16-T7: the conflicts of the last `days` days, by entity and source. */
+        ConflictCount: {
+            /** Format: int64 */
+            count: number;
+            entity: string;
+            /** @description `api`, `bulk` or `import`. */
+            source: string;
+        };
         ConsentBody: {
             privacy_version?: string | null;
             terms_version?: string | null;
@@ -20649,6 +20677,22 @@ export interface components {
                  */
                 last_indexed_at?: string | null;
                 name?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_ConflictCount: {
+            items: {
+                /** Format: int64 */
+                count: number;
+                entity: string;
+                /** @description `api`, `bulk` or `import`. */
+                source: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -33297,6 +33341,47 @@ export interface operations {
             };
             /** @description changeset_not_closed */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    conflicts: {
+        parameters: {
+            query?: {
+                /** @description How many days back, today included: 1 to 366, default 30. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Conflict totals by entity and source */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ConflictCount"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
