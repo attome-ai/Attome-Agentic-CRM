@@ -43,6 +43,7 @@ mod config;
 mod env;
 mod keyring;
 mod net;
+pub mod secret;
 
 pub use config::{
     AiEnablement, AiSurface, AnchorStoreSection, ApiKeyPepper, AppConfig, AppSection, AuthSection,
@@ -58,3 +59,4 @@ pub use config::{
 pub use env::{APP_ENV_VAR, DEBUG_APP_ENV, app_env, is_debug_app_env, is_debug_env};
 pub use keyring::{BARE_STRING_KEY_ID, KeyRing};
 pub use net::parse_ip_network;
+pub use secret::Secret;
