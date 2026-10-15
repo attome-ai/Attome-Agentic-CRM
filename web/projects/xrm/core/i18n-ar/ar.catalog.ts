@@ -581,6 +581,7 @@ export const xrmAr = {
     palettePlaceholder: 'ابحث في السجلات والصفحات والأوامر (> للأوامر فقط، acc: للحسابات)',
     paletteEmpty: 'لا توجد نتائج مطابقة.', paletteHint: 'اكتب للبحث في السجلات والصفحات والأوامر.',
     paletteCommand: 'أمر',
+    paletteAsk: 'اسأل المساعد: «{text}»', paletteAskSub: 'يجيب من بياناتك',
     // B9-T3 — favourites and recent records.
     favourites: 'المفضلة', addThisPage: 'إضافة هذه الصفحة', pinned: 'المثبتة', teamList: 'الفريق',
     listEmpty: 'لا شيء هنا بعد', noFavourites: 'أضف صفحة أو سجلاً لتبقيه في متناول يدك.',

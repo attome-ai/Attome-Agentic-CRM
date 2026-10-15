@@ -24,6 +24,18 @@ export function parsePaletteQuery(raw: string): PaletteQuery {
   return { scope: 'all', entityPrefix: null, text: q.trim() };
 }
 
+/**
+ * B10-T3: whether palette text reads as a question for the copilot rather
+ * than a name to find: it ends with a question mark (Latin or Arabic) or
+ * runs to three words or more.
+ */
+export function isQuestion(text: string): boolean {
+  const t = text.trim();
+  if (!t) return false;
+  if (/[?؟]$/.test(t)) return true;
+  return t.split(/\s+/).length >= 3;
+}
+
 /** True when the entity's name, or one of its `_` parts, starts with the prefix. */
 export function entityMatchesPrefix(entity: string, prefix: string): boolean {
   const name = entity.toLowerCase();

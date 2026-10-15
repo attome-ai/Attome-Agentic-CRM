@@ -618,6 +618,7 @@ export const xrmEn = {
     palettePlaceholder: 'Search records, pages and commands (> commands only, acc: accounts)',
     paletteEmpty: 'Nothing matches.', paletteHint: 'Type to search records, pages and commands.',
     paletteCommand: 'Command',
+    paletteAsk: 'Ask the copilot: “{text}”', paletteAskSub: 'Answers from your data',
     // B9-T3 — favourites and recent records.
     favourites: 'Favourites', addThisPage: 'Add this page', pinned: 'Pinned', teamList: 'Team',
     listEmpty: 'Nothing here yet', noFavourites: 'Add a page or a record to keep it at hand.',

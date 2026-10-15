@@ -127,6 +127,23 @@ export class CopilotPanelComponent implements OnInit {
     () => !this.busy() && this.draft().trim().length > 0 && (!!this.conversation() || !!this.selectedAgentId()),
   );
 
+  /** B10-T3: a question handed over (from the command palette) to send once an agent is chosen. */
+  private pendingAsk = false;
+
+  /**
+   * B10-T3: puts `text` in the composer and sends it, now or as soon as the
+   * agent list has chosen an agent; with several agents to pick from it waits
+   * in the composer for the person.
+   */
+  ask(text: string): void {
+    this.draft.set(text);
+    if (this.canSend()) {
+      this.send();
+    } else {
+      this.pendingAsk = true;
+    }
+  }
+
   ngOnInit(): void {
     this.destroyRef.onDestroy(() => {
       this.closeStream();
@@ -140,6 +157,10 @@ export class CopilotPanelComponent implements OnInit {
           this.agents.set(agents);
           if (agents.length === 1) this.selectedAgentId.set(agents[0].id);
           this.agentsLoaded.set(true);
+          if (this.pendingAsk && this.canSend()) {
+            this.pendingAsk = false;
+            this.send();
+          }
         },
         error: () => this.agentsLoaded.set(true),
       });

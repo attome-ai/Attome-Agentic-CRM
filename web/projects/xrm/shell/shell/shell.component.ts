@@ -1,5 +1,5 @@
 import {
-  ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, signal, untracked,
+  ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, signal, untracked, viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterOutlet } from '@angular/router';
@@ -22,7 +22,7 @@ import { NotificationBellComponent } from '../notification-bell/notification-bel
 import { ProfileMenuComponent } from '../profile-menu/profile-menu.component';
 import { ShellSidebarComponent } from '../shell-sidebar/shell-sidebar.component';
 import { StatusBannerComponent } from '../status-banner/status-banner.component';
-import { PaletteUses, entityMatchesPrefix, parsePaletteQuery, rankByUse } from '../command-palette/palette';
+import { PaletteUses, entityMatchesPrefix, isQuestion, parsePaletteQuery, rankByUse } from '../command-palette/palette';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -126,6 +126,8 @@ export class ShellComponent implements OnInit {
   private readonly personalSettings = inject(PersonalSettingsService);
   private readonly brand = inject(BrandService);
   private readonly uiText = inject(UiTextOverrides);
+  /** B10-T3: where a palette question goes. */
+  private readonly copilotLauncher = viewChild(CopilotLauncherComponent);
   private readonly vitals = inject(WebVitals);
   private readonly lang = inject(LangService);
   private readonly search = inject(SearchService);
@@ -242,8 +244,20 @@ export class ShellComponent implements OnInit {
     // M65 Phase 1 (D-467) — searches the same app-filtered tree the sidebar
     // shows, so quick search never surfaces an entity the switcher just hid.
     collectNav(this.filteredSidebarItems());
-    return rankByUse([...results, ...this.qsRecords()], uses);
+    const ranked = rankByUse([...results, ...this.qsRecords()], uses);
+    // B10-T3: a sentence is also offered to the copilot, which answers it
+    // through the query planner (N5) and shows the matching records.
+    return isQuestion(parsed.text) ? [this.askItem(parsed.text), ...ranked] : ranked;
   });
+
+  /** B10-T3: the palette item that asks the copilot `text`. */
+  private askItem(text: string): QsItem {
+    return {
+      kind: 'cmd', id: 'cmd:copilot.ask', name: this.lang.translate('shell.paletteAsk', { text }),
+      sub: this.lang.translate('shell.paletteAskSub'), icon: 'las la-robot', context: false,
+      run: () => void this.copilotLauncher()?.ask(text),
+    };
+  }
 
   /** Registered commands whose name contains `q`; `contextOnly` keeps the page's own. */
   private commandResults(q: string, contextOnly: boolean): QsItem[] {

@@ -41,20 +41,26 @@ export class CopilotLauncherComponent {
     if (this.open()) {
       this.close();
     } else {
-      this.show();
+      void this.show();
     }
   }
 
-  private show(): void {
+  /** B10-T3: opens the panel and asks it `text`. */
+  async ask(text: string): Promise<void> {
+    await this.show();
+    this.panel?.instance.ask(text);
+  }
+
+  private show(): Promise<void> {
     this.loadError.set(null);
     if (this.panel) {
       this.setHidden(false);
       this.open.set(true);
-      return;
+      return Promise.resolve();
     }
-    if (this.loading) return;
+    if (this.loading) return Promise.resolve();
     this.loading = true;
-    import('@attome/xrm/ai/chat')
+    return import('@attome/xrm/ai/chat')
       .then((m) => {
         this.loading = false;
         this.panel = this.host().createComponent(m.CopilotPanelComponent);

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { PaletteUses, entityMatchesPrefix, parsePaletteQuery, rankByUse } from './palette';
+import { PaletteUses, entityMatchesPrefix, isQuestion, parsePaletteQuery, rankByUse } from './palette';
 
 describe('command palette (B10-T1)', () => {
   afterEach(() => localStorage.removeItem('attome.palette.uses'));
@@ -12,6 +12,14 @@ describe('command palette (B10-T1)', () => {
     expect(parsePaletteQuery('  invoices ')).toEqual({ scope: 'all', entityPrefix: null, text: 'invoices' });
     // A time or a URL is not a prefix.
     expect(parsePaletteQuery('10:30').scope).toBe('all');
+  });
+
+  it('reads a sentence or a question mark as a question for the copilot (B10-T3)', () => {
+    expect(isQuestion('open deals over 10000')).toBe(true);
+    expect(isQuestion('revenue?')).toBe(true);
+    expect(isQuestion('كم صفقة مفتوحة؟')).toBe(true);
+    expect(isQuestion('Acme Ltd')).toBe(false);
+    expect(isQuestion('  ')).toBe(false);
   });
 
   it('matches an entity by its name or one of its parts', () => {

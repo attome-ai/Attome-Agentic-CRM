@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { LangService } from '@attome/base';
-import { NEVER, of, throwError } from 'rxjs';
+import { NEVER, of, throwError, Subject } from 'rxjs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatService } from '../services/chat.service';
 import { CHAT_EVENT_SOURCE } from '../services/chat-stream';
@@ -84,6 +84,26 @@ describe('CopilotPanelComponent', () => {
       entity: 'contact',
       record_id: RECORD,
     });
+  });
+
+  it('sends a question handed over from the palette (B10-T3)', () => {
+    const panel = create();
+    panel.ask('how many open deals this month?');
+    expect(chat['send']).toHaveBeenCalledWith('conv-1', 'how many open deals this month?', {
+      entity: 'contact',
+      record_id: RECORD,
+    });
+  });
+
+  it('holds a handed-over question until an agent is chosen (B10-T3)', () => {
+    const agents = new Subject<{ id: string; name: string }[]>();
+    chat['listAgents'].mockReturnValue(agents);
+    const panel = create();
+    panel.ask('which accounts have no owner?');
+    expect(chat['send']).not.toHaveBeenCalled();
+    expect(panel.draft()).toBe('which accounts have no owner?');
+    agents.next([{ id: 'agent-1', name: 'Helper' }]);
+    expect(chat['send']).toHaveBeenCalledWith('conv-1', 'which accounts have no owner?', expect.anything());
   });
 
   it('sends no context when the user switches sharing off', () => {
