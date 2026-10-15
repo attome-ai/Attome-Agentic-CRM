@@ -1328,7 +1328,7 @@ mod tests {
         indices.sort_unstable();
         assert_eq!(
             indices,
-            (0..=24).collect::<Vec<_>>(),
+            (0..=27).collect::<Vec<_>>(),
             "one_of_each_variant must hold exactly one sample of every variant_index arm"
         );
 

@@ -56,6 +56,10 @@ const EXTRA_ROUTES: &[&str] = &[
     "/api/v1/{entity}",
     "/api/v1/{entity}/{id}",
     "/api/v1/{entity}/upsert",
+    // B13 UI text overrides: labels are metadata a changeset carries
+    // (`set_label` / `clear_label`), though the path is not an authoring
+    // prefix the production gate guards.
+    "/api/v1/admin/i18n/overrides",
 ];
 
 /// Recorded routes and the op(s) each records (design §1.1).

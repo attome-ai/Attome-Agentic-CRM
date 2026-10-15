@@ -51,6 +51,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         crate::my_work::openapi_fragment(),
         attome_records::entity_crud::openapi(),
         attome_records::bulk::openapi_fragment(),
+        attome_records::bulk_edit::openapi_fragment(),
         crate::data_export::openapi_fragment(),
         crate::data_mapping_admin::openapi_fragment(),
         crate::data_profile_admin::openapi_fragment(),

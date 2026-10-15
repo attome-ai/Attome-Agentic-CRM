@@ -657,7 +657,8 @@ pub fn routes() -> Router<EngineState> {
 #[openapi(paths(bulk_edit, bulk_edit_preview, bulk_edit_undo))]
 struct ApiDocFragment;
 
-pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
+/// The bulk-edit routes' slice of the API document (merged by attome-api).
+pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
 }
 

@@ -333,12 +333,9 @@ async fn probe_ai_model(state: &EngineState) -> ProbeOutcome {
 /// default port; `None` for an empty or unusable URL.
 fn host_port(url: &str) -> Option<String> {
     let url = url.trim();
-    let (rest, default_port) = if let Some(rest) = url.strip_prefix("https://") {
-        (rest, 443)
-    } else if let Some(rest) = url.strip_prefix("http://") {
-        (rest, 80)
-    } else {
-        return None;
+    let (rest, default_port) = match url.strip_prefix("https://") {
+        Some(rest) => (rest, 443),
+        None => (url.strip_prefix("http://")?, 80),
     };
     let authority = rest.split(['/', '?', '#']).next()?;
     let authority = authority.rsplit('@').next()?;

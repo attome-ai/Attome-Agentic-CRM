@@ -131,7 +131,7 @@ pub enum ErrorDetails {
 )]
 pub struct ErrorResponse {
     /// Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,
-    /// `conflict`, `version_conflict`, `idempotency_conflict`,
+    /// `conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,
     /// `validation_error`, `feature_unavailable`, `feature_hidden`,
     /// `rate_limit_exceeded`, `overloaded`, `capability_unavailable`,
     /// `metadata_authoring_locked`, `transition_not_allowed`,
@@ -188,6 +188,14 @@ pub struct ErrorResponse {
     /// this is a deliberate filtered projection — never a raw row dump.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub current_state: Option<serde_json::Value>,
+    /// Present on `duplicate_detected` (A15-T4): the existing records the
+    /// save matches that the caller may read (record, rule, score).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub matches: Option<serde_json::Value>,
+    /// Present on `duplicate_detected`: how many more matches the caller may
+    /// not read.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hidden: Option<i64>,
     /// Present on a `rate_limit_exceeded` response when the limiter knows its
     /// window: seconds to wait before retrying, equal by construction to the
     /// `Retry-After` header on the same response (BTY-11a). Omitted when the
