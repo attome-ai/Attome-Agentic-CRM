@@ -9738,6 +9738,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/scan/find": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** B16-T5: the records a scanned code points at. */
+        get: operations["scan_find"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/scenarios/{id}/clone": {
         parameters: {
             query?: never;
@@ -22349,6 +22366,24 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_ScanHit: {
+            items: {
+                /** @description The field that matched. */
+                attribute: string;
+                entity: string;
+                /** Format: uuid */
+                id: string;
+                /** @description The record's primary name, when its entity declares one. */
+                name?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_ScopeSwitchView: {
             items: {
                 /** @description `manual` | `budget` | `quality` | `injection` | `departure`. */
@@ -25524,6 +25559,16 @@ export interface components {
              */
             registry_note?: string | null;
             registry_updated: boolean;
+        };
+        /** @description A record whose scan-enabled field holds the scanned value. */
+        ScanHit: {
+            /** @description The field that matched. */
+            attribute: string;
+            entity: string;
+            /** Format: uuid */
+            id: string;
+            /** @description The record's primary name, when its entity declares one. */
+            name?: string | null;
         };
         ScenarioCloneResponse: {
             /** Format: uuid */
@@ -61046,6 +61091,58 @@ export interface operations {
                 };
             };
             /** @description Malformed body (e.g. client_ip is not an address) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    scan_find: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The scanned value, exactly as read. */
+                value: string;
+                /** @description Search only this entity's scan-enabled fields. */
+                entity: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Readable records holding the value, at most 50 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ScanHit"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Scanning is switched off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Empty or overlong value */
             422: {
                 headers: {
                     [name: string]: unknown;

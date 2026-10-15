@@ -50089,6 +50089,88 @@
         }
       }
     },
+    "/api/v1/scan/find": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B16-T5: the records a scanned code points at.",
+        "operationId": "scan_find",
+        "parameters": [
+          {
+            "name": "value",
+            "in": "path",
+            "description": "The scanned value, exactly as read.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "Search only this entity's scan-enabled fields.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Readable records holding the value, at most 50",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_ScanHit"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scanning is switched off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Empty or overlong value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/scenarios/{id}/clone": {
       "post": {
         "tags": [
@@ -89183,6 +89265,62 @@
           }
         }
       },
+      "PaginatedResponse_ScanHit": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A record whose scan-enabled field holds the scanned value.",
+              "required": [
+                "entity",
+                "id",
+                "attribute"
+              ],
+              "properties": {
+                "attribute": {
+                  "type": "string",
+                  "description": "The field that matched."
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "The record's primary name, when its entity declares one."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_ScopeSwitchView": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -97086,6 +97224,35 @@
           },
           "registry_updated": {
             "type": "boolean"
+          }
+        }
+      },
+      "ScanHit": {
+        "type": "object",
+        "description": "A record whose scan-enabled field holds the scanned value.",
+        "required": [
+          "entity",
+          "id",
+          "attribute"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string",
+            "description": "The field that matched."
+          },
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The record's primary name, when its entity declares one."
           }
         }
       },
