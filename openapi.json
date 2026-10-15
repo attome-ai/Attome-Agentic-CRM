@@ -64783,6 +64783,17 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "parent": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BinItem",
+                "description": "For `invalid`: a deleted record this one points at, which the caller\nmay restore first (\"Restore parent too\", A18-T9)."
+              }
+            ]
           }
         }
       },

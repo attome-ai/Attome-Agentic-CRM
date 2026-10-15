@@ -13261,6 +13261,7 @@ export interface components {
             entity: string;
             /** Format: uuid */
             id: string;
+            parent?: null | components["schemas"]["BinItem"];
         };
         /** @description `POST /api/v1/bin/restore`. */
         BinRestoreRequest: {
