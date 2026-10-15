@@ -538,6 +538,8 @@ export const xrmAr = {
     brand: 'Attome XRM', collapseSidebar: 'طي الشريط الجانبي', expandSidebar: 'توسيع الشريط الجانبي',
     filterPlaceholder: 'تصفية…', closeSection: 'إغلاق القسم',
     quickSearch: 'بحث سريع (Shift مرتين)', search: 'بحث', searchEntities: 'البحث في الكيانات…',
+    shortcutsTitle: 'اختصارات لوحة المفاتيح', shortcutQuickSearch: 'بحث سريع', shortcutPinned: 'فتح مفضلة مثبتة',
+    shortcutHelp: 'عرض هذه القائمة', shortcutClose: 'إغلاق نافذة أو هذه القائمة',
     // B9-T3 — favourites and recent records.
     favourites: 'المفضلة', addThisPage: 'إضافة هذه الصفحة', pinned: 'المثبتة', teamList: 'الفريق',
     listEmpty: 'لا شيء هنا بعد', noFavourites: 'أضف صفحة أو سجلاً لتبقيه في متناول يدك.',

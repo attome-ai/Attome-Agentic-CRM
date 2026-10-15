@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterOutlet } from '@angular/router';
-import { BrandService, TranslatePipe } from '@attome/base';
+import { BrandService, ShortcutRegistry, TranslatePipe, isTypingTarget } from '@attome/base';
 import { AdminService, SidebarItem } from '@attome/xrm/core/admin/data';
 import { entityFormRoute, entityListRoute, urlPathToLogical } from '@attome/xrm/core/entity';
 import { OmniSearchComponent } from '@attome/xrm/search/omni';
@@ -112,6 +112,9 @@ export class ShellComponent implements OnInit {
   protected readonly favourites = inject(FavouritesService);
   private readonly personalSettings = inject(PersonalSettingsService);
   private readonly brand = inject(BrandService);
+  readonly shortcutRegistry = inject(ShortcutRegistry);
+  /** B10-T2: the `?` help listing the shortcuts that work here. */
+  readonly shortcutsOpen = signal(false);
 
   // ── Sidebar data (owned here because quick search searches the same tree) ──
   readonly sidebarItems   = signal<SidebarItem[]>([]);
@@ -221,6 +224,13 @@ export class ShellComponent implements OnInit {
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.favourites.start();
+    // B10-T2: the shell's own shortcuts, listed by `?`.
+    this.shortcutRegistry.register(
+      { keys: 'Shift Shift', labelKey: 'shell.shortcutQuickSearch' },
+      { keys: 'Ctrl+1…9', labelKey: 'shell.shortcutPinned' },
+      { keys: '?', labelKey: 'shell.shortcutHelp' },
+      { keys: 'Esc', labelKey: 'shell.shortcutClose' },
+    );
     // B13-T8: the caller's brand adds their business unit's theme.
     this.brand.loadMine();
     // B11-T2: the person's settings apply at once; a chosen start page opens
@@ -289,6 +299,16 @@ export class ShellComponent implements OnInit {
 
   // ── Keyboard ──────────────────────────────────────────────────────────────
   onKeydown(e: KeyboardEvent): void {
+    // B10-T2: `?` shows the shortcuts; Esc hides them.
+    if (this.shortcutsOpen() && e.key === 'Escape') {
+      this.shortcutsOpen.set(false);
+      return;
+    }
+    if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey && !isTypingTarget(e.target)) {
+      e.preventDefault();
+      this.shortcutsOpen.update(open => !open);
+      return;
+    }
     // B9-T3: Ctrl+1..9 opens the pinned item with that number.
     if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && /^[1-9]$/.test(e.key)) {
       if (this.favourites.openPinned(Number(e.key))) {

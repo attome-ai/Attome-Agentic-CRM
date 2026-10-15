@@ -575,6 +575,8 @@ export const xrmEn = {
     brand: 'Attome XRM', collapseSidebar: 'Collapse sidebar', expandSidebar: 'Expand sidebar',
     filterPlaceholder: 'Filter…', closeSection: 'Close section',
     quickSearch: 'Quick search (double Shift)', search: 'Search', searchEntities: 'Search entities…',
+    shortcutsTitle: 'Keyboard shortcuts', shortcutQuickSearch: 'Quick search', shortcutPinned: 'Open a pinned favourite',
+    shortcutHelp: 'Show this list', shortcutClose: 'Close a dialog or this list',
     // B9-T3 — favourites and recent records.
     favourites: 'Favourites', addThisPage: 'Add this page', pinned: 'Pinned', teamList: 'Team',
     listEmpty: 'Nothing here yet', noFavourites: 'Add a page or a record to keep it at hand.',
