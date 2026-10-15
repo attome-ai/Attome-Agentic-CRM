@@ -1152,20 +1152,6 @@ pub(crate) async fn do_update_attribute_recorded(
     let new_external_id = attome_field::external_id_system(new_options.as_ref());
     let external_id_changed =
         attome_field::external_id_system(cur.options.as_ref()) != new_external_id;
-    if external_id_changed && new_external_id.is_some() {
-        let duplicates = provision::count_duplicate_values(
-            &state.base.db_migrator,
-            &entity_logicalname,
-            &field_logicalname,
-        )
-        .await?;
-        if duplicates > 0 {
-            return Err(AppError::Validation(format!(
-                "{field_logicalname}: {duplicates} value(s) are shared by more than one live \
-                 record, so it cannot be an external id; fix the duplicates first"
-            )));
-        }
-    }
     let new_req = body
         .is_required
         .unwrap_or_else(|| cur.required.unwrap_or(false));
@@ -1234,6 +1220,20 @@ pub(crate) async fn do_update_attribute_recorded(
     let new_lookup = resolve_lookup_target(&state.base.db_migrator, new_lookup_ref).await?;
     let new_lookup_name: Option<String> = new_lookup.as_ref().map(|(_, name)| name.clone());
     let field_logicalname = cur.logicalname.clone().ok_or(AppError::NotFound)?;
+    if external_id_changed && new_external_id.is_some() {
+        let duplicates = provision::count_duplicate_values(
+            &state.base.db_migrator,
+            &entity_logicalname,
+            &field_logicalname,
+        )
+        .await?;
+        if duplicates > 0 {
+            return Err(AppError::Validation(format!(
+                "{field_logicalname}: {duplicates} value(s) are shared by more than one live \
+                 record, so it cannot be an external id; fix the duplicates first"
+            )));
+        }
+    }
 
     let classification = provision::classify_schema_change(
         &state.base.db_migrator,
