@@ -57047,13 +57047,22 @@
           "entity"
         ],
         "summary": "F023 â€” match-or-create by unique key. Body: `{ \"match\": {...}, \"data\": {...} }`.\n`match` selects the candidate row (AND-ed equality, at least one field);\n`data` overrides/extends it â€” the merged field set is what's actually\nwritten on either branch, so a match field's value is preserved on insert\nwithout needing to repeat it in `data`.",
-        "description": "M01 Core C-06: once the natural-key resolution below has settled on\ninsert vs. update, the write itself goes through the same\n`entity_mutation::create_one`/`update_one` primitives interactive CRUD\nuses â€” never a hand-rolled `INSERT ... ON CONFLICT`. That is what buys\nupsert autovalue, state-model initial-state defaulting, rule evaluation,\nthe file-upload trust anchor (`lock_file_field_sessions`),\n`file_version`, and the change-feed row for free, and is why the\ninsert/update decision below happens BEFORE any column list is built\nrather than inside one shared SQL statement.",
+        "description": "M01 Core C-06: once the natural-key resolution below has settled on\ninsert vs. update, the write itself goes through the same\n`entity_mutation::create_one`/`update_one` primitives interactive CRUD\nuses â€” never a hand-rolled `INSERT ... ON CONFLICT`. That is what buys\nupsert autovalue, state-model initial-state defaulting, rule evaluation,\nthe file-upload trust anchor (`lock_file_field_sessions`),\n`file_version`, and the change-feed row for free, and is why the\ninsert/update decision below happens BEFORE any column list is built\nrather than inside one shared SQL statement.\n\nA29-T2: `?key=<attribute>` names the key to match on instead of a\n`match` object: an external-id attribute or one of the entity's business\nkey, with its value taken from `data`.",
         "operationId": "upsert_record",
         "parameters": [
           {
             "name": "entity",
             "in": "path",
             "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "description": "Match on this attribute's value in `data` (an external id or a\nbusiness-key attribute). Without it and without `match`, the\nentity's business key.",
+            "required": false,
             "schema": {
               "type": "string"
             }

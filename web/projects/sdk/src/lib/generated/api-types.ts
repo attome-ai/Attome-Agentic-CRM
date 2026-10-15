@@ -11156,6 +11156,10 @@ export interface paths {
          *     `file_version`, and the change-feed row for free, and is why the
          *     insert/update decision below happens BEFORE any column list is built
          *     rather than inside one shared SQL statement.
+         *
+         *     A29-T2: `?key=<attribute>` names the key to match on instead of a
+         *     `match` object: an external-id attribute or one of the entity's business
+         *     key, with its value taken from `data`.
          */
         post: operations["upsert_record"];
         delete?: never;
@@ -65885,7 +65889,14 @@ export interface operations {
     };
     upsert_record: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Match on this attribute's value in `data` (an external id or a
+                 *     business-key attribute). Without it and without `match`, the
+                 *     entity's business key.
+                 */
+                key?: string;
+            };
             header?: never;
             path: {
                 entity: string;
