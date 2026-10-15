@@ -16,6 +16,7 @@ use axum::{
 use chrono::Utc;
 use serde::Serialize;
 use serde_json::Value;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::entity_mutation::{
