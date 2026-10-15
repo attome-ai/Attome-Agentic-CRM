@@ -1464,6 +1464,21 @@ fn stale_row_version_is_rejected() {
         assert_eq!(res.status(), StatusCode::CONFLICT);
         let err = body_json(res).await;
         assert_eq!(err["error"], "version_conflict");
+        // A16-T1: the conflict says where the record is now and, when its
+        // audit captured the change, what changed: the title, to v1.
+        assert_eq!(err["current_version"].as_i64(), Some(v0 + 1), "{err}");
+        let changed = err["current_state"]["changed_attributes"]
+            .as_array()
+            .expect("changed_attributes listed");
+        if let Some(first) = changed.first() {
+            assert_eq!(first["name"], "title", "{err}");
+            assert!(
+                first["their_value"]
+                    .as_str()
+                    .is_some_and(|v| v.contains("v1")),
+                "{err}"
+            );
+        }
 
         // No If-Match → 422, never a silent last-write-wins (D-079).
         let unguarded_req = Request::builder()
