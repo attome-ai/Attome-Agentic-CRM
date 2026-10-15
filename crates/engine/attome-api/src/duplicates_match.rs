@@ -804,6 +804,7 @@ async fn is_low_risk(
 /// (migration `0218`) — a pair already recorded (in any status, including a
 /// steward's prior `dismissed`) is never re-flagged, see that migration's
 /// header. Returns whether a new row was actually inserted.
+#[allow(clippy::too_many_arguments)]
 async fn insert_candidate(
     db: &attome_db::DbPool,
     entity_name: &str,

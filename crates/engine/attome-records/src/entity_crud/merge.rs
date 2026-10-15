@@ -1042,6 +1042,7 @@ pub async fn undo_merge(
     merge_log_id: Uuid,
     expected_survivor_row_version: Option<i64>,
 ) -> Result<MergeUndone, AppError> {
+    #[allow(clippy::type_complexity)]
     let log: Option<(
         String,
         Uuid,

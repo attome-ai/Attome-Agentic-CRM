@@ -1417,6 +1417,7 @@ async fn explain_candidate(
     Path(id): Path<Uuid>,
 ) -> Result<Json<CandidateExplanation>, AppError> {
     let db = &state.base.db;
+    #[allow(clippy::type_complexity)]
     let row: Option<(Uuid, Uuid, Uuid, f64, Option<Value>, Value, f64)> = sqlx::query_as(
         "SELECT c.record_a, c.record_b, c.match_rule_id, c.score::float8, c.field_scores, \
                 r.fields, r.threshold::float8 \
