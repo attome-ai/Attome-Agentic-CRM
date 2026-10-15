@@ -15253,7 +15253,10 @@ export interface components {
             /** Format: uuid */
             thread_id: string;
         };
-        /** @enum {string} */
+        /**
+         * @description How one field of a rule compares two records.
+         * @enum {string}
+         */
         Comparator: "exact" | "normalized" | "trigram" | "embedding" | "phone" | "email" | "id" | "name" | "phonetic";
         CompareCell: {
             /** Format: double */
@@ -15915,6 +15918,8 @@ export interface components {
             fields: components["schemas"]["MatchField"][];
             is_active?: boolean;
             name: string;
+            /** @description A15-T4: `off` (the default), `warn`, `allow_with_reason` or `block`. */
+            on_save?: string | null;
             /** @description A15-T6: `hourly`, `daily` or `weekly` full scans; absent: on demand. */
             scan_schedule?: string | null;
             /** Format: double */
@@ -17110,6 +17115,19 @@ export interface components {
             score: number;
             status: string;
         };
+        /** @description One existing record a save matches. */
+        DuplicateMatch: {
+            /** Format: uuid */
+            record_id: string;
+            /** Format: uuid */
+            rule_id: string;
+            rule_name: string;
+            /**
+             * Format: double
+             * @description The rule's score for the pair, 0 to 1.
+             */
+            score: number;
+        };
         DuplicateResponse: {
             /** Format: uuid */
             id: string;
@@ -17317,8 +17335,19 @@ export interface components {
             data: {
                 [key: string]: unknown;
             };
+            /**
+             * @description A15-T4: the existing records this create or update matches under a
+             *     `warn` (or reasoned `allow_with_reason`) duplicate rule — the write
+             *     succeeded. Omitted when there are none.
+             */
+            duplicate_warnings?: components["schemas"]["DuplicateMatch"][];
             /** Format: uuid */
             entity_id: string;
+            /**
+             * Format: int64
+             * @description A15-T4: how many more matches the caller may not read. Omitted when 0.
+             */
+            hidden_duplicates?: number;
             /** Format: uuid */
             id: string;
             /**
@@ -19128,6 +19157,7 @@ export interface components {
             status: components["schemas"]["PlanStatus"];
             version: string;
         };
+        /** @description One field of a match rule (`match_rule.fields`). */
         MatchField: {
             comparator: components["schemas"]["Comparator"];
             /**
@@ -19137,18 +19167,14 @@ export interface components {
             default_country?: string | null;
             field: string;
             /**
-             * @description REVIEW-2026-09-02 finding #5 — see this module's doc comment,
-             *     "Blocking keys". `#[serde(default)]` so an existing rule saved before
-             *     this field existed deserializes as `false` on every field (its old
-             *     behavior: no blocking, full scan under the old cap) rather than
-             *     failing to parse.
+             * @description The sweep first narrows the peers to rows that agree on this field
+             *     (record-linkage blocking); absent on rules saved before it existed.
              */
             is_blocking_key?: boolean;
             /**
              * Format: double
              * @description `trigram` only — the `pg_trgm` similarity floor a pair must clear to
-             *     count as a match on this field. Defaults to `pg_trgm`'s own default
-             *     (0.3, the same constant `attome-search`'s `FuzzyLeg` uses) when absent.
+             *     count as a match on this field (0.3 when absent).
              */
             min_similarity?: number | null;
             /** Format: double */
@@ -19171,6 +19197,11 @@ export interface components {
              */
             last_scan_at?: string | null;
             name: string;
+            /**
+             * @description A15-T4: what saving a likely duplicate does: `off`, `warn`,
+             *     `allow_with_reason` or `block`.
+             */
+            on_save: string;
             /** Format: int64 */
             row_version: number;
             /** @description A15-T6: `hourly`, `daily` or `weekly`; `null`: scans run only on demand. */
@@ -21345,8 +21376,19 @@ export interface components {
                 data: {
                     [key: string]: unknown;
                 };
+                /**
+                 * @description A15-T4: the existing records this create or update matches under a
+                 *     `warn` (or reasoned `allow_with_reason`) duplicate rule — the write
+                 *     succeeded. Omitted when there are none.
+                 */
+                duplicate_warnings?: components["schemas"]["DuplicateMatch"][];
                 /** Format: uuid */
                 entity_id: string;
+                /**
+                 * Format: int64
+                 * @description A15-T4: how many more matches the caller may not read. Omitted when 0.
+                 */
+                hidden_duplicates?: number;
                 /** Format: uuid */
                 id: string;
                 /**
@@ -21801,6 +21843,11 @@ export interface components {
                  */
                 last_scan_at?: string | null;
                 name: string;
+                /**
+                 * @description A15-T4: what saving a likely duplicate does: `off`, `warn`,
+                 *     `allow_with_reason` or `block`.
+                 */
+                on_save: string;
                 /** Format: int64 */
                 row_version: number;
                 /** @description A15-T6: `hourly`, `daily` or `weekly`; `null`: scans run only on demand. */
@@ -28065,6 +28112,8 @@ export interface components {
             fields?: components["schemas"]["MatchField"][] | null;
             is_active?: boolean | null;
             name?: string | null;
+            /** @description A15-T4: `off`, `warn`, `allow_with_reason` or `block`. */
+            on_save?: string | null;
             /** Format: int64 */
             row_version: number;
             /** @description A15-T6: `hourly`, `daily`, `weekly`, or `""` to scan on demand only. */

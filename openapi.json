@@ -70729,6 +70729,7 @@
       },
       "Comparator": {
         "type": "string",
+        "description": "How one field of a rule compares two records.",
         "enum": [
           "exact",
           "normalized",
@@ -72388,6 +72389,13 @@
           },
           "name": {
             "type": "string"
+          },
+          "on_save": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A15-T4: `off` (the default), `warn`, `allow_with_reason` or `block`."
           },
           "scan_schedule": {
             "type": [
@@ -75415,6 +75423,34 @@
           }
         }
       },
+      "DuplicateMatch": {
+        "type": "object",
+        "description": "One existing record a save matches.",
+        "required": [
+          "record_id",
+          "rule_id",
+          "rule_name",
+          "score"
+        ],
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rule_name": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number",
+            "format": "double",
+            "description": "The rule's score for the pair, 0 to 1."
+          }
+        }
+      },
       "DuplicateResponse": {
         "type": "object",
         "required": [
@@ -75972,9 +76008,21 @@
               "type": "string"
             }
           },
+          "duplicate_warnings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DuplicateMatch"
+            },
+            "description": "A15-T4: the existing records this create or update matches under a\n`warn` (or reasoned `allow_with_reason`) duplicate rule — the write\nsucceeded. Omitted when there are none."
+          },
           "entity_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "hidden_duplicates": {
+            "type": "integer",
+            "format": "int64",
+            "description": "A15-T4: how many more matches the caller may not read. Omitted when 0."
           },
           "id": {
             "type": "string",
@@ -80219,6 +80267,7 @@
       },
       "MatchField": {
         "type": "object",
+        "description": "One field of a match rule (`match_rule.fields`).",
         "required": [
           "field",
           "comparator",
@@ -80240,7 +80289,7 @@
           },
           "is_blocking_key": {
             "type": "boolean",
-            "description": "REVIEW-2026-09-02 finding #5 — see this module's doc comment,\n\"Blocking keys\". `#[serde(default)]` so an existing rule saved before\nthis field existed deserializes as `false` on every field (its old\nbehavior: no blocking, full scan under the old cap) rather than\nfailing to parse."
+            "description": "The sweep first narrows the peers to rows that agree on this field\n(record-linkage blocking); absent on rules saved before it existed."
           },
           "min_similarity": {
             "type": [
@@ -80248,7 +80297,7 @@
               "null"
             ],
             "format": "double",
-            "description": "`trigram` only — the `pg_trgm` similarity floor a pair must clear to\ncount as a match on this field. Defaults to `pg_trgm`'s own default\n(0.3, the same constant `attome-search`'s `FuzzyLeg` uses) when absent."
+            "description": "`trigram` only — the `pg_trgm` similarity floor a pair must clear to\ncount as a match on this field (0.3 when absent)."
           },
           "weight": {
             "type": "number",
@@ -80269,7 +80318,8 @@
           "row_version",
           "created_at",
           "updated_at",
-          "created_by"
+          "created_by",
+          "on_save"
         ],
         "properties": {
           "auto_merge": {
@@ -80309,6 +80359,10 @@
           },
           "name": {
             "type": "string"
+          },
+          "on_save": {
+            "type": "string",
+            "description": "A15-T4: what saving a likely duplicate does: `off`, `warn`,\n`allow_with_reason` or `block`."
           },
           "row_version": {
             "type": "integer",
@@ -86301,9 +86355,21 @@
                     "type": "string"
                   }
                 },
+                "duplicate_warnings": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DuplicateMatch"
+                  },
+                  "description": "A15-T4: the existing records this create or update matches under a\n`warn` (or reasoned `allow_with_reason`) duplicate rule — the write\nsucceeded. Omitted when there are none."
+                },
                 "entity_id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "hidden_duplicates": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "A15-T4: how many more matches the caller may not read. Omitted when 0."
                 },
                 "id": {
                   "type": "string",
@@ -87541,7 +87607,8 @@
                 "row_version",
                 "created_at",
                 "updated_at",
-                "created_by"
+                "created_by",
+                "on_save"
               ],
               "properties": {
                 "auto_merge": {
@@ -87581,6 +87648,10 @@
                 },
                 "name": {
                   "type": "string"
+                },
+                "on_save": {
+                  "type": "string",
+                  "description": "A15-T4: what saving a likely duplicate does: `off`, `warn`,\n`allow_with_reason` or `block`."
                 },
                 "row_version": {
                   "type": "integer",
@@ -103808,6 +103879,13 @@
               "string",
               "null"
             ]
+          },
+          "on_save": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A15-T4: `off`, `warn`, `allow_with_reason` or `block`."
           },
           "row_version": {
             "type": "integer",
