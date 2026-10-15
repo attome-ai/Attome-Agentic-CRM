@@ -328,6 +328,27 @@ async fn upsert_record_inner(
         resolve_record_access_inputs(&state, &ctx, entity_id, &entity_name, RecordAction::Update)
             .await?;
 
+    // A15-T11: the duplicate rules judge an upsert like any save, before the
+    // transaction opens; the record the upsert would update is not its own
+    // duplicate.
+    let would_update: Option<Uuid> = {
+        let sql = format!(
+            "SELECT id FROM {table} WHERE {} AND is_active = TRUE",
+            conflict_predicates.join(" AND ")
+        );
+        let mut probe = sqlx::query_scalar::<_, Uuid>(&sql);
+        for value in &conflict_values {
+            probe = probe.bind(value.clone());
+        }
+        probe
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?
+    };
+    let (duplicates, hidden_duplicates) =
+        crate::duplicate_check::guard(&state, &ctx, entity_id, &entity_name, would_update, &merged)
+            .await?;
+
     // D-593 (U1): a polymorphic child (note, communication, tag, follow, …)
     // is written only by someone who can read the record it hangs off. The
     // parent checks need their own pool connection, so — like the access
@@ -481,8 +502,9 @@ async fn upsert_record_inner(
         .await?;
 
     let lookups = resolve_lookup_meta(&state, &ctx, &row, &attrs).await;
-    let response =
-        build_response(entity_id, row, &attrs, lookups, &ctx, &entity_name).with_warnings(warnings);
+    let response = build_response(entity_id, row, &attrs, lookups, &ctx, &entity_name)
+        .with_warnings(warnings)
+        .with_duplicates(duplicates, hidden_duplicates);
 
     Ok((status, Json(response)))
 }

@@ -1230,6 +1230,11 @@ async fn apply_ledgered_item(
     } else {
         None
     };
+    // A15-T11: a bulk or imported row meets the same duplicate rules as a
+    // save through the API, before the transaction opens.
+    if matches!(operation, "create" | "update") {
+        crate::duplicate_check::guard(state, ctx, entity_id, entity_name, existing_id, obj).await?;
+    }
     let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(state, user_id).await;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
 

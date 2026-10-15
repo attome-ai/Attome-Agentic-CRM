@@ -6616,6 +6616,156 @@ fn duplicate_routes_explain_preview_check_stats_and_undo_permission() {
     })
 }
 
+/// A15-T11: one set of duplicate rules for every way in. A `block` rule
+/// refuses a create through the API and a bulk row alike; a pair a steward
+/// dismissed is not suggested again by the next scan.
+#[test]
+fn import_and_api_share_rules_and_dismissed_pairs_stay_dismissed() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (entity, entity_id) = create_entity(&app, &admin_cookie, "dup_share").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"phone","name":"Phone","field_type":"text"}"#,
+        )
+        .await;
+        sync_registry(&state).await;
+        let call = |method: &str, uri: String, body: String| {
+            Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap()
+        };
+        // Two records before any rule, so the scan below pairs them.
+        let mut ids = Vec::new();
+        for phone in ["0501234567", "+966501234567"] {
+            let res = app
+                .clone()
+                .oneshot(call(
+                    "POST",
+                    format!("/api/v1/{entity}"),
+                    format!(r#"{{"phone":"{phone}"}}"#),
+                ))
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::CREATED);
+            ids.push(body_json(res).await["id"].as_str().unwrap().to_owned());
+        }
+        let res = app
+            .clone()
+            .oneshot(call(
+                "POST",
+                "/api/v1/admin/data/match-rules".into(),
+                format!(
+                    r#"{{"entity":"{entity}","name":"phone","threshold":1.0,"on_save":"block",
+                        "fields":[{{"field":"phone","comparator":"phone","weight":1.0,"default_country":"SA"}}]}}"#
+                ),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let rule_id: Uuid = body_json(res).await["id"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        attome_api::duplicates_match::run_match_scan(&state, rule_id, None)
+            .await
+            .expect("scan");
+
+        // Through the API: refused.
+        let res = app
+            .clone()
+            .oneshot(call(
+                "POST",
+                format!("/api/v1/{entity}"),
+                r#"{"phone":"00966501234567"}"#.into(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CONFLICT);
+
+        // As a bulk row: the row fails with the same verdict.
+        let res = app
+            .clone()
+            .oneshot(call(
+                "POST",
+                format!("/api/v1/{entity}/bulk"),
+                serde_json::json!({
+                    "operation": "create",
+                    "records": [{ "data": { "phone": "0501234567" } }],
+                })
+                .to_string(),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::ACCEPTED);
+        let bulk_id: Uuid = body_json(res).await["id"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        let admin_id: Uuid =
+            sqlx::query_scalar(&format!("SELECT created_by FROM {entity} LIMIT 1"))
+                .fetch_one(&db)
+                .await
+                .unwrap();
+        attome_records::bulk::process(&state, bulk_id, &entity, "create", Vec::new(), admin_id)
+            .await
+            .expect("bulk process");
+        let (failed, error): (i32, Option<String>) = sqlx::query_as(
+            "SELECT o.failed, (SELECT i.error FROM automation_bulk_operation_item i \
+                                WHERE i.bulk_operation_id = o.id LIMIT 1) \
+               FROM automation_bulk_operation o WHERE o.id = $1",
+        )
+        .bind(bulk_id)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(failed, 1);
+        assert!(error.unwrap_or_default().contains("duplicate"));
+
+        // A dismissed pair stays dismissed.
+        let (candidate, version): (Uuid, i64) = sqlx::query_as(
+            "SELECT id, row_version FROM duplicate_candidate WHERE entity_logicalname = $1 AND status = 'open'",
+        )
+        .bind(&entity)
+        .fetch_one(&db)
+        .await
+        .expect("the pair is open");
+        let res = app
+            .clone()
+            .oneshot(call(
+                "POST",
+                format!("/api/v1/admin/data/duplicates/{candidate}/dismiss"),
+                format!(r#"{{"row_version":{version},"note":"two branches share a number"}}"#),
+            ))
+            .await
+            .unwrap();
+        assert!(res.status().is_success(), "dismiss: {}", res.status());
+        attome_api::duplicates_match::run_match_scan(&state, rule_id, None)
+            .await
+            .expect("scan again");
+        let open: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM duplicate_candidate WHERE entity_logicalname = $1 AND status = 'open'",
+        )
+        .bind(&entity)
+        .fetch_one(&db)
+        .await
+        .unwrap();
+        assert_eq!(open, 0, "a dismissed pair is not suggested again");
+    })
+}
+
 /// D-432 / M13 — a small matching-precision fixture: an `exact`-comparator
 /// rule on `name` at `threshold = 1.0` must flag the one genuine duplicate
 /// pair and must NOT flag the unrelated third record (no false positive) —

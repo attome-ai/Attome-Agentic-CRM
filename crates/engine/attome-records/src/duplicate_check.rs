@@ -242,6 +242,26 @@ pub fn enforce(
     Ok((outcome.visible, outcome.hidden))
 }
 
+/// A15-T11: the check and its verdict for one write path, run before the
+/// write's transaction opens: `Err(409 duplicate_detected)` when a rule
+/// refuses the save, else the matches to report. The reason is the one the
+/// request gave (`Attome-Duplicate-Reason`); a bulk or imported row carries
+/// none, so a rule that wants one refuses it.
+pub async fn guard(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_id: Uuid,
+    entity_name: &str,
+    record_id: Option<Uuid>,
+    values: &Map<String, Value>,
+) -> Result<(Vec<DuplicateMatch>, i64), AppError> {
+    let reason = attome_core::match_rule::duplicate_reason();
+    enforce(
+        check(state, ctx, entity_id, entity_name, record_id, values).await?,
+        reason.as_deref(),
+    )
+}
+
 /// After a save, writes the record's keys for every active rule of its
 /// entity (the fields the write carried), so the next save sees it without
 /// waiting for the sweep. A failure is logged: the sweep writes them too.
