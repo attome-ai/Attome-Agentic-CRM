@@ -16,6 +16,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Record history: `POST /api/v1/{entity}/{id}/history/restore` puts back the values one change
   (`audit_id`) or a whole change set (`group_id`) replaced, through the ordinary update with
   `If-Match`.
+- Record history: `GET /api/v1/history/search` finds the changes to one field whose old and new
+  values meet conditions in a period (for example, the amount went above 20 last month), among the
+  live records the caller can read.
 - Clone with children: `POST /api/v1/{entity}/{id}/clone` takes `children` (entity and lookup
   field) and copies each readable child record under the new record, up to 200.
 - Clone: the result lists every record made (`undo`); `POST /api/v1/{entity}/{id}/clone/undo`

@@ -36,13 +36,19 @@
 //! back the values a change (or a whole change set) replaced, through the
 //! ordinary update with `If-Match`, so validation, rules and audit run as for
 //! any edit. A withheld (sensitive or encrypted) value cannot be restored.
+//!
+//! **Search (B2-T4).** `GET /api/v1/history/search` finds the changes to one
+//! field of one entity whose old and new values meet conditions, in a period
+//! ("where the discount went above 20 last month"), among the live records
+//! the caller can read under the entity's record rules.
 
 use std::collections::HashMap;
 
-use attome_core::{EngineState, FieldType};
+use attome_core::{EngineState, FieldType, quote_ident};
+use attome_security::RecordAction;
 use attome_security::SecurityContextExt;
 use attome_security::record_action::{Read, Update};
-use attome_server::authz::{Authorized, RecordScoped};
+use attome_server::authz::{Authorized, RecordScoped, SelfService};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, CursorPage, ErrorResponse};
 use axum::{
@@ -655,8 +661,264 @@ pub(super) async fn restore_history_route(
     ))
 }
 
+/// How a value is compared in a history search.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum HistoryCompare {
+    Eq,
+    Ne,
+    Gt,
+    Gte,
+    Lt,
+    Lte,
+    /// Text containing the value, ignoring case.
+    Contains,
+    /// Empty before (or after) the change.
+    Empty,
+}
+
+/// Query string for `GET /api/v1/history/search`.
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct HistorySearchQuery {
+    /// The entity's logical name.
+    pub entity: String,
+    /// The field's logical name.
+    pub field: String,
+    /// A condition on the value before the change.
+    pub old_op: Option<HistoryCompare>,
+    pub old_value: Option<String>,
+    /// A condition on the value after the change.
+    pub new_op: Option<HistoryCompare>,
+    pub new_value: Option<String>,
+    /// Changes on or after this moment (UTC).
+    pub from: Option<DateTime<Utc>>,
+    /// Changes before this moment (UTC).
+    pub to: Option<DateTime<Utc>>,
+    /// Opaque cursor from a previous page's `next_cursor`.
+    pub cursor: Option<String>,
+    /// Matches per page, 1..=200 (default 50).
+    pub page_size: Option<i64>,
+}
+
+/// One change a history search found.
+#[derive(Debug, Clone, Serialize, ToSchema, sqlx::FromRow)]
+pub struct HistoryMatch {
+    pub record_id: Uuid,
+    pub audit_id: Uuid,
+    pub changed_on: DateTime<Utc>,
+    pub user_display_name: Option<String>,
+    pub old_value: Option<String>,
+    pub new_value: Option<String>,
+    #[serde(skip)]
+    pub micros: i64,
+}
+
+/// The SQL condition for one side of a change: `column` compared with the
+/// bound parameter `$param`, numerically for number fields. Returns the
+/// condition. A side with no condition still names its parameter (bound to
+/// NULL), so PostgreSQL can type every parameter.
+pub fn compare_sql(
+    column: &str,
+    op: Option<HistoryCompare>,
+    numeric: bool,
+    param: usize,
+) -> String {
+    let Some(op) = op else {
+        return format!("${param}::text IS NULL");
+    };
+    let value = if numeric {
+        format!("(CASE WHEN {column} ~ '^-?[0-9]+(\\.[0-9]+)?$' THEN {column}::numeric END)")
+    } else {
+        column.to_owned()
+    };
+    let rhs = if numeric {
+        format!("${param}::numeric")
+    } else {
+        format!("${param}::text")
+    };
+    match op {
+        HistoryCompare::Eq => format!("{value} = {rhs}"),
+        HistoryCompare::Ne => format!("{value} IS DISTINCT FROM {rhs}"),
+        HistoryCompare::Gt => format!("{value} > {rhs}"),
+        HistoryCompare::Gte => format!("{value} >= {rhs}"),
+        HistoryCompare::Lt => format!("{value} < {rhs}"),
+        HistoryCompare::Lte => format!("{value} <= {rhs}"),
+        HistoryCompare::Contains => {
+            format!(
+                "{column} ILIKE '%' || replace(replace(${param}::text, '%', '\\%'), '_', '\\_') || '%'"
+            )
+        }
+        HistoryCompare::Empty => {
+            format!("(COALESCE({column}, '') = '' AND ${param}::text IS NULL)")
+        }
+    }
+}
+
+/// The value bound for one side: `None` for `empty` or no condition; a
+/// number side must parse as a number.
+fn compare_value(
+    op: Option<HistoryCompare>,
+    value: Option<&str>,
+    numeric: bool,
+    side: &str,
+) -> Result<Option<String>, AppError> {
+    match op {
+        None | Some(HistoryCompare::Empty) => Ok(None),
+        Some(op) => {
+            let value = value
+                .map(str::trim)
+                .filter(|v| !v.is_empty())
+                .ok_or_else(|| AppError::Validation(format!("{side}_value is required")))?;
+            if numeric && op != HistoryCompare::Contains && value.parse::<f64>().is_err() {
+                return Err(AppError::Validation(format!(
+                    "{side}_value must be a number"
+                )));
+            }
+            Ok(Some(value.to_owned()))
+        }
+    }
+}
+
+/// B2-T4: the changes to one field whose values meet the conditions, newest
+/// first, among the live records `ctx` can read.
+pub async fn search_history(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    query: &HistorySearchQuery,
+) -> Result<CursorPage<HistoryMatch>, AppError> {
+    let cursor = match query.cursor.as_deref().map(str::trim) {
+        None | Some("") => None,
+        Some(raw) => {
+            let (micros, tag, id) = decode_cursor(raw)?;
+            if tag != SEARCH_CURSOR_TAG {
+                return Err(AppError::Validation("malformed cursor".into()));
+            }
+            Some((micros_to_datetime(micros)?, id))
+        }
+    };
+    let page_size = clamp_page_size(query.page_size);
+    let (entity_id, entity, attrs, append_only) = resolve_entity(state, &query.entity).await?;
+    ctx.require(&entity, "read")?;
+    let attr = readable_attr(ctx, &entity, &attrs, query.field.trim()).ok_or(AppError::NotFound)?;
+    if attr.is_sensitive {
+        return Err(AppError::Validation(
+            "a sensitive field's values cannot be searched".into(),
+        ));
+    }
+    let numeric = matches!(
+        FieldType::from_int(attr.field_type_int),
+        Some(FieldType::Number | FieldType::Currency)
+    );
+    let old_value = compare_value(query.old_op, query.old_value.as_deref(), numeric, "old")?;
+    let new_value = compare_value(query.new_op, query.new_value.as_deref(), numeric, "new")?;
+    let access_level = attome_security::resolve_entity_access_level(
+        &state.base.db,
+        ctx.user_id,
+        entity_id,
+        &entity,
+        RecordAction::Read,
+    )
+    .await?;
+    let pred = attome_security::rls_predicate(
+        ctx,
+        entity_id,
+        "",
+        access_level,
+        RecordAction::Read.share_capability(),
+        10,
+    );
+    let table = quote_ident(&entity);
+    let live = if append_only {
+        ""
+    } else {
+        "AND is_active = true"
+    };
+    let sql = format!(
+        "SELECT c.record_id, c.audit_id, c.changed_on, c.user_display_name, c.old_value, \
+                c.new_value, c.micros \
+         FROM (SELECT h.record_id, h.id AS audit_id, h.changed_on, h.user_display_name, \
+                      d.old_value, d.new_value, \
+                      (EXTRACT(EPOCH FROM h.changed_on) * 1000000)::bigint AS micros \
+               FROM audit_header h JOIN audit_detail d ON d.audit_ref = h.id \
+               WHERE h.entity_name = $1 AND d.field_name = $2 AND h.changed_on IS NOT NULL \
+                 AND d.value_mode IS NULL AND COALESCE(d.is_sensitive, false) = false \
+                 AND ($3::timestamptz IS NULL OR h.changed_on >= $3) \
+                 AND ($4::timestamptz IS NULL OR h.changed_on < $4) \
+                 AND ({old}) AND ({new}) \
+                 AND ($8::timestamptz IS NULL OR h.changed_on < $8 \
+                      OR (h.changed_on = $8 AND h.id < $9::uuid))) c \
+         WHERE c.record_id IN (SELECT id FROM {table} WHERE true {live} {rls}) \
+         ORDER BY c.changed_on DESC, c.audit_id DESC LIMIT $5",
+        old = compare_sql("d.old_value", query.old_op, numeric, 6),
+        new = compare_sql("d.new_value", query.new_op, numeric, 7),
+        rls = pred.as_ref().map_or("", |p| p.sql.as_str()),
+    );
+    let mut q = sqlx::query_as::<_, HistoryMatch>(&sql)
+        .bind(&entity)
+        .bind(&attr.logicalname)
+        .bind(query.from)
+        .bind(query.to)
+        .bind(page_size + 1)
+        .bind(old_value)
+        .bind(new_value)
+        .bind(cursor.map(|(ts, _)| ts))
+        .bind(cursor.map(|(_, id)| id));
+    if let Some(p) = &pred {
+        q = q
+            .bind(p.binds.entity_ref)
+            .bind(p.binds.caller_id)
+            .bind(&p.binds.team_ids)
+            .bind(p.binds.capability)
+            .bind(&p.binds.accessible_org_ids)
+            .bind(&p.binds.subordinate_user_ids);
+    }
+    let mut items = q
+        .fetch_all(&state.base.db)
+        .await
+        .map_err(attome_db::classify)?;
+    let has_more = items.len() as i64 > page_size;
+    items.truncate(page_size as usize);
+    let next_cursor = if has_more {
+        items
+            .last()
+            .map(|m| encode_cursor(m.micros, SEARCH_CURSOR_TAG, m.audit_id))
+    } else {
+        None
+    };
+    Ok(CursorPage::new(items, next_cursor))
+}
+
+const SEARCH_CURSOR_TAG: &str = "hsearch";
+
+/// B2-T4: finds the changes to one field of an entity whose old and new
+/// values meet the conditions, in a period, newest first, among the live
+/// records the caller can read. Sensitive and encrypted values are never
+/// searched.
+#[utoipa::path(
+    get,
+    path = "/api/v1/history/search",
+    tag = "entity",
+    params(HistorySearchQuery),
+    responses(
+        (status = 200, description = "One keyset page of matching changes", body = CursorPage<HistoryMatch>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the entity's read privilege", body = ErrorResponse),
+        (status = 404, description = "No such entity, or a field the caller cannot read", body = ErrorResponse),
+        (status = 422, description = "A missing or non-numeric value, a sensitive field, or a malformed cursor", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn search_history_route(
+    State(state): State<EngineState>,
+    ctx: Authorized<SelfService>,
+    Query(query): Query<HistorySearchQuery>,
+) -> Result<Json<CursorPage<HistoryMatch>>, AppError> {
+    Ok(Json(search_history(&state, &ctx, &query).await?))
+}
+
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(get_record_history, restore_history_route))]
+#[openapi(paths(get_record_history, restore_history_route, search_history_route))]
 struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -716,6 +978,25 @@ mod tests {
         assert_eq!(
             restore_value(Some(FieldType::Number), Some("n/a")),
             Value::String("n/a".into())
+        );
+    }
+
+    #[test]
+    fn history_search_compares_numbers_and_text() {
+        let gt = compare_sql("d.new_value", Some(HistoryCompare::Gt), true, 7);
+        assert!(gt.contains("::numeric END) > $7::numeric"), "{gt}");
+        assert_eq!(compare_sql("d.old_value", None, true, 6), "$6::text IS NULL");
+        let eq = compare_sql("d.old_value", Some(HistoryCompare::Eq), false, 6);
+        assert_eq!(eq, "d.old_value = $6::text");
+        assert!(compare_value(Some(HistoryCompare::Gt), Some("abc"), true, "new").is_err());
+        assert!(compare_value(Some(HistoryCompare::Gt), None, false, "new").is_err());
+        assert_eq!(
+            compare_value(Some(HistoryCompare::Lte), Some(" 20 "), true, "old").unwrap(),
+            Some("20".to_owned())
+        );
+        assert_eq!(
+            compare_value(Some(HistoryCompare::Empty), None, false, "old").unwrap(),
+            None
         );
     }
 

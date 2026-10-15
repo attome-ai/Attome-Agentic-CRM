@@ -3243,6 +3243,99 @@ fn history_restore_puts_back_a_replaced_value() {
     })
 }
 
+/// B2-T4: the history search finds the record whose amount crossed 20,
+/// and not one that stayed below it.
+#[test]
+fn history_search_finds_a_value_crossing() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let (logicalname, admin_cookie, app) = provision_test_entity(system, "histsearch").await;
+        let send =
+            |method: &str, uri: String, if_match: Option<i64>, body: Option<serde_json::Value>| {
+                let mut req = Request::builder()
+                    .method(method)
+                    .uri(uri)
+                    .header("cookie", &admin_cookie)
+                    .header("content-type", "application/json");
+                if let Some(version) = if_match {
+                    req = req.header("if-match", format!("\"{version}\""));
+                }
+                req.body(body.map_or_else(Body::empty, |b| Body::from(b.to_string())))
+                    .unwrap()
+            };
+        let mut ids = Vec::new();
+        for (from, to) in [(10, 25), (5, 15)] {
+            let res = app
+                .clone()
+                .oneshot(send(
+                    "POST",
+                    format!("/api/v1/{logicalname}"),
+                    None,
+                    Some(serde_json::json!({"title": "deal", "amount": from})),
+                ))
+                .await
+                .expect("create");
+            assert_eq!(res.status(), StatusCode::CREATED);
+            let created = body_json(res).await;
+            let id = created["id"].as_str().expect("id").to_owned();
+            let version = created["row_version"].as_i64().expect("version");
+            let res = app
+                .clone()
+                .oneshot(send(
+                    "PATCH",
+                    format!("/api/v1/{logicalname}/{id}"),
+                    Some(version),
+                    Some(serde_json::json!({"amount": to})),
+                ))
+                .await
+                .expect("edit");
+            assert_eq!(res.status(), StatusCode::OK);
+            ids.push(id);
+        }
+        attome_audit::chainer::run_once(&state.base.db, state.audit_signer.as_deref(), 1000, None)
+            .await
+            .expect("drain the audit ingest queue");
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "GET",
+                format!(
+                    "/api/v1/history/search?entity={logicalname}&field=amount\
+                     &old_op=lte&old_value=20&new_op=gt&new_value=20"
+                ),
+                None,
+                None,
+            ))
+            .await
+            .expect("search");
+        assert_eq!(res.status(), StatusCode::OK);
+        let found = body_json(res).await;
+        let records: Vec<&str> = found["items"]
+            .as_array()
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|m| m["record_id"].as_str())
+                    .collect()
+            })
+            .unwrap_or_default();
+        assert_eq!(records, vec![ids[0].as_str()], "{found}");
+
+        let res = app
+            .oneshot(send(
+                "GET",
+                format!("/api/v1/history/search?entity={logicalname}&field=amount&new_op=gt&new_value=abc"),
+                None,
+                None,
+            ))
+            .await
+            .expect("bad search");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    })
+}
+
 /// F026 (P2.2): `POST .../restore` undeletes a soft-deleted record. Delete
 /// now also bumps `row_version` (P-data-lifecycle's `on_target_delete` work
 /// stamps `modified_by`/`modified_at`/`row_version` on every soft-delete, not
