@@ -2268,8 +2268,6 @@ mod tests {
             mode: None,
             stage: None,
             enforce_from: None,
-            stage: None,
-            enforce_from: None,
             ordinal: 0,
         }
     }
@@ -2283,8 +2281,6 @@ mod tests {
             value: None,
             expression: None,
             mode: None,
-            stage: None,
-            enforce_from: None,
             stage: None,
             enforce_from: None,
             ordinal: 1,

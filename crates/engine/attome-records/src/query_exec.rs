@@ -1882,7 +1882,7 @@ pub async fn execute_stored_query_with_definition(
 
     // A13-T2: a large matching set gets the planner's estimate, not a count.
     let estimated_total = if body.include_total && !use_cursor {
-        let estimate = estimate_rows(&mut *tx, &base_sql, &where_sql, &params).await?;
+        let estimate = estimate_rows(&mut *tx, base_sql, &where_sql, &params).await?;
         (estimate >= EXACT_TOTAL_LIMIT).then_some(estimate)
     } else {
         None

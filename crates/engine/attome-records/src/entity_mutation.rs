@@ -1914,9 +1914,7 @@ pub async fn create_one_as(
 
     // B4-T3: the tags the rules that hold add or remove.
     if let Some(pipeline) = &rules {
-        pipeline
-            .apply_tags(&mut **tx, record_id, stamp.created_by)
-            .await?;
+        pipeline.apply_tags(tx, record_id, stamp.created_by).await?;
         pipeline
             .write_overrides(tx, record_id, stamp.created_by)
             .await?;
@@ -2867,9 +2865,7 @@ pub async fn update_one_as(
 
     // B4-T3: the tags the rules that hold add or remove.
     if let Some(pipeline) = &rules {
-        pipeline
-            .apply_tags(&mut **tx, record_id, modified_by)
-            .await?;
+        pipeline.apply_tags(tx, record_id, modified_by).await?;
         pipeline.write_overrides(tx, record_id, modified_by).await?;
     }
 

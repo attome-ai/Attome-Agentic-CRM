@@ -567,6 +567,8 @@ mod tests {
             value: None,
             expression: None,
             set_mode: None,
+            stage: None,
+            enforce_from: None,
         }
     }
 

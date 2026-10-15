@@ -487,6 +487,9 @@ pub fn restore_value(field_type: Option<FieldType>, raw: Option<&str>) -> Value 
     }
 }
 
+/// One `audit_detail` row: its audit, field, old value, sensitivity and value mode.
+type BeforeRow = (Uuid, String, Option<String>, Option<bool>, Option<i16>);
+
 /// The values a change, or a change set, replaced on this record, as an
 /// update body: for each field, its value before the earliest of them.
 async fn values_before(
@@ -553,7 +556,7 @@ async fn values_before(
                 .map(|a| (a.logicalname.as_str(), a))
         })
         .collect();
-    let mut rows: Vec<(Uuid, String, Option<String>, Option<bool>, Option<i16>)> = sqlx::query_as(
+    let mut rows: Vec<BeforeRow> = sqlx::query_as(
         "SELECT d.audit_ref, d.field_name::text, d.old_value, d.is_sensitive, d.value_mode \
              FROM audit_detail d WHERE d.audit_ref = ANY($1) ORDER BY d.id",
     )
