@@ -1681,6 +1681,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/data/duplicates/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * `GET /api/v1/admin/data/duplicates/stats` — A15-T7: duplicate pairs per
+         *     entity by status (open, merged, dismissed), for the data-quality view.
+         */
+        get: operations["duplicate_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/data/duplicates/{id}": {
         parameters: {
             query?: never;
@@ -1714,6 +1734,27 @@ export interface paths {
          *     every status, not only `open`).
          */
         post: operations["dismiss_candidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data/duplicates/{id}/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * `GET /api/v1/admin/data/duplicates/{id}/explain` — A15-T7: why a pair was
+         *     flagged: per field of its rule, the comparator, the weight, the score the
+         *     sweep stored and, for key comparators, both records' keys.
+         */
+        get: operations["explain_candidate"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1791,6 +1832,29 @@ export interface paths {
         put?: never;
         /** `POST /api/v1/admin/data/match-rules` — `system.admin` only. */
         post: operations["create_match_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/data/match-rules/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/admin/data/match-rules/preview` — A15-T7: how many pairs a
+         *     draft rule would flag over a sample of the entity's live records (5,000
+         *     rows), with up to 20 examples. Pairs are found on the fields' keys
+         *     (exact, normalized and key comparators; trigram fields count as no
+         *     evidence here) and scored as the sweep scores them. Writes nothing.
+         */
+        post: operations["preview_match_rule"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8515,6 +8579,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/data/duplicates/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/data/duplicates/check` — A15-T7: what saving these values
+         *     would meet under the entity's duplicate rules (the check a create or
+         *     update runs), without saving anything. The caller needs read access to
+         *     the entity.
+         */
+        post: operations["check_duplicates"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/data/duplicates/for-record": {
         parameters: {
             query?: never;
@@ -11149,6 +11235,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/merges/{merge_id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/{entity}/merges/{merge_id}/undo` — undoes a merge as one
+         *     unit (see [`undo_merge`]). Needs `{entity}.update` and `{entity}.delete`
+         *     (it rewrites the survivor and brings the merged records back) and access
+         *     to the survivor; `If-Match` may carry the survivor's row version.
+         */
+        post: operations["undo_merge_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/new": {
         parameters: {
             query?: never;
@@ -11664,6 +11772,26 @@ export interface paths {
          *     meant to fix.
          */
         post: operations["merge_records"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/{id}/merge/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/{entity}/{id}/merge/preview` — what merging `duplicate_id`
+         *     into the record at `id` would do (see [`merge_preview`]); writes nothing.
+         */
+        post: operations["merge_preview_route"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14637,6 +14765,17 @@ export interface components {
             /** Format: uuid */
             turn_id: string;
         };
+        CandidateExplanation: {
+            /** Format: uuid */
+            candidate_id: string;
+            fields: components["schemas"]["FieldExplanation"][];
+            /** Format: uuid */
+            rule_id: string;
+            /** Format: double */
+            score: number;
+            /** Format: double */
+            threshold: number;
+        };
         /**
          * @description One pack that contributed to a session's allowed-action set, with the
          *     `row_version` it held at the moment the session started.
@@ -17226,6 +17365,29 @@ export interface components {
             score: number;
             status: string;
         };
+        DuplicateCheckBody: {
+            entity: string;
+            /**
+             * Format: uuid
+             * @description The record being edited, never its own duplicate.
+             */
+            record_id?: string | null;
+            /** @description The record's values, as a create or update would send them. */
+            values: Record<string, never>;
+        };
+        DuplicateCheckResult: {
+            /**
+             * @description What saving would do: `warn`, `allow_with_reason` or `block`; `null`
+             *     when nothing matches.
+             */
+            action?: string | null;
+            /**
+             * Format: int64
+             * @description Matches the caller may not read.
+             */
+            hidden: number;
+            matches: components["schemas"]["DuplicateMatch"][];
+        };
         /** @description One existing record a save matches. */
         DuplicateMatch: {
             /** Format: uuid */
@@ -17242,6 +17404,15 @@ export interface components {
         DuplicateResponse: {
             /** Format: uuid */
             id: string;
+        };
+        DuplicateStats: {
+            /** Format: int64 */
+            dismissed: number;
+            entity: string;
+            /** Format: int64 */
+            merged: number;
+            /** Format: int64 */
+            open: number;
         };
         /** @description One change to one attribute. */
         EditOperation: {
@@ -18156,6 +18327,23 @@ export interface components {
             field: string;
             /** @description Human-readable, English, server-side detail for this field. */
             message: string;
+        };
+        FieldExplanation: {
+            comparator: components["schemas"]["Comparator"];
+            field: string;
+            /**
+             * @description Each record's key for a key comparator (phone, email, id, name,
+             *     phonetic); `null` otherwise or when the record has none.
+             */
+            key_a?: string | null;
+            key_b?: string | null;
+            /**
+             * Format: double
+             * @description 1 matched, 0 differed, `null` no evidence (a side without a value).
+             */
+            score?: number | null;
+            /** Format: double */
+            weight: number;
         };
         /**
          * @description `details` of a `field_locked` / `field_locked_required` response: every
@@ -19422,6 +19610,29 @@ export interface components {
              */
             canonical_id: string;
         };
+        /** @description One relationship a merge would move rows along. */
+        MergeMove: {
+            /** Format: int64 */
+            count: number;
+            /** @description `entity.field`. */
+            relationship: string;
+        };
+        /** @description A15-T5: what merging would do, without doing it. */
+        MergePreview: {
+            /** @description Fields a `manual` survivorship rule leaves to a person. */
+            conflicts: string[];
+            /**
+             * @description The flows an update of the survivor or a delete of the merged record
+             *     would start.
+             */
+            flows: string[];
+            /** @description `soft_delete` or `keep_merged`. */
+            merge_mode: string;
+            /** @description Rows that would move from the merged record to the survivor. */
+            moved: components["schemas"]["MergeMove"][];
+            /** @description The survivor's values after the merge. */
+            result: Record<string, never>;
+        };
         /**
          * @description D-432 / M13 — the merge endpoint's response. `#[serde(flatten)]` keeps
          *     every field an existing caller already reads (`id`, `data`, `row_version`,
@@ -19450,6 +19661,17 @@ export interface components {
              * @description The shared tag to merge into.
              */
             into: string;
+        };
+        /** @description A15-T5: what an undo restored. */
+        MergeUndone: {
+            merged_ids: string[];
+            /**
+             * Format: int64
+             * @description Rows moved back to the merged records.
+             */
+            rows_moved_back: number;
+            /** Format: uuid */
+            survivor_id: string;
         };
         MessageView: {
             /**
@@ -21404,6 +21626,24 @@ export interface components {
                 /** Format: double */
                 score: number;
                 status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_DuplicateStats: {
+            items: {
+                /** Format: int64 */
+                dismissed: number;
+                entity: string;
+                /** Format: int64 */
+                merged: number;
+                /** Format: int64 */
+                open: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -26011,6 +26251,34 @@ export interface components {
             code: string;
             message: string;
             path: string;
+        };
+        RulePreview: {
+            /** @description Up to 20 of them, highest score first. */
+            examples: components["schemas"]["RulePreviewPair"][];
+            /**
+             * Format: int64
+             * @description Pairs the rule would flag among them.
+             */
+            pairs: number;
+            /**
+             * Format: int64
+             * @description Rows read (at most 5,000).
+             */
+            sampled: number;
+        };
+        RulePreviewBody: {
+            entity: string;
+            fields: components["schemas"]["MatchField"][];
+            /** Format: double */
+            threshold: number;
+        };
+        RulePreviewPair: {
+            /** Format: uuid */
+            record_a: string;
+            /** Format: uuid */
+            record_b: string;
+            /** Format: double */
+            score: number;
         };
         /** @description One role a business rule applies to. */
         RuleRoleRef: {
@@ -35212,6 +35480,47 @@ export interface operations {
             };
         };
     };
+    duplicate_stats: {
+        parameters: {
+            query?: {
+                /** @description One entity; absent: every entity. */
+                entity?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Counts per entity */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DuplicateStats"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_candidate: {
         parameters: {
             query?: never;
@@ -35314,6 +35623,55 @@ export interface operations {
             };
             /** @description row_version is stale, or candidate already resolved */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    explain_candidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The per-field explanation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateExplanation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such candidate */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -35727,6 +36085,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MatchRuleView"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    preview_match_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RulePreviewBody"];
+            };
+        };
+        responses: {
+            /** @description Pairs the draft rule would flag */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RulePreview"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -57860,6 +58269,57 @@ export interface operations {
             };
         };
     };
+    check_duplicates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DuplicateCheckBody"];
+            };
+        };
+        responses: {
+            /** @description The matches and what saving would do */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicateCheckResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     candidates_for_record: {
         parameters: {
             query?: never;
@@ -66310,6 +66770,68 @@ export interface operations {
             };
         };
     };
+    undo_merge_route: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The survivor's row_version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                entity: string;
+                merge_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The merge is undone */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergeUndone"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such merge of this entity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The survivor changed since the merge, or it was undone already */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     new_record_defaults: {
         parameters: {
             query?: never;
@@ -67923,6 +68445,65 @@ export interface operations {
             };
             /** @description If-Match row_version did not match the canonical record */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    merge_preview_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the merge would move, start and produce */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergePreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A record is missing or not visible to the caller */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

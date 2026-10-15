@@ -9561,6 +9561,66 @@
         ]
       }
     },
+    "/api/v1/admin/data/duplicates/stats": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`GET /api/v1/admin/data/duplicates/stats` — A15-T7: duplicate pairs per\nentity by status (open, merged, dismissed), for the data-quality view.",
+        "operationId": "duplicate_stats",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "query",
+            "description": "One entity; absent: every entity.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Counts per entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DuplicateStats"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/data/duplicates/{id}": {
       "get": {
         "tags": [
@@ -9728,6 +9788,76 @@
           ],
           "policy": "entity_policy"
         }
+      }
+    },
+    "/api/v1/admin/data/duplicates/{id}/explain": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`GET /api/v1/admin/data/duplicates/{id}/explain` — A15-T7: why a pair was\nflagged: per field of its rule, the comparator, the weight, the score the\nsweep stored and, for key comparators, both records' keys.",
+        "operationId": "explain_candidate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The per-field explanation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateExplanation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such candidate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/api/v1/admin/data/duplicates/{id}/merge": {
@@ -10418,6 +10548,80 @@
             }
           ],
           "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/data/match-rules/preview": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`POST /api/v1/admin/data/match-rules/preview` — A15-T7: how many pairs a\ndraft rule would flag over a sample of the entity's live records (5,000\nrows), with up to 20 examples. Pairs are found on the fields' keys\n(exact, normalized and key comparators; trigram fields count as no\nevidence here) and scored as the sweep scores them. Writes nothing.",
+        "operationId": "preview_match_rule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RulePreviewBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Pairs the draft rule would flag",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RulePreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "scores a draft rule over a sample and writes nothing",
+          "reason": "dry_run",
+          "via": null
         }
       }
     },
@@ -44160,6 +44364,80 @@
         }
       }
     },
+    "/api/v1/data/duplicates/check": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "`POST /api/v1/data/duplicates/check` — A15-T7: what saving these values\nwould meet under the entity's duplicate rules (the check a create or\nupdate runs), without saving anything. The caller needs read access to\nthe entity.",
+        "operationId": "check_duplicates",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DuplicateCheckBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The matches and what saving would do",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DuplicateCheckResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "looks the values up under the duplicate rules and writes nothing",
+          "reason": "read_only",
+          "via": null
+        }
+      }
+    },
     "/api/v1/data/duplicates/for-record": {
       "get": {
         "tags": [
@@ -57158,6 +57436,119 @@
         ]
       }
     },
+    "/api/v1/{entity}/merges/{merge_id}/undo": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "`POST /api/v1/{entity}/merges/{merge_id}/undo` — undoes a merge as one\nunit (see [`undo_merge`]). Needs `{entity}.update` and `{entity}.delete`\n(it rewrites the survivor and brings the merged records back) and access\nto the survivor; `If-Match` may carry the survivor's row version.",
+        "operationId": "undo_merge_route",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "merge_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The survivor's row_version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The merge is undone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MergeUndone"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such merge of this entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The survivor changed since the merge, or it was undone already",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            },
+            {
+              "category": "entity",
+              "operation": "restore"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/{entity}/new": {
       "get": {
         "tags": [
@@ -59884,6 +60275,99 @@
             }
           ],
           "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/{entity}/{id}/merge/preview": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "`POST /api/v1/{entity}/{id}/merge/preview` — what merging `duplicate_id`\ninto the record at `id` would do (see [`merge_preview`]); writes nothing.",
+        "operationId": "merge_preview_route",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the merge would move, start and produce",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MergePreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A record is missing or not visible to the caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "runs survivorship and counts related rows without writing",
+          "reason": "dry_run",
+          "via": null
         }
       }
     },
@@ -69372,6 +69856,40 @@
           }
         }
       },
+      "CandidateExplanation": {
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "rule_id",
+          "score",
+          "threshold",
+          "fields"
+        ],
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldExplanation"
+            }
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "score": {
+            "type": "number",
+            "format": "double"
+          },
+          "threshold": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
       "CapabilityPackRef": {
         "type": "object",
         "description": "One pack that contributed to a session's allowed-action set, with the\n`row_version` it held at the moment the session started.\n\nThe id alone is not enough: packs are versioned, so \"which capabilities did\nthis session hold\" must be answerable later without depending on what the\npack says now (D-556 §2). This is the same `{ref, row_version}` pair\n`PolicySnapshot::policy_ref`/`policy_row_version` already carries.",
@@ -75826,6 +76344,57 @@
           }
         }
       },
+      "DuplicateCheckBody": {
+        "type": "object",
+        "required": [
+          "entity",
+          "values"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "record_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The record being edited, never its own duplicate."
+          },
+          "values": {
+            "type": "object",
+            "description": "The record's values, as a create or update would send them."
+          }
+        }
+      },
+      "DuplicateCheckResult": {
+        "type": "object",
+        "required": [
+          "matches",
+          "hidden"
+        ],
+        "properties": {
+          "action": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "What saving would do: `warn`, `allow_with_reason` or `block`; `null`\nwhen nothing matches."
+          },
+          "hidden": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Matches the caller may not read."
+          },
+          "matches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DuplicateMatch"
+            }
+          }
+        }
+      },
       "DuplicateMatch": {
         "type": "object",
         "description": "One existing record a save matches.",
@@ -75863,6 +76432,32 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "DuplicateStats": {
+        "type": "object",
+        "required": [
+          "entity",
+          "open",
+          "merged",
+          "dismissed"
+        ],
+        "properties": {
+          "dismissed": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "merged": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "open": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -77902,6 +78497,47 @@
           "message": {
             "type": "string",
             "description": "Human-readable, English, server-side detail for this field."
+          }
+        }
+      },
+      "FieldExplanation": {
+        "type": "object",
+        "required": [
+          "field",
+          "comparator",
+          "weight"
+        ],
+        "properties": {
+          "comparator": {
+            "$ref": "#/components/schemas/Comparator"
+          },
+          "field": {
+            "type": "string"
+          },
+          "key_a": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Each record's key for a key comparator (phone, email, id, name,\nphonetic); `null` otherwise or when the record has none."
+          },
+          "key_b": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "score": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "description": "1 matched, 0 differed, `null` no evidence (a side without a value)."
+          },
+          "weight": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
@@ -81050,6 +81686,66 @@
           }
         }
       },
+      "MergeMove": {
+        "type": "object",
+        "description": "One relationship a merge would move rows along.",
+        "required": [
+          "relationship",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "relationship": {
+            "type": "string",
+            "description": "`entity.field`."
+          }
+        }
+      },
+      "MergePreview": {
+        "type": "object",
+        "description": "A15-T5: what merging would do, without doing it.",
+        "required": [
+          "moved",
+          "flows",
+          "result",
+          "conflicts",
+          "merge_mode"
+        ],
+        "properties": {
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Fields a `manual` survivorship rule leaves to a person."
+          },
+          "flows": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The flows an update of the survivor or a delete of the merged record\nwould start."
+          },
+          "merge_mode": {
+            "type": "string",
+            "description": "`soft_delete` or `keep_merged`."
+          },
+          "moved": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MergeMove"
+            },
+            "description": "Rows that would move from the merged record to the survivor."
+          },
+          "result": {
+            "type": "object",
+            "description": "The survivor's values after the merge."
+          }
+        }
+      },
       "MergeResponse": {
         "allOf": [
           {
@@ -81090,6 +81786,33 @@
             "type": "string",
             "format": "uuid",
             "description": "The shared tag to merge into."
+          }
+        }
+      },
+      "MergeUndone": {
+        "type": "object",
+        "description": "A15-T5: what an undo restored.",
+        "required": [
+          "survivor_id",
+          "merged_ids",
+          "rows_moved_back"
+        ],
+        "properties": {
+          "merged_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "rows_moved_back": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Rows moved back to the merged records."
+          },
+          "survivor_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -86518,6 +87241,59 @@
                 },
                 "status": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_DuplicateStats": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "entity",
+                "open",
+                "merged",
+                "dismissed"
+              ],
+              "properties": {
+                "dismissed": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "merged": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "open": {
+                  "type": "integer",
+                  "format": "int64"
                 }
               }
             }
@@ -98543,6 +99319,78 @@
           },
           "path": {
             "type": "string"
+          }
+        }
+      },
+      "RulePreview": {
+        "type": "object",
+        "required": [
+          "sampled",
+          "pairs",
+          "examples"
+        ],
+        "properties": {
+          "examples": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RulePreviewPair"
+            },
+            "description": "Up to 20 of them, highest score first."
+          },
+          "pairs": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Pairs the rule would flag among them."
+          },
+          "sampled": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Rows read (at most 5,000)."
+          }
+        }
+      },
+      "RulePreviewBody": {
+        "type": "object",
+        "required": [
+          "entity",
+          "fields",
+          "threshold"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MatchField"
+            }
+          },
+          "threshold": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "RulePreviewPair": {
+        "type": "object",
+        "required": [
+          "record_a",
+          "record_b",
+          "score"
+        ],
+        "properties": {
+          "record_a": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "record_b": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "score": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
