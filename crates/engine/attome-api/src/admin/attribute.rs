@@ -1523,7 +1523,8 @@ pub(super) async fn attribute_index_status(
     let attribute: Option<(String, String, bool)> = sqlx::query_as(
         r#"SELECT e.logicalname,
                   a.logicalname,
-                  (COALESCE(a.is_sortable, false) OR COALESCE(a.is_filterable, false))
+                  (COALESCE(a.is_sortable, false) OR COALESCE(a.is_filterable, false)
+                   OR a."type" = 11)
              FROM attribute_info a
              JOIN entity_info e ON e.id = a.entity_ref
             WHERE a.id = $1 AND a.entity_ref = $2
@@ -1542,7 +1543,8 @@ pub(super) async fn attribute_index_status(
         }));
     }
 
-    let index_name = format!("idx_{entity_logicalname}_{field_logicalname}_sf");
+    // A lookup is always indexed (A7-T3), and a long name is hashed to fit.
+    let index_name = provision::attribute_index_name(&entity_logicalname, &field_logicalname)?;
     let building: bool = sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM pg_stat_progress_create_index p JOIN pg_class c ON c.oid = p.index_relid WHERE c.relname = $1)",
     )

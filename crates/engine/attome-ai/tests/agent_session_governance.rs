@@ -1293,7 +1293,8 @@ async fn editing_or_deleting_the_policy_never_changes_a_started_sessions_snapsho
 
 /// Migration 0466's invariants hold for every row, whatever writes it:
 /// - a policy reference always carries its `row_version`, and the reverse;
-/// - only a definition-started session carries a policy;
+/// - (a session opened from a published v2 agent object carries a policy with
+///   no definition row, so migration 0026 dropped that invariant);
 /// - every limit that is present is positive (D-512 §2: zero and negative are
 ///   refused).
 ///
@@ -1323,11 +1324,6 @@ async fn the_database_refuses_an_inconsistent_policy_snapshot() {
                 policy_ref: None,
                 ..consistent.clone()
             },
-        ),
-        (
-            "a policy on a session not started from a definition",
-            None,
-            consistent.clone(),
         ),
         (
             "a negative limit",

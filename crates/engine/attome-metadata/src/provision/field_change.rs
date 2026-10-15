@@ -428,8 +428,8 @@ pub async fn rename_column_in_tx(
     .await
     .map_err(map_ddl_error)?;
 
-    let old_index = format!("idx_{}_{}_sf", row.entity, row.field);
-    let new_index = format!("idx_{}_{}_sf", row.entity, new_name);
+    let old_index = attribute_index_name(&row.entity, &row.field)?;
+    let new_index = attribute_index_name(&row.entity, new_name)?;
     let index_exists: bool = sqlx::query_scalar("SELECT to_regclass(quote_ident($1)) IS NOT NULL")
         .bind(&old_index)
         .fetch_one(&mut **tx)
