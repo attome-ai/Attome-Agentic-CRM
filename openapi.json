@@ -54906,6 +54906,94 @@
         ]
       }
     },
+    "/api/v1/{entity}/clone": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B7-T2: copies up to 50 records, each as a single clone with the same\n`overrides` would; the ones that could not be copied are listed.",
+        "operationId": "bulk_clone_route",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkCloneRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The copies made, and the records that could not be copied",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkCloneResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not create records of this entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No ids, or more than 50",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/{entity}/delete-impact": {
       "post": {
         "tags": [
@@ -56258,6 +56346,123 @@
             {
               "category": "entity",
               "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/{entity}/{id}/clone/undo": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B7-T2: removes what a clone made, while none of it has changed: each\nrecord in the clone's `undo` list must still be live at its version. The\nrecords go to the recycle bin as one delete operation.",
+        "operationId": "undo_clone_route",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloneUndoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The copies are in the recycle bin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloneUndoResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not delete one of the copies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A copy no longer exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A copy changed or was deleted since the clone; nothing was removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The list is empty, too long, or does not name this record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "soft_delete"
             }
           ],
           "policy": "entity_policy"
@@ -65361,6 +65566,93 @@
         ],
         "description": "A bucket's identity: the stored value, never a display string, so a drill\npredicate can be rebuilt from it exactly (D-522 decision 11)."
       },
+      "BulkCloneFailure": {
+        "type": "object",
+        "description": "One record a bulk clone could not copy.",
+        "required": [
+          "source",
+          "code"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "`not_found`, `forbidden`, `invalid` (the copy failed validation),\n`conflict` (a unique value) or `failed`."
+          },
+          "source": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "BulkCloneRequest": {
+        "type": "object",
+        "description": "`POST /api/v1/{entity}/clone`.",
+        "required": [
+          "ids"
+        ],
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The records to copy, 1 to 50."
+          },
+          "overrides": {
+            "type": "object",
+            "description": "Values every copy takes in place of its source's, by field."
+          }
+        }
+      },
+      "BulkCloneResult": {
+        "type": "object",
+        "description": "What a bulk clone did.",
+        "required": [
+          "cloned",
+          "failed"
+        ],
+        "properties": {
+          "cloned": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkCloned"
+            }
+          },
+          "failed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkCloneFailure"
+            }
+          }
+        }
+      },
+      "BulkCloned": {
+        "type": "object",
+        "description": "One record a bulk clone copied.",
+        "required": [
+          "source",
+          "id",
+          "undo"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "source": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "undo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CloneUndoItem"
+            },
+            "description": "The copy's undo list, as a single clone returns it."
+          }
+        }
+      },
       "BulkField": {
         "type": "object",
         "required": [
@@ -67957,7 +68249,8 @@
         "required": [
           "body",
           "left_out",
-          "children"
+          "children",
+          "undo"
         ],
         "properties": {
           "body": {
@@ -67985,6 +68278,69 @@
               "type": "string"
             },
             "description": "Fields of the source left out of the copy, and why."
+          },
+          "undo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CloneUndoItem"
+            },
+            "description": "Every record made, children first, at the version it was made with:\nthe body of `POST /api/v1/{entity}/{id}/clone/undo`. Empty for a\npreview."
+          }
+        }
+      },
+      "CloneUndoItem": {
+        "type": "object",
+        "description": "One record a clone made, at the version the clone left it.",
+        "required": [
+          "entity",
+          "id",
+          "row_version"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "CloneUndoRequest": {
+        "type": "object",
+        "description": "`POST /api/v1/{entity}/{id}/clone/undo`: the clone's `undo` list.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CloneUndoItem"
+            }
+          }
+        }
+      },
+      "CloneUndoResult": {
+        "type": "object",
+        "description": "What undoing a clone did.",
+        "required": [
+          "removed",
+          "operation_id"
+        ],
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "description": "Their delete operation:\n`POST /api/v1/bin/operations/{operation_id}/restore` brings them back."
+          },
+          "removed": {
+            "type": "integer",
+            "description": "Records moved to the recycle bin.",
+            "minimum": 0
           }
         }
       },

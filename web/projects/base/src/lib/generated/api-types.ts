@@ -10619,6 +10619,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/clone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B7-T2: copies up to 50 records, each as a single clone with the same
+         *     `overrides` would; the ones that could not be copied are listed.
+         */
+        post: operations["bulk_clone_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/delete-impact": {
         parameters: {
             query?: never;
@@ -10905,6 +10925,27 @@ export interface paths {
          *     nothing.
          */
         post: operations["clone_record_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/{id}/clone/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B7-T2: removes what a clone made, while none of it has changed: each
+         *     record in the clone's `undo` list must still be live at its version. The
+         *     records go to the recycle bin as one delete operation.
+         */
+        post: operations["undo_clone_route"];
         delete?: never;
         options?: never;
         head?: never;
@@ -13489,6 +13530,37 @@ export interface components {
             /** @enum {string} */
             kind: "other";
         };
+        /** @description One record a bulk clone could not copy. */
+        BulkCloneFailure: {
+            /**
+             * @description `not_found`, `forbidden`, `invalid` (the copy failed validation),
+             *     `conflict` (a unique value) or `failed`.
+             */
+            code: string;
+            /** Format: uuid */
+            source: string;
+        };
+        /** @description `POST /api/v1/{entity}/clone`. */
+        BulkCloneRequest: {
+            /** @description The records to copy, 1 to 50. */
+            ids: string[];
+            /** @description Values every copy takes in place of its source's, by field. */
+            overrides?: Record<string, never>;
+        };
+        /** @description What a bulk clone did. */
+        BulkCloneResult: {
+            cloned: components["schemas"]["BulkCloned"][];
+            failed: components["schemas"]["BulkCloneFailure"][];
+        };
+        /** @description One record a bulk clone copied. */
+        BulkCloned: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            source: string;
+            /** @description The copy's undo list, as a single clone returns it. */
+            undo: components["schemas"]["CloneUndoItem"][];
+        };
         BulkField: {
             attribute: string;
             entity: string;
@@ -14488,6 +14560,34 @@ export interface components {
             id?: string | null;
             /** @description Fields of the source left out of the copy, and why. */
             left_out: string[];
+            /**
+             * @description Every record made, children first, at the version it was made with:
+             *     the body of `POST /api/v1/{entity}/{id}/clone/undo`. Empty for a
+             *     preview.
+             */
+            undo: components["schemas"]["CloneUndoItem"][];
+        };
+        /** @description One record a clone made, at the version the clone left it. */
+        CloneUndoItem: {
+            entity: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            row_version: number;
+        };
+        /** @description `POST /api/v1/{entity}/{id}/clone/undo`: the clone's `undo` list. */
+        CloneUndoRequest: {
+            items: components["schemas"]["CloneUndoItem"][];
+        };
+        /** @description What undoing a clone did. */
+        CloneUndoResult: {
+            /**
+             * @description Their delete operation:
+             *     `POST /api/v1/bin/operations/{operation_id}/restore` brings them back.
+             */
+            operation_id: string;
+            /** @description Records moved to the recycle bin. */
+            removed: number;
         };
         /** @description What a clone did with one child relationship. */
         ClonedChildren: {
@@ -63438,6 +63538,59 @@ export interface operations {
             };
         };
     };
+    bulk_clone_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkCloneRequest"];
+            };
+        };
+        responses: {
+            /** @description The copies made, and the records that could not be copied */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkCloneResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not create records of this entity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No ids, or more than 50 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     preview_delete: {
         parameters: {
             query?: never;
@@ -64275,6 +64428,78 @@ export interface operations {
                 };
             };
             /** @description The copy failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    undo_clone_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CloneUndoRequest"];
+            };
+        };
+        responses: {
+            /** @description The copies are in the recycle bin */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloneUndoResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not delete one of the copies */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A copy no longer exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A copy changed or was deleted since the clone; nothing was removed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The list is empty, too long, or does not name this record */
             422: {
                 headers: {
                     [name: string]: unknown;
