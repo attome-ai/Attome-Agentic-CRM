@@ -220,6 +220,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "عمليات البحث عن كائن نموذج لم تجد شيئًا.",
     },
     MetricInfo {
+        name: "attome_node_up",
+        kind: "gauge",
+        unit: "nodes",
+        en: "1 for each node that stored its metrics this minute, by node and version.",
+        ar: "1 لكل عقدة خزّنت مقاييسها في هذه الدقيقة، حسب العقدة والإصدار.",
+    },
+    MetricInfo {
         name: "attome_readiness_check",
         kind: "gauge",
         unit: "flag",

@@ -186,6 +186,15 @@ export const xrmEn = {
     tryOn: 'Try on a record', entity: 'Entity', record: 'Record id', show: 'Show what the model receives',
   },
   // N30-T5/T9 — AI governance.
+  opsOverview: {
+    title: 'Operations', nodes: 'Nodes', healthy: 'Healthy', silent: 'Silent for over 3 minutes',
+    noNodes: 'No node has stored metrics in the last day. The built-in metrics store runs on single-server deployments (observability.builtin_store).',
+    noMetrics: 'Nothing sampled for this area yet.',
+    area: {
+      requests: 'Requests', database: 'Database', cache: 'Cache', jobs: 'Jobs', storage: 'Storage',
+      email: 'Email', models: 'AI models', other: 'Other',
+    },
+  },
   metricsPage: {
     title: 'Metrics', metric: 'Metric', choose: 'Choose a metric',
     empty: 'Nothing sampled in the last hour. The built-in metrics store runs on single-server deployments (observability.builtin_store).',

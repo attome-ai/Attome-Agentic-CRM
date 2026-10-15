@@ -423,6 +423,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.BrandingComponent),
           },
           {
+            // U4-T4: nodes by health and a page of charts per area.
+            path: 'ops',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.OpsOverviewComponent),
+          },
+          {
             // U4-T4: the built-in metrics store, drawn over time.
             path: 'ops/metrics',
             canActivate: [authGuard],

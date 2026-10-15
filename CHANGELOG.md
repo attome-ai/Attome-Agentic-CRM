@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Operations overview page: every node by health from a once-a-minute heartbeat
+  (`attome_node_up`, `GET /api/v1/admin/ops/nodes`), and a page of charts per area (requests,
+  database, cache, jobs, storage, email, AI models) from the built-in metrics store.
 - Live lists: `GET /api/v1/live?entities=` also sends `records` frames, the changes to records of
   those entities the caller can read; an open list reloads changed rows in place and offers new
   ones behind a "N new records" banner.

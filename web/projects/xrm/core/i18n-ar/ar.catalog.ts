@@ -166,6 +166,15 @@ export const xrmAr = {
       text: 'النص', text_dark: 'النص (داكن)', success: 'نجاح', warning: 'تحذير', danger: 'خطر', info: 'معلومة',
     },
   },
+  opsOverview: {
+    title: 'التشغيل', nodes: 'العقد', healthy: 'سليمة', silent: 'صامتة منذ أكثر من 3 دقائق',
+    noNodes: 'لم تخزّن أي عقدة مقاييس خلال اليوم الأخير. يعمل مخزن المقاييس المدمج على النشر بخادم واحد (observability.builtin_store).',
+    noMetrics: 'لم يُسجَّل شيء لهذا المجال بعد.',
+    area: {
+      requests: 'الطلبات', database: 'قاعدة البيانات', cache: 'التخزين المؤقت', jobs: 'المهام', storage: 'التخزين',
+      email: 'البريد', models: 'نماذج الذكاء الاصطناعي', other: 'أخرى',
+    },
+  },
   metricsPage: {
     title: 'المقاييس', metric: 'المقياس', choose: 'اختر مقياسًا',
     empty: 'لم يُسجَّل شيء خلال الساعة الأخيرة. يعمل مخزن المقاييس المدمج على النشر بخادم واحد (observability.builtin_store).',

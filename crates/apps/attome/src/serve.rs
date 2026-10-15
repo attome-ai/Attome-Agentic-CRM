@@ -336,6 +336,8 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 base_state.db.clone(),
                 base_state.db_migrator.clone(),
                 metrics_handle.clone(),
+                attome_server::metrics_store::node_name(config.app.port),
+                env!("CARGO_PKG_VERSION"),
             );
             tracing::info!("metrics store: sampling every minute, kept 30 days");
         }

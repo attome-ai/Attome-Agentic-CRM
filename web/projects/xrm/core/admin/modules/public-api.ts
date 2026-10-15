@@ -11,3 +11,4 @@ export { UsageComponent } from './usage/usage.component';
 export { LatencyComponent } from './latency/latency.component';
 export { BrandingComponent } from './branding/branding.component';
 export { OpsMetricsComponent } from './metrics/metrics.component';
+export { OpsOverviewComponent } from './ops-overview/ops-overview.component';

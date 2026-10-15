@@ -124,6 +124,7 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/admin/latency", get(latency))
         .route("/api/v1/admin/ops/metrics/names", get(metric_names))
         .route("/api/v1/admin/ops/metrics/catalogue", get(metric_catalogue))
+        .route("/api/v1/admin/ops/nodes", get(ops_nodes))
         .route("/api/v1/admin/ops/metrics/query", get(metric_query))
 }
 
@@ -219,6 +220,57 @@ async fn metric_query(
     let total = i64::try_from(points.len()).map_err(AppError::internal)?;
     Ok(Json(attome_types::PaginatedResponse::new(
         points, total, 1, MAX_POINTS,
+    )))
+}
+
+/// One node, from its heartbeat in the metrics store.
+#[derive(serde::Serialize, utoipa::ToSchema, sqlx::FromRow)]
+struct OpsNode {
+    node: String,
+    version: Option<String>,
+    last_seen: chrono::DateTime<chrono::Utc>,
+    /// It stored its metrics in the last three minutes.
+    healthy: bool,
+}
+
+/// U4-T4: the nodes that stored metrics in the last day, from their
+/// once-a-minute heartbeat (`attome_node_up`); a node silent for three
+/// minutes is shown as unhealthy. Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/ops/nodes",
+    tag = "operations",
+    responses(
+        (status = 200, description = "Every node seen in the last day", body = attome_types::PaginatedResponse<OpsNode>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn ops_nodes(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Result<Json<attome_types::PaginatedResponse<OpsNode>>, attome_types::AppError> {
+    use attome_types::AppError;
+    let nodes: Vec<OpsNode> = sqlx::query_as(
+        "SELECT labels->>'node' AS node, \
+                (array_agg(labels->>'version' ORDER BY ts DESC))[1] AS version, \
+                max(ts) AS last_seen, \
+                max(ts) > now() - interval '3 minutes' AS healthy \
+         FROM ops_metric_sample \
+         WHERE name = $1 AND ts > now() - interval '1 day' AND labels ? 'node' \
+         GROUP BY 1 ORDER BY 1",
+    )
+    .bind(attome_server::metrics_store::NODE_UP)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    let total = i64::try_from(nodes.len()).map_err(AppError::internal)?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        nodes,
+        total,
+        1,
+        total.max(1),
     )))
 }
 
@@ -318,7 +370,14 @@ async fn latency(_ctx: Authorized<Admin>) -> Json<LatencyReport> {
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(dependencies, latency, metric_query, metric_names, metric_catalogue))]
+#[openapi(paths(
+    dependencies,
+    latency,
+    metric_query,
+    metric_names,
+    metric_catalogue,
+    ops_nodes
+))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

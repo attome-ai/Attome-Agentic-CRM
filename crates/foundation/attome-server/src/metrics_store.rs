@@ -24,6 +24,34 @@ pub const KEEP_DAYS: i64 = 30;
 /// How often the registry is sampled.
 pub const SAMPLE_EVERY: Duration = Duration::from_secs(60);
 
+/// The heartbeat each node stores every minute (U4-T4): value 1, labelled
+/// with the node's name and version, so the nodes screen lists every node
+/// that sampled recently without a node registry.
+pub const NODE_UP: &str = "attome_node_up";
+
+/// A name for this node: the machine's name and the port it serves on.
+pub fn node_name(port: u16) -> String {
+    let host = std::env::var("COMPUTERNAME")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .ok()
+        .map(|h| h.trim().to_owned())
+        .filter(|h| !h.is_empty())
+        .unwrap_or_else(|| "localhost".to_owned());
+    format!("{host}:{port}")
+}
+
+/// This node's heartbeat sample.
+pub fn node_up(node: &str, version: &str) -> Sample {
+    let mut labels = Map::new();
+    labels.insert("node".to_owned(), Value::String(node.to_owned()));
+    labels.insert("version".to_owned(), Value::String(version.to_owned()));
+    Sample {
+        name: NODE_UP.to_owned(),
+        labels,
+        value: 1.0,
+    }
+}
+
 /// One series value at one minute.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Sample {
@@ -172,7 +200,13 @@ pub async fn insert(
 
 /// Starts the once-a-minute sampler. Process-lifetime supervision: a failed
 /// minute is logged and the next one runs.
-pub fn spawn(db: DbPool, migrator: DbPool, handle: PrometheusHandle) {
+pub fn spawn(
+    db: DbPool,
+    migrator: DbPool,
+    handle: PrometheusHandle,
+    node: String,
+    version: &'static str,
+) {
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(SAMPLE_EVERY);
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -201,7 +235,8 @@ pub fn spawn(db: DbPool, migrator: DbPool, handle: PrometheusHandle) {
                     }
                 }
             }
-            let samples = parse(&handle.render());
+            let mut samples = parse(&handle.render());
+            samples.push(node_up(&node, version));
             if let Err(error) = insert(&db, now, &samples).await {
                 tracing::warn!(%error, "metrics store: this minute's samples were not stored");
             }
@@ -212,6 +247,22 @@ pub fn spawn(db: DbPool, migrator: DbPool, handle: PrometheusHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_node_heartbeat_names_the_node_and_version() {
+        let sample = node_up("web-1:7865", "2.0.0");
+        assert_eq!(sample.name, NODE_UP);
+        assert!((sample.value - 1.0).abs() < f64::EPSILON);
+        assert_eq!(
+            sample.labels.get("node"),
+            Some(&Value::String("web-1:7865".into()))
+        );
+        assert_eq!(
+            sample.labels.get("version"),
+            Some(&Value::String("2.0.0".into()))
+        );
+        assert!(node_name(7865).ends_with(":7865"));
+    }
 
     #[test]
     fn metrics_store_parses_series_and_skips_buckets() {
