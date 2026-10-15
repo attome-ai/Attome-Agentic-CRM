@@ -92,7 +92,9 @@ pub const CURRENT_ENVELOPE_VERSION: u16 = 1;
 pub const MALFORMED_VARIANT_TAG: &str = "<malformed>";
 
 /// How a job is stored in `apalis.jobs.job`:
-/// `{"version", "variant", "payload", "trace_context"}`.
+/// `{"version", "variant", "payload", "trace_context"}`, plus `request_id`
+/// when the job was queued while serving a request (U4-T5), so the request
+/// can be traced to its jobs. Decoding ignores it.
 ///
 /// **Decoding never fails, whatever the JSON.** apalis-sql decodes every row
 /// its claim query returns with `.expect(...)`, before any handler runs, so a
@@ -157,7 +159,7 @@ impl<J: Job> Serialize for JobEnvelope<J> {
             }
             _ => serde_json::Value::Null,
         };
-        let mut envelope = serde_json::Map::with_capacity(4);
+        let mut envelope = serde_json::Map::with_capacity(5);
         envelope.insert("version".to_owned(), CURRENT_ENVELOPE_VERSION.into());
         envelope.insert("variant".to_owned(), job.kind().into());
         envelope.insert("payload".to_owned(), payload);
@@ -167,6 +169,12 @@ impl<J: Job> Serialize for JobEnvelope<J> {
                 .clone()
                 .map_or(serde_json::Value::Null, serde_json::Value::String),
         );
+        if let Some(request_id) = attome_types::request_scope::current() {
+            envelope.insert(
+                "request_id".to_owned(),
+                serde_json::Value::String(request_id),
+            );
+        }
         serde_json::Value::Object(envelope).serialize(serializer)
     }
 }
@@ -241,6 +249,19 @@ mod tests {
                 Self::Bulk(_) => "Bulk",
             }
         }
+    }
+
+    #[tokio::test]
+    async fn correlation_a_job_queued_in_a_request_names_it() {
+        let outside = serde_json::to_value(JobEnvelope::new(Sample::Sweep)).unwrap();
+        assert!(outside.get("request_id").is_none());
+        let inside = attome_types::request_scope::scope("req-7".to_owned(), async {
+            serde_json::to_value(JobEnvelope::new(Sample::Bulk(3))).unwrap()
+        })
+        .await;
+        assert_eq!(inside["request_id"], "req-7");
+        let decoded: JobEnvelope<Sample> = serde_json::from_value(inside).unwrap();
+        assert!(decoded.is_recognized());
     }
 
     fn round_trip(job: Sample) -> JobEnvelope<Sample> {

@@ -125,6 +125,10 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/admin/ops/metrics/names", get(metric_names))
         .route("/api/v1/admin/ops/metrics/catalogue", get(metric_catalogue))
         .route("/api/v1/admin/ops/nodes", get(ops_nodes))
+        .route(
+            "/api/v1/admin/ops/requests/{request_id}",
+            get(request_trail),
+        )
         .route("/api/v1/admin/ops/metrics/query", get(metric_query))
 }
 
@@ -221,6 +225,89 @@ async fn metric_query(
     Ok(Json(attome_types::PaginatedResponse::new(
         points, total, 1, MAX_POINTS,
     )))
+}
+
+/// A job a request queued.
+#[derive(serde::Serialize, utoipa::ToSchema, sqlx::FromRow)]
+struct RequestJob {
+    id: String,
+    job_type: String,
+    status: String,
+    variant: Option<String>,
+}
+
+/// An audit event a request wrote.
+#[derive(serde::Serialize, utoipa::ToSchema, sqlx::FromRow)]
+struct RequestAudit {
+    id: uuid::Uuid,
+    entity_name: Option<String>,
+    record_id: Option<uuid::Uuid>,
+    event_name: Option<String>,
+    changed_on: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+/// What one request led to.
+#[derive(serde::Serialize, utoipa::ToSchema)]
+struct RequestTrail {
+    request_id: String,
+    jobs: Vec<RequestJob>,
+    audit: Vec<RequestAudit>,
+}
+
+/// Rows of each kind a trail lists at most.
+const MAX_TRAIL: i64 = 100;
+
+/// U4-T5: the jobs a request queued and the audit events it wrote, found by
+/// the request id every response carries (`x-request-id`). Administrators
+/// only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/ops/requests/{request_id}",
+    tag = "operations",
+    params(("request_id" = String, Path)),
+    responses(
+        (status = 200, description = "The request's jobs and audit events, at most 100 of each", body = RequestTrail),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 422, description = "An empty or overlong request id", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn request_trail(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    axum::extract::Path(request_id): axum::extract::Path<String>,
+) -> Result<Json<RequestTrail>, attome_types::AppError> {
+    use attome_types::AppError;
+    let request_id = request_id.trim().to_owned();
+    if request_id.is_empty() || request_id.len() > 128 {
+        return Err(AppError::Validation(
+            "request_id is 1 to 128 characters".into(),
+        ));
+    }
+    let jobs: Vec<RequestJob> = sqlx::query_as(
+        "SELECT id, job_type, status, job->>'variant' AS variant FROM apalis.jobs \
+         WHERE job->>'request_id' = $1 ORDER BY run_at LIMIT $2",
+    )
+    .bind(&request_id)
+    .bind(MAX_TRAIL)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    let audit: Vec<RequestAudit> = sqlx::query_as(
+        "SELECT id, entity_name::text, record_id, event_name::text, changed_on FROM audit_header \
+         WHERE request_id = $1 ORDER BY changed_on NULLS LAST, id LIMIT $2",
+    )
+    .bind(&request_id)
+    .bind(MAX_TRAIL)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    Ok(Json(RequestTrail {
+        request_id,
+        jobs,
+        audit,
+    }))
 }
 
 /// One node, from its heartbeat in the metrics store.
@@ -376,7 +463,8 @@ async fn latency(_ctx: Authorized<Admin>) -> Json<LatencyReport> {
     metric_query,
     metric_names,
     metric_catalogue,
-    ops_nodes
+    ops_nodes,
+    request_trail
 ))]
 struct ApiDocFragment;
 

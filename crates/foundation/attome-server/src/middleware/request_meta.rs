@@ -85,11 +85,18 @@ pub(crate) async fn capture_request_meta(
         .map(str::to_owned);
 
     let meta = RequestMeta {
-        request_id,
+        request_id: request_id.clone(),
         ip_address,
         user_agent,
     };
-    CURRENT.scope(meta, next.run(req)).await
+    // U4-T5: the id also goes where `attome-jobs` can read it, so a job
+    // queued by this request names it.
+    match request_id {
+        Some(id) => {
+            attome_types::request_scope::scope(id, CURRENT.scope(meta, next.run(req))).await
+        }
+        None => CURRENT.scope(meta, next.run(req)).await,
+    }
 }
 
 #[cfg(test)]

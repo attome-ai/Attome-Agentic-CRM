@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Request trail: a job queued while serving a request stores its id (`request_id` in the job
+  envelope), and `GET /api/v1/admin/ops/requests/{request_id}` lists the request's jobs and audit
+  events.
 - Operations overview page: every node by health from a once-a-minute heartbeat
   (`attome_node_up`, `GET /api/v1/admin/ops/nodes`), and a page of charts per area (requests,
   database, cache, jobs, storage, email, AI models) from the built-in metrics store.
