@@ -65,6 +65,20 @@ function flatten(catalog: Record<string, unknown>, prefix = '', out = new Set<st
   return out;
 }
 
+/** B20-T2: the string at a dotted key, or undefined. */
+function valueAt(catalog: Record<string, unknown>, key: string): unknown {
+  return key.split('.').reduce<unknown>(
+    (node, part) => (node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined),
+    catalog,
+  );
+}
+
+/** B20-T2: the `{name}` placeholders a message uses (ICU arguments included). */
+function placeholders(message: unknown): string[] {
+  if (typeof message !== 'string') return [];
+  return [...new Set([...message.matchAll(/\{\s*([A-Za-z_]\w*)\s*[,}]/g)].map(m => m[1]))].sort();
+}
+
 const resolves = (flat: Record<string, unknown>, key: string): boolean =>
   flat[key] !== undefined || Object.keys(flat).some(k => k.startsWith(`${key}.`));
 
@@ -101,6 +115,18 @@ describe('i18n catalog coverage — all layers', () => {
       expect([...enKeys].filter(k => !arKeys.has(k)).sort(), `${name}: present in en, missing in ar`).toEqual([]);
       expect([...arKeys].filter(k => !enKeys.has(k)).sort(), `${name}: present in ar, missing in en`).toEqual([]);
     }
+  });
+
+  it('gives each English message and its Arabic one the same placeholders (B20-T2)', () => {
+    const mismatched: string[] = [];
+    for (const [name, en, ar] of [['xrm', xrmEn, xrmAr], ['host', hostEn, hostAr]] as const) {
+      for (const key of flatten(en as Record<string, unknown>)) {
+        const want = placeholders(valueAt(en as Record<string, unknown>, key));
+        const got = placeholders(valueAt(ar as Record<string, unknown>, key));
+        if (want.join(',') !== got.join(',')) mismatched.push(`${name}:${key} en {${want}} ar {${got}}`);
+      }
+    }
+    expect(mismatched).toEqual([]);
   });
 
   it('gives every namespace exactly one owning layer', () => {
