@@ -42,6 +42,11 @@ first, with each one's reason and operation.
 In the app, deactivating records in a list offers **Undo** for eight seconds, and each entity's
 list links to its recycle bin.
 
+Agents list deleted records with the `record.deleted` tool and bring one back with
+`record.restore`; agents have no permanent-delete tool. A workflow restores a record with the
+**Restore Record** node (`restore_record`, config `entity`, the record id wired into `record_id`);
+a record already live is left as it is. No node purges: purging goes through the retention sweep.
+
 ## Per-entity rules
 
 `PUT /api/v1/admin/bin-settings/{entity}` (administrators) sets:

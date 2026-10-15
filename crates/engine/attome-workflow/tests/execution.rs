@@ -1310,6 +1310,119 @@ async fn create_record_replay_after_checkpoint_crash_does_not_duplicate() {
     );
 }
 
+/// A18-T8: a `restore_record` node brings a deleted record back, and a
+/// second run against the now-live record completes without changing it.
+#[tokio::test]
+async fn restore_node_restores_record() {
+    let state = skip_if_no_db!(test_state().await);
+    let user_id = seed_user(&state.base.db).await;
+
+    let entity_id = attome_metadata::provision::ensure_entity(
+        &state.base.db,
+        "wf_restore_test_entity",
+        "Workflow Restore Test Entity",
+        None,
+        false,
+    )
+    .await
+    .expect("provision test entity");
+    attome_metadata::provision::ensure_attribute(
+        &state.base.db,
+        entity_id,
+        "name",
+        "Name",
+        "text",
+        false,
+        false,
+        false,
+        false,
+        None,
+        None,
+    )
+    .await
+    .expect("provision name attribute");
+    state.entities.swap(
+        attome_core::build_registry(&state.base.db)
+            .await
+            .expect("build registry"),
+    );
+
+    // Create the record through a workflow, so it carries every system
+    // column the generic create fills in.
+    let create = json!({
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": {"trigger_type": "manual"}},
+            {"id": "cr", "type": "create_record", "config": {"entity": "wf_restore_test_entity"}}
+        ],
+        "edges": [{"from_node": "t", "from_port": "out", "to_node": "cr", "to_port": "data"}]
+    });
+    let create_version = publish_workflow(&state.base.db, "restore-node-create", create).await;
+    let creator = attome_workflow::instance_admin::start_instance_internal(
+        &state,
+        create_version,
+        None,
+        Some(user_id),
+        None,
+        json!({"name": "to be restored"}),
+    )
+    .await
+    .expect("start create instance");
+    assert_eq!(run_to_checkpoint(&state, creator).await, "completed");
+    let record_id: Uuid = sqlx::query_scalar(
+        "SELECT (node_data -> 'cr' ->> 'id')::uuid FROM workflow_instance WHERE id = $1",
+    )
+    .bind(creator)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("read the created record's id");
+
+    // Soft-delete it (a throwaway test database).
+    sqlx::query("UPDATE wf_restore_test_entity SET is_active = false WHERE id = $1")
+        .bind(record_id)
+        .execute(&state.base.db)
+        .await
+        .expect("soft-delete the record");
+
+    let restore = json!({
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": {"trigger_type": "manual"}},
+            {"id": "rr", "type": "restore_record", "config": {"entity": "wf_restore_test_entity"}}
+        ],
+        "edges": [{"from_node": "t", "from_port": "out", "to_node": "rr", "to_port": "record_id"}]
+    });
+    let restore_version = publish_workflow(&state.base.db, "restore-node-restore", restore).await;
+    let is_active = |db: sqlx::PgPool| async move {
+        sqlx::query_scalar::<_, bool>("SELECT is_active FROM wf_restore_test_entity WHERE id = $1")
+            .bind(record_id)
+            .fetch_one(&db)
+            .await
+            .expect("read is_active")
+    };
+    assert!(!is_active(state.base.db.clone()).await);
+
+    for run in 0..2 {
+        let instance_id = attome_workflow::instance_admin::start_instance_internal(
+            &state,
+            restore_version,
+            None,
+            Some(user_id),
+            None,
+            json!({"id": record_id}),
+        )
+        .await
+        .expect("start restore instance");
+        assert_eq!(
+            run_to_checkpoint(&state, instance_id).await,
+            "completed",
+            "restore run {run} completes"
+        );
+        assert!(
+            is_active(state.base.db.clone()).await,
+            "the record is live after restore run {run}"
+        );
+    }
+}
+
 /// P-workflow-engine §5 step 6 follow-up (D-267 addendum): the entity-event
 /// outbox dispatch that closes the "entity create/update auto-start" gap.
 /// Inserts directly into `entity_change_event` (the exact row

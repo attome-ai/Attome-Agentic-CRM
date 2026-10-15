@@ -1151,6 +1151,7 @@ async fn execute_node(
         NodeType::CreateRecord | NodeType::UpdateRecord => {
             execute_entity_write(state, ctx, instance, node, node_type, input).await
         }
+        NodeType::RestoreRecord => execute_restore_record(state, ctx, node, input).await,
         NodeType::SendNotification => {
             execute_send_notification(state, instance, node, input, fired).await
         }
@@ -1225,6 +1226,71 @@ pub(crate) fn approval_taken_port(decision: &str) -> Option<&'static str> {
         "rejected" | "expired" | "cancelled" | "invalidated" => Some("rejected"),
         _ => None,
     }
+}
+
+/// A18-T8: brings the wired record back from the recycle bin through
+/// `restore_record_for`, the path the bin's own restore takes. A record
+/// already live succeeds unchanged, which is what makes a crash-replay after
+/// the restore committed harmless.
+async fn execute_restore_record(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    node: &GraphNode,
+    input: &Value,
+) -> Result<NodeOutcome, AppError> {
+    let entity_name = node
+        .config
+        .get("entity")
+        .and_then(Value::as_str)
+        .ok_or_else(|| AppError::internal(format!("node {:?} missing config.entity", node.id)))?;
+    let append_only = state
+        .entities
+        .load()
+        .get(entity_name)
+        .map(|meta| meta.is_append_only)
+        .ok_or_else(|| {
+            AppError::internal(format!(
+                "unknown entity {entity_name:?} in workflow node config"
+            ))
+        })?;
+    if append_only {
+        return Err(AppError::Validation(format!(
+            "{entity_name} records are never deleted, so none can be restored"
+        )));
+    }
+    let record_id = input
+        .get("record_id")
+        .and_then(|v| v.as_str().or_else(|| v.get("id").and_then(Value::as_str)))
+        .and_then(|s| Uuid::parse_str(s).ok())
+        .ok_or_else(|| {
+            AppError::Validation("restore_record node has no resolvable record_id".into())
+        })?;
+    let live: Option<bool> = sqlx::query_scalar(&format!(
+        "SELECT is_active FROM {} WHERE id = $1",
+        attome_core::quote_ident(entity_name)
+    ))
+    .bind(record_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    match live {
+        None => return Err(AppError::NotFound),
+        Some(true) => {}
+        Some(false) => {
+            attome_records::entity_crud::restore_record_for(
+                state,
+                ctx,
+                ctx.user_id,
+                entity_name,
+                record_id,
+                None,
+            )
+            .await?;
+        }
+    }
+    Ok(NodeOutcome::Succeeded {
+        output: serde_json::json!({ "id": record_id }),
+    })
 }
 
 /// §4.4 mechanism 1: routes Create/Update Record through

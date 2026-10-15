@@ -388,6 +388,7 @@ fn simulate_node(
         NodeType::CreateRecord | NodeType::UpdateRecord => {
             simulate_entity_write(state, node, node_type, input)
         }
+        NodeType::RestoreRecord => simulate_restore_record(state, node),
         NodeType::SendNotification => Ok(simulate_send_notification(node, input)),
         NodeType::Webhook => simulate_webhook(node, input),
         NodeType::Approval => Ok(simulate_approval(node, input, approval_decisions)),
@@ -525,6 +526,27 @@ fn simulate_entity_write(
         "fields": data.keys().collect::<Vec<_>>(),
     });
     Ok(SimOutcome::Succeeded { output, would_have })
+}
+
+/// A18-T8: names what a `restore_record` node would bring back; nothing is
+/// restored.
+fn simulate_restore_record(state: &EngineState, node: &GraphNode) -> Result<SimOutcome, AppError> {
+    let entity_name = node
+        .config
+        .get("entity")
+        .and_then(Value::as_str)
+        .ok_or_else(|| AppError::Validation(format!("node {:?} missing config.entity", node.id)))?;
+    if state.entities.load().get(entity_name).is_none() {
+        return Err(AppError::Validation(format!(
+            "unknown entity {entity_name:?} in workflow node config"
+        )));
+    }
+    Ok(SimOutcome::Succeeded {
+        output: serde_json::json!({ "would_restore": true, "entity": entity_name }),
+        would_have: Some(format!(
+            "would restore a deleted {entity_name:?} record — never restored in a dry run"
+        )),
+    })
 }
 
 fn simulate_send_notification(node: &GraphNode, input: &Value) -> SimOutcome {

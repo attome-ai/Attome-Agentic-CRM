@@ -130,6 +130,9 @@ export const NODE_TYPES: NodeTypeSpec[] = [
     outputs: [{ name: 'out', portType: 'any' }] },
   { type: 'join', label: 'Join', inputs: [{ name: 'in', portType: 'any', required: true }],
     outputs: [{ name: 'out', portType: 'any' }] },
+  { type: 'restore_record', label: 'Restore Record',
+    inputs: [{ name: 'record_id', portType: 'record_id', required: true }],
+    outputs: [{ name: 'record', portType: 'record_id' }] },
 ];
 
 export function nodeTypeSpec(type: string): NodeTypeSpec | undefined {
@@ -225,6 +228,11 @@ export const NODE_CONFIG_SCHEMA: Record<string, NodeConfigField[]> = {
   update_record: [
     { key: 'entity', label: 'Entity', kind: 'entity', required: true,
       hint: 'Target row comes from the wired "record_id" input, values from "data".' },
+  ],
+  // scheduler::execute_restore_record
+  restore_record: [
+    { key: 'entity', label: 'Entity', kind: 'entity', required: true,
+      hint: 'The deleted record comes from the wired "record_id" input; one already live is left as it is.' },
   ],
   // scheduler::execute_send_notification
   send_notification: [

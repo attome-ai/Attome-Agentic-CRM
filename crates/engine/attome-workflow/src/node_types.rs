@@ -87,10 +87,15 @@ pub enum NodeType {
     /// graph-instance-specific dynamic ports the closed `&'static` table
     /// below cannot express. See `scheduler::execute_route`.
     Route,
+    /// A18-T8: brings a deleted record back from the recycle bin through the
+    /// same path as `POST /api/v1/bin/restore` (access, lookup liveness,
+    /// unique values, audit). There is deliberately no purge node: purging
+    /// goes through the retention sweep's propose/approve/execute path.
+    RestoreRecord,
 }
 
 impl NodeType {
-    pub const ALL: [Self; 14] = [
+    pub const ALL: [Self; 15] = [
         Self::Trigger,
         Self::Condition,
         Self::CreateRecord,
@@ -105,6 +110,7 @@ impl NodeType {
         Self::Join,
         Self::AgentStep,
         Self::Route,
+        Self::RestoreRecord,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -123,6 +129,7 @@ impl NodeType {
             Self::Join => "join",
             Self::AgentStep => "agent_step",
             Self::Route => "route",
+            Self::RestoreRecord => "restore_record",
         }
     }
 
@@ -150,7 +157,12 @@ impl NodeType {
     /// node type's external effect must use.
     pub fn side_effect(self) -> SideEffect {
         match self {
-            Self::CreateRecord | Self::UpdateRecord => SideEffect::EntityIdempotencyKey,
+            // `RestoreRecord` needs no stored key: restoring a record that is
+            // already live is a no-op success, so a replay after the restore
+            // committed changes nothing (`scheduler::execute_restore_record`).
+            Self::CreateRecord | Self::UpdateRecord | Self::RestoreRecord => {
+                SideEffect::EntityIdempotencyKey
+            }
             // `AgentStep` joins the fired-marker mechanism, not the entity
             // key one: starting a session is not an entity write with a
             // natural `(instance_id, node_id)` idempotency key the way
@@ -233,6 +245,7 @@ impl NodeType {
             // single string with no structure is a `Route` author error, not
             // something to silently coerce).
             Self::Route => &[("context", PortType::Json, true)],
+            Self::RestoreRecord => &[("record_id", PortType::RecordId, true)],
         }
     }
 
@@ -281,6 +294,7 @@ impl NodeType {
             // pair already uses for an asynchronous outcome, applied here to
             // a synchronous classification instead.
             Self::Route => &[("matched", PortType::Json), ("unmatched", PortType::Json)],
+            Self::RestoreRecord => &[("record", PortType::RecordId)],
         }
     }
 
@@ -318,7 +332,7 @@ impl NodeType {
             // Entity writes, replayable because the entity path keys on
             // `(instance_id, node_id)` — the same reason `side_effect()`
             // returns `EntityIdempotencyKey`.
-            Self::CreateRecord | Self::UpdateRecord => NodeCapability {
+            Self::CreateRecord | Self::UpdateRecord | Self::RestoreRecord => NodeCapability {
                 risk: RiskTier::Reversible,
                 effect: Effect::Write,
                 retry: RetryClass::Idempotent,
@@ -637,6 +651,7 @@ mod tests {
         for t in [
             NodeType::CreateRecord,
             NodeType::UpdateRecord,
+            NodeType::RestoreRecord,
             NodeType::SendNotification,
             NodeType::Webhook,
             NodeType::AgentStep,
@@ -754,7 +769,7 @@ mod tests {
         for node in NodeType::ALL {
             let _ = node.capability();
         }
-        assert_eq!(NodeType::ALL.len(), 14, "the node set is closed (I-5)");
+        assert_eq!(NodeType::ALL.len(), 15, "the node set is closed (I-5)");
     }
 
     /// `Split`/`Join` are graph-shape markers, not the branching type
