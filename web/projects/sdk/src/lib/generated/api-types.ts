@@ -13965,9 +13965,19 @@ export interface components {
         BulkItemStatus: {
             /** Format: int32 */
             attempts: number;
+            /**
+             * @description A16-T6: for a conflict, the record's current version and what changed
+             *     since the row's version (`current_version`, `current_state`).
+             */
+            conflict?: Record<string, never> | null;
             error?: string | null;
             /** Format: int32 */
             item_index: number;
+            /**
+             * @description A16-T6: `ok`, `conflict` (the row's `expected_row_version` was stale;
+             *     see `conflict`), `error`, or `pending` while the row has not run.
+             */
+            outcome: string;
             /** Format: uuid */
             record_id?: string | null;
             status: string;
@@ -66038,7 +66048,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description version_conflict: the record changed since If-Match. `current_version` is its row version now and `current_state` lists `changed_attributes` (name, their_value, changed_by, changed_at; newest first) and `hidden_changes`, the changes to fields the caller cannot read */
+            /** @description version_conflict: the record changed since If-Match. `current_version` is its row version now and `current_state` names `last_changed_by` and `last_changed_at` and lists `changed_attributes` (name, their_value, changed_by, changed_at; newest first) and `hidden_changes`, the changes to fields the caller cannot read */
             409: {
                 headers: {
                     [name: string]: unknown;

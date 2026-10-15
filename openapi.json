@@ -57382,7 +57382,7 @@
             }
           },
           "409": {
-            "description": "version_conflict: the record changed since If-Match. `current_version` is its row version now and `current_state` lists `changed_attributes` (name, their_value, changed_by, changed_at; newest first) and `hidden_changes`, the changes to fields the caller cannot read",
+            "description": "version_conflict: the record changed since If-Match. `current_version` is its row version now and `current_state` names `last_changed_by` and `last_changed_at` and lists `changed_attributes` (name, their_value, changed_by, changed_at; newest first) and `hidden_changes`, the changes to fields the caller cannot read",
             "content": {
               "application/json": {
                 "schema": {
@@ -67344,12 +67344,20 @@
         "required": [
           "item_index",
           "status",
+          "outcome",
           "attempts"
         ],
         "properties": {
           "attempts": {
             "type": "integer",
             "format": "int32"
+          },
+          "conflict": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "A16-T6: for a conflict, the record's current version and what changed\nsince the row's version (`current_version`, `current_state`)."
           },
           "error": {
             "type": [
@@ -67360,6 +67368,10 @@
           "item_index": {
             "type": "integer",
             "format": "int32"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "A16-T6: `ok`, `conflict` (the row's `expected_row_version` was stale;\nsee `conflict`), `error`, or `pending` while the row has not run."
           },
           "record_id": {
             "type": [
