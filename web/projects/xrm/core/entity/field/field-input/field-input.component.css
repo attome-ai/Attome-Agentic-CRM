@@ -45,7 +45,7 @@ select option { background: var(--color-bg-alt, #111c33); }
 .btn-lookup {
   padding: 9px 14px; border: 1px solid var(--color-border, #24324d); border-radius: 6px;
   background: var(--color-bg, #0f172a); font-size: 14px;
-  color: var(--color-text-secondary, #94a3b8); cursor: pointer; text-align: left; width: 100%;
+  color: var(--color-text-secondary, #94a3b8); cursor: pointer; text-align: start; width: 100%;
 }
 .btn-lookup:hover { border-color: var(--color-accent, #14b8a6); color: var(--color-accent, #14b8a6); }
 .xf-input.is-invalid { border-color: #ef4444; }
@@ -59,7 +59,7 @@ select option { background: var(--color-bg-alt, #111c33); }
 .btn-clear:hover { color: #ef4444; }
 
 .lookup-popup {
-  position: absolute; z-index: 200; top: 100%; left: 0; right: 0;
+  position: absolute; z-index: 200; top: 100%; inset-inline-start: 0; inset-inline-end: 0;
   margin-top: 4px; background: var(--color-bg-alt, #111c33);
   border: 1px solid var(--color-border, #24324d);
   border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,.4);

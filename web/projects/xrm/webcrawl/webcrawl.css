@@ -136,7 +136,7 @@
    gap to the right, inside whatever width the browser gives the last
    (short-content) column. */
 .actions,
-.actions-header { text-align: right; }
+.actions-header { text-align: end; }
 
 .status-pending   { background: #422006; color: #fcd34d; }
 .status-crawling  { background: #1e3a5f; color: #93c5fd; }

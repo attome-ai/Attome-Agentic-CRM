@@ -17,7 +17,7 @@
 
 .metric-table, .metric-trend-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .metric-table th, .metric-trend-table th {
-  text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  text-align: start; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
   color: var(--color-text-secondary, #94a3b8); padding: 8px 10px; border-bottom: 1px solid var(--color-border, #24324d);
 }
 .metric-table td, .metric-trend-table td { padding: 8px 10px; border-bottom: 1px solid var(--color-border, #24324d); vertical-align: middle; }
@@ -58,7 +58,7 @@
 .metric-actions button:disabled { opacity: .5; cursor: default; }
 
 .metric-badge {
-  margin-left: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  margin-inline-start: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
   padding: 1px 6px; border-radius: 999px; background: color-mix(in srgb, var(--color-accent, #8b5cf6) 20%, transparent);
   color: var(--color-accent, #8b5cf6);
 }

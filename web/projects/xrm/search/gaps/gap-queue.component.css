@@ -12,10 +12,10 @@
 .gap-empty { margin-top: 1.5rem; padding: 1.5rem; border: 1px dashed #d1d5db; border-radius: .5rem; color: #6b7280; font-size: .85rem; }
 .gap-count-line { margin: 1rem 0 .5rem; color: #6b7280; font-size: .8rem; }
 .gap-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
-.gap-table th { text-align: left; font-weight: 600; color: #6b7280; padding: .5rem .6rem; border-bottom: 1px solid #e5e7eb; }
+.gap-table th { text-align: start; font-weight: 600; color: #6b7280; padding: .5rem .6rem; border-bottom: 1px solid #e5e7eb; }
 .gap-table td { padding: .5rem .6rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
 .gap-phrase { font-weight: 500; }
-.gap-num { text-align: right; font-variant-numeric: tabular-nums; }
+.gap-num { text-align: end; font-variant-numeric: tabular-nums; }
 .gap-pill { display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-size: .72rem; text-transform: capitalize; }
 .gap-pill-open { background: #e0f2fe; color: #075985; }
 .gap-pill-addressed { background: #dcfce7; color: #166534; }

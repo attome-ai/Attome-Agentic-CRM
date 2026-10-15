@@ -28,7 +28,7 @@
 
 .tags-table th,
 .tags-table td {
-  text-align: left;
+  text-align: start;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--color-border, #24324d);
   vertical-align: middle;
@@ -50,7 +50,7 @@
 .tags-actions-cell {
   width: 1%;
   white-space: nowrap;
-  text-align: right;
+  text-align: end;
 }
 
 .tags-remove-button {

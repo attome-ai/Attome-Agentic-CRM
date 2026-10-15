@@ -88,7 +88,7 @@
 
 .toolbar-actions,
 .footer-right {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .toolbar-actions {
@@ -188,7 +188,7 @@
   color: var(--color-text-primary);
   font: inherit;
   font-weight: 600;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
 }
@@ -210,7 +210,7 @@
 .view-picker-menu {
   position: absolute;
   top: calc(100% + 0.4rem);
-  left: 0;
+  inset-inline-start: 0;
   width: 100%;
   box-sizing: border-box;
   padding: 0.35rem;
@@ -234,7 +234,7 @@
   background: transparent;
   color: var(--color-text-primary);
   font: inherit;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   transition: background 120ms ease, color 120ms ease;
 }
@@ -255,7 +255,7 @@
 
 .search-box i {
   position: absolute;
-  left: 0.8rem;
+  inset-inline-start: 0.8rem;
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-text-secondary);
@@ -264,17 +264,17 @@
 }
 
 .list-container--compact .search-box i {
-  left: 0.7rem;
+  inset-inline-start: 0.7rem;
   font-size: 0.92rem;
 }
 
 .search-box input {
   width: 100%;
-  padding-left: 2.35rem;
+  padding-inline-start: 2.35rem;
 }
 
 .list-container--compact .search-box input {
-  padding-left: 2rem;
+  padding-inline-start: 2rem;
 }
 
 .btn {
@@ -352,7 +352,7 @@
 .table-loading-overlay {
   position: absolute;
   top: 0.8rem;
-  right: 0.9rem;
+  inset-inline-end: 0.9rem;
   z-index: 3;
   padding: 0.45rem 0.75rem;
   border: 1px solid rgba(37, 99, 235, 0.18);
@@ -381,7 +381,7 @@
 .data-table td {
   padding: 0.8rem 0.95rem;
   border-bottom: 1px solid var(--color-border);
-  text-align: left;
+  text-align: start;
   vertical-align: middle;
 }
 
@@ -483,7 +483,7 @@
 .column-filter-popover {
   position: absolute;
   top: calc(100% + 0.45rem);
-  left: 0;
+  inset-inline-start: 0;
   z-index: 5;
   width: min(19rem, calc(100vw - 4rem));
   padding: 0.9rem;
@@ -561,7 +561,7 @@
 .custom-checkbox-wrapper input[type='checkbox']:checked::after {
   content: '';
   position: absolute;
-  left: 0.34rem;
+  inset-inline-start: 0.34rem;
   top: 0.12rem;
   width: 0.22rem;
   height: 0.5rem;
@@ -644,7 +644,7 @@
   color: var(--color-accent);
   cursor: pointer;
   font-weight: 600;
-  text-align: left;
+  text-align: start;
   background: transparent;
   border: none;
 }
@@ -674,7 +674,7 @@
   min-height: 2.4rem;
   padding: 0.6rem 0.9rem;
   border: none;
-  border-right: 1px solid var(--color-border);
+  border-inline-end: 1px solid var(--color-border);
   background: transparent;
   color: var(--color-text-primary);
   cursor: pointer;
@@ -687,7 +687,7 @@
 }
 
 .btn-page:last-child {
-  border-right: none;
+  border-inline-end: none;
 }
 
 .btn-page:disabled {
@@ -716,7 +716,7 @@
   }
 
   .toolbar-actions {
-    margin-left: 0;
+    margin-inline-start: 0;
     width: 100%;
     justify-content: flex-end;
   }

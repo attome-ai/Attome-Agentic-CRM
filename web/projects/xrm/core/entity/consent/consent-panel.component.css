@@ -11,7 +11,7 @@
 
 .consent-status-table th,
 .consent-status-table td {
-  text-align: left;
+  text-align: start;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--xf-border, #e0e0e0);
   vertical-align: middle;
@@ -59,7 +59,7 @@
 }
 
 .consent-actions {
-  text-align: right;
+  text-align: end;
 }
 
 .consent-history-title {

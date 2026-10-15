@@ -29,7 +29,7 @@
 
 .dup-banner-body ul {
   margin: 0;
-  padding-left: 18px;
+  padding-inline-start: 18px;
 }
 
 .dup-banner-body a {

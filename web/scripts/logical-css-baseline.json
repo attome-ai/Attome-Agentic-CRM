@@ -1,0 +1,10 @@
+{
+  "projects/xrm/content/content-page/form/content-page-editor/content-page-editor.component.css": 10,
+  "projects/xrm/dashboard/registration/page-editor/page-editor.component.css": 3,
+  "projects/xrm/dashboard/registration/page-editor/page-settings-panel/page-settings-panel.component.css": 1,
+  "projects/xrm/dashboard/registration/page-editor/widget-inspector/widget-inspector.component.css": 2,
+  "projects/xrm/project/capacity/resource-capacity-page/resource-capacity-page.component.css": 5,
+  "projects/xrm/project/tab/project-work-plan-tab/project-work-plan-tab.component.css": 2,
+  "projects/xrm/workflow/workflow-definition/editor/workflow-graph-editor/workflow-graph-editor.component.css": 12,
+  "src/styles/line-awesome-subset.css": 8
+}

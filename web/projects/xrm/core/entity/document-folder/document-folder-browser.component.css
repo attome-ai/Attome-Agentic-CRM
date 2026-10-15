@@ -12,7 +12,7 @@
 .xdf-status { margin: 0; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
 .xdf-status-error { color: #f87171; }
 .xdf-upload-status { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--color-border, #24324d); border-radius: 7px; }
-.xdf-upload-dismiss { margin-left: auto; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: none; color: inherit; cursor: pointer; opacity: .7; }
+.xdf-upload-dismiss { margin-inline-start: auto; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 5px; background: none; color: inherit; cursor: pointer; opacity: .7; }
 .xdf-upload-dismiss:hover { opacity: 1; }
 
 .xdf-tile-icon { font-size: 20px; color: var(--color-accent, #5D5CDE); }
@@ -80,12 +80,12 @@
 .xdf-row-busy .xdf-icon, .xdf-row-busy .xdf-text, .xdf-row-busy .xdf-pct { position: relative; z-index: 1; }
 .xdf-pct { flex: none; font-size: 13px; font-weight: 600; color: var(--color-accent, #5D5CDE); }
 
-.xdf-search { margin-right: auto; display: flex; align-items: center; gap: 8px; width: min(300px, 100%); padding: 7px 10px; border: 1px solid var(--color-border, #24324d); border-radius: 7px; }
+.xdf-search { margin-inline-end: auto; display: flex; align-items: center; gap: 8px; width: min(300px, 100%); padding: 7px 10px; border: 1px solid var(--color-border, #24324d); border-radius: 7px; }
 .xdf-search input { width: 100%; border: 0; outline: 0; background: none; color: var(--color-text-primary, #e5eefc); font: inherit; }
 .xdf-browser { display: grid; grid-template-columns: 210px minmax(0, 1fr); min-height: 390px; border: 1px solid var(--color-border, #24324d); border-radius: 10px; overflow: hidden; background: var(--color-bg, #0f172a); }
-.xdf-sidebar { padding: 16px 10px; border-right: 1px solid var(--color-border, #24324d); background: color-mix(in srgb, var(--color-bg, #0f172a) 92%, black); }
+.xdf-sidebar { padding: 16px 10px; border-inline-end: 1px solid var(--color-border, #24324d); background: color-mix(in srgb, var(--color-bg, #0f172a) 92%, black); }
 .xdf-sidebar h3 { margin: 0 10px 12px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-text-secondary, #94a3b8); }
-.xdf-location { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 10px; border: 0; border-radius: 6px; background: none; font: inherit; font-size: 13px; color: var(--color-text-secondary, #94a3b8); cursor: pointer; text-align: left; }
+.xdf-location { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 10px; border: 0; border-radius: 6px; background: none; font: inherit; font-size: 13px; color: var(--color-text-secondary, #94a3b8); cursor: pointer; text-align: start; }
 .xdf-location i { font-size: 17px; color: var(--color-accent, #5D5CDE); }
 .xdf-location:hover, .xdf-location-active { color: var(--color-text-primary, #e5eefc); background: color-mix(in srgb, var(--color-accent, #5D5CDE) 17%, transparent); }
 .xdf-location-active { color: var(--color-accent, #5D5CDE); }
@@ -105,14 +105,14 @@
 /* VS Code-style indent guides: each nested <ul> has a visible vertical
    line at 16px from its left edge (aligned with the folder icon centre). */
 .xdf-tree-children {
-  margin-left: 16px;
-  padding-left: 8px;
-  border-left: 1px solid color-mix(in srgb, var(--color-border, #24324d) 160%, transparent);
+  margin-inline-start: 16px;
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid color-mix(in srgb, var(--color-border, #24324d) 160%, transparent);
 }
 .xdf-tree-row {
   display: flex; align-items: center; gap: 7px; width: 100%;
   padding: 5px 8px; border-radius: 5px; font-size: 13px;
-  color: var(--color-text-secondary, #94a3b8); cursor: pointer; text-align: left;
+  color: var(--color-text-secondary, #94a3b8); cursor: pointer; text-align: start;
 }
 .xdf-tree-row:hover, .xdf-tree-row.xdf-drop-target { background: color-mix(in srgb, var(--color-accent, #5D5CDE) 14%, transparent); }
 .xdf-tree-row.xdf-tree-active { color: var(--color-accent, #5D5CDE); background: color-mix(in srgb, var(--color-accent, #5D5CDE) 17%, transparent); }
@@ -136,12 +136,12 @@
 .xdf-main .xdf-list { gap: 0; }
 .xdf-list-head, .xdf-main .xdf-row { display: grid; grid-template-columns: minmax(180px, 1fr) 140px 140px 80px; align-items: center; }
 .xdf-list-head { min-height: 34px; border-bottom: 1px solid var(--color-border, #24324d); }
-.xdf-list-head button { padding: 8px 0; border: 0; background: none; text-align: left; color: var(--color-text-secondary, #94a3b8); font-size: 11px; font-weight: 700; text-transform: uppercase; cursor: pointer; }
+.xdf-list-head button { padding: 8px 0; border: 0; background: none; text-align: start; color: var(--color-text-secondary, #94a3b8); font-size: 11px; font-weight: 700; text-transform: uppercase; cursor: pointer; }
 .xdf-main .xdf-row { min-height: 40px; padding: 0; border: 0; border-radius: 6px; background: none; cursor: default; }
 .xdf-main .xdf-row:hover { background: color-mix(in srgb, var(--color-text-primary, #e5eefc) 5%, transparent); }
 .xdf-main .xdf-row.xdf-selected { background: color-mix(in srgb, var(--color-accent, #5D5CDE) 20%, transparent); outline: 1px solid color-mix(in srgb, var(--color-accent, #5D5CDE) 55%, transparent); }
-.xdf-main .xdf-row > .xdf-icon { grid-column: 1; margin-left: 12px; }
-.xdf-main .xdf-row > .xdf-name { grid-column: 1; margin-left: 38px; }
+.xdf-main .xdf-row > .xdf-icon { grid-column: 1; margin-inline-start: 12px; }
+.xdf-main .xdf-row > .xdf-name { grid-column: 1; margin-inline-start: 38px; }
 .xdf-main .xdf-row > .xdf-created { grid-column: 2; color: var(--color-text-secondary, #94a3b8); font-size: 12px; }
 .xdf-main .xdf-row > .xdf-modified { grid-column: 3; color: var(--color-text-secondary, #94a3b8); font-size: 12px; }
 .xdf-main .xdf-row > .xdf-size { grid-column: 4; color: var(--color-text-secondary, #94a3b8); font-size: 12px; }
@@ -156,12 +156,12 @@
 .xdf-badge-failed { background: color-mix(in srgb, #f87171 18%, transparent); color: #f87171; }
 .xdf-marquee { position: absolute; z-index: 4; pointer-events: none; border: 1px solid var(--color-accent, #5D5CDE); background: color-mix(in srgb, var(--color-accent, #5D5CDE) 16%, transparent); }
 .xdf-menu { position: fixed; z-index: 1000; min-width: 190px; padding: 6px; border: 1px solid var(--color-border, #334155); border-radius: 8px; background: var(--color-bg-alt, #1e293b); box-shadow: 0 14px 35px rgba(0,0,0,.35); }
-.xdf-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 11px; border: 0; border-radius: 5px; background: none; color: var(--color-text-primary, #e5eefc); cursor: pointer; text-align: left; }
+.xdf-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 11px; border: 0; border-radius: 5px; background: none; color: var(--color-text-primary, #e5eefc); cursor: pointer; text-align: start; }
 .xdf-menu button:hover { background: color-mix(in srgb, var(--color-text-primary, #e5eefc) 8%, transparent); }
 .xdf-menu button:disabled { opacity: .38; cursor: default; background: none; }
 .xdf-menu > div { height: 1px; margin: 5px; background: var(--color-border, #334155); }
 .xdf-menu .xdf-danger { color: #f87171; }
-@media (max-width: 760px) { .xdf-browser { grid-template-columns: 1fr; } .xdf-sidebar { border-right: 0; border-bottom: 1px solid var(--color-border, #24324d); } }
+@media (max-width: 760px) { .xdf-browser { grid-template-columns: 1fr; } .xdf-sidebar { border-inline-end: 0; border-bottom: 1px solid var(--color-border, #24324d); } }
 
 /* Folder switches keep the current list on screen. A fast load finishes
    before the dim's delay, so nothing changes; a slow one dims gently. New

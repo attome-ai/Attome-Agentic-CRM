@@ -5,7 +5,7 @@
   letter-spacing: .08em; text-transform: uppercase;
   color: var(--color-text-secondary, #94a3b8);
 }
-.xat-req { color: #f87171; margin-left: 2px; }
+.xat-req { color: #f87171; margin-inline-start: 2px; }
 
 .xat-gate { margin: 0; font-size: 13px; color: var(--color-text-secondary, #94a3b8); }
 

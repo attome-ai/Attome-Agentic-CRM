@@ -33,7 +33,7 @@
 .results td {
   border-bottom: 1px solid var(--attome-border-color, #ddd);
   padding: 0.4rem 0.6rem;
-  text-align: left;
+  text-align: start;
   font-size: 0.85rem;
 }
 

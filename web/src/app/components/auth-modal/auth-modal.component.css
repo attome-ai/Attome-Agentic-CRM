@@ -37,7 +37,7 @@
 .modal-close {
   position: absolute;
   top: 14px;
-  right: 14px;
+  inset-inline-end: 14px;
   width: 30px;
   height: 30px;
   display: flex;

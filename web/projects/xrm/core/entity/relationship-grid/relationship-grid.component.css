@@ -11,7 +11,7 @@
 .rg-table tr { border-top: 1px solid var(--color-border); }
 .rg-cell-label { padding: 6px 4px; cursor: pointer; }
 .rg-cell-label:hover { text-decoration: underline; }
-.rg-cell-actions { width: 32px; text-align: right; }
+.rg-cell-actions { width: 32px; text-align: end; }
 .rg-remove-button { background: transparent; border: none; color: var(--color-text-secondary, #94a3b8); cursor: pointer; padding: 4px; }
 .rg-remove-button:hover { color: var(--color-danger, #ef4444); }
 
@@ -26,7 +26,7 @@
 .relationship-search { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: 8px; }
 .relationship-search input { flex: 1; background: transparent; border: none; color: inherit; outline: none; }
 .relationship-list table { width: 100%; border-collapse: collapse; }
-.relationship-list th { text-align: left; font-size: 12px; color: var(--color-text-secondary, #94a3b8); padding: 6px 8px; }
+.relationship-list th { text-align: start; font-size: 12px; color: var(--color-text-secondary, #94a3b8); padding: 6px 8px; }
 .relationship-list td { padding: 6px 8px; border-top: 1px solid var(--color-border); }
 .relationship-list tr:not(thead tr) { cursor: pointer; }
 .relationship-list tr:hover { background: var(--color-surface-hover, rgb(255 255 255 / .06)); }

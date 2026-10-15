@@ -46,7 +46,7 @@ jobs:
       - name: lint
         run: |
           set -o pipefail
-          { npm run check:i18n && npm run check:colours && npm run lint:base && npm run lint:xrm && npm run lint:sdk && npx ng lint attome-website; } 2>&1 | tee -a ../web-check.log
+          { npm run check:i18n && npm run check:colours && npm run check:logical-css && npm run lint:base && npm run lint:xrm && npm run lint:sdk && npx ng lint attome-website; } 2>&1 | tee -a ../web-check.log
         shell: bash
       - name: test
         run: |

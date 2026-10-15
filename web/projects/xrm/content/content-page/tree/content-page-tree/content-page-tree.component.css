@@ -5,11 +5,11 @@
 .cpt-error { color: #f87171; font-size: 12px; margin: 0; }
 .cpt-tree, .cpt-tree-children { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
 .cpt-tree { flex: 1; min-height: 0; }
-.cpt-tree-children { margin-left: 14px; padding-left: 8px; border-left: 1px solid var(--color-border, #24324d); }
+.cpt-tree-children { margin-inline-start: 14px; padding-inline-start: 8px; border-inline-start: 1px solid var(--color-border, #24324d); }
 .cpt-empty { padding: 10px; font-size: 12px; color: var(--color-text-secondary, #94a3b8); }
 .cpt-row {
   display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 8px;
-  border-radius: 6px; color: var(--color-text-secondary, #94a3b8); cursor: pointer; text-align: left;
+  border-radius: 6px; color: var(--color-text-secondary, #94a3b8); cursor: pointer; text-align: start;
 }
 .cpt-row:hover { background: color-mix(in srgb, var(--color-accent, #5D5CDE) 12%, transparent); }
 .cpt-row-active { color: var(--color-accent, #5D5CDE); background: color-mix(in srgb, var(--color-accent, #5D5CDE) 17%, transparent); }
@@ -22,6 +22,6 @@
 .cpt-status-draft { background: color-mix(in srgb, #f59e0b 20%, transparent); color: #fbbf24; }
 .cpt-status-published { background: color-mix(in srgb, #22c55e 20%, transparent); color: #86efac; }
 .cpt-menu { position: fixed; z-index: 1000; min-width: 160px; padding: 6px; border: 1px solid var(--color-border, #334155); border-radius: 8px; background: var(--color-bg-alt, #1e293b); box-shadow: 0 14px 35px rgba(0,0,0,.35); }
-.cpt-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 5px; background: none; color: var(--color-text-primary, #e5eefc); cursor: pointer; text-align: left; font-size: 13px; }
+.cpt-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: 5px; background: none; color: var(--color-text-primary, #e5eefc); cursor: pointer; text-align: start; font-size: 13px; }
 .cpt-menu button:hover { background: color-mix(in srgb, var(--color-text-primary, #e5eefc) 8%, transparent); }
 .cpt-danger { color: #f87171; }

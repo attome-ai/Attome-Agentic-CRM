@@ -204,8 +204,8 @@ type Stage = 'credentials' | 'mfa-code' | 'mfa-enroll';
       position: relative; overflow: hidden; background: var(--color-bg);
     }
     .bg-shape { position: absolute; filter: blur(80px); opacity: .25; pointer-events: none; }
-    .shape-1 { top: -100px; left: -100px; width: 400px; height: 400px; background: radial-gradient(circle, var(--color-accent), transparent 70%); }
-    .shape-2 { right: -100px; bottom: -100px; width: 500px; height: 500px; background: radial-gradient(circle, var(--color-primary), transparent 70%); }
+    .shape-1 { top: -100px; inset-inline-start: -100px; width: 400px; height: 400px; background: radial-gradient(circle, var(--color-accent), transparent 70%); }
+    .shape-2 { inset-inline-end: -100px; bottom: -100px; width: 500px; height: 500px; background: radial-gradient(circle, var(--color-primary), transparent 70%); }
     .login-card {
       position: relative; z-index: 1; width: 100%; max-width: 440px;
       box-sizing: border-box; padding: 40px; border-radius: 24px;

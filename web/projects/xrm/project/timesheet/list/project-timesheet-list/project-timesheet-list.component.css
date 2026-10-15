@@ -14,7 +14,7 @@
 
 .ts-table-wrap { overflow-x: auto; border: 1px solid var(--color-border, #24324d); border-radius: 12px; background: var(--color-surface, #111c33); }
 .ts-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.ts-table th { text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--color-text-secondary, #94a3b8); border-bottom: 1px solid var(--color-border, #24324d); }
+.ts-table th { text-align: start; padding: 10px 16px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--color-text-secondary, #94a3b8); border-bottom: 1px solid var(--color-border, #24324d); }
 .ts-table td { padding: 10px 16px; color: var(--color-text-primary, #e5eefc); border-bottom: 1px solid var(--color-border, #24324d); }
 .ts-table tr:last-child td { border-bottom: 0; }
 .ts-mono { font-family: ui-monospace, monospace; font-size: 12px; color: var(--color-text-secondary, #94a3b8); }

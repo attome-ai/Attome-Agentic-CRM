@@ -16,7 +16,7 @@
 
 /* Notification count badge */
 .icon-badge {
-  position: absolute; top: 3px; right: 3px;
+  position: absolute; top: 3px; inset-inline-end: 3px;
   min-width: 16px; height: 16px; padding: 0 3px;
   border-radius: 999px;
   background: #ef4444; color: #fff;
@@ -26,7 +26,7 @@
 
 /* Subtle pulse ring around the badge */
 .icon-pulse {
-  position: absolute; top: 3px; right: 3px;
+  position: absolute; top: 3px; inset-inline-end: 3px;
   width: 16px; height: 16px; border-radius: 50%;
   background: rgba(239, 68, 68, 0.35);
   animation: pulse-ring 2s ease-out infinite;
@@ -66,7 +66,7 @@
   background: color-mix(in srgb, var(--color-accent) 5%, transparent);
 }
 .notif-item.unread::before {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  content: ''; position: absolute; inset-inline-start: 0; top: 0; bottom: 0;
   width: 3px; background: var(--color-accent);
 }
 

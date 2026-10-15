@@ -18,7 +18,7 @@ button { cursor:pointer; }
 .toolbar input { flex:1; }
 .toolbar span { color:#94a3b8; font-size:13px; white-space:nowrap; }
 input,select { box-sizing:border-box; width:100%; background:#0b1528; color:#e2e8f0; border:1px solid #334155; border-radius:7px; padding:9px 10px; }
-.item { width:100%; display:flex; gap:11px; align-items:center; text-align:left; padding:12px 14px; border:0; border-bottom:1px solid #1e2b43; background:transparent; color:#e2e8f0; }
+.item { width:100%; display:flex; gap:11px; align-items:center; text-align:start; padding:12px 14px; border:0; border-bottom:1px solid #1e2b43; background:transparent; color:#e2e8f0; }
 .item:hover,.item.selected { background:#182640; } .item.selected { box-shadow:inset 3px 0 #14b8a6; }
 .item-icon { width:25px; font-size:20px; text-align:center; }
 .item-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:3px; }

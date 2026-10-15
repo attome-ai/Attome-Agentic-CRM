@@ -99,11 +99,11 @@
 .qs-results::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
 .qs-item {
   display: flex; align-items: center; gap: 12px; padding: 10px 16px;
-  cursor: pointer; border-left: 3px solid transparent; transition: background 0.12s;
+  cursor: pointer; border-inline-start: 3px solid transparent; transition: background 0.12s;
 }
 .qs-item:hover, .qs-item.qs-active {
   background: color-mix(in srgb, var(--color-accent), transparent 92%);
-  border-left-color: var(--color-accent);
+  border-inline-start-color: var(--color-accent);
 }
 .qs-item-icon { font-size: 1.3rem; color: var(--color-accent); width: 24px; text-align: center; flex-shrink: 0; }
 .qs-item-body { flex: 1; display: flex; flex-direction: column; gap: 2px; overflow: hidden; }

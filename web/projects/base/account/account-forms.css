@@ -32,7 +32,7 @@
 
 .shape-1 {
   top: -100px;
-  left: -100px;
+  inset-inline-start: -100px;
   width: 400px;
   height: 400px;
   background: radial-gradient(circle, var(--color-accent) 0%, transparent 70%);
@@ -40,7 +40,7 @@
 
 .shape-2 {
   bottom: -100px;
-  right: -100px;
+  inset-inline-end: -100px;
   width: 500px;
   height: 500px;
   background: radial-gradient(circle, var(--color-primary) 0%, transparent 70%);

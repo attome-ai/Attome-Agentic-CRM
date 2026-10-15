@@ -54,7 +54,7 @@
 
 .em-search-icon {
   position: absolute;
-  left: 16px;
+  inset-inline-start: 16px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 22px;
@@ -282,5 +282,5 @@
   color: var(--color-text-secondary);
 }
 .em-scaffold-done p { margin: 0 0 6px; }
-.em-scaffold-done ul { margin: 0 0 8px; padding-left: 20px; }
+.em-scaffold-done ul { margin: 0 0 8px; padding-inline-start: 20px; }
 .em-scaffold-done li { margin-bottom: 3px; }

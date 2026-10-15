@@ -13,7 +13,7 @@
 :host { position: relative; }
 
 .hdr-panel {
-  position: absolute; right: 0; left: auto; top: calc(100% + 10px);
+  position: absolute; inset-inline-end: 0; inset-inline-start: auto; top: calc(100% + 10px);
   max-width: calc(100vw - 24px);
   background: var(--color-bg-alt);
   border: 1px solid var(--color-border);

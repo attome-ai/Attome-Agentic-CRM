@@ -8,6 +8,7 @@
     "check:chunks": "node scripts/chunk-budget.mjs",
     "check:i18n": "node scripts/check-i18n.mjs",
     "check:colours": "node scripts/check-colours.mjs",
+    "check:logical-css": "node scripts/check-logical-css.mjs",
     "build:base": "ng build base",
     "build:xrm": "ng build xrm",
     "build:sdk": "ng build sdk",
