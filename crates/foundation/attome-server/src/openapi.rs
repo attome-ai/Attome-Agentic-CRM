@@ -49,6 +49,33 @@ impl Modify for SecuritySchemes {
                  POST /api/v1/auth/api-keys.",
             ))),
         );
+
+        // S2-T1: `attome_s2s::middleware` — a system-to-system call signed
+        // with its client's key.
+        components.add_security_scheme(
+            "s2s_hmac",
+            SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::with_description(
+                "x-s2s-signature",
+                "A system-to-system call, signed. Send `x-s2s-client-id`, `x-s2s-key-id`, \
+                 `x-s2s-timestamp` (Unix milliseconds, within 300 seconds of the server's \
+                 clock), `x-s2s-nonce` (single use: a repeat is refused) and \
+                 `x-s2s-signature`: the hex HMAC-SHA256, keyed by the hex-decoded client \
+                 secret, of `METHOD`, `PATH_AND_QUERY`, the hex SHA-256 of the body, \
+                 `TIMESTAMP` and `NONCE`, joined by newlines in that order.",
+            ))),
+        );
+
+        // S2-T1: `attome_portal::session::cookie_names` — a web portal user's
+        // session, named per portal.
+        components.add_security_scheme(
+            "portal_session",
+            SecurityScheme::ApiKey(ApiKey::Cookie(ApiKeyValue::with_description(
+                "__Secure-wp_{portal}_session",
+                "A web portal user's session cookie, issued by the portal's sign-in; \
+                 `{portal}` is the portal's keyword (`wp_{portal}_session` on plain-http \
+                 local dev). Valid only on that portal's own routes.",
+            ))),
+        );
     }
 }
 
@@ -86,4 +113,25 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = RootDoc::openapi();
     doc.merge(crate::health::openapi_fragment());
     doc
+}
+
+#[cfg(test)]
+mod tests {
+    /// S2-T1: every credential the server accepts is a declared scheme.
+    #[test]
+    fn root_document_declares_four_security_schemes() {
+        let doc = serde_json::to_value(super::openapi()).expect("serialises");
+        let schemes = doc["components"]["securitySchemes"]
+            .as_object()
+            .expect("security schemes");
+        for name in ["session_cookie", "api_key", "s2s_hmac", "portal_session"] {
+            assert!(schemes.contains_key(name), "{name} is not declared");
+            assert!(
+                schemes[name]["description"]
+                    .as_str()
+                    .is_some_and(|d| !d.is_empty()),
+                "{name} has no description"
+            );
+        }
+    }
 }

@@ -53,6 +53,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - The OpenAPI document's `info.version` is the release version (it said 1.0.0).
 - `attome migrate` and a migrate-on-boot node refuse to run migrations when connected as another role or
   database than configured; preflight reports it as `database.identity`.
+- The OpenAPI document declares every accepted credential: `s2s_hmac` (the signed system-to-system
+  headers and how to sign) and `portal_session` beside `session_cookie` and `api_key`.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE
