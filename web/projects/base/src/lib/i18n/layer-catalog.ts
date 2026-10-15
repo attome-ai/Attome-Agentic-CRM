@@ -17,8 +17,9 @@ export type { LayerCatalog } from './layer-registry';
 export function provideLayerCatalog(
   en: Translation,
   loadAr: () => Promise<Translation>,
+  loaders?: Readonly<Record<string, () => Promise<Translation>>>,
 ): EnvironmentProviders {
-  const layer = { en, loadAr };
+  const layer = { en, loadAr, loaders };
   return makeEnvironmentProviders([
     provideEnvironmentInitializer(() => inject(LayerCatalogRegistry).add(layer)),
   ]);

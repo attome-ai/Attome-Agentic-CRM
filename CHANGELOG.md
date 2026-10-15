@@ -15,6 +15,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   it as an export (was a masked 500).
 - `query.timeouts_ms.interactive` (default 500) and `query.timeouts_ms.report` (default 5000) set how
   long a query may run; they were fixed values.
+- The web app shows any number of languages. `provideAttomeBase({ languages })` lists them with their
+  direction and catalogue; a key a language lacks falls back through its chain (`ar-SA`, then `ar`,
+  then English), and the profile menu offers every configured language.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE
   /api/v1/admin/i18n/overrides`, a `ui_text` label, migration 0034); the app lays
   `GET /api/v1/i18n/overrides` over its catalogue.

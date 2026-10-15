@@ -55,6 +55,7 @@ export class ProfileMenuComponent {
   // same value without an observable bridge.
   readonly themeMode   = this.themeService.mode;
   readonly currentLang = this.langService.current;
+  readonly languages = this.langService.languages;
 
   private lastTimezoneFetchFor: string | null = null;
 

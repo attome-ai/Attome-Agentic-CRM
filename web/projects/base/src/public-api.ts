@@ -54,6 +54,8 @@ export type { GoogleIdentityGlobal }       from './lib/google-identity';
 // registers it where it mounts; base's catalog holds base's own copy only.
 export { provideLayerCatalog, layerCatalogsReady } from './lib/i18n/layer-catalog';
 export type { LayerCatalog }                       from './lib/i18n/layer-catalog';
+export { ATTOME_LANGUAGES, DEFAULT_LANGUAGES, fallbackChain } from './lib/i18n/languages';
+export type { LanguageDef }                        from './lib/i18n/languages';
 
 // Used by `@attome/base/dialog` and `@attome/base/step-up` (NGB-5.1b/c, D-760):
 // one modal stack for the whole app, so it has to be one module instance.

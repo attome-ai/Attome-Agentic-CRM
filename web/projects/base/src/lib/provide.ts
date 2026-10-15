@@ -14,6 +14,7 @@ import { InMemoryTranslocoLoader } from './i18n/transloco.loader';
 import { WarnOnceMissingHandler } from './i18n/missing-handler';
 import { LazyMessageFormatTranspiler } from './i18n/lazy-messageformat.transpiler';
 import { LangService } from './lang.service';
+import { ATTOME_LANGUAGES, DEFAULT_LANGUAGES, LanguageDef } from './i18n/languages';
 
 /**
  * P-i18n-a11y §4.1 — the runtime catalog-library wiring (Transloco chosen
@@ -24,12 +25,17 @@ import { LangService } from './lang.service';
  * lang.service.spec.ts/translate.pipe.spec.ts can provide just this,
  * without pulling in HTTP/auth/session-bootstrap providers a pure i18n unit
  * test has no use for.
+ *
+ * B20-T1: `languages` lists the languages the interface offers (English and
+ * Arabic by default); each falls back through its chain to English.
  */
-export function provideAttomeI18n(): EnvironmentProviders {
+export function provideAttomeI18n(languages: readonly LanguageDef[] = DEFAULT_LANGUAGES): EnvironmentProviders {
+  const codes = languages.map(l => l.code);
   return makeEnvironmentProviders([
+    { provide: ATTOME_LANGUAGES, useValue: languages },
     provideTransloco({
       config: translocoConfig({
-        availableLangs: ['en', 'ar'],
+        availableLangs: codes,
         defaultLang: 'en',
         fallbackLang: 'en',
         reRenderOnLangChange: true,
@@ -57,7 +63,7 @@ export function provideAttomeI18n(): EnvironmentProviders {
     // path. See lazy-messageformat.transpiler.ts for the swap mechanics.
     {
       provide: TRANSLOCO_TRANSPILER,
-      useFactory: () => new LazyMessageFormatTranspiler({ locales: ['en', 'ar'], biDiSupport: true }),
+      useFactory: () => new LazyMessageFormatTranspiler({ locales: codes, biDiSupport: true }),
     },
     // The Arabic catalog is a lazy chunk (i18n/catalogs.ts). When the saved
     // language is Arabic, hold the first render until it has landed — a few
@@ -108,6 +114,6 @@ export function provideAttomeBase(config: AttomeBaseConfig): EnvironmentProvider
     provideHttpClient(withInterceptors([authInterceptor, metadataVersionInterceptor])),
     { provide: ATTOME_CONFIG, useValue: config },
     provideAppInitializer(() => { inject(AuthService).sessionReady().subscribe(); }),
-    provideAttomeI18n(),
+    provideAttomeI18n(config.languages),
   ]);
 }

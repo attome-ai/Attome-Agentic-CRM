@@ -1,6 +1,7 @@
-import { InjectionToken } from '@angular/core';
+import { InjectionToken, inject } from '@angular/core';
 import type { Translation } from '@jsverse/transloco';
 import { en } from './en.catalog';
+import { ATTOME_LANGUAGES, DEFAULT_LANGUAGES, LanguageDef } from './languages';
 
 /**
  * Where each language's catalog comes from (P-i18n-a11y §4.1: bundled JS, no
@@ -22,7 +23,13 @@ export const EAGER_CATALOGS: Readonly<Record<string, Translation>> = { en };
  */
 export const CATALOG_LOAD = new InjectionToken<(lang: string) => Promise<Translation>>(
   'ATTOME_CATALOG_LOAD',
-  { providedIn: 'root', factory: () => loadCatalog },
+  {
+    providedIn: 'root',
+    factory: () => {
+      const languages = inject(ATTOME_LANGUAGES);
+      return (lang: string) => loadCatalog(lang, languages);
+    },
+  },
 );
 
 const pending = new Map<string, Promise<Translation>>();
@@ -32,15 +39,21 @@ const pending = new Map<string, Promise<Translation>>();
  * (LangService, the Transloco loader) shares one chunk request and receives the
  * same catalog object. A failed load is not memoised: the next call retries.
  * An unknown language resolves to an empty catalog, as the loader always did.
+ * B20-T1: a configured language other than English and Arabic loads through
+ * its own `load`.
  */
-export function loadCatalog(lang: string): Promise<Translation> {
+export function loadCatalog(
+  lang: string,
+  languages: readonly LanguageDef[] = DEFAULT_LANGUAGES,
+): Promise<Translation> {
   const eager = EAGER_CATALOGS[lang];
   if (eager) return Promise.resolve(eager);
-  if (lang !== 'ar') return Promise.resolve({});
+  const own = languages.find(l => l.code === lang)?.load;
+  if (lang !== 'ar' && !own) return Promise.resolve({});
 
   let load = pending.get(lang);
   if (!load) {
-    load = import('@attome/base/i18n-ar').then(m => m.ar as Translation);
+    load = own ? own() : import('@attome/base/i18n-ar').then(m => m.ar as Translation);
     load.catch(() => pending.delete(lang));
     pending.set(lang, load);
   }

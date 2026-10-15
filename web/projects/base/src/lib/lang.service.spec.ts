@@ -8,6 +8,7 @@ import { ATTOME_CONFIG } from './config';
 import { provideAttomeI18n } from './provide';
 import { CATALOG_LOAD } from './i18n/catalogs';
 import { LazyMessageFormatTranspiler } from './i18n/lazy-messageformat.transpiler';
+import { DEFAULT_LANGUAGES, LanguageDef, fallbackChain } from './i18n/languages';
 
 describe('LangService', () => {
   afterEach(() => localStorage.clear());
@@ -279,5 +280,84 @@ describe('LangService', () => {
     expect(lang.isRtl()).toBe(false);
     expect(getItem).toHaveBeenCalledWith('attome-lang');
     getItem.mockRestore();
+  });
+});
+
+describe('LangService with more languages (B20-T1)', () => {
+  afterEach(() => localStorage.clear());
+
+  const languages: LanguageDef[] = [
+    ...DEFAULT_LANGUAGES,
+    { code: 'ar-SA', dir: 'rtl', intl: 'ar-SA', label: 'AR-SA', load: () => Promise.resolve({ auth: { back: 'عودة' } }) },
+    { code: 'fr', dir: 'ltr', intl: 'fr-FR', label: 'FR', load: () => Promise.resolve({ auth: { back: 'Retour' } }) },
+  ];
+
+  function setUp() {
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: ATTOME_CONFIG, useValue: { apiUrl: 'http://localhost:7865' } },
+        provideAttomeI18n(languages),
+      ],
+    });
+    return TestBed.inject(LangService);
+  }
+
+  it('a chain runs from the most specific language to English', () => {
+    expect(fallbackChain('ar-SA', languages)).toEqual(['ar-SA', 'ar', 'en']);
+    expect(fallbackChain('fr', languages)).toEqual(['fr', 'en']);
+    expect(fallbackChain('fr-CA', languages)).toEqual(['fr-CA', 'fr', 'en']);
+    expect(fallbackChain('x', [{ code: 'x', dir: 'ltr', intl: 'x', label: 'X', fallback: ['fr'] }, ...languages]))
+      .toEqual(['x', 'fr', 'en']);
+  });
+
+  it('a third language loads, and a key it lacks falls back to English', async () => {
+    const lang = setUp();
+    const english = lang.translate('dialog.cancel');
+    await lang.set('fr');
+    expect(lang.current()).toBe('fr');
+    expect(lang.translate('auth.back')).toBe('Retour');
+    expect(lang.translate('dialog.cancel')).toBe(english);
+    expect(lang.isRtl()).toBe(false);
+    expect(lang.intlLocale()).toBe('fr-FR');
+    const root = TestBed.inject(DOCUMENT).documentElement;
+    expect(root.lang).toBe('fr');
+    expect(root.dir).toBe('ltr');
+  });
+
+  it('a regional language falls back to its base language before English', async () => {
+    const lang = setUp();
+    await lang.set('ar-SA');
+    expect(lang.translate('auth.back')).toBe('عودة');
+    expect(lang.translate('dialog.cancel')).toBe('إلغاء');
+    expect(lang.isRtl()).toBe(true);
+    expect(TestBed.inject(DOCUMENT).documentElement.dir).toBe('rtl');
+  });
+
+  it('restores a saved third language at startup', async () => {
+    localStorage.setItem('attome-lang', 'fr');
+    const lang = setUp();
+    await lang.ready;
+    expect(lang.current()).toBe('fr');
+  });
+
+  it('toggle() walks the configured languages in order', async () => {
+    const lang = setUp();
+    await lang.toggle();
+    expect(lang.current()).toBe('ar');
+    await lang.toggle();
+    expect(lang.current()).toBe('ar-SA');
+    await lang.toggle();
+    expect(lang.current()).toBe('fr');
+    await lang.toggle();
+    expect(lang.current()).toBe('en');
+  });
+
+  it('ignores a language that is not configured', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const lang = setUp();
+    await lang.set('de');
+    expect(lang.current()).toBe('en');
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
   });
 });

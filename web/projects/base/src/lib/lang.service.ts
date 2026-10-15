@@ -3,17 +3,17 @@ import { isPlatformBrowser } from '@angular/common';
 import { DOCUMENT } from '@angular/common';
 import { TranslocoService } from '@jsverse/transloco';
 import { ATTOME_CONFIG } from './config';
+import type { Translation } from '@jsverse/transloco';
 import { CATALOG_LOAD, EAGER_CATALOGS } from './i18n/catalogs';
-import { LayerCatalog, LayerCatalogRegistry } from './i18n/layer-registry';
+import { ATTOME_LANGUAGES, BASE_LANGUAGE, LanguageDef, fallbackChain } from './i18n/languages';
+import { LayerCatalog, LayerCatalogRegistry, layerLoader } from './i18n/layer-registry';
 import type { ApiError } from './types';
 
-export type Lang = 'en' | 'ar';
-
-// Bare 'ar' resolves to Western digits under current CLDR/ICU data (Node 24's
-// ICU 78.3 and modern browsers both do this) — only a region-qualified locale
-// forces the 'arab' numbering system. Intl.NumberFormat/DateTimeFormat callers
-// must use this, never the bare Lang code directly.
-const INTL_LOCALE: Record<Lang, string> = { en: 'en-US', ar: 'ar-SA' };
+/**
+ * A language code (BCP 47), one of `ATTOME_LANGUAGES` (B20-T1). English and
+ * Arabic ship with the product; a deployment configures more.
+ */
+export type Lang = string;
 
 /**
  * NGB-1.9 / D-668 — how long the first render waits on the saved language's
@@ -70,24 +70,33 @@ export class LangService {
   private readonly transloco  = inject(TranslocoService);
   private readonly load       = inject(CATALOG_LOAD);
   private readonly registry   = inject(LayerCatalogRegistry);
+  /** B20-T1: the languages the interface can be shown in, in picker order. */
+  readonly languages          = inject(ATTOME_LANGUAGES);
 
   private readonly storageKey = `${this.config.portalKey ?? 'attome'}-lang`;
 
   /** Languages whose catalog has been handed to Transloco. */
   private readonly registered = new Set<Lang>();
   /** The most recent set() target — a slower, older request must not win. */
-  private requested: Lang = 'en';
-  /** NGB-5.2a — one Arabic load per layer; a failed one is dropped so it retries. */
-  private readonly layerAr = new Map<LayerCatalog, Promise<void>>();
+  private requested: Lang = BASE_LANGUAGE;
+  /** NGB-5.2a — one merge of a layer into a language; a failed one is dropped so it retries. */
+  private readonly layerMerges = new Map<LayerCatalog, Map<Lang, Promise<void>>>();
+  /** One fetch of a layer's own catalogue per language, shared by every chain that needs it. */
+  private readonly layerFetches = new Map<LayerCatalog, Map<Lang, Promise<Translation | null>>>();
   /** Loads a route may wait on (`catalogsReady`). */
   private readonly inflight = new Set<Promise<unknown>>();
   /** Bumped on every late catalog merge so templates re-read their keys. */
   private readonly catalogVersion = signal(0);
 
-  readonly current = signal<Lang>('en');
-  readonly isRtl   = computed(() => this.current() === 'ar');
-  /** For Intl.NumberFormat/DateTimeFormat — never pass `current()` to those directly. */
-  readonly intlLocale = computed(() => INTL_LOCALE[this.current()]);
+  readonly current = signal<Lang>(BASE_LANGUAGE);
+  readonly isRtl   = computed(() => this.language(this.current()).dir === 'rtl');
+  /**
+   * For Intl.NumberFormat/DateTimeFormat — never pass `current()` to those
+   * directly. Bare 'ar' resolves to Western digits under current CLDR/ICU
+   * data; only a region-qualified locale such as 'ar-SA' forces the 'arab'
+   * numbering system, so each language names its own.
+   */
+  readonly intlLocale = computed(() => this.language(this.current()).intl);
 
   /**
    * Settles once the saved language (if any) is applied with its catalog
@@ -108,7 +117,7 @@ export class LangService {
     // observable is still being resolved.
     for (const [lang, catalog] of Object.entries(EAGER_CATALOGS)) {
       this.transloco.setTranslation(catalog, lang);
-      this.registered.add(lang as Lang);
+      this.registered.add(lang);
     }
     for (const layer of this.registry.layers) this.mergeEn(layer);
     this.registry.listen(layer => this.addLayer(layer));
@@ -118,9 +127,9 @@ export class LangService {
     }
     let saved: string | null = null;
     try { saved = localStorage.getItem(this.storageKey); } catch { /* private mode */ }
-    this.apply('en');
-    this.ready = saved === 'ar'
-      ? raceBootDeadline(this.switchTo('ar', false))
+    this.apply(BASE_LANGUAGE);
+    this.ready = saved && saved !== BASE_LANGUAGE && this.isKnown(saved)
+      ? raceBootDeadline(this.switchTo(saved, false))
       : Promise.resolve();
   }
 
@@ -128,13 +137,25 @@ export class LangService {
    * Switch language and persist the choice. Synchronous when the catalog is
    * already loaded; otherwise the switch takes effect when the returned
    * promise resolves. Never rejects (a failed load keeps the current language).
+   * A language that is not configured is ignored.
    */
   set(lang: Lang): Promise<void> {
+    if (!this.isKnown(lang)) {
+      console.error(`[attome] '${lang}' is not a configured language; staying in '${this.current()}'.`);
+      return Promise.resolve();
+    }
     return this.switchTo(lang, true);
   }
 
+  /** The next configured language after the one last asked for. */
   toggle(): Promise<void> {
-    return this.set(this.requested === 'en' ? 'ar' : 'en');
+    const codes = this.languages.map(l => l.code);
+    return this.set(codes[(codes.indexOf(this.requested) + 1) % codes.length] ?? BASE_LANGUAGE);
+  }
+
+  /** The configured language `code`, or a left-to-right stand-in for one that is not. */
+  language(code: Lang): LanguageDef {
+    return this.languages.find(l => l.code === code) ?? { code, dir: 'ltr', intl: code, label: code };
   }
 
   /** Resolve a catalog key (optionally with ICU MessageFormat params) in the active language. */
@@ -192,14 +213,20 @@ export class LangService {
       this.apply(lang);
       return Promise.resolve();
     }
-    return this.track(this.load(lang).then(
-      async catalog => {
+    // B20-T1: the language's own catalogue and every one it falls back to
+    // before English (which Transloco's fallbackLang already covers).
+    const chain = this.chain(lang);
+    return this.track(Promise.all(chain.map(code => this.load(code))).then(
+      async catalogs => {
         if (!this.registered.has(lang)) {
-          this.transloco.setTranslation(catalog, lang);
+          // Most general first, so each more specific catalogue wins its keys.
+          for (const catalog of [...catalogs].reverse()) {
+            this.transloco.setTranslation(catalog, lang, { merge: true });
+          }
           this.registered.add(lang);
         }
         // Layers first, so the switch never shows a layer's English fallback.
-        await Promise.all(this.registry.layers.map(layer => this.mergeAr(layer)));
+        await Promise.all(this.registry.layers.map(layer => this.mergeLayer(layer, lang)));
         if (this.requested === lang) this.apply(lang);
       },
       (error: unknown) => {
@@ -218,7 +245,18 @@ export class LangService {
 
   private addLayer(layer: LayerCatalog): void {
     this.mergeEn(layer);
-    if (this.registered.has('ar')) void this.track(this.mergeAr(layer));
+    for (const lang of this.registered) {
+      if (lang !== BASE_LANGUAGE) void this.track(this.mergeLayer(layer, lang));
+    }
+  }
+
+  private isKnown(lang: Lang): boolean {
+    return this.languages.some(l => l.code === lang);
+  }
+
+  /** `lang` and the languages it falls back to before English, most specific first. */
+  private chain(lang: Lang): Lang[] {
+    return fallbackChain(lang, this.languages).filter(code => code !== BASE_LANGUAGE);
   }
 
   private mergeEn(layer: LayerCatalog): void {
@@ -226,23 +264,47 @@ export class LangService {
     this.catalogVersion.update(v => v + 1);
   }
 
-  /** Never rejects: a layer whose Arabic fails renders in English (OD-10). */
-  private mergeAr(layer: LayerCatalog): Promise<void> {
-    let load = this.layerAr.get(layer);
-    if (!load) {
-      load = layer.loadAr().then(
-        catalog => {
-          this.transloco.setTranslation(catalog, 'ar', { merge: true });
-          this.catalogVersion.update(v => v + 1);
-        },
+  /**
+   * Merges a layer's catalogues for `lang`'s chain into `lang`, most general
+   * first. Never rejects: a layer whose catalogue fails renders in the next
+   * language of the chain, English last (OD-10), and a later call retries.
+   */
+  private mergeLayer(layer: LayerCatalog, lang: Lang): Promise<void> {
+    const merges = this.layerMerges.get(layer) ?? new Map<Lang, Promise<void>>();
+    this.layerMerges.set(layer, merges);
+    let merge = merges.get(lang);
+    if (!merge) {
+      const chain = this.chain(lang).filter(code => layerLoader(layer, code));
+      merge = Promise.all(chain.map(code => this.fetchLayer(layer, code))).then(catalogs => {
+        for (const catalog of [...catalogs].reverse()) {
+          if (catalog) this.transloco.setTranslation(catalog, lang, { merge: true });
+        }
+        this.catalogVersion.update(v => v + 1);
+        if (catalogs.includes(null)) merges.delete(lang);
+      });
+      merges.set(lang, merge);
+    }
+    return merge;
+  }
+
+  /** One layer catalogue; `null` when it failed to load (the next call retries). */
+  private fetchLayer(layer: LayerCatalog, code: Lang): Promise<Translation | null> {
+    const fetches = this.layerFetches.get(layer) ?? new Map<Lang, Promise<Translation | null>>();
+    this.layerFetches.set(layer, fetches);
+    let fetch = fetches.get(code);
+    if (!fetch) {
+      const loader = layerLoader(layer, code);
+      fetch = (loader ? loader() : Promise.resolve({})).then(
+        catalog => catalog,
         (error: unknown) => {
-          this.layerAr.delete(layer);
-          console.error("[attome] a layer's Arabic catalog failed to load; its screens stay in English.", error);
+          fetches.delete(code);
+          console.error(`[attome] a layer's '${code}' catalog failed to load; its screens fall back to the next language.`, error);
+          return null;
         },
       );
-      this.layerAr.set(layer, load);
+      fetches.set(code, fetch);
     }
-    return load;
+    return fetch;
   }
 
   private track<T>(work: Promise<T>): Promise<T> {
@@ -256,7 +318,7 @@ export class LangService {
     this.current.set(lang);
     this.transloco.setActiveLang(lang);
     this.doc.documentElement.lang = lang;
-    this.doc.documentElement.dir  = lang === 'ar' ? 'rtl' : 'ltr';
+    this.doc.documentElement.dir  = this.language(lang).dir;
   }
 }
 

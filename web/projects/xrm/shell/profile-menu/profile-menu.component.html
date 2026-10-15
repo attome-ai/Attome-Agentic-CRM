@@ -49,8 +49,9 @@
     <div class="pp-setting-row">
       <span class="pp-setting-label"><i class="las la-language"></i> {{ 'shell.language' | translate }}</span>
       <div class="pp-segmented">
-        <button type="button" [class.active]="currentLang() === 'en'" (click)="setLang('en')">EN</button>
-        <button type="button" [class.active]="currentLang() === 'ar'" (click)="setLang('ar')">AR</button>
+        @for (language of languages; track language.code) {
+          <button type="button" [class.active]="currentLang() === language.code" (click)="setLang(language.code)">{{ language.label }}</button>
+        }
       </div>
     </div>
   </div>

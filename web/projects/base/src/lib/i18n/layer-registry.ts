@@ -3,11 +3,18 @@ import type { Translation } from '@jsverse/transloco';
 
 /**
  * One layer's own strings (NGB-5.2a, D-761): English bundled with the layer,
- * Arabic fetched the first time Arabic is needed.
+ * Arabic fetched the first time Arabic is needed. B20-T1: `loaders` adds the
+ * layer's catalogue for any other configured language, keyed by its code.
  */
 export interface LayerCatalog {
   readonly en: Translation;
   readonly loadAr: () => Promise<Translation>;
+  readonly loaders?: Readonly<Record<string, () => Promise<Translation>>>;
+}
+
+/** The layer's own loader for `lang`, if it has one. */
+export function layerLoader(layer: LayerCatalog, lang: string): (() => Promise<Translation>) | undefined {
+  return lang === 'ar' ? layer.loadAr : layer.loaders?.[lang];
 }
 
 /**
