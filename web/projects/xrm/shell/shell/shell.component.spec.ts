@@ -151,7 +151,7 @@ describe('ShellComponent command palette (B10-T1)', () => {
     expect(component.quickSearchOpen()).toBe(true);
   });
 
-  it('lists the open page's commands first, and only commands after >', () => {
+  it('lists the open page commands first, and only commands after >', () => {
     const { component } = createComponent();
     const run = vi.fn();
     TestBed.inject(CommandRegistry).register(
