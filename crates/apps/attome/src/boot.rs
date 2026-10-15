@@ -78,6 +78,10 @@ pub async fn apply_schema_migrations(
     attome_db::verify_migration_checksums(&MIGRATOR, MIGRATION_CHECKSUM_BASELINE)?;
     tracing::info!("migration checksum baseline verified");
     let migration_db = attome_db::create_direct_pool(config).await?;
+    // Z2-T1: migrations run only as the bootstrap role, on the configured
+    // database — the `migrate` binary and a migrate-on-boot node alike.
+    let ids = expected_identities(config);
+    attome_db::verify_pool_identity(&migration_db, ids.direct, ids.dbname).await?;
     attome_db::ensure_schema(&migration_db, config).await?;
     tracing::info!("schema ensured");
     attome_db::run_migrations(&migration_db, &MIGRATOR).await?;
@@ -222,13 +226,40 @@ pub fn public_portal_without_captcha_warning(config: &AppConfig) -> Option<Strin
 /// the wrong database/role (BDB-F10, OD-6). `migrate` and `preflight` are
 /// exempt: they are bootstrap by design.
 pub fn expected_runtime_identity(config: &AppConfig) -> (&str, &str) {
-    let user = config
-        .database
-        .runtime
-        .as_ref()
-        .map(|runtime| runtime.user.as_str())
-        .unwrap_or(config.database.user.as_str());
-    (user, config.database.dbname.as_str())
+    let ids = expected_identities(config);
+    (ids.runtime, ids.dbname)
+}
+
+/// Z2-T1: the role each connection must arrive as, and the database, which
+/// boot, `migrate` and `preflight` all check against.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ExpectedIdentities<'a> {
+    /// Request-time record work (`database.runtime`, else the bootstrap user).
+    pub runtime: &'a str,
+    /// Schema and entity DDL (`database.migrator`, else the bootstrap user).
+    pub migrator: &'a str,
+    /// The direct, non-pooled connection migrations run on: the bootstrap user.
+    pub direct: &'a str,
+    pub dbname: &'a str,
+}
+
+/// Z2-T1: the identities `config` expects.
+pub fn expected_identities(config: &AppConfig) -> ExpectedIdentities<'_> {
+    let bootstrap = config.database.user.as_str();
+    ExpectedIdentities {
+        runtime: config
+            .database
+            .runtime
+            .as_ref()
+            .map_or(bootstrap, |runtime| runtime.user.as_str()),
+        migrator: config
+            .database
+            .migrator
+            .as_ref()
+            .map_or(bootstrap, |migrator| migrator.user.as_str()),
+        direct: bootstrap,
+        dbname: config.database.dbname.as_str(),
+    }
 }
 
 /// Runs the shared boot sequence against an already-loaded, already-
@@ -502,12 +533,7 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     // an override naming a different database than config. The mismatch case (silently running schema/entity DDL as the
     // full-privilege bootstrap role) is exactly what D-148's boot-error gate
     // above exists to prevent, and that gate only checks config presence.
-    let expected_migrator_user = config
-        .database
-        .migrator
-        .as_ref()
-        .map(|m| m.user.as_str())
-        .unwrap_or(config.database.user.as_str());
+    let expected_migrator_user = expected_identities(config).migrator;
     attome_db::verify_pool_identity(
         &db_migrator,
         expected_migrator_user,
@@ -1548,6 +1574,32 @@ pub fn register_engines(
 
 #[cfg(test)]
 mod tests {
+    /// Z2-T1: the split roles when configured, else the bootstrap user.
+    #[test]
+    fn expected_identities_match_config() {
+        let mut config: AppConfig =
+            serde_json::from_str(include_str!("../../../../config.example.json"))
+                .expect("the example config parses");
+        let split = super::expected_identities(&config);
+        assert_eq!(split.direct, config.database.user);
+        assert_eq!(split.dbname, config.database.dbname);
+        let runtime = config.database.runtime.as_ref().map(|r| r.user.clone());
+        let migrator = config.database.migrator.as_ref().map(|m| m.user.clone());
+        assert_eq!(
+            Some(split.runtime.to_owned()),
+            runtime.or(Some(config.database.user.clone()))
+        );
+        assert_eq!(
+            Some(split.migrator.to_owned()),
+            migrator.or(Some(config.database.user.clone()))
+        );
+
+        config.database.runtime = None;
+        config.database.migrator = None;
+        let bootstrap = super::expected_identities(&config);
+        assert_eq!(bootstrap.runtime, config.database.user);
+        assert_eq!(bootstrap.migrator, config.database.user);
+    }
     use super::{
         begin_drain, public_portal_without_captcha_warning, report_ignored_config_keys,
         validate_operation_registries,

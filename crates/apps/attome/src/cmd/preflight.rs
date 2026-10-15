@@ -232,6 +232,15 @@ pub async fn run() -> ExitCode {
                             config.database.host, config.database.port
                         ),
                     ));
+                    // Z2-T1: connected as the role and database boot expects.
+                    let ids = attome::boot::expected_identities(&config);
+                    match attome_db::verify_pool_identity(&pool, ids.direct, ids.dbname).await {
+                        Ok(()) => results.push(pass(
+                            "database.identity",
+                            format!("connected as {} to {}", ids.direct, ids.dbname),
+                        )),
+                        Err(e) => results.push(fail("database.identity", e.to_string())),
+                    }
                     check_metadata_natural_keys(&mut results, &pool).await;
                 }
                 Err(e) => results.push(fail("postgres", e.to_string())),
