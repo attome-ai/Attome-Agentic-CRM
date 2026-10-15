@@ -92,10 +92,15 @@ pub enum NodeType {
     /// unique values, audit). There is deliberately no purge node: purging
     /// goes through the retention sweep's propose/approve/execute path.
     RestoreRecord,
+    /// A15-T9: "if a duplicate exists" — looks the record (wired
+    /// `record_id`, of `config.entity`) up under every active duplicate rule
+    /// of its entity and takes `found` (with the matches the flow's identity
+    /// may read and a count of the rest) or `none`. Reads only.
+    DuplicateCheck,
 }
 
 impl NodeType {
-    pub const ALL: [Self; 15] = [
+    pub const ALL: [Self; 16] = [
         Self::Trigger,
         Self::Condition,
         Self::CreateRecord,
@@ -111,6 +116,7 @@ impl NodeType {
         Self::AgentStep,
         Self::Route,
         Self::RestoreRecord,
+        Self::DuplicateCheck,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -130,6 +136,7 @@ impl NodeType {
             Self::AgentStep => "agent_step",
             Self::Route => "route",
             Self::RestoreRecord => "restore_record",
+            Self::DuplicateCheck => "duplicate_check",
         }
     }
 
@@ -186,7 +193,8 @@ impl NodeType {
             | Self::SubWorkflow
             | Self::Split
             | Self::Join
-            | Self::Route => SideEffect::None,
+            | Self::Route
+            | Self::DuplicateCheck => SideEffect::None,
         }
     }
 
@@ -246,6 +254,7 @@ impl NodeType {
             // something to silently coerce).
             Self::Route => &[("context", PortType::Json, true)],
             Self::RestoreRecord => &[("record_id", PortType::RecordId, true)],
+            Self::DuplicateCheck => &[("record_id", PortType::RecordId, true)],
         }
     }
 
@@ -295,6 +304,7 @@ impl NodeType {
             // a synchronous classification instead.
             Self::Route => &[("matched", PortType::Json), ("unmatched", PortType::Json)],
             Self::RestoreRecord => &[("record", PortType::RecordId)],
+            Self::DuplicateCheck => &[("found", PortType::Json), ("none", PortType::Json)],
         }
     }
 
@@ -324,7 +334,8 @@ impl NodeType {
         use attome_ai::descriptor::{Effect, RetryClass, RiskTier};
         match self {
             // Reads and pure evaluation. Nothing leaves the process.
-            Self::Trigger | Self::Condition => NodeCapability {
+            // A15-T9: `DuplicateCheck` reads the record and the match keys.
+            Self::Trigger | Self::Condition | Self::DuplicateCheck => NodeCapability {
                 risk: RiskTier::Read,
                 effect: Effect::Read,
                 retry: RetryClass::Idempotent,
@@ -404,7 +415,10 @@ impl NodeType {
     /// `skipped`, never left `pending` forever (§4.4 skip propagation,
     /// F090).
     pub fn is_branching(self) -> bool {
-        matches!(self, Self::Condition | Self::Approval | Self::Route)
+        matches!(
+            self,
+            Self::Condition | Self::Approval | Self::Route | Self::DuplicateCheck
+        )
     }
 }
 
@@ -769,7 +783,7 @@ mod tests {
         for node in NodeType::ALL {
             let _ = node.capability();
         }
-        assert_eq!(NodeType::ALL.len(), 15, "the node set is closed (I-5)");
+        assert_eq!(NodeType::ALL.len(), 16, "the node set is closed (I-5)");
     }
 
     /// `Split`/`Join` are graph-shape markers, not the branching type

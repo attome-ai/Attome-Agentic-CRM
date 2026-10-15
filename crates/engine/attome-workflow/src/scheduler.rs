@@ -1152,6 +1152,7 @@ async fn execute_node(
             execute_entity_write(state, ctx, instance, node, node_type, input).await
         }
         NodeType::RestoreRecord => execute_restore_record(state, ctx, node, input).await,
+        NodeType::DuplicateCheck => execute_duplicate_check(state, ctx, node, input).await,
         NodeType::SendNotification => {
             execute_send_notification(state, instance, node, input, fired).await
         }
@@ -1232,6 +1233,69 @@ pub(crate) fn approval_taken_port(decision: &str) -> Option<&'static str> {
 /// `restore_record_for`, the path the bin's own restore takes. A record
 /// already live succeeds unchanged, which is what makes a crash-replay after
 /// the restore committed harmless.
+/// A15-T9: the "if a duplicate exists" step. Reads the live record and looks
+/// it up under every active duplicate rule of its entity
+/// (`attome_records::duplicate_check::find_any`); `found` carries the
+/// matches the flow's identity may read and a count of the others.
+async fn execute_duplicate_check(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    node: &GraphNode,
+    input: &Value,
+) -> Result<NodeOutcome, AppError> {
+    let entity_name = node
+        .config
+        .get("entity")
+        .and_then(Value::as_str)
+        .ok_or_else(|| AppError::internal(format!("node {:?} missing config.entity", node.id)))?;
+    let entity_id = state
+        .entities
+        .load()
+        .get(entity_name)
+        .map(|meta| meta.entity_id)
+        .ok_or_else(|| {
+            AppError::internal(format!(
+                "unknown entity {entity_name:?} in workflow node config"
+            ))
+        })?;
+    let record_id = input
+        .get("record_id")
+        .and_then(|v| v.as_str().or_else(|| v.get("id").and_then(Value::as_str)))
+        .and_then(|s| Uuid::parse_str(s).ok())
+        .ok_or_else(|| {
+            AppError::Validation("duplicate_check node has no resolvable record_id".into())
+        })?;
+    let row: Option<Value> = sqlx::query_scalar(&format!(
+        "SELECT to_jsonb(t) FROM {} t WHERE id = $1 AND is_active = true",
+        attome_core::quote_ident(entity_name)
+    ))
+    .bind(record_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    let Some(Value::Object(values)) = row else {
+        return Err(AppError::NotFound);
+    };
+    let found = attome_records::duplicate_check::find_any(
+        state,
+        ctx,
+        entity_id,
+        entity_name,
+        Some(record_id),
+        &values,
+    )
+    .await?;
+    let any = !found.visible.is_empty() || found.hidden > 0;
+    Ok(NodeOutcome::Branch {
+        taken_port: if any { "found" } else { "none" },
+        output: serde_json::json!({
+            "id": record_id,
+            "matches": found.visible,
+            "hidden": found.hidden,
+        }),
+    })
+}
+
 async fn execute_restore_record(
     state: &EngineState,
     ctx: &SecurityContext,

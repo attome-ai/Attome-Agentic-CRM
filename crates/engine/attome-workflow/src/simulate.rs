@@ -389,6 +389,12 @@ fn simulate_node(
             simulate_entity_write(state, node, node_type, input)
         }
         NodeType::RestoreRecord => simulate_restore_record(state, node),
+        // A15-T9: a dry run looks nothing up and follows `none`.
+        NodeType::DuplicateCheck => Ok(SimOutcome::Branch {
+            taken_port: "none",
+            output: serde_json::json!({ "matches": [], "hidden": 0 }),
+            would_have: Some("would look the record up under its duplicate rules".to_owned()),
+        }),
         NodeType::SendNotification => Ok(simulate_send_notification(node, input)),
         NodeType::Webhook => simulate_webhook(node, input),
         NodeType::Approval => Ok(simulate_approval(node, input, approval_decisions)),

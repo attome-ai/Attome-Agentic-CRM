@@ -20,6 +20,7 @@ const EXECUTOR_TO_NODE_TYPE: Record<string, string[]> = {
   eval_condition:            ['condition'],
   execute_entity_write:      ['create_record', 'update_record'],
   execute_restore_record:    ['restore_record'],
+  execute_duplicate_check:   ['duplicate_check'],
   execute_send_notification: ['send_notification'],
   execute_approval:          ['approval'],
   execute_wait:              ['wait'],

@@ -1423,6 +1423,146 @@ async fn restore_node_restores_record() {
     }
 }
 
+/// A15-T9: a `duplicate_check` node takes `found` for a record another
+/// record shares a phone with (under the entity's duplicate rule), and
+/// `none` for one that has no match; the untaken branch is skipped.
+#[tokio::test]
+async fn duplicate_check_node_branches() {
+    let state = skip_if_no_db!(test_state().await);
+    let user_id = seed_user(&state.base.db).await;
+    let entity = format!("wf_dup_{}", &Uuid::now_v7().simple().to_string()[..12]);
+    let entity_id = attome_metadata::provision::ensure_entity(
+        &state.base.db,
+        &entity,
+        "Workflow Duplicate Test Entity",
+        None,
+        false,
+    )
+    .await
+    .expect("provision test entity");
+    attome_metadata::provision::ensure_attribute(
+        &state.base.db,
+        entity_id,
+        "phone",
+        "Phone",
+        "text",
+        false,
+        false,
+        false,
+        false,
+        None,
+        None,
+    )
+    .await
+    .expect("provision phone attribute");
+    state.entities.swap(
+        attome_core::build_registry(&state.base.db)
+            .await
+            .expect("build registry"),
+    );
+
+    let create = json!({
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": {"trigger_type": "manual"}},
+            {"id": "cr", "type": "create_record", "config": {"entity": entity}}
+        ],
+        "edges": [{"from_node": "t", "from_port": "out", "to_node": "cr", "to_port": "data"}]
+    });
+    let create_version =
+        publish_workflow(&state.base.db, &format!("{entity}-create"), create).await;
+    let mut ids = Vec::new();
+    for phone in ["0501234567", "+966501234567", "0559999999"] {
+        let instance = attome_workflow::instance_admin::start_instance_internal(
+            &state,
+            create_version,
+            None,
+            Some(user_id),
+            None,
+            json!({"phone": phone}),
+        )
+        .await
+        .expect("start create instance");
+        assert_eq!(run_to_checkpoint(&state, instance).await, "completed");
+        let id: Uuid = sqlx::query_scalar(
+            "SELECT (node_data -> 'cr' ->> 'id')::uuid FROM workflow_instance WHERE id = $1",
+        )
+        .bind(instance)
+        .fetch_one(&state.base.db)
+        .await
+        .expect("read the created record's id");
+        ids.push(id);
+    }
+
+    // The rule and the first record's stored key (a throwaway database).
+    let rule_id: Uuid = sqlx::query_scalar(
+        "INSERT INTO match_rule (entity_logicalname, name, fields, threshold, created_by) \
+         VALUES ($1, 'same phone', $2, 1.0, $3) RETURNING id",
+    )
+    .bind(&entity)
+    .bind(
+        json!([{"field": "phone", "comparator": "phone", "weight": 1.0, "default_country": "SA"}]),
+    )
+    .bind(user_id)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("insert match rule");
+    sqlx::query(
+        "INSERT INTO match_key (entity_logicalname, record_id, match_rule_id, field, key) \
+         VALUES ($1, $2, $3, 'phone', '+966501234567')",
+    )
+    .bind(&entity)
+    .bind(ids[0])
+    .bind(rule_id)
+    .execute(&state.base.db)
+    .await
+    .expect("insert the first record's key");
+
+    let check = json!({
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": {"trigger_type": "manual"}},
+            {"id": "dc", "type": "duplicate_check", "config": {"entity": entity}},
+            {"id": "f", "type": "join", "config": {}},
+            {"id": "n", "type": "join", "config": {}}
+        ],
+        "edges": [
+            {"from_node": "t", "from_port": "out", "to_node": "dc", "to_port": "record_id"},
+            {"from_node": "dc", "from_port": "found", "to_node": "f", "to_port": "in"},
+            {"from_node": "dc", "from_port": "none", "to_node": "n", "to_port": "in"}
+        ]
+    });
+    let check_version = publish_workflow(&state.base.db, &format!("{entity}-check"), check).await;
+    for (record, taken, skipped) in [(ids[1], "f", "n"), (ids[2], "n", "f")] {
+        let instance = attome_workflow::instance_admin::start_instance_internal(
+            &state,
+            check_version,
+            None,
+            Some(user_id),
+            None,
+            json!({"id": record}),
+        )
+        .await
+        .expect("start check instance");
+        assert_eq!(run_to_checkpoint(&state, instance).await, "completed");
+        let statuses: Vec<(String, String)> =
+            sqlx::query_as("SELECT node_id, status FROM workflow_node_run WHERE instance_id = $1")
+                .bind(instance)
+                .fetch_all(&state.base.db)
+                .await
+                .expect("read node_runs");
+        let by_id: std::collections::HashMap<_, _> = statuses.into_iter().collect();
+        assert_eq!(
+            by_id.get(taken).map(String::as_str),
+            Some("succeeded"),
+            "{by_id:?}"
+        );
+        assert_eq!(
+            by_id.get(skipped).map(String::as_str),
+            Some("skipped"),
+            "{by_id:?}"
+        );
+    }
+}
+
 /// P-workflow-engine §5 step 6 follow-up (D-267 addendum): the entity-event
 /// outbox dispatch that closes the "entity create/update auto-start" gap.
 /// Inserts directly into `entity_change_event` (the exact row

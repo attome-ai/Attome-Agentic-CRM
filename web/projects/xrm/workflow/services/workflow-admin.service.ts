@@ -133,6 +133,10 @@ export const NODE_TYPES: NodeTypeSpec[] = [
   { type: 'restore_record', label: 'Restore Record',
     inputs: [{ name: 'record_id', portType: 'record_id', required: true }],
     outputs: [{ name: 'record', portType: 'record_id' }] },
+  // A15-T9: "if a duplicate exists".
+  { type: 'duplicate_check', label: 'If a Duplicate Exists',
+    inputs: [{ name: 'record_id', portType: 'record_id', required: true }],
+    outputs: [{ name: 'found', portType: 'json' }, { name: 'none', portType: 'json' }] },
 ];
 
 export function nodeTypeSpec(type: string): NodeTypeSpec | undefined {
@@ -228,6 +232,11 @@ export const NODE_CONFIG_SCHEMA: Record<string, NodeConfigField[]> = {
   update_record: [
     { key: 'entity', label: 'Entity', kind: 'entity', required: true,
       hint: 'Target row comes from the wired "record_id" input, values from "data".' },
+  ],
+  // scheduler::execute_duplicate_check
+  duplicate_check: [
+    { key: 'entity', label: 'Entity', kind: 'entity', required: true,
+      hint: 'The record comes from the wired "record_id" input; "found" lists the matches under the entity\'s duplicate rules.' },
   ],
   // scheduler::execute_restore_record
   restore_record: [

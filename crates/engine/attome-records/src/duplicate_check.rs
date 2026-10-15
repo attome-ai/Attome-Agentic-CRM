@@ -91,12 +91,39 @@ pub async fn check(
     record_id: Option<Uuid>,
     values: &Map<String, Value>,
 ) -> Result<DuplicateOutcome, AppError> {
+    find(state, ctx, entity_id, entity_name, record_id, values, true).await
+}
+
+/// A15-T9: the same search under every active rule of the entity, whatever
+/// its `on_save` — what a flow's "if a duplicate exists" step asks.
+pub async fn find_any(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_id: Uuid,
+    entity_name: &str,
+    record_id: Option<Uuid>,
+    values: &Map<String, Value>,
+) -> Result<DuplicateOutcome, AppError> {
+    find(state, ctx, entity_id, entity_name, record_id, values, false).await
+}
+
+async fn find(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_id: Uuid,
+    entity_name: &str,
+    record_id: Option<Uuid>,
+    values: &Map<String, Value>,
+    on_save_rules_only: bool,
+) -> Result<DuplicateOutcome, AppError> {
     let db = &state.base.db;
     let rules: Vec<RuleRow> = sqlx::query_as(
         "SELECT id, name, fields, threshold::float8 AS threshold, on_save FROM match_rule \
-          WHERE entity_logicalname = $1 AND is_active AND NOT is_deleted AND on_save <> 'off'",
+          WHERE entity_logicalname = $1 AND is_active AND NOT is_deleted \
+            AND (NOT $2 OR on_save <> 'off')",
     )
     .bind(entity_name)
+    .bind(on_save_rules_only)
     .fetch_all(db)
     .await
     .map_err(AppError::internal)?;
