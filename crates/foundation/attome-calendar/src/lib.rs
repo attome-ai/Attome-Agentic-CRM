@@ -2273,8 +2273,11 @@ mod proptests {
             .unwrap();
             let (early, late) = if a <= b { (a, b) } else { (b, a) };
             // A fifty-year generator can exceed the scan limit; compare on a
-            // span both calculators can actually answer.
-            let late = late.min(early + Duration::days(MAX_DAYS_SCAN - 2));
+            // span both calculators can actually answer. The budget counts
+            // local dates, and a zone that skips a whole date (Samoa 2011)
+            // plus a DST hour makes a UTC span of `MAX_DAYS_SCAN - 2` days
+            // cover too many of them, so keep a week's margin.
+            let late = late.min(early + Duration::days(MAX_DAYS_SCAN - 7));
             prop_assert!(
                 closed.business_duration_between(early, late).unwrap()
                     <= cal.business_duration_between(early, late).unwrap()
