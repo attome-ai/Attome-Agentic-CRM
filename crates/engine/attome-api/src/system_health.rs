@@ -261,6 +261,7 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/admin/ops/metrics/names", get(metric_names))
         .route("/api/v1/admin/ops/metrics/catalogue", get(metric_catalogue))
         .route("/api/v1/admin/ops/nodes", get(ops_nodes))
+        .route("/api/v1/admin/deploys", get(deploys))
         .route("/api/v1/system/status", get(system_status))
         .route(
             "/api/v1/admin/ops/requests/{request_id}",
@@ -570,6 +571,39 @@ async fn ops_nodes(
     )))
 }
 
+/// AB7-T8: the most recent deploys and restarts across every node, newest
+/// first.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/deploys",
+    tag = "operations",
+    responses(
+        (status = 200, description = "The last 100 starts and drains", body = attome_types::PaginatedResponse<attome_server::deploy_event::DeployEvent>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn deploys(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Result<
+    Json<attome_types::PaginatedResponse<attome_server::deploy_event::DeployEvent>>,
+    attome_types::AppError,
+> {
+    const RECENT_DEPLOYS: i64 = 100;
+    let events = attome_server::deploy_event::recent(&state.base.db, RECENT_DEPLOYS)
+        .await
+        .map_err(attome_db::classify)?;
+    let total = i64::try_from(events.len()).map_err(attome_types::AppError::internal)?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        events,
+        total,
+        1,
+        RECENT_DEPLOYS,
+    )))
+}
+
 /// U4-T2: every metric this server emits, with its kind, unit and meaning in
 /// English and Arabic.
 #[utoipa::path(
@@ -675,6 +709,7 @@ async fn latency(_ctx: Authorized<Admin>) -> Json<LatencyReport> {
         metric_names,
         metric_catalogue,
         ops_nodes,
+        deploys,
         request_trail,
         system_status
     ),

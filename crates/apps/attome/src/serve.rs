@@ -45,6 +45,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
+    // AB7-T8: the deploy history's `start` row runs from here to ready.
+    let process_started = chrono::Utc::now();
     // P-api-contract Phase 0/1: `server --print-openapi` is a one-shot mode,
     // checked before logging/config/anything else boots — printing the
     // generated OpenAPI document (`attome::openapi::document`, now every
@@ -427,6 +429,11 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     tracing::info!("listening on {addr}");
 
+    // AB7-T8: the deploy history: a `start` row once ready, a `drain` row
+    // from the shutdown signal to exit.
+    let deploy_db = base_state.db.clone();
+    let deploy_node = attome_server::metrics_store::node_name(config.app.port);
+    let drain_row: std::sync::Arc<std::sync::OnceLock<uuid::Uuid>> = Default::default();
     let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
     // BJB-5a: any of the four components ending (a crashed worker, a failed
     // listener) signals the others, so the process exits instead of serving
@@ -443,9 +450,23 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     let (term_tx, term_rx) = tokio::sync::watch::channel(false);
     let draining = base_state.draining.clone();
     let drain_signal = base_state.drain_signal.clone();
+    let (drain_db, drain_node, drain_row_set) =
+        (deploy_db.clone(), deploy_node.clone(), drain_row.clone());
     tokio::spawn(async move {
         attome::boot::wait_for_shutdown_signal().await;
         let _ = term_tx.send(true);
+        // AB7-T8: beside the drain, never in front of it.
+        tokio::spawn(async move {
+            if let Some(id) = attome_server::deploy_event::record_drain(
+                &drain_db,
+                &drain_node,
+                env!("CARGO_PKG_VERSION"),
+            )
+            .await
+            {
+                let _ = drain_row_set.set(id);
+            }
+        });
         // S1 (BSV-F13): flip readiness to 503 and wake every
         // `AppState::shutdown_signal()` (long streams end instead of holding
         // the deadline open), then wait one LB probe interval x failure
@@ -475,6 +496,18 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     base_state
         .started
         .store(true, std::sync::atomic::Ordering::Relaxed);
+    tokio::spawn({
+        let (db, node) = (deploy_db.clone(), deploy_node.clone());
+        async move {
+            attome_server::deploy_event::record_start(
+                &db,
+                &node,
+                env!("CARGO_PKG_VERSION"),
+                process_started,
+            )
+            .await;
+        }
+    });
     let server_fut = axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
@@ -619,6 +652,10 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     // them. A no-op when tracing was never enabled (`tracing_guard` holds no
     // provider) — see `TracingGuard::shutdown`'s doc comment for why a
     // stalled/unreachable collector must never fail process shutdown.
+    // AB7-T8: failed requests during the drain are not counted yet.
+    if let Some(id) = drain_row.get() {
+        attome_server::deploy_event::finish_drain(&deploy_db, *id, None).await;
+    }
     tracing_guard.shutdown();
 
     Ok(())

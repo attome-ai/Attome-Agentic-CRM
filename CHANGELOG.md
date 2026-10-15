@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Deploy history: each node records a `start` row (process start to ready) and a `drain` row
+  (shutdown signal to exit) with its version and who started it (`ATTOME_DEPLOYED_BY`);
+  `GET /api/v1/admin/deploys` lists the last 100 for administrators. Migration `0037_deploy_event`.
 - `database.node_count` (default 1) and `database.max_server_connections`: with more than one node,
   or the server limit stated, each pool without a `database.pools` entry is sized from 80% of the
   server's connections split across the nodes (runtime 60%, read-only 20%, read-only-primary 10%,

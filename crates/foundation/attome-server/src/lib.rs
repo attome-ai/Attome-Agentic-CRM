@@ -4,6 +4,8 @@ pub mod app;
 pub mod authz;
 pub mod builder;
 pub mod capability;
+/// AB7-T8: the deploy and restart history.
+pub mod deploy_event;
 pub mod health;
 pub mod isolation;
 pub mod metrics;
