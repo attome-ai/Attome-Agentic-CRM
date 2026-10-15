@@ -11,6 +11,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Every DDL statement the provisioning engine runs is kept in `ddl_log` (kind, table, duration, lock
+  retries, outcome; DDL text only, never values), listed per entity by
+  `GET /api/v1/admin/entities/{entity_id}/ddl-log`. Migration `0038_schema_evolution_ledger` also
+  adds `attribute_alias` and the `paused`/`cancelled` data-step-run states with `rows_total`.
 - `GET /api/v1/admin/change-feed/consumers` lists every change-feed consumer (the platform's own and
   subscriptions) with its status, unread events, lag and last read; the governance Change Feed page
   shows them, and `change_feed_consumer_lag_seconds{consumer}` exports the lag.

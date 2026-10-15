@@ -15,6 +15,8 @@
 // metadata-invalidation helpers below.
 
 mod attribute;
+/// Y12-T2: the per-entity DDL ledger.
+mod ddl_log;
 #[cfg(debug_assertions)]
 mod dev_scaffold;
 mod entity;
@@ -146,6 +148,7 @@ pub(crate) fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = entity::openapi_fragment();
     doc.merge(attribute::openapi_fragment());
     doc.merge(recovery_archive::openapi_fragment());
+    doc.merge(ddl_log::openapi_fragment());
     doc.merge(release_report::openapi_fragment());
     // Gated like every other reference to this module (lines 18/36/178): the
     // scaffold is physically absent from release binaries, so an unconditional
@@ -211,6 +214,7 @@ pub fn routes() -> Router<EngineState> {
             post(abandon_field_run),
         )
         .merge(recovery_archive::routes())
+        .merge(ddl_log::routes())
         .merge(release_report::routes());
 
     // Physically absent from release binaries — see dev_scaffold.rs's module

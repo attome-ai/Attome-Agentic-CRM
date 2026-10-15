@@ -146,6 +146,38 @@ async fn ensure_attribute_adds_exactly_one_column_and_one_metadata_row() {
     assert_eq!(attr_count, 1);
 }
 
+/// Y12-T2: provisioning leaves one ledger row per DDL statement, each with
+/// its kind, attempts and outcome.
+#[tokio::test]
+async fn create_attribute_writes_ddl_log_row() {
+    let db = skip_if_no_db!(test_db().await);
+    let logicalname = format!("test_ddl_{}", Uuid::now_v7().simple());
+    let entity_id = ensure_entity(&db, &logicalname, "DDL Log Test", Some("title"), false)
+        .await
+        .expect("ensure_entity");
+    ensure_attribute(
+        &db, entity_id, "title", "Title", "text", true, false, false, false, None, None,
+    )
+    .await
+    .expect("ensure_attribute");
+
+    let rows: Vec<(String, String, i32, i32)> = sqlx::query_as(
+        "SELECT statement_kind, outcome, attempts, duration_ms FROM ddl_log WHERE entity = $1",
+    )
+    .bind(&logicalname)
+    .fetch_all(&db)
+    .await
+    .expect("read ddl_log");
+    assert!(
+        rows.iter().any(|(kind, ..)| kind == "CREATE TABLE"),
+        "the table's creation is on record: {rows:?}"
+    );
+    for (kind, outcome, attempts, duration_ms) in &rows {
+        assert_eq!(outcome, "ok", "{kind}");
+        assert!(*attempts >= 1 && *duration_ms >= 0, "{kind}");
+    }
+}
+
 /// This is the money-path assertion: re-running the exact same
 /// `ensure_entity` + `ensure_attribute` seed (as a boot-time reseed would)
 /// must be a complete no-op — no duplicate `entity_info`/

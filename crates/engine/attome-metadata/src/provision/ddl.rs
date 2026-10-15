@@ -196,11 +196,109 @@ fn lock_retry_backoff_ms(attempt: u32, sql_len: usize) -> u64 {
     1000 * (1u64 << attempt.saturating_sub(1).min(3)) + jitter_ms
 }
 
+/// The longest statement text kept in `ddl_log`.
+const LEDGER_STATEMENT_CHARS: usize = 4000;
+
+/// Y12-T2: what a DDL statement is and which table it touches, read from its
+/// text: the kind is its leading keywords (`ALTER TABLE`, `CREATE UNIQUE
+/// INDEX`, `GRANT`), the entity the first double-quoted identifier, or `-`
+/// when it names none.
+pub(super) fn ddl_summary(sql: &str) -> (String, String) {
+    let kind: Vec<&str> = sql
+        .split_whitespace()
+        .take_while(|w| !w.is_empty() && w.chars().all(|c| c.is_ascii_uppercase()))
+        .filter(|w| !matches!(*w, "IF" | "NOT" | "EXISTS" | "ONLY"))
+        .take(3)
+        .collect();
+    let kind = if kind.is_empty() {
+        "-".to_owned()
+    } else {
+        kind.join(" ")
+    };
+    // An index statement names the index first; its table follows `ON`.
+    let from = if kind.contains("INDEX") {
+        sql.find(" ON ").unwrap_or(0)
+    } else {
+        0
+    };
+    let entity = sql[from..]
+        .split('"')
+        .nth(1)
+        .filter(|name| !name.is_empty())
+        .unwrap_or("-")
+        .to_owned();
+    (kind, entity)
+}
+
+/// Y12-T2: one `ddl_log` row for a finished statement, written on the pool
+/// after its transaction ended, so a rolled-back statement is still on
+/// record. A failed write is logged and never fails the DDL.
+async fn record_ddl(
+    db: &DbPool,
+    sql: &str,
+    started_at: chrono::DateTime<chrono::Utc>,
+    elapsed: Duration,
+    attempts: u32,
+    outcome: &str,
+) {
+    let (kind, entity) = ddl_summary(sql);
+    let statement: String = sql.chars().take(LEDGER_STATEMENT_CHARS).collect();
+    let duration_ms = i32::try_from(elapsed.as_millis()).unwrap_or(i32::MAX);
+    let written = sqlx::query(
+        "INSERT INTO ddl_log \
+           (entity, statement_kind, statement, started_at, duration_ms, attempts, outcome) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    )
+    .bind(&entity)
+    .bind(&kind)
+    .bind(&statement)
+    .bind(started_at)
+    .bind(duration_ms)
+    .bind(i32::try_from(attempts).unwrap_or(i32::MAX))
+    .bind(outcome)
+    .execute(db)
+    .await;
+    if let Err(e) = written {
+        tracing::warn!(error = %e, entity = %entity, kind = %kind, "DDL ledger row not written");
+    }
+}
+
 pub(super) async fn exec_ddl_locked(
     db: &DbPool,
     pre_stmts: &[&str],
     sql: &str,
 ) -> Result<(), sqlx::Error> {
+    let started_at = chrono::Utc::now();
+    let clock = std::time::Instant::now();
+    let result = exec_ddl_with_retries(db, pre_stmts, sql).await;
+    let (attempts, outcome) = match &result {
+        Ok(attempts) => (*attempts, "ok"),
+        Err((attempts, e)) => {
+            let lock_timeout = e
+                .as_database_error()
+                .and_then(|dbe| dbe.code())
+                .is_some_and(|code| code.as_ref() == "55P03");
+            (
+                *attempts,
+                if lock_timeout {
+                    "lock_timeout"
+                } else {
+                    "failed"
+                },
+            )
+        }
+    };
+    record_ddl(db, sql, started_at, clock.elapsed(), attempts, outcome).await;
+    result.map(|_| ()).map_err(|(_, e)| e)
+}
+
+/// The retry loop behind [`exec_ddl_locked`]: the attempts it took, with the
+/// final error when it failed.
+async fn exec_ddl_with_retries(
+    db: &DbPool,
+    pre_stmts: &[&str],
+    sql: &str,
+) -> Result<u32, (u32, sqlx::Error)> {
     const MAX_ATTEMPTS: u32 = 5;
     for attempt in 1..=MAX_ATTEMPTS {
         // D-104 test hook: the standalone "reseed issues zero ALTER" check
@@ -216,7 +314,7 @@ pub(super) async fn exec_ddl_locked(
             clippy::disallowed_methods,
             reason = "exec_ddl_locked returns sqlx::Error so its retry loop can inspect lock-timeout codes; tx::begin returns AppError"
         )]
-        let mut tx = db.begin().await?;
+        let mut tx = db.begin().await.map_err(|e| (attempt, e))?;
         let outcome: Result<(), sqlx::Error> = async {
             sqlx::query("SET LOCAL statement_timeout = 0")
                 .execute(&mut *tx)
@@ -233,7 +331,13 @@ pub(super) async fn exec_ddl_locked(
         .await;
 
         match outcome {
-            Ok(()) => return tx.commit().await,
+            Ok(()) => {
+                return tx
+                    .commit()
+                    .await
+                    .map(|()| attempt)
+                    .map_err(|e| (attempt, e));
+            }
             Err(e) => {
                 let _ = tx.rollback().await;
                 let lock_not_available = e
@@ -250,7 +354,7 @@ pub(super) async fn exec_ddl_locked(
                     tokio::time::sleep(Duration::from_millis(backoff_ms)).await;
                     continue;
                 }
-                return Err(e);
+                return Err((attempt, e));
             }
         }
     }
@@ -263,7 +367,29 @@ pub(super) async fn exec_ddl_locked(
 
 #[cfg(test)]
 mod backoff_tests {
-    use super::lock_retry_backoff_ms;
+    use super::{ddl_summary, lock_retry_backoff_ms};
+
+    /// Y12-T2: the ledger reads a statement's kind and table from its text.
+    #[test]
+    fn ddl_summary_reads_kind_and_entity() {
+        assert_eq!(
+            ddl_summary(r#"ALTER TABLE "invoice" ADD COLUMN "total" numeric"#),
+            ("ALTER TABLE".to_owned(), "invoice".to_owned())
+        );
+        assert_eq!(
+            ddl_summary(r#"CREATE UNIQUE INDEX IF NOT EXISTS "ix" ON "invoice" ("code")"#),
+            ("CREATE UNIQUE INDEX".to_owned(), "invoice".to_owned())
+        );
+        assert_eq!(
+            ddl_summary("GRANT SELECT ON ALL TABLES IN SCHEMA s TO r"),
+            ("GRANT SELECT ON".to_owned(), "-".to_owned())
+        );
+        assert_eq!(
+            ddl_summary(r#"CREATE TABLE IF NOT EXISTS "invoice" (id uuid)"#),
+            ("CREATE TABLE".to_owned(), "invoice".to_owned())
+        );
+        assert_eq!(ddl_summary(""), ("-".to_owned(), "-".to_owned()));
+    }
 
     #[test]
     fn lock_retries_back_off_exponentially() {
