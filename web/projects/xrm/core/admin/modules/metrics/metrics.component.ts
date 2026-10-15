@@ -106,7 +106,7 @@ export class OpsMetricsComponent implements OnInit {
   readonly meaning = computed(() => {
     const info = this.catalogue().find(m => m.name === this.name());
     if (!info) return '';
-    const text = this.lang.current?.() === 'ar' ? info.ar : info.en;
+    const text = this.lang.current() === 'ar' ? info.ar : info.en;
     return `${text} (${info.unit})`;
   });
 
