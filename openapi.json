@@ -22413,6 +22413,55 @@
         ]
       }
     },
+    "/api/v1/admin/ops/metrics/catalogue": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "U4-T2: every metric this server emits, with its kind, unit and meaning in\nEnglish and Arabic.",
+        "operationId": "metric_catalogue",
+        "responses": {
+          "200": {
+            "description": "The metric catalogue, by name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_MetricInfo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/ops/metrics/names": {
       "get": {
         "tags": [
@@ -56030,6 +56079,74 @@
         ]
       }
     },
+    "/api/v1/{entity}/{id}/children": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B7-T3: a record's child records by relationship (entity and lookup\nfield), counted, in entities the caller can read: what a clone can take\nwith it through `children`.",
+        "operationId": "record_children",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Child records by relationship",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_DependentCount"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record, or the caller cannot read it",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/{entity}/{id}/clone": {
       "post": {
         "tags": [
@@ -57202,6 +57319,9 @@
           }
         ],
         "responses": {
+          "202": {
+            "description": "The entity's bin setting asks for approval: the request was submitted"
+          },
           "204": {
             "description": "Record permanently deleted"
           },
@@ -65384,6 +65504,10 @@
               "null"
             ],
             "format": "uuid"
+          },
+          "skip_defaults": {
+            "type": "boolean",
+            "description": "A28-T3: create this record without attribute defaults."
           }
         }
       },
@@ -65394,6 +65518,13 @@
           "records"
         ],
         "properties": {
+          "apply_defaults": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "A28-T3: `false` leaves empty fields empty on create instead of filling\nthem with their attributes' defaults. Default true."
+          },
           "batch_mode": {
             "type": [
               "string",
@@ -67760,10 +67891,33 @@
           }
         }
       },
+      "CloneChild": {
+        "type": "object",
+        "description": "A child relationship: records of `entity` whose `field` points at the\nrecord being copied.",
+        "required": [
+          "entity",
+          "field"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          }
+        }
+      },
       "CloneRequest": {
         "type": "object",
         "description": "`POST /api/v1/{entity}/{id}/clone`.",
         "properties": {
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CloneChild"
+            },
+            "description": "Child records to copy with it, by relationship."
+          },
           "overrides": {
             "type": "object",
             "description": "Values for the copy that replace the source's, by field."
@@ -67791,12 +67945,20 @@
         "description": "What a clone made, or would make.",
         "required": [
           "body",
-          "left_out"
+          "left_out",
+          "children"
         ],
         "properties": {
           "body": {
             "type": "object",
             "description": "The body sent to the create path."
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClonedChildren"
+            },
+            "description": "The child relationships copied with it."
           },
           "id": {
             "type": [
@@ -67812,6 +67974,43 @@
               "type": "string"
             },
             "description": "Fields of the source left out of the copy, and why."
+          }
+        }
+      },
+      "ClonedChildren": {
+        "type": "object",
+        "description": "What a clone did with one child relationship.",
+        "required": [
+          "entity",
+          "field",
+          "ids",
+          "count",
+          "skipped"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Child records found and readable (copied, or that would be).",
+            "minimum": 0
+          },
+          "entity": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The copies' ids; empty for a preview."
+          },
+          "skipped": {
+            "type": "integer",
+            "description": "Child records the caller cannot read, left behind.",
+            "minimum": 0
           }
         }
       },
@@ -77615,6 +77814,35 @@
           }
         }
       },
+      "MetricInfo": {
+        "type": "object",
+        "description": "One metric.",
+        "required": [
+          "name",
+          "kind",
+          "unit",
+          "en",
+          "ar"
+        ],
+        "properties": {
+          "ar": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`counter`, `gauge` or `histogram`."
+          },
+          "name": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          }
+        }
+      },
       "MetricLineageNode": {
         "type": "object",
         "required": [
@@ -82283,6 +82511,54 @@
           }
         }
       },
+      "PaginatedResponse_DependentCount": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Live records of one entity that point at the records being deleted\nthrough one lookup field.",
+              "required": [
+                "entity",
+                "field",
+                "count"
+              ],
+              "properties": {
+                "count": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "entity": {
+                  "type": "string"
+                },
+                "field": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_DsrRequestSummary": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -84340,6 +84616,62 @@
                     "null"
                   ],
                   "format": "double"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_MetricInfo": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One metric.",
+              "required": [
+                "name",
+                "kind",
+                "unit",
+                "en",
+                "ar"
+              ],
+              "properties": {
+                "ar": {
+                  "type": "string"
+                },
+                "en": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`counter`, `gauge` or `histogram`."
+                },
+                "name": {
+                  "type": "string"
+                },
+                "unit": {
+                  "type": "string"
                 }
               }
             }

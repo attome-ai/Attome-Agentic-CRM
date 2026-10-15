@@ -4117,6 +4117,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ops/metrics/catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * U4-T2: every metric this server emits, with its kind, unit and meaning in
+         *     English and Arabic.
+         */
+        get: operations["metric_catalogue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/ops/metrics/names": {
         parameters: {
             query?: never;
@@ -10848,6 +10868,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/{id}/children": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * B7-T3: a record's child records by relationship (entity and lookup
+         *     field), counted, in entities the caller can read: what a clone can take
+         *     with it through `children`.
+         */
+        get: operations["record_children"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/{id}/clone": {
         parameters: {
             query?: never;
@@ -13502,8 +13543,15 @@ export interface components {
             expected_row_version?: number | null;
             /** Format: uuid */
             id?: string | null;
+            /** @description A28-T3: create this record without attribute defaults. */
+            skip_defaults?: boolean;
         };
         BulkRequestBody: {
+            /**
+             * @description A28-T3: `false` leaves empty fields empty on create instead of filling
+             *     them with their attributes' defaults. Default true.
+             */
+            apply_defaults?: boolean | null;
             batch_mode?: string | null;
             /** Format: uuid */
             mapping_ref?: string | null;
@@ -14405,8 +14453,18 @@ export interface components {
             /** Format: date-time */
             state_changed_at: string;
         };
+        /**
+         * @description A child relationship: records of `entity` whose `field` points at the
+         *     record being copied.
+         */
+        CloneChild: {
+            entity: string;
+            field: string;
+        };
         /** @description `POST /api/v1/{entity}/{id}/clone`. */
         CloneRequest: {
+            /** @description Child records to copy with it, by relationship. */
+            children?: components["schemas"]["CloneChild"][];
             /** @description Values for the copy that replace the source's, by field. */
             overrides?: Record<string, never>;
             /** @description Return the copy's body without creating it. */
@@ -14420,6 +14478,8 @@ export interface components {
         CloneResult: {
             /** @description The body sent to the create path. */
             body: Record<string, never>;
+            /** @description The child relationships copied with it. */
+            children: components["schemas"]["ClonedChildren"][];
             /**
              * Format: uuid
              * @description The new record's id; absent for a preview.
@@ -14427,6 +14487,17 @@ export interface components {
             id?: string | null;
             /** @description Fields of the source left out of the copy, and why. */
             left_out: string[];
+        };
+        /** @description What a clone did with one child relationship. */
+        ClonedChildren: {
+            /** @description Child records found and readable (copied, or that would be). */
+            count: number;
+            entity: string;
+            field: string;
+            /** @description The copies' ids; empty for a preview. */
+            ids: string[];
+            /** @description Child records the caller cannot read, left behind. */
+            skipped: number;
         };
         /** @description `POST /api/v1/admin/changesets/{id}/close`. */
         CloseResponse: {
@@ -18419,6 +18490,15 @@ export interface components {
             /** Format: double */
             weight?: number | null;
         };
+        /** @description One metric. */
+        MetricInfo: {
+            ar: string;
+            en: string;
+            /** @description `counter`, `gauge` or `histogram`. */
+            kind: string;
+            name: string;
+            unit: string;
+        };
         MetricLineageNode: {
             /**
              * @description `no_recursion`: the node is recursive, and without it building the
@@ -20109,6 +20189,21 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_DependentCount: {
+            items: {
+                /** Format: int64 */
+                count: number;
+                entity: string;
+                field: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_DsrRequestSummary: {
             items: {
                 block_reason?: string | null;
@@ -20838,6 +20933,23 @@ export interface components {
                 unit?: string | null;
                 /** Format: double */
                 weight?: number | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_MetricInfo: {
+            items: {
+                ar: string;
+                en: string;
+                /** @description `counter`, `gauge` or `histogram`. */
+                kind: string;
+                name: string;
+                unit: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -41972,6 +42084,44 @@ export interface operations {
                 };
             };
             /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    metric_catalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The metric catalogue, by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_MetricInfo"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -64021,6 +64171,47 @@ export interface operations {
             };
         };
     };
+    record_children: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Child records by relationship */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DependentCount"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record, or the caller cannot read it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     clone_record_route: {
         parameters: {
             query?: never;
@@ -64691,6 +64882,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description The entity's bin setting asks for approval: the request was submitted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Record permanently deleted */
             204: {
                 headers: {
