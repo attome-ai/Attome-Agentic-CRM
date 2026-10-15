@@ -17125,7 +17125,7 @@ export interface components {
              *     `rate_limit_exceeded`, `overloaded`, `capability_unavailable`,
              *     `metadata_authoring_locked`, `transition_not_allowed`,
              *     `rule_violation`, `field_locked`, `field_locked_required`,
-             *     `reauth_required`, `server_timeout`, `query_timeout`, `payload_too_large`,
+             *     `reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,
              *     `idempotency_outcome_unknown`, `idempotency_replay_unavailable`,
              *     `method_not_allowed`, or
              *     `internal_error` — one per `AppError` variant (`FieldLocked` answers
@@ -26770,6 +26770,8 @@ export interface components {
             degraded: components["schemas"]["DegradedFeature"][];
             /** @description Changes are refused for now (the audit backlog guard is holding writes). */
             read_only: boolean;
+            /** @description AB5-T6: `operator`, `disk` or `recovery` while read-only mode is on. */
+            read_only_reason?: string | null;
         };
         TagGroup: {
             colour?: string | null;

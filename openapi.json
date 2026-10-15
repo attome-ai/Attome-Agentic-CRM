@@ -75174,7 +75174,7 @@
           },
           "error": {
             "type": "string",
-            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`conflict`, `version_conflict`, `idempotency_conflict`,\n`validation_error`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `payload_too_large`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
+            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`conflict`, `version_conflict`, `idempotency_conflict`,\n`validation_error`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
           },
           "field": {
             "type": [
@@ -100291,6 +100291,13 @@
           "read_only": {
             "type": "boolean",
             "description": "Changes are refused for now (the audit backlog guard is holding writes)."
+          },
+          "read_only_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "AB5-T6: `operator`, `disk` or `recovery` while read-only mode is on."
           }
         }
       },
