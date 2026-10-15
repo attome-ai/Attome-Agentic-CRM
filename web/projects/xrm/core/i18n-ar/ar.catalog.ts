@@ -47,6 +47,7 @@ export const xrmAr = {
     deleteViewConfirm: 'حذف عرضك "{name}"؟',
     // انظر التعليق في en.catalog.ts — حالة الحساب (D-121)
     deactivateSelected: 'إلغاء التنشيط',
+    liveNewRows: '{count} سجلات جديدة', liveChanged: 'تغيّرت هذه القائمة', liveShow: 'عرض',
     deletedCount: 'نُقل {count} إلى سلة المحذوفات.', undo: 'تراجع',
     deleteCascades: 'سيُحذف معها أيضًا: {details}.', deleteBlocked: 'ما زالت هذه السجلات تشير إلى المحدد، فلا يمكن حذفه: {details}.',
     deleteReason: 'لماذا تُحذف هذه السجلات؟', deleteReasonRequired: 'السبب مطلوب.',

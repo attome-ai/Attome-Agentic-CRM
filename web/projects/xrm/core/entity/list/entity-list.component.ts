@@ -8,7 +8,8 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import type { Observable, Subscription } from 'rxjs';
-import { ApiError, CurrencyService, LangService, TranslatePipe } from '@attome/base';
+import { ApiError, CurrencyService, LangService, LiveChannel, TranslatePipe } from '@attome/base';
+import type { LiveRecords } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { EntityRecord, FieldType, ListFilter, LookupMeta } from '@attome/xrm';
 import { EntityService, type DeleteImpact } from '../services/entity.service';
@@ -29,6 +30,7 @@ import {
 import { BulkTagComponent } from '../record-tags/bulk-tag.component';
 
 import { BulkJobRunner, isBulkTerminal } from './bulk-job-runner.service';
+import { liveRows } from './live-rows';
 // Deferred: the dialog's chunk loads the first time bulk edit is opened
 // (`@defer` in the template), which keeps it out of the shared entity chunk
 // every bespoke form loads (scripts/chunk-budget.mjs). Referenced only by the
@@ -255,6 +257,12 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   readonly selectedRecordIds = signal<Set<string>>(new Set());
   /** B4-T4: `?tag=<id>` from the tag page: only records carrying that tag. */
   readonly tagFilter = signal<string | null>(null);
+  private readonly live = inject(LiveChannel);
+  /** A13-T4: records created since the list loaded, shown as a banner. */
+  readonly newRows = signal(0);
+  /** A13-T4: more changed than the live channel lists; reload to see them. */
+  readonly liveOverflow = signal(false);
+
   /** A18-T9: the delete that can still be undone, for {@link UNDO_SECONDS}. */
   readonly undoOffer = signal<{ operationId: string; count: number } | null>(null);
   private undoTimer: ReturnType<typeof setTimeout> | null = null;
@@ -367,6 +375,18 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
       if (!this.loading()) { this.showLoading.set(false); return; }
       const timer = setTimeout(() => this.showLoading.set(true), 300);
       onCleanup(() => clearTimeout(timer));
+    });
+    // A13-T4: this entity's record changes while the list is open: rows on
+    // the page reload in place, new records wait behind a banner.
+    effect(onCleanup => {
+      const entity = this.entityName();
+      untracked(() => {
+        this.newRows.set(0);
+        this.liveOverflow.set(false);
+        const unwatch = this.live.watch(entity);
+        const sub = this.live.records.subscribe(frame => this.onLiveRecords(entity, frame));
+        onCleanup(() => { unwatch(); sub.unsubscribe(); });
+      });
     });
     // Opens the dialog once its deferred chunk has rendered it.
     effect(() => {
@@ -558,6 +578,21 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
       },
       error: (e: ApiError) => { this.loading.set(false); this.error.set(e.message); },
     });
+  }
+
+  /** A13-T4: applies one live frame for `entity`. */
+  onLiveRecords(entity: string, frame: LiveRecords): void {
+    const outcome = liveRows(entity, frame, new Set(this.records().map(r => r.id)));
+    if (outcome.overflow) this.liveOverflow.set(true);
+    if (outcome.created) this.newRows.update(n => n + outcome.created);
+    if (outcome.reload) this.load();
+  }
+
+  /** A13-T4: loads the list again, taking in the new records. */
+  showNewRows(): void {
+    this.newRows.set(0);
+    this.liveOverflow.set(false);
+    this.load();
   }
 
   private load(): void {

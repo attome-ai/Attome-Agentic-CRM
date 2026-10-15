@@ -1,4 +1,10 @@
 <div class="list-container" [class.list-container--compact]="compact()">
+  @if (newRows() > 0 || liveOverflow()) {
+  <div class="live-bar" role="status" data-live-rows>
+    <span>{{ liveOverflow() ? ('entityList.liveChanged' | translate) : ('entityList.liveNewRows' | translate: { count: newRows() }) }}</span>
+    <button type="button" class="btn btn-text" (click)="showNewRows()">{{ 'entityList.liveShow' | translate }}</button>
+  </div>
+  }
   <div class="list-toolbar">
     @if (undoOffer(); as offer) {
     <div class="undo-bar" role="status" data-undo>

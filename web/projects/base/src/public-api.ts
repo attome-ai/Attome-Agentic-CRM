@@ -26,6 +26,8 @@ export { provideAttomeBase, provideAttomeI18n } from './lib/provide';
 export { ThemeService }                    from './lib/theme.service';
 export { ShortcutRegistry, isTypingTarget } from './lib/shortcut-registry.service';
 export { CommandRegistry }                  from './lib/command-registry.service';
+export { LiveChannel }                      from './lib/live-channel.service';
+export type { LiveRecordChange, LiveRecords } from './lib/live-channel.service';
 export type { PaletteCommand }             from './lib/command-registry.service';
 export type { Shortcut }                   from './lib/shortcut-registry.service';
 export { BrandService }                    from './lib/brand.service';

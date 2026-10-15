@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Live lists: `GET /api/v1/live?entities=` also sends `records` frames, the changes to records of
+  those entities the caller can read; an open list reloads changed rows in place and offers new
+  ones behind a "N new records" banner.
 - Record history: each change names its change set (`group_id`: an import or bulk batch, an agent
   session, a flow run or one save), who made it (`actor`) and through what (`source`).
 - Record history: `POST /api/v1/{entity}/{id}/history/restore` puts back the values one change

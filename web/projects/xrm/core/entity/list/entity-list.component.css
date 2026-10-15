@@ -775,3 +775,16 @@
 /* A18-T9: "Deleted. Undo" after a delete. */
 .undo-bar { display: flex; align-items: center; gap: 0.5rem; padding-block: 0.375rem; padding-inline: 0.75rem;
   margin-block-end: 0.5rem; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-bg-alt); }
+
+/* A13-T4: new records arrived while the list was open. */
+.live-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.375rem;
+  padding-inline: 0.75rem;
+  margin-block-end: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
