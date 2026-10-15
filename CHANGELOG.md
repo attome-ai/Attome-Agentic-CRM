@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Honest totals: `query/execute` with `include_total` counts a matching set only when the planner
   expects fewer than 100,000 rows; past that it returns the planner's estimate with
   `total_estimated: true`.
+- Aggregation: `POST /api/v1/search/aggregate` takes `then_by`, a second field to group by within
+  each `group_by` bucket; buckets then carry `label_2`.
 - Business rules: `add_tag` and `remove_tag` outcomes tag or untag the record written while the
   condition holds (migration 0030).
 - Business rules: two outcomes, `required` (a field is required while the condition holds) and

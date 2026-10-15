@@ -92,6 +92,10 @@ pub struct AggregateRequest {
     /// "Total Revenue" — `SUM(amount)` with no `GROUP BY`) — the response
     /// carries exactly one bucket with `label: null`.
     group_by: Option<String>,
+    /// A13-T2: a second field to bucket on within each `group_by` bucket
+    /// (needs `group_by`); each bucket then carries `label_2`.
+    #[serde(default)]
+    then_by: Option<String>,
     /// Required unless `metric_fn == "count"`.
     metric_field: Option<String>,
     /// One of: `count`, `sum`, `avg`, `min`, `max`.
@@ -122,6 +126,9 @@ pub struct AggregateBucket {
     /// SQL rather than decoded per its native type, since a bucket label is
     /// for display, not further computation.
     label: Option<String>,
+    /// A13-T2: the `then_by` value, when the request named one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    label_2: Option<String>,
     value: f64,
 }
 
@@ -549,15 +556,21 @@ pub async fn run_aggregate(
 
     let scope = AggregateScope::build(state, ctx, &logicalname, &body.filters).await?;
 
-    if let Some(group_by) = &body.group_by {
+    if body.then_by.is_some() && body.group_by.is_none() {
+        return Err(AppError::Validation("then_by needs group_by".into()));
+    }
+    for (key, group_by) in [("group_by", &body.group_by), ("then_by", &body.then_by)] {
+        let Some(group_by) = group_by else {
+            continue;
+        };
         if scope.is_multi_choice(group_by) {
-            return Err(AppError::Validation(
-                "group_by does not support multi-select Choice fields".into(),
-            ));
+            return Err(AppError::Validation(format!(
+                "{key} does not support multi-select Choice fields"
+            )));
         }
         if scope.data_type(group_by).is_none() {
             return Err(AppError::Validation(format!(
-                "unknown group_by field: {group_by}"
+                "unknown {key} field: {group_by}"
             )));
         }
     }
@@ -594,10 +607,15 @@ pub async fn run_aggregate(
     let sql = match &body.group_by {
         Some(group_by) => {
             let group_by_sql = quote_ident(group_by);
+            let (then_sql, group_cols) = match &body.then_by {
+                Some(then_by) => (format!("t.{}::text", quote_ident(then_by)), "1, 2"),
+                None => ("NULL::text".to_owned(), "1"),
+            };
             format!(
-                "SELECT t.{group_by_sql}::text AS label, {metric_expr} AS value \
+                "SELECT t.{group_by_sql}::text AS label, {then_sql} AS label_2, \
+                        {metric_expr} AS value \
                  FROM {table} t {where_sql} \
-                 GROUP BY 1 ORDER BY {dir} LIMIT {}",
+                 GROUP BY {group_cols} ORDER BY {dir}, label_2 ASC NULLS FIRST LIMIT {}",
                 MAX_GROUP_BUCKETS + 1
             )
         }
@@ -606,14 +624,17 @@ pub async fn run_aggregate(
         // stays correct without a special case (a real aggregate never
         // produces a second row here, so `truncated` is always `false`).
         None => {
-            format!("SELECT NULL::text AS label, {metric_expr} AS value FROM {table} t {where_sql}")
+            format!(
+                "SELECT NULL::text AS label, NULL::text AS label_2, {metric_expr} AS value \
+                 FROM {table} t {where_sql}"
+            )
         }
     };
 
     let mut tx = begin_bounded(db).await?;
     enforce_cost_ceiling(&mut tx, &sql, &scope.params).await?;
 
-    let mut q = sqlx::query_as::<_, (Option<String>, Option<f64>)>(&sql);
+    let mut q = sqlx::query_as::<_, (Option<String>, Option<String>, Option<f64>)>(&sql);
     for param in &scope.params {
         q = q.bind(param);
     }
@@ -623,8 +644,9 @@ pub async fn run_aggregate(
     let (rows, truncated) = split_at_cap(rows, MAX_GROUP_BUCKETS);
     let buckets: Vec<AggregateBucket> = rows
         .into_iter()
-        .map(|(label, value)| AggregateBucket {
+        .map(|(label, label_2, value)| AggregateBucket {
             label,
+            label_2,
             value: value.unwrap_or(0.0),
         })
         .collect();
