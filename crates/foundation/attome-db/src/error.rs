@@ -108,6 +108,34 @@ pub fn set_pool_pressure_hooks(hooks: PoolPressureHooks) -> bool {
     POOL_PRESSURE_HOOKS.set(hooks).is_ok()
 }
 
+/// Z2-T3: [`crate::tx::with_retry`]'s counters, by transaction class.
+#[derive(Clone, Copy, Debug)]
+pub struct TxRetryHooks {
+    /// One retry after a serialization failure or deadlock.
+    pub retry: fn(class: &str),
+    /// The attempts ran out and the conflict went to the caller.
+    pub exhausted: fn(class: &str),
+}
+
+static TX_RETRY_HOOKS: OnceLock<TxRetryHooks> = OnceLock::new();
+
+/// Installs the transaction-retry callbacks. Set-once, like the hooks above.
+pub fn set_tx_retry_hooks(hooks: TxRetryHooks) -> bool {
+    TX_RETRY_HOOKS.set(hooks).is_ok()
+}
+
+pub(crate) fn note_tx_retry(class: &str) {
+    if let Some(hooks) = TX_RETRY_HOOKS.get() {
+        (hooks.retry)(class);
+    }
+}
+
+pub(crate) fn note_tx_retry_exhausted(class: &str) {
+    if let Some(hooks) = TX_RETRY_HOOKS.get() {
+        (hooks.exhausted)(class);
+    }
+}
+
 pub(crate) fn note_acquire_wait(role: &str, waited: std::time::Duration) {
     if let Some(hooks) = POOL_PRESSURE_HOOKS.get() {
         (hooks.wait)(role, waited);

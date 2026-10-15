@@ -130,6 +130,94 @@ pub async fn begin_class<'p>(
     Ok(tx)
 }
 
+/// Z2-T3: how often and how fast [`with_retry`] tries again.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RetryPolicy {
+    /// Attempts in all, the first included.
+    pub max_attempts: u8,
+    /// The pause before the first retry; each later one is four times longer.
+    pub base_delay: std::time::Duration,
+}
+
+impl RetryPolicy {
+    /// Three attempts, pausing about 40 ms and then 160 ms.
+    pub const SHORT: RetryPolicy = RetryPolicy {
+        max_attempts: 3,
+        base_delay: std::time::Duration::from_millis(10),
+    };
+
+    /// The pause after failed attempt `attempt` (1-based): `base_delay *
+    /// 4^attempt` plus up to half again, so racing callers spread apart.
+    fn delay(self, attempt: u8, jitter_seed: u32) -> std::time::Duration {
+        let base = self
+            .base_delay
+            .saturating_mul(4u32.saturating_pow(u32::from(attempt)));
+        let jitter_percent = jitter_seed % 51;
+        base + base * jitter_percent / 100
+    }
+}
+
+/// The future a [`with_retry`] body returns.
+pub type TxFuture<'c, T> =
+    std::pin::Pin<Box<dyn std::future::Future<Output = Result<T, sqlx::Error>> + Send + 'c>>;
+
+/// `true` for the two failures a retry can cure: `40001`
+/// (serialization_failure) and `40P01` (deadlock_detected).
+fn is_retryable(error: &sqlx::Error) -> bool {
+    crate::sqlstate(error).is_some_and(|code| code == "40001" || code == "40P01")
+}
+
+/// Z2-T3: runs `body` in a transaction, and again in a fresh one when the
+/// body or the commit fails with a serialization failure or a deadlock,
+/// until `policy` runs out; then the conflict is returned classified (409)
+/// as before. Any other error is returned at once through
+/// [`crate::classify`].
+///
+/// **The body must be safe to run more than once and must do no Redis,
+/// HTTP, S3, email or filesystem I/O**: a retried attempt runs it again from
+/// the start, and only the database work of the last attempt survives. Put
+/// side effects after the call. `class` names the transaction in the
+/// `db_tx_retries_total` and `db_tx_retry_exhausted_total` counters.
+pub async fn with_retry<'p, T, F>(
+    pool: &'p DbPool,
+    class: &'static str,
+    policy: RetryPolicy,
+    mut body: F,
+) -> Result<T, AppError>
+where
+    F: for<'c> FnMut(&'c mut Tx<'p>) -> TxFuture<'c, T>,
+{
+    let max_attempts = policy.max_attempts.max(1);
+    let mut attempt: u8 = 0;
+    loop {
+        attempt += 1;
+        let mut tx = begin(pool).await?;
+        let outcome = match body(&mut tx).await {
+            Ok(value) => tx.commit().await.map(|()| value),
+            Err(error) => {
+                drop(tx);
+                Err(error)
+            }
+        };
+        match outcome {
+            Ok(value) => return Ok(value),
+            Err(error) if is_retryable(&error) && attempt < max_attempts => {
+                crate::error::note_tx_retry(class);
+                let seed = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .map_or(0, |elapsed| elapsed.subsec_nanos());
+                tokio::time::sleep(policy.delay(attempt, seed)).await;
+            }
+            Err(error) => {
+                if is_retryable(&error) {
+                    crate::error::note_tx_retry_exhausted(class);
+                }
+                return Err(crate::classify(error));
+            }
+        }
+    }
+}
+
 /// Commits a transaction, classifying a commit-time failure with
 /// [`crate::classify`].
 ///
@@ -146,6 +234,18 @@ pub async fn commit(tx: Tx<'_>) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
     use super::StatementClass;
+
+    /// Z2-T3: retries pause 4x longer each time, with at most half again.
+    #[test]
+    fn retry_delay_grows_fourfold_with_bounded_jitter() {
+        use super::RetryPolicy;
+        use std::time::Duration;
+        let policy = RetryPolicy::SHORT;
+        assert_eq!(policy.delay(1, 0), Duration::from_millis(40));
+        assert_eq!(policy.delay(2, 0), Duration::from_millis(160));
+        assert_eq!(policy.delay(1, 50), Duration::from_millis(60));
+        assert!(policy.delay(2, u32::MAX) <= Duration::from_millis(240));
+    }
 
     /// Z2-T5: the class defaults, and an override replacing one class only.
     #[test]

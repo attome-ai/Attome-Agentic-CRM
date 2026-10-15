@@ -42,6 +42,11 @@ pub fn build_layer_and_handle() -> (PrometheusMetricLayer<'static>, PrometheusHa
         wait: record_db_pool_acquire_wait,
         timeout: record_db_pool_role_acquire_timeout,
     });
+    // Z2-T3: transaction retries on serialization failure or deadlock.
+    attome_db::set_tx_retry_hooks(attome_db::TxRetryHooks {
+        retry: record_db_tx_retry,
+        exhausted: record_db_tx_retry_exhausted,
+    });
     // AA1-T6: the latency screen reads the same registry `/metrics` renders.
     let _ = RENDER_HANDLE.set(pair.1.clone());
     pair
@@ -259,6 +264,14 @@ fn record_db_pool_acquire_wait(role: &str, waited: Duration) {
 }
 
 /// `db_pool_role_acquire_timeouts_total{role}`.
+fn record_db_tx_retry(class: &str) {
+    metrics::counter!("db_tx_retries_total", "class" => class.to_owned()).increment(1);
+}
+
+fn record_db_tx_retry_exhausted(class: &str) {
+    metrics::counter!("db_tx_retry_exhausted_total", "class" => class.to_owned()).increment(1);
+}
+
 fn record_db_pool_role_acquire_timeout(role: &str) {
     metrics::counter!("db_pool_role_acquire_timeouts_total", "role" => role.to_owned())
         .increment(1);

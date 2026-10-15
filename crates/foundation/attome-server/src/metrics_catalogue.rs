@@ -507,6 +507,20 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "استعلامات أُلغيت لتجاوز حدها الزمني.",
     },
     MetricInfo {
+        name: "db_tx_retries_total",
+        kind: "counter",
+        unit: "retries",
+        en: "Transactions run again after a serialization failure or deadlock, by class.",
+        ar: "معاملات أُعيد تشغيلها بعد تعارض تسلسلي أو جمود، حسب الفئة.",
+    },
+    MetricInfo {
+        name: "db_tx_retry_exhausted_total",
+        kind: "counter",
+        unit: "transactions",
+        en: "Transactions that still conflicted after every retry, by class.",
+        ar: "معاملات بقي فيها التعارض بعد كل المحاولات، حسب الفئة.",
+    },
+    MetricInfo {
         name: "db_unpooled_sessions_open",
         kind: "gauge",
         unit: "sessions",
