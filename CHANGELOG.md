@@ -31,6 +31,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - Read-only mode: while the `ops.read_only` setting is on, or the database reaches
   `deployment.read_only_at_database_bytes`, every write answers 503 `read_only`; reading, signing in and
   the switch itself still work, and `/api/v1/system/status` gives the reason.
+- A production configuration refuses a secret written into the file: every password, key and
+  client secret must come from a `${VAR}` placeholder (the variable or `VAR_FILE`). Preflight checks
+  each `VAR_FILE` a placeholder reads, naming the variable only.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE

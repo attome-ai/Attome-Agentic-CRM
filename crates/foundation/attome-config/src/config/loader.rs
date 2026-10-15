@@ -14,7 +14,9 @@ use std::time::Duration;
 use crate::Secret;
 use crate::keyring::KeyRing;
 
-use super::helpers::{expand_env_vars_in_value, postgres_url, template_secret_marker};
+use super::helpers::{
+    expand_env_vars_tracking, is_secret_path, postgres_url, template_secret_marker,
+};
 use super::{
     AnchorStoreSection, AppConfig, CacheRole, CacheRoleOverride, CacheSentinelConfig, ConfigError,
     build_redis_sentinel_url, build_redis_url, cidr_contains, parse_cidr, urlencoding,
@@ -139,7 +141,8 @@ impl AppConfig {
         })?;
 
         let mut unresolved = Vec::new();
-        expand_env_vars_in_value(&mut document, &mut unresolved);
+        let mut literals = Vec::new();
+        expand_env_vars_tracking(&mut document, &mut unresolved, &mut literals);
 
         // Fail-closed (D-038): an unresolved ${VAR} anywhere in the config is
         // a boot error — a missing DB password or Redis URL must never boot as
@@ -185,6 +188,7 @@ impl AppConfig {
             })?;
         config.unresolved_placeholders = unresolved;
         config.ignored_keys = ignored_keys;
+        config.literal_paths = literals;
         // BCF-5 (D-615) — the profile decides, not APP_ENV: a production node
         // must never boot on a literal "${VAR}", whatever APP_ENV says. The
         // gate above already covers the non-debug case; this closes the
@@ -642,6 +646,18 @@ impl AppConfig {
         // rule: config.example.json deliberately ships throwaway secrets for
         // the dev stack, and only a declared production node must refuse them.
         let production = self.app.deployment_profile == "production";
+        // Z1-T5: in production a secret comes from the environment or a
+        // mounted file (`${VAR}` / `VAR_FILE`), never typed into the file.
+        // Names the path only, never the value.
+        if production && let Some(path) = self.literal_paths.iter().find(|p| is_secret_path(p)) {
+            return Err(ConfigError::Insecure {
+                field: path.clone(),
+                reason: "a secret in production must come from a ${VAR} placeholder \
+                         (the VAR or VAR_FILE environment variable), not be written into \
+                         the configuration file"
+                    .into(),
+            });
+        }
         // S1 (BSV-F13) — the drain delay is the only knob over how long a
         // draining node keeps taking new connections after readiness reads
         // 503. 0 is legal (it restores the pre-S1 "flip and signal together"

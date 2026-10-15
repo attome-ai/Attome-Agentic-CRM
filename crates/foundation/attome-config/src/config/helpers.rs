@@ -162,18 +162,102 @@ pub(crate) fn expand_env_vars_in_value(
     value: &mut serde_json::Value,
     unresolved: &mut Vec<String>,
 ) {
-    expand_value_at(value, &mut Vec::new(), unresolved);
+    expand_env_vars_tracking(value, unresolved, &mut Vec::new());
+}
+
+/// [`expand_env_vars_in_value`], also listing in `literals` the path of every
+/// non-empty string written into the file as is (no `${VAR}` in it), so the
+/// production profile can refuse a secret typed into the file (Z1-T5).
+pub(crate) fn expand_env_vars_tracking(
+    value: &mut serde_json::Value,
+    unresolved: &mut Vec<String>,
+    literals: &mut Vec<String>,
+) {
+    expand_value_at(value, &mut Vec::new(), unresolved, literals);
+}
+
+/// A path as dotted text, list positions glued on: `a.b[0].c`.
+fn path_text(path: &[String]) -> String {
+    let mut out = String::new();
+    for segment in path {
+        if !out.is_empty() && !segment.starts_with('[') {
+            out.push('.');
+        }
+        out.push_str(segment);
+    }
+    out
+}
+
+/// Z1-T5: where a secret lives in the configuration. `*` stands for one key
+/// (a provider name, an endpoint) and `[]` for any list position; a pattern
+/// covers everything under it, so a key ring's `keys[n].secret` counts too.
+const SECRET_PATHS: &[&str] = &[
+    "auth.jwt_secret",
+    "auth.mfa_encryption_key",
+    "auth.oauth_google_client_secret",
+    "auth.apikey_hash_pepper",
+    "auth.apikey_hash_previous_peppers[].secret",
+    "database.password",
+    "database.direct_url",
+    "database.readonly.password",
+    "database.migrator.password",
+    "database.runtime.password",
+    "cache.password",
+    "cache.sentinel.sentinel_password",
+    "cache.roles.*.password",
+    "cache.roles.*.sentinel.sentinel_password",
+    "storage.s3_secret_key",
+    "email.smtp_password",
+    "google_ai.api_key",
+    "s2s.key_encryption_key",
+    "s2s.seeded_clients[].secret",
+    "audit.signing_private_key",
+    "audit.erasure_key_encryption_key",
+    "audit.anchor_store.s3_secret_key",
+    "events.webhook_signing_key",
+    "integration.credential_encryption_key",
+    "inference.provider_credential_key",
+    "inference.*.api_key",
+    "oidc.providers.*.client_secret",
+    "portal.captcha.secret",
+    "portal.oidc_providers.*.client_secret",
+];
+
+/// The segments of a dotted path, with every list index as `[]`.
+fn path_segments(path: &str) -> Vec<&str> {
+    path.split(['.', '['])
+        .filter(|s| !s.is_empty())
+        .map(|s| if s.ends_with(']') { "[]" } else { s })
+        .collect()
+}
+
+/// Z1-T5: whether `path` (as [`expand_env_vars_tracking`] writes it) holds a
+/// secret.
+pub(crate) fn is_secret_path(path: &str) -> bool {
+    let segments = path_segments(path);
+    SECRET_PATHS.iter().any(|pattern| {
+        let wanted = path_segments(pattern);
+        wanted.len() <= segments.len()
+            && wanted
+                .iter()
+                .zip(&segments)
+                .all(|(w, s)| *w == "*" || w == s)
+    })
 }
 
 fn expand_value_at(
     value: &mut serde_json::Value,
     path: &mut Vec<String>,
     unresolved: &mut Vec<String>,
+    literals: &mut Vec<String>,
 ) {
     match value {
         serde_json::Value::String(text) => {
             if path.iter().any(|segment| segment.starts_with('_')) {
                 return;
+            }
+            if !text.is_empty() && !text.contains("${") {
+                literals.push(path_text(path));
             }
             let (expanded, missing) = expand_env_vars(text);
             if !missing.is_empty() {
@@ -191,14 +275,14 @@ fn expand_value_at(
         serde_json::Value::Array(items) => {
             for (index, item) in items.iter_mut().enumerate() {
                 path.push(format!("[{index}]"));
-                expand_value_at(item, path, unresolved);
+                expand_value_at(item, path, unresolved, literals);
                 path.pop();
             }
         }
         serde_json::Value::Object(map) => {
             for (key, child) in map.iter_mut() {
                 path.push(key.clone());
-                expand_value_at(child, path, unresolved);
+                expand_value_at(child, path, unresolved, literals);
                 path.pop();
             }
         }

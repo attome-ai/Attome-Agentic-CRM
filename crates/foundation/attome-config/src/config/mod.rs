@@ -230,4 +230,10 @@ pub struct AppConfig {
     /// parallel parser. Boot warns on each; `preflight` fails on any.
     #[serde(skip)]
     pub(crate) ignored_keys: Vec<String>,
+
+    /// Z1-T5 — the paths of the strings the file holds as is (no `${VAR}`),
+    /// recorded by `from_file` so the production profile can refuse a
+    /// literal secret. Not part of the on-disk schema.
+    #[serde(skip)]
+    pub(crate) literal_paths: Vec<String>,
 }

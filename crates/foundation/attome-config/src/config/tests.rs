@@ -4361,3 +4361,56 @@ fn no_secret_named_field_is_a_plain_string() {
         "secret fields must be Secret: {offenders:?}"
     );
 }
+
+/// Z1-T5: a production configuration whose secret is typed into the file is
+/// refused, naming the path and not the value.
+#[test]
+fn production_rejects_literal_secret() {
+    let mut config = production_ready_config();
+    config.validate().expect("the production baseline is valid");
+    config.literal_paths = vec!["app.name".into(), "auth.jwt_secret".into()];
+    let err = config.validate().expect_err("a literal secret is refused");
+    let text = err.to_string();
+    assert!(text.contains("auth.jwt_secret"), "{text}");
+    assert!(!text.contains("production-jwt-secret"), "{text}");
+}
+
+/// Z1-T5: development keeps literal secrets (the shipped template has them).
+#[test]
+fn debug_allows_literal_secret() {
+    let mut config = minimal_valid_config();
+    config.literal_paths = vec!["auth.jwt_secret".into(), "database.password".into()];
+    config
+        .validate()
+        .expect("development allows literal secrets");
+}
+
+/// Z1-T5: which paths count as secrets.
+#[test]
+fn secret_paths_cover_key_rings_lists_and_named_providers() {
+    use super::helpers::is_secret_path;
+    assert!(is_secret_path("auth.jwt_secret"));
+    assert!(is_secret_path("auth.jwt_secret.keys[0].secret"));
+    assert!(is_secret_path("oidc.providers.entra.client_secret"));
+    assert!(is_secret_path("s2s.seeded_clients[2].secret"));
+    assert!(is_secret_path("inference.embedding.api_key"));
+    assert!(!is_secret_path("auth.jwt_issuer"));
+    assert!(!is_secret_path("oidc.providers.entra.client_id"));
+    assert!(!is_secret_path("database.user"));
+}
+
+/// Z1-T5: the expander lists the strings written as is, by path.
+#[test]
+fn the_expander_lists_literal_strings_by_path() {
+    let mut document = serde_json::json!({
+        "auth": { "jwt_secret": "typed-in", "apikey_hash_pepper": "${ATTOME_TEST_Z1T5_UNSET}" },
+        "list": [{ "secret": "x" }],
+        "_readme": "prose",
+        "empty": ""
+    });
+    let mut unresolved = Vec::new();
+    let mut literals = Vec::new();
+    super::helpers::expand_env_vars_tracking(&mut document, &mut unresolved, &mut literals);
+    literals.sort();
+    assert_eq!(literals, ["auth.jwt_secret", "list[0].secret"]);
+}

@@ -77,6 +77,9 @@ pub fn advice(check: &str) -> &'static str {
         ("smtp", _) => {
             "Check email.smtp_host, port and credentials, or set email.enabled to false."
         }
+        ("secret_file", _) => {
+            "Mount the secret file at the path its _FILE variable names, readable by the service account."
+        }
         ("clamav", _) => {
             "Start ClamAV, or clear storage.clamd_address to turn upload scanning off."
         }
@@ -151,6 +154,14 @@ pub async fn run() -> ExitCode {
             print_report(&results);
             return ExitCode::FAILURE;
         }
+    }
+
+    // Z1-T5: a secret mounted as a file (`${NAME}` read through
+    // `NAME_FILE`) is checked before the load that needs it, by variable
+    // name only: an unreadable one otherwise surfaces as an unresolved
+    // placeholder with no word about the file.
+    if let Ok(text) = std::fs::read_to_string(&config_path) {
+        check_secret_files(&mut results, &text);
     }
 
     let config = match AppConfig::from_file() {
@@ -576,6 +587,50 @@ async fn check_duplicate_rows(
     ));
 }
 
+/// The `${NAME}` placeholder names in a configuration's text, once each.
+fn placeholder_names(text: &str) -> Vec<&str> {
+    let mut names = Vec::new();
+    let mut rest = text;
+    while let Some(start) = rest.find("${") {
+        rest = &rest[start + 2..];
+        let Some(end) = rest.find('}') else { break };
+        let name = &rest[..end];
+        if !name.is_empty()
+            && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+            && !names.contains(&name)
+        {
+            names.push(name);
+        }
+        rest = &rest[end + 1..];
+    }
+    names
+}
+
+/// Z1-T5: for each placeholder read from `NAME_FILE` (its `NAME` unset),
+/// whether the file can be read. Reports the variable, never the content.
+fn check_secret_files(results: &mut Vec<CheckResult>, config_text: &str) {
+    for name in placeholder_names(config_text) {
+        if std::env::var_os(name).is_some() {
+            continue;
+        }
+        let Some(file) = std::env::var_os(format!("{name}_FILE")) else {
+            continue;
+        };
+        let check = format!("secret_file.{name}");
+        match std::fs::read(&file) {
+            Ok(_) => results.push(pass(check, format!("{name}_FILE is readable"))),
+            Err(e) => results.push(fail(
+                check,
+                format!(
+                    "{name}_FILE ({}) cannot be read: {}",
+                    file.to_string_lossy(),
+                    e.kind()
+                ),
+            )),
+        }
+    }
+}
+
 fn check_file(results: &mut Vec<CheckResult>, field: impl Into<String>, path: Option<&str>) {
     match path {
         None => results.push(pass(field, "not configured, skipped")),
@@ -665,6 +720,12 @@ mod tests {
     /// parallel, under a shared system temp directory.
     fn temp_path(label: &str) -> std::path::PathBuf {
         std::env::temp_dir().join(format!("preflight-{label}-{}", uuid::Uuid::new_v4()))
+    }
+
+    #[test]
+    fn placeholder_names_are_listed_once_each() {
+        let text = r#"{"a": "${DB_PASSWORD}", "b": "x${JWT_SECRET}y", "c": "${DB_PASSWORD}", "d": "${not ok}"}"#;
+        assert_eq!(placeholder_names(text), ["DB_PASSWORD", "JWT_SECRET"]);
     }
 
     #[test]
