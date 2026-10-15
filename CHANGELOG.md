@@ -22,6 +22,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `report` logs failures, `warn` saves with a warning, `enforce` refuses, from `enforce_from` when set
   (warning before then). A user holding `record.override_rules` (or an administrator) saves past a
   refusing check by sending `X-Override-Reason`; each override is a security event.
+- A record form says when the record changed on the server while it was open (who and when, or that
+  it was deleted), from the live channel, with a button to load the newer version.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE

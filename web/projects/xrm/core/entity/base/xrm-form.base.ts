@@ -231,6 +231,7 @@ export abstract class EngineFormBase implements OnInit {
       next: r => {
         if (this.id() !== id) return;
         this.record = r;
+        this.loadedVersion.set(r.row_version);
         const fg = this.form();
         for (const field of change.fields) {
           const ctrl = fg.get(field);
@@ -281,6 +282,9 @@ export abstract class EngineFormBase implements OnInit {
 
   /** Y8-T8: the entity's design changed on the server while this form was open. */
   readonly modelChanged = signal(false);
+
+  /** A16-T4: the `row_version` this form loaded or last saved. */
+  readonly loadedVersion = signal<number | null>(null);
 
   /** B7-T3: whether a copy is being made. */
   readonly duplicating = signal(false);
@@ -461,6 +465,7 @@ export abstract class EngineFormBase implements OnInit {
     this.svc.get(this.entityLogicalName, this.id()!).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: r => {
         this.record = r;
+        this.loadedVersion.set(r.row_version);
         this.form().patchValue(r.data);
         this.onRecordLoaded(r);
         this.loading.set(false);
@@ -484,6 +489,7 @@ export abstract class EngineFormBase implements OnInit {
     this.svc.get(this.entityLogicalName, this.id()!).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: r => {
         this.record = r;
+        this.loadedVersion.set(r.row_version);
         this.form().patchValue(r.data);
         this.onRecordLoaded(r);
         this.conflict.set(false);
@@ -561,6 +567,7 @@ export abstract class EngineFormBase implements OnInit {
         // current version instead of the one this form loaded with, which
         // would otherwise conflict on the second consecutive save.
         this.record = r;
+        this.loadedVersion.set(r.row_version);
         this.completeSave();
         // D-791 rule 6: warnings never block; the save went through.
         this.saveWarnings.set(writeWarnings(r));

@@ -91,6 +91,9 @@
           <span>{{ 'xrmForm.modelChanged' | translate }}</span>
         </div>
       }
+      <!-- A16-T4 — the record changed on the server while this form was open. -->
+      <xrm-record-changed-banner [entity]="f.name()" [recordId]="f.id()"
+                                 [rowVersion]="f.loadedVersion()" (reload)="f.reload()" />
       <xrm-duplicate-banner [entity]="f.name()" [recordId]="f.id()" />
 
       <!-- M36 (D-473) — renders nothing until the record has a live prediction. -->

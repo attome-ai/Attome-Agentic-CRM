@@ -4,6 +4,7 @@ import { TranslatePipe } from '@attome/base';
 import { XRM_FIELD_POLICY, XrmFieldPolicy } from '../../business-rules/field-policy';
 import { DuplicateBannerComponent } from '../../duplicate-banner/duplicate-banner.component';
 import { PredictionBannerComponent } from '../../prediction-banner/prediction-banner.component';
+import { RecordChangedBannerComponent } from '../../record-changed-banner/record-changed-banner.component';
 import { RecordAccessActionsComponent } from '../../record-access/record-access-actions.component';
 import { RecordTabPanelsComponent } from '../../record-tabs/record-tab-panels.component';
 import { RemindMeComponent } from '../../reminders/remind-me.component';
@@ -56,6 +57,7 @@ import { XrmTabDirective } from './xrm-tab.directive';
   imports: [
     RecordAncestorsComponent,
     NgTemplateOutlet, TranslatePipe, DuplicateBannerComponent, PredictionBannerComponent,
+    RecordChangedBannerComponent,
     RecordAccessActionsComponent, RecordTabPanelsComponent, RemindMeComponent, RecordTagsComponent,
   ],
   styleUrls: ['../../../../styles/xrm-form.css', './xrm-base-form.component.css'],
