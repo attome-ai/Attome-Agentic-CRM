@@ -30,7 +30,9 @@
 //!   (attome-db hardening 4.3); a closed pool doesn't.
 //! - A **lost connection** — SQLSTATE class `08`, `57P01`
 //!   (admin_shutdown: a switchover), `57P02` (crash_shutdown), `57P03`
-//!   (cannot_connect_now), `53300` (too_many_connections), or a raw
+//!   (cannot_connect_now), `53300` (too_many_connections), `25006`
+//!   (read_only_sql_transaction: a write that reached a leader the failover
+//!   manager just demoted, AB2-T1), or a raw
 //!   `sqlx::Error::Io`/`Tls` — -> [`attome_types::AppError::Overloaded`]
 //!   `("db_unavailable")` (503, wire code unchanged: this is not a new
 //!   variant, D-506/OD-4). The statement's outcome is unknown and the
@@ -257,10 +259,13 @@ fn db_unavailable(error: &sqlx::Error) -> AppError {
 }
 
 /// SQLSTATEs that mean the connection — not the statement — failed. Class `08`
-/// is the whole connection-exception class; the four named codes are the
+/// is the whole connection-exception class; the named codes are the
 /// server-side variants PostgreSQL raises without a class-`08` code.
+/// `25006` (read_only_sql_transaction) is here too (AB2-T1): a write that
+/// reaches a primary the failover manager has just demoted to a replica fails
+/// with it, and the retry reaches the new primary.
 fn is_connection_loss_sqlstate(code: &str) -> bool {
-    code.starts_with("08") || matches!(code, "57P01" | "57P02" | "57P03" | "53300")
+    code.starts_with("08") || matches!(code, "57P01" | "57P02" | "57P03" | "53300" | "25006")
 }
 
 #[cfg(test)]
@@ -376,16 +381,23 @@ mod tests {
         sqlx::Error::Database(Box::new(SyntheticDbError { code }))
     }
 
+    /// AB2-T1: a write that reached a just-demoted leader is retryable.
+    #[test]
+    fn read_only_transaction_after_demotion_is_retryable() {
+        assert!(is_connection_loss_sqlstate("25006"));
+        assert!(!is_connection_loss_sqlstate("25001"));
+    }
+
     /// BDB-F6 / 3.1a — a connection lost mid-statement is a retryable 503, not
     /// an opaque 500. Class `08` is the whole connection-exception class; the
-    /// four named codes are the server-side variants PostgreSQL raises without
-    /// a class-`08` code (a switchover, an admin shutdown, too many
-    /// connections).
+    /// named codes are the server-side variants PostgreSQL raises without a
+    /// class-`08` code (a switchover, an admin shutdown, too many
+    /// connections, a write on a just-demoted leader).
     #[test]
     fn connection_loss_codes_are_overloaded_db_unavailable() {
         for code in [
             "08000", "08001", "08003", "08004", "08006", "08007", "08P01", "57P01", "57P02",
-            "57P03", "53300",
+            "57P03", "53300", "25006",
         ] {
             match classify(synthetic(code)) {
                 AppError::Overloaded(breaker) => assert_eq!(breaker, "db_unavailable", "{code}"),
