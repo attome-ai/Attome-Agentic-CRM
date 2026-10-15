@@ -17509,6 +17509,15 @@ export interface components {
             related_to?: null | components["schemas"]["RelatedToFilter"];
             search?: string;
             /**
+             * @description AA4-T4: start a keyset page at this sort value ("jump to M", "jump
+             *     to March"): the first page holds the rows whose `order_by` value is
+             *     at or after it (at or before it for `desc`), with a `next_cursor` as
+             *     usual. Coerced and bound like a filter value on the sort column, so a
+             *     value of the wrong type is a 422; no rows are counted to find the
+             *     place. Not with `after_id` (422).
+             */
+            seek?: unknown;
+            /**
              * Format: uuid
              * @description Direct list/view selection. The view resolves to its referenced SQL query.
              */

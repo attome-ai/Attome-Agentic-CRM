@@ -76077,6 +76077,9 @@
           "search": {
             "type": "string"
           },
+          "seek": {
+            "description": "AA4-T4: start a keyset page at this sort value (\"jump to M\", \"jump\nto March\"): the first page holds the rows whose `order_by` value is\nat or after it (at or before it for `desc`), with a `next_cursor` as\nusual. Coerced and bound like a filter value on the sort column, so a\nvalue of the wrong type is a 422; no rows are counted to find the\nplace. Not with `after_id` (422)."
+          },
           "view_id": {
             "type": [
               "string",
