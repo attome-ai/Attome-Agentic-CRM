@@ -20847,6 +20847,21 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_MetricPoint: {
+            items: {
+                /** Format: date-time */
+                at: string;
+                /** Format: double */
+                value: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_MigrationProjectRow: {
             items: {
                 /** Format: date-time */
@@ -22100,6 +22115,20 @@ export interface components {
                 source_id: string;
                 /** @description Short, human-readable description of the event. */
                 summary: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_TokenChange: {
+            items: {
+                after?: unknown;
+                before?: unknown;
+                field: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -42020,7 +42049,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MetricPoint"][];
+                    "application/json": components["schemas"]["PaginatedResponse_MetricPoint"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -49187,7 +49216,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TokenChange"][];
+                    "application/json": components["schemas"]["PaginatedResponse_TokenChange"];
                 };
             };
             /** @description Missing or invalid credentials */
