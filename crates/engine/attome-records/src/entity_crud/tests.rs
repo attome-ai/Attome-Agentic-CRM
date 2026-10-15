@@ -309,3 +309,29 @@ fn json_to_str_formats_arrays_as_pg_literals_and_stringifies_objects_rather_than
     let obj = serde_json::json!({"a": 1});
     assert_eq!(json_to_str(&obj, &non_file), Some(obj.to_string()));
 }
+
+/// S1-T5: the whole record unless `return=minimal` is asked for, in any case.
+#[test]
+fn return_pref_defaults_to_representation() {
+    use super::response::{ReturnPref, return_pref};
+    let headers = axum::http::HeaderMap::new();
+    assert_eq!(return_pref(&headers), ReturnPref::Representation);
+    let mut other = axum::http::HeaderMap::new();
+    other.insert("prefer", "respond-async".parse().unwrap());
+    assert_eq!(return_pref(&other), ReturnPref::Representation);
+}
+
+#[test]
+fn return_pref_reads_minimal_case_insensitively() {
+    use super::response::{ReturnPref, return_pref};
+    for value in [
+        "return=minimal",
+        "Return=Minimal",
+        "respond-async, return=minimal",
+        "return=minimal; strict",
+    ] {
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert("prefer", value.parse().unwrap());
+        assert_eq!(return_pref(&headers), ReturnPref::Minimal, "{value}");
+    }
+}

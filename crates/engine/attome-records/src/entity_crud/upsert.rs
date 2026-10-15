@@ -67,7 +67,7 @@ const UPSERT_INDEX_INLINE_ROW_LIMIT: i64 = 10_000;
     tag = "entity",
     params(("entity" = String, Path)),
     responses(
-        (status = 201, description = "Success", body = EntityRecordResponse),
+        (status = 201, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
@@ -90,17 +90,24 @@ pub(super) async fn upsert_record(
     Extension(claims): Extension<SessionClaims>,
     recording: RecordingCtx,
     Path(entity_input): Path<String>,
+    headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
-) -> Result<(StatusCode, Json<EntityRecordResponse>), AppError> {
+) -> Result<axum::response::Response, AppError> {
     // D-787 rule 7: a write to a reference-data entity is recorded as
     // `upsert_record` when a changeset is in play (read only for reference
     // data, in `entity_mutation::record_reference_write`; every other upsert
     // is unchanged).
-    reference::scope(
+    let (status, Json(record)) = reference::scope(
         Arc::new(recording.0),
         upsert_record_inner(state, ctx, claims, entity_input, body),
     )
-    .await
+    .await?;
+    // S1-T5: `Prefer: return=minimal` answers with the id and row version.
+    Ok(super::response::write_response(
+        status,
+        super::response::return_pref(&headers),
+        record,
+    ))
 }
 
 /// The upsert itself (the handler wraps it in the ambient recording).

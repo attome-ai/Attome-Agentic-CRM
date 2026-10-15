@@ -428,7 +428,7 @@ async fn read_record_for(
     tag = "entity",
     params(("entity" = String, Path)),
     responses(
-        (status = 201, description = "Success", body = EntityRecordResponse),
+        (status = 201, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
@@ -442,8 +442,9 @@ pub(super) async fn create_record(
     Extension(claims): Extension<SessionClaims>,
     recording: RecordingCtx,
     Path(entity_input): Path<String>,
+    headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
-) -> Result<(StatusCode, Json<EntityRecordResponse>), AppError> {
+) -> Result<axum::response::Response, AppError> {
     // The extractor above IS the create-privilege check. See
     // `create_record_for`'s doc for what a non-HTTP caller must do instead.
     // D-787 rule 7: a write to a reference-data entity is recorded as
@@ -455,7 +456,12 @@ pub(super) async fn create_record(
         create_record_for(&state, &ctx, claims.sub, &entity_input, body),
     )
     .await?;
-    Ok((StatusCode::CREATED, Json(response)))
+    // S1-T5: `Prefer: return=minimal` answers with the id and row version.
+    Ok(super::response::write_response(
+        StatusCode::CREATED,
+        super::response::return_pref(&headers),
+        response,
+    ))
 }
 
 /// What a dry-run create found (A3-T3).
@@ -1054,7 +1060,7 @@ pub(crate) async fn sync_file_field_documents(
         ("id" = Uuid, Path),
     ),
     responses(
-        (status = 200, description = "Success", body = EntityRecordResponse),
+        (status = 200, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
@@ -1070,7 +1076,7 @@ pub(super) async fn update_record(
     Path((entity_input, record_id)): Path<(String, Uuid)>,
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
-) -> Result<Json<EntityRecordResponse>, AppError> {
+) -> Result<axum::response::Response, AppError> {
     // C-10: this used to be a byte-for-byte copy of `update_record_for`
     // (the same resolve/access-check/validate/update_one/mirror/audit/
     // commit/invalidate/rw-pin sequence, with `ctx`/`claims.sub` spelled
@@ -1091,7 +1097,11 @@ pub(super) async fn update_record(
         ),
     )
     .await?;
-    Ok(Json(response))
+    Ok(super::response::write_response(
+        StatusCode::OK,
+        super::response::return_pref(&headers),
+        response,
+    ))
 }
 
 /// `DELETE /api/v1/{entity}/{id}?reason=`.

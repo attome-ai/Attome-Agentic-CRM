@@ -46,6 +46,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   or queue), a body with `{{field}}` merge fields, and short SMS and WhatsApp variants.
 - The standard `Idempotency-Key` header is accepted beside `x-idempotency-key`; both with different
   keys answer 422. On signed S2S requests only `x-idempotency-key` counts.
+- Record create, update and upsert honour `Prefer: return=minimal`: the answer is only `{id, row_version}`
+  (plus any warnings or approval id), with `Preference-Applied: return=minimal` and the row version as `ETag`.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE

@@ -61,6 +61,83 @@ pub struct EntityRecordResponse {
     warnings: Vec<crate::business_rules::RuleWarning>,
 }
 
+/// S1-T5: what a write's `Prefer` header asks it to answer with.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(super) enum ReturnPref {
+    /// `return=minimal`: the id and row version only.
+    Minimal,
+    /// The whole record (the default).
+    Representation,
+}
+
+/// The `return=` preference across every `Prefer` header, case-insensitive;
+/// the whole record unless `return=minimal` is asked for.
+pub(super) fn return_pref(headers: &axum::http::HeaderMap) -> ReturnPref {
+    let minimal = headers
+        .get_all(axum::http::header::HeaderName::from_static("prefer"))
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .flat_map(|value| value.split(','))
+        .any(|pref| {
+            pref.trim()
+                .split(';')
+                .next()
+                .is_some_and(|p| p.trim().eq_ignore_ascii_case("return=minimal"))
+        });
+    if minimal {
+        ReturnPref::Minimal
+    } else {
+        ReturnPref::Representation
+    }
+}
+
+/// S1-T5: the body of a write answered with `Prefer: return=minimal`.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct MinimalRecord {
+    id: Uuid,
+    row_version: i64,
+    /// As on the full record: present only when the write was held for approval.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    approval_request_id: Option<Uuid>,
+    /// As on the full record: business-rule warnings that fired.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    warnings: Vec<crate::business_rules::RuleWarning>,
+}
+
+/// A write's answer: the whole record, or with `return=minimal` its id and
+/// row version, a `Preference-Applied` header and the row version as `ETag`.
+pub(super) fn write_response(
+    status: axum::http::StatusCode,
+    pref: ReturnPref,
+    record: EntityRecordResponse,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    match pref {
+        ReturnPref::Representation => (status, axum::Json(record)).into_response(),
+        ReturnPref::Minimal => {
+            let etag = super::row_version::row_version_etag(record.row_version);
+            let body = MinimalRecord {
+                id: record.id,
+                row_version: record.row_version,
+                approval_request_id: record.approval_request_id,
+                warnings: record.warnings,
+            };
+            (
+                status,
+                [
+                    (
+                        axum::http::header::HeaderName::from_static("preference-applied"),
+                        "return=minimal".to_owned(),
+                    ),
+                    (axum::http::header::ETAG, etag),
+                ],
+                axum::Json(body),
+            )
+                .into_response()
+        }
+    }
+}
+
 impl std::fmt::Debug for EntityRecordResponse {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EntityRecordResponse")
