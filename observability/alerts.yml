@@ -542,6 +542,24 @@ groups:
             completes is rejected by the 24-hour sweep, so this alert is the
             warning before that happens.
 
+      - alert: IdempotencyKeysStuckPending
+        # S9-T6: attome-api's metrics loop counts durable idempotency rows
+        # still `pending` ten minutes after they were taken.
+        expr: idempotency_pending_stuck > 0
+        for: 5m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          runbook_url: "observability/RUNBOOK.md#idempotencykeysstuckpending"
+          summary: "A retried request's original died mid-flight; its outcome is unknown"
+          description: >
+            Runbook: a request on a mandatory-idempotency route never finished
+            and never released its key, so every retry answers
+            idempotency_outcome_unknown. Check whether its change committed
+            (audit log for the operation and principal) before telling the
+            caller to retry with a new key.
+
       # ── attome-cache plan BCA-22 / BCA-F4 (2026-09-25) ──────────────────────
       # Both gauges come from attome_server's 15s loop, which probes the
       # coordination store's INFO memory.

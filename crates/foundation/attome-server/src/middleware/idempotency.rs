@@ -222,6 +222,7 @@ pub async fn idempotency(State(state): State<AppState>, req: Request, next: Next
     let settings = GateSettings {
         replay_max_bytes: state.config.idempotency.replay_max_bytes,
         stale_after: pending_stale_after(&state),
+        operation: &operation,
     };
 
     redis_gate(
@@ -239,11 +240,13 @@ pub async fn idempotency(State(state): State<AppState>, req: Request, next: Next
 
 /// The Redis flow's tunables, resolved once per request.
 #[derive(Clone, Copy, Debug)]
-struct GateSettings {
+struct GateSettings<'a> {
     /// Largest successful response body stored for replay.
     replay_max_bytes: usize,
     /// Age past which a `pending` marker is answered as outcome unknown.
     stale_after: Duration,
+    /// The route template, the `operation` label on the duplicate counters.
+    operation: &'a str,
 }
 
 /// The Redis flow's only I/O. A crate-private seam so a test can fail one
@@ -306,7 +309,7 @@ impl IdempotencyStore for RedisStore<'_> {
 /// not commit.
 async fn redis_gate<S: IdempotencyStore>(
     store: &S,
-    settings: GateSettings,
+    settings: GateSettings<'_>,
     key: &str,
     request_digest: &str,
     req: Request,
@@ -343,7 +346,7 @@ async fn redis_gate<S: IdempotencyStore>(
 
 async fn answer_duplicate<S: IdempotencyStore>(
     store: &S,
-    settings: GateSettings,
+    settings: GateSettings<'_>,
     key: &str,
     request_digest: &str,
 ) -> Response {
@@ -358,7 +361,9 @@ async fn answer_duplicate<S: IdempotencyStore>(
         // NX path cleanly.
         return AppError::Conflict("duplicate request already in progress").into_response();
     };
-    match classify_existing(&raw, request_digest, unix_now(), settings.stale_after) {
+    let existing = classify_existing(&raw, request_digest, unix_now(), settings.stale_after);
+    count_duplicate(settings.operation, &existing);
+    match existing {
         Existing::Replay(cached) => replay_cached(cached),
         Existing::InProgress => {
             AppError::Conflict("duplicate request already in progress").into_response()
@@ -377,7 +382,7 @@ async fn answer_duplicate<S: IdempotencyStore>(
 /// the real response.
 async fn store_completed<S: IdempotencyStore>(
     store: &S,
-    settings: GateSettings,
+    settings: GateSettings<'_>,
     key: &str,
     request_digest: &str,
     response: Response,
@@ -413,6 +418,24 @@ async fn store_completed<S: IdempotencyStore>(
             }
             Response::from_parts(parts, body)
         }
+    }
+}
+
+/// S9-T6: the counter a duplicate request's answer increments, if any.
+fn duplicate_counter(existing: &Existing) -> Option<&'static str> {
+    match existing {
+        Existing::Replay(_) | Existing::ReplayUnavailable => Some("idempotency_replays_total"),
+        Existing::DifferentRequest => Some("idempotency_mismatch_total"),
+        Existing::OutcomeUnknown => Some("idempotency_unknown_total"),
+        Existing::InProgress => None,
+    }
+}
+
+/// S9-T6: counts a duplicate by what it was answered with, per operation
+/// (the route template, so the label set stays bounded).
+fn count_duplicate(operation: &str, existing: &Existing) {
+    if let Some(name) = duplicate_counter(existing) {
+        metrics::counter!(name, "operation" => operation.to_owned()).increment(1);
     }
 }
 
@@ -674,11 +697,15 @@ async fn idempotency_durable_flow(
 
     let record_id = match outcome {
         AcquireOutcome::Acquired { record_id } => record_id,
-        AcquireOutcome::Replay(cached) => return replay_from_durable(cached),
+        AcquireOutcome::Replay(cached) => {
+            metrics::counter!("idempotency_replays_total", "operation" => operation).increment(1);
+            return replay_from_durable(cached);
+        }
         AcquireOutcome::InProgress => {
             return AppError::Conflict("duplicate request already in progress").into_response();
         }
         AcquireOutcome::DifferentRequest => {
+            metrics::counter!("idempotency_mismatch_total", "operation" => operation).increment(1);
             return AppError::IdempotencyConflict(
                 "idempotency key was already used for a different request",
             )
@@ -893,6 +920,36 @@ mod tests {
     const OTHER_DIGEST: &str = "ffff00";
     const NOW: i64 = 1_700_000_000;
     const STALE_AFTER: Duration = Duration::from_secs(35);
+
+    /// S9-T6: replays, mismatches and unknown outcomes each have a counter;
+    /// a request still in progress is not counted.
+    #[test]
+    fn each_duplicate_answer_counts_under_its_own_name() {
+        let cached = CachedResponse {
+            status: 201,
+            content_type: None,
+            headers: Vec::new(),
+            body_b64: String::new(),
+            request_digest: DIGEST.to_owned(),
+        };
+        assert_eq!(
+            duplicate_counter(&Existing::Replay(cached)),
+            Some("idempotency_replays_total")
+        );
+        assert_eq!(
+            duplicate_counter(&Existing::ReplayUnavailable),
+            Some("idempotency_replays_total")
+        );
+        assert_eq!(
+            duplicate_counter(&Existing::DifferentRequest),
+            Some("idempotency_mismatch_total")
+        );
+        assert_eq!(
+            duplicate_counter(&Existing::OutcomeUnknown),
+            Some("idempotency_unknown_total")
+        );
+        assert_eq!(duplicate_counter(&Existing::InProgress), None);
+    }
 
     #[test]
     fn a_v1_marker_round_trips_for_every_kind() {
@@ -1156,6 +1213,7 @@ mod tests {
         let settings = GateSettings {
             replay_max_bytes: cap,
             stale_after,
+            operation: "POST /test",
         };
         routes.layer(axum::middleware::from_fn(
             move |req: Request, next: Next| {

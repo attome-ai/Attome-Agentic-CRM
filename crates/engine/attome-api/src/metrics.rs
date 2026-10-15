@@ -151,6 +151,7 @@ pub fn spawn_upload_scan_backlog_refresh(state: AppState, interval: Duration) {
     tokio::spawn(async move {
         loop {
             refresh_upload_scan_backlog_once(&state.db).await;
+            refresh_idempotency_stuck_once(&state.db).await;
             tokio::time::sleep(interval).await;
         }
     });
@@ -180,6 +181,26 @@ async fn refresh_upload_scan_backlog_once(db: &DbPool) {
         }
         Err(e) => {
             tracing::warn!(error = %e, "metrics refresh: upload-scan backlog query failed");
+        }
+    }
+}
+
+/// S9-T6: durable idempotency keys still `pending` ten minutes after they
+/// were taken. A request that outlives the request timeout this much died
+/// mid-flight, so whether its change committed is unknown and every retry of
+/// it answers `idempotency_outcome_unknown` until the row is pruned.
+async fn refresh_idempotency_stuck_once(db: &DbPool) {
+    let stuck: Result<i64, sqlx::Error> = sqlx::query_scalar(
+        "SELECT COUNT(*)::bigint FROM idempotency_record
+         WHERE state = 'pending' AND is_deleted = FALSE
+           AND created_at < NOW() - INTERVAL '10 minutes'",
+    )
+    .fetch_one(db)
+    .await;
+    match stuck {
+        Ok(stuck) => metrics::gauge!("idempotency_pending_stuck").set(stuck as f64),
+        Err(e) => {
+            tracing::warn!(error = %e, "metrics refresh: stuck idempotency key count failed");
         }
     }
 }

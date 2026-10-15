@@ -273,6 +273,15 @@ An upload has waited more than 15 minutes for its virus scan. Confirm `storage.c
 points at a live clamd (the compose `clamav` profile) and the worker is running. Unscanned
 uploads are rejected by the 24-hour sweep.
 
+### IdempotencyKeysStuckPending
+
+A request on a mandatory-idempotency route has held its key as `pending` for more than ten
+minutes: it died mid-flight, so whether its change committed is unknown, and every retry with that
+key answers `idempotency_outcome_unknown`. Look up the operation and principal in the audit log to
+see whether the change landed, then have the caller retry with a new key only if it did not.
+`idempotency_replays_total`, `idempotency_mismatch_total` and `idempotency_unknown_total` show
+which operations retries hit.
+
 ## Host
 
 ### DiskSpaceLow
