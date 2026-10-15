@@ -930,6 +930,25 @@ mod tests {
 
     use super::pool_capacity_summary;
 
+    /// Z2-T7: behind a transaction-pooling pgbouncer the client-side
+    /// statement cache is off for every pool when configured.
+    #[test]
+    fn statement_cache_disabled_when_configured() {
+        let url = "postgres://u:p@localhost:5555/db";
+        let off = config_with_database(serde_json::json!({ "disable_statement_cache": true }));
+        let options = super::connect_options(url, &off).unwrap();
+        assert!(
+            format!("{options:?}").contains("statement_cache_capacity: 0"),
+            "{options:?}"
+        );
+        let on = config_with_database(serde_json::json!({}));
+        let options = super::connect_options(url, &on).unwrap();
+        assert!(
+            !format!("{options:?}").contains("statement_cache_capacity: 0"),
+            "{options:?}"
+        );
+    }
+
     /// Z2-T2: two nodes under a 200-connection server get 48 runtime, 16
     /// read-only, 8 read-only-primary and 2 migrator connections each.
     #[test]
