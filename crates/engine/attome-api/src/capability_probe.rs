@@ -76,6 +76,105 @@ pub fn spawn_capability_refresh(state: EngineState) {
 /// test with live infrastructure can drive a single round deterministically
 /// rather than racing a timer.
 async fn probe_once(state: &EngineState, worker_stale_after: f64) {
+    // AB5-T8: the states before this round, to find what went down or came
+    // back once every probe has been recorded.
+    let before = Capability::ALL.map(|c| state.base.capabilities.state(c));
+    probe_round(state, worker_stale_after).await;
+    let after = Capability::ALL.map(|c| state.base.capabilities.state(c));
+    for (i, capability) in Capability::ALL.into_iter().enumerate() {
+        if let Some(change) = period_change(before[i], after[i]) {
+            record_period(&state.base.db, capability, change).await;
+        }
+    }
+}
+
+/// AB5-T8: what a state change means for the degraded-period record.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PeriodChange {
+    Open,
+    Close,
+}
+
+fn period_change(before: CapabilityState, after: CapabilityState) -> Option<PeriodChange> {
+    match (before, after) {
+        (b, CapabilityState::Unavailable) if b != CapabilityState::Unavailable => {
+            Some(PeriodChange::Open)
+        }
+        (CapabilityState::Unavailable, a) if a != CapabilityState::Unavailable => {
+            Some(PeriodChange::Close)
+        }
+        _ => None,
+    }
+}
+
+/// Opens or closes `capability`'s degraded period. At most one open period
+/// per capability (a partial unique index), so two nodes seeing one outage
+/// record it once. Bounded and best effort: a failure is logged, and the
+/// probe carries on.
+async fn record_period(db: &attome_db::DbPool, capability: Capability, change: PeriodChange) {
+    let features: Vec<String> = capability
+        .affected_features()
+        .iter()
+        .map(|f| (*f).to_owned())
+        .collect();
+    let write = async {
+        match change {
+            PeriodChange::Open => sqlx::query(
+                "INSERT INTO degraded_period (capability, features) VALUES ($1, $2) \
+                 ON CONFLICT (capability) WHERE ended_at IS NULL DO NOTHING",
+            )
+            .bind(capability.as_str())
+            .bind(&features)
+            .execute(db)
+            .await
+            .map(|_| ()),
+            PeriodChange::Close => sqlx::query(
+                "UPDATE degraded_period SET ended_at = now() \
+                 WHERE capability = $1 AND ended_at IS NULL",
+            )
+            .bind(capability.as_str())
+            .execute(db)
+            .await
+            .map(|_| ()),
+        }
+    };
+    match tokio::time::timeout(PROBE_TIMEOUT, write).await {
+        Ok(Ok(())) => {}
+        Ok(Err(e)) => tracing::warn!(
+            error = %e,
+            capability = capability.as_str(),
+            "degraded period not recorded"
+        ),
+        Err(_) => tracing::warn!(
+            capability = capability.as_str(),
+            "degraded period write timed out"
+        ),
+    }
+}
+
+/// AB5-T8: one degraded period, for the dependency report.
+#[derive(Debug, Clone, serde::Serialize, sqlx::FromRow)]
+pub struct DegradedPeriod {
+    pub capability: String,
+    pub started_at: chrono::DateTime<chrono::Utc>,
+    pub ended_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub features: Vec<String>,
+    pub cause: Option<String>,
+}
+
+/// AB5-T8: the degraded periods that started in the last 90 days, newest
+/// first, at most 500.
+pub async fn degraded_history(db: &attome_db::DbPool) -> Result<Vec<DegradedPeriod>, sqlx::Error> {
+    sqlx::query_as(
+        "SELECT capability, started_at, ended_at, features, cause FROM degraded_period \
+         WHERE started_at > now() - interval '90 days' \
+         ORDER BY started_at DESC LIMIT 500",
+    )
+    .fetch_all(db)
+    .await
+}
+
+async fn probe_round(state: &EngineState, worker_stale_after: f64) {
     // Concurrent, not sequential: four independent network/database round
     // trips, each already bounded by its own 2s timeout (D-167). Serially
     // this round could take 8s of the interval; together it takes the slowest
@@ -314,6 +413,31 @@ fn record(state: &EngineState, capability: Capability, outcome: ProbeOutcome, er
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// AB5-T8: a period opens when a capability becomes unavailable and
+    /// closes when it stops being unavailable; nothing else touches it.
+    #[test]
+    fn periods_open_and_close_on_unavailable_edges() {
+        use CapabilityState::{Available, Disabled, Unavailable, Unknown};
+        assert_eq!(
+            period_change(Available, Unavailable),
+            Some(PeriodChange::Open)
+        );
+        assert_eq!(
+            period_change(Unknown, Unavailable),
+            Some(PeriodChange::Open)
+        );
+        assert_eq!(
+            period_change(Unavailable, Available),
+            Some(PeriodChange::Close)
+        );
+        assert_eq!(
+            period_change(Unavailable, Disabled),
+            Some(PeriodChange::Close)
+        );
+        assert_eq!(period_change(Unavailable, Unavailable), None);
+        assert_eq!(period_change(Unknown, Available), None);
+    }
 
     /// AB5-T1: the AI endpoint's host and port, defaulted by scheme.
     #[test]

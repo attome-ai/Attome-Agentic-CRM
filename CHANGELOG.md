@@ -11,6 +11,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Five more capabilities are probed and reported: `ai_model`, `search_index`, `virus_scanner`,
+  `cache` and `connectors`, each naming the features it affects; the status banner explains each in
+  English and Arabic. Every period a capability is unavailable is kept in `degraded_period`
+  (migration `0039`) and `/health/dependencies` lists the last 90 days as `degraded_history`.
 - Statement classes: `attome_db::tx::begin_class` opens a transaction with the class's statement,
   lock and idle-in-transaction timeouts (fast, standard, report, admin), set transaction-locally with
   bound values; `database.statement_classes` overrides any class.

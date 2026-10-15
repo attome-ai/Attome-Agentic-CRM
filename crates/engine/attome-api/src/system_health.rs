@@ -94,6 +94,11 @@ async fn dependencies(State(state): State<EngineState>, _ctx: Authorized<Admin>)
     // existing flag keeps one source of truth instead of adding a second
     // one that could drift.
     let capabilities = state.base.capabilities.snapshot();
+    // AB5-T8: the last 90 days of degraded periods.
+    let history = match crate::capability_probe::degraded_history(&state.base.db).await {
+        Ok(periods) => json!(periods),
+        Err(e) => json!({ "error": e.to_string() }),
+    };
     let audit_ingest_tripped = state
         .base
         .audit_ingest_backlog_exceeded
@@ -108,6 +113,7 @@ async fn dependencies(State(state): State<EngineState>, _ctx: Authorized<Admin>)
             "batch": { "worker_last_seen_age_seconds": batch_age.ok().flatten() },
         },
         "audit_chainer": audit,
+        "degraded_history": history,
         "capabilities": {
             "gated_routes": capabilities,
             "audit_ingest": {
