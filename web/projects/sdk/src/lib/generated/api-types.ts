@@ -1930,6 +1930,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/deploys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AB7-T8: the most recent deploys and restarts across every node, newest
+         *     first.
+         */
+        get: operations["deploys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/dev-tools/available": {
         parameters: {
             query?: never;
@@ -16499,6 +16519,25 @@ export interface components {
             entity: string;
             field: string;
         };
+        /** @description One row of the history. */
+        DeployEvent: {
+            /**
+             * Format: int64
+             * @description Server errors answered while the node drained; empty when not counted.
+             */
+            failed_requests?: number | null;
+            /** Format: date-time */
+            finished_at?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** @description `start` (process start to ready) or `drain` (shutdown signal to exit). */
+            kind: string;
+            node: string;
+            /** Format: date-time */
+            started_at: string;
+            started_by?: string | null;
+            version: string;
+        };
         DescribeQueryBody: {
             sql_query: string;
         };
@@ -20745,6 +20784,33 @@ export interface components {
                 count: number;
                 entity: string;
                 field: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_DeployEvent: {
+            items: {
+                /**
+                 * Format: int64
+                 * @description Server errors answered while the node drained; empty when not counted.
+                 */
+                failed_requests?: number | null;
+                /** Format: date-time */
+                finished_at?: string | null;
+                /** Format: uuid */
+                id: string;
+                /** @description `start` (process start to ready) or `drain` (shutdown signal to exit). */
+                kind: string;
+                node: string;
+                /** Format: date-time */
+                started_at: string;
+                started_by?: string | null;
+                version: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -35596,6 +35662,44 @@ export interface operations {
             };
             /** @description Survivorship rule not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    deploys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The last 100 starts and drains */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DeployEvent"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
