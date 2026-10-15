@@ -33,7 +33,10 @@ pub use sections::auth::{
 };
 pub use sections::backup::BackupSection;
 pub use sections::cache::{CacheBackend, CacheRole, CacheRoleOverride, CacheRoles, CacheSection};
-pub use sections::database::{AppSection, DatabasePoolSize, DatabasePools, DatabaseSection};
+pub use sections::database::{
+    AppSection, DatabasePoolSize, DatabasePools, DatabaseSection, StatementClassOverrides,
+    StatementClassTimeouts,
+};
 pub use sections::docgen::DocgenSection;
 pub use sections::events::EventsSection;
 pub use sections::fleet::FleetSection;

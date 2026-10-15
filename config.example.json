@@ -25,6 +25,7 @@
     "connection_number": 10,
     "_comment_node_count": "Z2-T2: node_count (default 1) is how many server/worker processes share this database; max_server_connections is its max_connections. With node_count above 1, or max_server_connections set, each pool without a pools entry takes its share of 80% of that budget split across the nodes (runtime 60%, readonly 20%, readonly_primary 10%, migrator 2) instead of connection_number.",
     "node_count": 1,
+    "_comment_statement_classes": "Z2-T5: optional statement_classes overrides the per-class timeouts (ms) that attome_db::tx::begin_class sets: fast 500/200, standard 5000/1000, report 60000/1000, admin 300000/5000 (statement/lock), idle in transaction 10000 for all. Example: \"statement_classes\": {\"report\": {\"statement_timeout_ms\": 120000, \"lock_timeout_ms\": 2000, \"idle_in_transaction_timeout_ms\": 10000}}.",
     "timeout": 5.0,
     "_comment_pools": "Optional per-pool sizes (attome-db hardening Phase 2.3): add \"pools\": {\"runtime\": {\"max_connections\": N}} (keys: runtime, readonly, readonly_primary, migrator) to size one pool; any pool left out uses connection_number above. Each value must be 1..=1000. The direct (schema bootstrap) pool is fixed at 2.",
     "readonly": {

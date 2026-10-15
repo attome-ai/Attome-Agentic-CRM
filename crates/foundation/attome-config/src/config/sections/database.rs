@@ -164,6 +164,11 @@ pub struct DatabaseSection {
     /// split across the nodes instead of from `connection_number`.
     #[serde(default = "default_node_count")]
     pub node_count: u32,
+    /// Z2-T5: per statement class, the statement, lock and
+    /// idle-in-transaction timeouts that replace the class defaults. A class
+    /// left out keeps its defaults.
+    #[serde(default)]
+    pub statement_classes: StatementClassOverrides,
     /// Z2-T2: PostgreSQL's (or pgbouncer's) `max_connections`, when known.
     /// `None` assumes 100 once sizing applies.
     #[serde(default)]
@@ -311,6 +316,7 @@ impl std::fmt::Debug for DatabaseSection {
             .field("connection_number", &self.connection_number)
             .field("timeout", &self.timeout)
             .field("pools", &self.pools)
+            .field("statement_classes", &self.statement_classes)
             .field("node_count", &self.node_count)
             .field("max_server_connections", &self.max_server_connections)
             .field("readonly", &self.readonly)
@@ -342,6 +348,30 @@ pub struct DatabasePools {
     pub readonly_primary: Option<DatabasePoolSize>,
     #[serde(default)]
     pub migrator: Option<DatabasePoolSize>,
+}
+
+/// Z2-T5: `database.statement_classes`, one optional override per class.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StatementClassOverrides {
+    #[serde(default)]
+    pub fast: Option<StatementClassTimeouts>,
+    #[serde(default)]
+    pub standard: Option<StatementClassTimeouts>,
+    #[serde(default)]
+    pub report: Option<StatementClassTimeouts>,
+    #[serde(default)]
+    pub admin: Option<StatementClassTimeouts>,
+}
+
+/// Z2-T5: one statement class's timeouts in milliseconds; each must be
+/// above 0.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StatementClassTimeouts {
+    pub statement_timeout_ms: u64,
+    pub lock_timeout_ms: u64,
+    pub idle_in_transaction_timeout_ms: u64,
 }
 
 /// One pool's size override; `max_connections` is validated to `1..=1000`.

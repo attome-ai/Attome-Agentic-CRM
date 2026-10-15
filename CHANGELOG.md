@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Statement classes: `attome_db::tx::begin_class` opens a transaction with the class's statement,
+  lock and idle-in-transaction timeouts (fast, standard, report, admin), set transaction-locally with
+  bound values; `database.statement_classes` overrides any class.
 - Every DDL statement the provisioning engine runs is kept in `ddl_log` (kind, table, duration, lock
   retries, outcome; DDL text only, never values), listed per entity by
   `GET /api/v1/admin/entities/{entity_id}/ddl-log`. Migration `0038_schema_evolution_ledger` also

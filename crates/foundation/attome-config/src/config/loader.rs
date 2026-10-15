@@ -1017,6 +1017,24 @@ impl AppConfig {
                 ),
             });
         }
+        let classes = &self.database.statement_classes;
+        for (class, timeouts) in [
+            ("fast", classes.fast),
+            ("standard", classes.standard),
+            ("report", classes.report),
+            ("admin", classes.admin),
+        ] {
+            if let Some(t) = timeouts
+                && (t.statement_timeout_ms == 0
+                    || t.lock_timeout_ms == 0
+                    || t.idle_in_transaction_timeout_ms == 0)
+            {
+                return Err(ConfigError::Invalid {
+                    field: format!("database.statement_classes.{class}"),
+                    reason: "every timeout must be above 0 ms".into(),
+                });
+            }
+        }
         if self.database.node_count == 0 {
             return Err(ConfigError::Invalid {
                 field: "database.node_count".into(),
