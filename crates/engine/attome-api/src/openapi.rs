@@ -93,6 +93,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         crate::signoff::openapi_fragment(),
         crate::profiler_admin::openapi_fragment(),
         crate::system_health::openapi_fragment(),
+        crate::autonumber_admin::openapi_fragment(),
         crate::api_usage_admin::openapi_fragment(),
         crate::changes_admin::openapi_fragment(),
         crate::relationship_admin::openapi_fragment(),

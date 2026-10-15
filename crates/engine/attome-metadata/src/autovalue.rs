@@ -887,6 +887,108 @@ pub async fn generate_for_update(
     Ok(generated)
 }
 
+// ── Gap report (A4-T5) ───────────────────────────────────────────────────────
+
+/// One piece of a format, for reading numbers back out of stored values.
+#[derive(Debug, PartialEq)]
+enum Piece {
+    Literal(String),
+    /// The sequence number: one or more digits.
+    Seq,
+    /// A check character.
+    Check,
+    /// Any other token (a date, a record value): any text.
+    Any,
+}
+
+fn pieces(format: &str) -> Vec<Piece> {
+    let mut out = Vec::new();
+    let mut literal = String::new();
+    let mut chars = format.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '{' if chars.peek() == Some(&'{') => {
+                chars.next();
+                literal.push('{');
+            }
+            '}' if chars.peek() == Some(&'}') => {
+                chars.next();
+                literal.push('}');
+            }
+            '{' => {
+                let token: String = chars.by_ref().take_while(|&t| t != '}').collect();
+                let token = token.trim();
+                if !literal.is_empty() {
+                    out.push(Piece::Literal(std::mem::take(&mut literal)));
+                }
+                let is_seq = (!token.is_empty() && token.chars().all(|t| t == 'D' || t == '#'))
+                    || token.starts_with("SEQ")
+                    || token.starts_with("seq");
+                out.push(if is_seq {
+                    Piece::Seq
+                } else if matches!(token, "LUHN" | "luhn" | "MOD11" | "mod11") {
+                    Piece::Check
+                } else {
+                    Piece::Any
+                });
+            }
+            other => literal.push(other),
+        }
+    }
+    if !literal.is_empty() {
+        out.push(Piece::Literal(literal));
+    }
+    out
+}
+
+/// Matches `value` from `pos` against `pieces`; on success the sequence
+/// number's byte range.
+fn match_pieces(pieces: &[Piece], value: &str, pos: usize) -> Option<Option<(usize, usize)>> {
+    let Some((first, rest)) = pieces.split_first() else {
+        return (pos == value.len()).then_some(None);
+    };
+    let tail = &value[pos..];
+    match first {
+        Piece::Literal(text) => {
+            if tail.starts_with(text.as_str()) {
+                match_pieces(rest, value, pos + text.len())
+            } else {
+                None
+            }
+        }
+        Piece::Check => {
+            let ch = tail.chars().next()?;
+            match_pieces(rest, value, pos + ch.len_utf8())
+        }
+        Piece::Seq => {
+            let digits = tail.chars().take_while(char::is_ascii_digit).count();
+            (1..=digits)
+                .rev()
+                .find_map(|n| match_pieces(rest, value, pos + n).map(|_| Some((pos, pos + n))))
+        }
+        Piece::Any => {
+            let ends: Vec<usize> = tail
+                .char_indices()
+                .map(|(i, _)| pos + i)
+                .chain(std::iter::once(value.len()))
+                .collect();
+            ends.into_iter()
+                .find_map(|end| match_pieces(rest, value, end))
+        }
+    }
+}
+
+/// A4-T5: reads a stored value back by its rule's format: the value with the
+/// sequence digits replaced by `#` (the counter it came from, such as
+/// `INV-RUH-1447-#`) and the sequence number. `None` when the value does not
+/// fit the format or the format has no sequence.
+pub fn split_number(format: &str, value: &str) -> Option<(String, i64)> {
+    let pieces = pieces(format);
+    let (start, end) = match_pieces(&pieces, value, 0)??;
+    let number = value[start..end].parse::<i64>().ok()?;
+    Some((format!("{}#{}", &value[..start], &value[end..]), number))
+}
+
 // ── Seed ─────────────────────────────────────────────────────────────────────
 
 /// Test-fixture equivalent of applying `platform-bundles/
@@ -946,6 +1048,25 @@ mod tests {
             ResetScope::parse(Some("hijri_yearly")),
             ResetScope::HijriYearly
         );
+    }
+
+    /// A4-T5: stored numbers read back by their format.
+    #[test]
+    fn autonumber_gaps_split_number() {
+        assert_eq!(
+            split_number("INV-{branch}-{hyyyy}-{SEQ:4}", "INV-RUH-1447-0007"),
+            Some(("INV-RUH-1447-#".to_owned(), 7))
+        );
+        assert_eq!(
+            split_number("AVG-{DDDD}-{YY-MM-DD}", "AVG-0012-26-08-07"),
+            Some(("AVG-#-26-08-07".to_owned(), 12))
+        );
+        assert_eq!(
+            split_number("T-{SEQ}{LUHN}", "T-423"),
+            Some(("T-#3".to_owned(), 42))
+        );
+        assert_eq!(split_number("INV-{SEQ}", "BILL-7"), None);
+        assert_eq!(split_number("INV-{branch}", "INV-RUH"), None);
     }
 
     #[test]

@@ -55,6 +55,7 @@ pub mod changeset;
 // `attome-core` so the dashboard crate can share its types;
 // `view_admin::validate_view_kind_metadata` keeps its crate-local path.
 use attome_core::chart_view_metadata;
+mod autonumber_admin;
 /// D-789 §6.1 — `/api/v1/admin/business-rules` (CRUD, validate, test,
 /// publish). Replaces `/api/v1/admin/rules*` (D-790).
 pub mod business_rule_admin;

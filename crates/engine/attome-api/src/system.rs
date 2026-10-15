@@ -619,6 +619,7 @@ impl EngineSystem {
             // (below) is for administrators (U9-T2) and probes storage, jobs,
             // email and audit; see system_health.rs's module doc.
             .merge(crate::system_health::routes())
+            .merge(crate::autonumber_admin::routes())
             .merge(authed)
             .with_state(self.state);
         attome_server::RouteBundle::new(router)

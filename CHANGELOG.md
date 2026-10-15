@@ -20,6 +20,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   (migration `0056`).
 - An autonumber rule may run in `fast_mode`: its number is committed on its own, so creates never
   wait on each other, and a failed create leaves a gap (for ticket ids, not invoices).
+- `GET /api/v1/admin/autonumber/{entity}/{attribute}/gaps` lists each rule's counters and, per counter,
+  the numbers missing or given twice among the stored records (deleted ones keep their numbers).
 - A text or number field may be an external id: `options.external_id: {"system": "<name>"}` makes
   its value unique among the entity's live records (a unique index built online); an entity may hold
   ids for several systems.

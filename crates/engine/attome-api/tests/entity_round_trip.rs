@@ -4086,6 +4086,101 @@ fn upsert_by_external_id_and_lookup_by_external_id() {
     })
 }
 
+/// A4-T5: the gap report reads the numbers a rule gave: three records
+/// numbered, one deleted (it keeps its number), and no number is missing.
+#[test]
+fn autonumber_gaps_report_keeps_deleted_numbers() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (entity, entity_id) = create_entity(&app, &admin_cookie, "gapinv").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"number","name":"Number","field_type":"text"}"#,
+        )
+        .await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"title","name":"Title","field_type":"text"}"#,
+        )
+        .await;
+        let send = |method: &str, uri: String, body: String| {
+            Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                "/api/v1/autovalue".to_owned(),
+                format!(
+                    r#"{{"name":"gap test","entity_logicalname":"{entity}","attribute_logicalname":"number",
+                        "format":"G-{{SEQ:3}}","initial_value":1,"next_value":1,"reset_scope":"never"}}"#
+                ),
+            ))
+            .await
+            .expect("rule");
+        assert_eq!(res.status(), StatusCode::CREATED);
+
+        let mut ids = Vec::new();
+        for title in ["a", "b", "c"] {
+            let res = app
+                .clone()
+                .oneshot(send(
+                    "POST",
+                    format!("/api/v1/{entity}"),
+                    format!(r#"{{"title":"{title}"}}"#),
+                ))
+                .await
+                .expect("record");
+            assert_eq!(res.status(), StatusCode::CREATED);
+            let created = body_json(res).await;
+            ids.push(created["id"].as_str().expect("id").to_owned());
+        }
+        let res = app
+            .clone()
+            .oneshot(send(
+                "DELETE",
+                format!("/api/v1/{entity}/{}", ids[1]),
+                String::new(),
+            ))
+            .await
+            .expect("delete");
+        assert!(res.status().is_success(), "delete: {}", res.status());
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "GET",
+                format!("/api/v1/admin/autonumber/{entity}/number/gaps"),
+                String::new(),
+            ))
+            .await
+            .expect("gap report");
+        assert_eq!(res.status(), StatusCode::OK);
+        let report = body_json(res).await;
+        let group = &report["rules"][0]["groups"][0];
+        assert_eq!(group["pattern"], "G-#", "{report}");
+        assert_eq!(group["count"], 3, "{report}");
+        assert_eq!(group["missing"], serde_json::json!([]), "{report}");
+        assert_eq!(group["duplicates"], serde_json::json!([]), "{report}");
+        assert_eq!(
+            report["rules"][0]["counters"][0]["next_value"], 4,
+            "{report}"
+        );
+    })
+}
+
 /// F023 (P2.2): `POST .../upsert` creates when no row matches `match`, then
 /// updates that same row (never inserting a duplicate) on a second call with
 /// the same match key.
