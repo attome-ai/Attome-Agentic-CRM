@@ -400,13 +400,22 @@ impl GuardedClient {
         })
     }
 
+    /// Z5-T9: the request carries the current trace (`traceparent`) and the
+    /// id of the request that caused it (`x-request-id`) when there are
+    /// ones, so a webhook or connector call can be followed back to it. A job
+    /// worker restores its producer's trace, so this holds for work done in
+    /// the background too.
     pub fn request(
         &self,
         method: reqwest::Method,
         url: Url,
     ) -> Result<reqwest::RequestBuilder, SsrfGuardError> {
         refuse_non_routable_literal(&url)?;
-        Ok(self.inner.request(method, url))
+        let mut builder = self.inner.request(method, url);
+        for (name, value) in correlation_headers() {
+            builder = builder.header(name, value);
+        }
+        Ok(builder)
     }
 
     pub fn get(&self, url: Url) -> Result<reqwest::RequestBuilder, SsrfGuardError> {
@@ -433,6 +442,21 @@ impl GuardedClient {
         refuse_non_routable_literal(request.url())?;
         Ok(self.inner.execute(request).await?)
     }
+}
+
+/// Z5-T9: the trace and request-id headers for an outbound call made now.
+fn correlation_headers() -> Vec<(&'static str, String)> {
+    use tracing_opentelemetry::OpenTelemetrySpanExt;
+    let mut headers = Vec::new();
+    if let Some(traceparent) =
+        attome_types::w3c_trace::format_current_traceparent(&tracing::Span::current().context())
+    {
+        headers.push(("traceparent", traceparent));
+    }
+    if let Some(request_id) = attome_types::request_scope::current() {
+        headers.push(("x-request-id", request_id));
+    }
+    headers
 }
 
 /// [`refuse_non_routable_literal`]'s shape, as [`GuardedClient::into_parts`] hands it out.
@@ -462,6 +486,21 @@ pub fn refuse_non_routable_literal(url: &Url) -> Result<(), SsrfGuardError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Z5-T9: an outbound call names the request that caused it, and adds
+    /// nothing when there is none.
+    #[tokio::test]
+    async fn guarded_request_carries_the_request_id() {
+        let client = GuardedClient::new(5).expect("client");
+        let url = Url::parse("https://example.com/hook").unwrap();
+        let outside = client.post(url.clone()).unwrap().build().unwrap();
+        assert!(outside.headers().get("x-request-id").is_none());
+        let inside = attome_types::request_scope::scope("req-77".to_owned(), async {
+            client.post(url).unwrap().build().unwrap()
+        })
+        .await;
+        assert_eq!(inside.headers().get("x-request-id").unwrap(), "req-77");
+    }
     use std::str::FromStr;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
