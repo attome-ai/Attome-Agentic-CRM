@@ -27,6 +27,8 @@ export type ApiErrorKind =
   | 'server_timeout'
   // AA4-T7: an interactive query ran past its limit; run it as an export.
   | 'query_timeout'
+  // AB5-T6: changes are paused (the operator's switch or a full disk).
+  | 'read_only'
   | 'payload_too_large'
   | 'idempotency_outcome_unknown'
   | 'idempotency_replay_unavailable'
@@ -59,6 +61,7 @@ const KNOWN_KINDS: ReadonlySet<string> = new Set<ApiErrorKind>([
   'transition_not_allowed',
   'server_timeout',
   'query_timeout',
+  'read_only',
   'payload_too_large',
   'idempotency_outcome_unknown',
   'idempotency_replay_unavailable',

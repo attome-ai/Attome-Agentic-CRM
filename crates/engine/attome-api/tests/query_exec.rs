@@ -693,9 +693,10 @@ fn runaway_query_is_cancelled_by_the_statement_timeout() {
         let app = full_app(system);
 
         let status = execute_query(app, &admin_cookie, qid).await;
+        // AA4-T7: a query past its limit is a 504 query_timeout.
         assert_eq!(
             status,
-            StatusCode::INTERNAL_SERVER_ERROR,
+            StatusCode::GATEWAY_TIMEOUT,
             "a 2s query must be cancelled by the 500ms fast-read statement_timeout"
         );
     })

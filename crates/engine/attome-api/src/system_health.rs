@@ -484,7 +484,7 @@ pub fn degraded_features(down: &[attome_server::Capability]) -> Vec<DegradedFeat
                 continue;
             }
             out.push(DegradedFeature {
-                feature: *feature,
+                feature,
                 message_key: format!("systemStatus.{feature}"),
             });
         }

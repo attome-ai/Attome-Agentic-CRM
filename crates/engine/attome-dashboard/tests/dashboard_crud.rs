@@ -1366,7 +1366,14 @@ mod create_from_layout {
         )
         .await
         .expect_err("an unregistered widget_type must be rejected");
-        assert!(matches!(err, attome_types::AppError::Validation(_)));
+        // A3-T1: a record's field failures come back together.
+        assert!(
+            matches!(
+                err,
+                attome_types::AppError::Validation(_) | attome_types::AppError::FieldValidation(_)
+            ),
+            "{err:?}"
+        );
 
         let count: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM attome_dashboard WHERE name = 'Bad Widget Type'",
@@ -1404,7 +1411,14 @@ mod create_from_layout {
         )
         .await
         .expect_err("an out-of-band section_type must be rejected");
-        assert!(matches!(err, attome_types::AppError::Validation(_)));
+        // A3-T1: a record's field failures come back together.
+        assert!(
+            matches!(
+                err,
+                attome_types::AppError::Validation(_) | attome_types::AppError::FieldValidation(_)
+            ),
+            "{err:?}"
+        );
     }
 
     #[tokio::test]
@@ -1423,7 +1437,14 @@ mod create_from_layout {
         )
         .await
         .expect_err("an out-of-band dashboard_type must be rejected");
-        assert!(matches!(err, attome_types::AppError::Validation(_)));
+        // A3-T1: a record's field failures come back together.
+        assert!(
+            matches!(
+                err,
+                attome_types::AppError::Validation(_) | attome_types::AppError::FieldValidation(_)
+            ),
+            "{err:?}"
+        );
     }
 }
 

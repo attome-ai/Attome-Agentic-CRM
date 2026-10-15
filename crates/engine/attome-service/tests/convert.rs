@@ -333,9 +333,12 @@ async fn converting_a_request_without_a_requester_is_a_validation_error() {
     let err = convert_work_request_to_ticket(&state, &admin_ctx(actor), work_request_id)
         .await
         .expect_err("a ticket without a requester must be refused");
+    // A3-T1: every field failure comes back at once, named by field.
     assert!(
-        matches!(&err, AppError::Validation(m) if m.starts_with("requester_id")),
-        "expected Validation, got {err:?}"
+        matches!(&err, AppError::Validation(m) if m.starts_with("requester_id"))
+            || matches!(&err, AppError::FieldValidation(errors)
+                if errors.iter().any(|e| e.field == "requester_id")),
+        "expected a requester_id validation error, got {err:?}"
     );
     assert_eq!(work_request_state(db, work_request_id).await.0, "new");
 }

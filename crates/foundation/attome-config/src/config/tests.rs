@@ -1917,8 +1917,9 @@ fn secret_named_fields_live_in_redacting_types() {
         ("keyring.rs", include_str!("../keyring.rs")),
     ];
 
-    /// `(struct name, secret field name)` for each sensitive field.
-    fn secret_fields(source: &str) -> Vec<(String, String)> {
+    /// `(struct name, secret field name, redacts itself)` for each sensitive
+    /// field; a `Secret` field redacts itself (Z1-T2).
+    fn secret_fields(source: &str) -> Vec<(String, String, bool)> {
         let mut found = Vec::new();
         let mut current: Option<String> = None;
         let mut depth = 0i32;
@@ -1963,11 +1964,13 @@ fn secret_named_fields_live_in_redacting_types() {
                 // A *public* key is not secret material: a bundle signer's
                 // public key is meant to be printed and copied.
                 let secret_name = secret_name && !field_name.contains("public_key");
+                let self_redacting = field_type.contains("Secret");
                 let sensitive_type = field_type.contains("String")
                     || field_type.contains("KeyRing")
-                    || field_type.contains("str");
+                    || field_type.contains("str")
+                    || self_redacting;
                 if secret_name && sensitive_type {
-                    found.push((struct_name.clone(), field_name.to_string()));
+                    found.push((struct_name.clone(), field_name.to_string(), self_redacting));
                 }
             }
         }
@@ -1977,9 +1980,11 @@ fn secret_named_fields_live_in_redacting_types() {
     let mut unredacted: Vec<String> = Vec::new();
     let mut checked = 0usize;
     for (label, source) in SOURCES {
-        for (struct_name, field_name) in secret_fields(source) {
+        for (struct_name, field_name, self_redacting) in secret_fields(source) {
             checked += 1;
-            if !source.contains(&format!("impl std::fmt::Debug for {struct_name}")) {
+            if !self_redacting
+                && !source.contains(&format!("impl std::fmt::Debug for {struct_name}"))
+            {
                 unredacted.push(format!("{label}: {struct_name}.{field_name}"));
             }
         }
