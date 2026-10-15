@@ -32,12 +32,15 @@ records it would leave pointing at a deleted record, and whether a reason is req
 Each restore needs update access to the record, as a single restore does; a selection reports
 the records that could not come back and why (`not_found`, `forbidden`, `conflict`, `invalid`).
 A restore whose unique value another live record now holds is a `409`; a record whose lookup
-points at a deleted record is refused until that record is restored.
+points at a deleted record is refused until that record is restored; its failure entry then
+carries `parent` (entity and id) when the caller may restore that record, and the bin page offers
+**Restore that record too**, which restores the parent and then the record.
 
 `GET /api/v1/{entity}/deleted` lists an entity's deleted records the caller could read, newest
 first, with each one's reason and operation.
 
-In the app, deactivating records in a list offers **Undo** for eight seconds.
+In the app, deactivating records in a list offers **Undo** for eight seconds, and each entity's
+list links to its recycle bin.
 
 ## Per-entity rules
 
@@ -49,6 +52,10 @@ In the app, deactivating records in a list offers **Undo** for eight seconds.
 | `retention_days` | Days a deleted record stays before it is purged; `null` follows `retention.entity_purge_grace_days` |
 | `alert_threshold` | Deletions by one person within ten minutes that raise an alert (default 100) |
 | `hard_delete_needs_approval` | A permanent delete waits for a second person |
+
+The entity metadata admin screen has a **Recycle bin** section for these settings. Its retention
+choices are the default, 7, 30, 365 and 2,555 days; there is no "keep forever", as the route
+takes 1 to 3,650 days.
 
 Purging goes through the retention sweep (propose, approve, execute): sensitive fields are
 scrubbed, the audit key destroyed, and the bin entry closed. A record under legal hold is never

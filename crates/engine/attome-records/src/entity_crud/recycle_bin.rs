@@ -521,7 +521,7 @@ pub async fn take_large_deletes(db: &attome_db::DbPool) -> Result<Vec<LargeDelet
 pub const MAX_BIN_RESTORE: usize = 500;
 
 /// One record to restore.
-#[derive(Debug, Clone, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct BinItem {
     pub entity: String,
     pub id: Uuid,
@@ -543,6 +543,10 @@ pub struct BinRestoreFailure {
     /// taken by another record), `invalid` (a lookup it points at is gone)
     /// or `failed`.
     pub code: &'static str,
+    /// For `invalid`: a deleted record this one points at, which the caller
+    /// may restore first ("Restore parent too", A18-T9).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent: Option<BinItem>,
 }
 
 /// What a bin restore did.
@@ -593,13 +597,81 @@ pub async fn restore_items(
                 "failed"
             }
         };
+        let parent = if code == "invalid" {
+            deleted_parent(state, ctx, &item.entity, item.id)
+                .await
+                .unwrap_or_else(|error| {
+                    tracing::warn!(%error, entity = %item.entity, record_id = %item.id,
+                        "bin restore could not look for a deleted parent");
+                    None
+                })
+        } else {
+            None
+        };
         result.failed.push(BinRestoreFailure {
             entity: item.entity.clone(),
             id: item.id,
             code,
+            parent,
         });
     }
     Ok(result)
+}
+
+/// The first deleted record `id` points at through a lookup, in an entity
+/// the caller may restore: what keeps it from coming back.
+async fn deleted_parent(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity: &str,
+    id: Uuid,
+) -> Result<Option<BinItem>, AppError> {
+    let (_, entity_name, attrs, _) = resolve_entity(state, entity).await?;
+    let lookups: Vec<(String, String)> = {
+        let registry = state.entities.load();
+        attrs
+            .iter()
+            .filter(|a| a.field_type_int == 11)
+            .filter_map(|a| {
+                let target = registry.get_by_id(a.lookup_entity_ref?)?;
+                (!target.is_append_only)
+                    .then(|| (a.logicalname.clone(), target.logicalname.clone()))
+            })
+            .collect()
+    };
+    for (field, target) in lookups {
+        if ctx.require(&target, "update").is_err() {
+            continue;
+        }
+        let parent_id: Option<Uuid> = sqlx::query_scalar(&format!(
+            "SELECT {} FROM {} WHERE id = $1",
+            quote_ident(&field),
+            quote_ident(&entity_name)
+        ))
+        .bind(id)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(attome_db::classify)?
+        .flatten();
+        let Some(parent_id) = parent_id else {
+            continue;
+        };
+        let deleted: Option<bool> = sqlx::query_scalar(&format!(
+            "SELECT NOT is_active FROM {} WHERE id = $1",
+            quote_ident(&target)
+        ))
+        .bind(parent_id)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(attome_db::classify)?;
+        if deleted == Some(true) {
+            return Ok(Some(BinItem {
+                entity: target,
+                id: parent_id,
+            }));
+        }
+    }
+    Ok(None)
 }
 
 /// A18-T7: restores up to 500 deleted records, each checked as a single

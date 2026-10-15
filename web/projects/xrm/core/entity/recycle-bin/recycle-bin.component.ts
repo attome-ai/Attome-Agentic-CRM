@@ -13,11 +13,28 @@ export interface DeletedRecord {
   operation_kind: string | null;
 }
 
+/** `recycle_bin::BinItem`. */
+export interface BinItem {
+  entity: string;
+  id: string;
+}
+
+/** `recycle_bin::BinRestoreFailure`. */
+export interface BinRestoreFailure extends BinItem {
+  /** `not_found`, `forbidden`, `conflict`, `invalid` or `failed`. */
+  code: string;
+  /** For `invalid`: the deleted record it points at. */
+  parent?: BinItem;
+}
+
 /** `recycle_bin::BinRestoreResult`. */
 export interface BinRestoreResult {
   restored: number;
-  failed: { entity: string; id: string; code: string }[];
+  failed: BinRestoreFailure[];
 }
+
+/** The failure codes with a message of their own. */
+const FAILURE_CODES = new Set(['not_found', 'forbidden', 'conflict', 'invalid']);
 
 /**
  * A18-T9: an entity's recycle bin. The deleted records the caller could read,
@@ -40,6 +57,24 @@ export interface BinRestoreResult {
       @if (error(); as message) { <p class="rb-error" role="alert">{{ message }}</p> }
       @if (result(); as r) {
         <p role="status" data-result>{{ 'recycleBin.result' | translate: { restored: r.restored, failed: r.failed.length } }}</p>
+        @if (r.failed.length) {
+          <ul class="rb-failed">
+            @for (f of r.failed; track f.entity + f.id) {
+              <li [attr.data-failed]="f.id">
+                <span class="rb-failed-name">{{ labelOf(f.id) }}</span>
+                @if (f.parent; as parent) {
+                  <span>{{ 'recycleBin.failedParent' | translate: { entity: parent.entity } }}</span>
+                  <button type="button" class="btn btn-text" [disabled]="busy()" (click)="restoreWithParent(f)"
+                          [attr.data-restore-parent]="f.id">
+                    {{ 'recycleBin.restoreParentToo' | translate }}
+                  </button>
+                } @else {
+                  <span>{{ failureKey(f.code) | translate }}</span>
+                }
+              </li>
+            }
+          </ul>
+        }
       }
       @if (records().length === 0) {
         <p class="rb-muted">{{ 'recycleBin.empty' | translate }}</p>
@@ -89,6 +124,8 @@ export interface BinRestoreResult {
       border-block-end: 1px solid var(--color-border); }
     .rb-muted { color: var(--color-text-secondary); font-size: 0.875rem; }
     .rb-error { color: var(--color-danger); }
+    .rb-failed { margin: 0; padding-inline-start: 1.25rem; display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.875rem; }
+    .rb-failed-name { font-weight: 600; margin-inline-end: 0.5rem; }
     .rb-sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   `],
 })
@@ -135,6 +172,30 @@ export class RecycleBinComponent {
     const entity = this.entity();
     const items = [...this.selected()].map(id => ({ entity, id }));
     this.run(this.api.post<BinRestoreResult>('/api/v1/bin/restore', { items }));
+  }
+
+  /**
+   * Restores the deleted record a failed restore points at, then the record
+   * itself: the route restores items in order.
+   */
+  restoreWithParent(failure: BinRestoreFailure): void {
+    if (!failure.parent) return;
+    const items = [failure.parent, { entity: failure.entity, id: failure.id }];
+    this.run(this.api.post<BinRestoreResult>('/api/v1/bin/restore', { items }));
+  }
+
+  /** The record's name as the bin lists it, else its id. */
+  labelOf(id: string): string {
+    return this.records().find(r => r.id === id)?.label ?? id;
+  }
+
+  /**
+   * Why a record could not come back. A unique-value clash says to rename or
+   * change the record that now holds the value; there is no merge from here
+   * until the merge dialog (A15) exists.
+   */
+  failureKey(code: string): string {
+    return `recycleBin.failed_${FAILURE_CODES.has(code) ? code : 'failed'}`;
   }
 
   restoreOperation(operationId: string): void {

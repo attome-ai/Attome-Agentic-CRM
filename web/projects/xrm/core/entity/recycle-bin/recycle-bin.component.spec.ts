@@ -40,6 +40,33 @@ describe('RecycleBinComponent (A18-T9)', () => {
     expect(fixture.componentInstance.result()?.restored).toBe(2);
   });
 
+  it('offers to restore a deleted parent with the record that points at it', () => {
+    const { fixture, post } = create();
+    post.mockReturnValueOnce(of({
+      restored: 0,
+      failed: [{ entity: 'account', id: 'r1', code: 'invalid', parent: { entity: 'region', id: 'p1' } }],
+    }));
+    fixture.componentInstance.toggle('r1');
+    fixture.componentInstance.restoreSelected();
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('[data-restore-parent="r1"]') as HTMLButtonElement;
+    expect(button).toBeTruthy();
+    button.click();
+    expect(post).toHaveBeenLastCalledWith('/api/v1/bin/restore', {
+      items: [{ entity: 'region', id: 'p1' }, { entity: 'account', id: 'r1' }],
+    });
+  });
+
+  it('explains a unique-value clash', () => {
+    const { fixture, post } = create();
+    post.mockReturnValueOnce(of({ restored: 0, failed: [{ entity: 'account', id: 'r2', code: 'conflict' }] }));
+    fixture.componentInstance.toggle('r2');
+    fixture.componentInstance.restoreSelected();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[data-failed="r2"]')?.textContent).toContain('recycleBin.failed_conflict');
+    expect(fixture.componentInstance.failureKey('weird')).toBe('recycleBin.failed_failed');
+  });
+
   it('restores a whole operation', () => {
     const { fixture, post } = create();
     expect(fixture.componentInstance.operationSize('op-1')).toBe(2);

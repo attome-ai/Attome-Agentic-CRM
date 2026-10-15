@@ -189,6 +189,20 @@
     }
   </div>
 
+  <!-- ── Recycle bin rules (A18-T9) ──────────────────────────────────── -->
+  <div class="ee-fields-section">
+    <div class="ee-section-header">
+      <div>
+        <h2 class="ee-card-title">
+          <i class="las la-trash-alt" aria-hidden="true"></i>
+          {{ 'binSettings.title' | translate }}
+        </h2>
+        <p class="ee-section-sub">{{ 'binSettings.hint' | translate }}</p>
+      </div>
+    </div>
+    <xrm-bin-settings [entity]="entity()!.logicalname" />
+  </div>
+
   <!-- ── Auto Value ──────────────────────────────────────────────────── -->
   <div class="ee-fields-section">
     <div class="ee-section-header">

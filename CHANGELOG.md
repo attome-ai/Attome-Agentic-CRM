@@ -18,6 +18,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `POST /api/v1/{entity}/delete-impact`, `POST /api/v1/bin/restore`,
   `POST /api/v1/bin/operations/{operation_id}/restore` and `/api/v1/admin/bin-settings`; a list
   delete offers Undo; see docs/recycle-bin.md.
+- Recycle bin: a restore refused because a parent record is deleted names that record
+  (`parent`), and the bin page offers to restore both; the entity metadata screen edits the
+  entity's bin rules.
 - Backups copy the file store beside the database, `attome restore` puts files back, an erasure
   ledger in object storage re-applies erasures after a restore, and a monthly restore drill
   (`attome backup drill`) records evidence; `GET /api/v1/admin/backup` reports it all.

@@ -14,6 +14,7 @@ import {
   FieldChangeDialogComponent, type FieldChangeMode,
 } from '../../field-changes/field-change-dialog/field-change-dialog.component';
 import { RecoveryArchiveComponent } from '../../field-changes/recovery-archive/recovery-archive.component';
+import { BinSettingsComponent } from '../../bin-settings/bin-settings.component';
 
 type RelationshipCascade = 'restrict' | 'orphan' | 'cascade_deactivate';
 const RELATIONSHIP_CASCADE_LABELS: Record<RelationshipCascade, string> = {
@@ -145,7 +146,7 @@ const SYSTEM_FIELDS: SystemField[] = [
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports:    [
     OwnerLayerBadgeComponent, FormsModule, RouterLink, TranslatePipe,
-    FieldChangeDialogComponent, RecoveryArchiveComponent,
+    FieldChangeDialogComponent, RecoveryArchiveComponent, BinSettingsComponent,
   ],
   styleUrls:  ['../../../../../styles/admin-page.css', './entity-editor.component.css'],
   templateUrl: './entity-editor.component.html',
