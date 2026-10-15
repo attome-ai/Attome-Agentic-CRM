@@ -618,6 +618,11 @@ pub async fn create_record_for(
     if super::LEDGER_ENTITIES.contains(&entity_name.as_str()) {
         return Err(AppError::Forbidden);
     }
+    // A29-T2: a lookup may name its target by an external id.
+    let mut body = body;
+    if let Some(fields) = body.as_object_mut() {
+        super::upsert::resolve_lookups_by_external_id(&state, &attrs, fields).await?;
+    }
     let obj = body
         .as_object()
         .ok_or_else(|| AppError::Validation("request body must be a JSON object".into()))?;
@@ -817,6 +822,11 @@ pub async fn update_record_for_outcome(
         RecordAction::Update,
     )
     .await?;
+    // A29-T2: a lookup may name its target by an external id.
+    let mut body = body;
+    if let Some(fields) = body.as_object_mut() {
+        super::upsert::resolve_lookups_by_external_id(&state, &attrs, fields).await?;
+    }
     let obj = body
         .as_object()
         .ok_or_else(|| AppError::Validation("request body must be a JSON object".into()))?;

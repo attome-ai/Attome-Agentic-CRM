@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - A text or number field may be an external id: `options.external_id: {"system": "<name>"}` makes
   its value unique among the entity's live records (a unique index built online); an entity may hold
   ids for several systems.
+- `POST /api/v1/{entity}/upsert?key=<attribute>` matches on an external id (or a business-key
+  attribute) read from `data`; with neither `match` nor `key` it matches on the business key. A lookup
+  value in a create, update or upsert may be `{"by": "<external id of the target>", "value": ...}`;
+  ids no record holds are refused together with a 422 naming each.
 - A bulk operation or staged import reports a row with a stale `expected_row_version` as a conflict
   (`outcome: "conflict"` and the record's `current_version` and changes) and applies the other rows
   (migration `0047`); `GET /api/v1/admin/conflicts?days=N` counts version conflicts per entity and

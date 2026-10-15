@@ -3836,6 +3836,129 @@ fn restore_with_stale_if_match_is_a_conflict() {
     })
 }
 
+/// A29-T2: an upsert matches on an external id given as `?key=` (creating,
+/// then updating the same record), a lookup names its target by an external
+/// id, and an id no record holds is a 422 naming it.
+#[test]
+fn upsert_by_external_id_and_lookup_by_external_id() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (account, account_id) = create_entity(&app, &admin_cookie, "xacct").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &account_id,
+            r#"{"logicalname":"sap_no","name":"SAP no","field_type":"text",
+                "options":{"external_id":{"system":"sap"}}}"#,
+        )
+        .await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &account_id,
+            r#"{"logicalname":"title","name":"Title","field_type":"text"}"#,
+        )
+        .await;
+        let (deal, deal_id) = create_entity(&app, &admin_cookie, "xdeal").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &deal_id,
+            &format!(
+                r#"{{"logicalname":"account_ref","name":"Account","field_type":"lookup","lookup_entity_ref":"{account_id}"}}"#
+            ),
+        )
+        .await;
+
+        let post = |uri: String, body: &'static str| {
+            Request::builder()
+                .method("POST")
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap()
+        };
+
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{account}/upsert?key=sap_no"),
+                r#"{"data":{"sap_no":"10045","title":"Acme"}}"#,
+            ))
+            .await
+            .expect("first upsert");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let first = body_json(res).await;
+        let record_id = first["id"].as_str().expect("id").to_owned();
+        let version = first["row_version"].as_i64().expect("row_version");
+
+        let res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/v1/{account}/upsert?key=sap_no"))
+                    .header("cookie", &admin_cookie)
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"data":{{"sap_no":"10045","title":"Acme Ltd"}},"row_version":{version}}}"#
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .expect("second upsert");
+        assert_eq!(res.status(), StatusCode::OK);
+        let second = body_json(res).await;
+        assert_eq!(second["id"], record_id.as_str());
+        assert_eq!(second["data"]["title"], "Acme Ltd");
+
+        // `title` is neither an external id nor a business key.
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{account}/upsert?key=title"),
+                r#"{"data":{"title":"Other"}}"#,
+            ))
+            .await
+            .expect("upsert by a plain field");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{deal}"),
+                r#"{"account_ref":{"by":"sap_no","value":"10045"}}"#,
+            ))
+            .await
+            .expect("lookup by external id");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let created = body_json(res).await;
+        assert_eq!(
+            created["data"]["account_ref"],
+            record_id.as_str(),
+            "{created}"
+        );
+
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{deal}/upsert?key=account_ref"),
+                r#"{"data":{"account_ref":{"by":"sap_no","value":"99999"}}}"#,
+            ))
+            .await
+            .expect("unknown external id");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let err = body_json(res).await;
+        assert!(
+            err["message"].as_str().unwrap_or("").contains("99999"),
+            "{err}"
+        );
+    })
+}
+
 /// F023 (P2.2): `POST .../upsert` creates when no row matches `match`, then
 /// updates that same row (never inserting a duplicate) on a second call with
 /// the same match key.

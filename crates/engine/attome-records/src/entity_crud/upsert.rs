@@ -9,7 +9,7 @@ use attome_server::authz::{Authorized, RecordScoped};
 use attome_types::AppError;
 use axum::{
     Json,
-    extract::{Extension, Path, State},
+    extract::{Extension, Path, Query, State},
     http::StatusCode,
 };
 use serde_json::Value;
@@ -46,6 +46,16 @@ use attome_types::ErrorResponse;
 /// once the table is over this and no index exists yet.
 const UPSERT_INDEX_INLINE_ROW_LIMIT: i64 = 10_000;
 
+/// A29-T2: the upsert's query string.
+#[derive(Debug, Default, serde::Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub(super) struct UpsertQuery {
+    /// Match on this attribute's value in `data` (an external id or a
+    /// business-key attribute). Without it and without `match`, the
+    /// entity's business key.
+    key: Option<String>,
+}
+
 /// F023 â€” match-or-create by unique key. Body: `{ "match": {...}, "data": {...} }`.
 /// `match` selects the candidate row (AND-ed equality, at least one field);
 /// `data` overrides/extends it â€” the merged field set is what's actually
@@ -61,11 +71,15 @@ const UPSERT_INDEX_INLINE_ROW_LIMIT: i64 = 10_000;
 /// `file_version`, and the change-feed row for free, and is why the
 /// insert/update decision below happens BEFORE any column list is built
 /// rather than inside one shared SQL statement.
+///
+/// A29-T2: `?key=<attribute>` names the key to match on instead of a
+/// `match` object: an external-id attribute or one of the entity's business
+/// key, with its value taken from `data`.
 #[utoipa::path(
     post,
     path = "/api/v1/{entity}/upsert",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path), UpsertQuery),
     responses(
         (status = 201, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -90,6 +104,7 @@ pub(super) async fn upsert_record(
     Extension(claims): Extension<SessionClaims>,
     recording: RecordingCtx,
     Path(entity_input): Path<String>,
+    Query(query): Query<UpsertQuery>,
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<axum::response::Response, AppError> {
@@ -99,7 +114,7 @@ pub(super) async fn upsert_record(
     // is unchanged).
     let (status, Json(record)) = reference::scope(
         Arc::new(recording.0),
-        upsert_record_inner(state, ctx, claims, entity_input, body),
+        upsert_record_inner(state, ctx, claims, entity_input, query.key, body),
     )
     .await?;
     // S1-T5: `Prefer: return=minimal` answers with the id and row version.
@@ -116,6 +131,7 @@ async fn upsert_record_inner(
     ctx: Authorized<RecordScoped<CreateAndUpdate>>,
     claims: SessionClaims,
     entity_input: String,
+    key: Option<String>,
     body: Value,
 ) -> Result<(StatusCode, Json<EntityRecordResponse>), AppError> {
     let (entity_id, entity_name, attrs, is_append_only) =
@@ -141,15 +157,34 @@ async fn upsert_record_inner(
     }
     let expected_version = expected_upsert_row_version(body_obj)?;
 
-    let match_obj = body
-        .get("match")
-        .and_then(Value::as_object)
-        .ok_or_else(|| AppError::Validation("body must have a 'match' object".into()))?;
-    let data_obj = body
+    let mut data_obj = body
         .get("data")
         .and_then(Value::as_object)
         .cloned()
         .unwrap_or_default();
+    // A29-T2: a lookup may name its target by an external id.
+    resolve_lookups_by_external_id(&state, &attrs, &mut data_obj).await?;
+    // A29-T2: the key is a `match` object, or `?key=` / the business key
+    // read from `data`; a declared key already has its unique index.
+    let (match_owned, key_indexed) = match (body.get("match"), key) {
+        (Some(_), Some(_)) => {
+            return Err(AppError::Validation(
+                "give either a 'match' object or ?key=, not both".into(),
+            ));
+        }
+        (Some(given), None) => {
+            let mut given = given
+                .as_object()
+                .cloned()
+                .ok_or_else(|| AppError::Validation("'match' must be an object".into()))?;
+            resolve_lookups_by_external_id(&state, &attrs, &mut given).await?;
+            (given, false)
+        }
+        (None, key) => {
+            declared_key_match(&state, &entity_name, &attrs, key.as_deref(), &data_obj).await?
+        }
+    };
+    let match_obj = &match_owned;
 
     if match_obj.is_empty() {
         return Err(AppError::Validation(
@@ -225,11 +260,14 @@ async fn upsert_record_inner(
     // unreviewed schema changes just by picking a novel `match` field set.
     // An already-provisioned key (the common, repeat-call case) needs no
     // elevated privilege — this must stay cheap for normal upsert traffic.
-    let index_already_exists: bool = sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
-        .bind(&index_name)
-        .fetch_one(&state.base.db)
-        .await
-        .map_err(AppError::internal)?;
+    // A29-T2: a declared key (external id, business key) brings its own
+    // unique index; no ad hoc one is built for it.
+    let index_already_exists: bool = key_indexed
+        || sqlx::query_scalar("SELECT to_regclass($1) IS NOT NULL")
+            .bind(&index_name)
+            .fetch_one(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
     if !index_already_exists {
         ctx.require_admin()?;
         // guidelines §9 / M01 Core C-06: never run a full-table-scan-shaped
@@ -256,13 +294,15 @@ async fn upsert_record_inner(
             )));
         }
     }
-    sqlx::query(&format!(
-        "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS {index_name} ON {table} ({}) WHERE is_active = TRUE",
-        match_columns.join(", ")
-    ))
-    .execute(&state.base.db)
-    .await
-    .map_err(|_| AppError::Validation("natural key columns are not indexable".into()))?;
+    if !key_indexed {
+        sqlx::query(&format!(
+            "CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS {index_name} ON {table} ({}) WHERE is_active = TRUE",
+            match_columns.join(", ")
+        ))
+        .execute(&state.base.db)
+        .await
+        .map_err(|_| AppError::Validation("natural key columns are not indexable".into()))?;
+    }
 
     let actor = MutationActor::fetch(&state, claims.sub).await;
 
@@ -450,4 +490,148 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+/// A29-T2: whether an attribute holds an external id
+/// (`options.external_id.system`).
+fn is_external_id(attr: &AttrInfo) -> bool {
+    attr.options
+        .as_ref()
+        .and_then(|o| o.get("external_id"))
+        .and_then(|e| e.get("system"))
+        .and_then(Value::as_str)
+        .is_some_and(|s| !s.is_empty())
+}
+
+/// A29-T2: the `match` an upsert without one uses: `key` (an external-id
+/// attribute or a business-key attribute) or else the entity's business key,
+/// each with its value from `data`; and whether that key already has its
+/// own unique index (an external id, or the whole business key).
+async fn declared_key_match(
+    state: &EngineState,
+    entity_name: &str,
+    attrs: &[AttrInfo],
+    key: Option<&str>,
+    data: &serde_json::Map<String, Value>,
+) -> Result<(serde_json::Map<String, Value>, bool), AppError> {
+    let business_key = attome_metadata::provision::read_business_key(&state.base.db, entity_name)
+        .await?
+        .and_then(|k| k.fields)
+        .unwrap_or_default();
+    let (fields, indexed): (Vec<String>, bool) = match key {
+        Some(key) => {
+            let key = key.trim();
+            let attr = attrs
+                .iter()
+                .find(|a| a.logicalname == key)
+                .ok_or_else(|| AppError::Validation(format!("key: {key} is not a field")))?;
+            if !is_external_id(attr) && !business_key.iter().any(|f| f == key) {
+                return Err(AppError::Validation(format!(
+                    "key: {key} is neither an external id nor part of the business key"
+                )));
+            }
+            let whole_key = business_key.len() == 1 && business_key[0] == key;
+            (
+                vec![attr.logicalname.clone()],
+                is_external_id(attr) || whole_key,
+            )
+        }
+        None if !business_key.is_empty() => (business_key, true),
+        None => {
+            return Err(AppError::Validation(
+                "give a 'match' object or ?key=, or declare a business key".into(),
+            ));
+        }
+    };
+    let mut matched = serde_json::Map::new();
+    for field in fields {
+        match data.get(&field) {
+            Some(value) if !value.is_null() => {
+                matched.insert(field, value.clone());
+            }
+            _ => {
+                return Err(AppError::Validation(format!(
+                    "data.{field}: the key needs a value"
+                )));
+            }
+        }
+    }
+    Ok((matched, indexed))
+}
+
+/// The most lookups one write may give by external id.
+const MAX_LOOKUPS_BY_EXTERNAL_ID: usize = 50;
+
+/// A29-T2: a lookup value given as `{"by": "<external-id attribute of the
+/// target>", "value": ...}` becomes the id of the live target record holding
+/// that id. Values no record holds are refused together, each named.
+pub(super) async fn resolve_lookups_by_external_id(
+    state: &EngineState,
+    attrs: &[AttrInfo],
+    fields: &mut serde_json::Map<String, Value>,
+) -> Result<(), AppError> {
+    let by_id: Vec<(String, Uuid, String, Value)> = attrs
+        .iter()
+        .filter(|a| a.field_type() == attome_core::FieldType::Lookup)
+        .filter_map(|a| {
+            let object = fields.get(&a.logicalname)?.as_object()?;
+            let by = object.get("by")?.as_str()?.to_owned();
+            let value = object.get("value")?.clone();
+            Some((a.logicalname.clone(), a.lookup_entity_ref?, by, value))
+        })
+        .collect();
+    if by_id.len() > MAX_LOOKUPS_BY_EXTERNAL_ID {
+        return Err(AppError::Validation(format!(
+            "at most {MAX_LOOKUPS_BY_EXTERNAL_ID} lookups by external id in one write"
+        )));
+    }
+    let mut unmatched = Vec::new();
+    for (field, target_ref, by, value) in by_id {
+        let target: Option<String> =
+            sqlx::query_scalar("SELECT logicalname FROM entity_info WHERE id = $1")
+                .bind(target_ref)
+                .fetch_optional(&state.base.db)
+                .await
+                .map_err(AppError::internal)?;
+        let target =
+            target.ok_or_else(|| AppError::Validation(format!("{field}: no target entity")))?;
+        let (_, target_name, target_attrs, _) = resolve_entity(state, &target).await?;
+        let by_attr = target_attrs
+            .iter()
+            .find(|a| a.logicalname == by && is_external_id(a))
+            .ok_or_else(|| {
+                AppError::Validation(format!(
+                    "{field}.by: {by} is not an external id of {target_name}"
+                ))
+            })?;
+        let Some(text) = json_to_str(&value, by_attr) else {
+            return Err(AppError::Validation(format!(
+                "{field}.value: give the external id"
+            )));
+        };
+        let found: Option<Uuid> = sqlx::query_scalar(&format!(
+            "SELECT id FROM {} WHERE {} = $1{} AND is_active = TRUE",
+            quote_ident(&target_name),
+            quote_ident(&by_attr.logicalname),
+            sql_cast(by_attr)
+        ))
+        .bind(&text)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(AppError::internal)?;
+        match found {
+            Some(id) => {
+                fields.insert(field, Value::String(id.to_string()));
+            }
+            None => unmatched.push(format!("{field} ({by} = {text})")),
+        }
+    }
+    if unmatched.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::Validation(format!(
+            "no record holds these external ids: {}",
+            unmatched.join(", ")
+        )))
+    }
 }
