@@ -70,6 +70,138 @@ use super::timeline::{
 
 const CURSOR_TAG: &str = "change";
 
+/// A16-T1: the most changes a version conflict reports.
+const CONFLICT_CHANGES_MAX: i64 = 20;
+
+/// A16-T1: one attribute changed since the caller read the record.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ConflictChange {
+    /// The attribute's logical name.
+    pub name: String,
+    /// The value the other writer saved (its display form when it has one).
+    pub their_value: Option<String>,
+    pub changed_by: Option<String>,
+    pub changed_at: Option<DateTime<Utc>>,
+}
+
+/// A16-T1: the version conflict a PATCH answers, with what changed since the
+/// caller's row version: the attributes, who changed them and when, newest
+/// first, one entry per attribute. Changes to attributes the caller may not
+/// read, or whose values are masked, count as `hidden_changes` only. Any
+/// failure reading the history falls back to the plain conflict.
+pub async fn version_conflict(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    record_id: Uuid,
+    expected_version: i64,
+) -> AppError {
+    match conflict_details(state, ctx, entity_input, record_id, expected_version).await {
+        Ok(Some(conflict)) => conflict,
+        Ok(None) => AppError::VersionConflict,
+        Err(e) => {
+            tracing::warn!(error = %e, %record_id, "version conflict details unavailable");
+            AppError::VersionConflict
+        }
+    }
+}
+
+async fn conflict_details(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    record_id: Uuid,
+    expected_version: i64,
+) -> Result<Option<AppError>, AppError> {
+    let (_, entity_name, attrs, _) = resolve_entity(state, entity_input).await?;
+    let db = &state.base.db;
+    let current: Option<i64> = sqlx::query_scalar(&format!(
+        "SELECT row_version FROM {} WHERE id = $1 AND is_active = true",
+        quote_ident(&entity_name)
+    ))
+    .bind(record_id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(current) = current else {
+        return Ok(None);
+    };
+    // Every write moves the version on by one, so the changes the caller
+    // missed are the newest `current - expected` ones.
+    let missed = (current - expected_version).clamp(0, CONFLICT_CHANGES_MAX);
+    let headers: Vec<(Uuid, Option<DateTime<Utc>>, Option<String>)> = if missed == 0 {
+        Vec::new()
+    } else {
+        sqlx::query_as(
+            "SELECT h.id, h.changed_on, h.user_display_name FROM audit_header h \
+             WHERE h.entity_name = $1 AND h.record_id = $2 AND h.changed_on IS NOT NULL \
+             ORDER BY h.changed_on DESC, h.id DESC LIMIT $3",
+        )
+        .bind(&entity_name)
+        .bind(record_id)
+        .bind(missed)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?
+    };
+    let ids: Vec<Uuid> = headers.iter().map(|h| h.0).collect();
+    #[allow(clippy::type_complexity)]
+    let details: Vec<(
+        Uuid,
+        String,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<bool>,
+        Option<i16>,
+    )> = if ids.is_empty() {
+        Vec::new()
+    } else {
+        sqlx::query_as(
+            "SELECT d.audit_ref, d.field_name::text, d.new_value, d.new_display_value, \
+                    d.new_lookup_name, d.is_sensitive, d.value_mode::smallint \
+             FROM audit_detail d WHERE d.audit_ref = ANY($1) ORDER BY d.id",
+        )
+        .bind(&ids)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?
+    };
+    let mut changes: Vec<ConflictChange> = Vec::new();
+    let mut hidden = 0usize;
+    // Headers are newest first; the first change seen for a field is its
+    // latest.
+    for (header_id, changed_at, changed_by) in &headers {
+        for (_, field, value, display, lookup, row_sensitive, value_mode) in
+            details.iter().filter(|d| d.0 == *header_id)
+        {
+            let shown = readable_attr(ctx, &entity_name, &attrs, field)
+                .filter(|a| !a.is_sensitive && !row_sensitive.unwrap_or(false))
+                .filter(|_| value_mode.is_none());
+            if shown.is_none() {
+                hidden += 1;
+                continue;
+            }
+            if changes.iter().any(|c| &c.name == field) {
+                continue;
+            }
+            changes.push(ConflictChange {
+                name: field.clone(),
+                their_value: lookup.clone().or(display.clone()).or(value.clone()),
+                changed_by: changed_by.clone(),
+                changed_at: *changed_at,
+            });
+        }
+    }
+    Ok(Some(AppError::VersionConflictAt {
+        current_version: current,
+        current_state: serde_json::json!({
+            "changed_attributes": changes,
+            "hidden_changes": hidden,
+        }),
+    }))
+}
+
 /// One change to a record: who made it, when, and which fields moved.
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct RecordHistoryChange {

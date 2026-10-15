@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- A `409 version_conflict` on `PATCH /api/v1/{entity}/{id}` now says what changed since the caller's
+  `If-Match`: `current_version`, and `current_state.changed_attributes` (name, the other writer's
+  value, who and when) with `hidden_changes` counting changes to fields the caller cannot read.
 - `POST /api/v1/{entity}/{id}/actions/{name}` invokes a record-bound action (one whose arguments
   take `entity` and `record_id`) on that record, through the same gate as `/api/v1/actions/{id}/invoke`.
 - `POST /api/v1/{entity}/bulk-edit` changes the same attributes on up to 500 records, picked by id or

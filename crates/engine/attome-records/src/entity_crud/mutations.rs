@@ -1063,6 +1063,7 @@ pub(crate) async fn sync_file_field_documents(
         (status = 200, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 409, description = "version_conflict: the record changed since If-Match. `current_version` is its row version now and `current_state` lists `changed_attributes` (name, their_value, changed_by, changed_at; newest first) and `hidden_changes`, the changes to fields the caller cannot read", body = ErrorResponse),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
@@ -1084,7 +1085,7 @@ pub(super) async fn update_record(
     // version cannot do for itself, so that is all this handler still does.
     let expected_version = expected_row_version(&headers)?;
     // D-787 rule 7: see `create_record` (reference data only).
-    let response = reference::scope(
+    let response = match reference::scope(
         Arc::new(recording.0),
         update_record_for(
             &state,
@@ -1096,7 +1097,21 @@ pub(super) async fn update_record(
             body,
         ),
     )
-    .await?;
+    .await
+    {
+        // A16-T1: say what changed since the caller's version.
+        Err(AppError::VersionConflict) => {
+            return Err(super::history::version_conflict(
+                &state,
+                &ctx,
+                &entity_input,
+                record_id,
+                expected_version,
+            )
+            .await);
+        }
+        other => other?,
+    };
     Ok(super::response::write_response(
         StatusCode::OK,
         super::response::return_pref(&headers),
