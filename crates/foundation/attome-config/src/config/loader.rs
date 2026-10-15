@@ -1017,6 +1017,18 @@ impl AppConfig {
                 ),
             });
         }
+        if self.database.node_count == 0 {
+            return Err(ConfigError::Invalid {
+                field: "database.node_count".into(),
+                reason: "must be at least 1".into(),
+            });
+        }
+        if self.database.max_server_connections == Some(0) {
+            return Err(ConfigError::Invalid {
+                field: "database.max_server_connections".into(),
+                reason: "must be at least 1 when set".into(),
+            });
+        }
         let pools = &self.database.pools;
         for (field, size) in [
             ("database.pools.runtime.max_connections", pools.runtime),

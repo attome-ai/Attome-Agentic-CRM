@@ -11,6 +11,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- `database.node_count` (default 1) and `database.max_server_connections`: with more than one node,
+  or the server limit stated, each pool without a `database.pools` entry is sized from 80% of the
+  server's connections split across the nodes (runtime 60%, read-only 20%, read-only-primary 10%,
+  migrator 2) instead of `connection_number`; the boot capacity log says which sizing applied.
 - A response replayed for a repeated `Idempotency-Key` carries `Idempotency-Replayed: true` and
   `X-Original-Request-Id` (the request that ran), beside the original status, body, `Location` and
   `ETag`; both headers are readable cross-origin.

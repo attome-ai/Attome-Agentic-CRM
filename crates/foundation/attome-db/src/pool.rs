@@ -63,13 +63,61 @@ impl PoolRole {
 /// role-password seeds, one at a time.
 const DIRECT_POOL_MAX_CONNECTIONS: u32 = 2;
 
+/// PostgreSQL's `max_connections` assumed when `database.max_server_connections`
+/// is unset (the PostgreSQL default).
+const DEFAULT_SERVER_CONNECTIONS: u32 = 100;
+/// The migrator pool's size whenever it is sized from the budget: it serves
+/// one migration or seed at a time.
+const SIZED_MIGRATOR_CONNECTIONS: u32 = 2;
+/// The runtime pool never drops below this, however many nodes share the
+/// budget.
+const SIZED_RUNTIME_FLOOR: u32 = 5;
+
+/// Z2-T2: `role`'s share of the database's connection budget. 80% of the
+/// server's `max_connections` (the rest stays free for administration,
+/// replication and the direct pool), divided across `node_count` processes,
+/// then split runtime 60%, read-only 20%, read-only-primary 10%; the
+/// migrator gets a fixed 2.
+fn sized_max_connections(role: PoolRole, node_count: u32, server_max: Option<u32>) -> u32 {
+    let budget = f64::from(server_max.unwrap_or(DEFAULT_SERVER_CONNECTIONS)) * 0.8
+        / f64::from(node_count.max(1));
+    let share = |fraction: f64, floor: u32| {
+        // A non-negative budget below u32::MAX, so the cast is exact.
+        let size = (budget * fraction).floor() as u32;
+        size.clamp(floor, 1000)
+    };
+    match role {
+        PoolRole::Runtime => share(0.6, SIZED_RUNTIME_FLOOR),
+        PoolRole::Readonly => share(0.2, 1),
+        PoolRole::ReadonlyPrimary => share(0.1, 1),
+        PoolRole::Migrator => SIZED_MIGRATOR_CONNECTIONS,
+        PoolRole::Direct => DIRECT_POOL_MAX_CONNECTIONS,
+    }
+}
+
+/// `true` when pools without a `database.pools` entry are sized from the
+/// connection budget rather than from `connection_number`: more than one
+/// node shares the database, or its `max_connections` is stated.
+fn budget_sizing(config: &AppConfig) -> bool {
+    config.database.node_count > 1 || config.database.max_server_connections.is_some()
+}
+
 /// `role`'s pool size, shared by [`pool_options`] and the capacity report so
-/// the two can't disagree. A `database.pools` entry sizes that pool; without
-/// one the pool keeps `connection_number` (attome-db hardening Phase 2.3). The
-/// direct pool's size is fixed.
+/// the two can't disagree. A `database.pools` entry sizes that pool, always.
+/// Without one, the pool takes its share of the connection budget when
+/// [`budget_sizing`] applies (Z2-T2), and `connection_number` otherwise
+/// (attome-db hardening Phase 2.3). The direct pool's size is fixed.
 fn pool_max_connections(role: PoolRole, config: &AppConfig) -> u32 {
     let pools = &config.database.pools;
-    let fallback = config.database.connection_number;
+    let fallback = if budget_sizing(config) {
+        sized_max_connections(
+            role,
+            config.database.node_count,
+            config.database.max_server_connections,
+        )
+    } else {
+        config.database.connection_number
+    };
     match role {
         PoolRole::Direct => DIRECT_POOL_MAX_CONNECTIONS,
         PoolRole::Runtime => pools.runtime.map_or(fallback, |size| size.max_connections),
@@ -787,6 +835,12 @@ pub fn log_pool_capacity(config: &AppConfig) {
     tracing::info!(
         event = "db.pool.capacity",
         pools = %summary,
+        sizing = if budget_sizing(config) {
+            "budget"
+        } else {
+            "connection_number"
+        },
+        node_count = config.database.node_count,
         not_counted = "direct pool (schema bootstrap and migrations only); unpooled \
                        sessions are exported live as db_unpooled_sessions_open (workflow \
                        claims <= jobs.worker_concurrency, attribute-index builds <= the \
@@ -875,6 +929,43 @@ mod tests {
     use sqlx::postgres::PgSslMode;
 
     use super::pool_capacity_summary;
+
+    /// Z2-T2: two nodes under a 200-connection server get 48 runtime, 16
+    /// read-only, 8 read-only-primary and 2 migrator connections each.
+    #[test]
+    fn budget_sizing_splits_the_server_budget_across_nodes() {
+        use super::sized_max_connections;
+        assert_eq!(sized_max_connections(PoolRole::Runtime, 2, Some(200)), 48);
+        assert_eq!(sized_max_connections(PoolRole::Readonly, 2, Some(200)), 16);
+        assert_eq!(
+            sized_max_connections(PoolRole::ReadonlyPrimary, 2, Some(200)),
+            8
+        );
+        assert_eq!(sized_max_connections(PoolRole::Migrator, 2, Some(200)), 2);
+        // Many nodes on a small server: the runtime floor holds.
+        assert_eq!(sized_max_connections(PoolRole::Runtime, 40, None), 5);
+        assert_eq!(sized_max_connections(PoolRole::Readonly, 40, None), 1);
+    }
+
+    /// Z2-T2: budget sizing fills only the pools without an explicit size,
+    /// and one node with no stated server limit keeps `connection_number`.
+    #[test]
+    fn explicit_pool_sizes_win_over_budget_sizing() {
+        let config = config_with_database(serde_json::json!({
+            "node_count": 2,
+            "max_server_connections": 200,
+            "pools": { "runtime": { "max_connections": 30 } },
+        }));
+        assert_eq!(
+            pool_capacity_summary(&config, None, None),
+            "localhost:5555 = 32 (attome-runtime 30, attome-migrator 2)"
+        );
+        let single = config_with_database(serde_json::json!({ "connection_number": 7 }));
+        assert_eq!(
+            pool_capacity_summary(&single, None, None),
+            "localhost:5555 = 14 (attome-runtime 7, attome-migrator 7)"
+        );
+    }
 
     // attome-db hardening Phase 2.4 — the boot capacity report lists this
     // process's long-lived pools per endpoint, with their resolved sizes, and

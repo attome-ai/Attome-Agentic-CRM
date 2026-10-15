@@ -158,6 +158,16 @@ pub struct DatabaseSection {
     /// migrations) keeps its fixed size of 2 and has no entry.
     #[serde(default)]
     pub pools: DatabasePools,
+    /// Z2-T2: how many processes share this database. With more than one,
+    /// or with `max_server_connections` set, a pool with no
+    /// `database.pools` entry is sized from PostgreSQL's connection budget
+    /// split across the nodes instead of from `connection_number`.
+    #[serde(default = "default_node_count")]
+    pub node_count: u32,
+    /// Z2-T2: PostgreSQL's (or pgbouncer's) `max_connections`, when known.
+    /// `None` assumes 100 once sizing applies.
+    #[serde(default)]
+    pub max_server_connections: Option<u32>,
     /// SELECT-only role for `/api/v1/query/execute` (P1.1e) — reuses this
     /// section's host/port/dbname/schema, only the credentials differ.
     #[serde(default)]
@@ -301,6 +311,8 @@ impl std::fmt::Debug for DatabaseSection {
             .field("connection_number", &self.connection_number)
             .field("timeout", &self.timeout)
             .field("pools", &self.pools)
+            .field("node_count", &self.node_count)
+            .field("max_server_connections", &self.max_server_connections)
             .field("readonly", &self.readonly)
             .field("migrator", &self.migrator)
             .field("runtime", &self.runtime)
@@ -340,6 +352,10 @@ pub struct DatabasePoolSize {
 
 fn default_db_connection_number() -> u32 {
     10
+}
+
+fn default_node_count() -> u32 {
+    1
 }
 
 fn default_db_timeout() -> f64 {
