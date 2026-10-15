@@ -1,0 +1,83 @@
+/* A15-T10 — the side-by-side merge. Logical properties only (RTL). */
+
+:host {
+  display: block;
+  margin-block-end: 16px;
+}
+
+.merge-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-border, #334155);
+  border-radius: 8px;
+  background: var(--color-bg-alt, #fff);
+  color: var(--color-text-primary, #e5eefc);
+}
+
+.merge-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.merge-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.merge-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.merge-table th,
+.merge-table td {
+  padding-block: 6px;
+  padding-inline: 8px;
+  text-align: start;
+  vertical-align: top;
+  border-block-end: 1px solid var(--color-border, #334155);
+}
+
+.merge-table thead th .mono {
+  display: block;
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.merge-same {
+  opacity: 0.7;
+}
+
+.merge-pick {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.merge-result {
+  font-weight: 600;
+}
+
+.merge-preview p {
+  margin-block: 0 4px;
+}
+
+.merge-preview ul {
+  margin-block: 0 6px;
+  padding-inline-start: 18px;
+}
+
+.merge-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mono {
+  font-family: var(--font-mono, monospace);
+}

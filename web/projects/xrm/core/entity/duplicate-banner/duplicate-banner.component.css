@@ -1,30 +1,41 @@
-/* D-432 / M13 — the record form's "possible duplicate" banner. Uses the
-   same warn-toned surface `.badge-warn` (approval-queue-list.component.css)
-   establishes for this palette, restyled as a full banner rather than a
-   pill. */
+/* D-432 / M13, A15-T4 — the record form's duplicate banner: the form's own
+   warning surface (`.xf-warning-banner` in xrm-base-form.component.css). */
+
+:host {
+  --dup-accent: var(--color-warning, #b45309);
+  display: block;
+}
 
 .dup-banner {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 10px 14px;
-  margin-bottom: 16px;
-  border-radius: 6px;
-  background: #78350f;
-  color: #fdba74;
+  padding-block: 10px;
+  padding-inline: 14px;
+  margin-block-end: 16px;
+  border: 1px solid color-mix(in srgb, var(--dup-accent) 30%, transparent);
+  border-inline-start: 3px solid var(--dup-accent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--dup-accent) 8%, var(--color-bg-alt, #fff));
+  color: var(--color-text-primary, #e5eefc);
 }
 
 .dup-banner > .las {
-  margin-top: 2px;
+  margin-block-start: 2px;
+  color: var(--dup-accent);
 }
 
 .dup-banner-body {
   flex: 1;
 }
 
-.dup-banner-body p {
-  margin: 0 0 4px;
+.dup-banner-title {
+  margin-block: 0 4px;
   font-weight: 600;
+}
+
+.dup-banner-hidden {
+  margin-block: 4px 0;
 }
 
 .dup-banner-body ul {
@@ -32,9 +43,31 @@
   padding-inline-start: 18px;
 }
 
+.dup-banner-body li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
 .dup-banner-body a {
-  color: #fdba74;
+  color: inherit;
   text-decoration: underline;
+}
+
+.dup-reason {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-block-start: 8px;
+}
+
+.dup-reason label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-inline-size: 240px;
 }
 
 .dup-banner .btn-sm {

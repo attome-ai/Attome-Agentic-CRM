@@ -1,24 +1,75 @@
-@if (!dismissed() && candidates().length > 0) {
-  <div class="dup-banner">
-    <i class="las la-exclamation-triangle"></i>
+<!-- A15-T4: what the last save found. -->
+@if (notice(); as n) {
+  <div class="dup-banner" role="alert" data-duplicate-notice>
+    <i class="las la-exclamation-triangle" aria-hidden="true"></i>
     <div class="dup-banner-body">
-      <p>
-        This record may be a duplicate of
-        {{ candidates().length === 1 ? 'another record' : (candidates().length + ' other records') }}.
+      <p class="dup-banner-title">
+        @if (!n.refused) {
+          {{ 'duplicateBanner.savedWithMatches' | translate }}
+        } @else if (n.action === 'allow_with_reason') {
+          {{ 'duplicateBanner.needsReason' | translate }}
+        } @else {
+          {{ 'duplicateBanner.blocked' | translate }}
+        }
       </p>
+      @if (n.matches.length) {
+        <ul>
+          @for (m of n.matches; track m.record_id) {
+            <li>
+              <a [routerLink]="formRoute()" [queryParams]="{ id: m.record_id }" target="_blank">{{ m.record_id }}</a>
+              <span class="cell-muted">{{ 'duplicateBanner.matchBy' | translate: { rule: m.rule_name, score: percent(m.score) } }}</span>
+            </li>
+          }
+        </ul>
+      }
+      @if (n.hidden > 0) {
+        <p class="dup-banner-hidden" data-duplicate-hidden>
+          {{ 'duplicateBanner.hidden' | translate: { count: n.hidden } }}
+        </p>
+      }
+      @if (n.refused && n.action === 'allow_with_reason') {
+        <form class="dup-reason" (submit)="$event.preventDefault(); submitReason()">
+          <label>
+            <span>{{ 'duplicateBanner.reasonLabel' | translate }}</span>
+            <input type="text" class="mono-input" data-duplicate-reason
+                   [value]="reason()" (input)="reason.set($any($event.target).value)" />
+          </label>
+          <button type="submit" class="btn-sm btn-sm-accent" [disabled]="!reason().trim()">
+            {{ 'duplicateBanner.saveAnyway' | translate }}
+          </button>
+        </form>
+      }
+    </div>
+  </div>
+}
+
+<!-- D-432: open candidates the sweep found for this record. -->
+@if (lastMergeId(); as mergeId) {
+  <xrm-merge-undo-bar [entity]="entity()" [mergeId]="mergeId" (undone)="onUndone()" (closed)="lastMergeId.set(null)" />
+}
+@if (merging(); as c) {
+  <xrm-merge-dialog [entity]="entity()" [survivorId]="recordId()!" [mergedId]="otherRecordId(c)"
+                    [candidateId]="c.id" (merged)="onMerged($event)" (cancelled)="merging.set(null)" />
+} @else if (!dismissed() && candidates().length > 0) {
+  <div class="dup-banner" data-duplicate-candidates>
+    <i class="las la-exclamation-triangle" aria-hidden="true"></i>
+    <div class="dup-banner-body">
+      <p class="dup-banner-title">{{ 'duplicateBanner.possible' | translate: { count: candidates().length } }}</p>
       <ul>
         @for (c of candidates(); track c.id) {
           <li>
-            <a [routerLink]="formRoute()" [queryParams]="{ id: otherRecordId(c) }" target="_blank">
-              {{ otherRecordId(c) }}
-            </a>
-            <span class="cell-muted">({{ scorePercent(c) }} match)</span>
+            <a [routerLink]="formRoute()" [queryParams]="{ id: otherRecordId(c) }" target="_blank">{{ otherRecordId(c) }}</a>
+            <span class="cell-muted">{{ 'duplicateBanner.score' | translate: { score: percent(c.score) } }}</span>
+            <button type="button" class="btn-sm btn-ghost" data-duplicate-merge (click)="merging.set(c)">
+              <i class="las la-code-branch" aria-hidden="true"></i> {{ 'duplicateBanner.merge' | translate }}
+            </button>
           </li>
         }
       </ul>
     </div>
-    <button class="btn-sm btn-ghost" type="button" (click)="dismissed.set(true)">
-      <i class="las la-times"></i>
+    <button class="btn-sm btn-ghost" type="button" [attr.aria-label]="'duplicateBanner.close' | translate"
+            (click)="dismissed.set(true)">
+      <i class="las la-times" aria-hidden="true"></i>
     </button>
   </div>
 }

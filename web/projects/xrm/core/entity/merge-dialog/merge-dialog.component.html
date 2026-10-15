@@ -1,0 +1,89 @@
+<section class="merge-dialog" role="dialog" aria-modal="false" [attr.aria-label]="'mergeDialog.title' | translate" data-merge-dialog>
+  <header class="merge-head">
+    <h3>{{ 'mergeDialog.title' | translate }}</h3>
+    <button type="button" class="btn-sm btn-ghost" data-merge-swap (click)="swap()" [disabled]="loading() || merging()">
+      <i class="las la-exchange-alt" aria-hidden="true"></i> {{ 'mergeDialog.swap' | translate }}
+    </button>
+  </header>
+
+  @if (error()) {
+    <p class="error-msg" role="alert">{{ error() }}</p>
+  }
+
+  @if (loading()) {
+    <p class="state-msg">{{ 'mergeDialog.loading' | translate }}</p>
+  } @else if (records(); as recs) {
+    <div class="table-wrap">
+      <table class="merge-table">
+        <thead>
+          <tr>
+            <th scope="col">{{ 'mergeDialog.field' | translate }}</th>
+            <th scope="col">{{ 'mergeDialog.survivor' | translate }}<span class="cell-muted mono">{{ recs.survivor.id }}</span></th>
+            <th scope="col">{{ 'mergeDialog.merged' | translate }}<span class="cell-muted mono">{{ recs.merged.id }}</span></th>
+            <th scope="col">{{ 'mergeDialog.result' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.name) {
+            <tr [class.merge-same]="row.same">
+              <th scope="row">{{ row.label }}</th>
+              @if (row.same) {
+                <td colspan="2">{{ row.survivor }}</td>
+              } @else {
+                <td>
+                  <label class="merge-pick">
+                    <input type="radio" [name]="'merge-' + row.name" [attr.data-merge-pick]="row.name + ':survivor'"
+                           [checked]="picks()[row.name] !== 'merged'" (change)="pick(row.name, 'survivor')" />
+                    <span>{{ row.survivor || ('mergeDialog.empty' | translate) }}</span>
+                  </label>
+                </td>
+                <td>
+                  <label class="merge-pick">
+                    <input type="radio" [name]="'merge-' + row.name" [attr.data-merge-pick]="row.name + ':merged'"
+                           [checked]="picks()[row.name] === 'merged'" (change)="pick(row.name, 'merged')" />
+                    <span>{{ row.merged || ('mergeDialog.empty' | translate) }}</span>
+                  </label>
+                </td>
+              }
+              <td class="merge-result">{{ result()[row.name] }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (preview(); as p) {
+      <div class="merge-preview" data-merge-preview>
+        <p data-merge-moved>{{ 'mergeDialog.moved' | translate: { count: movedTotal() } }}</p>
+        @if (p.moved.length) {
+          <ul>
+            @for (m of p.moved; track m.relationship) {
+              <li><span class="mono">{{ m.relationship }}</span>: {{ m.count }}</li>
+            }
+          </ul>
+        }
+        <p data-merge-flows>
+          @if (p.flows.length) {
+            {{ 'mergeDialog.flows' | translate: { flows: p.flows.join(', ') } }}
+          } @else {
+            {{ 'mergeDialog.noFlows' | translate }}
+          }
+        </p>
+        <p>{{ (p.merge_mode === 'keep_merged' ? 'mergeDialog.modeKeep' : 'mergeDialog.modeDelete') | translate }}</p>
+        @if (p.conflicts.length) {
+          <p class="error-msg">{{ 'mergeDialog.conflicts' | translate: { fields: p.conflicts.join(', ') } }}</p>
+        }
+      </div>
+    }
+
+    <footer class="merge-actions">
+      <button type="button" class="btn-sm btn-sm-accent" data-merge-confirm
+              [disabled]="merging() || !preview()" (click)="confirm()">
+        {{ (merging() ? 'mergeDialog.merging' : 'mergeDialog.confirm') | translate }}
+      </button>
+      <button type="button" class="btn-sm btn-ghost" (click)="cancelled.emit()" [disabled]="merging()">
+        {{ 'mergeDialog.cancel' | translate }}
+      </button>
+    </footer>
+  }
+</section>

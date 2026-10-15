@@ -83,8 +83,6 @@
     <!-- ── Body ─────────────────────────────────────────────────────── -->
     <div class="xf-body">
 
-      <!-- D-432 / M13 — renders nothing until the record has open duplicate
-           candidates; id() is null in create mode ("nothing to look up yet"). -->
       <!-- Y8-T8 — the entity's design changed while the form was open. -->
       @if (f.modelChanged()) {
         <div class="xf-warning-banner" role="status" data-model-changed>
@@ -94,7 +92,9 @@
       <!-- A16-T4 — the record changed on the server while this form was open. -->
       <xrm-record-changed-banner [entity]="f.name()" [recordId]="f.id()"
                                  [rowVersion]="f.loadedVersion()" (reload)="f.reload()" />
-      <xrm-duplicate-banner [entity]="f.name()" [recordId]="f.id()" />
+      <!-- D-432 / A15 — a save refused or warned as a likely duplicate, and open candidates. -->
+      <xrm-duplicate-banner [entity]="f.name()" [recordId]="f.id()" [notice]="f.duplicateNotice()"
+                            (saveWithReason)="f.saveWithDuplicateReason($event)" (changed)="f.reload()" />
 
       <!-- M36 (D-473) — renders nothing until the record has a live prediction. -->
       <xrm-prediction-banner [entity]="f.name()" [recordId]="f.id()" />

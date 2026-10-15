@@ -120,7 +120,6 @@ export abstract class EngineFormBase implements OnInit {
    * a warning. Shown by `xrm-duplicate-banner`.
    */
   readonly duplicateNotice = signal<DuplicateNotice | null>(null);
-  private readonly duplicates = inject(DuplicatesService);
 
   // ── Business rules (D-789 section 5, D-791 rule 6) ───────────────────────
   /**
@@ -572,10 +571,17 @@ export abstract class EngineFormBase implements OnInit {
     this.clearSaved();
 
     const data = fg.value as Record<string, unknown>;
-    const options = duplicateReason ? [{ duplicateReason }] as const : [] as const;
-    const req$ = this.isEdit()
-      ? this.svc.update(this.entityLogicalName, this.id()!, data, this.record?.row_version, ...options)
-      : this.svc.create(this.entityLogicalName, data, ...options);
+    const id = this.id();
+    let req$;
+    if (this.isEdit() && id) {
+      req$ = duplicateReason
+        ? this.svc.update(this.entityLogicalName, id, data, this.record?.row_version, { duplicateReason })
+        : this.svc.update(this.entityLogicalName, id, data, this.record?.row_version);
+    } else {
+      req$ = duplicateReason
+        ? this.svc.create(this.entityLogicalName, data, { duplicateReason })
+        : this.svc.create(this.entityLogicalName, data);
+    }
 
     req$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: r => {
@@ -618,7 +624,8 @@ export abstract class EngineFormBase implements OnInit {
   private onDuplicateRefusal(data: Record<string, unknown>, found: NonNullable<ApiError['duplicates']>): void {
     const notice: DuplicateNotice = { refused: true, action: 'block', matches: found.matches, hidden: found.hidden };
     this.duplicateNotice.set(notice);
-    this.duplicates.check(this.entityLogicalName, data, this.id()).subscribe({
+    // Resolved here, not at construction: most forms never meet a refusal.
+    this.formInjector.get(DuplicatesService).check(this.entityLogicalName, data, this.id()).subscribe({
       next: r => {
         if (this.duplicateNotice() === notice && r.action) this.duplicateNotice.set({ ...notice, action: r.action });
       },

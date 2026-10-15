@@ -63,6 +63,10 @@ export { RecordTabPanelsComponent }     from './record-tabs/record-tab-panels.co
 // `EntityMetadataChangeService`'s own doc comment already describes for the
 // reverse direction.
 export { DuplicateBannerComponent }     from './duplicate-banner/duplicate-banner.component';
+export { duplicateWarningsOf }          from './duplicate-banner/duplicate-notice';
+export type { DuplicateNotice }         from './duplicate-banner/duplicate-notice';
+export { MergeDialogComponent }         from './merge-dialog/merge-dialog.component';
+export { MergeUndoBarComponent }        from './merge-dialog/merge-undo-bar.component';
 export { RecordChangedBannerComponent } from './record-changed-banner/record-changed-banner.component';
 export type { ServerChange }            from './record-changed-banner/record-changed-banner.component';
 // M36 Phase 0+1 (Predictive Intelligence, D-473) — the record form's
