@@ -1971,6 +1971,9 @@ pub fn archive_event<'a>(
         sensitive: row.is_sensitive,
         op,
         run_ref,
+        // Y12-T10: an entity-level retention setting (A18) is not defined
+        // yet, so the archive keeps its default.
+        retention_days: None,
     }
 }
 

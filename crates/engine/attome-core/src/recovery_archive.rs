@@ -98,6 +98,19 @@ pub struct ArchiveEvent<'a> {
     pub op: Option<(Uuid, i32)>,
     /// The batched run this event belongs to (resume-safe inserts).
     pub run_ref: Option<Uuid>,
+    /// Y12-T10: the entity's own retention in days, when it sets one; the
+    /// archive keeps the values that long instead of
+    /// [`DEFAULT_RETENTION_DAYS`].
+    pub retention_days: Option<i32>,
+}
+
+/// Y12-T10: how long archived values are kept when the entity sets nothing.
+pub const DEFAULT_RETENTION_DAYS: i32 = 30;
+
+/// Y12-T10: the days an archived value is kept: the entity's retention when
+/// it sets one (at least a day), else [`DEFAULT_RETENTION_DAYS`].
+pub fn retention_days(entity_retention: Option<i32>) -> i32 {
+    entity_retention.map_or(DEFAULT_RETENTION_DAYS, |days| days.max(1))
 }
 
 /// The configured ring, or `None` (fail closed at the caller).
@@ -207,18 +220,20 @@ pub async fn insert_batch(
         Some((id, seq)) => (Some(id), Some(seq)),
         None => (None, None),
     };
+    // A re-archive never shortens a row's retention.
     let conflict = if event.run_ref.is_some() {
         "ON CONFLICT (run_ref, record_id) WHERE run_ref IS NOT NULL \
          DO UPDATE SET value_enc = EXCLUDED.value_enc, archived_at = now(), \
-                       expires_at = now() + interval '30 days'"
+                       expires_at = GREATEST(recovery_archive.expires_at, EXCLUDED.expires_at)"
     } else {
         "ON CONFLICT ON CONSTRAINT uq_core_recovery_archive_event DO NOTHING"
     };
     let sql = format!(
         "INSERT INTO recovery_archive \
              (reason, entity_logicalname, field_logicalname, attribute_id, record_id, \
-              field_type, value_enc, changeset_id, op_seq, run_ref) \
-         SELECT $1, $2, $3, $4, r.record_id, $5, r.value_enc, $6, $7, $8 \
+              field_type, value_enc, changeset_id, op_seq, run_ref, expires_at) \
+         SELECT $1, $2, $3, $4, r.record_id, $5, r.value_enc, $6, $7, $8, \
+                now() + make_interval(days => $11) \
          FROM unnest($9::uuid[], $10::bytea[]) AS r(record_id, value_enc) \
          {conflict}"
     );
@@ -233,6 +248,7 @@ pub async fn insert_batch(
         .bind(event.run_ref)
         .bind(&ids)
         .bind(&sealed)
+        .bind(retention_days(event.retention_days))
         .execute(&mut *conn)
         .await
         .map_err(AppError::internal)?;
@@ -374,6 +390,15 @@ pub async fn purge_expired(db: &DbPool, deployment_hold: bool) -> Result<u64, Ap
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Y12-T10: values are kept 30 days unless the entity sets its own
+    /// retention, and never less than a day.
+    #[test]
+    fn default_retention_is_30_days() {
+        assert_eq!(retention_days(None), 30);
+        assert_eq!(retention_days(Some(365)), 365);
+        assert_eq!(retention_days(Some(0)), 1);
+    }
     use serde_json::json;
 
     fn test_ring() -> KeyRing {

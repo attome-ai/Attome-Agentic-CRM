@@ -831,6 +831,7 @@ async fn archived_value(fx: &Fx) -> Uuid {
         sensitive: false,
         op: None,
         run_ref: None,
+        retention_days: None,
     };
     let mut conn = fx.base.db.acquire().await.expect("connection");
     attome_core::recovery_archive::insert_batch(
