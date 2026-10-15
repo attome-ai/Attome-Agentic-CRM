@@ -381,6 +381,119 @@ fn commands_create_a_form_and_report_a_missing_attribute() {
     });
 }
 
+/// A5-T1: two entities share one option set: once it is published, both
+/// choice fields offer its codes (not the retired one), and publishing logs a
+/// registry refresh for each entity that uses it.
+#[test]
+fn two_entities_share_a_published_option_set() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, cookie) = seed_admin(&db).await;
+        let app = full_app(system);
+        let suffix = Uuid::now_v7().simple().to_string();
+        let set_name = format!("stage_{suffix}");
+        let set_id = Uuid::now_v7();
+
+        let mut entities = Vec::new();
+        for prefix in ["deal", "lead"] {
+            let logicalname = format!("{prefix}_{}", &suffix[..12]);
+            let entity_id = attome_metadata::provision::ensure_entity(
+                &db,
+                &logicalname,
+                "Option set test",
+                None,
+                false,
+            )
+            .await
+            .expect("provision entity");
+            attome_metadata::provision::ensure_attribute(
+                &db,
+                entity_id,
+                "stage",
+                "Stage",
+                "choice",
+                false,
+                false,
+                false,
+                false,
+                None,
+                Some(serde_json::json!({ "option_set": set_name, "multi": false })),
+            )
+            .await
+            .expect("provision choice attribute");
+            entities.push((entity_id, logicalname));
+        }
+
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/option_set/{set_id}/commands"),
+                &cookie,
+                serde_json::json!({
+                    "base_hash": "",
+                    "name": set_name,
+                    "commands": [{ "op": "set", "path": "/values", "value": [
+                        { "code": "won", "label_en": "Won", "order": 2 },
+                        { "code": "open", "label_en": "Open", "label_ar": "مفتوح", "order": 1 },
+                        { "code": "lost", "label_en": "Lost", "retired": true }
+                    ] }]
+                }),
+            ))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let body = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let before: i64 =
+            sqlx::query_scalar("SELECT COALESCE(MAX(id), 0) FROM metadata_change_log")
+                .fetch_one(&db)
+                .await
+                .expect("change log watermark");
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/option_set/{set_id}/publish"),
+                &cookie,
+                serde_json::json!({}),
+            ))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let body = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+
+        let logged: Vec<String> = sqlx::query_scalar(
+            "SELECT logicalname FROM metadata_change_log WHERE id > $1 ORDER BY logicalname",
+        )
+        .bind(before)
+        .fetch_all(&db)
+        .await
+        .expect("change log rows");
+        for (_, logicalname) in &entities {
+            assert!(
+                logged.contains(logicalname),
+                "{logicalname} is refreshed: {logged:?}"
+            );
+        }
+
+        let registry = attome_core::build_registry(&db).await.expect("registry");
+        for (_, logicalname) in &entities {
+            let meta = registry.get(logicalname).expect("the entity is registered");
+            let stage = meta
+                .attrs
+                .iter()
+                .find(|a| a.logicalname == "stage")
+                .expect("the choice field");
+            assert_eq!(
+                stage.options.as_ref().and_then(|o| o.get("choices")),
+                Some(&serde_json::json!(["open", "won"])),
+                "{logicalname} offers the set's active codes in order"
+            );
+        }
+    });
+}
+
 #[test]
 fn a_published_form_has_a_render_plan() {
     attome_testkit::run_shared(async {
