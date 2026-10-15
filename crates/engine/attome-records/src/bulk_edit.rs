@@ -81,6 +81,43 @@ pub struct BulkEditSubmitted {
     pub unchanged: usize,
 }
 
+/// B5-T2: one record as the edit would change it.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct PreviewRecord {
+    pub id: Uuid,
+    /// The changed attributes' values now.
+    #[schema(value_type = Object)]
+    pub before: Map<String, Value>,
+    /// The same attributes after the edit.
+    #[schema(value_type = Object)]
+    pub after: Map<String, Value>,
+}
+
+/// B5-T2: what a bulk edit would do, without doing it.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct BulkEditPreview {
+    /// Records picked that the caller can read.
+    pub matched: usize,
+    /// Records the edit would change.
+    pub to_change: usize,
+    /// Picked records already holding the requested values.
+    pub unchanged: usize,
+    /// The first 20 records the edit would change, before and after.
+    pub samples: Vec<PreviewRecord>,
+}
+
+/// The planned edit: the bulk-update items and what the preview shows.
+#[derive(Debug, Clone)]
+pub struct BulkEditPlan {
+    pub items: Vec<BulkItem>,
+    pub matched: usize,
+    pub unchanged: usize,
+    pub samples: Vec<PreviewRecord>,
+}
+
+/// Records a preview shows before and after.
+const PREVIEW_SAMPLES: usize = 20;
+
 /// The kind of attribute an operation targets, for the checks and the
 /// arithmetic.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -239,14 +276,14 @@ impl FilterSchema for EditFilterSchema<'_> {
     }
 }
 
-/// Plans a bulk edit: the bulk-update items, the records matched and the
-/// records left unchanged.
+/// Plans a bulk edit: the bulk-update items, the records matched and left
+/// unchanged, and the first records' before and after values.
 pub async fn plan_bulk_edit(
     state: &EngineState,
     ctx: &SecurityContext,
     entity: &str,
     request: &BulkEditRequest,
-) -> Result<(Vec<BulkItem>, usize, usize), AppError> {
+) -> Result<BulkEditPlan, AppError> {
     if request.operations.is_empty() || request.operations.len() > MAX_OPERATIONS {
         return Err(AppError::Validation(format!(
             "operations: 1 to {MAX_OPERATIONS}"
@@ -382,6 +419,7 @@ pub async fn plan_bulk_edit(
 
     let matched = rows.len();
     let mut items = Vec::new();
+    let mut samples = Vec::new();
     for row in rows {
         let Value::Object(row) = row else { continue };
         let Some(id) = row
@@ -395,6 +433,16 @@ pub async fn plan_bulk_edit(
         if patch.is_empty() {
             continue;
         }
+        if samples.len() < PREVIEW_SAMPLES {
+            samples.push(PreviewRecord {
+                id,
+                before: patch
+                    .keys()
+                    .map(|name| (name.clone(), row.get(name).cloned().unwrap_or(Value::Null)))
+                    .collect(),
+                after: patch.clone(),
+            });
+        }
         items.push(BulkItem {
             id: Some(id),
             expected_row_version: row.get("row_version").and_then(Value::as_i64),
@@ -402,7 +450,12 @@ pub async fn plan_bulk_edit(
         });
     }
     let unchanged = matched - items.len();
-    Ok((items, matched, unchanged))
+    Ok(BulkEditPlan {
+        items,
+        matched,
+        unchanged,
+        samples,
+    })
 }
 
 /// B5-T1: changes the same attributes on many records.
@@ -429,7 +482,12 @@ async fn bulk_edit(
     Path(entity): Path<String>,
     Json(request): Json<BulkEditRequest>,
 ) -> Result<(StatusCode, Json<BulkEditSubmitted>), AppError> {
-    let (items, matched, unchanged) = plan_bulk_edit(&state, &ctx, &entity, &request).await?;
+    let BulkEditPlan {
+        items,
+        matched,
+        unchanged,
+        ..
+    } = plan_bulk_edit(&state, &ctx, &entity, &request).await?;
     if items.is_empty() {
         return Ok((
             StatusCode::OK,
@@ -453,12 +511,53 @@ async fn bulk_edit(
     ))
 }
 
+/// B5-T2: what a bulk edit would change, without changing anything: the
+/// counts and the first 20 records before and after.
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/bulk-edit/preview",
+    tag = "entity",
+    params(("entity" = String, Path)),
+    request_body = BulkEditRequest,
+    responses(
+        (status = 200, description = "What the edit would change", body = BulkEditPreview),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the entity's bulk privilege", body = ErrorResponse),
+        (status = 422, description = "Invalid operations, or too many records", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "computes the edit a bulk-edit would make and writes nothing"
+    )))),
+)]
+async fn bulk_edit_preview(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Bulk>>,
+    Path(entity): Path<String>,
+    Json(request): Json<BulkEditRequest>,
+) -> Result<Json<BulkEditPreview>, AppError> {
+    let plan = plan_bulk_edit(&state, &ctx, &entity, &request).await?;
+    Ok(Json(BulkEditPreview {
+        matched: plan.matched,
+        to_change: plan.items.len(),
+        unchanged: plan.unchanged,
+        samples: plan.samples,
+    }))
+}
+
 pub fn routes() -> Router<EngineState> {
-    Router::new().route("/api/v1/{entity}/bulk-edit", post(bulk_edit))
+    Router::new()
+        .route("/api/v1/{entity}/bulk-edit", post(bulk_edit))
+        .route(
+            "/api/v1/{entity}/bulk-edit/preview",
+            post(bulk_edit_preview),
+        )
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(bulk_edit))]
+#[openapi(paths(bulk_edit, bulk_edit_preview))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

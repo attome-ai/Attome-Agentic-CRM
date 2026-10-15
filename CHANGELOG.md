@@ -16,6 +16,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   new values are computed from its current ones and applied by the bulk engine through the normal
   update path with the record's row version, so a record changed in between is reported, not
   overwritten.
+- `POST /api/v1/{entity}/bulk-edit/preview` shows what a bulk edit would do without doing it: how
+  many records match, change and stay as they are, and the first 20 before and after.
 - `query/execute` takes `seek`: a keyset page that starts at a sort value ("jump to M"), bound and
   type-checked like a filter, with a `next_cursor`; not together with `after_id` (422).
 - While the AI model is confirmed down, a conversation turn is refused up front with
