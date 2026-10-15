@@ -16,6 +16,11 @@
 //! channel never reveals a record the caller could not open. More than
 //! [`MAX_CHANGES`] in one poll sends `overflow` instead: reload.
 //!
+//! **Notifications** (J11-T1): `notifications` (`{unread}`) when the
+//! caller's inbox changes, checked on the same tick as the model version, so
+//! the bell refreshes without waiting for its own poll (which stays as the
+//! fallback for a browser without the channel).
+//!
 //! Each connection polls one cheap aggregate over the published versions
 //! every [`POLL`] (no process-wide state, so it is right on any number of
 //! servers) and ends after [`LIFETIME`]; the browser's `EventSource`
@@ -231,6 +236,9 @@ struct Live {
     deadline: tokio::time::Instant,
     next_model: tokio::time::Instant,
     watch: Option<Watch>,
+    /// J11-T1: whose inbox, and its stamp as last sent.
+    user: Uuid,
+    inbox: Option<String>,
 }
 
 /// The published model's stamp: the newest publish time and the number of
@@ -246,6 +254,13 @@ async fn model_stamp(db: &attome_db::DbPool) -> Result<String, AppError> {
     Ok(stamp.unwrap_or_default())
 }
 
+/// J11-T1: the caller's inbox changed; `unread` is its unread count.
+fn notifications_frame(unread: i64) -> Event {
+    Event::default()
+        .event("notifications")
+        .data(json!({ "unread": unread }).to_string())
+}
+
 fn frame(name: &'static str, stamp: &str) -> Event {
     Event::default()
         .event(name)
@@ -258,7 +273,7 @@ fn frame(name: &'static str, stamp: &str) -> Event {
     path = "/api/v1/live",
     tag = "model",
     responses(
-        (status = 200, description = "Server-Sent Events: `hello` with the current model version, then `model-version` whenever published metadata changes (each `data` is `{model_version}`), and `records` for changes to records of the watched entities (`{changes: [{entity, id, op}]}`, or `{overflow: true}` when there were too many)", content_type = "text/event-stream"),
+        (status = 200, description = "Server-Sent Events: `hello` with the current model version, then `model-version` whenever published metadata changes (each `data` is `{model_version}`), `records` for changes to records of the watched entities (`{changes: [{entity, id, op}]}`, or `{overflow: true}` when there were too many), and `notifications` when the caller's inbox changes (`{unread}`)", content_type = "text/event-stream"),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 422, description = "More than 10 entities", body = ErrorResponse),
     ),
@@ -272,6 +287,12 @@ async fn live(
 ) -> Result<Sse<impl futures_util::Stream<Item = Result<Event, Infallible>>>, AppError> {
     let first = model_stamp(&state.base.db).await?;
     let ctx = ctx.into_inner();
+    let user = ctx.user_id;
+    let inbox = attome_notification::service::NotificationInbox::new(&state.base.db)
+        .stamp(user)
+        .await
+        .map(|(_, stamp)| stamp)
+        .ok();
     let watch = match query.entities.as_deref() {
         Some(raw) if !raw.trim().is_empty() => {
             let entities = watched_entities(&state, &ctx, raw).await?;
@@ -295,6 +316,8 @@ async fn live(
         deadline: now + LIFETIME,
         next_model: now + POLL,
         watch,
+        user,
+        inbox,
     };
     let stream = futures_util::stream::unfold(start, |mut live| async move {
         if live.hello {
@@ -330,6 +353,22 @@ async fn live(
                     Err(error) => {
                         tracing::warn!(%error, "live channel: model version read failed");
                         return None;
+                    }
+                }
+                // J11-T1: the caller's inbox, on the same tick.
+                let read =
+                    attome_notification::service::NotificationInbox::new(&live.state.base.db)
+                        .stamp(live.user)
+                        .await;
+                match read {
+                    Ok((unread, stamp)) if live.inbox.as_deref() != Some(stamp.as_str()) => {
+                        live.inbox = Some(stamp);
+                        let event = notifications_frame(unread);
+                        return Some((Ok(event), live));
+                    }
+                    Ok(_) => {}
+                    Err(error) => {
+                        tracing::warn!(%error, "live channel: notification read failed");
                     }
                 }
             }

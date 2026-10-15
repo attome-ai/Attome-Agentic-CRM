@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { ApiService, LangService } from '@attome/base';
+import { ApiService, LangService, LiveChannel } from '@attome/base';
 import { Observable, defer, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -74,6 +74,13 @@ describe('NotificationBellComponent polling (T7-4)', () => {
   afterEach(() => {
     Reflect.deleteProperty(document, 'visibilityState');
     vi.useRealTimers();
+  });
+
+  it('refreshes at once when the live channel says the inbox changed (J11-T1)', () => {
+    const { api } = mount();
+    expect(api.polls).toBe(1);
+    TestBed.inject(LiveChannel).notifications.next(2);
+    expect(api.polls).toBe(2);
   });
 
   it('polls immediately and then on the steady cadence while visible', () => {

@@ -30,4 +30,14 @@ describe('LiveChannel (A13-T4)', () => {
       { overflow: true },
     ]);
   });
+
+  it('passes the unread count of a notifications frame on (J11-T1)', () => {
+    const channel = TestBed.inject(LiveChannel);
+    const seen: number[] = [];
+    channel.notifications.subscribe(unread => seen.push(unread));
+    channel.receiveNotifications('{"unread":3}');
+    channel.receiveNotifications('{"unread":"many"}');
+    channel.receiveNotifications('not json');
+    expect(seen).toEqual([3]);
+  });
 });

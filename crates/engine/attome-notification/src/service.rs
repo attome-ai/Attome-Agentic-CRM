@@ -52,6 +52,24 @@ impl<'a> NotificationInbox<'a> {
         Self { db }
     }
 
+    /// J11-T1: the user's unread count and a stamp that changes whenever a
+    /// notification reaches them or one is read or removed, for the live
+    /// channel to tell the bell when to refresh.
+    pub async fn stamp(&self, user_id: Uuid) -> Result<(i64, String), AppError> {
+        let row: (i64, String) = sqlx::query_as(
+            "SELECT COUNT(*) FILTER (WHERE read_at IS NULL), \
+                    COUNT(*)::text || '/' || COUNT(read_at)::text || '/' \
+                        || COALESCE(max(created_at)::text, '') \
+               FROM notification_recipient \
+              WHERE user_ref = $1 AND is_deleted = FALSE",
+        )
+        .bind(user_id)
+        .fetch_one(self.db)
+        .await
+        .map_err(AppError::internal)?;
+        Ok(row)
+    }
+
     /// Most recent active notifications addressed to this user, newest first,
     /// plus the unread count — one query instead of a separate list + COUNT
     /// (P1.11f). The unread count is a window aggregate over the whole

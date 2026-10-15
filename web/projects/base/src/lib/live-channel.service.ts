@@ -33,6 +33,8 @@ export class LiveChannel {
   readonly modelFrames = new Subject<string>();
   /** The record changes of the watched entities. */
   readonly records = new Subject<LiveRecords>();
+  /** J11-T1: the signed-in person's inbox changed; the number is its unread count. */
+  readonly notifications = new Subject<number>();
 
   /** Opens the channel (once). */
   connect(): void {
@@ -87,6 +89,16 @@ export class LiveChannel {
     }
   }
 
+  /** Applies one `notifications` frame's data. */
+  receiveNotifications(data: string): void {
+    try {
+      const parsed = JSON.parse(data) as { unread?: unknown };
+      if (typeof parsed.unread === 'number') this.notifications.next(parsed.unread);
+    } catch {
+      // A malformed frame is dropped; the bell's own poll still runs.
+    }
+  }
+
   private open(): void {
     if (!this.wanted || typeof EventSource === 'undefined') return;
     this.source?.close();
@@ -97,6 +109,8 @@ export class LiveChannel {
     source.addEventListener('hello', model);
     source.addEventListener('model-version', model);
     source.addEventListener('records', event => this.receiveRecords((event as MessageEvent<string>).data));
+    source.addEventListener('notifications', event =>
+      this.receiveNotifications((event as MessageEvent<string>).data));
     this.source = source;
   }
 }

@@ -4,7 +4,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { ApiService, TranslatePipe } from '@attome/base';
+import { ApiService, TranslatePipe, LiveChannel } from '@attome/base';
 import {
   EMPTY, Observable, catchError, distinctUntilChanged, fromEvent, map, of, repeat, startWith, switchMap, tap, timer,
 } from 'rxjs';
@@ -88,6 +88,7 @@ export class NotificationBellComponent implements OnInit {
   private readonly host       = inject(ElementRef<HTMLElement>);
   private readonly document   = inject(DOCUMENT);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly live       = inject(LiveChannel);
 
   readonly notifications = signal<XrmNotif[]>([]);
   readonly unreadCount   = signal(0);
@@ -97,6 +98,13 @@ export class NotificationBellComponent implements OnInit {
   private consecutiveFailures = 0;
 
   ngOnInit(): void {
+    // J11-T1: a change to the inbox arrives on the live channel and refreshes
+    // the bell at once; the poll below stays as the fallback.
+    this.live.connect();
+    this.live.notifications.pipe(
+      switchMap(() => this.pollOnce()),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe();
     pageVisible$(this.document).pipe(
       // `switchMap`: going hidden unsubscribes the running loop, which also
       // aborts an in-flight request; going visible starts a fresh loop whose
