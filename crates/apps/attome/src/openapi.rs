@@ -72,6 +72,8 @@ fn build() -> utoipa::openapi::OpenApi {
     // entry can name a path mounted by any layer, so this can't run any
     // earlier than the point where every layer's paths are already present.
     attome_server::middleware::deprecation::apply_to_openapi(&mut doc);
+    // S2-T8: the document names the release it describes.
+    doc.info.version = env!("CARGO_PKG_VERSION").to_owned();
     doc
 }
 
@@ -109,6 +111,13 @@ pub fn routes() -> Router<AppState> {
 
 #[cfg(test)]
 mod tests {
+    /// S2-T8: the version is the release's, not a placeholder.
+    #[test]
+    fn document_version_is_package_version() {
+        assert_eq!(super::document().info.version, env!("CARGO_PKG_VERSION"));
+        assert!(super::document().info.license.is_some());
+    }
+
     /// Every operation has its own `operationId`. utoipa takes the handler's
     /// function name, so two `start_run` handlers collide, and the generated
     /// TypeScript then refuses to compile (duplicate identifier).

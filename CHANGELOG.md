@@ -50,6 +50,7 @@ that makes it; the release gate's contract step refuses a release that breaks th
   (plus any warnings or approval id), with `Preference-Applied: return=minimal` and the row version as `ETag`.
 - Sign-in has a per-address budget beside the per-account one: 20 failed sign-ins from one address
   (an IPv6 address by its prefix) in 15 minutes, across accounts, answer 429 until the window ends.
+- The OpenAPI document's `info.version` is the release version (it said 1.0.0).
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE
