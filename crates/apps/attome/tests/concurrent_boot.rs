@@ -451,6 +451,10 @@ fn concurrent_boot_child_process() {
         .spawn(move || {
             let now = unix_ms();
             if start_at_ms > now {
+                #[expect(
+                    clippy::disallowed_methods,
+                    reason = "a plain thread, before its runtime exists"
+                )]
                 std::thread::sleep(Duration::from_millis(start_at_ms - now));
             }
             tokio::runtime::Builder::new_multi_thread()

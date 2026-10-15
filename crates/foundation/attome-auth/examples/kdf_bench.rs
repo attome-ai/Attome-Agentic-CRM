@@ -27,7 +27,8 @@
     clippy::expect_used,
     clippy::unwrap_used,
     clippy::print_stdout,
-    reason = "a developer-run example: printing results and panicking on setup failure is the point"
+    clippy::disallowed_methods,
+    reason = "a developer-run, synchronous example: printing, sleeping and panicking are the point"
 )]
 
 use std::sync::{Arc, Barrier};

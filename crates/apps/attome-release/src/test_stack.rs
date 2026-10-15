@@ -134,6 +134,10 @@ fn wait_ready(timeout: Duration) -> Result<(), String> {
         if ready_twice >= 2 && port_open(6380) {
             return Ok(());
         }
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "the release CLI's own synchronous poll loop"
+        )]
         std::thread::sleep(Duration::from_millis(500));
     }
     Err(format!(

@@ -841,6 +841,10 @@ fn smoke(root: &Path) -> Result<(), String> {
             ready = true;
             break;
         }
+        #[expect(
+            clippy::disallowed_methods,
+            reason = "the release CLI's own synchronous poll loop"
+        )]
         std::thread::sleep(std::time::Duration::from_secs(2));
     }
     let _ = server.kill();

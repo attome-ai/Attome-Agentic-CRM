@@ -181,6 +181,10 @@ impl Topology {
                 started.elapsed() < Duration::from_secs(30),
                 "the Sentinel quorum never formed: {reply}"
             );
+            #[expect(
+                clippy::disallowed_methods,
+                reason = "synchronous test setup, no runtime"
+            )]
             std::thread::sleep(Duration::from_millis(500));
         }
         topology

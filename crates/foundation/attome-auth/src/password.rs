@@ -699,6 +699,10 @@ mod tests {
                 tokio::spawn(async move {
                     executor
                         .run(|| {
+                            #[expect(
+                                clippy::disallowed_methods,
+                                reason = "stands in for KDF work on the executor's blocking thread"
+                            )]
                             std::thread::sleep(Duration::from_millis(20));
                             Ok(())
                         })

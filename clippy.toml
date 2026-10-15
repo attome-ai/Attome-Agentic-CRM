@@ -8,6 +8,12 @@ allow-print-in-tests  = true
 # `#[expect(clippy::disallowed_methods, reason = "...")]`; integration tests
 # that open transactions directly carry a file-level `allow`. The path must be
 # sqlx's defining path; the `sqlx::Pool::begin` re-export does not match.
+#
+# `std::thread::sleep` blocks the thread it runs on, which in server code is a
+# Tokio worker serving other requests (Y13-T4). Async code waits with
+# `tokio::time::sleep`; a genuinely synchronous thread (a CLI poll loop, a
+# `spawn_blocking` closure, a test's own thread) carries an `#[expect]`.
 disallowed-methods = [
     { path = "sqlx_core::pool::Pool::begin", reason = "use attome_db::tx::begin, which maps pool exhaustion to AppError::Overloaded (503)" },
+    { path = "std::thread::sleep", reason = "blocks an async runtime thread; use tokio::time::sleep" },
 ]
