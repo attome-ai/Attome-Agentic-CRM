@@ -175,6 +175,18 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
         "Recursive CTEs over the hierarchy field to preview a move; reads only.",
     ),
     (
+        "crates/engine/attome-records/src/entity_crud/merge.rs",
+        "do_merge_core_with_version",
+        Projection,
+        "A29-T3: reads the merged record's external-id values (SELECT) to keep them as links; the merge's own writes go through update_one and delete_one.",
+    ),
+    (
+        "crates/engine/attome-records/src/entity_crud/upsert.rs",
+        "resolve_lookups_by_external_id",
+        Projection,
+        "A29-T2: a WHERE predicate on the target's external-id attribute to find the record a lookup names; reads only.",
+    ),
+    (
         "crates/engine/attome-records/src/entity_crud/upsert.rs",
         "upsert_record_inner",
         Projection,
