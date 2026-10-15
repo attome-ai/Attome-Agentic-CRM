@@ -635,7 +635,26 @@ pub(super) async fn require_referenced_record_access(
 /// extractor does, and a non-HTTP caller does it itself) and does not prove the
 /// row exists for a Global-tier caller — `require_record_access` short-circuits
 /// there, and the caller's own fetch answers `NotFound`.
+///
+/// S1-T15: a record the caller cannot read answers `NotFound`, never
+/// `Forbidden`, so a read cannot tell a hidden record from a missing one;
+/// any `Forbidden` from the checks below is answered as `NotFound`.
 pub(crate) async fn require_record_read(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_id: Uuid,
+    entity_name: &str,
+    record_id: Uuid,
+) -> Result<(), AppError> {
+    record_read_checks(state, ctx, entity_id, entity_name, record_id)
+        .await
+        .map_err(|error| match error {
+            AppError::Forbidden => AppError::NotFound,
+            other => other,
+        })
+}
+
+async fn record_read_checks(
     state: &EngineState,
     ctx: &SecurityContext,
     entity_id: Uuid,
