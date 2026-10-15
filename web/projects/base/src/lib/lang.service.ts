@@ -216,6 +216,9 @@ export class LangService {
     // B20-T1: the language's own catalogue and every one it falls back to
     // before English (which Transloco's fallbackLang already covers).
     const chain = this.chain(lang);
+    // Layers load alongside the base catalogue, and land before the switch,
+    // so it never shows a layer's English fallback.
+    const layers = Promise.all(this.registry.layers.map(layer => this.mergeLayer(layer, lang)));
     return this.track(Promise.all(chain.map(code => this.load(code))).then(
       async catalogs => {
         if (!this.registered.has(lang)) {
@@ -225,8 +228,7 @@ export class LangService {
           }
           this.registered.add(lang);
         }
-        // Layers first, so the switch never shows a layer's English fallback.
-        await Promise.all(this.registry.layers.map(layer => this.mergeLayer(layer, lang)));
+        await layers;
         if (this.requested === lang) this.apply(lang);
       },
       (error: unknown) => {

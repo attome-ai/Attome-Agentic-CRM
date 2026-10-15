@@ -1,7 +1,7 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { from, Observable } from 'rxjs';
 import type { Translation, TranslocoLoader } from '@jsverse/transloco';
-import { CATALOG_LOAD } from './catalogs';
+import { loadCatalog } from './catalogs';
 
 /**
  * Bundled-at-build-time catalog loader (P-i18n-a11y §4.1) — no HTTP
@@ -14,9 +14,7 @@ import { CATALOG_LOAD } from './catalogs';
  */
 @Injectable({ providedIn: 'root' })
 export class InMemoryTranslocoLoader implements TranslocoLoader {
-  private readonly load = inject(CATALOG_LOAD);
-
   getTranslation(lang: string): Observable<Translation> {
-    return from(this.load(lang));
+    return from(loadCatalog(lang));
   }
 }
