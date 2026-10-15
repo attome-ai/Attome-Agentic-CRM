@@ -115,15 +115,17 @@ async fn conflict_details(
 ) -> Result<Option<AppError>, AppError> {
     let (_, entity_name, attrs, _) = resolve_entity(state, entity_input).await?;
     let db = &state.base.db;
-    let current: Option<i64> = sqlx::query_scalar(&format!(
-        "SELECT row_version FROM {} WHERE id = $1 AND is_active = true",
+    // The record's own stamps name the last writer and the time even before
+    // the audit chainer has turned that write into history.
+    let current: Option<(i64, Option<DateTime<Utc>>, Option<Uuid>)> = sqlx::query_as(&format!(
+        "SELECT row_version, modified_at, modified_by FROM {} WHERE id = $1 AND is_active = true",
         quote_ident(&entity_name)
     ))
     .bind(record_id)
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;
-    let Some(current) = current else {
+    let Some((current, last_changed_at, last_changed_by)) = current else {
         return Ok(None);
     };
     // Every write moves the version on by one, so the changes the caller
@@ -196,6 +198,8 @@ async fn conflict_details(
     Ok(Some(AppError::VersionConflictAt {
         current_version: current,
         current_state: serde_json::json!({
+            "last_changed_by": last_changed_by,
+            "last_changed_at": last_changed_at,
             "changed_attributes": changes,
             "hidden_changes": hidden,
         }),

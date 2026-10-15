@@ -1063,7 +1063,7 @@ pub(crate) async fn sync_file_field_documents(
         (status = 200, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
-        (status = 409, description = "version_conflict: the record changed since If-Match. `current_version` is its row version now and `current_state` lists `changed_attributes` (name, their_value, changed_by, changed_at; newest first) and `hidden_changes`, the changes to fields the caller cannot read", body = ErrorResponse),
+        (status = 409, description = "version_conflict: the record changed since If-Match. `current_version` is its row version now and `current_state` names `last_changed_by` and `last_changed_at` and lists `changed_attributes` (name, their_value, changed_by, changed_at; newest first) and `hidden_changes`, the changes to fields the caller cannot read", body = ErrorResponse),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),

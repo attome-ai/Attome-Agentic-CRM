@@ -1467,6 +1467,7 @@ fn stale_row_version_is_rejected() {
         // A16-T1: the conflict says where the record is now and, when its
         // audit captured the change, what changed: the title, to v1.
         assert_eq!(err["current_version"].as_i64(), Some(v0 + 1), "{err}");
+        assert!(err["current_state"]["last_changed_at"].is_string(), "{err}");
         let changed = err["current_state"]["changed_attributes"]
             .as_array()
             .expect("changed_attributes listed");
