@@ -14,6 +14,11 @@
 //! Local and free: no model call, nothing written. An agent that wants the
 //! review as a task creates one with the write actions, under their approval
 //! rules.
+//!
+//! **Business cards** (D29-T1, `doc_type: business_card`): name, job title,
+//! company, email, phone and website from the card's text, a `contact` draft
+//! with them, and `match_on` — the email and phone to look up before
+//! creating, so the agent finds an existing contact instead of a duplicate.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -319,12 +324,189 @@ pub fn extract(text: &str, qr: Option<&ZatcaQr>) -> (Map<String, Value>, Vec<Str
     (fields, review)
 }
 
+/// Words that mark a company line on a business card.
+const COMPANY_WORDS: &[&str] = &[
+    " llc",
+    " ltd",
+    " inc",
+    " co.",
+    " company",
+    " corp",
+    " group",
+    " gmbh",
+    " est.",
+    "شركة",
+    "مؤسسة",
+    "مجموعة",
+];
+
+/// Whether `token` reads as an email address.
+fn is_email(token: &str) -> bool {
+    let t = token.trim_matches(|c: char| c == ',' || c == ';' || c == '<' || c == '>');
+    match t.split_once('@') {
+        Some((user, domain)) => {
+            !user.is_empty() && domain.contains('.') && !domain.starts_with('.') && !t.contains(' ')
+        }
+        None => false,
+    }
+}
+
+/// Whether `token` reads as a web address.
+fn is_website(token: &str) -> bool {
+    let t = token.to_lowercase();
+    !t.contains('@')
+        && (t.starts_with("www.") || t.starts_with("http://") || t.starts_with("https://"))
+}
+
+/// The phone number on a line that is mostly one: 8 to 15 digits, with
+/// only spaces, `+`, `-`, `.` and brackets besides a short label.
+fn phone(line: &str) -> Option<String> {
+    let digits: String = line.chars().filter(char::is_ascii_digit).collect();
+    if !(8..=15).contains(&digits.len()) {
+        return None;
+    }
+    let start = line.find(|c: char| c.is_ascii_digit() || c == '+')?;
+    let number = &line[start..];
+    if !number
+        .chars()
+        .all(|c| c.is_ascii_digit() || " +-.()".contains(c))
+    {
+        return None;
+    }
+    let plus = if number.trim_start().starts_with('+') {
+        "+"
+    } else {
+        ""
+    };
+    Some(format!("{plus}{digits}"))
+}
+
+/// Fields found in a business card's text. The exact patterns (email,
+/// phone, website) score 0.9; the name, title and company, read from which
+/// line holds them, score 0.6 so a person checks them.
+pub fn extract_card(text: &str) -> Map<String, Value> {
+    let text = ascii_digits(text);
+    let mut emails = Vec::new();
+    let mut phones = Vec::new();
+    let mut websites = Vec::new();
+    let mut companies = Vec::new();
+    let mut plain = Vec::new();
+    for raw in text.lines() {
+        let line = raw.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let mut contact_line = false;
+        for token in line.split_whitespace() {
+            if is_email(token) {
+                emails.push(
+                    token
+                        .trim_matches(|c: char| ",;<>".contains(c))
+                        .to_lowercase(),
+                );
+                contact_line = true;
+            } else if is_website(token) {
+                websites.push(token.to_lowercase());
+                contact_line = true;
+            }
+        }
+        if let Some(number) = phone(line) {
+            phones.push(number);
+            contact_line = true;
+        }
+        if contact_line {
+            continue;
+        }
+        let lower = format!(" {}", line.to_lowercase());
+        if COMPANY_WORDS.iter().any(|w| lower.contains(w)) {
+            companies.push(line.to_owned());
+        } else {
+            plain.push(line.to_owned());
+        }
+    }
+    let exact = |candidates: Vec<String>| {
+        pick(candidates).map(|f| Field {
+            confidence: if f.confidence > 0.6 { 0.9 } else { 0.5 },
+            ..f
+        })
+    };
+    let guess = |value: Option<String>| {
+        value.map(|value| Field {
+            value,
+            confidence: 0.6,
+            source: "text",
+        })
+    };
+    let mut fields = Map::new();
+    for (name, field) in [
+        ("email", exact(emails)),
+        ("phone", exact(phones)),
+        ("website", exact(websites)),
+        ("name", guess(plain.first().cloned())),
+        ("job_title", guess(plain.get(1).cloned())),
+        ("company", guess(companies.first().cloned())),
+    ] {
+        if let Some(field) = field {
+            fields.insert(name.to_owned(), json!(field));
+        }
+    }
+    fields
+}
+
+/// The card's fields a person must check: missing or under the threshold.
+pub fn card_review(fields: &Map<String, Value>) -> Vec<String> {
+    ["name", "email", "phone", "company", "job_title"]
+        .into_iter()
+        .filter(|name| {
+            fields
+                .get(*name)
+                .and_then(|f| f["confidence"].as_f64())
+                .is_none_or(|c| c < REVIEW_THRESHOLD)
+        })
+        .map(str::to_owned)
+        .collect()
+}
+
+/// A contact draft from a card's fields, and the values to match an
+/// existing contact on before creating one.
+pub fn contact_draft(fields: &Map<String, Value>) -> (Value, Value) {
+    let value = |name: &str| {
+        fields
+            .get(name)
+            .and_then(|f| f["value"].as_str())
+            .map(str::to_owned)
+    };
+    let (first, last) = match value("name") {
+        Some(name) => match name.split_once(' ') {
+            Some((first, last)) => (Some(first.to_owned()), Some(last.trim().to_owned())),
+            None => (Some(name), None),
+        },
+        None => (None, None),
+    };
+    let draft = json!({
+        "first_name": first,
+        "last_name": last,
+        "email": value("email"),
+        "phone": value("phone"),
+        "company_name": value("company"),
+        "job_title": value("job_title"),
+        "website": value("website"),
+    });
+    let mut match_on = Map::new();
+    for name in ["email", "phone"] {
+        if let Some(v) = value(name) {
+            match_on.insert(name.to_owned(), Value::String(v));
+        }
+    }
+    (draft, Value::Object(match_on))
+}
+
 const INPUT: &str = r#"{
   "type": "object",
   "properties": {
     "text": { "type": "string", "description": "The document's text, e.g. what OCR read from a scan." },
     "qr": { "type": "string", "description": "The ZATCA e-invoice QR payload (base64), when the document has one." },
-    "doc_type": { "type": "string", "enum": ["invoice", "receipt"] }
+    "doc_type": { "type": "string", "enum": ["invoice", "receipt", "business_card"] }
   },
   "required": ["text"],
   "additionalProperties": false
@@ -335,7 +517,10 @@ pub fn descriptor() -> ActionDescriptor {
         DOCUMENT_EXTRACT,
         "Typed fields from an invoice or receipt's text (VAT number, invoice number, date, \
          total, VAT) with a confidence each, plus the exact fields of its ZATCA QR code when \
-         given, and the fields a person should check. English and Arabic. Local; writes nothing.",
+         given, and the fields a person should check. With doc_type business_card: name, job \
+         title, company, email, phone and website, a contact draft, and match_on (email, phone) \
+         to search for an existing contact before creating one. English and Arabic. Local; \
+         writes nothing.",
         RiskTier::Read,
         Effect::Read,
         RetryClass::Idempotent,
@@ -377,6 +562,19 @@ impl Action for DocumentExtract {
                     })?),
                     None => None,
                 };
+            if args["doc_type"].as_str() == Some("business_card") {
+                let fields = extract_card(text);
+                let needs_review = card_review(&fields);
+                let (contact, match_on) = contact_draft(&fields);
+                return Ok(ActionResult::plain(json!({
+                    "doc_type": "business_card",
+                    "fields": fields,
+                    "needs_review": needs_review,
+                    "review_threshold": REVIEW_THRESHOLD,
+                    "contact": contact,
+                    "match_on": match_on,
+                })));
+            }
             let (fields, needs_review) = extract(text, qr.as_ref());
             Ok(ActionResult::plain(json!({
                 "doc_type": args["doc_type"].as_str().unwrap_or("invoice"),
@@ -422,6 +620,42 @@ mod tests {
             }
         }
         out
+    }
+
+    /// D29-T1: a business card, English and Arabic lines mixed.
+    #[test]
+    fn a_business_card_gives_a_contact_and_what_to_match_on() {
+        let card = "Mona Al-Harbi\nSales Director\nNakheel Trading Co.\n\
+                    Mobile: +966 50 123 4567\nmona@nakheel.example\nwww.nakheel.example";
+        let fields = extract_card(card);
+        assert_eq!(fields["name"]["value"], "Mona Al-Harbi");
+        assert_eq!(fields["job_title"]["value"], "Sales Director");
+        assert_eq!(fields["company"]["value"], "Nakheel Trading Co.");
+        assert_eq!(fields["phone"]["value"], "+966501234567");
+        assert_eq!(fields["email"]["value"], "mona@nakheel.example");
+        assert_eq!(fields["website"]["value"], "www.nakheel.example");
+        assert!((fields["email"]["confidence"].as_f64().unwrap() - 0.9).abs() < 1e-9);
+
+        let review = card_review(&fields);
+        assert!(review.contains(&"name".to_owned()));
+        assert!(!review.contains(&"email".to_owned()));
+
+        let (contact, match_on) = contact_draft(&fields);
+        assert_eq!(contact["first_name"], "Mona");
+        assert_eq!(contact["last_name"], "Al-Harbi");
+        assert_eq!(contact["company_name"], "Nakheel Trading Co.");
+        assert_eq!(match_on["email"], "mona@nakheel.example");
+        assert_eq!(match_on["phone"], "+966501234567");
+    }
+
+    #[test]
+    fn an_arabic_card_with_arabic_digits_reads_too() {
+        let card = "أحمد سالم\nمدير المشتريات\nشركة الرياض للتجارة\nجوال ٠٥٠٩٨٧٦٥٤٣٢";
+        let fields = extract_card(card);
+        assert_eq!(fields["name"]["value"], "أحمد سالم");
+        assert_eq!(fields["company"]["value"], "شركة الرياض للتجارة");
+        assert_eq!(fields["phone"]["value"], "05098765432");
+        assert!(card_review(&fields).contains(&"email".to_owned()));
     }
 
     #[test]
