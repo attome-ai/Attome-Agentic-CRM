@@ -24,6 +24,9 @@ mod related;
 mod resolve;
 mod response;
 mod row_version;
+/// B16-T5: `GET /api/v1/scan/find`, a scanned value to the readable records
+/// holding it.
+pub mod scan;
 mod survivorship;
 pub mod tags;
 /// U3 (basic-units plan B-R4, D-601): `/{entity}/{id}/timeline`, the
@@ -144,6 +147,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(favourites::openapi_fragment());
     doc.merge(clone::openapi_fragment());
     doc.merge(tags::openapi_fragment());
+    doc.merge(scan::openapi_fragment());
     doc.merge(recycle_bin::openapi_fragment());
     doc.merge(new_record::openapi_fragment());
     doc
@@ -171,6 +175,7 @@ pub fn routes() -> Router<EngineState> {
             axum::routing::post(tags::bulk_tag_records),
         )
         .route("/api/v1/tags/suggest", get(tags::suggest_tags))
+        .route("/api/v1/scan/find", get(scan::scan_find))
         .route(
             "/api/v1/admin/tags/{tag_id}/merge",
             axum::routing::post(tags::merge_tag_route),

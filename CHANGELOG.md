@@ -11,6 +11,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Scanning (behind the `scan.enabled` flag, off by default): a text or number field takes
+  `options.scan` (formats, GS1 batch and expiry fields, what an unknown code does), the web library
+  reads GS1 element strings and checks GTIN check digits, and `GET /api/v1/scan/find?value=` returns
+  the records the caller may read whose scan-enabled field holds the value (at most 50).
 - A query that runs past its time limit answers `504 query_timeout` with a hint to narrow it or run
   it as an export (was a masked 500).
 - `query.timeouts_ms.interactive` (default 500) and `query.timeouts_ms.report` (default 5000) set how
