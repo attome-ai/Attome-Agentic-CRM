@@ -391,7 +391,7 @@ describe('WorkflowGraphEditorComponent node-type picker', () => {
 
     dblclick(c);
     expect(c.typeMenu()).not.toBeNull();
-    expect(c.menuOptions().length).toBe(12);   // every node type, nothing wired yet (incl. M06's split/join)
+    expect(c.menuOptions().length).toBe(13);   // every node type, nothing wired yet (incl. M06's split/join, A18's restore)
 
     c.chooseType('condition');
 
@@ -415,7 +415,7 @@ describe('WorkflowGraphEditorComponent node-type picker', () => {
 
     c.menuFilter.set('record');
 
-    expect(c.menuOptions().map(t => t.type)).toEqual(['create_record', 'update_record']);
+    expect(c.menuOptions().map(t => t.type)).toEqual(['create_record', 'update_record', 'restore_record']);
   });
 
   it('offers only types that accept the output the + was opened from', () => {
