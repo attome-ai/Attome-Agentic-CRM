@@ -333,6 +333,7 @@ mod tests {
             id,
             expected_row_version: id.map(|_| 0),
             data,
+            skip_defaults: false,
         }
     }
 

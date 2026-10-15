@@ -194,6 +194,27 @@ pub fn normalize_body(
     out
 }
 
+tokio::task_local! {
+    /// A28-T3: set while an import that asked for no defaults creates its
+    /// records.
+    static SKIP_DEFAULTS: bool;
+}
+
+/// A28-T3: runs `fut` with attribute defaults applied to empty fields on
+/// create (`apply` true, the normal case) or left empty (an import that
+/// asked for its cells exactly as given).
+pub async fn with_defaults<F: std::future::Future>(apply: bool, fut: F) -> F::Output {
+    if apply {
+        fut.await
+    } else {
+        SKIP_DEFAULTS.scope(true, fut).await
+    }
+}
+
+fn defaults_skipped() -> bool {
+    SKIP_DEFAULTS.try_with(|skip| *skip).unwrap_or(false)
+}
+
 /// A28-T1: the body with each empty attribute that declares a default
 /// (`options.default`) filled, or `None` when nothing changes. A default is
 /// `{"kind": "fixed", "value": ...}`, `{"kind": "today"}` (the deployment's
@@ -1624,12 +1645,17 @@ pub async fn create_one_as(
         Principal::Staff(ctx) => Some(ctx.user_id),
         Principal::Portal(_) => None,
     };
-    let obj = match apply_defaults(
-        attrs,
-        obj,
-        actor,
-        attome_core::calendar::deployment_now(state.base.config.app.time_zone.as_deref()),
-    ) {
+    let filled = if defaults_skipped() {
+        None
+    } else {
+        apply_defaults(
+            attrs,
+            obj,
+            actor,
+            attome_core::calendar::deployment_now(state.base.config.app.time_zone.as_deref()),
+        )
+    };
+    let obj = match filled {
         Some(map) => {
             defaulted = map;
             &defaulted

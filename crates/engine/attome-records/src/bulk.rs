@@ -211,7 +211,23 @@ struct BulkRequestBody {
     // handler's own check.
     #[serde(default)]
     mode: Option<String>,
+    /// A28-T3: `false` leaves empty fields empty on create instead of filling
+    /// them with their attributes' defaults. Default true.
+    #[serde(default)]
+    apply_defaults: Option<bool>,
     records: Vec<BulkRecordEnvelope>,
+}
+
+impl BulkRequestBody {
+    /// Carries `apply_defaults: false` onto every record, so the worker (or a
+    /// staged import's approval, much later) sees it with the record.
+    fn mark_skip_defaults(&mut self) {
+        if self.apply_defaults == Some(false) {
+            for record in &mut self.records {
+                record.skip_defaults = true;
+            }
+        }
+    }
 }
 
 /// `pub(crate)` so `bulk_graph.rs`'s pure preflight functions can operate on
@@ -224,6 +240,9 @@ pub(crate) struct BulkRecordEnvelope {
     #[serde(default)]
     pub(crate) expected_row_version: Option<i64>,
     pub(crate) data: Value,
+    /// A28-T3: create this record without attribute defaults.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) skip_defaults: bool,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -559,6 +578,7 @@ pub async fn submit_bulk(
                 id: item.id,
                 expected_row_version: item.expected_row_version,
                 data: item.data,
+                skip_defaults: false,
             })
             .collect(),
     };
@@ -574,9 +594,10 @@ async fn enqueue_inner(
     ctx: &SecurityContext,
     user_id: Uuid,
     entity_input: &str,
-    body: BulkRequestBody,
+    mut body: BulkRequestBody,
     idempotency_handle: Option<idempotency_durable::DurableIdempotencyHandle>,
 ) -> Result<BulkOperationResponse, AppError> {
+    body.mark_skip_defaults();
     let state = state.clone();
     let (entity_id, entity_name, attrs, is_append_only) =
         entity_crud::resolve_entity(&state, entity_input).await?;
@@ -1259,16 +1280,19 @@ async fn apply_ledgered_item(
     let mutation_mode = ledger.mutation_mode();
     let mutation = match operation {
         "create" => {
-            let created = entity_mutation::create_one(
-                &mut tx,
-                state,
-                ctx,
-                entity_name,
-                attrs,
-                obj,
-                user_id,
-                org_ref,
-                mutation_mode,
+            let created = entity_mutation::with_defaults(
+                !record.skip_defaults,
+                entity_mutation::create_one(
+                    &mut tx,
+                    state,
+                    ctx,
+                    entity_name,
+                    attrs,
+                    obj,
+                    user_id,
+                    org_ref,
+                    mutation_mode,
+                ),
             )
             .await?;
             // D-133 (2): bulk/staged create bypasses `create_record`'s own
@@ -1969,16 +1993,19 @@ async fn dry_run_one(
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let result = match operation {
         "create" => {
-            entity_mutation::create_one(
-                &mut tx,
-                state,
-                ctx,
-                entity_name,
-                attrs,
-                obj,
-                user_id,
-                org_ref,
-                mode,
+            entity_mutation::with_defaults(
+                !record.skip_defaults,
+                entity_mutation::create_one(
+                    &mut tx,
+                    state,
+                    ctx,
+                    entity_name,
+                    attrs,
+                    obj,
+                    user_id,
+                    org_ref,
+                    mode,
+                ),
             )
             .await
         }
@@ -2083,6 +2110,7 @@ async fn staged_import(
     // D-766: staged rows resolve lookups against other entities in the
     // worker, outside the S2S entity ceiling — refuse a capped caller.
     ctx.refuse_if_capped()?;
+    body.mark_skip_defaults();
     let (entity_id, entity_name, attrs, is_append_only) =
         entity_crud::resolve_entity(&state, &entity_input).await?;
     validate_request_shape(&body)?;
@@ -2563,6 +2591,7 @@ mod tests {
             id: Some(Uuid::now_v7()),
             expected_row_version: Some(0),
             data: json!({}),
+            skip_defaults: false,
         };
         assert!(validate_record_envelope("create", &record).is_err());
     }
@@ -2573,6 +2602,7 @@ mod tests {
             id: None,
             expected_row_version: None,
             data: json!({}),
+            skip_defaults: false,
         };
         assert!(validate_record_envelope("update", &record).is_err());
         assert!(validate_record_envelope("delete", &record).is_err());
