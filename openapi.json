@@ -55446,7 +55446,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Success",
+            "description": "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`",
             "content": {
               "application/json": {
                 "schema": {
@@ -56721,7 +56721,7 @@
         ],
         "responses": {
           "201": {
-            "description": "Success",
+            "description": "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`",
             "content": {
               "application/json": {
                 "schema": {
@@ -57073,7 +57073,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Success",
+            "description": "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`",
             "content": {
               "application/json": {
                 "schema": {
