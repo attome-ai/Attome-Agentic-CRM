@@ -10933,6 +10933,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/bulk-edit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** B5-T1: changes the same attributes on many records. */
+        post: operations["bulk_edit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/bulk-edit/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B5-T2: what a bulk edit would change, without changing anything: the
+         *     counts and the first 20 records before and after.
+         */
+        post: operations["bulk_edit_preview"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/bulk-edit/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B5-T3: puts a bulk edit back. The undo list goes in as a bulk update
+         *     carrying each record's post-edit row version, so a record changed since
+         *     the edit is reported as a conflict and left as it is; every record still
+         *     goes through the normal update path with the caller's own access.
+         */
+        post: operations["bulk_edit_undo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/bulk-transform": {
         parameters: {
             query?: never;
@@ -14068,6 +14127,58 @@ export interface components {
             /** @description The copy's undo list, as a single clone returns it. */
             undo: components["schemas"]["CloneUndoItem"][];
         };
+        /** @description B5-T2: what a bulk edit would do, without doing it. */
+        BulkEditPreview: {
+            /** @description Records picked that the caller can read. */
+            matched: number;
+            /** @description The first 20 records the edit would change, before and after. */
+            samples: components["schemas"]["PreviewRecord"][];
+            /** @description Records the edit would change. */
+            to_change: number;
+            /** @description Picked records already holding the requested values. */
+            unchanged: number;
+        };
+        /** @description What to change on the picked records. */
+        BulkEditRequest: {
+            /**
+             * @description The records to change, by the same filters a list uses. At most 500
+             *     may match.
+             */
+            filters?: components["schemas"]["Filter"][];
+            /** @description The records to change, at most 500. Give `ids` or `filters`. */
+            ids?: string[];
+            /** @description The changes, applied in order to each record. */
+            operations: components["schemas"]["EditOperation"][];
+        };
+        /** @description The bulk edit as submitted. */
+        BulkEditSubmitted: {
+            /**
+             * Format: uuid
+             * @description The bulk operation applying the edit; follow it at
+             *     `/api/v1/{entity}/bulk/{id}`. Empty when no record needed a change.
+             */
+            id?: string | null;
+            /** @description Records picked that the caller can read. */
+            matched: number;
+            /**
+             * Format: int32
+             * @description Records the edit will change.
+             */
+            total: number;
+            /** @description Picked records already holding the requested values. */
+            unchanged: number;
+            /**
+             * @description B5-T3: what to send to `POST /api/v1/{entity}/bulk-edit/undo` to put
+             *     the changed records back. Kept by the caller, like a clone's undo
+             *     list.
+             */
+            undo: components["schemas"]["UndoItem"][];
+        };
+        /** @description B5-T3: a bulk edit to put back. */
+        BulkEditUndoRequest: {
+            /** @description The `undo` list the bulk edit returned. */
+            undo: components["schemas"]["UndoItem"][];
+        };
         BulkField: {
             attribute: string;
             entity: string;
@@ -17132,6 +17243,17 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
+        /** @description One change to one attribute. */
+        EditOperation: {
+            attribute: string;
+            /**
+             * @description `set` (to `value`), `clear`, `add` or `remove` (values of a
+             *     multi-select choice), `increment` (a number by `value`, may be
+             *     negative).
+             */
+            op: string;
+            value?: unknown;
+        };
         /**
          * @description The "effective" half: `SecurityContext` fields as actually resolved right
          *     now, uncached. `privileges` is sorted (the resolver's `HashSet` has no
@@ -17362,6 +17484,12 @@ export interface components {
             lookups?: {
                 [key: string]: components["schemas"]["LookupMeta"];
             } | null;
+            /**
+             * Format: uuid
+             * @description A15-T5: this record was merged into that one (the entity keeps merged
+             *     records); omitted otherwise.
+             */
+            merged_into?: string | null;
             /** Format: int64 */
             row_version: number;
             /** Format: date-time */
@@ -17453,7 +17581,7 @@ export interface components {
             effect?: string | null;
             /**
              * @description Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,
-             *     `conflict`, `version_conflict`, `idempotency_conflict`,
+             *     `conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,
              *     `validation_error`, `feature_unavailable`, `feature_hidden`,
              *     `rate_limit_exceeded`, `overloaded`, `capability_unavailable`,
              *     `metadata_authoring_locked`, `transition_not_allowed`,
@@ -17471,6 +17599,17 @@ export interface components {
              *     refused field (every one is in `details.fields`).
              */
             field?: string | null;
+            /**
+             * Format: int64
+             * @description Present on `duplicate_detected`: how many more matches the caller may
+             *     not read.
+             */
+            hidden?: number | null;
+            /**
+             * @description Present on `duplicate_detected` (A15-T4): the existing records the
+             *     save matches that the caller may read (record, rule, score).
+             */
+            matches?: unknown;
             message: string;
             /**
              * @description Present on responses that passed through the request-id middleware
@@ -19291,6 +19430,11 @@ export interface components {
          *     changes).
          */
         MergeResponse: components["schemas"]["EntityRecordResponse"] & {
+            /**
+             * Format: uuid
+             * @description A15-T5: the merge log row; undoing the merge names it.
+             */
+            merge_log_id: string;
             /**
              * @description Field names a `manual`-strategy survivorship rule could not
              *     auto-decide (both records carried a non-null, differing value) — the
@@ -21403,6 +21547,12 @@ export interface components {
                 lookups?: {
                     [key: string]: components["schemas"]["LookupMeta"];
                 } | null;
+                /**
+                 * Format: uuid
+                 * @description A15-T5: this record was merged into that one (the entity keeps merged
+                 *     records); omitted otherwise.
+                 */
+                merged_into?: string | null;
                 /** Format: int64 */
                 row_version: number;
                 /** Format: date-time */
@@ -24206,6 +24356,15 @@ export interface components {
             sort?: null | components["schemas"]["SortOrder"];
             /** Format: double */
             threshold?: number | null;
+        };
+        /** @description B5-T2: one record as the edit would change it. */
+        PreviewRecord: {
+            /** @description The same attributes after the edit. */
+            after: Record<string, never>;
+            /** @description The changed attributes' values now. */
+            before: Record<string, never>;
+            /** Format: uuid */
+            id: string;
         };
         /**
          * @description `privilege` — privileges are platform-minted per entity
@@ -27989,6 +28148,22 @@ export interface components {
          *     `error`. Documentation-only.
          */
         UnauthorizedResponse: components["schemas"]["ReauthRequiredResponse"] | components["schemas"]["ErrorResponse"];
+        /**
+         * @description B5-T3: one record's values before a bulk edit, and the row version the
+         *     edit leaves it at.
+         */
+        UndoItem: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: int64
+             * @description The record's row version once the edit has applied; an undo only
+             *     reverts a record still at it.
+             */
+            row_version: number;
+            /** @description The changed attributes' values before the edit. */
+            values: Record<string, never>;
+        };
         /**
          * @description Why a ticket's SLA has no deadline (D-517) — the value stored in
          *     `service_ticket.sla_unresolved_reason`.
@@ -65469,6 +65644,183 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    bulk_edit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkEditRequest"];
+            };
+        };
+        responses: {
+            /** @description The edit is planned and running as a bulk update */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkEditSubmitted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the entity's bulk or update privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid operations, or too many records */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No batch worker can run the edit */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    bulk_edit_preview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkEditRequest"];
+            };
+        };
+        responses: {
+            /** @description What the edit would change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkEditPreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the entity's bulk privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid operations, or too many records */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    bulk_edit_undo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkEditUndoRequest"];
+            };
+        };
+        responses: {
+            /** @description The undo is running as a bulk update */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkEditSubmitted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the entity's bulk or update privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An empty or oversized undo list */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No batch worker can run the undo */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

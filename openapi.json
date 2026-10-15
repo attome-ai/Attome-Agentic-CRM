@@ -56100,6 +56100,286 @@
         }
       }
     },
+    "/api/v1/{entity}/bulk-edit": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B5-T1: changes the same attributes on many records.",
+        "operationId": "bulk_edit",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkEditRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The edit is planned and running as a bulk update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkEditSubmitted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the entity's bulk or update privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid operations, or too many records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No batch worker can run the edit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "bulk_accepted"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/{entity}/bulk-edit/preview": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B5-T2: what a bulk edit would change, without changing anything: the\ncounts and the first 20 records before and after.",
+        "operationId": "bulk_edit_preview",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkEditRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What the edit would change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkEditPreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the entity's bulk privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid operations, or too many records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "computes the edit a bulk-edit would make and writes nothing",
+          "reason": "dry_run",
+          "via": null
+        }
+      }
+    },
+    "/api/v1/{entity}/bulk-edit/undo": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B5-T3: puts a bulk edit back. The undo list goes in as a bulk update\ncarrying each record's post-edit row version, so a record changed since\nthe edit is reported as a conflict and left as it is; every record still\ngoes through the normal update path with the caller's own access.",
+        "operationId": "bulk_edit_undo",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkEditUndoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "The undo is running as a bulk update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkEditSubmitted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the entity's bulk or update privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An empty or oversized undo list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No batch worker can run the undo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "bulk_accepted"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/{entity}/bulk-transform": {
       "post": {
         "tags": [
@@ -67700,6 +67980,129 @@
           }
         }
       },
+      "BulkEditPreview": {
+        "type": "object",
+        "description": "B5-T2: what a bulk edit would do, without doing it.",
+        "required": [
+          "matched",
+          "to_change",
+          "unchanged",
+          "samples"
+        ],
+        "properties": {
+          "matched": {
+            "type": "integer",
+            "description": "Records picked that the caller can read.",
+            "minimum": 0
+          },
+          "samples": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreviewRecord"
+            },
+            "description": "The first 20 records the edit would change, before and after."
+          },
+          "to_change": {
+            "type": "integer",
+            "description": "Records the edit would change.",
+            "minimum": 0
+          },
+          "unchanged": {
+            "type": "integer",
+            "description": "Picked records already holding the requested values.",
+            "minimum": 0
+          }
+        }
+      },
+      "BulkEditRequest": {
+        "type": "object",
+        "description": "What to change on the picked records.",
+        "required": [
+          "operations"
+        ],
+        "properties": {
+          "filters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Filter"
+            },
+            "description": "The records to change, by the same filters a list uses. At most 500\nmay match."
+          },
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The records to change, at most 500. Give `ids` or `filters`."
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EditOperation"
+            },
+            "description": "The changes, applied in order to each record."
+          }
+        }
+      },
+      "BulkEditSubmitted": {
+        "type": "object",
+        "description": "The bulk edit as submitted.",
+        "required": [
+          "total",
+          "matched",
+          "unchanged",
+          "undo"
+        ],
+        "properties": {
+          "id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The bulk operation applying the edit; follow it at\n`/api/v1/{entity}/bulk/{id}`. Empty when no record needed a change."
+          },
+          "matched": {
+            "type": "integer",
+            "description": "Records picked that the caller can read.",
+            "minimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Records the edit will change."
+          },
+          "unchanged": {
+            "type": "integer",
+            "description": "Picked records already holding the requested values.",
+            "minimum": 0
+          },
+          "undo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UndoItem"
+            },
+            "description": "B5-T3: what to send to `POST /api/v1/{entity}/bulk-edit/undo` to put\nthe changed records back. Kept by the caller, like a clone's undo\nlist."
+          }
+        }
+      },
+      "BulkEditUndoRequest": {
+        "type": "object",
+        "description": "B5-T3: a bulk edit to put back.",
+        "required": [
+          "undo"
+        ],
+        "properties": {
+          "undo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UndoItem"
+            },
+            "description": "The `undo` list the bulk edit returned."
+          }
+        }
+      },
       "BulkField": {
         "type": "object",
         "required": [
@@ -75463,6 +75866,24 @@
           }
         }
       },
+      "EditOperation": {
+        "type": "object",
+        "description": "One change to one attribute.",
+        "required": [
+          "attribute",
+          "op"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "op": {
+            "type": "string",
+            "description": "`set` (to `value`), `clear`, `add` or `remove` (values of a\nmulti-select choice), `increment` (a number by `value`, may be\nnegative)."
+          },
+          "value": {}
+        }
+      },
       "EffectiveAccess": {
         "type": "object",
         "description": "The \"effective\" half: `SecurityContext` fields as actually resolved right\nnow, uncached. `privileges` is sorted (the resolver's `HashSet` has no\nstable order) so the UI renders a deterministic list, not one that\nreshuffles on every refresh.",
@@ -76041,6 +76462,14 @@
               "type": "string"
             }
           },
+          "merged_into": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "A15-T5: this record was merged into that one (the entity keeps merged\nrecords); omitted otherwise."
+          },
           "row_version": {
             "type": "integer",
             "format": "int64"
@@ -76226,7 +76655,7 @@
           },
           "error": {
             "type": "string",
-            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`conflict`, `version_conflict`, `idempotency_conflict`,\n`validation_error`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
+            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,\n`validation_error`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `read_only`, `payload_too_large`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
           },
           "field": {
             "type": [
@@ -76234,6 +76663,17 @@
               "null"
             ],
             "description": "Present on `field_locked` / `field_locked_required` (D-789): the first\nrefused field (every one is in `details.fields`)."
+          },
+          "hidden": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Present on `duplicate_detected`: how many more matches the caller may\nnot read."
+          },
+          "matches": {
+            "description": "Present on `duplicate_detected` (A15-T4): the existing records the\nsave matches that the caller may read (record, rule, score)."
           },
           "message": {
             "type": "string"
@@ -80618,9 +81058,15 @@
           {
             "type": "object",
             "required": [
-              "survivorship_conflicts"
+              "survivorship_conflicts",
+              "merge_log_id"
             ],
             "properties": {
+              "merge_log_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "A15-T5: the merge log row; undoing the merge names it."
+              },
               "survivorship_conflicts": {
                 "type": "array",
                 "items": {
@@ -86387,6 +86833,14 @@
                   "propertyNames": {
                     "type": "string"
                   }
+                },
+                "merged_into": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "A15-T5: this record was merged into that one (the entity keeps merged\nrecords); omitted otherwise."
                 },
                 "row_version": {
                   "type": "integer",
@@ -94341,6 +94795,29 @@
           }
         },
         "additionalProperties": false
+      },
+      "PreviewRecord": {
+        "type": "object",
+        "description": "B5-T2: one record as the edit would change it.",
+        "required": [
+          "id",
+          "before",
+          "after"
+        ],
+        "properties": {
+          "after": {
+            "type": "object",
+            "description": "The same attributes after the edit."
+          },
+          "before": {
+            "type": "object",
+            "description": "The changed attributes' values now."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
       },
       "PrivilegeDef": {
         "type": "object",
@@ -103553,6 +104030,30 @@
           }
         ],
         "description": "A 401 from a route guarded by a step-up (D-510): either the standard\nenvelope (`unauthorized`, for a missing session or a session without a live\nrefresh family) or a [`ReauthRequiredResponse`]. Clients tell them apart by\n`error`. Documentation-only."
+      },
+      "UndoItem": {
+        "type": "object",
+        "description": "B5-T3: one record's values before a bulk edit, and the row version the\nedit leaves it at.",
+        "required": [
+          "id",
+          "row_version",
+          "values"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "row_version": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The record's row version once the edit has applied; an undo only\nreverts a record still at it."
+          },
+          "values": {
+            "type": "object",
+            "description": "The changed attributes' values before the edit."
+          }
+        }
       },
       "UnresolvedReason": {
         "type": "string",
