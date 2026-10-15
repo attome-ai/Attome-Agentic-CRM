@@ -1,5 +1,6 @@
 import { EnvironmentProviders, inject, isDevMode, makeEnvironmentProviders, provideAppInitializer } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { metadataVersionInterceptor } from './metadata-version';
 import {
   TRANSLOCO_MISSING_HANDLER,
   provideTransloco,
@@ -104,7 +105,7 @@ export function provideAttomeI18n(): EnvironmentProviders {
  */
 export function provideAttomeBase(config: AttomeBaseConfig): EnvironmentProviders {
   return makeEnvironmentProviders([
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, metadataVersionInterceptor])),
     { provide: ATTOME_CONFIG, useValue: config },
     provideAppInitializer(() => { inject(AuthService).sessionReady().subscribe(); }),
     provideAttomeI18n(),

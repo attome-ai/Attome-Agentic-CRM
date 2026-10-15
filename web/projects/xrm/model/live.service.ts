@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { LiveChannel } from '@attome/base';
+import { LiveChannel, MetadataVersion } from '@attome/base';
 
 import { ModelService } from './model.service';
 
@@ -15,6 +15,7 @@ import { ModelService } from './model.service';
 export class LiveService {
   private readonly model = inject(ModelService);
   private readonly channel = inject(LiveChannel);
+  private readonly versions = inject(MetadataVersion);
   private listening = false;
 
   /** The published model's version stamp, once the server has sent it. */
@@ -25,6 +26,8 @@ export class LiveService {
     if (!this.listening) {
       this.listening = true;
       this.channel.modelFrames.subscribe(data => this.receive(data));
+      // Y8-T8: a response naming a newer metadata version drops the plans too.
+      this.versions.changes.subscribe(() => this.model.forgetPlans());
     }
     this.channel.connect();
   }
