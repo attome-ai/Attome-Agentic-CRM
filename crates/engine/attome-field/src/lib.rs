@@ -519,6 +519,13 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
     if options.get("strict").is_some_and(|s| !s.is_boolean()) {
         return Err(AppError::Validation("strict: true or false".into()));
     }
+    if let Some(editable_by) = options.get("editable_by")
+        && !matches!(editable_by.as_str(), Some("everyone" | "integrations_only"))
+    {
+        return Err(AppError::Validation(
+            "editable_by: everyone or integrations_only".into(),
+        ));
+    }
     // The default, the scan settings and the external id are checked above;
     // each type's own shape below.
     let stripped;
@@ -528,7 +535,8 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
                 || map.contains_key("scan")
                 || map.contains_key("external_id")
                 || map.contains_key("unique")
-                || map.contains_key("strict") =>
+                || map.contains_key("strict")
+                || map.contains_key("editable_by") =>
         {
             let mut map = map.clone();
             map.remove("default");
@@ -536,6 +544,7 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
             map.remove("external_id");
             map.remove("unique");
             map.remove("strict");
+            map.remove("editable_by");
             if map.is_empty() {
                 // Only a default or scan settings: nothing else to check.
                 return Ok(());
@@ -730,6 +739,16 @@ pub fn is_unique(options: Option<&Value>) -> bool {
             .unwrap_or(false)
 }
 
+/// A29-T4: a field only integrations may write
+/// (`options.editable_by: "integrations_only"`), such as an external id an
+/// outside system owns: a person signed in to the app cannot change it.
+pub fn integrations_only(options: Option<&Value>) -> bool {
+    options
+        .and_then(|o| o.get("editable_by"))
+        .and_then(Value::as_str)
+        == Some("integrations_only")
+}
+
 /// A3-T6: a required field with `options.strict: true` is also refused
 /// empty by the database (a CHECK constraint), not only by the engine.
 pub fn strict_required(is_required: bool, options: Option<&Value>) -> bool {
@@ -890,6 +909,25 @@ mod tests {
         )));
         assert!(!is_unique(Some(&serde_json::json!({ "unique": false }))));
         assert!(!is_unique(None));
+    }
+
+    /// A29-T4: `editable_by` locks a field to integrations.
+    #[test]
+    fn external_id_lock_option() {
+        let locked = serde_json::json!({ "external_id": { "system": "sap" }, "editable_by": "integrations_only" });
+        validate_options(&FieldType::Text, &locked).unwrap();
+        assert!(integrations_only(Some(&locked)));
+        assert!(!integrations_only(Some(
+            &serde_json::json!({ "editable_by": "everyone" })
+        )));
+        assert!(!integrations_only(None));
+        assert!(
+            validate_options(
+                &FieldType::Text,
+                &serde_json::json!({ "editable_by": "admins" })
+            )
+            .is_err()
+        );
     }
 
     /// A3-T6: the database-held range and strict required.

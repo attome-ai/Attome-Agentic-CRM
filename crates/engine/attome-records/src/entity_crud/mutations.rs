@@ -442,9 +442,20 @@ pub(super) async fn create_record(
     Extension(claims): Extension<SessionClaims>,
     recording: RecordingCtx,
     Path(entity_input): Path<String>,
+    cookie: Option<Extension<attome_server::middleware::auth::CookieSession>>,
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<axum::response::Response, AppError> {
+    // A29-T4: people may not write a field locked to integrations.
+    if let Some(fields) = body.as_object() {
+        super::upsert::refuse_integration_only_fields(
+            &state,
+            &entity_input,
+            cookie.is_some(),
+            &[fields],
+        )
+        .await?;
+    }
     // The extractor above IS the create-privilege check. See
     // `create_record_for`'s doc for what a non-HTTP caller must do instead.
     // D-787 rule 7: a write to a reference-data entity is recorded as
@@ -1085,9 +1096,20 @@ pub(super) async fn update_record(
     Extension(claims): Extension<SessionClaims>,
     recording: RecordingCtx,
     Path((entity_input, record_id)): Path<(String, Uuid)>,
+    cookie: Option<Extension<attome_server::middleware::auth::CookieSession>>,
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<axum::response::Response, AppError> {
+    // A29-T4: people may not write a field locked to integrations.
+    if let Some(fields) = body.as_object() {
+        super::upsert::refuse_integration_only_fields(
+            &state,
+            &entity_input,
+            cookie.is_some(),
+            &[fields],
+        )
+        .await?;
+    }
     // C-10: this used to be a byte-for-byte copy of `update_record_for`
     // (the same resolve/access-check/validate/update_one/mirror/audit/
     // commit/invalidate/rw-pin sequence, with `ctx`/`claims.sub` spelled

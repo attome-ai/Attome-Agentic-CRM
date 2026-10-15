@@ -105,9 +105,16 @@ pub(super) async fn upsert_record(
     recording: RecordingCtx,
     Path(entity_input): Path<String>,
     Query(query): Query<UpsertQuery>,
+    cookie: Option<Extension<attome_server::middleware::auth::CookieSession>>,
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<axum::response::Response, AppError> {
+    // A29-T4: people may not write a field locked to integrations.
+    let parts: Vec<&serde_json::Map<String, Value>> = ["match", "data"]
+        .iter()
+        .filter_map(|k| body.get(*k).and_then(Value::as_object))
+        .collect();
+    refuse_integration_only_fields(&state, &entity_input, cookie.is_some(), &parts).await?;
     // D-787 rule 7: a write to a reference-data entity is recorded as
     // `upsert_record` when a changeset is in play (read only for reference
     // data, in `entity_mutation::record_reference_write`; every other upsert
@@ -501,6 +508,31 @@ pub(super) fn external_id_system_of(attr: &AttrInfo) -> Option<&str> {
         .and_then(|e| e.get("system"))
         .and_then(Value::as_str)
         .filter(|s| !s.is_empty())
+}
+
+/// A29-T4: a person signed in to the app (a cookie session; API keys and
+/// service-to-service callers are integrations) may not write a field locked
+/// to integrations. `fields` is a write body: a record's values, or an
+/// upsert's `match` and `data`.
+pub(super) async fn refuse_integration_only_fields(
+    state: &EngineState,
+    entity_input: &str,
+    interactive: bool,
+    fields: &[&serde_json::Map<String, Value>],
+) -> Result<(), AppError> {
+    if !interactive {
+        return Ok(());
+    }
+    let (_, _, attrs, _) = resolve_entity(state, entity_input).await?;
+    let locked = attrs
+        .iter()
+        .filter(|a| attome_field::integrations_only(a.options.as_ref()))
+        .any(|a| fields.iter().any(|f| f.contains_key(&a.logicalname)));
+    if locked {
+        Err(AppError::Forbidden)
+    } else {
+        Ok(())
+    }
 }
 
 /// A29-T2: whether an attribute holds an external id.

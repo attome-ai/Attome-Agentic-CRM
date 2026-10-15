@@ -25,6 +25,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   attribute) read from `data`; with neither `match` nor `key` it matches on the business key. A lookup
   value in a create, update or upsert may be `{"by": "<external id of the target>", "value": ...}`;
   ids no record holds are refused together with a 422 naming each.
+- External ids survive a merge: the merged record's ids link to the survivor (migration `0055`), so a
+  lookup by either id finds it. `options.editable_by: "integrations_only"` locks a field against
+  people signed in to the app (`403`); API keys and service-to-service callers still set it.
 - A bulk operation or staged import reports a row with a stale `expected_row_version` as a conflict
   (`outcome: "conflict"` and the record's `current_version` and changes) and applies the other rows
   (migration `0047`); `GET /api/v1/admin/conflicts?days=N` counts version conflicts per entity and

@@ -4055,6 +4055,34 @@ fn upsert_by_external_id_and_lookup_by_external_id() {
             record_id.as_str(),
             "{created}"
         );
+
+        // A29-T4: a field locked to integrations refuses a person's write.
+        create_field(
+            &app,
+            &admin_cookie,
+            &account_id,
+            r#"{"logicalname":"erp_id","name":"ERP id","field_type":"text",
+                "options":{"external_id":{"system":"erp"},"editable_by":"integrations_only"}}"#,
+        )
+        .await;
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{account}"),
+                r#"{"title":"Typed by hand","erp_id":"E-1"}"#,
+            ))
+            .await
+            .expect("person writes a locked field");
+        assert_eq!(res.status(), StatusCode::FORBIDDEN);
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{account}"),
+                r#"{"title":"No ERP id"}"#,
+            ))
+            .await
+            .expect("person leaves it alone");
+        assert_eq!(res.status(), StatusCode::CREATED);
     })
 }
 
