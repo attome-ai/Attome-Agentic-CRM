@@ -67,6 +67,10 @@ pub struct EntityRecordResponse {
     /// A15-T4: how many more matches the caller may not read. Omitted when 0.
     #[serde(skip_serializing_if = "is_zero")]
     hidden_duplicates: i64,
+    /// A15-T5: this record was merged into that one (the entity keeps merged
+    /// records); omitted otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    merged_into: Option<Uuid>,
 }
 
 fn is_zero(n: &i64) -> bool {
@@ -168,6 +172,12 @@ impl EntityRecordResponse {
     /// See the `approval_request_id` field.
     pub(crate) fn with_approval_request_id(mut self, id: Option<Uuid>) -> Self {
         self.approval_request_id = id;
+        self
+    }
+
+    /// See the `merged_into` field.
+    pub(crate) fn with_merged_into(mut self, merged_into: Option<Uuid>) -> Self {
+        self.merged_into = merged_into;
         self
     }
 
@@ -387,5 +397,6 @@ pub(super) fn build_response(
         warnings: Vec::new(),
         duplicate_warnings: Vec::new(),
         hidden_duplicates: 0,
+        merged_into: None,
     }
 }

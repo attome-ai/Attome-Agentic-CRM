@@ -6222,6 +6222,175 @@ fn duplicate_rule_blocks_warns_and_takes_a_reason_on_save() {
     })
 }
 
+/// A15-T5: the merge log. A preview counts the related rows a merge would
+/// move; a merge can be undone as one unit (the survivor's values, the
+/// merged record, the moved rows), once; an undo after the survivor changed
+/// is refused; an entity that keeps merged records gets a redirect instead.
+#[test]
+fn merge_preview_undo_and_keep_merged() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (account, account_id) = create_entity(&app, &admin_cookie, "mlog").await;
+        for field in ["title", "note"] {
+            create_field(
+                &app,
+                &admin_cookie,
+                &account_id,
+                &format!(r#"{{"logicalname":"{field}","name":"{field}","field_type":"text"}}"#),
+            )
+            .await;
+        }
+        let (deal, deal_id) = create_entity(&app, &admin_cookie, "mlogdeal").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &deal_id,
+            &format!(
+                r#"{{"logicalname":"account_ref","name":"Account","field_type":"lookup","lookup_entity_ref":"{account_id}"}}"#
+            ),
+        )
+        .await;
+        sync_registry(&state).await;
+
+        let call = |method: &str, uri: String, body: Option<String>, if_match: Option<i64>| {
+            let mut req = Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json");
+            if let Some(v) = if_match {
+                req = req.header("if-match", format!("\"{v}\""));
+            }
+            req.body(body.map(Body::from).unwrap_or_else(Body::empty))
+                .unwrap()
+        };
+        let create = |entity: &str, body: String| {
+            call("POST", format!("/api/v1/{entity}"), Some(body), None)
+        };
+        let id_of = |v: &Value| -> Uuid { v["id"].as_str().unwrap().parse().unwrap() };
+
+        let res = app
+            .clone()
+            .oneshot(create(&account, r#"{"title":"A"}"#.into()))
+            .await
+            .unwrap();
+        let a = id_of(&body_json(res).await);
+        let res = app
+            .clone()
+            .oneshot(create(&account, r#"{"title":"B","note":"from b"}"#.into()))
+            .await
+            .unwrap();
+        let b = id_of(&body_json(res).await);
+        let res = app
+            .clone()
+            .oneshot(create(&deal, format!(r#"{{"account_ref":"{b}"}}"#)))
+            .await
+            .unwrap();
+        let d = id_of(&body_json(res).await);
+        let admin_id: Uuid =
+            sqlx::query_scalar(&format!("SELECT created_by FROM {account} WHERE id = $1"))
+                .bind(a)
+                .fetch_one(&db)
+                .await
+                .expect("the admin's id");
+        let ctx = attome_records::entity_crud::admin_security_context(admin_id);
+
+        let preview = attome_records::entity_crud::merge_preview(&state, &ctx, &account, a, b)
+            .await
+            .expect("preview");
+        assert_eq!(preview.moved.len(), 1, "{preview:?}");
+        assert_eq!(preview.moved[0].count, 1);
+        assert_eq!(preview.result["note"], "from b");
+
+        let get =
+            |entity: &str, id: Uuid| call("GET", format!("/api/v1/{entity}/{id}"), None, None);
+        let merge = |into: Uuid, from: Uuid| {
+            call(
+                "POST",
+                format!("/api/v1/{account}/{into}/merge"),
+                Some(format!(r#"{{"duplicate_id":"{from}"}}"#)),
+                None,
+            )
+        };
+        let res = app.clone().oneshot(merge(a, b)).await.unwrap();
+        assert!(res.status().is_success(), "merge: {}", res.status());
+        let log_id: Uuid = body_json(res).await["merge_log_id"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        let res = app.clone().oneshot(get(&deal, d)).await.unwrap();
+        assert_eq!(body_json(res).await["data"]["account_ref"], a.to_string());
+
+        let undone = attome_records::entity_crud::undo_merge(&state, &ctx, admin_id, log_id, None)
+            .await
+            .expect("undo");
+        assert_eq!(undone.rows_moved_back, 1);
+        let res = app.clone().oneshot(get(&account, b)).await.unwrap();
+        assert_eq!(res.status(), StatusCode::OK, "the merged record is back");
+        let res = app.clone().oneshot(get(&deal, d)).await.unwrap();
+        assert_eq!(body_json(res).await["data"]["account_ref"], b.to_string());
+        let res = app.clone().oneshot(get(&account, a)).await.unwrap();
+        let survivor = body_json(res).await;
+        assert!(survivor["data"]["note"].is_null(), "{survivor}");
+        assert!(
+            attome_records::entity_crud::undo_merge(&state, &ctx, admin_id, log_id, None)
+                .await
+                .is_err(),
+            "a merge is undone once"
+        );
+
+        // An edit to the survivor after the merge refuses the undo.
+        let res = app.clone().oneshot(merge(a, b)).await.unwrap();
+        let log_id: Uuid = body_json(res).await["merge_log_id"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        let res = app.clone().oneshot(get(&account, a)).await.unwrap();
+        let version = body_json(res).await["row_version"].as_i64().unwrap();
+        let res = app
+            .clone()
+            .oneshot(call(
+                "PATCH",
+                format!("/api/v1/{account}/{a}"),
+                Some(r#"{"title":"A edited"}"#.into()),
+                Some(version),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        assert!(matches!(
+            attome_records::entity_crud::undo_merge(&state, &ctx, admin_id, log_id, None).await,
+            Err(attome_types::AppError::VersionConflict)
+        ));
+
+        // An entity that keeps merged records redirects instead.
+        sqlx::query(
+            "INSERT INTO merge_setting (entity_logicalname, merge_mode) VALUES ($1, 'keep_merged')",
+        )
+        .bind(&account)
+        .execute(&db)
+        .await
+        .expect("keep merged");
+        let res = app
+            .clone()
+            .oneshot(create(&account, r#"{"title":"C"}"#.into()))
+            .await
+            .unwrap();
+        let c = id_of(&body_json(res).await);
+        let res = app.clone().oneshot(merge(a, c)).await.unwrap();
+        assert!(res.status().is_success());
+        let res = app.clone().oneshot(get(&account, c)).await.unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(body_json(res).await["merged_into"], a.to_string());
+    })
+}
+
 /// D-432 / M13 — a small matching-precision fixture: an `exact`-comparator
 /// rule on `name` at `threshold = 1.0` must flag the one genuine duplicate
 /// pair and must NOT flag the unrelated third record (no false positive) —

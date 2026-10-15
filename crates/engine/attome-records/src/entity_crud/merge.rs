@@ -69,6 +69,8 @@ pub fn admin_security_context(user_id: Uuid) -> SecurityContext {
 pub struct MergeOutcome {
     pub response: EntityRecordResponse,
     pub survivorship_conflicts: Vec<String>,
+    /// A15-T5: the merge log row that can undo this merge.
+    pub merge_log_id: Uuid,
 }
 
 impl std::fmt::Debug for MergeOutcome {
@@ -91,6 +93,8 @@ pub struct MergeResponse {
     /// canonical record's pre-merge value was kept; a steward should review.
     /// Always empty for an entity with no survivorship rules configured.
     survivorship_conflicts: Vec<String>,
+    /// A15-T5: the merge log row; undoing the merge names it.
+    merge_log_id: Uuid,
 }
 
 impl std::fmt::Debug for MergeResponse {
@@ -109,6 +113,7 @@ impl MergeResponse {
         Self {
             record: outcome.response,
             survivorship_conflicts: outcome.survivorship_conflicts,
+            merge_log_id: outcome.merge_log_id,
         }
     }
 }
@@ -525,6 +530,8 @@ pub async fn do_merge_core_with_version(
     // and locked do the redirects below run, all inside the same
     // transaction.
     let mut redirect_summary: Vec<String> = Vec::new();
+    // A15-T5: every row moved off the duplicate, for the merge log (undo).
+    let mut moved: Vec<Value> = Vec::new();
     for ((dep_entity, dep_field, _mode), (access_level, dep_owner_visible)) in
         dependents.iter().zip(dep_access.iter())
     {
@@ -646,6 +653,11 @@ pub async fn do_merge_core_with_version(
             )
             .await?;
             redirect_summary.push(format!("{dep_entity}.{dep_field}: {affected}"));
+            moved.push(serde_json::json!({
+                "entity": dep_entity,
+                "field": dep_field,
+                "ids": redirected_ids,
+            }));
         }
     }
 
@@ -662,19 +674,74 @@ pub async fn do_merge_core_with_version(
     // duplicate, and the duplicate is already locked/re-verified active
     // earlier in this same transaction (the `lock_order` loop above) — no
     // concurrent writer can have touched it since.
-    let retire = delete_one(
-        &mut tx,
-        &entity_name,
-        &dependents,
-        duplicate_id,
-        actor_user_id,
-        None,
-        &crate::entity_mutation::DeleteOrigin::with_id(
-            crate::entity_mutation::DeleteKind::Merge,
-            format!("merge:{duplicate_id}"),
-        ),
+    // A15-T5: the entity's merge mode: retire the duplicate (the default), or
+    // keep it live with a redirect to the survivor.
+    let merge_mode: String =
+        sqlx::query_scalar("SELECT merge_mode FROM merge_setting WHERE entity_logicalname = $1")
+            .bind(&entity_name)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(AppError::internal)?
+            .unwrap_or_else(|| "soft_delete".to_owned());
+    let keep_merged = merge_mode == "keep_merged";
+    let cascade_summary: Vec<String> = if keep_merged {
+        Vec::new()
+    } else {
+        delete_one(
+            &mut tx,
+            &entity_name,
+            &dependents,
+            duplicate_id,
+            actor_user_id,
+            None,
+            &crate::entity_mutation::DeleteOrigin::with_id(
+                crate::entity_mutation::DeleteKind::Merge,
+                format!("merge:{duplicate_id}"),
+            ),
+        )
+        .await?
+        .cascade_summary
+    };
+    // A15-T5: the merge log holds what undo needs: both rows as they were,
+    // every moved row, the mode, and the survivor's version after the merge.
+    let survivor_row_version = merged_row
+        .get("row_version")
+        .and_then(Value::as_i64)
+        .unwrap_or(canonical_row_version);
+    let merge_log_id: Uuid = sqlx::query_scalar(
+        "INSERT INTO merge_log (entity_logicalname, survivor_id, merged_ids, survivor_before, \
+             merged_before, moved_rows, merge_mode, merged_by) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id",
     )
-    .await?;
+    .bind(&entity_name)
+    .bind(canonical_id)
+    .bind(vec![duplicate_id])
+    .bind(&canonical_row)
+    .bind(&duplicate_row)
+    .bind(serde_json::json!({
+        "survivor_row_version": survivor_row_version,
+        "moved": moved,
+    }))
+    .bind(&merge_mode)
+    .bind(actor_user_id)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    if keep_merged {
+        sqlx::query(
+            "INSERT INTO record_redirect (entity_logicalname, from_id, to_id, merge_log_id) \
+             VALUES ($1, $2, $3, $4) \
+             ON CONFLICT (entity_logicalname, from_id) DO UPDATE \
+             SET to_id = EXCLUDED.to_id, merge_log_id = EXCLUDED.merge_log_id",
+        )
+        .bind(&entity_name)
+        .bind(duplicate_id)
+        .bind(canonical_id)
+        .bind(merge_log_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    }
 
     // D-432 / M13 — closes out the steward queue row this merge resolved, in
     // the same transaction as the merge itself. `AND status = 'open'` makes a
@@ -775,7 +842,11 @@ pub async fn do_merge_core_with_version(
         category: AuditCategory::Entity,
         entity_name: Some(entity_name.clone()),
         record_id: Some(duplicate_id),
-        operation: AuditOperation::SoftDelete,
+        operation: if keep_merged {
+            AuditOperation::Merge
+        } else {
+            AuditOperation::SoftDelete
+        },
         version_before: None,
         version_after: None,
         user_context: user_ctx,
@@ -785,12 +856,14 @@ pub async fn do_merge_core_with_version(
         correlation_id: None,
         batch_id: None,
         event_name: None,
-        event_comment: Some(if retire.cascade_summary.is_empty() {
+        event_comment: Some(if keep_merged {
+            format!("merged into {canonical_id}; kept, redirecting to it")
+        } else if cascade_summary.is_empty() {
             format!("merged into {canonical_id}")
         } else {
             format!(
                 "merged into {canonical_id}; cascade-deactivated dependents: {}",
-                retire.cascade_summary.join(", ")
+                cascade_summary.join(", ")
             )
         }),
         changed_fields: vec![],
@@ -826,6 +899,372 @@ pub async fn do_merge_core_with_version(
     Ok(MergeOutcome {
         response,
         survivorship_conflicts,
+        merge_log_id,
+    })
+}
+
+// ── A15-T5: preview and undo ─────────────────────────────────────────────────
+
+/// One relationship a merge would move rows along.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct MergeMove {
+    /// `entity.field`.
+    pub relationship: String,
+    pub count: i64,
+}
+
+/// A15-T5: what merging would do, without doing it.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct MergePreview {
+    /// Rows that would move from the merged record to the survivor.
+    pub moved: Vec<MergeMove>,
+    /// The flows an update of the survivor or a delete of the merged record
+    /// would start.
+    pub flows: Vec<String>,
+    /// The survivor's values after the merge.
+    #[schema(value_type = Object)]
+    pub result: Value,
+    /// Fields a `manual` survivorship rule leaves to a person.
+    pub conflicts: Vec<String>,
+    /// `soft_delete` or `keep_merged`.
+    pub merge_mode: String,
+}
+
+/// A15-T5: the merge preview: per relationship how many rows would move to
+/// the survivor, the flows the merge would start, the merged values, and
+/// the fields left to a person. Writes nothing.
+pub async fn merge_preview(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    canonical_id: Uuid,
+    duplicate_id: Uuid,
+) -> Result<MergePreview, AppError> {
+    let (entity_id, entity_name, attrs, _) = resolve_entity(state, entity_input).await?;
+    for id in [canonical_id, duplicate_id] {
+        require_record_access(state, ctx, entity_id, &entity_name, id, RecordAction::Read).await?;
+    }
+    let db = &state.base.db;
+    let table = quote_ident(&entity_name);
+    let cols = attome_core::select_columns(&attrs, true);
+    let read = |id: Uuid| {
+        let sql = format!(
+            "SELECT row_to_json(t) FROM (SELECT {cols} FROM {table} WHERE id = $1 AND is_active = true) t"
+        );
+        async move {
+            sqlx::query_scalar::<_, Value>(&sql)
+                .bind(id)
+                .fetch_optional(db)
+                .await
+                .map_err(AppError::internal)?
+                .ok_or(AppError::NotFound)
+        }
+    };
+    let canonical = read(canonical_id).await?;
+    let duplicate = read(duplicate_id).await?;
+    let (Value::Object(canonical_obj), Value::Object(duplicate_obj)) = (&canonical, &duplicate)
+    else {
+        return Err(AppError::internal("merge preview rows were not objects"));
+    };
+    let rules = load_survivorship_rules(db, &entity_name).await?;
+    let (fill, conflicts) = compute_fill(&attrs, canonical_obj, duplicate_obj, &rules);
+    let mut result = canonical_obj.clone();
+    for (field, value) in fill {
+        result.insert(field, value);
+    }
+    let mut moved = Vec::new();
+    let dependents = state.entities.load().dependents_of(entity_id);
+    for (dep_entity, dep_field, _) in dependents {
+        let count: i64 = sqlx::query_scalar(&format!(
+            "SELECT count(*) FROM {} WHERE {} = $1",
+            quote_ident(&dep_entity),
+            quote_ident(&dep_field)
+        ))
+        .bind(duplicate_id)
+        .fetch_one(db)
+        .await
+        .map_err(AppError::internal)?;
+        if count > 0 {
+            moved.push(MergeMove {
+                relationship: format!("{dep_entity}.{dep_field}"),
+                count,
+            });
+        }
+    }
+    let flows: Vec<String> = sqlx::query_scalar(
+        "SELECT DISTINCT d.name FROM workflow_trigger_index ti \
+           JOIN workflow_definition_version v ON v.id = ti.definition_version_id \
+           JOIN workflow_definition d ON d.id = v.definition_id \
+          WHERE ti.role = 'entry' AND ti.entity_logicalname = $1 \
+            AND ti.match_type IN ('update', 'delete') ORDER BY 1",
+    )
+    .bind(&entity_name)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let merge_mode: String =
+        sqlx::query_scalar("SELECT merge_mode FROM merge_setting WHERE entity_logicalname = $1")
+            .bind(&entity_name)
+            .fetch_optional(db)
+            .await
+            .map_err(AppError::internal)?
+            .unwrap_or_else(|| "soft_delete".to_owned());
+    Ok(MergePreview {
+        moved,
+        flows,
+        result: Value::Object(result),
+        conflicts,
+        merge_mode,
+    })
+}
+
+/// A15-T5: what an undo restored.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct MergeUndone {
+    pub survivor_id: Uuid,
+    pub merged_ids: Vec<Uuid>,
+    /// Rows moved back to the merged records.
+    pub rows_moved_back: i64,
+}
+
+/// A15-T5: undoes a merge as one unit: the survivor's values as they were
+/// before it, the merged record live again (or its redirect removed), and
+/// every row the merge moved pointing back at the merged record. Refused
+/// with 409 when the survivor changed since the merge (its version differs
+/// from the one the merge left), when `expected_survivor_row_version` is
+/// stale, or when the merge was undone already; one undo of a merge runs at
+/// a time (`attome-records/merge_undo:{id}`).
+pub async fn undo_merge(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    actor_user_id: Uuid,
+    merge_log_id: Uuid,
+    expected_survivor_row_version: Option<i64>,
+) -> Result<MergeUndone, AppError> {
+    let log: Option<(
+        String,
+        Uuid,
+        Vec<Uuid>,
+        Value,
+        Value,
+        String,
+        Option<chrono::DateTime<Utc>>,
+    )> = sqlx::query_as(
+        "SELECT entity_logicalname, survivor_id, merged_ids, survivor_before, moved_rows, \
+                    merge_mode, undone_at FROM merge_log WHERE id = $1",
+    )
+    .bind(merge_log_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let (entity, survivor_id, merged_ids, survivor_before, moved_rows, merge_mode, undone_at) =
+        log.ok_or(AppError::NotFound)?;
+    if undone_at.is_some() {
+        return Err(AppError::Conflict("this merge was undone already"));
+    }
+    let (entity_id, entity_name, attrs, _) = resolve_entity(state, &entity).await?;
+    require_record_access(
+        state,
+        ctx,
+        entity_id,
+        &entity_name,
+        survivor_id,
+        RecordAction::Update,
+    )
+    .await?;
+    let table = quote_ident(&entity_name);
+    let (user_ctx, org_ref) = fetch_audit_ctx(state, actor_user_id).await;
+
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_xact_lock($1, hashtext($2))")
+        .bind(crate::ADVISORY_LOCK_NAMESPACE)
+        .bind(format!("attome-records/merge_undo:{merge_log_id}"))
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    if !locked {
+        return Err(AppError::Conflict("this merge is being undone already"));
+    }
+    let still_open: bool =
+        sqlx::query_scalar("SELECT undone_at IS NULL FROM merge_log WHERE id = $1 FOR UPDATE")
+            .bind(merge_log_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    if !still_open {
+        return Err(AppError::Conflict("this merge was undone already"));
+    }
+
+    // The survivor must be exactly as the merge left it.
+    let current: Option<i64> = sqlx::query_scalar(&format!(
+        "SELECT row_version FROM {table} WHERE id = $1 FOR UPDATE"
+    ))
+    .bind(survivor_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let current = current.ok_or(AppError::NotFound)?;
+    let logged = moved_rows
+        .get("survivor_row_version")
+        .and_then(Value::as_i64);
+    if logged != Some(current) || expected_survivor_row_version.is_some_and(|e| e != current) {
+        return Err(AppError::VersionConflict);
+    }
+
+    // The survivor's own fields as they were before the merge.
+    let restore_cols: Vec<String> = attrs
+        .iter()
+        .filter(|a| !a.is_formula())
+        .map(|a| a.logicalname.clone())
+        .filter(|name| survivor_before.get(name).is_some())
+        .collect();
+    if !restore_cols.is_empty() {
+        let list = restore_cols
+            .iter()
+            .map(|c| quote_ident(c))
+            .collect::<Vec<_>>()
+            .join(", ");
+        sqlx::query(&format!(
+            "UPDATE {table} SET ({list}) = (SELECT {list} FROM jsonb_populate_record(NULL::{table}, $1)), \
+                    row_version = row_version + 1, modified_at = now(), modified_by = $3 \
+              WHERE id = $2"
+        ))
+        .bind(&survivor_before)
+        .bind(survivor_id)
+        .bind(actor_user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    }
+
+    // The merged records come back (or stop redirecting).
+    if merge_mode == "keep_merged" {
+        sqlx::query("DELETE FROM record_redirect WHERE merge_log_id = $1")
+            .bind(merge_log_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    } else {
+        sqlx::query(&format!(
+            "UPDATE {table} SET is_active = true, row_version = row_version + 1, \
+                    modified_at = now(), modified_by = $2 WHERE id = ANY($1)"
+        ))
+        .bind(&merged_ids)
+        .bind(actor_user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    }
+
+    // Every moved row points back at the record it was moved off.
+    let back_to = merged_ids.first().copied().ok_or(AppError::NotFound)?;
+    let mut rows_moved_back = 0i64;
+    // Only fields the registry still knows are written to.
+    let moves: Vec<(String, String, Vec<Uuid>)> = {
+        let registry = state.entities.load();
+        moved_rows
+            .get("moved")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(|moved| {
+                let dep_entity = moved.get("entity").and_then(Value::as_str)?;
+                let dep_field = moved.get("field").and_then(Value::as_str)?;
+                let known = registry
+                    .get(dep_entity)
+                    .is_some_and(|meta| meta.attrs.iter().any(|a| a.logicalname == dep_field));
+                let ids: Vec<Uuid> = moved
+                    .get("ids")
+                    .and_then(Value::as_array)
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|v| v.as_str().and_then(|s| Uuid::parse_str(s).ok()))
+                    .collect();
+                known.then(|| (dep_entity.to_owned(), dep_field.to_owned(), ids))
+            })
+            .collect()
+    };
+    for (dep_entity, dep_field, ids) in &moves {
+        let (dep_entity, dep_field) = (dep_entity.as_str(), dep_field.as_str());
+        let back: Vec<Uuid> = sqlx::query_scalar(&format!(
+            "UPDATE {} SET {} = $1, row_version = row_version + 1, modified_at = now(), \
+                    modified_by = $4 WHERE id = ANY($2) AND {} = $3 RETURNING id",
+            quote_ident(dep_entity),
+            quote_ident(dep_field),
+            quote_ident(dep_field)
+        ))
+        .bind(back_to)
+        .bind(ids)
+        .bind(survivor_id)
+        .bind(actor_user_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        if !back.is_empty() {
+            attome_core::change_feed::emit_many(
+                &mut tx,
+                dep_entity,
+                &back,
+                attome_core::ChangeOperation::Update,
+            )
+            .await?;
+            rows_moved_back += back.len() as i64;
+        }
+    }
+    let mut touched = vec![survivor_id];
+    touched.extend(merged_ids.iter().copied());
+    attome_core::change_feed::emit_many(
+        &mut tx,
+        &entity_name,
+        &touched,
+        attome_core::ChangeOperation::Update,
+    )
+    .await?;
+    sqlx::query("UPDATE merge_log SET undone_at = now(), undone_by = $2 WHERE id = $1")
+        .bind(merge_log_id)
+        .bind(actor_user_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+
+    let event = |record_id: Uuid, operation: AuditOperation, comment: String| AuditEvent {
+        organization_ref: org_ref,
+        category: AuditCategory::Entity,
+        entity_name: Some(entity_name.clone()),
+        record_id: Some(record_id),
+        operation,
+        version_before: None,
+        version_after: None,
+        user_context: user_ctx.clone(),
+        changed_on: Utc::now(),
+        source: AuditSource::Api,
+        request_context: AuditRequestContext::default(),
+        correlation_id: None,
+        batch_id: None,
+        event_name: Some("merge_undone".to_owned()),
+        event_comment: Some(comment),
+        changed_fields: vec![],
+        snapshot_json: None,
+    };
+    let mut events = vec![event(
+        survivor_id,
+        AuditOperation::Update,
+        format!("merge {merge_log_id} undone; {rows_moved_back} row(s) moved back"),
+    )];
+    for id in &merged_ids {
+        events.push(event(
+            *id,
+            AuditOperation::Restore,
+            format!("merge {merge_log_id} undone"),
+        ));
+    }
+    MutationRing::new(state)
+        .commit_events(tx, events, actor_user_id, "undo merge")
+        .await?;
+    Ok(MergeUndone {
+        survivor_id,
+        merged_ids,
+        rows_moved_back,
     })
 }
 

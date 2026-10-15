@@ -277,6 +277,16 @@ pub(super) async fn get_record(
         attome_security::field_gate::Surface::Interactive,
     )
     .await?;
+    // A15-T5: a record kept after a merge names the one it was merged into.
+    let merged_into: Option<Uuid> = sqlx::query_scalar(
+        "SELECT to_id FROM record_redirect WHERE entity_logicalname = $1 AND from_id = $2",
+    )
+    .bind(&entity_name)
+    .bind(record_id)
+    .fetch_optional(pool)
+    .await
+    .map_err(AppError::internal)?;
+    let response = response.with_merged_into(merged_into);
     let etag = row_version_etag(response.row_version);
     Ok((
         StatusCode::OK,

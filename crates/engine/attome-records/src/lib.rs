@@ -69,6 +69,11 @@ pub mod rw_pin;
 /// put) binds it as `attome_records::FILES_ADVISORY_LOCK_NAMESPACE`.
 pub const FILES_ADVISORY_LOCK_NAMESPACE: i32 = 9;
 
+/// A15-T5: the advisory-lock namespace of `attome-records/` keys
+/// (`attome-records/merge_undo:{merge_log_id}`), registered in
+/// `crates/apps/attome/tests/advisory_lock_namespaces.rs`.
+pub const ADVISORY_LOCK_NAMESPACE: i32 = 31;
+
 /// This crate's slice of the workspace OpenAPI document, merged in by
 /// `attome_server::openapi_document()` the same way every other sibling engine
 /// crate's `openapi()` is.

@@ -84,7 +84,10 @@ pub use lookup_names::{ResolvedLookup, resolve_visible};
 /// posture the latter two rely on. `pub`, not `pub(crate)`, since
 /// `duplicates_admin.rs`/`approval_admin.rs` (D-477: now external crates)
 /// call all three directly.
-pub use merge::{MergeResponse, admin_security_context, do_merge_core};
+pub use merge::{
+    MergeMove, MergePreview, MergeResponse, MergeUndone, admin_security_context, do_merge_core,
+    merge_preview, undo_merge,
+};
 /// `pub`, not `pub(crate)` — `communication.rs` (D-477: now external) uses
 /// this directly too.
 pub use mutations::field_changes_from_obj;

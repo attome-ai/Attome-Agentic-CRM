@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   the matches (`duplicate_warnings`), `allow_with_reason` needs an `Attome-Duplicate-Reason` header
   (kept in the audit), `block` refuses it with `409 duplicate_detected`; matches the caller cannot
   read are only counted.
+- A merge is logged (both records as they were, every moved row) and its response carries
+  `merge_log_id`; an entity set to keep merged records keeps the merged one live with `merged_into` on
+  read instead of deleting it.
 - Autonumber rules gain a `sequence_key` (`{branch}`: one counter per branch, per period), a
   `hijri_yearly` reset, `{field}` and `{lookup.field}` tokens in the format, and `assign_when`
   (`status = issued`): the number is given when a create or an update first meets it
