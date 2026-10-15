@@ -369,6 +369,26 @@ pub(super) async fn login(
         return Ok(rejected);
     }
 
+    // Z4-T10: the per-address budget, across accounts, also before any
+    // password work; only failures spend it (see `address_throttle`).
+    let client_ip = connect_info.map(|Extension(ConnectInfo(peer))| {
+        attome_server::middleware::client_ip::client_ip_from_parts(
+            peer.ip(),
+            &headers,
+            &state.config,
+        )
+    });
+    let address_key = client_ip
+        .map(|ip| super::address_throttle::key(ip, state.config.rate_limit.ipv6_bucket_prefix));
+    if let Some(key) = &address_key
+        && let Some(retry_after_secs) =
+            super::address_throttle::blocked(&state.redis_coordination, key).await?
+    {
+        return Err(AppError::TooManyRequests {
+            retry_after_secs: Some(retry_after_secs),
+        });
+    }
+
     // D-786: a service principal has no password; answer like any bad
     // credential, and record it as a failed login like one (follow-up L3).
     let attempt = if attome_security::accounts::is_reserved_service_email(&body.email) {
@@ -395,16 +415,10 @@ pub(super) async fn login(
         // unverified email is `Forbidden`, infrastructure errors are 5xx), so
         // only this arm is a failed-login event (D-541 rule 6).
         Err(AppError::Unauthorized) => {
-            let ip = connect_info
-                .map(|Extension(ConnectInfo(peer))| {
-                    attome_server::middleware::client_ip::client_ip_from_parts(
-                        peer.ip(),
-                        &headers,
-                        &state.config,
-                    )
-                    .to_string()
-                })
-                .unwrap_or_else(|| "unknown".to_owned());
+            if let Some(key) = &address_key {
+                super::address_throttle::record_failure(&state.redis_coordination, key).await?;
+            }
+            let ip = client_ip.map_or_else(|| "unknown".to_owned(), |ip| ip.to_string());
             let subject = failed_login_subject(&state, &body.email).await?;
             failed_login::record_failure(
                 &auditor,

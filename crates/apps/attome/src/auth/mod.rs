@@ -22,6 +22,7 @@ use axum::{
 };
 use std::sync::Arc;
 
+mod address_throttle;
 mod dto;
 /// Audit plan 3.5 (D-541 rule 6): failed-login coalescing and its sweep.
 pub mod failed_login;

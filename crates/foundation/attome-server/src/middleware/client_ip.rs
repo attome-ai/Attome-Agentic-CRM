@@ -33,7 +33,7 @@ pub fn client_ip_from_parts(peer: IpAddr, headers: &HeaderMap, config: &AppConfi
 /// BSV-F16 (B6): the per-IP rate-limit subject. IPv4 is bucketed per address;
 /// IPv6 by its `ipv6_prefix`-bit network (default /64, one host's usual
 /// allocation), so rotating addresses inside it shares one bucket.
-pub(crate) fn rate_limit_subject(ip: IpAddr, ipv6_prefix: u8) -> String {
+pub fn rate_limit_subject(ip: IpAddr, ipv6_prefix: u8) -> String {
     match ip.to_canonical() {
         IpAddr::V4(v4) => v4.to_string(),
         IpAddr::V6(v6) => {
