@@ -246,9 +246,10 @@ pub async fn count_duplicate_values(
     .map_err(AppError::internal)
 }
 
-/// A29-T1: makes the unique index of an external-id field match its
-/// metadata. The attribute's `options.external_id.system` is re-read here, so
-/// a caller only says which field changed: a live external-id field gets a
+/// A29-T1, A3-T6: makes the unique index of an external-id or unique field
+/// match its metadata. The attribute's `options.external_id.system` and
+/// `options.unique` are re-read here, so a caller only says which field
+/// changed: a live external-id or unique field gets a
 /// unique index over its live records (`NULLS DISTINCT`: a record without the
 /// id is fine), built `CONCURRENTLY` so writes go on meanwhile; any other
 /// field has none. Live records that share a value fail the build: the
@@ -326,7 +327,8 @@ async fn sync_external_id_index_on_connection(
           WHERE e.logicalname = $1 AND a.logicalname = $2 \
             AND (e.is_active IS NULL OR e.is_active = true) \
             AND (a.is_active IS NULL OR a.is_active = true) \
-            AND COALESCE(a.options->'external_id'->>'system', '') <> '')",
+            AND (COALESCE(a.options->'external_id'->>'system', '') <> '' \
+                 OR a.options->'unique' = 'true'::jsonb))",
     )
     .bind(entity_logicalname)
     .bind(field_logicalname)
@@ -368,7 +370,7 @@ async fn sync_external_id_index_on_connection(
             }
             if duplicate {
                 Err(AppError::Validation(format!(
-                    "{field_logicalname}: live records share a value, so it cannot be an external id; \
+                    "{field_logicalname}: live records share a value, so it cannot be unique; \
                      fix the duplicates first"
                 )))
             } else {

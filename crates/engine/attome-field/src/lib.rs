@@ -513,6 +513,9 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
     if let Some(external_id) = options.get("external_id") {
         validate_external_id(field_type, external_id)?;
     }
+    if let Some(unique) = options.get("unique") {
+        validate_unique(field_type, unique)?;
+    }
     // The default, the scan settings and the external id are checked above;
     // each type's own shape below.
     let stripped;
@@ -520,12 +523,14 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
         Some(map)
             if map.contains_key("default")
                 || map.contains_key("scan")
-                || map.contains_key("external_id") =>
+                || map.contains_key("external_id")
+                || map.contains_key("unique") =>
         {
             let mut map = map.clone();
             map.remove("default");
             map.remove("scan");
             map.remove("external_id");
+            map.remove("unique");
             if map.is_empty() {
                 // Only a default or scan settings: nothing else to check.
                 return Ok(());
@@ -710,6 +715,35 @@ pub fn external_id_system(options: Option<&Value>) -> Option<&str> {
         .filter(|s| !s.is_empty())
 }
 
+/// A3-T6: whether a field's value is unique among the entity's live
+/// records: `options.unique: true`, or an external id (always unique).
+pub fn is_unique(options: Option<&Value>) -> bool {
+    external_id_system(options).is_some()
+        || options
+            .and_then(|o| o.get("unique"))
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+}
+
+/// A3-T6: `options.unique` is a boolean on a text, number, date or lookup
+/// field (a unique lookup makes the relationship one to one).
+fn validate_unique(field_type: &FieldType, unique: &Value) -> Result<(), AppError> {
+    if !unique.is_boolean() {
+        return Err(AppError::Validation("unique: true or false".into()));
+    }
+    if unique == &Value::Bool(true)
+        && !matches!(
+            field_type,
+            FieldType::Text | FieldType::Number | FieldType::Date | FieldType::Lookup
+        )
+    {
+        return Err(AppError::Validation(format!(
+            "unique: a {field_type} field cannot be unique; use a text, number, date or lookup field"
+        )));
+    }
+    Ok(())
+}
+
 /// A29-T1: `options.external_id` is `{"system": "<name>"}` on a text or
 /// number field: the id another system knows the record by. The name is
 /// lowercase letters, digits, `_` or `-`, at most [`EXTERNAL_ID_SYSTEM_MAX`].
@@ -795,6 +829,31 @@ mod tests {
             &serde_json::json!({ "external_id": { "system": "legacy-crm" }, "text_type": "email" }),
         )
         .unwrap();
+    }
+
+    /// A3-T6: `unique` on the types that can hold a unique index.
+    #[test]
+    fn unique_attribute_option() {
+        let unique = serde_json::json!({ "unique": true });
+        for field_type in [
+            FieldType::Text,
+            FieldType::Number,
+            FieldType::Date,
+            FieldType::Lookup,
+        ] {
+            validate_options(&field_type, &unique).unwrap();
+        }
+        assert!(validate_options(&FieldType::Bool, &unique).is_err());
+        assert!(
+            validate_options(&FieldType::Text, &serde_json::json!({ "unique": "yes" })).is_err()
+        );
+        validate_options(&FieldType::Bool, &serde_json::json!({ "unique": false })).unwrap();
+        assert!(is_unique(Some(&unique)));
+        assert!(is_unique(Some(
+            &serde_json::json!({ "external_id": { "system": "sap" } })
+        )));
+        assert!(!is_unique(Some(&serde_json::json!({ "unique": false }))));
+        assert!(!is_unique(None));
     }
 
     #[test]

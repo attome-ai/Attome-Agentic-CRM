@@ -877,7 +877,7 @@ pub(crate) async fn do_create_attribute_recorded(
         .await?;
     }
     // A29-T1: an external id is unique among the entity's live records.
-    if attome_field::external_id_system(body.options.as_ref()).is_some() {
+    if attome_field::is_unique(body.options.as_ref()) {
         provision::sync_external_id_index(
             state.base.config.as_ref(),
             &entity_logicalname,
@@ -1149,9 +1149,10 @@ pub(crate) async fn do_update_attribute_recorded(
     }
     // A29-T1: becoming an external id needs the live values to be unique
     // already; the unique index is built after the metadata commits.
-    let new_external_id = attome_field::external_id_system(new_options.as_ref());
-    let external_id_changed =
-        attome_field::external_id_system(cur.options.as_ref()) != new_external_id;
+    // A3-T6: an external id is unique too; either way the field's unique
+    // index follows the change.
+    let new_unique = attome_field::is_unique(new_options.as_ref());
+    let unique_changed = attome_field::is_unique(cur.options.as_ref()) != new_unique;
     let new_req = body
         .is_required
         .unwrap_or_else(|| cur.required.unwrap_or(false));
@@ -1220,7 +1221,7 @@ pub(crate) async fn do_update_attribute_recorded(
     let new_lookup = resolve_lookup_target(&state.base.db_migrator, new_lookup_ref).await?;
     let new_lookup_name: Option<String> = new_lookup.as_ref().map(|(_, name)| name.clone());
     let field_logicalname = cur.logicalname.clone().ok_or(AppError::NotFound)?;
-    if external_id_changed && new_external_id.is_some() {
+    if unique_changed && new_unique {
         let duplicates = provision::count_duplicate_values(
             &state.base.db_migrator,
             &entity_logicalname,
@@ -1230,7 +1231,7 @@ pub(crate) async fn do_update_attribute_recorded(
         if duplicates > 0 {
             return Err(AppError::Validation(format!(
                 "{field_logicalname}: {duplicates} value(s) are shared by more than one live \
-                 record, so it cannot be an external id; fix the duplicates first"
+                 record, so it cannot be unique; fix the duplicates first"
             )));
         }
     }
@@ -1497,7 +1498,7 @@ pub(crate) async fn do_update_attribute_recorded(
         .await?;
     }
 
-    if external_id_changed {
+    if unique_changed {
         provision::sync_external_id_index(
             state.base.config.as_ref(),
             &entity_logicalname,

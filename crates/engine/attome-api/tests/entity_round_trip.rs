@@ -3094,6 +3094,27 @@ fn external_id_field_is_unique_per_entity() {
             .await
             .expect("new ids");
         assert_eq!(res.status(), StatusCode::CREATED);
+
+        // A3-T6: `unique: true` without an external system is unique too.
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"code","name":"Code","field_type":"text","options":{"unique":true}}"#,
+        )
+        .await;
+        let res = app
+            .clone()
+            .oneshot(create(r#"{"code":"K1"}"#))
+            .await
+            .expect("first code");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let res = app
+            .clone()
+            .oneshot(create(r#"{"code":"K1"}"#))
+            .await
+            .expect("same code");
+        assert_eq!(res.status(), StatusCode::CONFLICT);
     })
 }
 
