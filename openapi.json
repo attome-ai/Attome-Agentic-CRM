@@ -10600,6 +10600,95 @@
         }
       }
     },
+    "/api/v1/admin/data/match-rules/{id}/scan": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "`POST /api/v1/admin/data/match-rules/{id}/scan` — `system.admin` only.\nA15-T6: scans every live row of the rule's entity in pages of 500 in the\nbackground (keys written, each row scored against its peers, candidates\nrecorded); a restart resumes from the last page.",
+        "operationId": "scan_match_rule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The scan is queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatchScanStarted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The rule is switched off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "configuration",
+              "operation": "update"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
     "/api/v1/admin/data/profile": {
       "get": {
         "tags": [
@@ -72300,6 +72389,13 @@
           "name": {
             "type": "string"
           },
+          "scan_schedule": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A15-T6: `hourly`, `daily` or `weekly` full scans; absent: on demand."
+          },
           "threshold": {
             "type": "number",
             "format": "double"
@@ -80203,12 +80299,27 @@
           "is_active": {
             "type": "boolean"
           },
+          "last_scan_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "A15-T6: when the last full scan finished."
+          },
           "name": {
             "type": "string"
           },
           "row_version": {
             "type": "integer",
             "format": "int64"
+          },
+          "scan_schedule": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A15-T6: `hourly`, `daily` or `weekly`; `null`: scans run only on demand."
           },
           "threshold": {
             "type": "number",
@@ -80217,6 +80328,18 @@
           "updated_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "MatchScanStarted": {
+        "type": "object",
+        "description": "A15-T6: whether a scan was queued (`false`: one is queued already).",
+        "required": [
+          "queued"
+        ],
+        "properties": {
+          "queued": {
+            "type": "boolean"
           }
         }
       },
@@ -87448,12 +87571,27 @@
                 "is_active": {
                   "type": "boolean"
                 },
+                "last_scan_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time",
+                  "description": "A15-T6: when the last full scan finished."
+                },
                 "name": {
                   "type": "string"
                 },
                 "row_version": {
                   "type": "integer",
                   "format": "int64"
+                },
+                "scan_schedule": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "A15-T6: `hourly`, `daily` or `weekly`; `null`: scans run only on demand."
                 },
                 "threshold": {
                   "type": "number",
@@ -103674,6 +103812,13 @@
           "row_version": {
             "type": "integer",
             "format": "int64"
+          },
+          "scan_schedule": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A15-T6: `hourly`, `daily`, `weekly`, or `\"\"` to scan on demand only."
           },
           "threshold": {
             "type": [

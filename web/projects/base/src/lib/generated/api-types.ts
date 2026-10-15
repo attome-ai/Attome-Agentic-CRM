@@ -1820,6 +1820,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/data/match-rules/{id}/scan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * `POST /api/v1/admin/data/match-rules/{id}/scan` — `system.admin` only.
+         *     A15-T6: scans every live row of the rule's entity in pages of 500 in the
+         *     background (keys written, each row scored against its peers, candidates
+         *     recorded); a restart resumes from the last page.
+         */
+        post: operations["scan_match_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/data/profile": {
         parameters: {
             query?: never;
@@ -15893,6 +15915,8 @@ export interface components {
             fields: components["schemas"]["MatchField"][];
             is_active?: boolean;
             name: string;
+            /** @description A15-T6: `hourly`, `daily` or `weekly` full scans; absent: on demand. */
+            scan_schedule?: string | null;
             /** Format: double */
             threshold: number;
         };
@@ -19141,13 +19165,24 @@ export interface components {
             /** Format: uuid */
             id: string;
             is_active: boolean;
+            /**
+             * Format: date-time
+             * @description A15-T6: when the last full scan finished.
+             */
+            last_scan_at?: string | null;
             name: string;
             /** Format: int64 */
             row_version: number;
+            /** @description A15-T6: `hourly`, `daily` or `weekly`; `null`: scans run only on demand. */
+            scan_schedule?: string | null;
             /** Format: double */
             threshold: number;
             /** Format: date-time */
             updated_at: string;
+        };
+        /** @description A15-T6: whether a scan was queued (`false`: one is queued already). */
+        MatchScanStarted: {
+            queued: boolean;
         };
         McpServerView: {
             allow_external: boolean;
@@ -21760,9 +21795,16 @@ export interface components {
                 /** Format: uuid */
                 id: string;
                 is_active: boolean;
+                /**
+                 * Format: date-time
+                 * @description A15-T6: when the last full scan finished.
+                 */
+                last_scan_at?: string | null;
                 name: string;
                 /** Format: int64 */
                 row_version: number;
+                /** @description A15-T6: `hourly`, `daily` or `weekly`; `null`: scans run only on demand. */
+                scan_schedule?: string | null;
                 /** Format: double */
                 threshold: number;
                 /** Format: date-time */
@@ -28025,6 +28067,8 @@ export interface components {
             name?: string | null;
             /** Format: int64 */
             row_version: number;
+            /** @description A15-T6: `hourly`, `daily`, `weekly`, or `""` to scan on demand only. */
+            scan_schedule?: string | null;
             /** Format: double */
             threshold?: number | null;
         };
@@ -35599,6 +35643,64 @@ export interface operations {
             };
             /** @description Match rule not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    scan_match_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scan is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchScanStarted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such rule */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The rule is switched off */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
