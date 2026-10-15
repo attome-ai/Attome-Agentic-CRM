@@ -9,6 +9,7 @@ import {
 } from '@attome/base';
 import { AdminService, SidebarItem } from '@attome/xrm/core/admin/data';
 import { entityFormRoute, entityListRoute, urlPathToLogical } from '@attome/xrm/core/entity';
+import { WebVitals } from '../services/web-vitals.service';
 import { DEBOUNCE_MS, MIN_QUERY_LENGTH, OmniSearchComponent, SearchService } from '@attome/xrm/search/omni';
 import type { OmniSelection } from '@attome/xrm/search/omni';
 import { AppSwitcherComponent } from '../app-switcher/app-switcher.component';
@@ -125,6 +126,7 @@ export class ShellComponent implements OnInit {
   private readonly personalSettings = inject(PersonalSettingsService);
   private readonly brand = inject(BrandService);
   private readonly uiText = inject(UiTextOverrides);
+  private readonly vitals = inject(WebVitals);
   private readonly lang = inject(LangService);
   private readonly search = inject(SearchService);
   private readonly commandRegistry = inject(CommandRegistry);
@@ -319,6 +321,8 @@ export class ShellComponent implements OnInit {
     this.brand.loadMine();
     // B20-T3: this deployment's rewording of built-in text.
     this.uiText.start();
+    // AA12-T1: page speed, reported when the page is hidden.
+    this.vitals.start();
     // B11-T2: the person's settings apply at once; a chosen start page opens
     // when they land on the app's front door.
     this.personalSettings.load().subscribe({

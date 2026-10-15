@@ -118,9 +118,83 @@ async fn dependencies(State(state): State<EngineState>, _ctx: Authorized<Admin>)
     }))
 }
 
+/// AA12-T1: one Web Vitals measurement from a browser.
+#[derive(serde::Deserialize, utoipa::ToSchema)]
+pub(crate) struct WebVital {
+    /// `LCP` (largest contentful paint) or `INP` (interaction to next paint).
+    name: String,
+    /// The measurement in milliseconds.
+    value: f64,
+    /// The screen's first path segment (e.g. `xrm`, `admin`), for grouping.
+    #[serde(default)]
+    area: Option<String>,
+}
+
+/// The screen area a vital is grouped under: the first path segment, when it
+/// is a short lowercase word, so the label stays a handful of values.
+fn vital_area(area: Option<&str>) -> &str {
+    match area.map(str::trim) {
+        Some(a)
+            if !a.is_empty()
+                && a.len() <= 24
+                && a.chars().all(|c| c.is_ascii_lowercase() || c == '-') =>
+        {
+            a
+        }
+        _ => "other",
+    }
+}
+
+/// AA12-T1: records a browser's LCP or INP in the metrics registry, so the
+/// built-in metrics store keeps its sum and count per minute
+/// (`attome_web_vital_ms`).
+#[utoipa::path(
+    post,
+    path = "/api/v1/telemetry/web-vitals",
+    tag = "operations",
+    request_body = WebVital,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Telemetry,
+        None,
+        "a browser's page-speed measurement; no business or security effect"
+    )))),
+    responses(
+        (status = 204, description = "Recorded"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 422, description = "Not LCP or INP, or not a time from 0 to 10 minutes", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn web_vital(
+    _ctx: Authorized<SelfService>,
+    Json(body): Json<WebVital>,
+) -> Result<axum::http::StatusCode, attome_types::AppError> {
+    let name = match body.name.as_str() {
+        "LCP" => "lcp",
+        "INP" => "inp",
+        _ => {
+            return Err(attome_types::AppError::Validation(
+                "name is LCP or INP".into(),
+            ));
+        }
+    };
+    if !body.value.is_finite() || !(0.0..=600_000.0).contains(&body.value) {
+        return Err(attome_types::AppError::Validation(
+            "value is milliseconds from 0 to 600000".into(),
+        ));
+    }
+    let area = vital_area(body.area.as_deref()).to_owned();
+    metrics::histogram!("attome_web_vital_ms", "vital" => name, "area" => area).record(body.value);
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/health/dependencies", get(dependencies))
+        .route(
+            "/api/v1/telemetry/web-vitals",
+            axum::routing::post(web_vital),
+        )
         .route("/api/v1/admin/latency", get(latency))
         .route("/api/v1/admin/ops/metrics/names", get(metric_names))
         .route("/api/v1/admin/ops/metrics/catalogue", get(metric_catalogue))
@@ -524,16 +598,20 @@ async fn latency(_ctx: Authorized<Admin>) -> Json<LatencyReport> {
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(
-    dependencies,
-    latency,
-    metric_query,
-    metric_names,
-    metric_catalogue,
-    ops_nodes,
-    request_trail,
-    system_status
-))]
+#[openapi(
+    paths(
+        web_vital,
+        dependencies,
+        latency,
+        metric_query,
+        metric_names,
+        metric_catalogue,
+        ops_nodes,
+        request_trail,
+        system_status
+    ),
+    components(schemas(WebVital))
+)]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -544,6 +622,16 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 mod status_tests {
     use super::*;
     use attome_server::Capability;
+
+    #[test]
+    fn a_vital_area_is_a_short_word_or_other() {
+        assert_eq!(vital_area(Some("xrm")), "xrm");
+        assert_eq!(vital_area(Some("record-form")), "record-form");
+        assert_eq!(vital_area(Some("Xrm")), "other");
+        assert_eq!(vital_area(Some("a/b")), "other");
+        assert_eq!(vital_area(Some("")), "other");
+        assert_eq!(vital_area(None), "other");
+    }
 
     #[test]
     fn status_lists_degraded_feature() {

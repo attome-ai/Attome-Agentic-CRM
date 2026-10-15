@@ -1,7 +1,7 @@
 import { ApplicationConfig, inject, provideAppInitializer, provideZonelessChangeDetection } from '@angular/core';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withPreloading } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
-import { BrandService, provideAttomeBase } from '@attome/base';
+import { BrandService, IdlePreloading, provideAttomeBase } from '@attome/base';
 import { environment } from '../environments/environment';
 import { routes } from './app.routes';
 import { provideHostI18n } from './i18n/provide-host-i18n';
@@ -20,7 +20,8 @@ export const appConfig: ApplicationConfig = {
     // rendering and a fast second sidebar click could be lost. Pages and list
     // rows fade in with plain CSS animations instead (styles.css), which never
     // touch input.
-    provideRouter(routes, withComponentInputBinding()),
+    // AA12-T1: routes marked `data: { preload: true }` load when the browser is idle.
+    provideRouter(routes, withComponentInputBinding(), withPreloading(IdlePreloading)),
     provideAnimationsAsync(),
     // Guards and logout return XRM users to the canonical XRM login. The
     // public website keeps its separate, root-owned sign-in modal.

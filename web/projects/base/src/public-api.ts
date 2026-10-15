@@ -37,6 +37,8 @@ export type { Branding }                   from './lib/brand.service';
 export { CurrencyService }                 from './lib/currency.service';
 export type { CurrencyRate }               from './lib/currency.service';
 export { LangService }                     from './lib/lang.service';
+// AA12-T1: the next screens' code loads while the browser is idle.
+export { IdlePreloading, IDLE_PRELOAD_TIMEOUT_MS, preloadAllowed } from './lib/idle-preloading';
 export { TranslatePipe }                   from './lib/translate.pipe';
 export { LocalDatePipe, localeTag, localDay } from './lib/local-date.pipe';
 export {

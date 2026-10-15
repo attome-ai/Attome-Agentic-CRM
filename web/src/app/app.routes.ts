@@ -70,6 +70,8 @@ export const routes: Routes = [
     // — see that file's header comment for why.
     path: 'xrm',
     loadChildren: () => import('./xrm-shell.routes').then(m => m.xrmShellRoutes),
+    // AA12-T1: the signed-in app is where the sign-in page leads.
+    data: { preload: true },
   },
   {
     // Solution 7 Phase 2 (design §10.5): the post-apply notification's route
