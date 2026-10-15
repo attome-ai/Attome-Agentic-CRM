@@ -238,7 +238,30 @@ fn reserved_boot_time_examples() -> Vec<SettingDescriptor> {
 /// does the deeper structural/dependency validation before ever calling the
 /// shared `write_setting` path.
 fn feature_flag_settings() -> Vec<SettingDescriptor> {
+    let scan = |key: &'static str, description: &'static str| {
+        SettingDescriptor::new(
+            key,
+            description,
+            || json!({"type": "object"}),
+            &[SettingScope::Deployment],
+            false,
+            || json!({"deployment": false}),
+        )
+    };
     vec![
+        scan(
+            "feature.scan.enabled",
+            "Stored policy value for the scan.enabled feature flag (B16-T9), same shape as \
+             feature.core.beta_ui.",
+        ),
+        scan(
+            "feature.scan.actions_enabled",
+            "Stored policy value for the scan.actions_enabled feature flag (B16-T9).",
+        ),
+        scan(
+            "feature.scan.continuous_enabled",
+            "Stored policy value for the scan.continuous_enabled feature flag (B16-T9).",
+        ),
         SettingDescriptor::new(
             "feature.core.beta_ui",
             "Stored policy value for the core.beta_ui feature flag (M95, D-430): \

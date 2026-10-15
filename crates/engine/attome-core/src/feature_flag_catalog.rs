@@ -17,7 +17,37 @@ use attome_modules::{MODULE_CORE, MODULE_PROJECT};
 use crate::feature_flag_descriptor::FeatureFlag;
 
 pub(crate) fn all() -> Vec<FeatureFlag> {
-    core_flags()
+    let mut all = core_flags();
+    all.extend(scan_flags());
+    all
+}
+
+/// B16-T9: scanning stays hidden until a deployment switches it on; acting
+/// on a scan and continuous scanning each need scanning on too.
+fn scan_flags() -> Vec<FeatureFlag> {
+    vec![
+        FeatureFlag::new(
+            "scan.enabled",
+            MODULE_CORE,
+            "Scanning barcodes and QR codes into fields and to find records.",
+            false,
+            &[],
+        ),
+        FeatureFlag::new(
+            "scan.actions_enabled",
+            MODULE_CORE,
+            "Running the action bound to a scanned code's pattern.",
+            false,
+            &["scan.enabled"],
+        ),
+        FeatureFlag::new(
+            "scan.continuous_enabled",
+            MODULE_CORE,
+            "Continuous scanning: a running count of codes read one after another.",
+            false,
+            &["scan.enabled"],
+        ),
+    ]
 }
 
 fn core_flags() -> Vec<FeatureFlag> {
@@ -55,4 +85,27 @@ fn core_flags() -> Vec<FeatureFlag> {
             &[],
         ),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    /// B16-T9: the scan flags exist and are off until switched on.
+    #[test]
+    fn scan_flags_registered_and_off_by_default() {
+        let registry = crate::feature_flag_descriptor::registry();
+        for key in [
+            "scan.enabled",
+            "scan.actions_enabled",
+            "scan.continuous_enabled",
+        ] {
+            let flag = registry
+                .get(key)
+                .unwrap_or_else(|| panic!("{key} is registered"));
+            assert!(!flag.default, "{key} is off by default");
+        }
+        assert_eq!(
+            registry.get("scan.actions_enabled").map(|f| f.requires),
+            Some(&["scan.enabled"][..])
+        );
+    }
 }

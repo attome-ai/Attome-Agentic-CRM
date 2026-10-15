@@ -267,6 +267,11 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         "feature.core.beta_ui_advanced_panels" => {
             "سياسة ميزة اللوحات المتقدمة التجريبية، بنفس شكل الواجهة التجريبية."
         }
+        "feature.scan.enabled" => {
+            "سياسة ميزة المسح: قراءة الباركود ورموز QR في الحقول وللبحث عن السجلات."
+        }
+        "feature.scan.actions_enabled" => "سياسة تشغيل الإجراء المرتبط بنمط الرمز الممسوح.",
+        "feature.scan.continuous_enabled" => "سياسة المسح المتواصل مع عدّاد للرموز المقروءة.",
         "feature.project.gantt_v2_preview" => "سياسة معاينة مخطط جانت الجديد؛ تتطلب وحدة المشاريع.",
         "ai.record_update_field_allowlist" => {
             "أزواج الكيان والحقل التي يجوز لإجراء الذكاء الاصطناعي تعديلها."
