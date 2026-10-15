@@ -502,9 +502,13 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
             // (`bin/worker.rs`) registers the same two builders.
             let mut jobs = jobs;
             attome::jobs::start_job_wakeup_listener(&config, &mut jobs).await;
+            // AB7-T2: names unique to this process (see the worker binary).
+            let fast_worker = attome_jobs::worker_name("platform-job-worker");
+            let batch_worker = attome_jobs::worker_name("platform-job-batch-worker");
+            let release_pool = db.clone();
             let monitor = Monitor::new()
                 .register(
-                    WorkerBuilder::new("platform-job-worker")
+                    WorkerBuilder::new(&fast_worker)
                         .concurrency(config.jobs.worker_concurrency)
                         .enable_tracing()
                         .data(db.clone())
@@ -515,7 +519,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                         .build_fn(attome::jobs::handle_platform_job),
                 )
                 .register(
-                    WorkerBuilder::new("platform-job-batch-worker")
+                    WorkerBuilder::new(&batch_worker)
                         .concurrency(config.jobs.batch_worker_concurrency)
                         .enable_tracing()
                         .data(db)
@@ -525,13 +529,20 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                         .backend(jobs.batch().clone())
                         .build_fn(attome::jobs::handle_platform_job),
                 );
-            monitor
+            let stopped = monitor
                 .shutdown_timeout(std::time::Duration::from_secs(10))
                 .run_with_signal(async move {
                     attome::boot::wait_for_shutdown(worker_shutdown).await;
                     Ok(())
                 })
-                .await
+                .await;
+            // AB7-T2: held jobs go back to the queue at once.
+            attome_jobs::release_claimed_on_stop(
+                &release_pool,
+                &[fast_worker.as_str(), batch_worker.as_str()],
+            )
+            .await;
+            stopped
         } else {
             attome::boot::wait_for_shutdown(worker_shutdown).await;
             Ok(())

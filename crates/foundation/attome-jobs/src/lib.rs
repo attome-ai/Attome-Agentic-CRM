@@ -487,6 +487,59 @@ pub async fn worker_last_seen_age_seconds(
     .await
 }
 
+/// AB7-T2: a worker name unique to this process (`{kind}@{host}:{pid}`).
+/// A stopping process can then release the jobs it still holds without
+/// touching a live worker's, and a dead process's jobs look orphaned instead
+/// of being kept alive by a namesake's heartbeat.
+pub fn worker_name(kind: &str) -> String {
+    let host = std::env::var("COMPUTERNAME")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .ok()
+        .map(|h| h.trim().to_owned())
+        .filter(|h| !h.is_empty())
+        .unwrap_or_else(|| "localhost".to_owned());
+    format!("{kind}@{host}:{}", std::process::id())
+}
+
+/// AB7-T2: returns the jobs `worker` still holds to `Pending` at once, so a
+/// job interrupted by a worker stop is picked up by another worker within
+/// seconds instead of after the orphan timeout. Safe because every job is
+/// idempotent and retry-safe (guidelines section 10): a job that had half
+/// run simply runs again. Returns how many were released.
+pub async fn release_claimed(pool: &attome_db::DbPool, worker: &str) -> Result<u64, sqlx::Error> {
+    sqlx::query(
+        "UPDATE apalis.jobs SET status = 'Pending', lock_at = NULL, lock_by = NULL, \
+             run_at = now() \
+         WHERE lock_by = $1 AND status = 'Running'",
+    )
+    .bind(worker)
+    .execute(pool)
+    .await
+    .map(|done| done.rows_affected())
+}
+
+/// AB7-T2: [`release_claimed`] for each of a stopping process's workers,
+/// logged; a failure is logged and the orphan timeout recovers the jobs.
+pub async fn release_claimed_on_stop(pool: &attome_db::DbPool, workers: &[&str]) {
+    for worker in workers {
+        match release_claimed(pool, worker).await {
+            Ok(0) => {}
+            Ok(released) => {
+                tracing::info!(
+                    worker,
+                    released,
+                    "jobs this worker still held returned to the queue"
+                )
+            }
+            Err(error) => tracing::warn!(
+                worker,
+                %error,
+                "could not return this worker's jobs to the queue; the orphan timeout will"
+            ),
+        }
+    }
+}
+
 /// One dead-lettered (`status = 'Killed'`) row, for the admin dead-letter
 /// list. `job` is the full versioned-envelope payload
 /// (`{"version","variant","payload","trace_context"}`, see [`JobEnvelope`]) —

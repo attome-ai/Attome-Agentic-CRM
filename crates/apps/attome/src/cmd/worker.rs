@@ -86,9 +86,14 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     // they'd replace.
     let mut jobs = jobs;
     attome::jobs::start_job_wakeup_listener(&config, &mut jobs).await;
+    // AB7-T2: names unique to this process, so its held jobs can be
+    // released on stop without touching another worker's.
+    let fast_worker = attome_jobs::worker_name("platform-job-worker");
+    let batch_worker = attome_jobs::worker_name("platform-job-batch-worker");
+    let release_pool = db.clone();
     let monitor = Monitor::new()
         .register(
-            WorkerBuilder::new("platform-job-worker")
+            WorkerBuilder::new(&fast_worker)
                 .concurrency(config.jobs.worker_concurrency)
                 .enable_tracing()
                 .data(db.clone())
@@ -99,7 +104,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
                 .build_fn(attome::jobs::handle_platform_job),
         )
         .register(
-            WorkerBuilder::new("platform-job-batch-worker")
+            WorkerBuilder::new(&batch_worker)
                 .concurrency(config.jobs.batch_worker_concurrency)
                 .enable_tracing()
                 .data(db)
@@ -227,6 +232,13 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         attome::jobs::signal_shutdown_after(shutdown_tx.clone(), health_fut),
         attome::jobs::signal_shutdown_after(shutdown_tx, metrics_fut),
     );
+    // AB7-T2: anything still held after the graceful wait goes back to the
+    // queue now, for another worker to pick up.
+    attome_jobs::release_claimed_on_stop(
+        &release_pool,
+        &[fast_worker.as_str(), batch_worker.as_str()],
+    )
+    .await;
     monitor_res?;
     health_res?;
     metrics_res?;
