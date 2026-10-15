@@ -4,6 +4,8 @@
 
 use serde::Deserialize;
 
+use crate::Secret;
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct ObservabilitySection {
     pub metrics_port: u16,
@@ -89,7 +91,7 @@ pub struct EmailSection {
     pub smtp_host: String,
     pub smtp_port: u16,
     pub smtp_user: String,
-    pub smtp_password: String,
+    pub smtp_password: Secret,
     pub smtp_from_address: String,
     pub smtp_from_name: String,
     /// **Deprecated** (BEM-5): `true` = implicit TLS, `false` = plaintext.
@@ -155,7 +157,7 @@ impl std::fmt::Debug for EmailSection {
 /// alongside whatever crate actually builds the client once one exists.
 #[derive(Clone, Deserialize)]
 pub struct GoogleAiSection {
-    pub api_key: String,
+    pub api_key: Secret,
 }
 
 /// Hand-rolled: `api_key` is a live external-API credential — the derived

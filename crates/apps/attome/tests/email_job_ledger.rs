@@ -93,7 +93,7 @@ fn test_config(port: u16) -> AppConfig {
         smtp_host: "127.0.0.1".to_string(),
         smtp_port: port,
         smtp_user: String::new(),
-        smtp_password: String::new(),
+        smtp_password: String::new().into(),
         smtp_from_address: "noreply@example.invalid".to_string(),
         smtp_from_name: "Attome".to_string(),
         smtp_use_tls: None,
@@ -320,7 +320,7 @@ async fn a_config_error_moves_queued_to_failed_with_no_retry() {
     // before any dial (BEM-D4): a configuration error no retry can fix.
     config.email.smtp_host = "relay.example.invalid".to_string();
     config.email.smtp_user = "smtp-user".to_string();
-    config.email.smtp_password = "hunter2".to_string();
+    config.email.smtp_password = "hunter2".into();
     let (id, message) = queued(&db).await;
 
     run(&config, &db, message, 0, &no_task())

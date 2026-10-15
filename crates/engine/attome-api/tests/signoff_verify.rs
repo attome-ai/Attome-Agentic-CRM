@@ -137,7 +137,7 @@ async fn test_system_with(chainer_enabled: bool) -> Option<EngineSystem> {
     config.audit.chainer_enabled = chainer_enabled;
     config.audit.signing_enabled = true;
     config.audit.signing_key_id = SIGNING_KEY_ID.to_owned();
-    config.audit.signing_private_key = "5a".repeat(32);
+    config.audit.signing_private_key = "5a".repeat(32).into();
 
     let db = attome_db::create_pool(&config)
         .await

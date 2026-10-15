@@ -166,7 +166,7 @@ pub fn places(config: &AppConfig) -> Vec<Place> {
             inside,
         });
     }
-    if !config.google_ai.api_key.trim().is_empty() {
+    if !config.google_ai.api_key.expose().trim().is_empty() {
         out.push(Place {
             kind: "destination",
             what: "Google AI".to_owned(),
@@ -252,12 +252,12 @@ mod tests {
     #[test]
     fn the_report_lists_the_database_first_and_marks_outside_places() {
         let mut config = example();
-        config.google_ai.api_key = String::new();
+        config.google_ai.api_key = String::new().into();
         let before = places(&config);
         assert!(before[0].what.starts_with("database"));
         assert!(before.iter().any(|p| p.what.starts_with("files")));
 
-        config.google_ai.api_key = "k".to_owned();
+        config.google_ai.api_key = "k".into();
         let after = places(&config);
         assert!(after.iter().any(|p| p.what == "Google AI" && !p.inside));
         let json = report_json(&config);

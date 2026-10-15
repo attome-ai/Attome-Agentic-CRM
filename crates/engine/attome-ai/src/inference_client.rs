@@ -97,7 +97,7 @@ pub async fn client_for(
         attome_config::InferenceEndpoint {
             base_url,
             model: provider_model_id.trim().to_owned(),
-            api_key,
+            api_key: api_key.map(Into::into),
             request_timeout_secs: timeout_secs,
         },
         inference.max_output_tokens,

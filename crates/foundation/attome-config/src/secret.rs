@@ -1,8 +1,12 @@
 //! A secret configuration value (roadmap Z1-T1): a password, key or token
-//! that never appears in `Debug`, `Display` or logs, and cannot be
-//! serialized at all, so it cannot leak through a config dump, an error
-//! message or a JSON response. Read it with [`Secret::expose`] at the point
-//! it is handed to the driver, client or hasher that needs it.
+//! that never appears in `Debug` or logs, and cannot be serialized at all,
+//! so it cannot leak through a config dump, an error message or a JSON
+//! response. Read it with [`Secret::expose`] at the point it is handed to
+//! the driver, client or hasher that needs it.
+//!
+//! It has no `Display` (Z1-T2): `format!("{}", secret)` does not compile, so
+//! a connection string built from one has to call `expose()` and cannot
+//! quietly come out as `[REDACTED]`.
 
 use serde::{Deserialize, Deserializer};
 
@@ -31,9 +35,15 @@ impl std::fmt::Debug for Secret {
     }
 }
 
-impl std::fmt::Display for Secret {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("[REDACTED]")
+impl From<String> for Secret {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&str> for Secret {
+    fn from(value: &str) -> Self {
+        Self(value.to_owned())
     }
 }
 
@@ -67,8 +77,9 @@ mod tests {
     }
 
     #[test]
-    fn display_is_redacted() {
-        assert_eq!(Secret::new("hunter2".into()).to_string(), "[REDACTED]");
+    fn converts_from_text() {
+        assert_eq!(Secret::from("hunter2").expose(), "hunter2");
+        assert_eq!(Secret::from(String::from("hunter2")).expose(), "hunter2");
     }
 
     #[test]

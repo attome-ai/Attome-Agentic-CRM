@@ -143,11 +143,7 @@ fn cfg_for(port: u16, user: &str) -> EmailSection {
         smtp_host: "127.0.0.1".to_string(),
         smtp_port: port,
         smtp_user: user.to_string(),
-        smtp_password: if user.is_empty() {
-            String::new()
-        } else {
-            "hunter2".to_string()
-        },
+        smtp_password: if user.is_empty() { "" } else { "hunter2" }.into(),
         smtp_from_address: "noreply@example.invalid".to_string(),
         smtp_from_name: "Attome".to_string(),
         // The scripted peer speaks plaintext; the host is loopback, which is

@@ -18,6 +18,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - The web app shows any number of languages. `provideAttomeBase({ languages })` lists them with their
   direction and catalogue; a key a language lacks falls back through its chain (`ar-SA`, then `ar`,
   then English), and the profile menu offers every configured language.
+- Every password, key and client secret in the configuration is a `Secret`: it never prints, never
+  serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE
   /api/v1/admin/i18n/overrides`, a `ui_text` label, migration 0034); the app lays
   `GET /api/v1/i18n/overrides` over its catalogue.

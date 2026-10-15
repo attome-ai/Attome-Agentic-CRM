@@ -739,7 +739,7 @@ pub async fn complete_login(
         ("code", code),
         ("redirect_uri", state.redirect_uri.as_str()),
         ("client_id", provider.client_id.as_str()),
-        ("client_secret", provider.client_secret.as_str()),
+        ("client_secret", provider.client_secret.expose()),
         ("code_verifier", state.code_verifier.as_str()),
     ];
     let client = http_client();

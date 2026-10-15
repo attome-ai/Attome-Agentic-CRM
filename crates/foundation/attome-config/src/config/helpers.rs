@@ -103,7 +103,10 @@ pub(crate) fn build_redis_sentinel_url(
         url.push_str(&format!("&sentinelUsername={}", urlencoding::encode(u)));
     }
     if let Some(p) = &sentinel.sentinel_password {
-        url.push_str(&format!("&sentinelPassword={}", urlencoding::encode(p)));
+        url.push_str(&format!(
+            "&sentinelPassword={}",
+            urlencoding::encode(p.expose())
+        ));
     }
     for node in &sentinel.nodes {
         url.push_str(&format!("&node={}", host_port(&node.host, node.port)));

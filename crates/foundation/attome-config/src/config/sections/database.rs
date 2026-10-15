@@ -5,6 +5,8 @@
 
 use serde::Deserialize;
 
+use crate::Secret;
+
 use crate::config::helpers::{
     default_max_body, default_request_timeout, default_server_host, default_true,
 };
@@ -136,7 +138,7 @@ pub struct DatabaseSection {
     /// `bin/migrate.rs` independently requires `Some` unconditionally (that
     /// binary is not gated by `migrate_on_boot` — see its own module doc).
     #[serde(default)]
-    pub password: Option<String>,
+    pub password: Option<Secret>,
     pub schema: String,
     /// Pool size — plausibly scales with hardware/load. Has a default so a
     /// deployment that hasn't tuned it can omit the key entirely.
@@ -355,7 +357,7 @@ fn default_sticky_primary_ttl_secs() -> u64 {
 #[derive(Clone, Deserialize)]
 pub struct ReadonlyDbCredentials {
     pub user: String,
-    pub password: String,
+    pub password: Secret,
     /// P-ha-failover-hardening follow-up / D-155 — closes the gap D-125
     /// flagged ("`ReadonlyDbCredentials` only overrides user/password, there
     /// is no host/port override for the readonly role"): lets the readonly
@@ -393,7 +395,7 @@ impl std::fmt::Debug for ReadonlyDbCredentials {
 #[derive(Clone, Deserialize)]
 pub struct MigratorDbCredentials {
     pub user: String,
-    pub password: String,
+    pub password: Secret,
 }
 
 /// Hand-rolled: `password` is a live database credential — the derived
@@ -412,7 +414,7 @@ impl std::fmt::Debug for MigratorDbCredentials {
 #[derive(Clone, Deserialize)]
 pub struct RuntimeDbCredentials {
     pub user: String,
-    pub password: String,
+    pub password: Secret,
 }
 
 /// Hand-rolled: `password` is a live database credential — the derived

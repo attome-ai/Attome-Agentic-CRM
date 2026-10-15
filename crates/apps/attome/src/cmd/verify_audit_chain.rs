@@ -129,7 +129,7 @@ async fn verify() -> i32 {
     let signer = if config.audit.signing_enabled {
         match AuditSigner::from_config(
             &config.audit.signing_key_id,
-            &config.audit.signing_private_key,
+            config.audit.signing_private_key.expose(),
         ) {
             Ok(s) => Some(s),
             Err(e) => {

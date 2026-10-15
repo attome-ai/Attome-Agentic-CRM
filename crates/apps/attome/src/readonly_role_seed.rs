@@ -42,7 +42,7 @@ pub async fn seed(db: &DbPool, config: &AppConfig) -> Result<(), AppError> {
         .map_err(|_| AppError::internal("readonly_role_seed: failed to open transaction"))?;
 
     sqlx::query("SELECT set_config('attome.readonly_password', $1, true)")
-        .bind(&readonly.password)
+        .bind(readonly.password.expose())
         .execute(&mut *tx)
         .await
         .map_err(|_| AppError::internal("readonly_role_seed: failed to stage credential"))?;

@@ -19,6 +19,8 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
+use crate::Secret;
+
 use super::auth::OidcProviderConfig;
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -42,7 +44,7 @@ pub enum CaptchaProvider {
 pub struct CaptchaConfig {
     pub provider: CaptchaProvider,
     /// The provider's server-side secret, `${VAR}`-expanded.
-    pub secret: String,
+    pub secret: Secret,
     pub timeout_ms: u64,
 }
 
@@ -63,7 +65,7 @@ impl Default for CaptchaConfig {
     fn default() -> Self {
         Self {
             provider: CaptchaProvider::None,
-            secret: String::new(),
+            secret: Secret::default(),
             timeout_ms: 3_000,
         }
     }
@@ -117,7 +119,7 @@ impl PortalSection {
     /// (BCF-D1); the placeholder and minimum-length rules hold in every profile.
     pub(crate) fn check(&self, production: bool) -> Result<(), (String, String)> {
         if self.captcha.provider != CaptchaProvider::None {
-            if self.captcha.secret.trim().is_empty() {
+            if self.captcha.secret.expose().trim().is_empty() {
                 return Err((
                     "portal.captcha.secret".into(),
                     "a CAPTCHA provider is configured without its secret".into(),
@@ -125,7 +127,7 @@ impl PortalSection {
             }
             check_portal_secret(
                 "portal.captcha.secret",
-                &self.captcha.secret,
+                self.captcha.secret.expose(),
                 MIN_CAPTCHA_SECRET_BYTES,
                 production,
             )?;
@@ -144,7 +146,7 @@ impl PortalSection {
             }
             if p.issuer.trim().is_empty()
                 || p.client_id.trim().is_empty()
-                || p.client_secret.trim().is_empty()
+                || p.client_secret.expose().trim().is_empty()
             {
                 return Err((
                     format!("portal.oidc_providers.{key}"),
@@ -153,7 +155,7 @@ impl PortalSection {
             }
             check_portal_secret(
                 &format!("portal.oidc_providers.{key}.client_secret"),
-                &p.client_secret,
+                p.client_secret.expose(),
                 MIN_OIDC_CLIENT_SECRET_BYTES,
                 production,
             )?;

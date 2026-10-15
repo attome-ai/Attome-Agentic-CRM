@@ -11,6 +11,7 @@
 use std::net::IpAddr;
 use std::time::Duration;
 
+use crate::Secret;
 use crate::keyring::KeyRing;
 
 use super::helpers::{expand_env_vars_in_value, postgres_url, template_secret_marker};
@@ -218,7 +219,7 @@ impl AppConfig {
         // case, since every legitimate caller of this URL outside
         // `bin/migrate.rs`/`migrate_on_boot=true` is already fail-closed
         // gated before it can be reached (see `password`'s own doc comment).
-        let userinfo = match db.password.as_deref() {
+        let userinfo = match db.password.as_ref().map(Secret::expose) {
             Some(password) if !password.is_empty() => format!(
                 "{}:{}",
                 urlencoding::encode(&db.user),
@@ -280,7 +281,7 @@ impl AppConfig {
             format!(
                 "{}:{}",
                 urlencoding::encode(&migrator.user),
-                urlencoding::encode(&migrator.password)
+                urlencoding::encode(migrator.password.expose())
             )
         };
         postgres_url(&userinfo, &db.host, db.port, &db.dbname, &db.schema)
@@ -305,7 +306,7 @@ impl AppConfig {
             format!(
                 "{}:{}",
                 urlencoding::encode(&runtime.user),
-                urlencoding::encode(&runtime.password)
+                urlencoding::encode(runtime.password.expose())
             )
         };
         postgres_url(&userinfo, &db.host, db.port, &db.dbname, &db.schema)
@@ -330,7 +331,7 @@ impl AppConfig {
             format!(
                 "{}:{}",
                 urlencoding::encode(&ro.user),
-                urlencoding::encode(&ro.password)
+                urlencoding::encode(ro.password.expose())
             )
         };
         Some(postgres_url(&userinfo, host, port, &db.dbname, &db.schema))
@@ -360,7 +361,7 @@ impl AppConfig {
             format!(
                 "{}:{}",
                 urlencoding::encode(&ro.user),
-                urlencoding::encode(&ro.password)
+                urlencoding::encode(ro.password.expose())
             )
         };
         Some(format!(
@@ -377,7 +378,7 @@ impl AppConfig {
             Some(sentinel) => build_redis_sentinel_url(
                 &self.cache.host,
                 self.cache.port,
-                &self.cache.password,
+                self.cache.password.expose(),
                 self.cache.db,
                 self.cache.tls_enabled,
                 sentinel,
@@ -385,7 +386,7 @@ impl AppConfig {
             None => build_redis_url(
                 &self.cache.host,
                 self.cache.port,
-                &self.cache.password,
+                self.cache.password.expose(),
                 self.cache.db,
                 self.cache.tls_enabled,
             ),
@@ -407,12 +408,12 @@ impl AppConfig {
                 Some(sentinel) => build_redis_sentinel_url(
                     &o.host,
                     o.port,
-                    &o.password,
+                    o.password.expose(),
                     o.db,
                     o.tls_enabled,
                     sentinel,
                 ),
-                None => build_redis_url(&o.host, o.port, &o.password, o.db, o.tls_enabled),
+                None => build_redis_url(&o.host, o.port, o.password.expose(), o.db, o.tls_enabled),
             },
             None => self.redis_url(),
         }
@@ -612,7 +613,7 @@ impl AppConfig {
                 "a sovereign deployment uses only its own model servers".to_owned(),
             ));
         }
-        if !self.google_ai.api_key.trim().is_empty() {
+        if !self.google_ai.api_key.expose().trim().is_empty() {
             out.push((
                 "google_ai.api_key".to_owned(),
                 "Google AI is an outside service; leave the key empty".to_owned(),
@@ -687,7 +688,7 @@ impl AppConfig {
         // `HashMap::insert` silently pick one.
         Self::check_secret(
             "auth.apikey_hash_pepper",
-            &self.auth.apikey_hash_pepper,
+            self.auth.apikey_hash_pepper.expose(),
             production,
         )?;
         {
@@ -696,7 +697,7 @@ impl AppConfig {
             for prev in &self.auth.apikey_hash_previous_peppers {
                 Self::check_secret(
                     &format!("auth.apikey_hash_previous_peppers[id={}]", prev.id),
-                    &prev.secret,
+                    prev.secret.expose(),
                     production,
                 )?;
                 if !seen_ids.insert(prev.id) {
@@ -915,10 +916,13 @@ impl AppConfig {
         if self.audit.signing_enabled {
             Self::check_secret(
                 "audit.signing_private_key",
-                &self.audit.signing_private_key,
+                self.audit.signing_private_key.expose(),
                 production,
             )?;
-            Self::check_hex_key("audit.signing_private_key", &self.audit.signing_private_key)?;
+            Self::check_hex_key(
+                "audit.signing_private_key",
+                self.audit.signing_private_key.expose(),
+            )?;
             if self.audit.signing_key_id.trim().is_empty() {
                 return Err(ConfigError::Invalid {
                     field:  "audit.signing_key_id".into(),
@@ -961,7 +965,7 @@ impl AppConfig {
             }
             Self::check_secret(
                 &format!("oidc.providers.{key}.client_secret"),
-                &provider.client_secret,
+                provider.client_secret.expose(),
                 production,
             )?;
         }
@@ -1408,26 +1412,35 @@ impl AppConfig {
         // their own `production` flag; these are the connection/API
         // credentials that previously had no shape check at all, so a
         // production node booted happily on `DB_PASSWORD=change_me`.
-        if let Some(password) = self.database.password.as_deref() {
+        if let Some(password) = self.database.password.as_ref().map(Secret::expose) {
             Self::check_not_template_secret("database.password", password)?;
         }
         if let Some(readonly) = &self.database.readonly {
-            Self::check_not_template_secret("database.readonly.password", &readonly.password)?;
+            Self::check_not_template_secret(
+                "database.readonly.password",
+                readonly.password.expose(),
+            )?;
         }
         if let Some(migrator) = &self.database.migrator {
-            Self::check_not_template_secret("database.migrator.password", &migrator.password)?;
+            Self::check_not_template_secret(
+                "database.migrator.password",
+                migrator.password.expose(),
+            )?;
         }
         if let Some(runtime) = &self.database.runtime {
-            Self::check_not_template_secret("database.runtime.password", &runtime.password)?;
+            Self::check_not_template_secret(
+                "database.runtime.password",
+                runtime.password.expose(),
+            )?;
         }
-        Self::check_not_template_secret("cache.password", &self.cache.password)?;
+        Self::check_not_template_secret("cache.password", self.cache.password.expose())?;
         if let Some(coordination) = &self.cache.roles.coordination {
             Self::check_not_template_secret(
                 "cache.roles.coordination.password",
-                &coordination.password,
+                coordination.password.expose(),
             )?;
             if let Some(sentinel) = &coordination.sentinel
-                && let Some(password) = &sentinel.sentinel_password
+                && let Some(password) = sentinel.sentinel_password.as_ref().map(Secret::expose)
             {
                 Self::check_not_template_secret(
                     "cache.roles.coordination.sentinel.sentinel_password",
@@ -1436,14 +1449,20 @@ impl AppConfig {
             }
         }
         if let Some(sentinel) = &self.cache.sentinel
-            && let Some(password) = &sentinel.sentinel_password
+            && let Some(password) = sentinel.sentinel_password.as_ref().map(Secret::expose)
         {
             Self::check_not_template_secret("cache.sentinel.sentinel_password", password)?;
         }
         Self::check_not_template_secret("storage.s3_access_key", &self.storage.s3_access_key)?;
-        Self::check_not_template_secret("storage.s3_secret_key", &self.storage.s3_secret_key)?;
+        Self::check_not_template_secret(
+            "storage.s3_secret_key",
+            self.storage.s3_secret_key.expose(),
+        )?;
         if self.email.enabled {
-            Self::check_not_template_secret("email.smtp_password", &self.email.smtp_password)?;
+            Self::check_not_template_secret(
+                "email.smtp_password",
+                self.email.smtp_password.expose(),
+            )?;
         }
         if let Some(anchor) = &self.audit.anchor_store {
             Self::check_not_template_secret(
@@ -1452,7 +1471,7 @@ impl AppConfig {
             )?;
             Self::check_not_template_secret(
                 "audit.anchor_store.s3_secret_key",
-                &anchor.s3_secret_key,
+                anchor.s3_secret_key.expose(),
             )?;
         }
         for (field, api_key) in [
@@ -1466,7 +1485,7 @@ impl AppConfig {
             ),
         ] {
             if let Some(api_key) = api_key {
-                Self::check_not_template_secret(field, api_key)?;
+                Self::check_not_template_secret(field, api_key.expose())?;
             }
         }
         if self.database.ssl_mode != "verify-full" {
@@ -1789,7 +1808,9 @@ impl AppConfig {
             Self::check_not_placeholder("audit.anchor_store.s3_endpoint", &anchor.s3_endpoint)?;
             Self::check_not_placeholder("audit.anchor_store.s3_bucket", &anchor.s3_bucket)?;
             Self::check_not_placeholder("audit.anchor_store.s3_access_key", &anchor.s3_access_key)?;
-            if anchor.s3_access_key.trim().is_empty() || anchor.s3_secret_key.trim().is_empty() {
+            if anchor.s3_access_key.trim().is_empty()
+                || anchor.s3_secret_key.expose().trim().is_empty()
+            {
                 return Err(ConfigError::Insecure {
                     field: "audit.anchor_store.s3_access_key".into(),
                     reason: "both s3_access_key and s3_secret_key must be set when \

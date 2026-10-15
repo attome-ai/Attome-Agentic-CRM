@@ -121,7 +121,7 @@ fn transport_for(
         }
         transport_builder = transport_builder.credentials(Credentials::new(
             cfg.smtp_user.clone(),
-            cfg.smtp_password.clone(),
+            cfg.smtp_password.expose().to_owned(),
         ));
     }
 
@@ -483,7 +483,7 @@ mod tests {
             smtp_host: "localhost".to_string(),
             smtp_port: 1025,
             smtp_user: String::new(),
-            smtp_password: String::new(),
+            smtp_password: String::new().into(),
             smtp_from_address: "noreply@example.com".to_string(),
             smtp_from_name: "Attome".to_string(),
             smtp_use_tls: None,
@@ -719,7 +719,7 @@ mod tests {
         let port = spawn_peer(vec![("EHLO", Some("250 scripted\r\n"))]).await;
         let mut cfg = cfg_at(port);
         cfg.smtp_user = "smtp-user".to_string();
-        cfg.smtp_password = "hunter2".to_string();
+        cfg.smtp_password = "hunter2".into();
         let email = build_email(&cfg, &test_message()).expect("build message");
         let result = deliver(&cfg, email).await;
         assert!(
@@ -782,7 +782,7 @@ mod tests {
         let mut cfg = test_cfg();
         cfg.smtp_host = "smtp.example.invalid".to_string();
         cfg.smtp_user = "smtp-user".to_string();
-        cfg.smtp_password = "hunter2".to_string();
+        cfg.smtp_password = "hunter2".into();
         cfg.tls_mode = Some("none".to_string());
 
         let err = build_transport(&cfg).expect_err("must be refused");
@@ -800,7 +800,7 @@ mod tests {
     fn plaintext_credentials_to_loopback_are_allowed() {
         let mut cfg = test_cfg();
         cfg.smtp_user = "smtp-user".to_string();
-        cfg.smtp_password = "hunter2".to_string();
+        cfg.smtp_password = "hunter2".into();
         cfg.tls_mode = Some("none".to_string());
         assert!(build_transport(&cfg).is_ok());
     }

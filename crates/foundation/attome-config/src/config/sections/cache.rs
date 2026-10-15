@@ -3,6 +3,8 @@
 
 use serde::Deserialize;
 
+use crate::Secret;
+
 /// Where the platform keeps its shared, short-lived state: rate-limit
 /// windows, replay nonces, revocation markers, caches and doorbells.
 /// `docs/solo-memory-backend.md` is the design.
@@ -31,7 +33,7 @@ pub struct CacheSection {
     #[serde(default)]
     pub port: u16,
     #[serde(default)]
-    pub password: String,
+    pub password: Secret,
     #[serde(default)]
     pub db: i64,
     /// Pool size — plausibly scales with hardware/load. Has a default so a
@@ -150,7 +152,7 @@ pub struct CacheSentinelConfig {
     #[serde(default)]
     pub sentinel_username: Option<String>,
     #[serde(default)]
-    pub sentinel_password: Option<String>,
+    pub sentinel_password: Option<Secret>,
 }
 
 /// Hand-rolled: `sentinel_password` is a live credential (when the Sentinel
@@ -197,7 +199,7 @@ pub struct CacheRoleOverride {
     pub host: String,
     pub port: u16,
     #[serde(default)]
-    pub password: String,
+    pub password: Secret,
     #[serde(default)]
     pub db: i64,
     #[serde(default = "default_role_pool_size")]

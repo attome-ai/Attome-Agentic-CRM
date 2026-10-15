@@ -618,7 +618,13 @@ impl Transport {
     /// parsed base, so nothing here can retarget the request.
     fn request<Req: Serialize>(&self, path: &str, body: &Req) -> reqwest::RequestBuilder {
         let mut request = self.http.post(join_path(&self.base_url, path)).json(body);
-        if let Some(key) = self.endpoint.api_key.as_deref().filter(|k| !k.is_empty()) {
+        if let Some(key) = self
+            .endpoint
+            .api_key
+            .as_ref()
+            .map(|k| k.expose())
+            .filter(|k| !k.is_empty())
+        {
             request = request.bearer_auth(key);
         }
         request
@@ -726,7 +732,13 @@ impl Transport {
             .post(join_path(&self.base_url, path))
             .header(reqwest::header::CONTENT_TYPE, content_type)
             .body(body);
-        if let Some(key) = self.endpoint.api_key.as_deref().filter(|k| !k.is_empty()) {
+        if let Some(key) = self
+            .endpoint
+            .api_key
+            .as_ref()
+            .map(|k| k.expose())
+            .filter(|k| !k.is_empty())
+        {
             request = request.bearer_auth(key);
         }
         let response = self.send(request).await?;

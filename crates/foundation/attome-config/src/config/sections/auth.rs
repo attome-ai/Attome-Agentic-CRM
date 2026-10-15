@@ -8,6 +8,8 @@ use std::net::IpAddr;
 
 use serde::Deserialize;
 
+use crate::Secret;
+
 use crate::config::helpers::{
     default_access_token_expiry_mins, default_mfa_challenge_max_attempts,
     default_refresh_absolute_lifetime_days, default_refresh_token_expiry_days,
@@ -55,7 +57,7 @@ pub struct AuthSection {
     #[serde(default)]
     pub oauth_google_client_id: String,
     #[serde(default)]
-    pub oauth_google_client_secret: String,
+    pub oauth_google_client_secret: Secret,
     /// P-account-lifecycle — when true, `attome_auth::accounts::login` rejects
     /// (403) a local password account whose `email_verified` is still false.
     /// Default false so air-gapped/no-SMTP deployments are unaffected; only
@@ -112,7 +114,7 @@ pub struct AuthSection {
     /// config file that omits it still deserializes — `validate()` is what
     /// actually enforces the requirement.
     #[serde(default)]
-    pub apikey_hash_pepper: String,
+    pub apikey_hash_pepper: Secret,
     /// Id of `apikey_hash_pepper` above, stored inline in
     /// `api_key.secret_hash` as `hmac256:v{id}$<hex>`. **The very first
     /// pepper a deployment ever sets must use id 0** — id 0 doubles as the
@@ -273,7 +275,7 @@ impl std::fmt::Debug for AuthSection {
 #[derive(Clone, Deserialize)]
 pub struct ApiKeyPepper {
     pub id: u32,
-    pub secret: String,
+    pub secret: Secret,
 }
 
 /// Hand-rolled: `id` is not secret (see the field's doc on `AuthSection`
@@ -426,7 +428,7 @@ pub struct S2sSeededClient {
     pub public_id: String,
     /// 64 hex chars (32 bytes), e.g. `openssl rand -hex 32`.
     #[serde(default)]
-    pub secret: String,
+    pub secret: Secret,
     #[serde(default = "default_s2s_seed_slot")]
     pub slot: String,
     #[serde(default)]
@@ -442,7 +444,7 @@ impl S2sSeededClient {
     /// The secret when it is really configured: non-blank and not a
     /// `${VAR}` literal left behind by a debug-mode config load.
     pub fn configured_secret(&self) -> Option<&str> {
-        let s = self.secret.trim();
+        let s = self.secret.expose().trim();
         (!s.is_empty() && !s.starts_with("${")).then_some(s)
     }
 }
@@ -695,7 +697,7 @@ pub struct OidcProviderConfig {
     /// `${VAR}`-expanded like every other secret in this file (D-038) — never
     /// commit a real value. Length-checked by `AppConfig::validate` same as
     /// `auth.jwt_secret`/`s2s.key_encryption_key`.
-    pub client_secret: String,
+    pub client_secret: Secret,
     #[serde(default = "default_oidc_scopes")]
     pub scopes: Vec<String>,
     /// ID-token claim carrying the user's email — almost always "email"; a

@@ -619,7 +619,7 @@ pub fn point_config_at(config: &mut attome_config::AppConfig, url: &str) {
     config.database.host = parts.host;
     config.database.port = parts.port;
     config.database.user = parts.user;
-    config.database.password = (!parts.password.is_empty()).then_some(parts.password);
+    config.database.password = (!parts.password.is_empty()).then(|| parts.password.into());
     config.database.dbname = parts.dbname;
     // In-process requests carry no peer address, so every test binary on the
     // shared Redis lands in the one `preauth-ip:unknown` bucket and the

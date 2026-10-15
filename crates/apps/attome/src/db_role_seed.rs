@@ -49,7 +49,7 @@ pub async fn seed_migrator(db: &DbPool, config: &AppConfig) -> Result<(), AppErr
         .map_err(|_| AppError::internal("db_role_seed: failed to open transaction (migrator)"))?;
 
     sqlx::query("SELECT set_config('attome.migrator_password', $1, true)")
-        .bind(&migrator.password)
+        .bind(migrator.password.expose())
         .execute(&mut *tx)
         .await
         .map_err(|_| AppError::internal("db_role_seed: failed to stage migrator credential"))?;
@@ -97,7 +97,7 @@ pub async fn seed_runtime(db: &DbPool, config: &AppConfig) -> Result<(), AppErro
         .map_err(|_| AppError::internal("db_role_seed: failed to open transaction (runtime)"))?;
 
     sqlx::query("SELECT set_config('attome.runtime_password', $1, true)")
-        .bind(&runtime.password)
+        .bind(runtime.password.expose())
         .execute(&mut *tx)
         .await
         .map_err(|_| AppError::internal("db_role_seed: failed to stage runtime credential"))?;

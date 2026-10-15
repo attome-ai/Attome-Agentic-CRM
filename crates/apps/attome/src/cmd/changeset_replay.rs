@@ -492,7 +492,7 @@ fn scratch_config(
     config.database.migrate_on_boot = true;
     config.cache.host = redis_host.to_owned();
     config.cache.port = redis_port;
-    config.cache.password = String::new();
+    config.cache.password = String::new().into();
     config.cache.tls_enabled = false;
     config.cache.sentinel = None;
     config.cache.roles = Default::default();

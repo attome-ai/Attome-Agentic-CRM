@@ -140,7 +140,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let signer = if config.audit.signing_enabled {
         Some(AuditSigner::from_config(
             &config.audit.signing_key_id,
-            &config.audit.signing_private_key,
+            config.audit.signing_private_key.expose(),
         )?)
     } else {
         None

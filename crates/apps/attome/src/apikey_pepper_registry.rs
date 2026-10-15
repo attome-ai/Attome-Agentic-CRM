@@ -34,10 +34,10 @@ pub async fn check_and_register(db: &DbPool, config: &AppConfig) -> Result<(), A
     let auth = &config.auth;
     let mut entries: Vec<(i32, &str)> = vec![(
         auth.apikey_hash_pepper_id as i32,
-        auth.apikey_hash_pepper.as_str(),
+        auth.apikey_hash_pepper.expose(),
     )];
     for prev in &auth.apikey_hash_previous_peppers {
-        entries.push((prev.id as i32, prev.secret.as_str()));
+        entries.push((prev.id as i32, prev.secret.expose()));
     }
 
     for (pepper_id, secret) in entries {

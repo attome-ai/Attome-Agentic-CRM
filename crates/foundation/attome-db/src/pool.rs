@@ -440,7 +440,7 @@ fn with_configured_migrator_credentials(
     match config.database.migrator.as_ref() {
         Some(migrator) => options
             .username(&migrator.user)
-            .password(&migrator.password),
+            .password(migrator.password.expose()),
         None => options,
     }
 }

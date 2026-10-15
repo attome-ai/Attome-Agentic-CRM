@@ -129,11 +129,11 @@ impl PepperRing {
         let previous: Vec<(u32, String)> = auth
             .apikey_hash_previous_peppers
             .iter()
-            .map(|p| (p.id, p.secret.clone()))
+            .map(|p| (p.id, p.secret.expose().to_owned()))
             .collect();
         Self::new(
             auth.apikey_hash_pepper_id,
-            &auth.apikey_hash_pepper,
+            auth.apikey_hash_pepper.expose(),
             &previous,
         )
     }

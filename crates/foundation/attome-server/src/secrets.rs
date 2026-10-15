@@ -14,7 +14,7 @@
 //! gone; every secret here now only ever changes via a config edit and a
 //! restart, same as the fields that were never Vault-covered in the first
 //! place (DB password, S3 keys, SMTP password).
-use attome_config::{AppConfig, KeyRing};
+use attome_config::{AppConfig, KeyRing, Secret};
 use std::collections::HashMap;
 
 #[derive(Clone)]
@@ -31,9 +31,9 @@ pub struct SecretRings {
     /// credentials and AI provider keys are held by different operators and
     /// rotated on different schedules.
     pub ai_provider_credential_key: KeyRing,
-    pub oauth_google_client_secret: String,
-    pub oidc_client_secrets: HashMap<String, String>,
-    pub apikey_hash_pepper: String,
+    pub oauth_google_client_secret: Secret,
+    pub oidc_client_secrets: HashMap<String, Secret>,
+    pub apikey_hash_pepper: Secret,
     pub apikey_hash_previous_peppers: Vec<attome_config::ApiKeyPepper>,
 }
 

@@ -39,7 +39,7 @@ async fn verify_at(
     let Some(token) = token.filter(|t| !t.trim().is_empty()) else {
         return false;
     };
-    let mut form = vec![("secret", config.secret.as_str()), ("response", token)];
+    let mut form = vec![("secret", config.secret.expose()), ("response", token)];
     if let Some(ip) = remote_ip {
         form.push(("remoteip", ip));
     }

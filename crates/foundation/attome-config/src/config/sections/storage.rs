@@ -4,6 +4,8 @@
 
 use serde::Deserialize;
 
+use crate::Secret;
+
 use crate::config::helpers::default_true;
 
 /// The values `attome_storage` needs to build a client for **one**
@@ -70,7 +72,7 @@ pub struct StorageSection {
     pub s3_public_endpoint: String,
     pub s3_region: String,
     pub s3_access_key: String,
-    pub s3_secret_key: String,
+    pub s3_secret_key: Secret,
     pub s3_bucket: String,
     /// Whether HTTPS certificates from the S3 endpoints are verified. It does
     /// not choose the transport: the endpoint's scheme does (`http://` is
@@ -146,7 +148,7 @@ impl StorageSection {
             region: &self.s3_region,
             bucket: &self.s3_bucket,
             access_key: &self.s3_access_key,
-            secret_key: &self.s3_secret_key,
+            secret_key: self.s3_secret_key.expose(),
             verify_ssl: self.s3_verify_ssl,
         }
     }

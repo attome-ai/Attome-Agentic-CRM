@@ -252,7 +252,7 @@ impl EngineState {
             Some(Arc::new(
                 AuditSigner::from_config(
                     &base.config.audit.signing_key_id,
-                    &base.config.audit.signing_private_key,
+                    base.config.audit.signing_private_key.expose(),
                 )
                 // config.validate() already fail-fast-checks this at boot
                 // (non-placeholder, 64 hex chars when signing is on — BCF-7)

@@ -24,6 +24,8 @@
 use crate::keyring::KeyRing;
 use serde::Deserialize;
 
+use crate::Secret;
+
 /// Which AI surfaces are enabled. Every field defaults to **off**: a
 /// deployment that upgrades into a build containing AI code gets no AI
 /// behaviour, no model traffic, and no GPU expectation until someone turns it
@@ -109,7 +111,7 @@ pub struct InferenceEndpoint {
     /// this exists for a deployment fronting them with an authenticating
     /// proxy, and for the config-gated external-provider case below.
     #[serde(default)]
-    pub api_key: Option<String>,
+    pub api_key: Option<Secret>,
 
     /// Per-request timeout. Generation is slow by nature and a bare default
     /// would either cut off a legitimate long answer or hang a request thread

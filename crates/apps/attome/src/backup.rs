@@ -68,7 +68,7 @@ fn connect_options(config: &AppConfig, dbname: &str) -> sqlx::postgres::PgConnec
         .port(db.port)
         .username(&db.user)
         .database(dbname);
-    if let Some(password) = db.password.as_deref() {
+    if let Some(password) = db.password.as_ref().map(|p| p.expose()) {
         options = options.password(password);
     }
     options
@@ -109,7 +109,7 @@ async fn drill_into(config: &AppConfig, archive: &Path, temp: &str) -> Result<St
                 archive.display().to_string(),
             ])
             .kill_on_drop(true);
-        if let Some(password) = config.database.password.as_deref() {
+        if let Some(password) = config.database.password.as_ref().map(|p| p.expose()) {
             command.env("PGPASSWORD", password);
         }
         let output = tokio::time::timeout(BACKUP_TIMEOUT, command.output())
@@ -471,7 +471,7 @@ pub async fn run_once(config: &AppConfig) -> Result<PathBuf, String> {
     command
         .args(pg_dump_args(config, &partial))
         .kill_on_drop(true);
-    if let Some(password) = config.database.password.as_deref() {
+    if let Some(password) = config.database.password.as_ref().map(|p| p.expose()) {
         command.env("PGPASSWORD", password);
     }
     let output = tokio::time::timeout(BACKUP_TIMEOUT, command.output())
@@ -763,7 +763,7 @@ pub async fn run_restore(args: Vec<String>) -> std::process::ExitCode {
     command
         .args(pg_restore_args(&config, &archive))
         .kill_on_drop(true);
-    if let Some(password) = config.database.password.as_deref() {
+    if let Some(password) = config.database.password.as_ref().map(|p| p.expose()) {
         command.env("PGPASSWORD", password);
     }
     let output = match tokio::time::timeout(BACKUP_TIMEOUT, command.output()).await {

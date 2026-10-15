@@ -277,11 +277,11 @@ impl AppState {
         let previous: Vec<(u32, String)> = secrets
             .apikey_hash_previous_peppers
             .iter()
-            .map(|p| (p.id, p.secret.clone()))
+            .map(|p| (p.id, p.secret.expose().to_owned()))
             .collect();
         PepperRing::new(
             self.config.auth.apikey_hash_pepper_id,
-            &secrets.apikey_hash_pepper,
+            secrets.apikey_hash_pepper.expose(),
             &previous,
         )
     }

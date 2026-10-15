@@ -239,7 +239,7 @@ async fn client_for_agent(
     let endpoint = InferenceEndpoint {
         base_url,
         model: provider_model_id,
-        api_key,
+        api_key: api_key.map(Into::into),
         request_timeout_secs: timeout_secs,
     };
     GenerationClient::for_endpoint(endpoint, inference.max_output_tokens, http).map_err(|e| {

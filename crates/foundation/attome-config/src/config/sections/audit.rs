@@ -4,6 +4,8 @@
 
 use serde::Deserialize;
 
+use crate::Secret;
+
 use crate::config::helpers::default_true;
 use crate::config::sections::storage::S3Target;
 use crate::keyring::KeyRing;
@@ -63,7 +65,7 @@ pub struct AnchorStoreSection {
     #[serde(default)]
     pub s3_access_key: String,
     #[serde(default)]
-    pub s3_secret_key: String,
+    pub s3_secret_key: Secret,
     #[serde(default = "default_true")]
     pub s3_verify_ssl: bool,
     /// What the operator provisioned on the bucket, out-of-band:
@@ -94,7 +96,7 @@ impl AnchorStoreSection {
             region: &self.s3_region,
             bucket: &self.s3_bucket,
             access_key: &self.s3_access_key,
-            secret_key: &self.s3_secret_key,
+            secret_key: self.s3_secret_key.expose(),
             verify_ssl: self.s3_verify_ssl,
         }
     }
@@ -153,7 +155,7 @@ pub struct AuditSection {
     /// 64-hex-char Ed25519 signing seed. Required when signing_enabled = true.
     /// Generate with: openssl rand -hex 32
     #[serde(default)]
-    pub signing_private_key: String,
+    pub signing_private_key: Secret,
 
     /// P1.13 stage 1: additionally durably capture every audit event into
     /// `xrm_audit_ingest` (same transaction as the existing header/detail/
@@ -321,7 +323,7 @@ impl Default for AuditSection {
         Self {
             signing_enabled: false,
             signing_key_id: String::new(),
-            signing_private_key: String::new(),
+            signing_private_key: Secret::default(),
             ingest_capture_enabled: false,
             chainer_enabled: default_chainer_enabled(),
             ingest_retention_days: 0,

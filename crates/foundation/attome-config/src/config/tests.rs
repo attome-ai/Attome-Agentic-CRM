@@ -273,7 +273,7 @@ fn omitting_a_whole_optional_section_still_yields_its_documented_field_defaults(
 #[test]
 fn validate_rejects_a_missing_apikey_hash_pepper() {
     let mut config = minimal_valid_config();
-    config.auth.apikey_hash_pepper = String::new();
+    config.auth.apikey_hash_pepper = String::new().into();
     let err = config.validate().unwrap_err();
     assert!(format!("{err}").contains("auth.apikey_hash_pepper"));
 }
@@ -705,7 +705,7 @@ fn validate_rejects_production_profile_with_coordination_role_tls_disabled() {
     config.cache.roles.coordination = Some(CacheRoleOverride {
         host: "coordination.internal".into(),
         port: 6379,
-        password: String::new(),
+        password: String::new().into(),
         db: 0,
         connection_pool_size: 16,
         timeout: 2000,
@@ -1187,7 +1187,7 @@ fn validate_rejects_production_anchoring_that_reuses_the_upload_credential() {
 #[test]
 fn validate_rejects_production_anchoring_with_a_missing_anchor_credential() {
     let mut config = production_with_anchoring();
-    config.audit.anchor_store.as_mut().unwrap().s3_secret_key = String::new();
+    config.audit.anchor_store.as_mut().unwrap().s3_secret_key = String::new().into();
     let err = config.validate().unwrap_err();
     assert!(format!("{err}").contains("audit.anchor_store.s3_access_key"));
 }
@@ -2001,7 +2001,7 @@ fn secret_named_fields_live_in_redacting_types() {
 #[test]
 fn database_url_omits_the_colon_separator_when_password_is_empty() {
     let mut config = minimal_valid_config();
-    config.database.password = Some(String::new());
+    config.database.password = Some(String::new().into());
     let url = config.database_url();
     assert!(
         url.starts_with("postgres://test@localhost:5555/test"),
@@ -3484,7 +3484,7 @@ fn expanded_secret_arrives_byte_for_byte() {
 
     let config = result.expect("from_file must resolve the placeholder and parse the config");
     assert_eq!(
-        config.database.password.as_deref(),
+        config.database.password.as_ref().map(|p| p.expose()),
         Some(RAW),
         "the expanded secret must arrive byte-for-byte, never JSON-decoded"
     );
@@ -3506,7 +3506,7 @@ fn validate_rejects_non_hex_signing_key() {
     );
 
     let mut config = production_ready_config();
-    config.audit.signing_private_key = "ab".repeat(20);
+    config.audit.signing_private_key = "ab".repeat(20).into();
     let err = config
         .validate()
         .expect_err("a 40-hex-char signing key must be refused");
@@ -3626,7 +3626,7 @@ fn portal_captcha_secret_at_the_minimum_is_accepted() {
     let mut config = minimal_valid_config();
     config.portal.captcha = CaptchaConfig {
         provider: CaptchaProvider::Turnstile,
-        secret: "a".repeat(32),
+        secret: "a".repeat(32).into(),
         timeout_ms: 3_000,
     };
     assert!(config.validate().is_ok());
@@ -4253,7 +4253,7 @@ fn validate_checks_the_release_report_notify_roles() {
 fn sovereign_preset_refuses_outside_destinations() {
     let mut config = minimal_valid_config();
     assert!(!config.deployment.sovereign);
-    config.google_ai.api_key = String::new();
+    config.google_ai.api_key = String::new().into();
     // Everything in the minimal config is local except nothing: clean.
     assert_eq!(
         config.sovereign_violations(),
@@ -4307,5 +4307,57 @@ fn validate_refuses_an_outside_generation_endpoint_unless_allowed() {
     assert!(
         config.validate().is_ok(),
         "a model server on the private network is inside"
+    );
+}
+
+/// Z1-T2: a password, key or client secret in the config is a `Secret`, never a
+/// plain `String`, so it cannot reach a log, a `format!` or a JSON response by
+/// accident. Scans the section sources for a field named like a secret.
+#[test]
+fn no_secret_named_field_is_a_plain_string() {
+    let sources = [
+        ("audit.rs", include_str!("sections/audit.rs")),
+        ("auth.rs", include_str!("sections/auth.rs")),
+        ("backup.rs", include_str!("sections/backup.rs")),
+        ("cache.rs", include_str!("sections/cache.rs")),
+        ("capability.rs", include_str!("sections/capability.rs")),
+        ("database.rs", include_str!("sections/database.rs")),
+        ("deployment.rs", include_str!("sections/deployment.rs")),
+        ("docgen.rs", include_str!("sections/docgen.rs")),
+        ("events.rs", include_str!("sections/events.rs")),
+        ("fleet.rs", include_str!("sections/fleet.rs")),
+        ("inference.rs", include_str!("sections/inference.rs")),
+        ("integration.rs", include_str!("sections/integration.rs")),
+        ("metadata.rs", include_str!("sections/metadata.rs")),
+        (
+            "observability.rs",
+            include_str!("sections/observability.rs"),
+        ),
+        ("platform.rs", include_str!("sections/platform.rs")),
+        ("portal.rs", include_str!("sections/portal.rs")),
+        ("storage.rs", include_str!("sections/storage.rs")),
+        ("webchat.rs", include_str!("sections/webchat.rs")),
+        ("webcrawl.rs", include_str!("sections/webcrawl.rs")),
+    ];
+    let secret_words = ["password", "secret", "private_key", "api_key", "pepper"];
+    let mut offenders = Vec::new();
+    for (file, source) in sources {
+        for line in source.lines() {
+            let Some(field) = line.trim().strip_prefix("pub ") else {
+                continue;
+            };
+            let Some((name, ty)) = field.split_once(':') else {
+                continue;
+            };
+            let ty = ty.trim().trim_end_matches(',');
+            let plain = ty == "String" || ty == "Option<String>";
+            if plain && secret_words.iter().any(|w| name.contains(w)) {
+                offenders.push(format!("{file}: {}", line.trim()));
+            }
+        }
+    }
+    assert!(
+        offenders.is_empty(),
+        "secret fields must be Secret: {offenders:?}"
     );
 }

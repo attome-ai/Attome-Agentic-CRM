@@ -642,7 +642,7 @@ async fn verify_google_id_token_at(
         client_id: google_client_id.to_string(),
         // Google's ID-token flow sends no client secret: there is no
         // authorization-code exchange to authenticate.
-        client_secret: String::new(),
+        client_secret: String::new().into(),
         scopes: vec!["openid".into(), "email".into()],
         email_claim: "email".into(),
         require_email_verified_claim: true,

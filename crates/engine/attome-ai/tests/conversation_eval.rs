@@ -390,7 +390,7 @@ async fn state_for(
     common::test_state_with(move |config| {
         config.inference.generation.base_url = model_url;
         config.inference.generation.model = model;
-        config.inference.generation.api_key = api_key;
+        config.inference.generation.api_key = api_key.map(Into::into);
         config.inference.generation.request_timeout_secs = 120;
         config.inference.allow_external_provider = external;
     })

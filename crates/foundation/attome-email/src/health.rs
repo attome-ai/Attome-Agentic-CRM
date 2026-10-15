@@ -238,7 +238,7 @@ mod tests {
             smtp_host: "127.0.0.1".to_string(),
             smtp_port: port,
             smtp_user: "smtp-user".to_string(),
-            smtp_password: "hunter2".to_string(),
+            smtp_password: "hunter2".into(),
             smtp_from_address: "noreply@example.invalid".to_string(),
             smtp_from_name: "Attome".to_string(),
             smtp_use_tls: None,
