@@ -203,6 +203,12 @@ pub enum AppError {
     #[error("the request exceeded the server's processing time limit")]
     ServerTimeout,
 
+    /// AA4-T7: an interactive query ran past its time limit. The message
+    /// tells the caller to narrow it or run it as an export, whose limit is
+    /// longer.
+    #[error("the query took too long; narrow its filters or run it as an export")]
+    QueryTimeout,
+
     /// The request body exceeds `app.max_body_size_bytes`. Raised by
     /// `attome_server`'s Content-Length guard before any handler runs, or by the
     /// idempotency gate while it buffers the body before acquiring its key —
@@ -317,6 +323,7 @@ impl IntoResponse for AppError {
             }
             AppError::ReauthRequired { .. } => (StatusCode::UNAUTHORIZED, "reauth_required"),
             AppError::ServerTimeout => (StatusCode::SERVICE_UNAVAILABLE, "server_timeout"),
+            AppError::QueryTimeout => (StatusCode::GATEWAY_TIMEOUT, "query_timeout"),
             AppError::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "payload_too_large"),
             AppError::IdempotencyOutcomeUnknown => {
                 (StatusCode::CONFLICT, "idempotency_outcome_unknown")
@@ -867,6 +874,20 @@ mod tests {
     /// its code stays distinct from `overloaded` so a caller can tell a slow
     /// request from a node shedding writes.
     #[tokio::test]
+    async fn interactive_query_timeout_is_504_with_hint() {
+        let resp = AppError::QueryTimeout.into_response();
+        assert_eq!(resp.status(), StatusCode::GATEWAY_TIMEOUT);
+        let body = body_json(resp).await;
+        assert_eq!(body["error"], "query_timeout");
+        assert!(
+            body["message"]
+                .as_str()
+                .is_some_and(|m| m.contains("export")),
+            "{body}"
+        );
+    }
+
+    #[tokio::test]
     async fn server_timeout_maps_to_503_with_its_own_distinct_code() {
         let resp = AppError::ServerTimeout.into_response();
         assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
@@ -1158,6 +1179,7 @@ mod tests {
             AppError::VersionConflictAt { .. } => 22,
             AppError::MethodNotAllowed => 23,
             AppError::FieldLocked { .. } => 24,
+            AppError::QueryTimeout => 25,
         }
     }
 
@@ -1185,6 +1207,7 @@ mod tests {
                 details: None,
             },
             AppError::ServerTimeout,
+            AppError::QueryTimeout,
             AppError::PayloadTooLarge,
             AppError::IdempotencyOutcomeUnknown,
             AppError::IdempotencyReplayUnavailable,

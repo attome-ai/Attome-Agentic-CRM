@@ -25,6 +25,8 @@ export type ApiErrorKind =
   | 'metadata_authoring_locked'
   | 'transition_not_allowed'
   | 'server_timeout'
+  // AA4-T7: an interactive query ran past its limit; run it as an export.
+  | 'query_timeout'
   | 'payload_too_large'
   | 'idempotency_outcome_unknown'
   | 'idempotency_replay_unavailable'
@@ -56,6 +58,7 @@ const KNOWN_KINDS: ReadonlySet<string> = new Set<ApiErrorKind>([
   'metadata_authoring_locked',
   'transition_not_allowed',
   'server_timeout',
+  'query_timeout',
   'payload_too_large',
   'idempotency_outcome_unknown',
   'idempotency_replay_unavailable',

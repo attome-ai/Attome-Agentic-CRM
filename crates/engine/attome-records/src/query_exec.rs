@@ -917,6 +917,9 @@ impl FilterSchema for QueryExecFilterSchema<'_> {
 /// *operator* — `operator does not exist: uuid = text` is a 42883.
 const SQLSTATE_UNDEFINED_FUNCTION: &str = "42883";
 
+/// `query_canceled`: what PostgreSQL raises when `statement_timeout` fires.
+const SQLSTATE_QUERY_CANCELED: &str = "57014";
+
 /// Maps a stored-query execution failure to an `AppError`, attaching the
 /// operator-facing context that a bare [`AppError::internal`] call cannot:
 /// that one logs only the driver's message, so a failed grid recorded
@@ -945,6 +948,14 @@ fn query_exec_error(
     let filter_fields: Vec<&str> = filters.iter().map(|f| f.field.as_str()).collect();
     let entity = entity.unwrap_or("(no single entity scope)");
 
+    // AA4-T7: the statement time limit cancelled the query.
+    if e.as_database_error()
+        .and_then(|db| db.code())
+        .is_some_and(|code| code.as_ref() == SQLSTATE_QUERY_CANCELED)
+    {
+        tracing::info!(query_id = %query_id, entity, "query/execute ran past its time limit");
+        return AppError::QueryTimeout;
+    }
     let operand_type_mismatch = e
         .as_database_error()
         .and_then(|db| db.code())
