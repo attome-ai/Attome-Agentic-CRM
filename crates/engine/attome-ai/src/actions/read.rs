@@ -107,12 +107,15 @@ const QUERY_EXECUTE_SCHEMA: &str = r#"{
     },
     "order_by": { "type": "string" },
     "order_dir": { "type": "string", "enum": ["asc", "desc"], "default": "asc" },
-    "page": { "type": "integer", "minimum": 1, "maximum": 10000, "default": 1 },
+    "page": {
+      "type": "integer", "minimum": 1, "maximum": 10000, "default": 1,
+      "description": "Ignored while paging by cursor (the default); use after_id instead."
+    },
     "page_size": { "type": "integer", "minimum": 1, "maximum": 200, "default": 50 },
     "after_id": {
       "type": "string",
       "format": "uuid",
-      "description": "Keyset cursor: the last row already held."
+      "description": "To read the next page, pass the previous result's next_cursor here. A result without next_cursor is the last page. Each page costs the same however deep you go."
     },
     "include_total": {
       "type": "boolean",
@@ -604,6 +607,17 @@ mod tests {
             system.contains(OPEN) && system.contains(CLOSE),
             "the prompt must name the delimiters it relies on: {system}"
         );
+    }
+
+    /// AA4-T10: the query tool tells an agent to page with `next_cursor`.
+    #[test]
+    fn query_tool_schema_explains_cursor_paging() {
+        let schema: serde_json::Value =
+            serde_json::from_str(QUERY_EXECUTE_SCHEMA).expect("schema is JSON");
+        let after = schema["properties"]["after_id"]["description"]
+            .as_str()
+            .unwrap_or_default();
+        assert!(after.contains("next_cursor"), "{after}");
     }
 
     /// A record whose own text contains the closing delimiter must not be able
