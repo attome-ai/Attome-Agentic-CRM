@@ -425,12 +425,14 @@ async fn create_update_upsert_merge_bulk_succeed_under_a_single_connection_pool(
         ),
     )
     .await;
+    let second_status = second_upsert.status();
+    let second_body = body_json(second_upsert).await;
     assert_eq!(
-        second_upsert.status(),
+        second_status,
         StatusCode::OK,
-        "upsert's conflict/update branch must not hang/fail under a 1-connection pool"
+        "upsert's conflict/update branch must not hang/fail under a 1-connection pool: {second_body}"
     );
-    let second_upsert_body = body_json(second_upsert).await;
+    let second_upsert_body = second_body;
     assert_eq!(
         second_upsert_body["id"]
             .as_str()

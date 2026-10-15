@@ -3031,7 +3031,14 @@ async fn create_record_node_grants_the_creator_share_to_started_by() {
     .expect("start instance");
 
     let status = run_to_checkpoint(&state, instance_id).await;
-    assert_eq!(status, "completed");
+    let errors: Option<String> = sqlx::query_scalar(
+        "SELECT string_agg(node_id || ': ' || COALESCE(last_error, ''), '; ')          FROM workflow_node_run WHERE instance_id = $1",
+    )
+    .bind(instance_id)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("read node errors");
+    assert_eq!(status, "completed", "node errors: {errors:?}");
 
     let record_id: Uuid = sqlx::query_scalar(
         "SELECT (node_data -> 'cr' ->> 'id')::uuid FROM workflow_instance WHERE id = $1",
