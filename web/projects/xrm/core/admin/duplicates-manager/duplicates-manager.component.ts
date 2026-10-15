@@ -8,6 +8,26 @@ import {
 } from '@attome/xrm/core/admin/data';
 import { MergeDialogComponent, MergeUndoBarComponent } from '@attome/xrm/core/entity';
 
+/** Catalogue keys, spelled out so the catalogue coverage check sees each one. */
+const COMPARATOR_KEYS: Record<MatchComparator, string> = {
+  exact: 'duplicatesManager.comparator_exact',
+  normalized: 'duplicatesManager.comparator_normalized',
+  trigram: 'duplicatesManager.comparator_trigram',
+  embedding: 'duplicatesManager.comparator_embedding',
+  phone: 'duplicatesManager.comparator_phone',
+  email: 'duplicatesManager.comparator_email',
+  id: 'duplicatesManager.comparator_id',
+  name: 'duplicatesManager.comparator_name',
+  phonetic: 'duplicatesManager.comparator_phonetic',
+};
+
+const ON_SAVE_KEYS: Record<OnSave, string> = {
+  off: 'duplicatesManager.onSave_off',
+  warn: 'duplicatesManager.onSave_warn',
+  allow_with_reason: 'duplicatesManager.onSave_allow_with_reason',
+  block: 'duplicatesManager.onSave_block',
+};
+
 /** One field row of the rule editor. */
 interface DraftField {
   field: string;
@@ -45,6 +65,8 @@ export class DuplicatesManagerComponent implements OnInit {
 
   readonly comparators = MATCH_COMPARATORS;
   readonly onSaveModes = ON_SAVE_MODES;
+  readonly comparatorKey = (c: MatchComparator): string => COMPARATOR_KEYS[c];
+  readonly onSaveKey = (m: OnSave): string => ON_SAVE_KEYS[m];
 
   readonly items = signal<DuplicateCandidate[]>([]);
   readonly loading = signal(true);
@@ -150,7 +172,7 @@ export class DuplicatesManagerComponent implements OnInit {
 
   fieldsText(rule: MatchRule): string {
     return rule.fields
-      .map(f => `${f.field} (${this.lang.translate('duplicatesManager.comparator_' + f.comparator)})`)
+      .map(f => `${f.field} (${this.lang.translate(COMPARATOR_KEYS[f.comparator])})`)
       .join(', ');
   }
 

@@ -93,7 +93,7 @@
                       @for (f of x.fields; track f.field) {
                         <tr>
                           <td class="mono-input">{{ f.field }}</td>
-                          <td>{{ ('duplicatesManager.comparator_' + f.comparator) | translate }}</td>
+                          <td>{{ comparatorKey(f.comparator) | translate }}</td>
                           <td>{{ f.weight }}</td>
                           <td>{{ f.score === null ? ('duplicatesManager.noEvidence' | translate) : percent(f.score) }}</td>
                           <td class="mono-input">{{ f.key_a ?? '' }}</td>
@@ -160,7 +160,7 @@
               <td>{{ r.name }}</td>
               <td class="mono-input">{{ r.entity_logicalname }}</td>
               <td>{{ fieldsText(r) }}</td>
-              <td>{{ ('duplicatesManager.onSave_' + r.on_save) | translate }}</td>
+              <td>{{ onSaveKey(r.on_save) | translate }}</td>
               <td class="cell-muted">
                 @if (r.last_scan_at) { {{ r.last_scan_at | date:'medium' }} } @else { {{ 'duplicatesManager.never' | translate }} }
               </td>
@@ -197,7 +197,7 @@
           <span>{{ 'duplicatesManager.onSave' | translate }}</span>
           <select name="on_save" data-rule-on-save [ngModel]="draftOnSave()" (ngModelChange)="draftOnSave.set($event)">
             @for (m of onSaveModes; track m) {
-              <option [value]="m">{{ ('duplicatesManager.onSave_' + m) | translate }}</option>
+              <option [value]="m">{{ onSaveKey(m) | translate }}</option>
             }
           </select>
         </label>
@@ -212,7 +212,7 @@
             <span>{{ 'duplicatesManager.comparator' | translate }}</span>
             <select [name]="'comparator-' + i" data-rule-comparator [ngModel]="f.comparator" (ngModelChange)="setField(i, { comparator: $event })">
               @for (c of comparators; track c) {
-                <option [value]="c">{{ ('duplicatesManager.comparator_' + c) | translate }}</option>
+                <option [value]="c">{{ comparatorKey(c) | translate }}</option>
               }
             </select>
           </label>
