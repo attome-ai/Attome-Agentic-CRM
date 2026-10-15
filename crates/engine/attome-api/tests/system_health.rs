@@ -291,3 +291,49 @@ async fn dependencies_endpoint_never_affects_health_ready() {
     assert_eq!(body["redis"], true);
     assert_eq!(body["registry"], true);
 }
+
+/// AB7-T8: a recorded boot shows in the deploy history, for administrators
+/// only.
+#[tokio::test]
+async fn deploys_listed_for_admin() {
+    let system = skip_if_no_db!(test_system().await);
+    let db = system.state().base.db.clone();
+    let cookie = seed_admin(&db).await;
+    let node = format!("test-node-{}", Uuid::now_v7());
+    attome_server::deploy_event::record_start(
+        &db,
+        &node,
+        "9.9.9",
+        chrono::Utc::now() - chrono::Duration::seconds(3),
+    )
+    .await;
+    let app = full_app(system);
+
+    let anonymous = Request::builder()
+        .method("GET")
+        .uri("/api/v1/admin/deploys")
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(anonymous).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+
+    let req = Request::builder()
+        .method("GET")
+        .uri("/api/v1/admin/deploys")
+        .header("cookie", &cookie)
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.oneshot(req).await.unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    let bytes = to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    let row = body["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["node"] == node.as_str())
+        .expect("the recorded start is listed");
+    assert_eq!(row["kind"], "start");
+    assert_eq!(row["version"], "9.9.9");
+    assert!(row["finished_at"].is_string(), "{row}");
+}
