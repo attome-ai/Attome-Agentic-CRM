@@ -323,6 +323,14 @@ export const xrmEn = {
     loadMore: 'Load more',
   },
   // U6 (D-601) — <xrm-record-history-panel>.
+  systemStatus: {
+    readOnly: 'Changes are paused for now. You can still read everything; try again in a few minutes.',
+    files: 'File uploads and downloads are unavailable right now.',
+    email: 'Emails are delayed; they will go out once the service is back.',
+    notifications: 'Notifications are delayed.',
+    imports: 'Imports wait until the service is back.',
+    bulk: 'Bulk changes wait until the service is back.',
+  },
   recordTree: { path: 'Place in the tree' },
   recordHistory: {
     group_batch: 'Import or bulk change', group_agent: 'Agent run', group_run: 'Flow run',

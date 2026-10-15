@@ -17,7 +17,7 @@
 //! on.
 
 use attome_core::EngineState;
-use attome_server::authz::{Admin, Authorized};
+use attome_server::authz::{Admin, Authorized, SelfService};
 use attome_types::ErrorResponse;
 use axum::{Json, Router, extract::State, routing::get};
 use serde_json::{Value, json};
@@ -125,6 +125,7 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/admin/ops/metrics/names", get(metric_names))
         .route("/api/v1/admin/ops/metrics/catalogue", get(metric_catalogue))
         .route("/api/v1/admin/ops/nodes", get(ops_nodes))
+        .route("/api/v1/system/status", get(system_status))
         .route(
             "/api/v1/admin/ops/requests/{request_id}",
             get(request_trail),
@@ -310,6 +311,72 @@ async fn request_trail(
     }))
 }
 
+/// One feature that is down or slow right now.
+#[derive(serde::Serialize, utoipa::ToSchema, PartialEq, Eq, Debug)]
+pub struct DegradedFeature {
+    /// `files`, `email`, `notifications`, `imports` or `bulk`.
+    pub feature: &'static str,
+    /// The translation key of the message to show; never a raw error.
+    pub message_key: String,
+}
+
+/// What a signed-in person should know about the system right now.
+#[derive(serde::Serialize, utoipa::ToSchema, Debug)]
+pub struct SystemStatus {
+    /// Changes are refused for now (the audit backlog guard is holding writes).
+    pub read_only: bool,
+    pub degraded: Vec<DegradedFeature>,
+}
+
+/// AB5-T2: the degraded features, one per feature, from the capabilities
+/// that are down.
+pub fn degraded_features(down: &[attome_server::Capability]) -> Vec<DegradedFeature> {
+    let mut out: Vec<DegradedFeature> = Vec::new();
+    for capability in down {
+        for feature in capability.affected_features() {
+            if out.iter().any(|d| d.feature == *feature) {
+                continue;
+            }
+            out.push(DegradedFeature {
+                feature: *feature,
+                message_key: format!("systemStatus.{feature}"),
+            });
+        }
+    }
+    out
+}
+
+/// AB5-T2: what is down or slow right now, for any signed-in person: the
+/// features affected, as message keys, and whether changes are refused. No
+/// dependency names or errors are shown.
+#[utoipa::path(
+    get,
+    path = "/api/v1/system/status",
+    tag = "operations",
+    responses(
+        (status = 200, description = "The degraded features and whether changes are refused", body = SystemStatus),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn system_status(
+    State(state): State<EngineState>,
+    _ctx: Authorized<SelfService>,
+) -> Json<SystemStatus> {
+    let registry = &state.base.capabilities;
+    let down: Vec<attome_server::Capability> = attome_server::Capability::ALL
+        .into_iter()
+        .filter(|c| registry.state(*c) == attome_server::CapabilityState::Unavailable)
+        .collect();
+    Json(SystemStatus {
+        read_only: state
+            .base
+            .audit_ingest_backlog_exceeded
+            .load(std::sync::atomic::Ordering::Relaxed),
+        degraded: degraded_features(&down),
+    })
+}
+
 /// One node, from its heartbeat in the metrics store.
 #[derive(serde::Serialize, utoipa::ToSchema, sqlx::FromRow)]
 struct OpsNode {
@@ -464,10 +531,37 @@ async fn latency(_ctx: Authorized<Admin>) -> Json<LatencyReport> {
     metric_names,
     metric_catalogue,
     ops_nodes,
-    request_trail
+    request_trail,
+    system_status
 ))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod status_tests {
+    use super::*;
+    use attome_server::Capability;
+
+    #[test]
+    fn status_lists_degraded_feature() {
+        assert!(degraded_features(&[]).is_empty());
+        let both = degraded_features(&[Capability::Email, Capability::FastJobs]);
+        let features: Vec<&str> = both.iter().map(|d| d.feature).collect();
+        assert_eq!(
+            features,
+            vec!["email", "notifications"],
+            "email is listed once"
+        );
+        assert_eq!(both[0].message_key, "systemStatus.email");
+        for capability in Capability::ALL {
+            assert!(
+                !capability.affected_features().is_empty(),
+                "{}",
+                capability.as_str()
+            );
+        }
+    }
 }

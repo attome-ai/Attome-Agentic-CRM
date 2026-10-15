@@ -138,6 +138,17 @@ impl Capability {
         }
     }
 
+    /// AB5-T1: the features that stop (or slow) while this capability is
+    /// down, as the keys the status endpoint and banner use.
+    pub const fn affected_features(self) -> &'static [&'static str] {
+        match self {
+            Capability::ObjectStorage => &["files"],
+            Capability::Email => &["email"],
+            Capability::FastJobs => &["email", "notifications"],
+            Capability::BatchJobs => &["imports", "bulk"],
+        }
+    }
+
     /// The capability named `name` ([`Self::as_str`]), if any.
     pub fn from_name(name: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|c| c.as_str() == name)
