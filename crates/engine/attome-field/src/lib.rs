@@ -510,14 +510,22 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
     if let Some(scan) = options.get("scan") {
         validate_scan(field_type, scan)?;
     }
-    // The default and the scan settings are checked above; each type's own
-    // shape below.
+    if let Some(external_id) = options.get("external_id") {
+        validate_external_id(field_type, external_id)?;
+    }
+    // The default, the scan settings and the external id are checked above;
+    // each type's own shape below.
     let stripped;
     let options = match options.as_object() {
-        Some(map) if map.contains_key("default") || map.contains_key("scan") => {
+        Some(map)
+            if map.contains_key("default")
+                || map.contains_key("scan")
+                || map.contains_key("external_id") =>
+        {
             let mut map = map.clone();
             map.remove("default");
             map.remove("scan");
+            map.remove("external_id");
             if map.is_empty() {
                 // Only a default or scan settings: nothing else to check.
                 return Ok(());
@@ -688,6 +696,54 @@ fn validate_scan(field_type: &FieldType, scan: &Value) -> Result<(), AppError> {
     Ok(())
 }
 
+/// The longest external system name.
+pub const EXTERNAL_ID_SYSTEM_MAX: usize = 64;
+
+/// A29-T1: the system an external-id field holds ids for, from
+/// `options.external_id.system`; `None` for an ordinary field. An entity may
+/// have several external-id fields, one per system or more.
+pub fn external_id_system(options: Option<&Value>) -> Option<&str> {
+    options?
+        .get("external_id")?
+        .get("system")?
+        .as_str()
+        .filter(|s| !s.is_empty())
+}
+
+/// A29-T1: `options.external_id` is `{"system": "<name>"}` on a text or
+/// number field: the id another system knows the record by. The name is
+/// lowercase letters, digits, `_` or `-`, at most [`EXTERNAL_ID_SYSTEM_MAX`].
+/// The value is unique among the entity's live records (a unique index).
+fn validate_external_id(field_type: &FieldType, external_id: &Value) -> Result<(), AppError> {
+    if !matches!(field_type, FieldType::Text | FieldType::Number) {
+        return Err(AppError::Validation(format!(
+            "external_id: a {field_type} field cannot hold an external id; use a text or number field"
+        )));
+    }
+    let Some(map) = external_id.as_object() else {
+        return Err(AppError::Validation(
+            "external_id: expected {\"system\": \"<name>\"}".into(),
+        ));
+    };
+    if let Some(unknown) = map.keys().find(|k| k.as_str() != "system") {
+        return Err(AppError::Validation(format!(
+            "external_id: unknown setting '{unknown}'"
+        )));
+    }
+    let system = map.get("system").and_then(Value::as_str).unwrap_or("");
+    if system.is_empty()
+        || system.len() > EXTERNAL_ID_SYSTEM_MAX
+        || !system
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_' || c == '-')
+    {
+        return Err(AppError::Validation(format!(
+            "external_id.system: 1 to {EXTERNAL_ID_SYSTEM_MAX} lowercase letters, digits, _ or -"
+        )));
+    }
+    Ok(())
+}
+
 /// A28-T1: `options.default`, when present, is `{"kind": "fixed", "value":
 /// <a value of the field's type>}`, `{"kind": "today"}` or `{"kind": "now"}`
 /// (date fields), or `{"kind": "current_user"}` (lookup fields).
@@ -723,6 +779,48 @@ fn type_err(expected: &str, got: &Value) -> AppError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A29-T1: a text or number field can hold an external id.
+    #[test]
+    fn external_id_option_accepted_and_read() {
+        let options = serde_json::json!({ "external_id": { "system": "sap" } });
+        validate_options(&FieldType::Text, &options).unwrap();
+        validate_options(&FieldType::Number, &options).unwrap();
+        assert_eq!(external_id_system(Some(&options)), Some("sap"));
+        assert_eq!(external_id_system(Some(&serde_json::json!({}))), None);
+        assert_eq!(external_id_system(None), None);
+        // Next to a text field's own settings.
+        validate_options(
+            &FieldType::Text,
+            &serde_json::json!({ "external_id": { "system": "legacy-crm" }, "text_type": "email" }),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn external_id_option_refused_when_malformed() {
+        for (field_type, options) in [
+            (
+                FieldType::Date,
+                serde_json::json!({ "external_id": { "system": "sap" } }),
+            ),
+            (FieldType::Text, serde_json::json!({ "external_id": "sap" })),
+            (FieldType::Text, serde_json::json!({ "external_id": {} })),
+            (
+                FieldType::Text,
+                serde_json::json!({ "external_id": { "system": "SAP" } }),
+            ),
+            (
+                FieldType::Text,
+                serde_json::json!({ "external_id": { "system": "sap", "x": 1 } }),
+            ),
+        ] {
+            assert!(
+                validate_options(&field_type, &options).is_err(),
+                "{options}"
+            );
+        }
+    }
 
     /// B16-T3: a text field can be scanned.
     #[test]

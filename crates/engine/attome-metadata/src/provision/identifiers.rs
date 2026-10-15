@@ -108,7 +108,22 @@ pub fn valid_identifier(s: &str) -> bool {
 /// prefix and ends in a hash of the whole entity and field pair, which is
 /// unique per pair and always fits. P-provisioning-hardening item (a).
 pub fn attribute_index_name(entity: &str, field: &str) -> Result<String, AppError> {
-    let name = format!("idx_{entity}_{field}_sf");
+    field_index_name("idx", "sf", entity, field)
+}
+
+/// A29-T1: the unique index of an external-id field, named the same way as
+/// [`attribute_index_name`].
+pub fn external_id_index_name(entity: &str, field: &str) -> Result<String, AppError> {
+    field_index_name("uxei", "ext", entity, field)
+}
+
+fn field_index_name(
+    prefix: &str,
+    suffix: &str,
+    entity: &str,
+    field: &str,
+) -> Result<String, AppError> {
+    let name = format!("{prefix}_{entity}_{field}_{suffix}");
     if name.len() <= attome_db::ident::PG_MAX_IDENTIFIER_LEN {
         return Ok(name);
     }
@@ -118,7 +133,9 @@ pub fn attribute_index_name(entity: &str, field: &str) -> Result<String, AppErro
         hash ^= u64::from(byte);
         hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
     }
-    // "idx_" + 39 + "_" + 16 hex + "_sf" = 63.
-    let prefix: String = format!("{entity}_{field}").chars().take(39).collect();
-    Ok(format!("idx_{prefix}_{hash:016x}_sf"))
+    // prefix + "_" + readable + "_" + 16 hex + "_" + suffix = 63 ("idx" and
+    // "sf" keep 39 readable characters, as before).
+    let room = attome_db::ident::PG_MAX_IDENTIFIER_LEN - prefix.len() - suffix.len() - 19;
+    let readable: String = format!("{entity}_{field}").chars().take(room).collect();
+    Ok(format!("{prefix}_{readable}_{hash:016x}_{suffix}"))
 }

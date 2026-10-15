@@ -2991,6 +2991,90 @@ fn masked_text_pattern_is_enforced_on_write_and_validated_on_creation() {
     })
 }
 
+/// A29-T1: an external-id field is unique among live records (a second
+/// record with the same id is a 409), an entity may hold ids for several
+/// systems, and a malformed `external_id` option is refused.
+#[test]
+fn external_id_field_is_unique_per_entity() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (logicalname, entity_id) = create_entity(&app, &admin_cookie, "extid").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"sap_id","name":"SAP id","field_type":"text",
+                "options":{"external_id":{"system":"sap"}}}"#,
+        )
+        .await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"crm_id","name":"Old CRM id","field_type":"text",
+                "options":{"external_id":{"system":"legacy-crm"}}}"#,
+        )
+        .await;
+        let bad = Request::builder()
+            .method("POST")
+            .uri(format!("/api/v1/admin/entities/{entity_id}/fields"))
+            .header("cookie", &admin_cookie)
+            .header("content-type", "application/json")
+            .body(Body::from(
+                r#"{"logicalname":"when_id","name":"When","field_type":"date",
+                "options":{"external_id":{"system":"sap"}}}"#,
+            ))
+            .unwrap();
+        let res = app.clone().oneshot(bad).await.expect("bad field");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+        let create = |body: &'static str| {
+            Request::builder()
+                .method("POST")
+                .uri(format!("/api/v1/{logicalname}"))
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(create(r#"{"sap_id":"A1","crm_id":"C1"}"#))
+            .await
+            .expect("first");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let res = app
+            .clone()
+            .oneshot(create(r#"{"sap_id":"A1","crm_id":"C2"}"#))
+            .await
+            .expect("same SAP id");
+        assert_eq!(res.status(), StatusCode::CONFLICT);
+        let res = app
+            .clone()
+            .oneshot(create(r#"{"sap_id":"A2","crm_id":"C1"}"#))
+            .await
+            .expect("same old CRM id");
+        assert_eq!(res.status(), StatusCode::CONFLICT);
+        // Records without the id do not clash.
+        for _ in 0..2 {
+            let res = app
+                .clone()
+                .oneshot(create(r#"{"crm_id":null}"#))
+                .await
+                .expect("no ids");
+            assert_eq!(res.status(), StatusCode::CREATED);
+        }
+        let res = app
+            .clone()
+            .oneshot(create(r#"{"sap_id":"A2","crm_id":"C2"}"#))
+            .await
+            .expect("new ids");
+        assert_eq!(res.status(), StatusCode::CREATED);
+    })
+}
+
 /// B7-T2: a bulk clone copies each record with the overrides, a preview
 /// creates nothing, and undoing a clone removes the copy while it is
 /// unchanged; once the copy is edited, undo is a 409 and removes nothing.

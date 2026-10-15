@@ -44,8 +44,9 @@ mod table;
 mod tests;
 
 pub use attribute::{
-    MAX_ATTRIBUTES_PER_ENTITY, attribute_index_requires_async, ensure_attribute, ensure_entity,
-    sync_attribute_index, sync_attribute_index_on_connection, table_row_count_exceeds,
+    MAX_ATTRIBUTES_PER_ENTITY, attribute_index_requires_async, count_duplicate_values,
+    ensure_attribute, ensure_entity, sync_attribute_index, sync_attribute_index_on_connection,
+    sync_external_id_index, table_row_count_exceeds,
 };
 pub use bundle_walk::seed_bundle_for_tests;
 pub use business_key::{
@@ -62,8 +63,8 @@ pub use default_query::{
 pub use fixture_gate::run_bundle_fixture;
 pub use grants::{backfill_readonly_grants, grant_readonly_select};
 pub use identifiers::{
-    MAX_IDENTIFIER_LEN, attribute_index_name, is_multi_valued, physical_field_type,
-    valid_field_type, valid_identifier,
+    MAX_IDENTIFIER_LEN, attribute_index_name, external_id_index_name, is_multi_valued,
+    physical_field_type, valid_field_type, valid_identifier,
 };
 pub use reconcile::{
     AttributeDesc, EntityDesc, RECONCILE_SCHEMA_CHANGE_INLINE_ROW_LIMIT, ReconcileOutcome,

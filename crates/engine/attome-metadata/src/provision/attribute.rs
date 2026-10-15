@@ -6,7 +6,7 @@ use attome_types::AppError;
 use tokio::sync::Semaphore;
 use uuid::Uuid;
 
-use super::identifiers::{attribute_index_name, valid_identifier};
+use super::identifiers::{attribute_index_name, external_id_index_name, valid_identifier};
 
 /// Caps how many `sync_attribute_index` calls in this process may hold a
 /// direct migrator-role connection open at once. `create_migrator_connection`
@@ -222,6 +222,164 @@ pub async fn sync_attribute_index_on_connection(
     }
 
     Ok(())
+}
+
+/// A29-T1: how many values of a field more than one live record holds; an
+/// external id cannot be declared on a field while this is above zero.
+pub async fn count_duplicate_values(
+    db: &DbPool,
+    entity_logicalname: &str,
+    field_logicalname: &str,
+) -> Result<i64, AppError> {
+    if !valid_identifier(entity_logicalname) || !valid_identifier(field_logicalname) {
+        return Err(AppError::internal(format!(
+            "invalid identifier: entity={entity_logicalname}, field={field_logicalname}"
+        )));
+    }
+    sqlx::query_scalar(&format!(
+        r#"SELECT count(*) FROM (SELECT 1 FROM "{entity_logicalname}"
+            WHERE is_active = TRUE AND "{field_logicalname}" IS NOT NULL
+            GROUP BY "{field_logicalname}" HAVING count(*) > 1) d"#
+    ))
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// A29-T1: makes the unique index of an external-id field match its
+/// metadata. The attribute's `options.external_id.system` is re-read here, so
+/// a caller only says which field changed: a live external-id field gets a
+/// unique index over its live records (`NULLS DISTINCT`: a record without the
+/// id is fine), built `CONCURRENTLY` so writes go on meanwhile; any other
+/// field has none. Live records that share a value fail the build: the
+/// half-built index is dropped and the caller gets a validation error.
+#[expect(
+    clippy::expect_used,
+    reason = "the semaphore is a static that is never closed"
+)]
+pub async fn sync_external_id_index(
+    config: &AppConfig,
+    entity_logicalname: &str,
+    field_logicalname: &str,
+) -> Result<(), AppError> {
+    if !valid_identifier(entity_logicalname) || !valid_identifier(field_logicalname) {
+        return Err(AppError::internal(format!(
+            "invalid identifier: entity={entity_logicalname}, field={field_logicalname}"
+        )));
+    }
+    let index_name = external_id_index_name(entity_logicalname, field_logicalname)?;
+    let _permit = ATTRIBUTE_INDEX_CONNECTION_LIMIT
+        .acquire()
+        .await
+        .expect("ATTRIBUTE_INDEX_CONNECTION_LIMIT is never closed");
+    let mut conn = attome_db::UnpooledSession::new(
+        attome_db::create_migrator_connection(config)
+            .await
+            .map_err(AppError::internal)?,
+    );
+    let lock_key =
+        format!("attome-metadata/external-id-index:{entity_logicalname}:{field_logicalname}");
+    let locked: bool = sqlx::query_scalar("SELECT pg_try_advisory_lock($1, hashtext($2))")
+        .bind(crate::ADVISORY_LOCK_NAMESPACE)
+        .bind(&lock_key)
+        .fetch_one(&mut *conn)
+        .await
+        .map_err(AppError::internal)?;
+    if !locked {
+        let _ = conn.close().await;
+        return Err(AppError::Conflict(
+            "external id index build already in progress",
+        ));
+    }
+    let result = sync_external_id_index_on_connection(
+        &mut conn,
+        entity_logicalname,
+        field_logicalname,
+        &index_name,
+    )
+    .await;
+    if let Err(e) = sqlx::query_scalar::<_, bool>("SELECT pg_advisory_unlock($1, hashtext($2))")
+        .bind(crate::ADVISORY_LOCK_NAMESPACE)
+        .bind(&lock_key)
+        .fetch_optional(&mut *conn)
+        .await
+    {
+        tracing::warn!(
+            error = %e,
+            entity = %entity_logicalname,
+            field = %field_logicalname,
+            "failed to release the external id index advisory lock"
+        );
+    }
+    let _ = conn.close().await;
+    result
+}
+
+async fn sync_external_id_index_on_connection(
+    conn: &mut PgConnection,
+    entity_logicalname: &str,
+    field_logicalname: &str,
+    index_name: &str,
+) -> Result<(), AppError> {
+    let wanted: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
+          WHERE e.logicalname = $1 AND a.logicalname = $2 \
+            AND (e.is_active IS NULL OR e.is_active = true) \
+            AND (a.is_active IS NULL OR a.is_active = true) \
+            AND COALESCE(a.options->'external_id'->>'system', '') <> '')",
+    )
+    .bind(entity_logicalname)
+    .bind(field_logicalname)
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+
+    let drop = format!(r#"DROP INDEX CONCURRENTLY IF EXISTS "{index_name}""#);
+    // A build that failed earlier leaves an INVALID index behind.
+    let invalid: Option<bool> = sqlx::query_scalar(
+        "SELECT NOT i.indisvalid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid \
+         JOIN pg_class t ON t.oid = i.indrelid WHERE c.relname = $1 AND t.relname = $2",
+    )
+    .bind(index_name)
+    .bind(entity_logicalname)
+    .fetch_optional(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    if invalid == Some(true) || !wanted {
+        sqlx::query(&drop)
+            .execute(&mut *conn)
+            .await
+            .map_err(AppError::internal)?;
+    }
+    if !wanted {
+        return Ok(());
+    }
+    let created = sqlx::query(&format!(
+        r#"CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS "{index_name}" ON "{entity_logicalname}" ("{field_logicalname}") WHERE is_active = TRUE"#
+    ))
+    .execute(&mut *conn)
+    .await;
+    match created {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            let duplicate = attome_db::is_unique_violation(&e);
+            if let Err(drop_error) = sqlx::query(&drop).execute(&mut *conn).await {
+                tracing::warn!(error = %drop_error, index = %index_name, "dropping the failed external id index failed");
+            }
+            if duplicate {
+                Err(AppError::Validation(format!(
+                    "{field_logicalname}: live records share a value, so it cannot be an external id; \
+                     fix the duplicates first"
+                )))
+            } else {
+                tracing::error!(
+                    error = %e, index = %index_name, entity = %entity_logicalname, field = %field_logicalname,
+                    "CREATE UNIQUE INDEX CONCURRENTLY failed for an external id"
+                );
+                Err(AppError::internal(e))
+            }
+        }
+    }
 }
 
 /// Registers an entity in `entity_info` and ensures its physical

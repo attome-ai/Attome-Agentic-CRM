@@ -876,6 +876,15 @@ pub(crate) async fn do_create_attribute_recorded(
         )
         .await?;
     }
+    // A29-T1: an external id is unique among the entity's live records.
+    if attome_field::external_id_system(body.options.as_ref()).is_some() {
+        provision::sync_external_id_index(
+            state.base.config.as_ref(),
+            &entity_logicalname,
+            &logicalname,
+        )
+        .await?;
+    }
 
     notify_metadata_change(&state.base.redis).await;
     pin_write_best_effort(state, user_id, "create attribute").await;
@@ -1137,6 +1146,25 @@ pub(crate) async fn do_update_attribute_recorded(
         let ft = FieldType::try_from(new_ft_str.as_str())
             .map_err(|e| AppError::Validation(format!("invalid field_type: {e}")))?;
         attome_field::validate_options(&ft, options)?;
+    }
+    // A29-T1: becoming an external id needs the live values to be unique
+    // already; the unique index is built after the metadata commits.
+    let new_external_id = attome_field::external_id_system(new_options.as_ref());
+    let external_id_changed =
+        attome_field::external_id_system(cur.options.as_ref()) != new_external_id;
+    if external_id_changed && new_external_id.is_some() {
+        let duplicates = provision::count_duplicate_values(
+            &state.base.db_migrator,
+            &entity_logicalname,
+            &field_logicalname,
+        )
+        .await?;
+        if duplicates > 0 {
+            return Err(AppError::Validation(format!(
+                "{field_logicalname}: {duplicates} value(s) are shared by more than one live \
+                 record, so it cannot be an external id; fix the duplicates first"
+            )));
+        }
     }
     let new_req = body
         .is_required
@@ -1465,6 +1493,15 @@ pub(crate) async fn do_update_attribute_recorded(
             &entity_logicalname,
             &field_logicalname,
             wants_index,
+        )
+        .await?;
+    }
+
+    if external_id_changed {
+        provision::sync_external_id_index(
+            state.base.config.as_ref(),
+            &entity_logicalname,
+            &field_logicalname,
         )
         .await?;
     }

@@ -1,8 +1,8 @@
 // ── Tests (D-021 — the shared validator both provision.rs and admin.rs call) ──
 use super::{
     ATTRIBUTE_INDEX_CONNECTION_LIMIT, MAX_IDENTIFIER_LEN, ReconcilePolicy, RowStatus, WriteStep,
-    attribute_index_name, decide_step, default_display_query_sql, managed_value,
-    reject_unsafe_default_query_sql, seeded_view_sql, valid_identifier,
+    attribute_index_name, decide_step, default_display_query_sql, external_id_index_name,
+    managed_value, reject_unsafe_default_query_sql, seeded_view_sql, valid_identifier,
 };
 
 // ── P-environment-promotion: the pure reconcile policy matrix ────────────────
@@ -211,6 +211,24 @@ fn accepts_identifier_at_cap() {
 fn rejects_identifier_over_cap() {
     let name: String = "a".repeat(MAX_IDENTIFIER_LEN + 1);
     assert!(!valid_identifier(&name));
+}
+
+/// A29-T1: an external id's unique index has its own name, which fits too.
+#[test]
+fn external_id_index_name_is_distinct_and_fits() {
+    assert_eq!(
+        external_id_index_name("account", "sap_id").unwrap(),
+        "uxei_account_sap_id_ext"
+    );
+    let entity = "a".repeat(40);
+    let field = "b".repeat(40);
+    let name = external_id_index_name(&entity, &field).unwrap();
+    assert_eq!(name.len(), 63, "{name}");
+    assert!(
+        name.starts_with("uxei_aaaa") && name.ends_with("_ext"),
+        "{name}"
+    );
+    assert_ne!(name, attribute_index_name(&entity, &field).unwrap());
 }
 
 #[test]
