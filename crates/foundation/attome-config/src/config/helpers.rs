@@ -158,6 +158,7 @@ pub(crate) fn expand_env_vars(s: &str) -> (String, Vec<String>) {
 ///
 /// `unresolved` receives one `"KEY (at path)"` entry per placeholder that
 /// resolved to nothing.
+#[cfg(test)]
 pub(crate) fn expand_env_vars_in_value(
     value: &mut serde_json::Value,
     unresolved: &mut Vec<String>,
