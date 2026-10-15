@@ -22632,6 +22632,124 @@
         ]
       }
     },
+    "/api/v1/admin/ops/nodes": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "U4-T4: the nodes that stored metrics in the last day, from their\nonce-a-minute heartbeat (`attome_node_up`); a node silent for three\nminutes is shown as unhealthy. Administrators only.",
+        "operationId": "ops_nodes",
+        "responses": {
+          "200": {
+            "description": "Every node seen in the last day",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_OpsNode"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/ops/requests/{request_id}": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "U4-T5: the jobs a request queued and the audit events it wrote, found by\nthe request id every response carries (`x-request-id`). Administrators\nonly.",
+        "operationId": "request_trail",
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The request's jobs and audit events, at most 100 of each",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestTrail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "An empty or overlong request id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/outcomes": {
       "get": {
         "tags": [
@@ -32702,6 +32820,204 @@
             }
           ],
           "policy": "mandatory"
+        }
+      }
+    },
+    "/api/v1/admin/tags/{tag_id}/merge": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "B4-T3: merges a shared tag into another; its links move over and its\nname keeps finding the other tag. Administrators only.",
+        "operationId": "merge_tag_route",
+        "parameters": [
+          {
+            "name": "tag_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeTag"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Merged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagMergeResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such tag",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "One of the tags was already merged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A personal tag, or a tag into itself",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/admin/tags/{tag_id}/unmerge": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "B4-T3: undoes a tag merge. Administrators only.",
+        "operationId": "unmerge_tag_route",
+        "parameters": [
+          {
+            "name": "tag_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The merge is undone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagMergeResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such tag",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The tag is not merged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
         }
       }
     },
@@ -44018,6 +44334,168 @@
         }
       }
     },
+    "/api/v1/history/search": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B2-T4: finds the changes to one field of an entity whose old and new\nvalues meet the conditions, in a period, newest first, among the live\nrecords the caller can read. Sensitive and encrypted values are never\nsearched.",
+        "operationId": "search_history_route",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "query",
+            "description": "The entity's logical name.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "field",
+            "in": "query",
+            "description": "The field's logical name.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "old_op",
+            "in": "query",
+            "description": "A condition on the value before the change.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/HistoryCompare"
+            }
+          },
+          {
+            "name": "old_value",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "new_op",
+            "in": "query",
+            "description": "A condition on the value after the change.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/HistoryCompare"
+            }
+          },
+          {
+            "name": "new_value",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Changes on or after this moment (UTC).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Changes before this moment (UTC).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Opaque cursor from a previous page's `next_cursor`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "description": "Matches per page, 1..=200 (default 50).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One keyset page of matching changes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CursorPage_HistoryMatch"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the entity's read privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity, or a field the caller cannot read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A missing or non-numeric value, a sensitive field, or a malformed cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/integrations/{system}/webhook": {
       "post": {
         "tags": [
@@ -44137,15 +44615,36 @@
         ],
         "summary": "Opens the live channel.",
         "operationId": "live",
+        "parameters": [
+          {
+            "name": "entities",
+            "in": "query",
+            "description": "A13-T4: entities whose record changes to send, comma-separated, at\nmost 10. Entities the caller cannot read are left out.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Server-Sent Events: `hello` with the current model version, then `model-version` whenever published metadata changes; each `data` is `{model_version}`",
+            "description": "Server-Sent Events: `hello` with the current model version, then `model-version` whenever published metadata changes (each `data` is `{model_version}`), and `records` for changes to records of the watched entities (`{changes: [{entity, id, op}]}`, or `{overflow: true}` when there were too many)",
             "content": {
               "text/event-stream": {}
             }
           },
           "401": {
             "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "More than 10 entities",
             "content": {
               "application/json": {
                 "schema": {
@@ -71312,6 +71811,73 @@
           }
         }
       },
+      "CursorPage_HistoryMatch": {
+        "type": "object",
+        "description": "The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One change a history search found.",
+              "required": [
+                "record_id",
+                "audit_id",
+                "changed_on"
+              ],
+              "properties": {
+                "audit_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "changed_on": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "new_value": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "old_value": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "record_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "user_display_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Exact size of the whole window, when the route counts it (first page\nonly); absent otherwise."
+          }
+        }
+      },
       "CursorPage_MyWorkItem": {
         "type": "object",
         "description": "The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only.",
@@ -76359,6 +76925,20 @@
           }
         }
       },
+      "HistoryCompare": {
+        "type": "string",
+        "description": "How a value is compared in a history search.",
+        "enum": [
+          "eq",
+          "ne",
+          "gt",
+          "gte",
+          "lt",
+          "lte",
+          "contains",
+          "empty"
+        ]
+      },
       "HistoryEntry": {
         "type": "object",
         "required": [
@@ -76441,6 +77021,47 @@
           },
           "user_name": {
             "type": "string"
+          }
+        }
+      },
+      "HistoryMatch": {
+        "type": "object",
+        "description": "One change a history search found.",
+        "required": [
+          "record_id",
+          "audit_id",
+          "changed_on"
+        ],
+        "properties": {
+          "audit_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "changed_on": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "new_value": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "old_value": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_display_name": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -78197,6 +78818,20 @@
         ],
         "description": "D-432 / M13 — the merge endpoint's response. `#[serde(flatten)]` keeps\nevery field an existing caller already reads (`id`, `data`, `row_version`,\n…) at the top level, unchanged — `survivorship_conflicts` is purely\nadditive alongside them (guidelines §12: prefer additive public API\nchanges)."
       },
+      "MergeTag": {
+        "type": "object",
+        "description": "`POST /api/v1/admin/tags/{tag_id}/merge`.",
+        "required": [
+          "into"
+        ],
+        "properties": {
+          "into": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The shared tag to merge into."
+          }
+        }
+      },
       "MessageView": {
         "type": "object",
         "required": [
@@ -79841,6 +80476,34 @@
           },
           "title": {
             "type": "string"
+          }
+        }
+      },
+      "OpsNode": {
+        "type": "object",
+        "description": "One node, from its heartbeat in the metrics store.",
+        "required": [
+          "node",
+          "last_seen",
+          "healthy"
+        ],
+        "properties": {
+          "healthy": {
+            "type": "boolean",
+            "description": "It stored its metrics in the last three minutes."
+          },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "node": {
+            "type": "string"
+          },
+          "version": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -85578,6 +86241,61 @@
                 "version_no": {
                   "type": "integer",
                   "format": "int64"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_OpsNode": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One node, from its heartbeat in the metrics store.",
+              "required": [
+                "node",
+                "last_seen",
+                "healthy"
+              ],
+              "properties": {
+                "healthy": {
+                  "type": "boolean",
+                  "description": "It stored its metrics in the last three minutes."
+                },
+                "last_seen": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "node": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 }
               }
             }
@@ -93684,6 +94402,97 @@
         ],
         "description": "One item, with a conflict's values when the caller may read them."
       },
+      "RequestAudit": {
+        "type": "object",
+        "description": "An audit event a request wrote.",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "changed_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "entity_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "event_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "record_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "RequestJob": {
+        "type": "object",
+        "description": "A job a request queued.",
+        "required": [
+          "id",
+          "job_type",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "job_type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "variant": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "RequestTrail": {
+        "type": "object",
+        "description": "What one request led to.",
+        "required": [
+          "request_id",
+          "jobs",
+          "audit"
+        ],
+        "properties": {
+          "audit": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestAudit"
+            }
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestJob"
+            }
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
       "Requires": {
         "type": "object",
         "description": "What a bundle needs from the deployment it is applied to.",
@@ -98633,6 +99442,28 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "TagMergeResult": {
+        "type": "object",
+        "description": "What a merge or its undo did.",
+        "required": [
+          "moved",
+          "dropped"
+        ],
+        "properties": {
+          "dropped": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Links dropped because the record already carried the other tag (a\nmerge only; an undo cannot bring these back).",
+            "minimum": 0
+          },
+          "moved": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Links moved to the other tag.",
+            "minimum": 0
           }
         }
       },

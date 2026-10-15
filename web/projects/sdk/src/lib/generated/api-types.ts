@@ -4174,6 +4174,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/ops/nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * U4-T4: the nodes that stored metrics in the last day, from their
+         *     once-a-minute heartbeat (`attome_node_up`); a node silent for three
+         *     minutes is shown as unhealthy. Administrators only.
+         */
+        get: operations["ops_nodes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/ops/requests/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * U4-T5: the jobs a request queued and the audit events it wrote, found by
+         *     the request id every response carries (`x-request-id`). Administrators
+         *     only.
+         */
+        get: operations["request_trail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/outcomes": {
         parameters: {
             query?: never;
@@ -5961,6 +6003,43 @@ export interface paths {
         put?: never;
         /** B4-T2: creates a tag group with its create policy. Administrators only. */
         post: operations["create_tag_group"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tags/{tag_id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B4-T3: merges a shared tag into another; its links move over and its
+         *     name keeps finding the other tag. Administrators only.
+         */
+        post: operations["merge_tag_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/tags/{tag_id}/unmerge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** B4-T3: undoes a tag merge. Administrators only. */
+        post: operations["unmerge_tag_route"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8440,6 +8519,28 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["remediate_finding_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/history/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * B2-T4: finds the changes to one field of an entity whose old and new
+         *     values meet the conditions, in a period, newest first, among the live
+         *     records the caller can read. Sensitive and encrypted values are never
+         *     searched.
+         */
+        get: operations["search_history_route"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -15744,6 +15845,27 @@ export interface components {
             total?: number | null;
         };
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
+        CursorPage_HistoryMatch: {
+            items: {
+                /** Format: uuid */
+                audit_id: string;
+                /** Format: date-time */
+                changed_on: string;
+                new_value?: string | null;
+                old_value?: string | null;
+                /** Format: uuid */
+                record_id: string;
+                user_display_name?: string | null;
+            }[];
+            next_cursor?: string | null;
+            /**
+             * Format: int64
+             * @description Exact size of the whole window, when the route counts it (first page
+             *     only); absent otherwise.
+             */
+            total?: number | null;
+        };
+        /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_MyWorkItem: {
             items: {
                 /**
@@ -17868,6 +17990,11 @@ export interface components {
             /** Format: int32 */
             to_year: number;
         };
+        /**
+         * @description How a value is compared in a history search.
+         * @enum {string}
+         */
+        HistoryCompare: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "empty";
         HistoryEntry: {
             /** Format: int32 */
             category: number;
@@ -17892,6 +18019,18 @@ export interface components {
             /** Format: uuid */
             user_id: string;
             user_name: string;
+        };
+        /** @description One change a history search found. */
+        HistoryMatch: {
+            /** Format: uuid */
+            audit_id: string;
+            /** Format: date-time */
+            changed_on: string;
+            new_value?: string | null;
+            old_value?: string | null;
+            /** Format: uuid */
+            record_id: string;
+            user_display_name?: string | null;
         };
         /**
          * @description `POST /api/v1/{entity}/{id}/history/restore`: name one change
@@ -18596,6 +18735,14 @@ export interface components {
              */
             survivorship_conflicts: string[];
         };
+        /** @description `POST /api/v1/admin/tags/{tag_id}/merge`. */
+        MergeTag: {
+            /**
+             * Format: uuid
+             * @description The shared tag to merge into.
+             */
+            into: string;
+        };
         MessageView: {
             /**
              * @description On a turn's final assistant message: the citations of the turn's
@@ -19213,6 +19360,15 @@ export interface components {
              */
             scope: string;
             title: string;
+        };
+        /** @description One node, from its heartbeat in the metrics store. */
+        OpsNode: {
+            /** @description It stored its metrics in the last three minutes. */
+            healthy: boolean;
+            /** Format: date-time */
+            last_seen: string;
+            node: string;
+            version?: string | null;
         };
         OrganizationItem: {
             /** Format: uuid */
@@ -21228,6 +21384,23 @@ export interface components {
                 state: string;
                 /** Format: int64 */
                 version_no: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_OpsNode: {
+            items: {
+                /** @description It stored its metrics in the last three minutes. */
+                healthy: boolean;
+                /** Format: date-time */
+                last_seen: string;
+                node: string;
+                version?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -24337,6 +24510,30 @@ export interface components {
             /** @description The values exist but the caller may not read the field. */
             values_hidden: boolean;
         };
+        /** @description An audit event a request wrote. */
+        RequestAudit: {
+            /** Format: date-time */
+            changed_on?: string | null;
+            entity_name?: string | null;
+            event_name?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            record_id?: string | null;
+        };
+        /** @description A job a request queued. */
+        RequestJob: {
+            id: string;
+            job_type: string;
+            status: string;
+            variant?: string | null;
+        };
+        /** @description What one request led to. */
+        RequestTrail: {
+            audit: components["schemas"]["RequestAudit"][];
+            jobs: components["schemas"]["RequestJob"][];
+            request_id: string;
+        };
         /** @description What a bundle needs from the deployment it is applied to. */
         Requires: {
             /**
@@ -26311,6 +26508,20 @@ export interface components {
             /** @description The privilege key `privilege` needs. */
             create_privilege?: string | null;
             name: string;
+        };
+        /** @description What a merge or its undo did. */
+        TagMergeResult: {
+            /**
+             * Format: int64
+             * @description Links dropped because the record already carried the other tag (a
+             *     merge only; an undo cannot bring these back).
+             */
+            dropped: number;
+            /**
+             * Format: int64
+             * @description Links moved to the other tag.
+             */
+            moved: number;
         };
         /** @description A suggestion: the tag and how many records carry it. */
         TagSuggestion: {
@@ -42409,6 +42620,93 @@ export interface operations {
             };
         };
     };
+    ops_nodes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every node seen in the last day */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_OpsNode"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    request_trail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The request's jobs and audit events, at most 100 of each */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequestTrail"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description An empty or overlong request id */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_outcomes: {
         parameters: {
             query?: never;
@@ -49061,6 +49359,135 @@ export interface operations {
             };
             /** @description Invalid name, colour or policy */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    merge_tag_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeTag"];
+            };
+        };
+        responses: {
+            /** @description Merged */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagMergeResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such tag */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description One of the tags was already merged */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A personal tag, or a tag into itself */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    unmerge_tag_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The merge is undone */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagMergeResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such tag */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The tag is not merged */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -56506,6 +56933,81 @@ export interface operations {
             };
         };
     };
+    search_history_route: {
+        parameters: {
+            query: {
+                /** @description The entity's logical name. */
+                entity: string;
+                /** @description The field's logical name. */
+                field: string;
+                /** @description A condition on the value before the change. */
+                old_op?: components["schemas"]["HistoryCompare"];
+                old_value?: string;
+                /** @description A condition on the value after the change. */
+                new_op?: components["schemas"]["HistoryCompare"];
+                new_value?: string;
+                /** @description Changes on or after this moment (UTC). */
+                from?: string;
+                /** @description Changes before this moment (UTC). */
+                to?: string;
+                /** @description Opaque cursor from a previous page's `next_cursor`. */
+                cursor?: string;
+                /** @description Matches per page, 1..=200 (default 50). */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One keyset page of matching changes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CursorPage_HistoryMatch"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the entity's read privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity, or a field the caller cannot read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A missing or non-numeric value, a sensitive field, or a malformed cursor */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     handle_webhook: {
         parameters: {
             query?: never;
@@ -56581,14 +57083,20 @@ export interface operations {
     };
     live: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description A13-T4: entities whose record changes to send, comma-separated, at
+                 *     most 10. Entities the caller cannot read are left out.
+                 */
+                entities?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Server-Sent Events: `hello` with the current model version, then `model-version` whenever published metadata changes; each `data` is `{model_version}` */
+            /** @description Server-Sent Events: `hello` with the current model version, then `model-version` whenever published metadata changes (each `data` is `{model_version}`), and `records` for changes to records of the watched entities (`{changes: [{entity, id, op}]}`, or `{overflow: true}` when there were too many) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -56599,6 +57107,15 @@ export interface operations {
             };
             /** @description Missing or invalid credentials */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description More than 10 entities */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
