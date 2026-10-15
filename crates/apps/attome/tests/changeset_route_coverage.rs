@@ -116,6 +116,8 @@ const RECORDED: &[(&str, &[&str])] = &[
         &["clear_label"],
     ),
     ("POST /api/v1/admin/entities/labels/xliff", &["set_label"]),
+    ("PUT /api/v1/admin/i18n/overrides", &["set_label"]),
+    ("DELETE /api/v1/admin/i18n/overrides", &["clear_label"]),
     (
         "POST /api/v1/admin/governance/domains",
         &["upsert_data_domain"],

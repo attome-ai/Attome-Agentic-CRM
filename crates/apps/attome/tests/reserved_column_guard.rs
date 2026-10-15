@@ -169,6 +169,12 @@ const ATTRIBUTE_SQL_SITES: &[(&str, &str, Classification, &str)] = &[
         "Recursive CTE over the hierarchy field; a read-only structural walk.",
     ),
     (
+        "crates/engine/attome-records/src/entity_crud/hierarchy.rs",
+        "move_preview",
+        Projection,
+        "Recursive CTEs over the hierarchy field to preview a move; reads only.",
+    ),
+    (
         "crates/engine/attome-records/src/entity_crud/upsert.rs",
         "upsert_record_inner",
         Projection,
