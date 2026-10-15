@@ -2573,26 +2573,26 @@ const ARABIC_COLLATION: &str = "ar-x-icu";
 
 /// Whether this server's PostgreSQL has [`ARABIC_COLLATION`]; asked once and
 /// kept for the process (a catalog fact that does not change while it runs).
-/// A failed probe is not kept, so the next sort asks again.
-static ARABIC_COLLATION_AVAILABLE: tokio::sync::OnceCell<bool> = tokio::sync::OnceCell::const_new();
+/// A failed probe is not kept, so the next sort asks again; two first sorts
+/// at once may both ask, which is harmless.
+static ARABIC_COLLATION_AVAILABLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 
 async fn arabic_collation_available(db: &DbPool) -> bool {
-    let probe = ARABIC_COLLATION_AVAILABLE
-        .get_or_try_init(|| async {
-            sqlx::query_scalar::<_, bool>(
-                "SELECT EXISTS (SELECT 1 FROM pg_collation WHERE collname = $1)",
-            )
-            .bind(ARABIC_COLLATION)
-            .fetch_one(db)
-            .await
-        })
-        .await;
+    if let Some(available) = ARABIC_COLLATION_AVAILABLE.get() {
+        return *available;
+    }
+    let probe = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS (SELECT 1 FROM pg_collation WHERE collname = $1)",
+    )
+    .bind(ARABIC_COLLATION)
+    .fetch_one(db)
+    .await;
     match probe {
         Ok(available) => {
-            if !*available {
+            if !available {
                 tracing::debug!("no ICU Arabic collation; Arabic text sorts by the default one");
             }
-            *available
+            *ARABIC_COLLATION_AVAILABLE.get_or_init(|| available)
         }
         Err(e) => {
             tracing::warn!(error = %e, "could not look up the ICU Arabic collation");
