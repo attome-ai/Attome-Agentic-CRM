@@ -116,6 +116,12 @@ pub fn validate_policy(password: &str) -> Result<(), AppError> {
             "password must be at least {min_chars} characters"
         )));
     }
+    // Q7-T1: checked offline; nothing about the password leaves the server.
+    if crate::password_policy::is_breached(password) {
+        return Err(AppError::Validation(
+            "this password appears in lists of breached passwords; choose another".to_string(),
+        ));
+    }
     Ok(())
 }
 

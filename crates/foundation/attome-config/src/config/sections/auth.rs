@@ -161,6 +161,12 @@ pub struct AuthSection {
     /// Floors and ceilings are enforced by `AppConfig::validate`.
     #[serde(default)]
     pub kdf: KdfSection,
+    /// Q7-T1: an offline set of breached passwords (the Have I Been Pwned
+    /// SHA-1 download, `HASH` or `HASH:COUNT` per line), checked locally
+    /// when a password is set. Unset, only the small built-in list applies.
+    /// Replace the file and restart to update it.
+    #[serde(default)]
+    pub breached_passwords_file: Option<String>,
 }
 
 /// `auth.kdf` — see [`AuthSection::kdf`]. Every default is the value the

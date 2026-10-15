@@ -221,6 +221,7 @@ async fn confirm_inner(
     // Security contract I2: enforced in the engine, before any database or KDF
     // work. It sits after the bearer parse, so a malformed token still reads as
     // Unauthorized whatever password came with it.
+    let plain_password = new_password;
     let new_password = crate::password::NewPassword::validate(new_password)?;
 
     // Deliberately does NOT filter `used_at IS NULL` here — an already-used
@@ -254,6 +255,13 @@ async fn confirm_inner(
         }
     };
 
+    // Q7-T1: not the current password nor one of the last five.
+    if crate::password_policy::reused(db, user_id, plain_password).await? {
+        return Err(AppError::Validation(
+            "choose a password you have not used recently".to_string(),
+        ));
+    }
+
     let new_hash = crate::password::hash_password_async(new_password).await?;
 
     let mut tx = attome_db::tx::begin(db).await?;
@@ -286,7 +294,16 @@ async fn confirm_inner(
         return Err(AppError::Conflict("reset token already used"));
     }
 
-    // 3. The new password.
+    // 3. The new password; the one it replaces joins the history (Q7-T1).
+    let old_hash: Option<String> =
+        sqlx::query_scalar("SELECT password_hash FROM user_account WHERE id = $1")
+            .bind(user_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+    if let Some(old_hash) = old_hash {
+        crate::password_policy::remember(&mut tx, user_id, &old_hash).await?;
+    }
     sqlx::query("UPDATE user_account SET password_hash = $1 WHERE id = $2")
         .bind(&new_hash)
         .bind(user_id)

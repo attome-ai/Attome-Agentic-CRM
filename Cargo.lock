@@ -527,6 +527,7 @@ dependencies = [
  "rsa",
  "serde",
  "serde_json",
+ "sha1 0.10.7",
  "sha2 0.10.9",
  "sqlx",
  "thiserror",

@@ -73,6 +73,8 @@ pub mod jwt;
 pub mod mfa;
 pub mod oidc;
 pub mod password;
+/// Q7-T1: breached and reused passwords.
+pub mod password_policy;
 /// Z4-T2: principal kinds and the token type each carries.
 pub mod principal;
 pub mod refresh;

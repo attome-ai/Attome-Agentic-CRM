@@ -333,6 +333,13 @@ pub async fn init(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Error>
     if !attome_auth::password::configure((&config.auth.kdf).into()) {
         tracing::warn!("auth.kdf: KDF settings were already fixed before boot; config not applied");
     }
+    // Q7-T1: a configured breached-password file that cannot be read stops
+    // boot rather than leave the check weaker than the operator asked for.
+    if let Some(path) = config.auth.breached_passwords_file.as_deref() {
+        let count = attome_auth::password_policy::load_file(std::path::Path::new(path))
+            .map_err(|e| format!("auth.breached_passwords_file ({path}): {e}"))?;
+        tracing::info!(count, "breached password set loaded");
+    }
     // BPR-32 (BPR-F7): the profiler's posture was invisible at runtime; one
     // line per boot names it, next to the `profiler_enabled` gauge.
     tracing::info!(
