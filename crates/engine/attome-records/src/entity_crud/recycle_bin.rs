@@ -218,28 +218,18 @@ pub struct DeleteImpact {
     pub reason_required: bool,
 }
 
-/// Counts what deleting `ids` of `entity_input` would touch.
-pub async fn delete_impact(
+/// The live records pointing at `ids` through each lookup to the entity,
+/// counted per relationship, in entities the caller can read; the flag is
+/// true when an unreadable entity has some.
+pub(super) async fn dependent_counts(
     state: &EngineState,
     ctx: &SecurityContext,
-    entity_input: &str,
+    entity_id: Uuid,
     ids: &[Uuid],
-) -> Result<DeleteImpact, AppError> {
-    if ids.is_empty() || ids.len() > MAX_BIN_RESTORE {
-        return Err(AppError::Validation(format!(
-            "give 1 to {MAX_BIN_RESTORE} ids"
-        )));
-    }
-    let (entity_id, entity, _, _) = resolve_entity(state, entity_input).await?;
-    ctx.require(&entity, "delete")?;
+) -> Result<(Vec<(DependentCount, attome_core::OnTargetDelete)>, bool), AppError> {
     let registry = state.entities.load();
-    let mut impact = DeleteImpact {
-        cascades: Vec::new(),
-        blocked_by: Vec::new(),
-        orphaned: Vec::new(),
-        hidden_dependents: false,
-        reason_required: false,
-    };
+    let mut found = Vec::new();
+    let mut hidden = false;
     for (dependent, field, policy) in registry.dependents_of(entity_id) {
         let live = match registry.get(&dependent) {
             Some(meta) if meta.is_append_only => "",
@@ -259,14 +249,45 @@ pub async fn delete_impact(
             continue;
         }
         if ctx.require(&dependent, "read").is_err() {
-            impact.hidden_dependents = true;
+            hidden = true;
             continue;
         }
-        let row = DependentCount {
-            entity: dependent,
-            field,
-            count,
-        };
+        found.push((
+            DependentCount {
+                entity: dependent,
+                field,
+                count,
+            },
+            policy,
+        ));
+    }
+    Ok((found, hidden))
+}
+
+/// Counts what deleting `ids` of `entity_input` would touch.
+pub async fn delete_impact(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    ids: &[Uuid],
+) -> Result<DeleteImpact, AppError> {
+    if ids.is_empty() || ids.len() > MAX_BIN_RESTORE {
+        return Err(AppError::Validation(format!(
+            "give 1 to {MAX_BIN_RESTORE} ids"
+        )));
+    }
+    let (entity_id, entity, _, _) = resolve_entity(state, entity_input).await?;
+    ctx.require(&entity, "delete")?;
+    let mut impact = DeleteImpact {
+        cascades: Vec::new(),
+        blocked_by: Vec::new(),
+        orphaned: Vec::new(),
+        hidden_dependents: false,
+        reason_required: false,
+    };
+    let (dependents, hidden) = dependent_counts(state, ctx, entity_id, ids).await?;
+    impact.hidden_dependents = hidden;
+    for (row, policy) in dependents {
         match policy {
             attome_core::OnTargetDelete::CascadeDeactivate => impact.cascades.push(row),
             attome_core::OnTargetDelete::Restrict => impact.blocked_by.push(row),

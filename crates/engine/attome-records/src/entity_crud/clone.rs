@@ -334,8 +334,42 @@ pub(super) async fn clone_record_route(
     Ok((status, Json(result)))
 }
 
+/// B7-T3: a record's child records by relationship (entity and lookup
+/// field), counted, in entities the caller can read: what a clone can take
+/// with it through `children`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/{entity}/{id}/children",
+    tag = "entity",
+    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "Child records by relationship", body = attome_types::PaginatedResponse<super::recycle_bin::DependentCount>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 404, description = "No such record, or the caller cannot read it", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn record_children(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Read>>,
+    Path((entity, id)): Path<(String, Uuid)>,
+) -> Result<Json<attome_types::PaginatedResponse<super::recycle_bin::DependentCount>>, AppError> {
+    // Reading the record proves the caller can see it.
+    super::read_record(&state, &ctx, &entity, id).await?;
+    let (entity_id, _, _, _) = resolve_entity(&state, &entity).await?;
+    let (found, _) = super::recycle_bin::dependent_counts(&state, &ctx, entity_id, &[id]).await?;
+    let items: Vec<_> = found.into_iter().map(|(row, _)| row).collect();
+    let total = i64::try_from(items.len()).map_err(AppError::internal)?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        items,
+        total,
+        1,
+        total.max(1),
+    )))
+}
+
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(clone_record_route))]
+#[openapi(paths(clone_record_route, record_children))]
 struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {

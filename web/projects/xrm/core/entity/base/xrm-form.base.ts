@@ -1,10 +1,12 @@
 import {
-  computed, DestroyRef, Directive, effect, inject, input, OnInit, signal, untracked,
+  computed, DestroyRef, Directive, effect, inject, Injector, input, OnInit, signal, untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiError } from '@attome/base';
+import { ApiError, LangService } from '@attome/base';
+import { DialogService } from '@attome/base/dialog';
+import { firstValueFrom } from 'rxjs';
 import { BusinessRuleClient, ChoiceOptions, EntitySchema, FieldSchema } from '@attome/xrm';
 import { fieldKindResolver } from '../business-rules/business-rule-condition';
 import {
@@ -165,6 +167,8 @@ export abstract class EngineFormBase implements OnInit {
   protected readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly recordChanges = inject(RecordChangeNotifier);
+  /** Resolves the dialog and language services only when Duplicate needs them. */
+  private readonly injector = inject(Injector);
 
   // `protected`, not `private`: a subclass that calls a bespoke, non-generic
   // write endpoint of its own (e.g. `DashboardEditorComponent`'s lifecycle
@@ -266,12 +270,32 @@ export abstract class EngineFormBase implements OnInit {
   /** B7-T3: whether a copy is being made. */
   readonly duplicating = signal(false);
 
-  /** B7-T3: copies this record and opens the copy. */
-  duplicate(): void {
+  /**
+   * B7-T3: copies this record and opens the copy. When it has child records,
+   * asks once whether to copy them too.
+   */
+  async duplicate(): Promise<void> {
     const id = this.id();
     if (!id || this.duplicating()) return;
     this.duplicating.set(true);
-    this.svc.clone(this.entityLogicalName, id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    let children: { entity: string; field: string }[] = [];
+    if (typeof this.svc.childRecords === 'function') {
+      const found = await firstValueFrom(this.svc.childRecords(this.entityLogicalName, id))
+        .then(page => page.items)
+        .catch(() => []);
+      if (found.length) {
+        const lang = this.injector.get(LangService);
+        const copyThem = await this.injector.get(DialogService).confirm({
+          message: lang.translate('xrmForm.duplicateWithChildren', {
+            details: found.map(c => `${c.entity} (${c.count})`).join(', '),
+          }),
+          confirmText: lang.translate('xrmForm.duplicateCopyChildren'),
+          cancelText: lang.translate('xrmForm.duplicateRecordOnly'),
+        });
+        if (copyThem) children = found.map(c => ({ entity: c.entity, field: c.field }));
+      }
+    }
+    this.svc.clone(this.entityLogicalName, id, children).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: copy => {
         this.duplicating.set(false);
         if (copy.id) {

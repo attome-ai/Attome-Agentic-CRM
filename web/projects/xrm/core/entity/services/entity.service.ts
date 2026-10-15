@@ -217,11 +217,24 @@ export class EntityService {
     return this.api.post(`/api/v1/bin/operations/${encodeURIComponent(operationId)}/restore`, {});
   }
 
-  /** B7-T3: copies a record through the ordinary create; returns the copy's id. */
-  clone(entityName: string, id: string): Observable<{ id: string | null }> {
+  /**
+   * B7-T3: copies a record through the ordinary create, with the child
+   * records of each named relationship; returns the copy's id.
+   */
+  clone(
+    entityName: string,
+    id: string,
+    children: readonly { entity: string; field: string }[] = [],
+  ): Observable<{ id: string | null }> {
     return this.api.post<{ id: string | null }>(
-      `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(id)}/clone`, {},
+      `/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(id)}/clone`,
+      children.length ? { children } : {},
     );
+  }
+
+  /** B7-T3: a record's child records, counted by relationship. */
+  childRecords(entityName: string, id: string): Observable<{ items: { entity: string; field: string; count: number }[] }> {
+    return this.api.get(`/api/v1/${encodeURIComponent(entityName)}/${encodeURIComponent(id)}/children`);
   }
 
   /** A28-T2: the values a new record of `entityName` starts with, by field. */

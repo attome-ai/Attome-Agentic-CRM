@@ -240,6 +240,10 @@ pub fn routes() -> Router<EngineState> {
             axum::routing::post(mutations::restore_record),
         )
         .route(
+            "/api/v1/{entity}/{id}/children",
+            get(clone::record_children),
+        )
+        .route(
             "/api/v1/{entity}/{id}/clone",
             axum::routing::post(clone::clone_record_route),
         )

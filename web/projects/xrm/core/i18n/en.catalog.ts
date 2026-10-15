@@ -98,6 +98,8 @@ export const xrmEn = {
   // document/note/organization/privilege/team/user forms).
   xrmForm: {
     duplicate: 'Duplicate',
+    duplicateWithChildren: 'This record has related records: {details}. Copy them with it?',
+    duplicateCopyChildren: 'Copy them too', duplicateRecordOnly: 'Only this record',
     loadingRecord: 'Loading record…', editRecord: 'Edit record', newRecord: 'New record',
     edit: 'Edit', new: 'New', back: 'Back', save: 'Save', cancel: 'Cancel',
     saving: 'Saving…', saved: 'Saved', update: 'Update', create: 'Create',
