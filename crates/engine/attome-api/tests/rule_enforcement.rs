@@ -459,6 +459,91 @@ fn validation_rule_violation_returns_422_with_rule_id() {
     })
 }
 
+/// A11-T1: `required` refuses an empty field while the condition holds, and
+/// `allowed_values` refuses a code outside its list.
+#[test]
+fn rule_outcomes_required_and_allowed_values_are_enforced() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+
+        let logicalname = format!("rule_req_{}", Uuid::now_v7().simple());
+        provision_entity_with_fields(
+            &app,
+            &admin_cookie,
+            &logicalname,
+            &[("amount", "number"), ("reason", "text"), ("status", "text")],
+        )
+        .await;
+        create_rule(
+            &app,
+            &admin_cookie,
+            serde_json::json!({
+                "entity_logicalname": logicalname,
+                "name": "large_needs_reason",
+                "condition": { "expression": "amount > 1000" },
+                "policies": [
+                    { "type": "required", "field": "reason", "message": "large amounts need a reason" },
+                    { "type": "allowed_values", "field": "status", "value": ["open", "review"] }
+                ],
+            }),
+        )
+        .await;
+        let create = |body: &'static str| {
+            Request::builder()
+                .method("POST")
+                .uri(format!("/api/v1/{logicalname}"))
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap()
+        };
+
+        let res = app
+            .clone()
+            .oneshot(create(r#"{"amount": 5000}"#))
+            .await
+            .expect("create");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let body = body_json(res).await;
+        assert_eq!(body["error"], "rule_violation", "{body}");
+        assert!(
+            body.to_string().contains("large amounts need a reason"),
+            "{body}"
+        );
+
+        let res = app
+            .clone()
+            .oneshot(create(
+                r#"{"amount": 5000, "reason": "big deal", "status": "won"}"#,
+            ))
+            .await
+            .expect("create");
+        assert_eq!(
+            res.status(),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "status is not allowed"
+        );
+
+        let res = app
+            .clone()
+            .oneshot(create(
+                r#"{"amount": 5000, "reason": "big deal", "status": "review"}"#,
+            ))
+            .await
+            .expect("create");
+        assert_eq!(res.status(), StatusCode::CREATED);
+
+        // Below the threshold the rule does not hold.
+        let res = app
+            .oneshot(create(r#"{"amount": 50, "status": "won"}"#))
+            .await
+            .expect("create");
+        assert_eq!(res.status(), StatusCode::CREATED);
+    })
+}
+
 /// `kind = calculation`: the derived field is stored on the row (not a
 /// virtual/computed-on-read value), recomputed from the caller's own body —
 /// M45 plan §5.

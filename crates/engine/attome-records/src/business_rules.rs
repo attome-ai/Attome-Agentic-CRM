@@ -52,8 +52,8 @@ use std::sync::{Arc, LazyLock};
 use attome_cache::{HotCache, create_hot_cache};
 use attome_core::business_rules::{
     CompiledCondition, ConditionFieldKind, ConditionOutcome, FieldLock, PolicyEffect, RuleAudience,
-    SetMode, SetValueSource, combine_locks, compile_condition, condition_context, condition_schema,
-    condition_value,
+    SetMode, SetValueSource, Severity, combine_locks, compile_condition, condition_context,
+    condition_schema, condition_value,
 };
 use attome_core::{AttrInfo, BusinessRuleDef, EngineState};
 use attome_rules::{Compiled, Type, Value as RulesValue};
@@ -503,9 +503,15 @@ impl<'a> WritePipeline<'a> {
     ) -> Result<Vec<RuleWarning>, AppError> {
         let mut outcomes: HashMap<Uuid, ConditionOutcome> = HashMap::new();
         for index in 0..self.rules.len() {
-            let judged = self
-                .policies(index)
-                .any(|e| matches!(e, PolicyEffect::Lock { .. } | PolicyEffect::Error { .. }));
+            let judged = self.policies(index).any(|e| {
+                matches!(
+                    e,
+                    PolicyEffect::Lock { .. }
+                        | PolicyEffect::Error { .. }
+                        | PolicyEffect::Required { .. }
+                        | PolicyEffect::AllowedValues { .. }
+                )
+            });
             if !judged {
                 continue;
             }
@@ -696,13 +702,42 @@ fn judge_outcomes(
             continue;
         };
         for policy in rule.policies_for(audience) {
-            let Some(PolicyEffect::Error {
-                field,
-                message,
-                severity,
-            }) = policy.effect()
-            else {
-                continue;
+            // A11-T1: `required` and `allowed_values` fail like a blocking
+            // error, and only when the record breaks them.
+            let (field, message, severity) = match policy.effect() {
+                Some(PolicyEffect::Error {
+                    field,
+                    message,
+                    severity,
+                }) => (field, message.map(str::to_owned), severity),
+                Some(PolicyEffect::Required { field, message }) => {
+                    if !is_empty(m2.get(field)) {
+                        continue;
+                    }
+                    (
+                        Some(field),
+                        Some(message.map_or_else(|| format!("{field} is required"), str::to_owned)),
+                        Severity::Error,
+                    )
+                }
+                Some(PolicyEffect::AllowedValues {
+                    field,
+                    values,
+                    message,
+                }) => {
+                    if attome_core::business_rules::value_allowed(m2.get(field), values) {
+                        continue;
+                    }
+                    (
+                        Some(field),
+                        Some(message.map_or_else(
+                            || format!("{field} has a value this rule does not allow"),
+                            str::to_owned,
+                        )),
+                        Severity::Error,
+                    )
+                }
+                _ => continue,
             };
             if *outcome == ConditionOutcome::Transient {
                 transient_block |= severity.blocks();
@@ -711,9 +746,7 @@ fn judge_outcomes(
             if !outcome.holds_fail_closed() {
                 continue;
             }
-            let message = message
-                .map(str::to_owned)
-                .unwrap_or_else(|| format!("rule '{}' failed", rule.label()));
+            let message = message.unwrap_or_else(|| format!("rule '{}' failed", rule.label()));
             if severity.blocks() {
                 failures.push(RuleFailure {
                     rule_id: rule.id,

@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Business rules: two outcomes, `required` (a field is required while the condition holds) and
+  `allowed_values` (a field takes only the listed codes while it holds), enforced on every server
+  write (migration 0029). A default value is the existing `set_value` with `mode: default`.
 - Tags: `POST /api/v1/admin/tags/{tag_id}/merge` moves a shared tag's links into another (its
   name then finds the other tag) and `/unmerge` undoes it (migration 0028); an hourly job removes
   tag links past their expiry.

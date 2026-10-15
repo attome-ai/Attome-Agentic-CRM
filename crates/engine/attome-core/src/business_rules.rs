@@ -282,6 +282,11 @@ pub enum PolicyType {
     Disabled,
     Error,
     SetValue,
+    /// A11-T1: the field is required while the condition holds.
+    Required,
+    /// A11-T1: the field takes only the codes in `value` (a list) while the
+    /// condition holds.
+    AllowedValues,
 }
 
 impl PolicyType {
@@ -291,6 +296,8 @@ impl PolicyType {
             Self::Disabled => "disabled",
             Self::Error => "error",
             Self::SetValue => "set_value",
+            Self::Required => "required",
+            Self::AllowedValues => "allowed_values",
         }
     }
 
@@ -300,6 +307,8 @@ impl PolicyType {
             "disabled" => Self::Disabled,
             "error" => Self::Error,
             "set_value" => Self::SetValue,
+            "required" => Self::Required,
+            "allowed_values" => Self::AllowedValues,
             _ => return None,
         })
     }
@@ -465,6 +474,37 @@ pub enum PolicyEffect<'a> {
         source: SetValueSource<'a>,
         mode: SetMode,
     },
+    /// A11-T1: the write fails when `field` is empty.
+    Required {
+        field: &'a str,
+        message: Option<&'a str>,
+    },
+    /// A11-T1: the write fails when `field` holds a value (or, for a
+    /// multi-choice, any value) not in `values`.
+    AllowedValues {
+        field: &'a str,
+        values: &'a [Value],
+        message: Option<&'a str>,
+    },
+}
+
+/// A11-T1: whether `value` is allowed by an `allowed_values` list. Empty is
+/// allowed (that is `required`'s business); a list must hold allowed items
+/// only. Codes compare by their text, so `1` and `"1"` are the same code.
+pub fn value_allowed(value: Option<&Value>, allowed: &[Value]) -> bool {
+    fn code(v: &Value) -> String {
+        match v {
+            Value::String(s) => s.trim().to_owned(),
+            other => other.to_string(),
+        }
+    }
+    let one = |v: &Value| allowed.iter().any(|a| code(a) == code(v));
+    match value {
+        None | Some(Value::Null) => true,
+        Some(Value::String(s)) if s.trim().is_empty() => true,
+        Some(Value::Array(items)) => items.iter().all(one),
+        Some(v) => one(v),
+    }
 }
 
 impl PolicyDef {
@@ -496,6 +536,15 @@ impl PolicyDef {
                     mode: self.mode?,
                 })
             }
+            PolicyType::Required => Some(PolicyEffect::Required {
+                field: self.field.as_deref()?,
+                message: self.message.as_deref(),
+            }),
+            PolicyType::AllowedValues => Some(PolicyEffect::AllowedValues {
+                field: self.field.as_deref()?,
+                values: self.value.as_ref()?.as_array()?.as_slice(),
+                message: self.message.as_deref(),
+            }),
         }
     }
 }
@@ -1502,6 +1551,17 @@ fn check_policy(
             forbid(policy.message.is_some(), "message");
             forbid(policy.severity.is_some(), "severity");
         }
+        PolicyType::Required => {
+            forbid(policy.severity.is_some(), "severity");
+            forbid(policy.value.is_some(), "value");
+            forbid(policy.expression.is_some(), "expression");
+            forbid(policy.mode.is_some(), "mode");
+        }
+        PolicyType::AllowedValues => {
+            forbid(policy.severity.is_some(), "severity");
+            forbid(policy.expression.is_some(), "expression");
+            forbid(policy.mode.is_some(), "mode");
+        }
     }
 
     let field_attr = match policy.field.as_deref() {
@@ -1550,8 +1610,41 @@ fn check_policy(
                 check_set_value(policy, path, attr, expr_schema, issues);
             }
         }
+        PolicyType::Required | PolicyType::AllowedValues => {
+            if policy
+                .message
+                .as_deref()
+                .is_some_and(|m| m.chars().count() > MAX_POLICY_MESSAGE_CHARS)
+            {
+                issues.push(RuleIssue::new(
+                    format!("{path}.message"),
+                    "message_too_long",
+                    format!("a message may hold at most {MAX_POLICY_MESSAGE_CHARS} characters"),
+                ));
+            }
+            if policy.policy_type == PolicyType::AllowedValues {
+                let codes = policy.value.as_ref().and_then(Value::as_array);
+                let well_formed = codes.is_some_and(|c| {
+                    !c.is_empty()
+                        && c.len() <= MAX_ALLOWED_VALUES
+                        && c.iter().all(|v| v.is_string() || v.is_number())
+                });
+                if !well_formed {
+                    issues.push(RuleIssue::new(
+                        format!("{path}.value"),
+                        "policy_shape",
+                        format!(
+                            "an allowed_values policy needs a list of 1 to {MAX_ALLOWED_VALUES} codes"
+                        ),
+                    ));
+                }
+            }
+        }
     }
 }
+
+/// The most codes one `allowed_values` policy lists.
+pub const MAX_ALLOWED_VALUES: usize = 500;
 
 fn policy_attr<'a>(
     attrs: &'a [AttrInfo],
@@ -2175,6 +2268,56 @@ mod tests {
             condition,
             policies,
         }
+    }
+
+    #[test]
+    fn rule_outcomes_required_and_allowed_values_have_typed_effects() {
+        let required = PolicyDef {
+            policy_type: PolicyType::Required,
+            field: Some("amount".into()),
+            message: Some("Amount is needed for large deals".into()),
+            severity: None,
+            value: None,
+            expression: None,
+            mode: None,
+            ordinal: 0,
+        };
+        assert_eq!(
+            required.effect(),
+            Some(PolicyEffect::Required {
+                field: "amount",
+                message: Some("Amount is needed for large deals"),
+            })
+        );
+        let codes = serde_json::json!(["open", 2]);
+        let allowed = PolicyDef {
+            policy_type: PolicyType::AllowedValues,
+            field: Some("status".into()),
+            message: None,
+            severity: None,
+            value: Some(codes.clone()),
+            expression: None,
+            mode: None,
+            ordinal: 1,
+        };
+        let Some(PolicyEffect::AllowedValues { field, values, .. }) = allowed.effect() else {
+            panic!("allowed_values has an effect");
+        };
+        assert_eq!(field, "status");
+        assert!(value_allowed(Some(&serde_json::json!("open")), values));
+        assert!(value_allowed(Some(&serde_json::json!("2")), values));
+        assert!(value_allowed(Some(&serde_json::json!(["open", 2])), values));
+        assert!(value_allowed(None, values));
+        assert!(!value_allowed(Some(&serde_json::json!("closed")), values));
+        assert!(!value_allowed(
+            Some(&serde_json::json!(["open", "closed"])),
+            values
+        ));
+        assert_eq!(
+            PolicyType::parse("allowed_values"),
+            Some(PolicyType::AllowedValues)
+        );
+        assert_eq!(PolicyType::Required.as_str(), "required");
     }
 
     #[test]
