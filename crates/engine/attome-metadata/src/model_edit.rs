@@ -22,6 +22,7 @@ fn registered_kinds() -> Vec<Arc<dyn Kind>> {
         Arc::new(attome_model::kinds::FormKind),
         Arc::new(attome_model::kinds::AgentKind),
         Arc::new(attome_model::kinds::NavigationKind),
+        Arc::new(attome_model::kinds::OptionSetKind),
         Arc::new(attome_model::kinds::EvalSuiteKind),
         Arc::new(attome_model::kinds::PromptOverrideKind),
     ];
