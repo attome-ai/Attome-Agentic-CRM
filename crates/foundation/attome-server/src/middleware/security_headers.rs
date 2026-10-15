@@ -38,6 +38,30 @@ pub(crate) const CSP_POLICY: &str = "default-src 'self'; script-src 'self' https
      connect-src 'self'; frame-src https://accounts.google.com; \
      frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
 
+/// Z5-T10: which kind of response a path serves, for its header set.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Surface {
+    /// A page of the signed-in app (and, until Q21-T2 gives them their own
+    /// policy, a web portal's pages): the CSP applies.
+    App,
+    /// A web portal page. Shares the app's header set today.
+    Portal,
+    /// A JSON API response: no CSP (a JSON body runs no script), but
+    /// `X-Frame-Options: DENY` so no page may frame it.
+    Api,
+}
+
+/// The surface a request path is served on: `/api/` is the API, everything
+/// else a page. Portal pages are not told apart here yet (they share the
+/// page set), so this never answers `Portal`.
+pub fn surface_for(path: &str) -> Surface {
+    if path == "/api" || path.starts_with("/api/") {
+        Surface::Api
+    } else {
+        Surface::App
+    }
+}
+
 /// Precomputed once at server boot (`app::apply_outer_layers`) from
 /// `AppConfig.security.csp_enforce` — never rebuilt per request.
 #[derive(Clone)]
@@ -102,10 +126,22 @@ fn hsts_header_value(max_age_secs: u64, include_subdomains: bool) -> Option<Head
 /// wraps every other layer) — every response gets these headers regardless
 /// of which layer produced it (a 2xx from a handler, a 401 from `authn`, a
 /// 413 from the body-limit guard, a 503 from `mutation_gate`, etc.).
+///
+/// Z5-T10: the set depends on the surface ([`surface_for`]), decided from
+/// the request path before the inner layers run; the values themselves were
+/// built once at boot.
 pub async fn security_headers(values: SecurityHeaderValues, req: Request, next: Next) -> Response {
+    let surface = surface_for(req.uri().path());
     let mut response = next.run(req).await;
     let headers = response.headers_mut();
-    headers.insert(values.csp_header_name, values.csp);
+    match surface {
+        Surface::App | Surface::Portal => {
+            headers.insert(values.csp_header_name, values.csp);
+        }
+        Surface::Api => {
+            headers.insert("x-frame-options", HeaderValue::from_static("DENY"));
+        }
+    }
     headers.insert("x-content-type-options", values.x_content_type_options);
     headers.insert("referrer-policy", values.referrer_policy);
     if let Some(hsts) = values.strict_transport_security {
@@ -212,6 +248,42 @@ mod tests {
         let app = app_with(SecurityHeaderValues::new(true, 0, true));
         let response = app.oneshot(get_request()).await.unwrap();
         assert!(!response.headers().contains_key("strict-transport-security"));
+    }
+
+    fn request_for(path: &str) -> axum::http::Request<axum::body::Body> {
+        axum::http::Request::builder()
+            .uri(path)
+            .body(axum::body::Body::empty())
+            .unwrap()
+    }
+
+    /// Z5-T10: an API response carries no CSP but may not be framed.
+    #[tokio::test]
+    async fn api_surface_has_no_csp() {
+        let app = Router::new()
+            .route("/api/v1/things", get(|| async { StatusCode::OK }))
+            .layer(axum::middleware::from_fn(move |req, next| {
+                security_headers(values(true), req, next)
+            }));
+        let response = app.oneshot(request_for("/api/v1/things")).await.unwrap();
+        let headers = response.headers();
+        assert!(!headers.contains_key("content-security-policy"));
+        assert!(!headers.contains_key("content-security-policy-report-only"));
+        assert_eq!(headers.get("x-frame-options").unwrap(), "DENY");
+        assert_eq!(headers.get("x-content-type-options").unwrap(), "nosniff");
+        assert!(headers.contains_key("strict-transport-security"));
+    }
+
+    /// Z5-T10: a page keeps the CSP and is not given the API's frame header.
+    #[tokio::test]
+    async fn app_surface_keeps_csp() {
+        let app = app_with(values(true));
+        let response = app.oneshot(request_for("/")).await.unwrap();
+        assert!(response.headers().contains_key("content-security-policy"));
+        assert!(!response.headers().contains_key("x-frame-options"));
+        assert_eq!(surface_for("/xrm/dashboard"), Surface::App);
+        assert_eq!(surface_for("/api/v1/live"), Surface::Api);
+        assert_eq!(surface_for("/apiary"), Surface::App);
     }
 
     #[tokio::test]
