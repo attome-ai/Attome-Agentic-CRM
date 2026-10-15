@@ -47,7 +47,7 @@ function same(a: unknown, b: unknown): boolean {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
-  styleUrls: ['../../../styles/admin-page.css', './merge-dialog.component.css'],
+  styleUrls: ['../../../styles/inline-actions.css', './merge-dialog.component.css'],
   templateUrl: './merge-dialog.component.html',
 })
 export class MergeDialogComponent {

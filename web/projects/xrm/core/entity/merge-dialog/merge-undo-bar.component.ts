@@ -13,7 +13,7 @@ import { DuplicatesService } from '@attome/xrm/core/admin/data';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe],
-  styleUrls: ['../../../styles/admin-page.css'],
+  styleUrls: ['../../../styles/inline-actions.css'],
   template: `
     <div class="merge-undo" role="status" data-merge-undo>
       <i class="las la-check" aria-hidden="true"></i>

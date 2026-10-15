@@ -44,12 +44,19 @@
 }
 
 <!-- D-432: open candidates the sweep found for this record. -->
+<!-- The dialog and the Undo bar load on first use: they stay out of the form's chunk. -->
 @if (lastMergeId(); as mergeId) {
-  <xrm-merge-undo-bar [entity]="entity()" [mergeId]="mergeId" (undone)="onUndone()" (closed)="lastMergeId.set(null)" />
+  @defer (on immediate) {
+    <xrm-merge-undo-bar [entity]="entity()" [mergeId]="mergeId" (undone)="onUndone()" (closed)="lastMergeId.set(null)" />
+  }
 }
 @if (merging(); as c) {
-  <xrm-merge-dialog [entity]="entity()" [survivorId]="recordId()!" [mergedId]="otherRecordId(c)"
-                    [candidateId]="c.id" (merged)="onMerged($event)" (cancelled)="merging.set(null)" />
+  @defer (on immediate) {
+    <xrm-merge-dialog [entity]="entity()" [survivorId]="recordId()!" [mergedId]="otherRecordId(c)"
+                      [candidateId]="c.id" (merged)="onMerged($event)" (cancelled)="merging.set(null)" />
+  } @loading {
+    <p class="state-msg">{{ 'mergeDialog.loading' | translate }}</p>
+  }
 } @else if (!dismissed() && candidates().length > 0) {
   <div class="dup-banner" data-duplicate-candidates>
     <i class="las la-exclamation-triangle" aria-hidden="true"></i>

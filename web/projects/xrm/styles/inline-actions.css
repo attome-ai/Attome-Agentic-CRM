@@ -1,0 +1,29 @@
+/* The few admin-page.css rules a small component on the record form needs
+   (buttons, messages, muted cells). admin-page.css is 17 kB and component-
+   scoped, so every component that lists it carries its own copy: on the
+   form's chunk that broke the bundle budget (A15-T10). Keep this file small. */
+
+.btn-sm {
+  display: inline-block;
+  padding-block: 4px;
+  padding-inline: 10px;
+  font-size: 12px;
+  font-family: inherit;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.btn-sm:hover:not(:disabled) { background: color-mix(in srgb, var(--color-text-primary) 10%, transparent); }
+.btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-sm-accent {
+  background: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent);
+  border-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+.btn-ghost { background: transparent; }
+.error-msg { color: var(--color-danger, #f87171); font-size: 13px; margin-block: 6px 0; }
+.state-msg { color: var(--color-text-secondary); font-size: 14px; padding-block: 8px; }
+.cell-muted { color: var(--color-text-secondary); font-size: 12px; }
+.mono-input { font-family: monospace; font-size: 13px; }

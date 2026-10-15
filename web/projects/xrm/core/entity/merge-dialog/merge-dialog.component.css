@@ -28,8 +28,13 @@
   font-size: 15px;
 }
 
+.table-wrap {
+  overflow-x: auto;
+}
+
 .merge-table {
   inline-size: 100%;
+  font-size: 13px;
   border-collapse: collapse;
 }
 

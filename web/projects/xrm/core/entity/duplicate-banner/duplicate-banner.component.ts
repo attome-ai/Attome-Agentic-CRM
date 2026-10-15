@@ -26,7 +26,7 @@ import { DuplicateNotice } from './duplicate-notice';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, TranslatePipe, MergeDialogComponent, MergeUndoBarComponent],
-  styleUrls: ['../../../styles/admin-page.css', './duplicate-banner.component.css'],
+  styleUrls: ['../../../styles/inline-actions.css', './duplicate-banner.component.css'],
   templateUrl: './duplicate-banner.component.html',
 })
 export class DuplicateBannerComponent {
