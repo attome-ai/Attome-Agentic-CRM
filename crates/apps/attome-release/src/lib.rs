@@ -751,7 +751,8 @@ fn web(root: &Path) -> Result<(), String> {
 }
 
 /// The web scripts the gate runs, libraries before the app that uses them.
-const WEB_SCRIPTS: [&str; 10] = [
+const WEB_SCRIPTS: [&str; 11] = [
+    "check:i18n",
     "build:base",
     "build:xrm",
     "build:sdk",

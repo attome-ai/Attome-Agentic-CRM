@@ -57,6 +57,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   headers and how to sign) and `portal_session` beside `session_cookie` and `api_key`.
 - Security headers are chosen per surface: `/api/` responses carry no CSP (so a brand asset keeps its
   own sandbox policy) and `X-Frame-Options: DENY`; pages keep the CSP.
+- The release gate refuses new hard-coded interface text: `npm run check:i18n` counts the text in each
+  template that does not come from the catalogue and fails when a template holds more than its baseline.
+  A pseudo-language (`pseudoCatalog`) shows text that skips the catalogue and layouts that break.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE

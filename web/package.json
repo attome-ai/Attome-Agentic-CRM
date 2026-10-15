@@ -6,6 +6,7 @@
     "generate:api": "node scripts/generate-api-types.mjs",
     "generate:icons": "node scripts/line-awesome-subset.mjs",
     "check:chunks": "node scripts/chunk-budget.mjs",
+    "check:i18n": "node scripts/check-i18n.mjs",
     "build:base": "ng build base",
     "build:xrm": "ng build xrm",
     "build:sdk": "ng build sdk",
