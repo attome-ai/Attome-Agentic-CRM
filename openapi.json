@@ -4506,6 +4506,85 @@
         }
       }
     },
+    "/api/v1/admin/autonumber/{entity}/{attribute}/gaps": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A4-T5: the gap report of the numbers one field holds.",
+        "operationId": "gaps",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "description": "Entity logical name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "attribute",
+            "in": "path",
+            "description": "The numbered field",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Counters and missing or repeated numbers per rule",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutonumberGapReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such entity or field",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/backup": {
       "get": {
         "tags": [
@@ -66364,6 +66443,152 @@
               "type": "string"
             },
             "description": "D-777: whole usernames nobody may take (case-insensitive), e.g.\n\"admin\", \"support\", staff names."
+          }
+        }
+      },
+      "AutonumberCounter": {
+        "type": "object",
+        "required": [
+          "sequence_key",
+          "period",
+          "next_value"
+        ],
+        "properties": {
+          "next_value": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The next number this counter gives."
+          },
+          "period": {
+            "type": "string",
+            "description": "The period (`2026`, `H1448`, empty for never)."
+          },
+          "sequence_key": {
+            "type": "string",
+            "description": "The rendered sequence key (empty: the rule's single counter)."
+          }
+        }
+      },
+      "AutonumberGapReport": {
+        "type": "object",
+        "required": [
+          "entity",
+          "attribute",
+          "rules",
+          "values_read",
+          "truncated"
+        ],
+        "properties": {
+          "attribute": {
+            "type": "string"
+          },
+          "entity": {
+            "type": "string"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutonumberRuleGaps"
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "More than 200,000 values are stored; only that many were read."
+          },
+          "values_read": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "AutonumberGroup": {
+        "type": "object",
+        "required": [
+          "pattern",
+          "first",
+          "last",
+          "count",
+          "missing",
+          "duplicates",
+          "missing_more"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "duplicates": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Numbers more than one record holds (at most 100 listed)."
+          },
+          "first": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "last": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "description": "Numbers between the rule's initial value and the last one that no\nrecord holds (at most 100 listed)."
+          },
+          "missing_more": {
+            "type": "boolean",
+            "description": "More missing numbers exist than are listed."
+          },
+          "pattern": {
+            "type": "string",
+            "description": "The stored values of one counter, the number shown as `#`."
+          }
+        }
+      },
+      "AutonumberRuleGaps": {
+        "type": "object",
+        "required": [
+          "rule_id",
+          "format",
+          "fast_mode",
+          "counters",
+          "groups",
+          "unmatched"
+        ],
+        "properties": {
+          "counters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutonumberCounter"
+            }
+          },
+          "fast_mode": {
+            "type": "boolean",
+            "description": "Gaps are allowed (A4-T4)."
+          },
+          "format": {
+            "type": "string"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutonumberGroup"
+            }
+          },
+          "rule_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "unmatched": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Stored values that do not fit the format (typed by hand or migrated)."
           }
         }
       },

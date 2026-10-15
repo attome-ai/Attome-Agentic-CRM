@@ -962,6 +962,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/autonumber/{entity}/{attribute}/gaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A4-T5: the gap report of the numbers one field holds. */
+        get: operations["gaps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/backup": {
         parameters: {
             query?: never;
@@ -13567,6 +13584,59 @@ export interface components {
              *     "admin", "support", staff names.
              */
             username_reserved?: string[];
+        };
+        AutonumberCounter: {
+            /**
+             * Format: int64
+             * @description The next number this counter gives.
+             */
+            next_value: number;
+            /** @description The period (`2026`, `H1448`, empty for never). */
+            period: string;
+            /** @description The rendered sequence key (empty: the rule's single counter). */
+            sequence_key: string;
+        };
+        AutonumberGapReport: {
+            attribute: string;
+            entity: string;
+            rules: components["schemas"]["AutonumberRuleGaps"][];
+            /** @description More than 200,000 values are stored; only that many were read. */
+            truncated: boolean;
+            /** Format: int64 */
+            values_read: number;
+        };
+        AutonumberGroup: {
+            /** Format: int64 */
+            count: number;
+            /** @description Numbers more than one record holds (at most 100 listed). */
+            duplicates: number[];
+            /** Format: int64 */
+            first: number;
+            /** Format: int64 */
+            last: number;
+            /**
+             * @description Numbers between the rule's initial value and the last one that no
+             *     record holds (at most 100 listed).
+             */
+            missing: number[];
+            /** @description More missing numbers exist than are listed. */
+            missing_more: boolean;
+            /** @description The stored values of one counter, the number shown as `#`. */
+            pattern: string;
+        };
+        AutonumberRuleGaps: {
+            counters: components["schemas"]["AutonumberCounter"][];
+            /** @description Gaps are allowed (A4-T4). */
+            fast_mode: boolean;
+            format: string;
+            groups: components["schemas"]["AutonumberGroup"][];
+            /** Format: uuid */
+            rule_id: string;
+            /**
+             * Format: int64
+             * @description Stored values that do not fit the format (typed by hand or migrated).
+             */
+            unmatched: number;
         };
         AvailableApp: {
             /** Format: uuid */
@@ -31548,6 +31618,58 @@ export interface operations {
             };
             /** @description Caller lacks the required privilege */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    gaps: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Entity logical name */
+                entity: string;
+                /** @description The numbered field */
+                attribute: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Counters and missing or repeated numbers per rule */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutonumberGapReport"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity or field */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
