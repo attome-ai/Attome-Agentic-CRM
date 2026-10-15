@@ -11155,6 +11155,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/{id}/history/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * B2-T2: puts back the values one change (`audit_id`) or one change set
+         *     (`group_id`, an import, run or agent session) replaced on this record,
+         *     through the ordinary update: `If-Match` is required and validation, rules
+         *     and audit run as for any edit.
+         */
+        post: operations["restore_history_route"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/{id}/merge": {
         parameters: {
             query?: never;
@@ -17870,6 +17892,21 @@ export interface components {
             /** Format: uuid */
             user_id: string;
             user_name: string;
+        };
+        /**
+         * @description `POST /api/v1/{entity}/{id}/history/restore`: name one change
+         *     (`audit_id`) or one change set (`group_id`); `fields` narrows it.
+         */
+        HistoryRestoreRequest: {
+            /** Format: uuid */
+            audit_id?: string | null;
+            /** @description Only these fields (logical names); all the change touched when absent. */
+            fields?: string[];
+            /**
+             * @description A `group_id` from the history: every change of that set to this record
+             *     is undone, each field going back to its value before the set began.
+             */
+            group_id?: string | null;
         };
         HolidayBody: {
             hijri_date?: null | components["schemas"]["HijriDateBody"];
@@ -65253,6 +65290,78 @@ export interface operations {
                 };
             };
             /** @description Malformed cursor */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    restore_history_route: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HistoryRestoreRequest"];
+            };
+        };
+        responses: {
+            /** @description The record with the values restored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntityRecordResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record or change */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The record changed since the If-Match version */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No If-Match, both or neither of audit_id and group_id, a withheld value, or the restored values fail validation */
             422: {
                 headers: {
                     [name: string]: unknown;

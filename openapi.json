@@ -57695,6 +57695,123 @@
         ]
       }
     },
+    "/api/v1/{entity}/{id}/history/restore": {
+      "post": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "B2-T2: puts back the values one change (`audit_id`) or one change set\n(`group_id`, an import, run or agent session) replaced on this record,\nthrough the ordinary update: `If-Match` is required and validation, rules\nand audit run as for any edit.",
+        "operationId": "restore_history_route",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HistoryRestoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The record with the values restored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityRecordResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update this record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such record or change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The record changed since the If-Match version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No If-Match, both or neither of audit_id and group_id, a withheld value, or the restored values fail validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/{entity}/{id}/merge": {
       "post": {
         "tags": [
@@ -76324,6 +76441,33 @@
           },
           "user_name": {
             "type": "string"
+          }
+        }
+      },
+      "HistoryRestoreRequest": {
+        "type": "object",
+        "description": "`POST /api/v1/{entity}/{id}/history/restore`: name one change\n(`audit_id`) or one change set (`group_id`); `fields` narrows it.",
+        "properties": {
+          "audit_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Only these fields (logical names); all the change touched when absent."
+          },
+          "group_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A `group_id` from the history: every change of that set to this record\nis undone, each field going back to its value before the set began."
           }
         }
       },
