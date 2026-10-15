@@ -18,6 +18,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   `hijri_yearly` reset, `{field}` and `{lookup.field}` tokens in the format, and `assign_when`
   (`status = issued`): the number is given when a create or an update first meets it
   (migration `0056`).
+- An autonumber rule may run in `fast_mode`: its number is committed on its own, so creates never
+  wait on each other, and a failed create leaves a gap (for ticket ids, not invoices).
 - A text or number field may be an external id: `options.external_id: {"system": "<name>"}` makes
   its value unique among the entity's live records (a unique index built online); an entity may hold
   ids for several systems.

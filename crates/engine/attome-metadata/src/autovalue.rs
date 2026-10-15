@@ -46,6 +46,13 @@
 //! update that makes it true numbers it. Set `options.unique` on the numbered
 //! field (A3-T6) so the database refuses a repeated number too.
 //!
+//! A rule in `fast_mode` (A4-T4) takes its number in a statement of its own,
+//! committed at once, instead of on the create's transaction: concurrent
+//! creates never wait on one another, and a create that fails afterwards
+//! leaves a gap. For numbers that may skip (ticket and request ids), not
+//! invoices. (Not a PostgreSQL sequence per key: creating one is DDL the
+//! runtime role may not run.)
+//!
 //! The `D`-vs-day ambiguity in the motivating example `AVG-{DDDD}-{YY-MM-DD}`
 //! is resolved structurally, not by guessing: a token made of *nothing but*
 //! `D`/`#` is the sequence (width = its length), and any other token is a
@@ -165,6 +172,8 @@ pub struct AutoValue {
     /// A4-T3: `field = value`; the number is given only once the record
     /// meets it.
     pub assign_when: Option<String>,
+    /// A4-T4: numbers come from a committed counter step, gaps allowed.
+    pub fast_mode: bool,
 }
 
 /// A4-T3: record values a format's `{field}` / `{lookup.field}` tokens read.
@@ -248,6 +257,21 @@ impl AutoValue {
             .allocate_seq(conn, now)
             .await?
             .map(|seq| self.render(seq, now)))
+    }
+
+    /// A4-T4: [`AutoValue::allocate_keyed`] on a pooled connection of its
+    /// own, committed at once: nothing waits on it, and a create that fails
+    /// afterwards leaves its number unused (a gap).
+    pub async fn allocate_fast(
+        &self,
+        pool: &DbPool,
+        now: DateTime<FixedOffset>,
+        sequence_key: &str,
+        values: &TokenValues,
+    ) -> Result<String, AppError> {
+        let mut own = pool.acquire().await.map_err(AppError::internal)?;
+        self.allocate_keyed(&mut own, now, sequence_key, values)
+            .await
     }
 
     /// The number [`AutoValue::allocate`] claims, before rendering.
@@ -501,6 +525,7 @@ fn render_datetime_pattern(pattern: &str, now: DateTime<FixedOffset>) -> String 
 /// correctness burden buys nothing against a scan of a few dozen rows.
 pub async fn generate_for_create(
     conn: &mut PgConnection,
+    pool: &DbPool,
     entity_logicalname: &str,
     attrs: &[AttrInfo],
     supplied: &serde_json::Map<String, Value>,
@@ -546,7 +571,7 @@ pub async fn generate_for_create(
         {
             continue;
         }
-        let Some(value) = allocate_for(&rule, &mut *conn, attrs, supplied, now).await? else {
+        let Some(value) = allocate_for(&rule, &mut *conn, pool, attrs, supplied, now).await? else {
             tracing::debug!(
                 rule_id = %rule.id,
                 entity = %entity_logicalname,
@@ -575,6 +600,7 @@ struct RuleRow {
     reset_scope: Option<String>,
     sequence_key: Option<String>,
     assign_when: Option<String>,
+    fast_mode: Option<bool>,
 }
 
 /// Loads the active rules targeting one entity, oldest first so a multi-rule
@@ -606,7 +632,8 @@ async fn load_rules(
     // cast in SQL rather than decoding a decimal and rounding in Rust.
     let rows: Vec<RuleRow> = sqlx::query_as(
         "SELECT id, attribute_logicalname, format, \
-                initial_value::bigint AS initial_value, reset_scope, sequence_key, assign_when \
+                initial_value::bigint AS initial_value, reset_scope, sequence_key, assign_when, \
+                fast_mode \
            FROM autovalue \
           WHERE entity_logicalname = $1 \
             AND is_active = TRUE \
@@ -639,6 +666,7 @@ async fn load_rules(
                 .assign_when
                 .map(|c| c.trim().to_owned())
                 .filter(|c| !c.is_empty()),
+            fast_mode: row.fast_mode.unwrap_or(false),
         })
         .collect())
 }
@@ -771,6 +799,7 @@ pub fn condition_met(condition: &str, record: &serde_json::Map<String, Value>) -
 async fn allocate_for(
     rule: &AutoValue,
     conn: &mut PgConnection,
+    pool: &DbPool,
     attrs: &[AttrInfo],
     record: &serde_json::Map<String, Value>,
     now: DateTime<FixedOffset>,
@@ -782,6 +811,12 @@ async fn allocate_for(
         &[&rule.format, &rule.sequence_key],
     )
     .await?;
+    // A4-T4: fast mode steps its counter on a pooled connection of its own,
+    // so no lock is held for the rest of the create.
+    if rule.fast_mode {
+        let key = render_format_with(&rule.sequence_key, 0, now, &values);
+        return rule.allocate_fast(pool, now, &key, &values).await.map(Some);
+    }
     if rule.sequence_key.is_empty() {
         let seq = rule.allocate_seq(&mut *conn, now).await?;
         return Ok(seq.map(|seq| rule.render_with(seq, now, &values)));
@@ -799,6 +834,7 @@ async fn allocate_for(
 /// `(attribute, value)` pairs to add to the update.
 pub async fn generate_for_update(
     conn: &mut PgConnection,
+    pool: &DbPool,
     entity_logicalname: &str,
     record_id: Uuid,
     attrs: &[AttrInfo],
@@ -843,7 +879,7 @@ pub async fn generate_for_update(
         if numbered || !condition_met(condition, &record) {
             continue;
         }
-        if let Some(value) = allocate_for(&rule, &mut *conn, attrs, &record, now).await? {
+        if let Some(value) = allocate_for(&rule, &mut *conn, pool, attrs, &record, now).await? {
             record.insert(field.to_owned(), Value::String(value.clone()));
             generated.push((field.to_owned(), value));
         }

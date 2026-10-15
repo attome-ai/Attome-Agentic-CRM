@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:ecf8c9aca1aedbf9bce9e6f3b3874b9ae7955906b2504fb42486c2a7e31e6ff3",
+  "checksum": "sha256:e426350b6ecc20f28bc36ddc00306c4e715bc4d7ff7dabb4fd670a61f52f266e",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-metadata-autovalue.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -210,16 +210,32 @@
     {
       "args": {
         "definition": {
+          "display_name": "Fast Mode (gaps allowed)",
+          "field_type": "bool",
+          "logicalname": "fast_mode"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "autovalue",
+        "field": "fast_mode"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "entity": "autovalue",
           "entity_mappings": [],
           "name": "All Auto Values",
           "required_privilege": "autovalue.read",
-          "sql": "SELECT id, name, entity_logicalname, attribute_logicalname, format, initial_value, next_value, reset_scope, scope_key, sequence_key, assign_when, row_version, created_at, modified_at FROM autovalue WHERE is_active = TRUE"
+          "sql": "SELECT id, name, entity_logicalname, attribute_logicalname, format, initial_value, next_value, reset_scope, scope_key, sequence_key, assign_when, fast_mode, row_version, created_at, modified_at FROM autovalue WHERE is_active = TRUE"
         }
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "entity": "autovalue",
         "query": "All Auto Values"
@@ -239,7 +255,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 13,
+      "seq": 14,
       "target": {
         "entity": "autovalue",
         "view": "All Auto Values"

@@ -1739,6 +1739,7 @@ pub async fn create_one_as(
     // instead of leaving a gap. Nothing is cloned unless a rule actually fired.
     let generated = attome_metadata::autovalue::generate_for_create(
         tx,
+        &state.base.db,
         entity_name,
         attrs,
         obj,
@@ -2761,6 +2762,7 @@ pub async fn update_one_as(
     // transaction.
     for (field, value) in attome_metadata::autovalue::generate_for_update(
         &mut **tx,
+        &state.base.db,
         entity_name,
         record_id,
         attrs,

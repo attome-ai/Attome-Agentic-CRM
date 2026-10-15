@@ -88,6 +88,7 @@ async fn concurrent_allocation_across_two_connections_is_distinct_and_gap_free()
         reset_scope: ResetScope::Never,
         sequence_key: String::new(),
         assign_when: None,
+        fast_mode: false,
     };
 
     let url = attome_testkit::migrated_db_url().expect("checked by skip_if_no_db above");
@@ -162,6 +163,7 @@ async fn autonumber_type_counts_per_branch_and_hijri_year() {
         reset_scope: ResetScope::HijriYearly,
         sequence_key: "{branch}".to_owned(),
         assign_when: None,
+        fast_mode: false,
     };
     let mut conn = db.acquire().await.expect("connection");
     // 2026-03-01 is in Hijri 1447, 2026-08-01 in 1448.
@@ -196,4 +198,46 @@ async fn autonumber_type_counts_per_branch_and_hijri_year() {
             "INV-RUH-1448-0001",
         ]
     );
+}
+
+/// A4-T4: a fast-mode rule numbers without holding a lock: with a create's
+/// transaction still open, the next number comes at once, and the number
+/// stays taken when that transaction rolls back (a gap, by design).
+#[tokio::test]
+async fn autonumber_fast_mode_does_not_wait() {
+    let db = skip_if_no_db!(test_db().await);
+    attome_metadata::autovalue::seed_for_tests(&db)
+        .await
+        .expect("seed the autovalue entity");
+    let rule = AutoValue {
+        id: Uuid::now_v7(),
+        entity_logicalname: "test_autovalue_target".to_owned(),
+        attribute_logicalname: "code".to_owned(),
+        format: "T-{SEQ}".to_owned(),
+        initial_value: 1,
+        reset_scope: ResetScope::Never,
+        sequence_key: String::new(),
+        assign_when: None,
+        fast_mode: true,
+    };
+    let now = Utc::now().fixed_offset();
+    let values = attome_metadata::autovalue::TokenValues::new();
+    let create = db.begin().await.expect("a create's transaction");
+    let one = rule
+        .allocate_fast(&db, now, "", &values)
+        .await
+        .expect("first number");
+    let two = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        rule.allocate_fast(&db, now, "", &values),
+    )
+    .await
+    .expect("the second number does not wait")
+    .expect("second number");
+    create.rollback().await.expect("the create fails");
+    let three = rule
+        .allocate_fast(&db, now, "", &values)
+        .await
+        .expect("third number");
+    assert_eq!([one, two, three], ["T-1", "T-2", "T-3"]);
 }
