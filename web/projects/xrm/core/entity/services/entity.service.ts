@@ -183,8 +183,14 @@ export class EntityService {
     return this.api.get<EntityRecordResponse>(`/api/v1/${entityName}/${id}`);
   }
 
-  create(entityName: string, data: Record<string, unknown>): Observable<EntityRecordResponse> {
-    return this.api.post<EntityRecordResponse>(`/api/v1/${entityName}`, data);
+  /** `duplicateReason` (A15-T4): why the save goes ahead though it matches
+   *  an existing record under an `allow_with_reason` duplicate rule. */
+  create(
+    entityName: string,
+    data: Record<string, unknown>,
+    options: { duplicateReason?: string } = {},
+  ): Observable<EntityRecordResponse> {
+    return this.api.post<EntityRecordResponse>(`/api/v1/${entityName}`, data, options);
   }
 
   update(
@@ -192,8 +198,9 @@ export class EntityService {
     id: string,
     patch: Record<string, unknown>,
     rowVersion?: number,
+    options: { duplicateReason?: string } = {},
   ): Observable<EntityRecordResponse> {
-    return this.api.patch<EntityRecordResponse>(`/api/v1/${entityName}/${id}`, patch, rowVersion);
+    return this.api.patch<EntityRecordResponse>(`/api/v1/${entityName}/${id}`, patch, rowVersion, options);
   }
 
   /**

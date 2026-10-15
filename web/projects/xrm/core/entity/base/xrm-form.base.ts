@@ -16,6 +16,8 @@ import {
 import { EntityRecordResponse, EntityService } from '../services/entity.service';
 import { entityFormRoute, entityListRoute } from '../services/entity-url.utils';
 import { RecordChange, RecordChangeNotifier } from '../services/record-change-notifier.service';
+import { DuplicatesService } from '@attome/xrm/core/admin/data';
+import { DuplicateNotice, duplicateWarningsOf } from '../duplicate-banner/duplicate-notice';
 
 /**
  * How long the post-save tick holds before the submit button returns to its
@@ -112,6 +114,13 @@ export abstract class EngineFormBase implements OnInit {
   /** Set on a 409 from a stale `row_version` — resolved via `reload()`, not a generic error banner. */
   readonly conflict  = signal(false);
   readonly reloading = signal(false);
+  /**
+   * A15-T4: the last save matched existing records under a duplicate rule —
+   * refused (`block`, or `allow_with_reason` without a reason) or saved with
+   * a warning. Shown by `xrm-duplicate-banner`.
+   */
+  readonly duplicateNotice = signal<DuplicateNotice | null>(null);
+  private readonly duplicates = inject(DuplicatesService);
 
   // ── Business rules (D-789 section 5, D-791 rule 6) ───────────────────────
   /**
@@ -508,6 +517,7 @@ export abstract class EngineFormBase implements OnInit {
     this.error.set(null);
     this.serverFieldErrors.set(new Map());
     this.saveWarnings.set([]);
+    this.duplicateNotice.set(null);
   }
 
   protected completeSave(): void {
@@ -542,7 +552,13 @@ export abstract class EngineFormBase implements OnInit {
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  save(): void {
+  /** A15-T4: saves again with the reason an `allow_with_reason` rule asks for. */
+  saveWithDuplicateReason(reason: string): void {
+    const trimmed = reason.trim();
+    if (trimmed) this.save(trimmed);
+  }
+
+  save(duplicateReason?: string): void {
     const fg = this.form();
     if (!this.canSave()) return;
     if (fg.invalid) {
@@ -556,9 +572,10 @@ export abstract class EngineFormBase implements OnInit {
     this.clearSaved();
 
     const data = fg.value as Record<string, unknown>;
+    const options = duplicateReason ? [{ duplicateReason }] as const : [] as const;
     const req$ = this.isEdit()
-      ? this.svc.update(this.entityLogicalName, this.id()!, data, this.record?.row_version)
-      : this.svc.create(this.entityLogicalName, data);
+      ? this.svc.update(this.entityLogicalName, this.id()!, data, this.record?.row_version, ...options)
+      : this.svc.create(this.entityLogicalName, data, ...options);
 
     req$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: r => {
@@ -571,6 +588,7 @@ export abstract class EngineFormBase implements OnInit {
         this.completeSave();
         // D-791 rule 6: warnings never block; the save went through.
         this.saveWarnings.set(writeWarnings(r));
+        this.duplicateNotice.set(duplicateWarningsOf(r));
         this.onRecordLoaded(r);
         this.onSaved(r);
       },
@@ -580,6 +598,7 @@ export abstract class EngineFormBase implements OnInit {
         // a version conflict; the operator chooses when to discard them via
         // `reload()`.
         if (e.kind === 'version_conflict') this.conflict.set(true);
+        else if (e.duplicates) this.onDuplicateRefusal(data, e.duplicates);
         else {
           this.error.set(e.message);
           // D-789 sections 3.4/3.5: a `field_locked*` or field-attached
@@ -588,6 +607,22 @@ export abstract class EngineFormBase implements OnInit {
           this.serverFieldErrors.set(fieldErrorsFromApiError(e));
         }
       },
+    });
+  }
+
+  /**
+   * A15-T4: a save refused as a likely duplicate. The refusal does not say
+   * whether a reason would let it through, so the check route (which writes
+   * nothing) is asked what saving these values would do.
+   */
+  private onDuplicateRefusal(data: Record<string, unknown>, found: NonNullable<ApiError['duplicates']>): void {
+    const notice: DuplicateNotice = { refused: true, action: 'block', matches: found.matches, hidden: found.hidden };
+    this.duplicateNotice.set(notice);
+    this.duplicates.check(this.entityLogicalName, data, this.id()).subscribe({
+      next: r => {
+        if (this.duplicateNotice() === notice && r.action) this.duplicateNotice.set({ ...notice, action: r.action });
+      },
+      error: () => undefined,
     });
   }
 

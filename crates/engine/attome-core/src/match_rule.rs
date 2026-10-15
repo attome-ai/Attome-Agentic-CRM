@@ -81,6 +81,65 @@ impl MatchField {
     }
 }
 
+/// A15-T8: a rule's fields are usable: at least one; each names a field the
+/// entity has (`known`), with a positive weight, a runnable comparator
+/// (not `embedding`), a phone field's `default_country`, and a trigram
+/// floor between 0 and 1. Shared by the rule routes and the agent that
+/// proposes rules.
+pub fn validate_fields(
+    known: &std::collections::HashSet<&str>,
+    fields: &[MatchField],
+) -> Result<(), attome_types::AppError> {
+    use attome_types::AppError;
+    if fields.is_empty() {
+        return Err(AppError::Validation(
+            "a match rule must specify at least one field".into(),
+        ));
+    }
+    for f in fields {
+        if f.comparator == Comparator::Embedding {
+            return Err(AppError::Validation(format!(
+                "field '{}': comparator 'embedding' is schema-accepted but not implemented yet \
+                 — there is no per-field embedding source (attome-search's embeddings cover its own \
+                 title/body search corpus, not arbitrary attribute values); use 'exact', \
+                 'normalized', 'trigram', 'phone', 'email', 'id', 'name' or 'phonetic'",
+                f.field
+            )));
+        }
+        if !known.contains(f.field.as_str()) {
+            return Err(AppError::Validation(format!(
+                "field '{}' does not exist on this entity",
+                f.field
+            )));
+        }
+        if f.weight <= 0.0 {
+            return Err(AppError::Validation(format!(
+                "field '{}': weight must be positive",
+                f.field
+            )));
+        }
+        // A15-T3: a phone field names the country its local numbers belong
+        // to, or it could never compare `05...` with `+9665...`.
+        if f.comparator == Comparator::Phone
+            && norm::phone_key("0500000000", f.default_country.as_deref().unwrap_or("")).is_none()
+        {
+            return Err(AppError::Validation(format!(
+                "field '{}': a phone comparator needs default_country (such as SA or 966)",
+                f.field
+            )));
+        }
+        if let Some(m) = f.min_similarity
+            && !(0.0..=1.0).contains(&m)
+        {
+            return Err(AppError::Validation(format!(
+                "field '{}': min_similarity must be between 0 and 1",
+                f.field
+            )));
+        }
+    }
+    Ok(())
+}
+
 /// A15-T4: what saving a record that matches an existing one does
 /// (`match_rule.on_save`), ordered from the mildest.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

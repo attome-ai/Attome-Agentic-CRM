@@ -47,57 +47,7 @@ fn validate_match_fields(
     known_fields: &HashSet<&str>,
     fields: &[MatchField],
 ) -> Result<(), AppError> {
-    if fields.is_empty() {
-        return Err(AppError::Validation(
-            "a match rule must specify at least one field".into(),
-        ));
-    }
-    for f in fields {
-        if f.comparator == Comparator::Embedding {
-            return Err(AppError::Validation(format!(
-                "field '{}': comparator 'embedding' is schema-accepted but not implemented yet \
-                 — there is no per-field embedding source (attome-search's embeddings cover its own \
-                 title/body search corpus, not arbitrary attribute values); use 'exact', \
-                 'normalized', 'trigram', 'phone', 'email', 'id', 'name' or 'phonetic'",
-                f.field
-            )));
-        }
-        if !known_fields.contains(f.field.as_str()) {
-            return Err(AppError::Validation(format!(
-                "field '{}' does not exist on this entity",
-                f.field
-            )));
-        }
-        if f.weight <= 0.0 {
-            return Err(AppError::Validation(format!(
-                "field '{}': weight must be positive",
-                f.field
-            )));
-        }
-        // A15-T3: a phone field names the country its local numbers belong
-        // to, or it could never compare `05...` with `+9665...`.
-        if f.comparator == Comparator::Phone
-            && attome_core::match_normalize::phone_key(
-                "0500000000",
-                f.default_country.as_deref().unwrap_or(""),
-            )
-            .is_none()
-        {
-            return Err(AppError::Validation(format!(
-                "field '{}': a phone comparator needs default_country (such as SA or 966)",
-                f.field
-            )));
-        }
-        if let Some(m) = f.min_similarity
-            && !(0.0..=1.0).contains(&m)
-        {
-            return Err(AppError::Validation(format!(
-                "field '{}': min_similarity must be between 0 and 1",
-                f.field
-            )));
-        }
-    }
-    Ok(())
+    attome_core::match_rule::validate_fields(known_fields, fields)
 }
 
 const MATCH_RULE_COLUMNS: &str = "id, entity_logicalname, name, is_active, fields, \
@@ -1477,52 +1427,11 @@ async fn explain_candidate(
     }))
 }
 
-/// The rows a rule preview reads.
-const RULE_PREVIEW_SAMPLE: i64 = 5_000;
-/// The example pairs a rule preview returns.
-const RULE_PREVIEW_EXAMPLES: usize = 20;
-
 #[derive(Deserialize, ToSchema)]
 struct RulePreviewBody {
     entity: String,
     fields: Vec<MatchField>,
     threshold: f64,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-struct RulePreviewPair {
-    record_a: Uuid,
-    record_b: Uuid,
-    score: f64,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-struct RulePreview {
-    /// Rows read (at most 5,000).
-    sampled: i64,
-    /// Pairs the rule would flag among them.
-    pairs: i64,
-    /// Up to 20 of them, highest score first.
-    examples: Vec<RulePreviewPair>,
-}
-
-/// The value one field of a draft rule compares, for the preview: the key
-/// for a key comparator, the trimmed lowercased text for `normalized`, the
-/// text for `exact`; `trigram` is left to the sweep.
-fn preview_key(field: &MatchField, value: &str) -> Option<String> {
-    match field.comparator {
-        Comparator::Exact => Some(value.to_owned()),
-        Comparator::Normalized => Some(
-            value
-                .split_whitespace()
-                .collect::<Vec<_>>()
-                .join(" ")
-                .to_lowercase(),
-        ),
-        c if c.is_key() => field.key_of(value),
-        _ => None,
-    }
-    .filter(|k| !k.is_empty())
 }
 
 /// `POST /api/v1/admin/data/match-rules/preview` — A15-T7: how many pairs a
@@ -1536,7 +1445,7 @@ fn preview_key(field: &MatchField, value: &str) -> Option<String> {
     tag = "admin",
     request_body = RulePreviewBody,
     responses(
-        (status = 200, description = "Pairs the draft rule would flag", body = RulePreview),
+        (status = 200, description = "Pairs the draft rule would flag", body = attome_records::duplicate_check::RulePreview),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
         (status = 422, description = "Request failed validation", body = ErrorResponse),
@@ -1552,7 +1461,7 @@ async fn preview_match_rule(
     State(state): State<EngineState>,
     _ctx: Authorized<Admin>,
     Json(body): Json<RulePreviewBody>,
-) -> Result<Json<RulePreview>, AppError> {
+) -> Result<Json<attome_records::duplicate_check::RulePreview>, AppError> {
     if body.threshold <= 0.0 || body.threshold > 1.0 {
         return Err(AppError::Validation(
             "threshold must be greater than 0 and at most 1".into(),
@@ -1561,93 +1470,16 @@ async fn preview_match_rule(
     let (_, entity_name, attrs, _) = entity_crud::resolve_entity(&state, &body.entity).await?;
     let known: HashSet<&str> = attrs.iter().map(|a| a.logicalname.as_str()).collect();
     validate_match_fields(&known, &body.fields)?;
-    let cols = body
-        .fields
-        .iter()
-        .map(|f| {
-            format!(
-                "{}::text AS {}",
-                attome_core::quote_ident(&f.field),
-                attome_core::quote_ident(&f.field)
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
-    let rows: Vec<(Uuid, Value)> = sqlx::query_as(&format!(
-        "SELECT id, (SELECT row_to_json(x) FROM (SELECT {cols}) x)::jsonb FROM {} \
-          WHERE is_active = true ORDER BY id LIMIT $1",
-        attome_core::quote_ident(&entity_name)
+    Ok(Json(
+        attome_records::duplicate_check::preview_rule(
+            &state,
+            &entity_name,
+            &body.fields,
+            body.threshold,
+            attome_records::duplicate_check::RULE_PREVIEW_SAMPLE,
+        )
+        .await?,
     ))
-    .bind(RULE_PREVIEW_SAMPLE)
-    .fetch_all(&state.base.db)
-    .await
-    .map_err(AppError::internal)?;
-    // Each record's key per field.
-    let keyed: Vec<(Uuid, Vec<Option<String>>)> = rows
-        .iter()
-        .map(|(id, values)| {
-            let keys = body
-                .fields
-                .iter()
-                .map(|f| {
-                    values
-                        .get(&f.field)
-                        .and_then(Value::as_str)
-                        .and_then(|v| preview_key(f, v))
-                })
-                .collect();
-            (*id, keys)
-        })
-        .collect();
-    // Candidate pairs share a key on at least one field.
-    let mut groups: std::collections::HashMap<(usize, &str), Vec<usize>> =
-        std::collections::HashMap::new();
-    for (i, (_, keys)) in keyed.iter().enumerate() {
-        for (f, key) in keys.iter().enumerate() {
-            if let Some(key) = key {
-                groups.entry((f, key.as_str())).or_default().push(i);
-            }
-        }
-    }
-    let mut seen: HashSet<(usize, usize)> = HashSet::new();
-    let mut found: Vec<RulePreviewPair> = Vec::new();
-    for members in groups.values() {
-        for (n, &i) in members.iter().enumerate() {
-            for &j in &members[n + 1..] {
-                let pair = (i.min(j), i.max(j));
-                if !seen.insert(pair) {
-                    continue;
-                }
-                let (a, b) = (&keyed[pair.0], &keyed[pair.1]);
-                let evidence: Vec<(f64, bool)> = body
-                    .fields
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(f, field)| match (&a.1[f], &b.1[f]) {
-                        (Some(x), Some(y)) => Some((field.weight, x == y)),
-                        _ => None,
-                    })
-                    .collect();
-                if let Some(score) = attome_core::match_rule::weighted_score(&evidence)
-                    && score >= body.threshold
-                {
-                    found.push(RulePreviewPair {
-                        record_a: a.0,
-                        record_b: b.0,
-                        score,
-                    });
-                }
-            }
-        }
-    }
-    let pairs = found.len() as i64;
-    found.sort_by(|x, y| y.score.total_cmp(&x.score));
-    found.truncate(RULE_PREVIEW_EXAMPLES);
-    Ok(Json(RulePreview {
-        sampled: rows.len() as i64,
-        pairs,
-        examples: found,
-    }))
 }
 
 #[derive(Deserialize, IntoParams)]

@@ -316,6 +316,267 @@ async fn try_write_match_keys(
     Ok(())
 }
 
+// ── A15-T7/T8: the rule preview and the open pairs ──────────────────────────
+
+/// The rows a rule preview reads at most.
+pub const RULE_PREVIEW_SAMPLE: i64 = 5_000;
+/// The example pairs a rule preview returns.
+const RULE_PREVIEW_EXAMPLES: usize = 20;
+
+/// One pair a draft rule would flag.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct RulePreviewPair {
+    pub record_a: Uuid,
+    pub record_b: Uuid,
+    pub score: f64,
+}
+
+/// What a draft rule would flag over a sample.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct RulePreview {
+    /// Rows read.
+    pub sampled: i64,
+    /// Pairs the rule would flag among them.
+    pub pairs: i64,
+    /// Up to 20 of them, highest score first.
+    pub examples: Vec<RulePreviewPair>,
+}
+
+/// The value one field of a draft rule compares, for the preview: the key
+/// for a key comparator, the trimmed lowercased text for `normalized`, the
+/// text for `exact`; `trigram` is left to the sweep.
+fn preview_key(field: &MatchField, value: &str) -> Option<String> {
+    use attome_core::match_rule::Comparator;
+    match field.comparator {
+        Comparator::Exact => Some(value.to_owned()),
+        Comparator::Normalized => Some(
+            value
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ")
+                .to_lowercase(),
+        ),
+        c if c.is_key() => field.key_of(value),
+        _ => None,
+    }
+    .filter(|k| !k.is_empty())
+}
+
+/// A15-T7: how many pairs a draft rule (already validated) would flag over
+/// the entity's first `sample` live records, with up to 20 examples. Pairs
+/// are found on the fields' keys (exact, normalized and key comparators;
+/// trigram fields count as no evidence) and scored as the sweep scores them.
+/// Writes nothing.
+pub async fn preview_rule(
+    state: &EngineState,
+    entity_name: &str,
+    fields: &[MatchField],
+    threshold: f64,
+    sample: i64,
+) -> Result<RulePreview, AppError> {
+    let cols = fields
+        .iter()
+        .map(|f| {
+            format!(
+                "{}::text AS {}",
+                quote_ident(&f.field),
+                quote_ident(&f.field)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let rows: Vec<(Uuid, Value)> = sqlx::query_as(&format!(
+        "SELECT t.id, (SELECT row_to_json(x) FROM (SELECT {cols}) x)::jsonb FROM {} t \
+          WHERE t.is_active = true ORDER BY t.id LIMIT $1",
+        quote_ident(entity_name)
+    ))
+    .bind(sample)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let keyed: Vec<(Uuid, Vec<Option<String>>)> = rows
+        .iter()
+        .map(|(id, values)| {
+            let keys = fields
+                .iter()
+                .map(|f| {
+                    values
+                        .get(&f.field)
+                        .and_then(Value::as_str)
+                        .and_then(|v| preview_key(f, v))
+                })
+                .collect();
+            (*id, keys)
+        })
+        .collect();
+    // Candidate pairs share a key on at least one field.
+    let mut groups: std::collections::HashMap<(usize, &str), Vec<usize>> =
+        std::collections::HashMap::new();
+    for (i, (_, keys)) in keyed.iter().enumerate() {
+        for (f, key) in keys.iter().enumerate() {
+            if let Some(key) = key {
+                groups.entry((f, key.as_str())).or_default().push(i);
+            }
+        }
+    }
+    let mut seen: std::collections::HashSet<(usize, usize)> = std::collections::HashSet::new();
+    let mut found: Vec<RulePreviewPair> = Vec::new();
+    for members in groups.values() {
+        for (n, &i) in members.iter().enumerate() {
+            for &j in &members[n + 1..] {
+                let pair = (i.min(j), i.max(j));
+                if !seen.insert(pair) {
+                    continue;
+                }
+                let (a, b) = (&keyed[pair.0], &keyed[pair.1]);
+                let evidence: Vec<(f64, bool)> = fields
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(f, field)| match (&a.1[f], &b.1[f]) {
+                        (Some(x), Some(y)) => Some((field.weight, x == y)),
+                        _ => None,
+                    })
+                    .collect();
+                if let Some(score) = weighted_score(&evidence)
+                    && score >= threshold
+                {
+                    found.push(RulePreviewPair {
+                        record_a: a.0,
+                        record_b: b.0,
+                        score,
+                    });
+                }
+            }
+        }
+    }
+    let pairs = found.len() as i64;
+    found.sort_by(|x, y| y.score.total_cmp(&x.score));
+    found.truncate(RULE_PREVIEW_EXAMPLES);
+    Ok(RulePreview {
+        sampled: rows.len() as i64,
+        pairs,
+        examples: found,
+    })
+}
+
+/// A15-T8: up to `limit` live records' values of `fields` (attribute names
+/// the caller has resolved and may read), newest first, keeping only
+/// records the caller may read — the sample a rule proposal shows a model.
+pub async fn sample_values(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_id: Uuid,
+    entity_name: &str,
+    fields: &[String],
+    limit: i64,
+) -> Result<Vec<Value>, AppError> {
+    if fields.is_empty() {
+        return Ok(Vec::new());
+    }
+    let cols = fields
+        .iter()
+        .map(|f| format!("{}::text AS {}", quote_ident(f), quote_ident(f)))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let rows: Vec<(Uuid, Value)> = sqlx::query_as(&format!(
+        "SELECT t.id, (SELECT row_to_json(x) FROM (SELECT {cols}) x)::jsonb FROM {} t \
+          WHERE t.is_active = true ORDER BY t.id DESC LIMIT $1",
+        quote_ident(entity_name)
+    ))
+    .bind(limit.saturating_mul(2))
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut out = Vec::new();
+    for (id, values) in rows {
+        if out.len() as i64 >= limit {
+            break;
+        }
+        match crate::entity_crud::require_record_access(
+            state,
+            ctx,
+            entity_id,
+            entity_name,
+            id,
+            RecordAction::Read,
+        )
+        .await
+        {
+            Ok(()) => out.push(values),
+            Err(AppError::Forbidden | AppError::NotFound) => {}
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(out)
+}
+
+/// One open duplicate pair whose records the caller may both read.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct OpenDuplicatePair {
+    pub candidate_id: Uuid,
+    pub record_a: Uuid,
+    pub record_b: Uuid,
+    pub rule_id: Uuid,
+    pub score: f64,
+}
+
+/// A15-T8: an entity's open duplicate pairs (or one record's), highest score
+/// first, keeping only pairs whose records the caller may both read.
+pub async fn list_open(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_id: Uuid,
+    entity_name: &str,
+    record_id: Option<Uuid>,
+    limit: i64,
+) -> Result<Vec<OpenDuplicatePair>, AppError> {
+    let rows: Vec<(Uuid, Uuid, Uuid, Uuid, f64)> = sqlx::query_as(
+        "SELECT id, record_a, record_b, match_rule_id, score::float8 FROM duplicate_candidate \
+          WHERE entity_logicalname = $1 AND status = 'open' \
+            AND ($2::uuid IS NULL OR record_a = $2 OR record_b = $2) \
+          ORDER BY score DESC, id LIMIT $3",
+    )
+    .bind(entity_name)
+    .bind(record_id)
+    .bind(limit.saturating_mul(4))
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut out = Vec::new();
+    for (candidate_id, record_a, record_b, rule_id, score) in rows {
+        if out.len() as i64 >= limit {
+            break;
+        }
+        let mut readable = true;
+        for id in [record_a, record_b] {
+            match crate::entity_crud::require_record_access(
+                state,
+                ctx,
+                entity_id,
+                entity_name,
+                id,
+                RecordAction::Read,
+            )
+            .await
+            {
+                Ok(()) => {}
+                Err(AppError::Forbidden | AppError::NotFound) => readable = false,
+                Err(e) => return Err(e),
+            }
+        }
+        if readable {
+            out.push(OpenDuplicatePair {
+                candidate_id,
+                record_a,
+                record_b,
+                rule_id,
+                score,
+            });
+        }
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

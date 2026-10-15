@@ -75,7 +75,7 @@ export type { ModalHandle }                from './lib/a11y/modal-stack';
 
 export { isMfaChallenge } from './lib/types';
 export type {
-  ApiError, ApiErrorKind,
+  ApiError, ApiErrorKind, DuplicateMatchRef,
   AuthResponse, GoogleAuthRequest, LoginRequest, RegisterRequest,
   OidcProviderInfo, IdentityLinkInfo,
   MfaChallenge, MfaVerifyBody, MfaPendingEnrollBody, MfaEnrollResponse,

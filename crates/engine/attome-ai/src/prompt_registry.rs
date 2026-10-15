@@ -65,6 +65,11 @@ pub fn all_versions() -> Vec<PromptEntry> {
             text: crate::actions::draft_article::draft_system_prompt(REFERENCE_LANGUAGE),
         },
         PromptEntry {
+            action_id: crate::actions::duplicates::DUPLICATES_PROPOSE_RULES,
+            version: crate::actions::duplicates::PROPOSE_RULES_PROMPT_VERSION,
+            text: crate::actions::duplicates::propose_rules_system_prompt(),
+        },
+        PromptEntry {
             action_id: crate::actions::classify::RECORD_CLASSIFY,
             version: crate::actions::classify::CLASSIFY_PROMPT_VERSION,
             // Rendered with a representative two-value choice list so the

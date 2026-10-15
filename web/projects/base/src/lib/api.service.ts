@@ -31,6 +31,12 @@ export interface WriteOptions {
    * operation the recycle bin can restore at once (the undo after a delete).
    */
   operationId?: string;
+  /**
+   * A15-T4: sent as `Attome-Duplicate-Reason` — why this save goes ahead
+   * although it matches an existing record under an `allow_with_reason`
+   * duplicate rule. The audit keeps it.
+   */
+  duplicateReason?: string;
 }
 
 /** `If-Match` from `etag`, plus the idempotency key. */
@@ -39,6 +45,7 @@ function writeHeaders(options: WriteOptions, etag?: number): Record<string, stri
   if (options.idempotencyKey) headers['x-idempotency-key'] = options.idempotencyKey;
   if (etag !== undefined) headers['If-Match'] = `"${etag}"`;
   if (options.operationId) headers['Attome-Operation-Id'] = options.operationId;
+  if (options.duplicateReason) headers['Attome-Duplicate-Reason'] = options.duplicateReason;
   return headers;
 }
 
@@ -348,6 +355,15 @@ export class ApiService {
     if (typeof body?.effect === 'string') error.effect = body.effect;
     if (body?.details !== undefined && body?.details !== null) error.details = body.details;
 
+    // A15-T4: a save refused as a likely duplicate names the records it
+    // matches (only those the caller may read) and counts the rest.
+    if (body?.error === 'duplicate_detected') {
+      error.duplicates = {
+        matches: Array.isArray(body?.matches) ? body.matches : [],
+        hidden: typeof body?.hidden === 'number' ? body.hidden : 0,
+      };
+    }
+
     // D-510 rule 6: the step-up prompt is built from these two fields, so they
     // are the only extra body fields kept — and only for this one code.
     if (error.kind === 'reauth_required') {
@@ -376,6 +392,7 @@ function codeToKind(code: unknown): ApiError['kind'] | undefined {
     case 'unauthorized':                   return 'unauthorized';
     case 'forbidden':                      return 'forbidden';
     case 'conflict':                       return 'conflict';
+    case 'duplicate_detected':             return 'conflict';
     case 'version_conflict':               return 'version_conflict';
     case 'idempotency_conflict':           return 'idempotency_conflict';
     case 'idempotency_outcome_unknown':    return 'idempotency_outcome_unknown';

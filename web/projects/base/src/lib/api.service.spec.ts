@@ -103,6 +103,13 @@ describe('ApiService', () => {
       expect(deleteReq.request.headers.get('x-idempotency-key')).toBe('k-del');
       deleteReq.flush(null);
     });
+
+    it('sends a duplicate reason as Attome-Duplicate-Reason (A15-T4)', () => {
+      service.post('/api/v1/foo', { a: 1 }, { duplicateReason: 'second branch' }).subscribe();
+      const req = httpMock.expectOne(URL);
+      expect(req.request.headers.get('Attome-Duplicate-Reason')).toBe('second branch');
+      req.flush({});
+    });
   });
 
   describe('getAllPages', () => {
@@ -295,6 +302,19 @@ describe('ApiService', () => {
 
       const error = await promise.catch((e: ApiError) => e);
       expect((error as ApiError).requestId).toBe('req-header');
+    });
+
+    it('keeps the matches and hidden count of a duplicate_detected refusal (A15-T4)', async () => {
+      const refused = firstValueFrom(service.post('/api/v1/contact', { phone: '1' }));
+      const match = { record_id: 'r1', rule_id: 'm1', rule_name: 'Phone', score: 0.9 };
+      httpMock.expectOne('http://localhost:7865/api/v1/contact').flush(
+        { error: 'duplicate_detected', message: 'dup', matches: [match], hidden: 2 },
+        { status: 409, statusText: 'Error' },
+      );
+      const err = (await refused.catch((e: ApiError) => e)) as ApiError;
+      expect(err.kind).toBe('conflict');
+      expect(err.code).toBe('duplicate_detected');
+      expect(err.duplicates).toEqual({ matches: [match], hidden: 2 });
     });
 
     it('keeps rule_id on a rule_violation only', async () => {

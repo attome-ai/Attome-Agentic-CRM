@@ -95,6 +95,11 @@ pub(crate) const GOVERNED_ACTIONS: &[(&str, Verb)] = &[
     ("record.bulk.status", Verb::Read),
     ("record.bulk.update", Verb::Update),
     ("record.bulk.delete", Verb::Delete),
+    // A15-T8: duplicates act on one entity's records.
+    ("duplicates.check", Verb::Read),
+    ("duplicates.list", Verb::Read),
+    ("duplicates.merge", Verb::Delete),
+    ("duplicates.propose_rules", Verb::Read),
 ];
 
 /// Security, identity, audit and licence entities, by exact logical name,

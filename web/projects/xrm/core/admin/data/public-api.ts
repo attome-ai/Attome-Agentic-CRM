@@ -61,11 +61,13 @@ export type {
 // record form's "possible duplicate" banner (`@attome/xrm/core/entity`) can
 // use `DuplicatesService`/`DuplicateCandidate` without pulling in the
 // admin-only review page component.
-export { DuplicatesService } from './services/duplicates.service';
+export { DuplicatesService, MATCH_COMPARATORS, ON_SAVE_MODES } from './services/duplicates.service';
 export type {
   MatchComparator, MatchField, MatchRule, MatchRulesPage, CreateMatchRuleBody,
   SurvivorshipStrategy, SurvivorshipRule, SurvivorshipRulesPage, CreateSurvivorshipRuleBody,
   CandidateStatus, DuplicateCandidate, DuplicateCandidatesPage, MergeResponse,
+  OnSave, DuplicateCheckResult, MergePicks, MergePreview, MergeUndone,
+  FieldExplanation, CandidateExplanation, DuplicateStats, RulePreview,
 } from './services/duplicates.service';
 // M36 Phase 0+1 (Predictive Intelligence, D-473) — same "exported from the
 // /data entry point so the record form's banner can use it without pulling

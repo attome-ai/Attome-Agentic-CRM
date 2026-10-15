@@ -126,6 +126,37 @@ async fn the_agents_owner_cannot_approve_their_own_agents_action() {
     );
 }
 
+/// A15-T8: an agent's `duplicates.merge` is Consequential, so the gate
+/// raises an approval request; nothing runs until another person approves.
+#[tokio::test]
+async fn duplicates_merge_requires_approval() {
+    let merge = attome_ai::actions::all()
+        .into_iter()
+        .find(|d| d.id.0 == "duplicates.merge")
+        .expect("duplicates.merge is registered");
+    assert_eq!(merge.risk, attome_ai::descriptor::RiskTier::Consequential);
+
+    let db = skip_if_no_db!(test_db().await);
+    let owner = Uuid::now_v7();
+    let mut request = agent_request(owner);
+    request.action_id = "duplicates.merge".into();
+    request.args = serde_json::json!({
+        "entity": "account",
+        "survivor_id": Uuid::now_v7(),
+        "duplicate_id": Uuid::now_v7(),
+    });
+    let pending = request_approval(&db, ActionId("duplicates.merge"), &request)
+        .await
+        .expect("submit");
+    assert!(
+        approved_payload(&db, pending.approval_id)
+            .await
+            .expect("read")
+            .is_none(),
+        "an agent's merge must not run before a person approves it"
+    );
+}
+
 /// A rejected request never yields an executable payload.
 #[tokio::test]
 async fn a_rejected_request_never_executes() {

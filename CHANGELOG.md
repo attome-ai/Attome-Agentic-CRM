@@ -30,6 +30,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   update and delete; refused once the survivor changed), `GET /api/v1/admin/data/duplicates/{id}/explain`
   (per-field scores and keys), `POST /api/v1/admin/data/match-rules/preview` (pairs a draft rule would
   flag in a 5,000-row sample) and `GET /api/v1/admin/data/duplicates/stats`.
+- Agents get `duplicates.check`, `duplicates.list`, `duplicates.merge` (approved by a person first)
+  and `duplicates.propose_rules` (a rule draft with its preview counts; never saved).
 - Autonumber rules gain a `sequence_key` (`{branch}`: one counter per branch, per period), a
   `hijri_yearly` reset, `{field}` and `{lookup.field}` tokens in the format, and `assign_when`
   (`status = issued`): the number is given when a create or an update first meets it

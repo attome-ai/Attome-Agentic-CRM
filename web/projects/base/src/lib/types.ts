@@ -49,6 +49,15 @@ export type ApiErrorKind =
   | 'authoring_locked'
   | 'unknown';
 
+/** A15-T4: one existing record a save matches under a duplicate rule. */
+export interface DuplicateMatchRef {
+  record_id: string;
+  rule_id: string;
+  rule_name: string;
+  /** The rule's score for the pair, 0 to 1. */
+  score: number;
+}
+
 export interface ApiError {
   kind:    ApiErrorKind;
   /**
@@ -96,6 +105,12 @@ export interface ApiError {
    * LockedField[]}` on `field_locked*`. Untyped here; the consumer narrows.
    */
   details?: unknown;
+  /**
+   * A15-T4: `duplicate_detected` only — the existing records the save
+   * matches that the caller may read (`record_id`, `rule_id`, `rule_name`,
+   * `score`), and how many more it may not.
+   */
+  duplicates?: { matches: DuplicateMatchRef[]; hidden: number };
   /** `reauth_required` only: the protected operation (`identity_link`, `api_key_create`). */
   operation?: string;
   /**
