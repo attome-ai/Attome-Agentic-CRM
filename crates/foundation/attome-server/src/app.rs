@@ -129,7 +129,7 @@ const CORS_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(600);
 /// one deliberate edit away from being readable. `pub` for the same reason as
 /// `allowed_request_headers`: a test in another crate can assert against the
 /// real contract rather than a copy that can drift.
-pub(crate) fn exposed_response_headers() -> [HeaderName; 10] {
+pub(crate) fn exposed_response_headers() -> [HeaderName; 12] {
     [
         HeaderName::from_static("x-request-id"),
         HeaderName::from_static(METADATA_VERSION_HEADER),
@@ -141,6 +141,10 @@ pub(crate) fn exposed_response_headers() -> [HeaderName; 10] {
         header::LOCATION,
         HeaderName::from_static("deprecation"),
         HeaderName::from_static("sunset"),
+        // S9-T4: a replayed idempotent response says so, and names the
+        // request that ran.
+        HeaderName::from_static(crate::middleware::idempotency::REPLAYED_HEADER),
+        HeaderName::from_static(crate::middleware::idempotency::ORIGINAL_REQUEST_ID_HEADER),
     ]
 }
 

@@ -322,6 +322,7 @@ async fn redis_gate<S: IdempotencyStore>(
         Err(error) => return AppError::internal(error).into_response(),
     }
 
+    let original_request_id = original_request_id(req.headers());
     let response = next.run(req).await;
     let not_applied = response.extensions().get::<MutationNotApplied>().is_some();
     match disposition(response.status(), not_applied) {
@@ -339,7 +340,15 @@ async fn redis_gate<S: IdempotencyStore>(
             response
         }
         Disposition::Completed => {
-            store_completed(store, settings, key, request_digest, response).await
+            store_completed(
+                store,
+                settings,
+                key,
+                request_digest,
+                original_request_id,
+                response,
+            )
+            .await
         }
     }
 }
@@ -385,6 +394,7 @@ async fn store_completed<S: IdempotencyStore>(
     settings: GateSettings<'_>,
     key: &str,
     request_digest: &str,
+    original_request_id: Option<(String, String)>,
     response: Response,
 ) -> Response {
     let (parts, body) = response.into_parts();
@@ -397,7 +407,10 @@ async fn store_completed<S: IdempotencyStore>(
                     .get(axum::http::header::CONTENT_TYPE)
                     .and_then(|v| v.to_str().ok())
                     .map(str::to_owned),
-                headers: replay_headers(&parts.headers),
+                headers: replay_headers(&parts.headers)
+                    .into_iter()
+                    .chain(original_request_id)
+                    .collect(),
                 body_b64: base64_encode(&bytes),
                 request_digest: request_digest.to_owned(),
             };
@@ -500,6 +513,7 @@ fn replay_cached(cached: CachedResponse) -> Response {
         builder = builder.header(name, value);
     }
     builder
+        .header(REPLAYED_HEADER, "true")
         .body(Body::from(body))
         .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())
 }
@@ -713,6 +727,7 @@ async fn idempotency_durable_flow(
         }
     };
 
+    let original_request_id = original_request_id(req.headers());
     let mut req = req;
     req.extensions_mut()
         .insert(idempotency_durable::DurableIdempotencyHandle { record_id });
@@ -733,7 +748,10 @@ async fn idempotency_durable_flow(
                 .into_response();
         }
     };
-    let headers = replay_headers(&parts.headers);
+    let headers: Vec<(String, String)> = replay_headers(&parts.headers)
+        .into_iter()
+        .chain(original_request_id)
+        .collect();
     idempotency_durable::complete_best_effort(
         &state,
         record_id,
@@ -753,11 +771,28 @@ fn replay_from_durable(cached: idempotency_durable::CachedRecord) -> Response {
         builder = builder.header(name, value);
     }
     builder
+        .header(REPLAYED_HEADER, "true")
         .body(Body::from(cached.body))
         .unwrap_or_else(|_| StatusCode::INTERNAL_SERVER_ERROR.into_response())
 }
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
+
+/// S9-T4: set on every replayed response, so a client can tell a replay
+/// from a fresh execution.
+pub const REPLAYED_HEADER: &str = "idempotency-replayed";
+/// S9-T4: the request id of the request that actually ran, on a replay; the
+/// replay's own `x-request-id` is the retry's.
+pub const ORIGINAL_REQUEST_ID_HEADER: &str = "x-original-request-id";
+
+/// The running request's id, stored with its response as the replay's
+/// [`ORIGINAL_REQUEST_ID_HEADER`].
+fn original_request_id(headers: &axum::http::HeaderMap) -> Option<(String, String)> {
+    headers
+        .get("x-request-id")
+        .and_then(|value| value.to_str().ok())
+        .map(|id| (ORIGINAL_REQUEST_ID_HEADER.to_owned(), id.to_owned()))
+}
 
 fn replay_headers(headers: &axum::http::HeaderMap) -> Vec<(String, String)> {
     const ALLOWED: &[&str] = &[
@@ -1295,6 +1330,45 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(&body[..], b"made");
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    /// S9-T4: a replayed create carries the original Location and ETag, says
+    /// it is a replay and names the request that ran.
+    #[tokio::test]
+    async fn a_replayed_create_returns_the_same_location_and_etag() {
+        use axum::http::header::{ETAG, LOCATION};
+        let calls = Arc::new(AtomicUsize::new(0));
+        let app = gated(
+            MemoryStore::default(),
+            LONG,
+            1024,
+            axum::Router::new().route(
+                "/r",
+                counting(calls.clone(), || {
+                    (
+                        StatusCode::CREATED,
+                        [(LOCATION, "/r/1"), (ETAG, "\"3\"")],
+                        "made",
+                    )
+                }),
+            ),
+        );
+        let with_id = |id: &'static str| {
+            let mut req = post("/r", "{}");
+            req.headers_mut()
+                .insert("x-request-id", axum::http::HeaderValue::from_static(id));
+            req
+        };
+
+        let first = send(&app, with_id("req-1")).await;
+        assert!(first.headers().get(REPLAYED_HEADER).is_none());
+        let second = send(&app, with_id("req-2")).await;
+        assert_eq!(second.status(), StatusCode::CREATED);
+        assert_eq!(second.headers()[LOCATION], "/r/1");
+        assert_eq!(second.headers()[ETAG], "\"3\"");
+        assert_eq!(second.headers()[REPLAYED_HEADER], "true");
+        assert_eq!(second.headers()[ORIGINAL_REQUEST_ID_HEADER], "req-1");
         assert_eq!(calls.load(Ordering::SeqCst), 1);
     }
 

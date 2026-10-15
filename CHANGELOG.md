@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- A response replayed for a repeated `Idempotency-Key` carries `Idempotency-Replayed: true` and
+  `X-Original-Request-Id` (the request that ran), beside the original status, body, `Location` and
+  `ETag`; both headers are readable cross-origin.
 - Scanning (behind the `scan.enabled` flag, off by default): a text or number field takes
   `options.scan` (formats, GS1 batch and expiry fields, what an unknown code does), the web library
   reads GS1 element strings and checks GTIN check digits, and `GET /api/v1/scan/find?value=` returns
