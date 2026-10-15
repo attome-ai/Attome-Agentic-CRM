@@ -59,6 +59,18 @@ pub struct EntityRecordResponse {
     /// every other response stays byte-identical.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     warnings: Vec<crate::business_rules::RuleWarning>,
+    /// A15-T4: the existing records this create or update matches under a
+    /// `warn` (or reasoned `allow_with_reason`) duplicate rule — the write
+    /// succeeded. Omitted when there are none.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    duplicate_warnings: Vec<crate::duplicate_check::DuplicateMatch>,
+    /// A15-T4: how many more matches the caller may not read. Omitted when 0.
+    #[serde(skip_serializing_if = "is_zero")]
+    hidden_duplicates: i64,
+}
+
+fn is_zero(n: &i64) -> bool {
+    *n == 0
 }
 
 /// S1-T5: what a write's `Prefer` header asks it to answer with.
@@ -102,6 +114,11 @@ pub struct MinimalRecord {
     /// As on the full record: business-rule warnings that fired.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     warnings: Vec<crate::business_rules::RuleWarning>,
+    /// As on the full record: likely duplicates (A15-T4).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    duplicate_warnings: Vec<crate::duplicate_check::DuplicateMatch>,
+    #[serde(skip_serializing_if = "is_zero")]
+    hidden_duplicates: i64,
 }
 
 /// A write's answer: the whole record, or with `return=minimal` its id and
@@ -121,6 +138,8 @@ pub(super) fn write_response(
                 row_version: record.row_version,
                 approval_request_id: record.approval_request_id,
                 warnings: record.warnings,
+                duplicate_warnings: record.duplicate_warnings,
+                hidden_duplicates: record.hidden_duplicates,
             };
             (
                 status,
@@ -149,6 +168,17 @@ impl EntityRecordResponse {
     /// See the `approval_request_id` field.
     pub(crate) fn with_approval_request_id(mut self, id: Option<Uuid>) -> Self {
         self.approval_request_id = id;
+        self
+    }
+
+    /// See the `duplicate_warnings` and `hidden_duplicates` fields.
+    pub(crate) fn with_duplicates(
+        mut self,
+        matches: Vec<crate::duplicate_check::DuplicateMatch>,
+        hidden: i64,
+    ) -> Self {
+        self.duplicate_warnings = matches;
+        self.hidden_duplicates = hidden;
         self
     }
 
@@ -355,5 +385,7 @@ pub(super) fn build_response(
         lookups,
         approval_request_id: None,
         warnings: Vec::new(),
+        duplicate_warnings: Vec::new(),
+        hidden_duplicates: 0,
     }
 }

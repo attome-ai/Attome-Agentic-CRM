@@ -8,6 +8,9 @@ export type ApiErrorKind =
   | 'forbidden'
   | 'conflict'
   | 'version_conflict'
+  // A15-T4: the save matches existing records under a blocking duplicate
+  // rule (the body lists `matches` and counts `hidden`).
+  | 'duplicate_detected'
   | 'idempotency_conflict'
   | 'validation_error'
   // D-472 / BTY-3: a rule violation carries the offending rule's id in the
@@ -47,6 +50,7 @@ const KNOWN_KINDS: ReadonlySet<string> = new Set<ApiErrorKind>([
   'forbidden',
   'conflict',
   'version_conflict',
+  'duplicate_detected',
   'idempotency_conflict',
   'validation_error',
   'rule_violation',

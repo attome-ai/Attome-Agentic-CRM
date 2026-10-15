@@ -6093,6 +6093,135 @@ fn scan_finds_existing_pairs() {
     })
 }
 
+/// A15-T4: the duplicate check before save. A `block` rule refuses a
+/// second record with the same phone (`409 duplicate_detected`, naming the
+/// first); `warn` saves it and lists the match; `allow_with_reason` refuses
+/// it until the request gives `Attome-Duplicate-Reason`.
+#[test]
+fn duplicate_rule_blocks_warns_and_takes_a_reason_on_save() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (logicalname, entity_id) = create_entity(&app, &admin_cookie, "dupcheck").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"phone","name":"Phone","field_type":"text"}"#,
+        )
+        .await;
+        sync_registry(&state).await;
+        let send = |method: &str, uri: String, body: String, reason: Option<&str>| {
+            let mut req = Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json");
+            if let Some(reason) = reason {
+                req = req.header("attome-duplicate-reason", reason);
+            }
+            req.body(Body::from(body)).unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                "/api/v1/admin/data/match-rules".to_owned(),
+                format!(
+                    r#"{{"entity":"{logicalname}","name":"same phone","threshold":1.0,"on_save":"block",
+                        "fields":[{{"field":"phone","comparator":"phone","weight":1.0,"default_country":"SA"}}]}}"#
+                ),
+                None,
+            ))
+            .await
+            .expect("rule");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let rule = body_json(res).await;
+        assert_eq!(rule["on_save"], "block", "{rule}");
+        let rule_id = rule["id"].as_str().unwrap().to_owned();
+        let mut version = rule["row_version"].as_i64().unwrap();
+
+        let create = |phone: &str, reason: Option<&str>| {
+            send(
+                "POST",
+                format!("/api/v1/{logicalname}"),
+                format!(r#"{{"phone":"{phone}"}}"#),
+                reason,
+            )
+        };
+        let res = app
+            .clone()
+            .oneshot(create("0501234567", None))
+            .await
+            .expect("first");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let first = body_json(res).await["id"].as_str().unwrap().to_owned();
+
+        let res = app
+            .clone()
+            .oneshot(create("+966 50 123 4567", None))
+            .await
+            .expect("blocked");
+        assert_eq!(res.status(), StatusCode::CONFLICT);
+        let err = body_json(res).await;
+        assert_eq!(err["error"], "duplicate_detected", "{err}");
+        assert_eq!(err["matches"][0]["record_id"], first.as_str(), "{err}");
+
+        let mut set_on_save = |on_save: &'static str| {
+            let req = send(
+                "PUT",
+                format!("/api/v1/admin/data/match-rules/{rule_id}"),
+                format!(r#"{{"on_save":"{on_save}","row_version":{version}}}"#),
+                None,
+            );
+            version += 1;
+            req
+        };
+        let res = app
+            .clone()
+            .oneshot(set_on_save("warn"))
+            .await
+            .expect("warn");
+        assert_eq!(res.status(), StatusCode::OK);
+        let res = app
+            .clone()
+            .oneshot(create("00966501234567", None))
+            .await
+            .expect("warned");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let warned = body_json(res).await;
+        assert_eq!(
+            warned["duplicate_warnings"][0]["record_id"],
+            first.as_str(),
+            "{warned}"
+        );
+
+        let res = app
+            .clone()
+            .oneshot(set_on_save("allow_with_reason"))
+            .await
+            .expect("reason");
+        assert_eq!(res.status(), StatusCode::OK);
+        let res = app
+            .clone()
+            .oneshot(create("0501234567", None))
+            .await
+            .expect("no reason");
+        assert_eq!(res.status(), StatusCode::CONFLICT);
+        let res = app
+            .clone()
+            .oneshot(create(
+                "0501234567",
+                Some("a branch office shares the number"),
+            ))
+            .await
+            .expect("with a reason");
+        assert_eq!(res.status(), StatusCode::CREATED);
+    })
+}
+
 /// D-432 / M13 — a small matching-precision fixture: an `exact`-comparator
 /// rule on `name` at `threshold = 1.0` must flag the one genuine duplicate
 /// pair and must NOT flag the unrelated third record (no false positive) —

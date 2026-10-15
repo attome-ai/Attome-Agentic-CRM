@@ -41,6 +41,16 @@ pub enum AppError {
         current_state: serde_json::Value,
     },
 
+    /// A15-T4: the save matches existing records under a duplicate rule that
+    /// blocks it, or wants a reason (`Attome-Duplicate-Reason`) the request
+    /// did not give. `matches` lists the ones the caller may read (record,
+    /// rule, score); `hidden` counts the others. `409 duplicate_detected`.
+    #[error("this looks like a duplicate of an existing record")]
+    DuplicateDetected {
+        matches: serde_json::Value,
+        hidden: i64,
+    },
+
     /// P-idempotency-hardening §4.2/§9 — distinguishable from `Conflict`'s
     /// generic `code` so a client (or an operator reading logs) can tell
     /// "your retry raced with another in-flight attempt" (`Conflict`, e.g.
@@ -306,6 +316,7 @@ impl IntoResponse for AppError {
             AppError::Conflict(_) => (StatusCode::CONFLICT, "conflict"),
             AppError::VersionConflict => (StatusCode::CONFLICT, "version_conflict"),
             AppError::VersionConflictAt { .. } => (StatusCode::CONFLICT, "version_conflict"),
+            AppError::DuplicateDetected { .. } => (StatusCode::CONFLICT, "duplicate_detected"),
             AppError::IdempotencyConflict(_) => (StatusCode::CONFLICT, "idempotency_conflict"),
             AppError::Validation(_) => (StatusCode::UNPROCESSABLE_ENTITY, "validation_error"),
             AppError::FieldValidation(_) => (StatusCode::UNPROCESSABLE_ENTITY, "validation_error"),
@@ -406,6 +417,10 @@ impl IntoResponse for AppError {
         {
             body["current_version"] = json!(current_version);
             body["current_state"] = json!(current_state);
+        }
+        if let AppError::DuplicateDetected { matches, hidden } = &self {
+            body["matches"] = json!(matches);
+            body["hidden"] = json!(hidden);
         }
 
         // BTY-11 (the 429 hint): one value drives both surfaces. RFC 9110 allows
@@ -1206,6 +1221,7 @@ mod tests {
             AppError::FieldLocked { .. } => 24,
             AppError::QueryTimeout => 25,
             AppError::ReadOnly => 26,
+            AppError::DuplicateDetected { .. } => 27,
         }
     }
 
@@ -1251,6 +1267,10 @@ mod tests {
             AppError::VersionConflictAt {
                 current_version: 7,
                 current_state: serde_json::json!({ "name": "x" }),
+            },
+            AppError::DuplicateDetected {
+                matches: serde_json::json!([]),
+                hidden: 1,
             },
             AppError::MethodNotAllowed,
             AppError::FieldLocked {

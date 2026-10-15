@@ -18,6 +18,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   Latin spellings), keep each candidate's per-field scores, and scan a whole table in the background:
   `POST /api/v1/admin/data/match-rules/{id}/scan`, on save, and on `scan_schedule` (`hourly`, `daily`,
   `weekly`; migration `0062`).
+- A duplicate rule's `on_save` checks a create or update before it is saved: `warn` saves it and lists
+  the matches (`duplicate_warnings`), `allow_with_reason` needs an `Attome-Duplicate-Reason` header
+  (kept in the audit), `block` refuses it with `409 duplicate_detected`; matches the caller cannot
+  read are only counted.
 - Autonumber rules gain a `sequence_key` (`{branch}`: one counter per branch, per period), a
   `hijri_yearly` reset, `{field}` and `{lookup.field}` tokens in the format, and `assign_when`
   (`status = issued`): the number is given when a create or an update first meets it

@@ -464,7 +464,10 @@ pub(super) async fn create_record(
     // unchanged (the ambient recording is read only for reference data).
     let (_, response) = reference::scope(
         Arc::new(recording.0),
-        create_record_for(&state, &ctx, claims.sub, &entity_input, body),
+        attome_core::match_rule::with_duplicate_reason(
+            duplicate_reason_header(&headers),
+            create_record_for(&state, &ctx, claims.sub, &entity_input, body),
+        ),
     )
     .await?;
     // S1-T5: `Prefer: return=minimal` answers with the id and row version.
@@ -646,6 +649,13 @@ pub async fn create_record_for(
         validate_lookup_targets(&state, &attrs, obj).await?;
     });
     require_child_parent_access_for_write(&state, ctx, &entity_name, None, obj).await?;
+    // A15-T4: a likely duplicate is warned about, needs a reason, or is
+    // refused, per the entity's duplicate rules.
+    let duplicate_reason = attome_core::match_rule::duplicate_reason();
+    let (duplicates, hidden_duplicates) = crate::duplicate_check::enforce(
+        crate::duplicate_check::check(&state, ctx, entity_id, &entity_name, None, obj).await?,
+        duplicate_reason.as_deref(),
+    )?;
 
     let actor = MutationActor::fetch(&state, acting_user_id).await;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -671,6 +681,11 @@ pub async fn create_record_for(
 
     let mut audit = MutationAudit::new();
     audit.changed_fields = field_changes_from_obj(&mut tx, &state, &attrs, obj, None).await;
+    if !duplicates.is_empty() || hidden_duplicates > 0 {
+        audit.event_comment = duplicate_reason
+            .as_deref()
+            .map(|reason| format!("saved as a likely duplicate: {reason}"));
+    }
 
     // C-10: the D-133 (2) creator-share grant, the `attome_document` file
     // mirror, the audit write, the commit, and the post-commit invalidation +
@@ -699,9 +714,12 @@ pub async fn create_record_for(
             .await?
     });
 
+    crate::duplicate_check::write_match_keys(&state, &entity_name, committed.result.record_id, obj)
+        .await;
     let lookups = resolve_lookup_meta(&state, ctx, &row, &attrs).await;
-    let response =
-        build_response(entity_id, row, &attrs, lookups, ctx, &entity_name).with_warnings(warnings);
+    let response = build_response(entity_id, row, &attrs, lookups, ctx, &entity_name)
+        .with_warnings(warnings)
+        .with_duplicates(duplicates, hidden_duplicates);
     Ok((committed.result.record_id, response))
 }
 
@@ -845,6 +863,23 @@ pub async fn update_record_for_outcome(
     validate_lookup_targets(&state, &attrs, obj).await?;
     require_child_parent_access(&state, ctx, &entity_name, record_id).await?;
     require_child_parent_access_for_write(&state, ctx, &entity_name, Some(record_id), obj).await?;
+    // A15-T4: see `create_record_for`.
+    let duplicate_reason = attome_core::match_rule::duplicate_reason();
+    let (duplicates, hidden_duplicates) = crate::duplicate_check::enforce(
+        crate::duplicate_check::check(&state, ctx, entity_id, &entity_name, Some(record_id), obj)
+            .await?,
+        duplicate_reason.as_deref(),
+    )?;
+    let event_comment = match (
+        &duplicate_reason,
+        duplicates.is_empty() && hidden_duplicates == 0,
+    ) {
+        (Some(reason), false) => Some(match event_comment {
+            Some(c) => format!("{c}; saved as a likely duplicate: {reason}"),
+            None => format!("saved as a likely duplicate: {reason}"),
+        }),
+        _ => event_comment,
+    };
 
     let actor = MutationActor::fetch(&state, acting_user_id).await;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
@@ -923,10 +958,12 @@ pub async fn update_record_for_outcome(
         )
         .await?;
 
+    crate::duplicate_check::write_match_keys(&state, &entity_name, record_id, obj).await;
     let lookups = resolve_lookup_meta(&state, ctx, &row, &attrs).await;
     let response = build_response(entity_id, row, &attrs, lookups, ctx, &entity_name)
         .with_approval_request_id(approval.as_ref().map(|a| a.request_id))
-        .with_warnings(warnings);
+        .with_warnings(warnings)
+        .with_duplicates(duplicates, hidden_duplicates);
     Ok(UpdateOutcome { response, approval })
 }
 
@@ -1119,14 +1156,17 @@ pub(super) async fn update_record(
     // D-787 rule 7: see `create_record` (reference data only).
     let response = match reference::scope(
         Arc::new(recording.0),
-        update_record_for(
-            &state,
-            &ctx,
-            claims.sub,
-            &entity_input,
-            record_id,
-            expected_version,
-            body,
+        attome_core::match_rule::with_duplicate_reason(
+            duplicate_reason_header(&headers),
+            update_record_for(
+                &state,
+                &ctx,
+                claims.sub,
+                &entity_input,
+                record_id,
+                expected_version,
+                body,
+            ),
         ),
     )
     .await
@@ -1794,4 +1834,13 @@ struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+/// A15-T4: the reason a request gives for saving a likely duplicate.
+fn duplicate_reason_header(headers: &axum::http::HeaderMap) -> Option<String> {
+    headers
+        .get("attome-duplicate-reason")
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.trim().chars().take(500).collect::<String>())
+        .filter(|v| !v.is_empty())
 }

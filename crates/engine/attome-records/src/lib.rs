@@ -38,6 +38,7 @@ pub mod bulk_edit;
 mod bulk_graph;
 pub mod business_rules;
 pub mod data_mapping;
+pub mod duplicate_check;
 pub mod entity_crud;
 pub mod entity_mutation;
 /// C-10 — the shared mutation-commit orchestration helper (creator share,

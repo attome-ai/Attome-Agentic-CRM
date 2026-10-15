@@ -88,9 +88,7 @@
 
 use attome_core::{EngineState, change_feed, quote_ident};
 use attome_types::AppError;
-use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// `change_consumer_cursor.consumer` key — see `attome_core::
@@ -114,76 +112,8 @@ const MAX_BLOCKED_CANDIDATES: i64 = 5000;
 /// record can't flood the steward queue from a single sweep tick.
 const TOP_CANDIDATES_PER_RULE: i64 = 5;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum Comparator {
-    Exact,
-    Normalized,
-    Trigram,
-    /// Schema-accepted, never runnable — see this module's doc comment.
-    Embedding,
-    /// A15-T3: the international phone number.
-    Phone,
-    /// A15-T3: the lowercased email address.
-    Email,
-    /// A15-T3: an id without spaces, dashes or dots.
-    Id,
-    /// A15-T3: the name, titles dropped and word order ignored.
-    Name,
-    /// A15-T3: the transliteration skeleton (Arabic meets Latin).
-    Phonetic,
-}
-
-impl Comparator {
-    /// A15-T3: compared through stored keys in `match_key`.
-    pub(crate) fn is_key(self) -> bool {
-        matches!(
-            self,
-            Self::Phone | Self::Email | Self::Id | Self::Name | Self::Phonetic
-        )
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub(crate) struct MatchField {
-    pub field: String,
-    pub comparator: Comparator,
-    pub weight: f64,
-    /// `trigram` only — the `pg_trgm` similarity floor a pair must clear to
-    /// count as a match on this field. Defaults to `pg_trgm`'s own default
-    /// (0.3, the same constant `attome-search`'s `FuzzyLeg` uses) when absent.
-    #[serde(default)]
-    pub min_similarity: Option<f64>,
-    /// REVIEW-2026-09-02 finding #5 — see this module's doc comment,
-    /// "Blocking keys". `#[serde(default)]` so an existing rule saved before
-    /// this field existed deserializes as `false` on every field (its old
-    /// behavior: no blocking, full scan under the old cap) rather than
-    /// failing to parse.
-    #[serde(default)]
-    pub is_blocking_key: bool,
-    /// A15-T3: `phone` only — the country a local number (leading `0`)
-    /// belongs to: `SA` or its calling code `966`.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub default_country: Option<String>,
-}
-
-impl MatchField {
-    /// A15-T3: this field's key for a value, for a key comparator.
-    pub(crate) fn key_of(&self, value: &str) -> Option<String> {
-        use attome_core::match_normalize as norm;
-        let non_empty = |s: String| (!s.is_empty()).then_some(s);
-        match self.comparator {
-            Comparator::Phone => {
-                norm::phone_key(value, self.default_country.as_deref().unwrap_or(""))
-            }
-            Comparator::Email => norm::email_key(value),
-            Comparator::Id => non_empty(norm::id_key(value)),
-            Comparator::Name => non_empty(norm::name_key(value)),
-            Comparator::Phonetic => non_empty(norm::translit_key(value)),
-            _ => None,
-        }
-    }
-}
+/// The rule vocabulary, shared with the check before save (A15-T4).
+pub(crate) use attome_core::match_rule::{Comparator, MatchField};
 
 struct MatchRule {
     id: Uuid,

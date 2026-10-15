@@ -103,6 +103,11 @@ pub mod hijri_store;
 pub mod jobs;
 pub mod label_store;
 pub mod legal_hold;
+/// Dashboard 10/10 Phase 6 — the `MyWorkProvider` trait every
+/// actionable-work-owning engine implements, and the types the aggregation
+/// route composes across them.
+pub mod match_normalize;
+pub mod match_rule;
 pub mod meta_registry;
 /// M18 Data Catalog Phase 1 (D-466) — the shared writer/reader for
 /// `metadata_reference`, the generalized lineage table. Lives here
@@ -110,10 +115,6 @@ pub mod meta_registry;
 /// (`attome-server` for queries, `attome-workflow` for workflows) writes it.
 pub mod metadata_reference;
 pub mod model;
-/// Dashboard 10/10 Phase 6 — the `MyWorkProvider` trait every
-/// actionable-work-owning engine implements, and the types the aggregation
-/// route composes across them.
-pub mod match_normalize;
 pub mod my_work;
 pub mod partition_maintenance;
 pub mod reconcile;

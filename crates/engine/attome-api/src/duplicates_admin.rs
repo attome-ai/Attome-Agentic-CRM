@@ -102,7 +102,20 @@ fn validate_match_fields(
 
 const MATCH_RULE_COLUMNS: &str = "id, entity_logicalname, name, is_active, fields, \
      threshold::float8, auto_merge, row_version, created_at, updated_at, created_by, \
-     scan_schedule, last_scan_at";
+     scan_schedule, last_scan_at, on_save";
+
+/// A15-T4: what saving a likely duplicate does.
+const ON_SAVE: [&str; 4] = ["off", "warn", "allow_with_reason", "block"];
+
+fn on_save_of(raw: Option<&str>) -> Result<Option<String>, AppError> {
+    match raw.map(str::trim) {
+        None => Ok(None),
+        Some(s) if ON_SAVE.contains(&s) => Ok(Some(s.to_owned())),
+        Some(s) => Err(AppError::Validation(format!(
+            "on_save: '{s}' is not off, warn, allow_with_reason or block"
+        ))),
+    }
+}
 
 /// A15-T6: the schedules a full scan may run on.
 const SCAN_SCHEDULES: [&str; 3] = ["hourly", "daily", "weekly"];
@@ -135,6 +148,7 @@ struct MatchRuleRow {
     created_by: Uuid,
     scan_schedule: Option<String>,
     last_scan_at: Option<DateTime<Utc>>,
+    on_save: String,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -154,6 +168,9 @@ struct MatchRuleView {
     scan_schedule: Option<String>,
     /// A15-T6: when the last full scan finished.
     last_scan_at: Option<DateTime<Utc>>,
+    /// A15-T4: what saving a likely duplicate does: `off`, `warn`,
+    /// `allow_with_reason` or `block`.
+    on_save: String,
 }
 
 impl TryFrom<MatchRuleRow> for MatchRuleView {
@@ -176,6 +193,7 @@ impl TryFrom<MatchRuleRow> for MatchRuleView {
             created_by: row.created_by,
             scan_schedule: row.scan_schedule,
             last_scan_at: row.last_scan_at,
+            on_save: row.on_save,
         })
     }
 }
@@ -253,6 +271,9 @@ struct CreateMatchRuleBody {
     /// A15-T6: `hourly`, `daily` or `weekly` full scans; absent: on demand.
     #[serde(default)]
     scan_schedule: Option<String>,
+    /// A15-T4: `off` (the default), `warn`, `allow_with_reason` or `block`.
+    #[serde(default)]
+    on_save: Option<String>,
 }
 
 fn default_true() -> bool {
@@ -293,14 +314,15 @@ async fn create_match_rule(
     validate_match_fields(&known, &body.fields)?;
     let fields_json = serde_json::to_value(&body.fields).map_err(AppError::internal)?;
     let scan_schedule = scan_schedule_of(body.scan_schedule.as_deref())?.flatten();
+    let on_save = on_save_of(body.on_save.as_deref())?.unwrap_or_else(|| "off".to_owned());
 
     let rule_id = Uuid::now_v7();
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let row: MatchRuleRow = sqlx::query_as(&format!(
         "INSERT INTO match_rule \
              (id, entity_logicalname, name, is_active, fields, threshold, auto_merge, row_version, \
-              created_by, scan_schedule) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, $9) \
+              created_by, scan_schedule, on_save) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, $9, $10) \
          RETURNING {MATCH_RULE_COLUMNS}"
     ))
     .bind(rule_id)
@@ -312,6 +334,7 @@ async fn create_match_rule(
     .bind(body.auto_merge)
     .bind(ctx.user_id)
     .bind(&scan_schedule)
+    .bind(&on_save)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -365,6 +388,8 @@ struct UpdateMatchRuleBody {
     auto_merge: Option<bool>,
     /// A15-T6: `hourly`, `daily`, `weekly`, or `""` to scan on demand only.
     scan_schedule: Option<String>,
+    /// A15-T4: `off`, `warn`, `allow_with_reason` or `block`.
+    on_save: Option<String>,
     row_version: i64,
 }
 
@@ -427,6 +452,7 @@ async fn update_match_rule(
     };
 
     let scan_schedule = scan_schedule_of(body.scan_schedule.as_deref())?;
+    let on_save = on_save_of(body.on_save.as_deref())?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let row: Option<MatchRuleRow> = sqlx::query_as(&format!(
         "UPDATE match_rule \
@@ -436,6 +462,7 @@ async fn update_match_rule(
              threshold = COALESCE($6, threshold), \
              auto_merge = COALESCE($7, auto_merge), \
              scan_schedule = CASE WHEN $8 THEN $9 ELSE scan_schedule END, \
+             on_save = COALESCE($10, on_save), \
              row_version = row_version + 1, \
              updated_at = NOW() \
          WHERE id = $1 AND row_version = $2 AND NOT is_deleted \
@@ -450,6 +477,7 @@ async fn update_match_rule(
     .bind(body.auto_merge)
     .bind(scan_schedule.is_some())
     .bind(scan_schedule.clone().flatten())
+    .bind(&on_save)
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
