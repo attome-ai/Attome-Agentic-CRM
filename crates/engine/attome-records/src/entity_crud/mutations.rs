@@ -1107,6 +1107,7 @@ pub(super) async fn update_record(
                 &entity_input,
                 record_id,
                 expected_version,
+                "api",
             )
             .await);
         }

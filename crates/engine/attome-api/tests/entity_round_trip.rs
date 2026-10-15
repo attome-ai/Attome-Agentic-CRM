@@ -1498,6 +1498,28 @@ fn stale_row_version_is_rejected() {
         let err = body_json(res).await;
         assert_eq!(err["error"], "validation_error");
 
+        // A16-T7: the stale write was counted for this entity, from the API.
+        let counts_req = Request::builder()
+            .method("GET")
+            .uri("/api/v1/admin/conflicts?days=1")
+            .header("cookie", &admin_cookie)
+            .body(Body::empty())
+            .unwrap();
+        let res = app
+            .clone()
+            .oneshot(counts_req)
+            .await
+            .expect("conflict counts");
+        assert_eq!(res.status(), StatusCode::OK);
+        let counts = body_json(res).await;
+        let counted = counts["items"]
+            .as_array()
+            .expect("items")
+            .iter()
+            .find(|c| c["entity"] == logicalname.as_str() && c["source"] == "api")
+            .unwrap_or_else(|| panic!("no api conflict counted for {logicalname}: {counts}"));
+        assert!(counted["count"].as_i64().unwrap_or(0) >= 1, "{counts}");
+
         // The record is untouched by the rejected unguarded attempt.
         let get_req = Request::builder()
             .method("GET")

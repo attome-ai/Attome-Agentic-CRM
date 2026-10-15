@@ -1774,6 +1774,10 @@ async fn process_ledger(
                             &entity_name,
                             record_id,
                             expected,
+                            match ledger {
+                                LedgerTable::BulkItem => "bulk",
+                                LedgerTable::StagedItem => "import",
+                            },
                         )
                         .await,
                     ))

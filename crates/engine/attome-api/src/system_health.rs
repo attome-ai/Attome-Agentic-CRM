@@ -268,6 +268,7 @@ pub fn routes() -> Router<EngineState> {
         .route("/api/v1/admin/ops/metrics/catalogue", get(metric_catalogue))
         .route("/api/v1/admin/ops/nodes", get(ops_nodes))
         .route("/api/v1/admin/deploys", get(deploys))
+        .route("/api/v1/admin/conflicts", get(conflicts))
         .route("/api/v1/system/status", get(system_status))
         .route(
             "/api/v1/admin/ops/requests/{request_id}",
@@ -610,6 +611,49 @@ async fn deploys(
     )))
 }
 
+#[derive(serde::Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+struct ConflictsQuery {
+    /// How many days back, today included: 1 to 366, default 30.
+    days: Option<i64>,
+}
+
+/// A16-T7: version conflicts of the last `days` days by entity and source
+/// (`api`, `bulk`, `import`), most first: where people overwrite each other.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/conflicts",
+    tag = "operations",
+    params(ConflictsQuery),
+    responses(
+        (status = 200, description = "Conflict totals by entity and source", body = attome_types::PaginatedResponse<attome_records::entity_crud::history::ConflictCount>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn conflicts(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    axum::extract::Query(query): axum::extract::Query<ConflictsQuery>,
+) -> Result<
+    Json<attome_types::PaginatedResponse<attome_records::entity_crud::history::ConflictCount>>,
+    attome_types::AppError,
+> {
+    let items = attome_records::entity_crud::history::conflict_totals(
+        &state.base.db,
+        query.days.unwrap_or(30),
+    )
+    .await?;
+    let total = i64::try_from(items.len()).map_err(attome_types::AppError::internal)?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        items,
+        total,
+        1,
+        total.max(1),
+    )))
+}
+
 /// U4-T2: every metric this server emits, with its kind, unit and meaning in
 /// English and Arabic.
 #[utoipa::path(
@@ -716,6 +760,7 @@ async fn latency(_ctx: Authorized<Admin>) -> Json<LatencyReport> {
         metric_catalogue,
         ops_nodes,
         deploys,
+        conflicts,
         request_trail,
         system_status
     ),

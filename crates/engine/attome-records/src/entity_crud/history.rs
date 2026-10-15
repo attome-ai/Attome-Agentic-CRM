@@ -89,13 +89,22 @@ pub struct ConflictChange {
 /// first, one entry per attribute. Changes to attributes the caller may not
 /// read, or whose values are masked, count as `hidden_changes` only. Any
 /// failure reading the history falls back to the plain conflict.
+///
+/// A16-T7: also counts the conflict for `source` (one of [`CONFLICT_SOURCES`])
+/// in the day's conflict counts.
 pub async fn version_conflict(
     state: &EngineState,
     ctx: &SecurityContext,
     entity_input: &str,
     record_id: Uuid,
     expected_version: i64,
+    source: &'static str,
 ) -> AppError {
+    let entity = resolve_entity(state, entity_input)
+        .await
+        .map(|(_, name, _, _)| name)
+        .unwrap_or_else(|_| entity_input.to_owned());
+    count_conflict(&state.base.db, &entity, source).await;
     match conflict_details(state, ctx, entity_input, record_id, expected_version).await {
         Ok(Some(conflict)) => conflict,
         Ok(None) => AppError::VersionConflict,
@@ -104,6 +113,58 @@ pub async fn version_conflict(
             AppError::VersionConflict
         }
     }
+}
+
+/// A16-T7: where a version conflict happened: a single write through the
+/// API, a bulk operation, or a staged import.
+pub const CONFLICT_SOURCES: [&str; 3] = ["api", "bulk", "import"];
+
+/// A16-T7: adds one to the day's conflict count for the entity and source.
+/// Runs after the failed write's transaction is gone; a failure here is
+/// logged and never changes the answer the caller gets.
+pub async fn count_conflict(db: &attome_db::DbPool, entity: &str, source: &str) {
+    let counted = sqlx::query(
+        "INSERT INTO conflict_daily_count (day, entity, source, count) \
+         VALUES ((now() AT TIME ZONE 'UTC')::date, $1, $2, 1) \
+         ON CONFLICT (day, entity, source) DO UPDATE SET count = conflict_daily_count.count + 1",
+    )
+    .bind(entity)
+    .bind(source)
+    .execute(db)
+    .await;
+    if let Err(e) = counted {
+        tracing::warn!(error = %e, entity, source, "version conflict not counted");
+    }
+}
+
+/// A16-T7: the conflicts of the last `days` days, by entity and source.
+#[derive(Debug, Clone, Serialize, sqlx::FromRow, ToSchema)]
+pub struct ConflictCount {
+    pub entity: String,
+    /// `api`, `bulk` or `import`.
+    pub source: String,
+    pub count: i64,
+}
+
+/// A16-T7: the most days the conflict counts reach back.
+pub const CONFLICT_DAYS_MAX: i64 = 366;
+
+/// A16-T7: conflict totals over the last `days` days (today included), most
+/// first.
+pub async fn conflict_totals(
+    db: &attome_db::DbPool,
+    days: i64,
+) -> Result<Vec<ConflictCount>, AppError> {
+    let days = days.clamp(1, CONFLICT_DAYS_MAX);
+    sqlx::query_as(
+        "SELECT entity, source, sum(count)::bigint AS count FROM conflict_daily_count \
+         WHERE day > (now() AT TIME ZONE 'UTC')::date - $1::int \
+         GROUP BY entity, source ORDER BY 3 DESC, 1, 2",
+    )
+    .bind(i32::try_from(days).map_err(AppError::internal)?)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
 }
 
 async fn conflict_details(
