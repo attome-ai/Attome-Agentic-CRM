@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { ApiService, AuthService, BrandService, LangService, ThemeService } from '@attome/base';
+import { ApiService, AuthService, BrandService, CommandRegistry, LangService, ThemeService } from '@attome/base';
 import { of, Subject } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminService } from '@attome/xrm/core/admin/data';
@@ -10,6 +10,8 @@ import { ShellComponent } from './shell.component';
 
 function createComponent() {
   const navigate = vi.fn();
+  // The palette ranks by stored use counts; each test starts without any.
+  localStorage.removeItem('attome.palette.uses');
   TestBed.configureTestingModule({
     providers: [
       { provide: AuthService, useValue: { userId: signal('user-id'), logout: () => of(undefined) } },
@@ -138,5 +140,44 @@ describe('ShellComponent header record search (U13)', () => {
     expect(navigate).toHaveBeenCalledWith(['/xrm', 'entity', 'user_account', 'form'], {
       queryParams: { id: '0190a1b2-0000-7000-8000-000000000001' },
     });
+  });
+});
+
+describe('ShellComponent command palette (B10-T1)', () => {
+  it('opens on Ctrl+K', () => {
+    const { component } = createComponent();
+    component.quickSearchOpen.set(false);
+    component.onKeydown(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+    expect(component.quickSearchOpen()).toBe(true);
+  });
+
+  it('lists the open page's commands first, and only commands after >', () => {
+    const { component } = createComponent();
+    const run = vi.fn();
+    TestBed.inject(CommandRegistry).register(
+      { id: 'other', labelKey: 'Clear cache', run: vi.fn() },
+      { id: 'save', labelKey: 'Save contact', context: true, run },
+    );
+    component.qsQuery.set('c');
+    expect(component.qsResults()[0].id).toBe('cmd:save');
+    expect(component.qsResults().map(r => r.id)).toContain('contacts');
+
+    component.qsQuery.set('>');
+    expect(component.qsResults().map(r => r.id)).toEqual(['cmd:save', 'cmd:other']);
+
+    component.navigateTo(component.qsResults()[0]);
+    expect(run).toHaveBeenCalled();
+    expect(component.quickSearchOpen()).toBe(false);
+  });
+
+  it('ranks what this person picks most', () => {
+    const { component } = createComponent();
+    component.qsQuery.set('c');
+    const contacts = component.qsResults().find(r => r.id === 'contacts');
+    if (!contacts) throw new Error('Contacts should match "c"');
+    component.navigateTo(contacts);
+    component.quickSearchOpen.set(true);
+    component.qsQuery.set('c');
+    expect(component.qsResults()[0].id).toBe('contacts');
   });
 });

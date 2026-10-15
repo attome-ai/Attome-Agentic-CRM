@@ -22,6 +22,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   (`parent`), and the bin page offers to restore both; the entity metadata screen edits the
   entity's bin rules.
 - Workflows: a **Restore Record** node (`restore_record`) brings a deleted record back.
+- Command palette: Ctrl+K (or Shift twice) finds records, pages and commands in one box; `>`
+  lists commands only and `acc:` searches one entity's records; the open record's actions come
+  first, then what the person picks most.
 - Backups copy the file store beside the database, `attome restore` puts files back, an erasure
   ledger in object storage re-applies erasures after a restore, and a monthly restore drill
   (`attome backup drill`) records evidence; `GET /api/v1/admin/backup` reports it all.

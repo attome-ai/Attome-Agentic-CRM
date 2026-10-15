@@ -4,7 +4,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiError, LangService } from '@attome/base';
+import { ApiError, CommandRegistry, LangService } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { firstValueFrom } from 'rxjs';
 import { BusinessRuleClient, ChoiceOptions, EntitySchema, FieldSchema } from '@attome/xrm';
@@ -184,6 +184,14 @@ export abstract class EngineFormBase implements OnInit {
     // from mid-confirmation; without this it would fire against a destroyed
     // component.
     this.destroyRef.onDestroy(() => this.clearSavedTimer());
+    // B10-T1: this record's actions come first in the command palette while
+    // the form is open.
+    this.destroyRef.onDestroy(this.formInjector.get(CommandRegistry).register(
+      { id: 'record.save', labelKey: 'xrmForm.cmdSave', icon: 'las la-save', context: true, run: () => this.save() },
+      { id: 'record.duplicate', labelKey: 'xrmForm.cmdDuplicate', icon: 'las la-copy', context: true,
+        run: () => void this.duplicate() },
+      { id: 'record.reload', labelKey: 'xrmForm.cmdReload', icon: 'las la-sync', context: true, run: () => this.reload() },
+    ));
     // Reset to the first tab whenever the routed entity changes, so a
     // persisted instance switching straight from one entity's form to
     // another's (the generic dispatcher's `NgComponentOutlet` reuse case)

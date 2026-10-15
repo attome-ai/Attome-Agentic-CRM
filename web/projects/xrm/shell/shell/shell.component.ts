@@ -1,12 +1,14 @@
 import {
-  ChangeDetectionStrategy, Component, computed, inject, OnInit, signal,
+  ChangeDetectionStrategy, Component, computed, effect, inject, OnInit, signal, untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterOutlet } from '@angular/router';
-import { BrandService, ShortcutRegistry, TranslatePipe, isTypingTarget } from '@attome/base';
+import {
+  BrandService, CommandRegistry, LangService, ShortcutRegistry, TranslatePipe, isTypingTarget,
+} from '@attome/base';
 import { AdminService, SidebarItem } from '@attome/xrm/core/admin/data';
 import { entityFormRoute, entityListRoute, urlPathToLogical } from '@attome/xrm/core/entity';
-import { OmniSearchComponent } from '@attome/xrm/search/omni';
+import { DEBOUNCE_MS, MIN_QUERY_LENGTH, OmniSearchComponent, SearchService } from '@attome/xrm/search/omni';
 import type { OmniSelection } from '@attome/xrm/search/omni';
 import { AppSwitcherComponent } from '../app-switcher/app-switcher.component';
 import { ChangesetIndicatorComponent } from '../changeset-indicator/changeset-indicator.component';
@@ -17,6 +19,7 @@ import { PersonalSettingsService } from '../settings/personal-settings.service';
 import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
 import { ProfileMenuComponent } from '../profile-menu/profile-menu.component';
 import { ShellSidebarComponent } from '../shell-sidebar/shell-sidebar.component';
+import { PaletteUses, entityMatchesPrefix, parsePaletteQuery, rankByUse } from '../command-palette/palette';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -77,7 +80,13 @@ type QsItem =
   | { kind: 'nav';    id: string; name: string; sub: string; icon: string; route: string }
   // B9-T3: a pinned or recent item, shown while the query is empty.
   | { kind: 'fav';    id: string; name: string; sub: string; icon: string;
-      target: Pick<FavouriteItem, 'kind' | 'entity' | 'ref'> };
+      target: Pick<FavouriteItem, 'kind' | 'entity' | 'ref'> }
+  // B10-T1: a registered command, and a record from the search index.
+  | { kind: 'cmd';    id: string; name: string; sub: string; icon: string; context: boolean; run: () => void }
+  | { kind: 'record'; id: string; name: string; sub: string; icon: string; entity: string; recordId: string };
+
+/** Records the palette lists at most. */
+const PALETTE_RECORDS = 8;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -112,6 +121,10 @@ export class ShellComponent implements OnInit {
   protected readonly favourites = inject(FavouritesService);
   private readonly personalSettings = inject(PersonalSettingsService);
   private readonly brand = inject(BrandService);
+  private readonly lang = inject(LangService);
+  private readonly search = inject(SearchService);
+  private readonly commandRegistry = inject(CommandRegistry);
+  private readonly paletteUses = inject(PaletteUses);
   readonly shortcutRegistry = inject(ShortcutRegistry);
   /** B10-T2: the `?` help listing the shortcuts that work here. */
   readonly shortcutsOpen = signal(false);
@@ -177,11 +190,35 @@ export class ShellComponent implements OnInit {
   readonly qsActive        = signal(0);
 
   private lastShiftTime = 0;
+  /** B10-T1: records from the search index for the current query. */
+  readonly qsRecords = signal<QsItem[]>([]);
+  private recordTimer: ReturnType<typeof setTimeout> | null = null;
 
+  constructor() {
+    // B10-T1: search records a moment after typing stops.
+    effect(() => {
+      const raw = this.quickSearchOpen() ? this.qsQuery() : null;
+      untracked(() => this.queueRecordSearch(raw));
+    });
+  }
+
+  /**
+   * B10-T1, the command palette: with no query, the open page's commands,
+   * pinned items and recent records; `>` lists commands, `acc:` searches
+   * records of the entities that word starts; anything else searches pages,
+   * commands and records. The open page's commands come first, then what
+   * this person picks most.
+   */
   readonly qsResults = computed((): QsItem[] => {
-    const q = this.qsQuery().trim().toLowerCase();
-    if (!q) return this.favouriteResults();
-    const results: QsItem[] = [];
+    const parsed = parsePaletteQuery(this.qsQuery());
+    const q = parsed.text.toLowerCase();
+    const uses = (id: string) => this.paletteUses.count(id);
+    if (parsed.scope === 'all' && !q) {
+      return [...this.commandResults('', true), ...this.favouriteResults()];
+    }
+    if (parsed.scope === 'commands') return rankByUse(this.commandResults(q, false), uses);
+    if (parsed.scope === 'records') return rankByUse(this.qsRecords(), uses);
+    const results: QsItem[] = [...this.commandResults(q, false)];
     const firstRoute = (item: SidebarItem): string => {
       if (item.route) return item.route;
       for (const c of item.child) { const r = firstRoute(c); if (r) return r; }
@@ -199,8 +236,50 @@ export class ShellComponent implements OnInit {
     // M65 Phase 1 (D-467) — searches the same app-filtered tree the sidebar
     // shows, so quick search never surfaces an entity the switcher just hid.
     collectNav(this.filteredSidebarItems());
-    return results;
+    return rankByUse([...results, ...this.qsRecords()], uses);
   });
+
+  /** Registered commands whose name contains `q`; `contextOnly` keeps the page's own. */
+  private commandResults(q: string, contextOnly: boolean): QsItem[] {
+    return this.commandRegistry.commands()
+      .filter(c => !contextOnly || c.context)
+      .map(c => ({
+        kind: 'cmd' as const, id: `cmd:${c.id}`, name: this.lang.translate(c.labelKey),
+        sub: this.lang.translate('shell.paletteCommand'), icon: c.icon ?? 'las la-play',
+        context: c.context ?? false, run: c.run,
+      }))
+      .filter(c => !q || c.name.toLowerCase().includes(q));
+  }
+
+  /** B10-T1: asks the search index for records once typing pauses. */
+  private queueRecordSearch(raw: string | null): void {
+    if (this.recordTimer) { clearTimeout(this.recordTimer); this.recordTimer = null; }
+    const parsed = raw === null ? null : parsePaletteQuery(raw);
+    if (!parsed || parsed.scope === 'commands' || parsed.text.length < MIN_QUERY_LENGTH) {
+      this.qsRecords.set([]);
+      return;
+    }
+    this.recordTimer = setTimeout(() => {
+      this.recordTimer = null;
+      // A scoped search asks for more, as other entities' hits are dropped.
+      const pageSize = parsed.entityPrefix ? 50 : PALETTE_RECORDS;
+      this.search.search(parsed.text, { pageSize }).subscribe({
+        next: response => {
+          if (this.qsQuery() !== raw) return;
+          const prefix = parsed.entityPrefix;
+          this.qsRecords.set((response.items ?? [])
+            .filter(hit => !prefix || entityMatchesPrefix(hit.entity_logicalname, prefix))
+            .slice(0, PALETTE_RECORDS)
+            .map(hit => ({
+              kind: 'record' as const, id: `rec:${hit.entity_logicalname}:${hit.record_id}`,
+              name: hit.title || hit.record_id.slice(0, 8), sub: hit.subtitle || hit.entity_logicalname,
+              icon: iconFor(hit.entity_logicalname), entity: hit.entity_logicalname, recordId: hit.record_id,
+            })));
+        },
+        error: () => this.qsRecords.set([]),
+      });
+    }, DEBOUNCE_MS);
+  }
 
   readonly iconFor = iconFor;
 
@@ -226,6 +305,7 @@ export class ShellComponent implements OnInit {
     this.favourites.start();
     // B10-T2: the shell's own shortcuts, listed by `?`.
     this.shortcutRegistry.register(
+      { keys: 'Ctrl+K', labelKey: 'shell.shortcutPalette' },
       { keys: 'Shift Shift', labelKey: 'shell.shortcutQuickSearch' },
       { keys: 'Ctrl+1…9', labelKey: 'shell.shortcutPinned' },
       { keys: '?', labelKey: 'shell.shortcutHelp' },
@@ -285,6 +365,17 @@ export class ShellComponent implements OnInit {
   }
 
   navigateTo(item: QsItem): void {
+    this.paletteUses.bump(item.id);
+    if (item.kind === 'cmd') {
+      this.closeQuickSearch();
+      item.run();
+      return;
+    }
+    if (item.kind === 'record') {
+      void this.router.navigate(entityFormRoute(item.entity), { queryParams: { id: item.recordId } });
+      this.closeQuickSearch();
+      return;
+    }
     if (item.kind === 'fav') {
       this.favourites.open(item.target);
       this.closeQuickSearch();
@@ -307,6 +398,12 @@ export class ShellComponent implements OnInit {
     if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey && !isTypingTarget(e.target)) {
       e.preventDefault();
       this.shortcutsOpen.update(open => !open);
+      return;
+    }
+    // B10-T1: Ctrl+K opens and closes the command palette.
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      this.toggleQuickSearch();
       return;
     }
     // B9-T3: Ctrl+1..9 opens the pinned item with that number.

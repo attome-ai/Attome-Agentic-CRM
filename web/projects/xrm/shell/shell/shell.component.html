@@ -55,7 +55,7 @@
            (click)="$event.stopPropagation()" (keydown)="onQuickSearchKeydown($event)">
         <div class="qs-input-wrap">
           <i class="las la-search qs-icon"></i>
-          <input class="qs-input" type="text" [placeholder]="'shell.searchEntities' | translate"
+          <input class="qs-input" type="text" [placeholder]="'shell.palettePlaceholder' | translate"
                  [ngModel]="qsQuery()"
                  (ngModelChange)="qsQuery.set($event); qsActive.set(0)" />
           <button type="button" class="qs-esc" (click)="closeQuickSearch()">ESC</button>
@@ -77,10 +77,10 @@
             </li>
           }
           @if (qsQuery().trim() && qsResults().length === 0) {
-            <li class="qs-empty">No entities found</li>
+            <li class="qs-empty">{{ 'shell.paletteEmpty' | translate }}</li>
           }
           @if (!qsQuery().trim() && qsResults().length === 0) {
-            <li class="qs-empty">Type to search entities…</li>
+            <li class="qs-empty">{{ 'shell.paletteHint' | translate }}</li>
           }
         </ul>
       </div>

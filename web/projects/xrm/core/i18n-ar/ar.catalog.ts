@@ -85,6 +85,7 @@ export const xrmAr = {
     duplicate: 'تكرار',
     duplicateWithChildren: 'لهذا السجل سجلات مرتبطة: {details}. هل تُنسخ معه؟',
     duplicateCopyChildren: 'انسخها أيضًا', duplicateRecordOnly: 'هذا السجل فقط',
+    cmdSave: 'حفظ هذا السجل', cmdDuplicate: 'تكرار هذا السجل', cmdReload: 'إعادة تحميل هذا السجل',
     loadingRecord: 'جاري تحميل السجل…', editRecord: 'تعديل السجل', newRecord: 'سجل جديد',
     edit: 'تعديل', new: 'جديد', back: 'رجوع', save: 'حفظ', cancel: 'إلغاء',
     saving: 'جاري الحفظ…', saved: 'تم الحفظ', update: 'تحديث', create: 'إنشاء',
@@ -540,6 +541,10 @@ export const xrmAr = {
     quickSearch: 'بحث سريع (Shift مرتين)', search: 'بحث', searchEntities: 'البحث في الكيانات…',
     shortcutsTitle: 'اختصارات لوحة المفاتيح', shortcutQuickSearch: 'بحث سريع', shortcutPinned: 'فتح مفضلة مثبتة',
     shortcutHelp: 'عرض هذه القائمة', shortcutClose: 'إغلاق نافذة أو هذه القائمة',
+    shortcutPalette: 'البحث عن السجلات والصفحات والأوامر',
+    palettePlaceholder: 'ابحث في السجلات والصفحات والأوامر (> للأوامر فقط، acc: للحسابات)',
+    paletteEmpty: 'لا توجد نتائج مطابقة.', paletteHint: 'اكتب للبحث في السجلات والصفحات والأوامر.',
+    paletteCommand: 'أمر',
     // B9-T3 — favourites and recent records.
     favourites: 'المفضلة', addThisPage: 'إضافة هذه الصفحة', pinned: 'المثبتة', teamList: 'الفريق',
     listEmpty: 'لا شيء هنا بعد', noFavourites: 'أضف صفحة أو سجلاً لتبقيه في متناول يدك.',

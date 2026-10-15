@@ -100,6 +100,7 @@ export const xrmEn = {
     duplicate: 'Duplicate',
     duplicateWithChildren: 'This record has related records: {details}. Copy them with it?',
     duplicateCopyChildren: 'Copy them too', duplicateRecordOnly: 'Only this record',
+    cmdSave: 'Save this record', cmdDuplicate: 'Duplicate this record', cmdReload: 'Reload this record',
     loadingRecord: 'Loading record…', editRecord: 'Edit record', newRecord: 'New record',
     edit: 'Edit', new: 'New', back: 'Back', save: 'Save', cancel: 'Cancel',
     saving: 'Saving…', saved: 'Saved', update: 'Update', create: 'Create',
@@ -577,6 +578,10 @@ export const xrmEn = {
     quickSearch: 'Quick search (double Shift)', search: 'Search', searchEntities: 'Search entities…',
     shortcutsTitle: 'Keyboard shortcuts', shortcutQuickSearch: 'Quick search', shortcutPinned: 'Open a pinned favourite',
     shortcutHelp: 'Show this list', shortcutClose: 'Close a dialog or this list',
+    shortcutPalette: 'Find records, pages and commands',
+    palettePlaceholder: 'Search records, pages and commands (> commands only, acc: accounts)',
+    paletteEmpty: 'Nothing matches.', paletteHint: 'Type to search records, pages and commands.',
+    paletteCommand: 'Command',
     // B9-T3 — favourites and recent records.
     favourites: 'Favourites', addThisPage: 'Add this page', pinned: 'Pinned', teamList: 'Team',
     listEmpty: 'Nothing here yet', noFavourites: 'Add a page or a record to keep it at hand.',
