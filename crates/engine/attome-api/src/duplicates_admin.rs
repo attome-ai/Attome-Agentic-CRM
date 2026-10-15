@@ -58,7 +58,7 @@ fn validate_match_fields(
                 "field '{}': comparator 'embedding' is schema-accepted but not implemented yet \
                  — there is no per-field embedding source (attome-search's embeddings cover its own \
                  title/body search corpus, not arbitrary attribute values); use 'exact', \
-                 'normalized', or 'trigram'",
+                 'normalized', 'trigram', 'phone', 'email', 'id', 'name' or 'phonetic'",
                 f.field
             )));
         }
@@ -71,6 +71,20 @@ fn validate_match_fields(
         if f.weight <= 0.0 {
             return Err(AppError::Validation(format!(
                 "field '{}': weight must be positive",
+                f.field
+            )));
+        }
+        // A15-T3: a phone field names the country its local numbers belong
+        // to, or it could never compare `05...` with `+9665...`.
+        if f.comparator == Comparator::Phone
+            && attome_core::match_normalize::phone_key(
+                "0500000000",
+                f.default_country.as_deref().unwrap_or(""),
+            )
+            .is_none()
+        {
+            return Err(AppError::Validation(format!(
+                "field '{}': a phone comparator needs default_country (such as SA or 966)",
                 f.field
             )));
         }

@@ -5879,6 +5879,132 @@ fn merge_records_applies_configured_survivorship_rules() {
     })
 }
 
+/// A15-T3: key comparators. A phone rule pairs `0501234567` with
+/// `+966 50 123 4567` (one number, local and international) and stores the
+/// per-field score on the candidate; a name rule pairs two spellings of one
+/// Arabic name; unrelated records stay unpaired.
+#[test]
+fn phone_and_arabic_name_rules_match_variants_with_field_scores() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+
+        let send = |uri: String, body: String| {
+            Request::builder()
+                .method("POST")
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap()
+        };
+        let mut pairs = Vec::new();
+        for (prefix, field, rule, values) in [
+            (
+                "match_phone",
+                "phone",
+                r#"{"field":"phone","comparator":"phone","weight":1.0,"default_country":"SA"}"#,
+                ["0501234567", "+966 50 123 4567", "0559999999"],
+            ),
+            (
+                "match_arname",
+                "full_name",
+                r#"{"field":"full_name","comparator":"name","weight":1.0}"#,
+                ["السيد محمد عبد الله", "عبدالله محمد", "خالد محمد"],
+            ),
+        ] {
+            let (logicalname, entity_id) = create_entity(&app, &admin_cookie, prefix).await;
+            create_field(
+                &app,
+                &admin_cookie,
+                &entity_id,
+                &format!(r#"{{"logicalname":"{field}","name":"{field}","field_type":"text"}}"#),
+            )
+            .await;
+            sync_registry(&state).await;
+            let res = app
+                .clone()
+                .oneshot(send(
+                    "/api/v1/admin/data/match-rules".to_owned(),
+                    format!(
+                        r#"{{"entity":"{logicalname}","name":"{prefix}","fields":[{rule}],"threshold":1.0}}"#
+                    ),
+                ))
+                .await
+                .expect("create match rule");
+            assert_eq!(
+                res.status(),
+                StatusCode::CREATED,
+                "{:?}",
+                body_json(res).await
+            );
+            let mut ids = Vec::new();
+            for value in values {
+                let res = app
+                    .clone()
+                    .oneshot(send(
+                        format!("/api/v1/{logicalname}"),
+                        Value::Object(
+                            [(field.to_owned(), Value::String(value.to_owned()))]
+                                .into_iter()
+                                .collect(),
+                        )
+                        .to_string(),
+                    ))
+                    .await
+                    .expect("create record");
+                assert_eq!(res.status(), StatusCode::CREATED);
+                let id: Uuid = body_json(res).await["id"]
+                    .as_str()
+                    .unwrap()
+                    .parse()
+                    .unwrap();
+                ids.push(id);
+            }
+            pairs.push((logicalname, field, ids));
+        }
+
+        attome_api::duplicates_match::run_match_sweep(&state)
+            .await
+            .expect("match sweep");
+
+        for (logicalname, field, ids) in pairs {
+            let found: Vec<(Uuid, Uuid, Option<Value>)> = sqlx::query_as(
+                "SELECT record_a, record_b, field_scores FROM duplicate_candidate \
+                 WHERE entity_logicalname = $1",
+            )
+            .bind(&logicalname)
+            .fetch_all(&db)
+            .await
+            .expect("candidates");
+            let (lo, hi) = if ids[0] < ids[1] {
+                (ids[0], ids[1])
+            } else {
+                (ids[1], ids[0])
+            };
+            let pair = found
+                .iter()
+                .find(|(a, b, _)| (*a, *b) == (lo, hi))
+                .unwrap_or_else(|| panic!("{logicalname}: the two variants must pair: {found:?}"));
+            assert_eq!(
+                pair.2
+                    .as_ref()
+                    .and_then(|s| s.get(field))
+                    .and_then(Value::as_f64),
+                Some(1.0),
+                "{logicalname}: the field's score is stored: {found:?}"
+            );
+            assert!(
+                found.iter().all(|(a, b, _)| *a != ids[2] && *b != ids[2]),
+                "{logicalname}: the unrelated record must not pair: {found:?}"
+            );
+        }
+    })
+}
+
 /// D-432 / M13 — a small matching-precision fixture: an `exact`-comparator
 /// rule on `name` at `threshold = 1.0` must flag the one genuine duplicate
 /// pair and must NOT flag the unrelated third record (no false positive) —

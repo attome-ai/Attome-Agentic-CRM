@@ -32,6 +32,18 @@
 //! (`duplicates_admin::validate_match_fields`) rather than silently ignored
 //! or ever reaching this module.
 //!
+//! ## Key comparators (A15-T3)
+//!
+//! `phone`, `email`, `id`, `name` and `phonetic` compare a normalized key
+//! (`attome_core::match_normalize`: an international phone number, a
+//! lowercased email, an id without separators, a name with titles dropped and
+//! word order ignored, a transliteration skeleton that lets an Arabic name
+//! meet its Latin spelling). Each record's key per rule and field is kept in
+//! `match_key`, written when the sweep evaluates the record, so a peer is
+//! compared by an index lookup instead of normalizing every row. A peer with
+//! no key yet (not evaluated since the rule was saved) gives no evidence.
+//! A `phone` field names the `default_country` its local numbers belong to.
+//!
 //! ## Scoring
 //!
 //! Each field is a boolean per-field indicator, not a continuous one — the
@@ -110,6 +122,26 @@ pub(crate) enum Comparator {
     Trigram,
     /// Schema-accepted, never runnable — see this module's doc comment.
     Embedding,
+    /// A15-T3: the international phone number.
+    Phone,
+    /// A15-T3: the lowercased email address.
+    Email,
+    /// A15-T3: an id without spaces, dashes or dots.
+    Id,
+    /// A15-T3: the name, titles dropped and word order ignored.
+    Name,
+    /// A15-T3: the transliteration skeleton (Arabic meets Latin).
+    Phonetic,
+}
+
+impl Comparator {
+    /// A15-T3: compared through stored keys in `match_key`.
+    pub(crate) fn is_key(self) -> bool {
+        matches!(
+            self,
+            Self::Phone | Self::Email | Self::Id | Self::Name | Self::Phonetic
+        )
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -129,6 +161,28 @@ pub(crate) struct MatchField {
     /// failing to parse.
     #[serde(default)]
     pub is_blocking_key: bool,
+    /// A15-T3: `phone` only — the country a local number (leading `0`)
+    /// belongs to: `SA` or its calling code `966`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub default_country: Option<String>,
+}
+
+impl MatchField {
+    /// A15-T3: this field's key for a value, for a key comparator.
+    pub(crate) fn key_of(&self, value: &str) -> Option<String> {
+        use attome_core::match_normalize as norm;
+        let non_empty = |s: String| (!s.is_empty()).then_some(s);
+        match self.comparator {
+            Comparator::Phone => {
+                norm::phone_key(value, self.default_country.as_deref().unwrap_or(""))
+            }
+            Comparator::Email => norm::email_key(value),
+            Comparator::Id => non_empty(norm::id_key(value)),
+            Comparator::Name => non_empty(norm::name_key(value)),
+            Comparator::Phonetic => non_empty(norm::translit_key(value)),
+            _ => None,
+        }
+    }
 }
 
 struct MatchRule {
@@ -279,27 +333,46 @@ async fn evaluate_record(
                 Some(v) => v,
                 None => return Ok(()), // record no longer active/visible — nothing to match against.
             };
+        // A15-T3: this record's keys first, so peers compare against them.
+        upsert_match_keys(
+            &state.base.db,
+            &entity_name,
+            rule.id,
+            record_id,
+            &usable_fields,
+            &target,
+        )
+        .await?;
 
         let candidates = score_peers(
             &state.base.db,
             &table,
             record_id,
+            rule.id,
             &usable_fields,
             &target,
             rule.threshold,
         )
         .await?;
 
-        for (peer_id, score) in candidates {
+        for (peer_id, score, field_scores) in candidates {
             let (a, b) = if record_id < peer_id {
                 (record_id, peer_id)
             } else {
                 (peer_id, record_id)
             };
             let low_risk = rule.auto_merge && is_low_risk(state, &entity_name, a, b).await?;
-            let inserted =
-                insert_candidate(&state.base.db, &entity_name, a, b, rule.id, score, low_risk)
-                    .await?;
+            let inserted = insert_candidate(
+                &state.base.db,
+                &entity_name,
+                a,
+                b,
+                rule.id,
+                score,
+                low_risk,
+                &field_scores,
+            )
+            .await?;
             if inserted {
                 stats.candidates_written += 1;
                 if low_risk && submit_auto_merge_request(state, &entity_name, a, b).await? {
@@ -346,6 +419,53 @@ async fn fetch_target_values(
     }
 }
 
+/// A15-T3: writes `record_id`'s key per key-comparator field of one rule
+/// into `match_key` (removing it when the value gives none).
+async fn upsert_match_keys(
+    db: &attome_db::DbPool,
+    entity_name: &str,
+    rule_id: Uuid,
+    record_id: Uuid,
+    fields: &[&MatchField],
+    target: &Map<String, Value>,
+) -> Result<(), AppError> {
+    for field in fields.iter().filter(|f| f.comparator.is_key()) {
+        let key = target
+            .get(&field.field)
+            .and_then(Value::as_str)
+            .and_then(|v| field.key_of(v));
+        match key {
+            Some(key) => {
+                sqlx::query(
+                    "INSERT INTO match_key (entity_logicalname, record_id, match_rule_id, field, key) \
+                     VALUES ($1, $2, $3, $4, $5) \
+                     ON CONFLICT (match_rule_id, field, record_id) DO UPDATE SET key = EXCLUDED.key",
+                )
+                .bind(entity_name)
+                .bind(record_id)
+                .bind(rule_id)
+                .bind(&field.field)
+                .bind(key)
+                .execute(db)
+                .await
+                .map_err(AppError::internal)?;
+            }
+            None => {
+                sqlx::query(
+                    "DELETE FROM match_key WHERE match_rule_id = $1 AND field = $2 AND record_id = $3",
+                )
+                .bind(rule_id)
+                .bind(&field.field)
+                .bind(record_id)
+                .execute(db)
+                .await
+                .map_err(AppError::internal)?;
+            }
+        }
+    }
+    Ok(())
+}
+
 /// One SQL parameter this module builds dynamically — never a raw
 /// interpolated literal (guidelines §4: bind every runtime value, including
 /// admin-configured ones like a rule's `weight`/`min_similarity`, not just
@@ -353,6 +473,7 @@ async fn fetch_target_values(
 enum Bind {
     Text(Option<String>),
     Num(f64),
+    Id(Uuid),
 }
 
 /// The per-field boolean-indicator SQL fragment, referencing peer column
@@ -362,9 +483,21 @@ enum Bind {
 fn field_indicator_sql(
     target_placeholder: usize,
     min_sim_placeholder: usize,
+    key_placeholders: (usize, usize),
     field: &MatchField,
 ) -> String {
     let col = quote_ident(&field.field);
+    if field.comparator.is_key() {
+        // A15-T3: the peer's stored key against the target's; a peer without
+        // a key gives no evidence (the scalar subquery is NULL).
+        let (rule_ph, field_ph) = key_placeholders;
+        return format!(
+            "CASE WHEN ${target_placeholder}::text IS NULL THEN NULL ELSE \
+                  (SELECT CASE WHEN mk.key = ${target_placeholder}::text THEN 1.0 ELSE 0.0 END \
+                     FROM match_key mk WHERE mk.match_rule_id = ${rule_ph}::uuid \
+                      AND mk.field = ${field_ph}::text AND mk.record_id = p.id) END"
+        );
+    }
     match field.comparator {
         Comparator::Exact => format!(
             "CASE WHEN p.{col} IS NOT NULL AND ${target_placeholder}::text IS NOT NULL \
@@ -384,7 +517,7 @@ fn field_indicator_sql(
                              THEN 1.0 ELSE 0.0 END) \
                   ELSE NULL END"
         ),
-        Comparator::Embedding => "NULL".to_owned(),
+        _ => "NULL".to_owned(),
     }
 }
 
@@ -398,9 +531,18 @@ fn field_indicator_sql(
 fn field_blocking_sql(
     target_placeholder: usize,
     min_sim_placeholder: usize,
+    key_placeholders: (usize, usize),
     field: &MatchField,
 ) -> String {
     let col = quote_ident(&field.field);
+    if field.comparator.is_key() {
+        let (rule_ph, field_ph) = key_placeholders;
+        return format!(
+            "EXISTS (SELECT 1 FROM match_key mk WHERE mk.match_rule_id = ${rule_ph}::uuid \
+                AND mk.field = ${field_ph}::text AND mk.record_id = p.id \
+                AND mk.key = ${target_placeholder}::text)"
+        );
+    }
     match field.comparator {
         Comparator::Exact => {
             format!("p.{col}::text = ${target_placeholder}::text")
@@ -412,7 +554,7 @@ fn field_blocking_sql(
         Comparator::Trigram => format!(
             "similarity(p.{col}::text, ${target_placeholder}::text) >= ${min_sim_placeholder}::float8"
         ),
-        Comparator::Embedding => "FALSE".to_owned(),
+        _ => "FALSE".to_owned(),
     }
 }
 
@@ -425,10 +567,11 @@ async fn score_peers(
     db: &attome_db::DbPool,
     table: &str,
     record_id: Uuid,
+    rule_id: Uuid,
     fields: &[&MatchField],
     target: &Map<String, Value>,
     threshold: f64,
-) -> Result<Vec<(Uuid, f64)>, AppError> {
+) -> Result<Vec<(Uuid, f64, Value)>, AppError> {
     let peer_cols = fields
         .iter()
         .map(|f| quote_ident(&f.field))
@@ -438,6 +581,8 @@ async fn score_peers(
     let mut numer_terms = Vec::with_capacity(fields.len());
     let mut denom_terms = Vec::with_capacity(fields.len());
     let mut blocking_terms = Vec::new();
+    // A15-T3: each field's indicator, kept with the candidate.
+    let mut score_terms = Vec::with_capacity(fields.len());
     // $1 is the excluded record id (bound below); every other runtime value
     // — target value, weight, and (trigram) similarity floor — gets its own
     // placeholder, never interpolated as a literal.
@@ -446,12 +591,13 @@ async fn score_peers(
     for field in fields {
         let target_placeholder = next_placeholder;
         next_placeholder += 1;
-        binds.push(Bind::Text(
-            target
-                .get(&field.field)
-                .and_then(Value::as_str)
-                .map(str::to_owned),
-        ));
+        let target_value = target.get(&field.field).and_then(Value::as_str);
+        // A key comparator compares the target's key, not its raw value.
+        binds.push(Bind::Text(if field.comparator.is_key() {
+            target_value.and_then(|v| field.key_of(v))
+        } else {
+            target_value.map(str::to_owned)
+        }));
 
         let weight_placeholder = next_placeholder;
         next_placeholder += 1;
@@ -465,7 +611,23 @@ async fn score_peers(
         next_placeholder += 1;
         binds.push(Bind::Num(field.min_similarity.unwrap_or(0.3)));
 
-        let indicator = field_indicator_sql(target_placeholder, min_sim_placeholder, field);
+        // A15-T3: the rule and the field name a key comparator looks up, and
+        // the field name its score is kept under.
+        let rule_placeholder = next_placeholder;
+        next_placeholder += 1;
+        binds.push(Bind::Id(rule_id));
+        let field_placeholder = next_placeholder;
+        next_placeholder += 1;
+        binds.push(Bind::Text(Some(field.field.clone())));
+        let key_placeholders = (rule_placeholder, field_placeholder);
+
+        let indicator = field_indicator_sql(
+            target_placeholder,
+            min_sim_placeholder,
+            key_placeholders,
+            field,
+        );
+        score_terms.push(format!("${field_placeholder}::text, ({indicator})"));
         numer_terms.push(format!(
             "COALESCE(${weight_placeholder}::float8 * ({indicator}), 0)"
         ));
@@ -477,11 +639,13 @@ async fn score_peers(
             blocking_terms.push(field_blocking_sql(
                 target_placeholder,
                 min_sim_placeholder,
+                key_placeholders,
                 field,
             ));
         }
     }
     let numer = numer_terms.join(" + ");
+    let field_scores = score_terms.join(", ");
     let denom = denom_terms.join(" + ");
     let threshold_placeholder = next_placeholder;
     binds.push(Bind::Num(threshold));
@@ -505,18 +669,20 @@ async fn score_peers(
               WHERE is_active = true AND id <> $1 AND {candidate_filter} \
               {candidate_limit} \
          ), scored AS ( \
-             SELECT p.id, ({numer}) / NULLIF({denom}, 0) AS score FROM capped p \
+             SELECT p.id, ({numer}) / NULLIF({denom}, 0) AS score, \
+                    jsonb_build_object({field_scores}) AS field_scores FROM capped p \
          ) \
-         SELECT id, score FROM scored \
+         SELECT id, score, field_scores FROM scored \
           WHERE score IS NOT NULL AND score >= ${threshold_placeholder}::float8 \
           ORDER BY score DESC LIMIT {TOP_CANDIDATES_PER_RULE}"
     );
 
-    let mut q = sqlx::query_as::<_, (Uuid, f64)>(&sql).bind(record_id);
+    let mut q = sqlx::query_as::<_, (Uuid, f64, Value)>(&sql).bind(record_id);
     for b in binds {
         q = match b {
             Bind::Text(v) => q.bind(v),
             Bind::Num(v) => q.bind(v),
+            Bind::Id(v) => q.bind(v),
         };
     }
     q.fetch_all(db).await.map_err(AppError::internal)
@@ -579,11 +745,13 @@ async fn insert_candidate(
     match_rule_id: Uuid,
     score: f64,
     auto_merge_eligible: bool,
+    field_scores: &Value,
 ) -> Result<bool, AppError> {
     let inserted: Option<Uuid> = sqlx::query_scalar(
         "INSERT INTO duplicate_candidate \
-             (entity_logicalname, record_a, record_b, match_rule_id, score, auto_merge_eligible) \
-         VALUES ($1, $2, $3, $4, $5, $6) \
+             (entity_logicalname, record_a, record_b, match_rule_id, score, auto_merge_eligible, \
+              field_scores) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7) \
          ON CONFLICT (entity_logicalname, record_a, record_b) DO NOTHING \
          RETURNING id",
     )
@@ -593,6 +761,7 @@ async fn insert_candidate(
     .bind(match_rule_id)
     .bind(score as f32)
     .bind(auto_merge_eligible)
+    .bind(field_scores)
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;
