@@ -45085,6 +45085,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "The server is restarting: retry after `Retry-After` seconds (JSON-RPC error -32000)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JsonRpcResponse"
+                }
+              }
+            }
           }
         },
         "security": [

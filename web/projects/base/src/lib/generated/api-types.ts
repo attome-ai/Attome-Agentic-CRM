@@ -57733,6 +57733,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description The server is restarting: retry after `Retry-After` seconds (JSON-RPC error -32000) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JsonRpcResponse"];
+                };
+            };
         };
     };
     list_favourites: {
