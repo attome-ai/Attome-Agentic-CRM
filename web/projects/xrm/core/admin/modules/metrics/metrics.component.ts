@@ -122,10 +122,10 @@ export class OpsMetricsComponent implements OnInit {
     const r = RANGES.find(x => x.key === this.range()) ?? RANGES[0];
     const to = new Date();
     const from = new Date(to.getTime() - r.hours * 3_600_000);
-    this.api.get<MetricPoint[]>('/api/v1/admin/ops/metrics/query', {
+    this.api.get<{ items: MetricPoint[] }>('/api/v1/admin/ops/metrics/query', {
       name, from: from.toISOString(), to: to.toISOString(), step: String(r.step),
     }).subscribe({
-      next: points => { this.error.set(null); this.points.set(points); },
+      next: page => { this.error.set(null); this.points.set(page.items); },
       error: (e: ApiError) => this.error.set(e.message),
     });
   }

@@ -189,8 +189,8 @@ export class BrandingComponent implements OnInit {
   }
 
   showChanges(row: ThemeRow): void {
-    this.api.get<TokenChange[]>(`/api/v1/admin/themes/${row.id}/diff`).subscribe({
-      next: changes => this.changes.set({ version: row.version, changes }),
+    this.api.get<{ items: TokenChange[] }>(`/api/v1/admin/themes/${row.id}/diff`).subscribe({
+      next: page => this.changes.set({ version: row.version, changes: page.items }),
       error: (e: ApiError) => this.error.set(e.message),
     });
   }

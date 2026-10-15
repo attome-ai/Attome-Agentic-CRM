@@ -104,18 +104,21 @@ pub fn valid_identifier(s: &str) -> bool {
 /// Postgres truncates index names > 63 bytes silently; a truncated name that
 /// collides with an existing index makes `CREATE INDEX ... IF NOT EXISTS` a
 /// silent no-op — a "filterable"/"sortable" field with no index and no error.
-/// Refuse instead of truncating. Callers (`admin.rs`) must call this BEFORE
-/// any metadata write so the failure surfaces as a clean 422; `provision.rs`
-/// calls it again in `sync_attribute_index` as defense in depth.
-/// P-provisioning-hardening item (a).
+/// So a name that would be too long is never truncated: it keeps a readable
+/// prefix and ends in a hash of the whole entity and field pair, which is
+/// unique per pair and always fits. P-provisioning-hardening item (a).
 pub fn attribute_index_name(entity: &str, field: &str) -> Result<String, AppError> {
     let name = format!("idx_{entity}_{field}_sf");
-    if name.len() > attome_db::ident::PG_MAX_IDENTIFIER_LEN {
-        return Err(AppError::Validation(format!(
-            "combined entity+field name too long for an index ({} > 63 bytes): \
-             shorten one of `{entity}`/`{field}` or clear is_sortable/is_filterable",
-            name.len()
-        )));
+    if name.len() <= attome_db::ident::PG_MAX_IDENTIFIER_LEN {
+        return Ok(name);
     }
-    Ok(name)
+    // FNV-1a, 64 bit: stable across builds and platforms, unlike std's hasher.
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    for byte in entity.bytes().chain([0]).chain(field.bytes()) {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    // "idx_" + 39 + "_" + 16 hex + "_sf" = 63.
+    let prefix: String = format!("{entity}_{field}").chars().take(39).collect();
+    Ok(format!("idx_{prefix}_{hash:016x}_sf"))
 }

@@ -10,6 +10,7 @@
   "_retention_comment": "Omitted: every retention window unset (keep forever), dry_run on, legal_hold off. Set windows deliberately per the deployment's retention policy — see config.example.json.",
   "_webcrawl_comment": "Omitted: web crawling ships dark (D-365); see config.example.json.",
   "_portal_comment": "Omitted: no external portal providers and captcha provider none (D-588). Production warns at boot when a portal runs without a CAPTCHA provider (BCF-17); see config.example.json.",
+  "_backup_comment": "Omitted: on a single server (cache.backend memory) the daily backup of the database and files runs with its defaults (02:00 UTC, 7 kept, next to the config file); several servers use pgBackRest or the database host. See config.example.json and docs/backup.md.",
   "_docgen_comment": "Omitted: document generation is off until docgen's render sidecar address is set (D-463); see config.example.json.",
   "app": {
     "port": 8080,

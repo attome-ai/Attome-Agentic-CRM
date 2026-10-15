@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:4564afcd12012ad426247a98d523b6275d9877e789b877309e4a10efee03821f",
+  "checksum": "sha256:9c7a107fb41e89fa00dbba3badee644f86ca7a2d30e84acc4cd2e20d4463f903",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-model-catalog.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -56,6 +56,22 @@
     {
       "args": {
         "definition": {
+          "display_name": "Base Model",
+          "field_type": "text",
+          "logicalname": "base_model"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "ai_model",
+        "field": "base_model"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "display_name": "Cached Input Cost",
           "field_type": "currency",
           "is_filterable": true,
@@ -67,7 +83,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 3,
+      "seq": 4,
       "target": {
         "entity": "ai_model",
         "field": "cached_input_cost"
@@ -87,7 +103,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 4,
+      "seq": 5,
       "target": {
         "entity": "ai_model",
         "field": "context_window"
@@ -116,7 +132,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 5,
+      "seq": 6,
       "target": {
         "entity": "ai_model",
         "field": "cost_unit"
@@ -133,7 +149,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 6,
+      "seq": 7,
       "target": {
         "entity": "ai_model",
         "field": "deployment_name"
@@ -149,10 +165,66 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 7,
+      "seq": 8,
       "target": {
         "entity": "ai_model",
         "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Drift Baseline",
+          "field_type": "number",
+          "logicalname": "drift_baseline",
+          "options": {
+            "max": 1,
+            "min": 0
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "ai_model",
+        "field": "drift_baseline"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Drift Eval Suite",
+          "field_type": "text",
+          "logicalname": "drift_suite_ref"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "ai_model",
+        "field": "drift_suite_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Drift Tolerance",
+          "field_type": "number",
+          "logicalname": "drift_tolerance",
+          "options": {
+            "max": 1,
+            "min": 0
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "ai_model",
+        "field": "drift_tolerance"
       }
     },
     {
@@ -169,7 +241,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 8,
+      "seq": 12,
       "target": {
         "entity": "ai_model",
         "field": "input_cost"
@@ -187,7 +259,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 9,
+      "seq": 13,
       "target": {
         "entity": "ai_model",
         "field": "knowledge_cutoff"
@@ -207,7 +279,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 10,
+      "seq": 14,
       "target": {
         "entity": "ai_model",
         "field": "max_concurrent_requests"
@@ -227,7 +299,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 11,
+      "seq": 15,
       "target": {
         "entity": "ai_model",
         "field": "max_input_tokens"
@@ -247,7 +319,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 12,
+      "seq": 16,
       "target": {
         "entity": "ai_model",
         "field": "max_output_tokens"
@@ -278,7 +350,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 13,
+      "seq": 17,
       "target": {
         "entity": "ai_model",
         "field": "model_type"
@@ -297,7 +369,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 14,
+      "seq": 18,
       "target": {
         "entity": "ai_model",
         "field": "name"
@@ -317,10 +389,26 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 15,
+      "seq": 19,
       "target": {
         "entity": "ai_model",
         "field": "output_cost"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_name": "Pinned Version",
+          "field_type": "text",
+          "logicalname": "pinned_version"
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "ai_model",
+        "field": "pinned_version"
       }
     },
     {
@@ -335,7 +423,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 16,
+      "seq": 21,
       "target": {
         "entity": "ai_model",
         "field": "provider_model_id"
@@ -352,7 +440,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 17,
+      "seq": 22,
       "target": {
         "entity": "ai_model",
         "field": "version"
@@ -371,7 +459,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 18,
+      "seq": 23,
       "target": {
         "entity": "ai_model",
         "field": "provider_ref"
@@ -389,7 +477,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 19,
+      "seq": 24,
       "target": {
         "entity": "ai_model",
         "field": "replacement_model_ref"
@@ -407,7 +495,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 20,
+      "seq": 25,
       "target": {
         "entity": "ai_model",
         "query": "Active AI Models"
@@ -425,7 +513,7 @@
       },
       "op": "upsert_query",
       "phase": "expand",
-      "seq": 21,
+      "seq": 26,
       "target": {
         "entity": "ai_model",
         "query": "Inactive AI Models"
@@ -445,7 +533,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 22,
+      "seq": 27,
       "target": {
         "entity": "ai_model",
         "view": "Active AI Models"
@@ -465,7 +553,7 @@
       },
       "op": "upsert_view",
       "phase": "expand",
-      "seq": 23,
+      "seq": 28,
       "target": {
         "entity": "ai_model",
         "view": "Inactive AI Models"
@@ -476,7 +564,7 @@
     "modules": [
       "core"
     ],
-    "platform": ">=4.0.1"
+    "platform": ">=0.1.0"
   },
   "scope": "platform",
   "seq": 14,

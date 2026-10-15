@@ -225,10 +225,22 @@ fn attribute_index_name_at_63_ok() {
 }
 
 #[test]
-fn attribute_index_name_at_64_rejected() {
+fn attribute_index_name_past_63_is_hashed_to_fit() {
     let entity = "a".repeat(30);
     let field = "b".repeat(26);
-    assert!(attribute_index_name(&entity, &field).is_err());
+    let name = attribute_index_name(&entity, &field).expect("a long pair still gets a name");
+    assert_eq!(name.len(), 63, "{name}");
+    assert!(
+        name.starts_with("idx_aaaa") && name.ends_with("_sf"),
+        "{name}"
+    );
+    assert_eq!(
+        attribute_index_name(&entity, &field).unwrap(),
+        name,
+        "stable"
+    );
+    let other = attribute_index_name(&entity, &"c".repeat(26)).unwrap();
+    assert_ne!(other, name, "another pair, another name");
 }
 
 // Item 28 — bounds `sync_attribute_index`'s direct migrator-connection

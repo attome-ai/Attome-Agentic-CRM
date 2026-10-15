@@ -605,7 +605,9 @@ async fn list_holidays(
         .fetch_all(&state.base.db)
         .await
         .map_err(AppError::internal)?;
-    Ok(Json(rows.into_iter().map(|r| r.with_hijri(&state)).collect()))
+    Ok(Json(
+        rows.into_iter().map(|r| r.with_hijri(&state)).collect(),
+    ))
 }
 
 #[utoipa::path(

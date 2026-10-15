@@ -41,7 +41,12 @@
           "options": { "choices": ["per_1m_tokens", "per_1k_tokens", "per_response", "per_minute", "per_image", "per_second"], "multi": false }
         },
         { "logicalname": "replacement_model_ref", "display_name": "Replacement Model", "field_type": "lookup", "is_filterable": true, "lookup_entity": "ai_model" },
-        { "logicalname": "knowledge_cutoff", "display_name": "Knowledge Cutoff", "field_type": "date", "is_sortable": true, "is_filterable": true }
+        { "logicalname": "knowledge_cutoff", "display_name": "Knowledge Cutoff", "field_type": "date", "is_sortable": true, "is_filterable": true },
+        { "logicalname": "pinned_version", "display_name": "Pinned Version", "field_type": "text" },
+        { "logicalname": "base_model", "display_name": "Base Model", "field_type": "text" },
+        { "logicalname": "drift_suite_ref", "display_name": "Drift Eval Suite", "field_type": "text" },
+        { "logicalname": "drift_baseline", "display_name": "Drift Baseline", "field_type": "number", "options": { "min": 0, "max": 1 } },
+        { "logicalname": "drift_tolerance", "display_name": "Drift Tolerance", "field_type": "number", "options": { "min": 0, "max": 1 } }
       ]
     }
   ],

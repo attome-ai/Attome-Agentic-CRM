@@ -1112,14 +1112,6 @@ pub fn request_stop() {
     EXTERNAL_STOP.notify_one();
 }
 
-/// Ctrl-C (SIGINT), SIGTERM (what a container stop sends) or a
-/// [`request_stop`] (the Windows service control manager). Shared by every
-/// long-lived process built on [`init`] (the HTTP server and inline worker,
-/// the standalone worker) so a split deployment drains identically on either.
-#[expect(
-    clippy::expect_used,
-    reason = "each expect() here guards an invariant its message states"
-)]
 /// R2-T1: applies the erasure ledger before anything serves. After
 /// `attome restore` (which leaves [`crate::backup::RESTORE_PENDING`] in the
 /// backup folder) a replay that fails stops the boot: the restored database
@@ -1150,7 +1142,7 @@ async fn replay_erasures(
             Ok(())
         }
         Err(error) if after_restore => Err(format!(
-            "the database was restored and the erasure ledger could not be applied ({error});              start the file store and boot again"
+            "the database was restored and the erasure ledger could not be applied ({error}); start the file store and boot again"
         )
         .into()),
         Err(error) => {
@@ -1160,6 +1152,14 @@ async fn replay_erasures(
     }
 }
 
+/// Ctrl-C (SIGINT), SIGTERM (what a container stop sends) or a
+/// [`request_stop`] (the Windows service control manager). Shared by every
+/// long-lived process built on [`init`] (the HTTP server and inline worker,
+/// the standalone worker) so a split deployment drains identically on either.
+#[expect(
+    clippy::expect_used,
+    reason = "each expect() here guards an invariant its message states"
+)]
 pub async fn wait_for_shutdown_signal() {
     let ctrl_c = async {
         tokio::signal::ctrl_c()

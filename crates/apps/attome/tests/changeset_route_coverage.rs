@@ -115,6 +115,7 @@ const RECORDED: &[(&str, &[&str])] = &[
         "DELETE /api/v1/admin/entities/{entity_id}/labels/{label_id}",
         &["clear_label"],
     ),
+    ("POST /api/v1/admin/entities/labels/xliff", &["set_label"]),
     (
         "POST /api/v1/admin/governance/domains",
         &["upsert_data_domain"],
@@ -170,6 +171,10 @@ const RECORDED: &[(&str, &[&str])] = &[
     (
         "DELETE /api/v1/admin/calendars/{id}/holidays/{holiday_id}",
         &["remove_calendar_holiday"],
+    ),
+    (
+        "POST /api/v1/admin/calendars/{id}/holidays/hijri-recurring",
+        &["add_calendar_holiday"],
     ),
     (
         "POST /api/v1/admin/calendars/{id}/exceptions",

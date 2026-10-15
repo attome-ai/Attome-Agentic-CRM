@@ -35,6 +35,7 @@ use attome_ai::execute::ActionOutcome;
 use attome_ai::registry::ActionRegistry;
 use attome_core::{EngineState, WorkflowStartFuture, WorkflowStartRequest, WorkflowStarter};
 use attome_testkit::skip_if_no_db;
+use attome_types::AppError;
 use serde_json::{Value, json};
 use uuid::Uuid;
 
@@ -121,8 +122,13 @@ async fn no_argument_or_taint_state_lets_an_agent_past_the_approval_arm() {
                 let mut ctx = f.agent_ctx(&format!("a22-{action}-{n}-{tainted}")).await;
                 ctx.contains_retrieved_content = tainted;
                 let outcome = f.dispatch(&ctx, action, args.clone()).await;
+                // An MCP tool call is hidden (NotFound) from a caller with no
+                // integration access, as this fixture's agent is; hidden or
+                // held for approval, it never runs.
+                let hidden =
+                    action.starts_with("mcp.call.") && matches!(outcome, Err(AppError::NotFound));
                 assert!(
-                    matches!(outcome, Ok(ActionOutcome::ApprovalRequired { .. })),
+                    hidden || matches!(outcome, Ok(ActionOutcome::ApprovalRequired { .. })),
                     "{action} with args #{n} (tainted={tainted}) must require approval, \
                      got {outcome:?}"
                 );

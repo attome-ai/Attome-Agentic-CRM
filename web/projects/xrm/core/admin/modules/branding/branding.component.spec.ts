@@ -18,7 +18,7 @@ describe('BrandingComponent (B13-T9)', () => {
 
   function create(post = vi.fn().mockReturnValue(of({ passed: true, failures: [] }))) {
     const get = vi.fn((path: string) => path.endsWith('/diff')
-      ? of([{ field: 'primary', before: '#000000', after: '#123456' }])
+      ? of({ items: [{ field: 'primary', before: '#000000', after: '#123456' }] })
       : of({ items: [published, retired], total: 2, page: 1, page_size: 100 }));
     TestBed.configureTestingModule({
       imports: [BrandingComponent],

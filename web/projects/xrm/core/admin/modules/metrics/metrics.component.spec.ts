@@ -9,7 +9,7 @@ describe('OpsMetricsComponent (U4-T4)', () => {
   it('lists metric names and draws the chosen one', () => {
     const get = vi.fn((path: string) => path.endsWith('/names')
       ? of({ items: ['pool_size', 'http_requests_total'] })
-      : of([{ at: '2026-10-14T10:00:00Z', value: 1 }, { at: '2026-10-14T10:01:00Z', value: 3 }]));
+      : of({ items: [{ at: '2026-10-14T10:00:00Z', value: 1 }, { at: '2026-10-14T10:01:00Z', value: 3 }] }));
     TestBed.configureTestingModule({
       imports: [OpsMetricsComponent],
       providers: [

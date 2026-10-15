@@ -1,7 +1,7 @@
 //! Pinned models and their drift check (roadmap N25-T2).
 //!
 //! A fine-tuned or adapter model is registered like any other `ai_model`
-//! catalogue row, with three more fields (platform changeset 0049):
+//! catalogue row, with three more fields (platform bundle attome-ai-model-catalog):
 //! `pinned_version` (the version label the operator pinned; the model id a
 //! call sends stays `provider_model_id`, so a pinned row names one exact
 //! provider version there and the approval check keeps working unchanged),

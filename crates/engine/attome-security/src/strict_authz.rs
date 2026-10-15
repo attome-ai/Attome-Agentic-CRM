@@ -33,6 +33,11 @@ pub async fn strict_authz(
     if !state.base.config.security.strict_privileged_authz {
         return next.run(req).await;
     }
+    // A public route mounted beside privileged ones (the sign-in page's
+    // brand) has no caller to re-resolve; `authz` let it through unchecked.
+    if attome_server::middleware::bypass::is_bypass(req.uri().path()) {
+        return next.run(req).await;
+    }
 
     let Some(user_id) = req
         .extensions()

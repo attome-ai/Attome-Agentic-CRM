@@ -160,7 +160,7 @@ struct MetricPoint {
     tag = "operations",
     params(MetricQuery),
     responses(
-        (status = 200, description = "The points, oldest first", body = Vec<MetricPoint>),
+        (status = 200, description = "The points, oldest first", body = attome_types::PaginatedResponse<MetricPoint>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
         (status = 422, description = "A bad range, step or labels filter", body = ErrorResponse),
@@ -171,7 +171,7 @@ async fn metric_query(
     State(state): State<EngineState>,
     _ctx: Authorized<Admin>,
     axum::extract::Query(query): axum::extract::Query<MetricQuery>,
-) -> Result<Json<Vec<MetricPoint>>, attome_types::AppError> {
+) -> Result<Json<attome_types::PaginatedResponse<MetricPoint>>, attome_types::AppError> {
     use attome_types::AppError;
     let to = query.to.unwrap_or_else(chrono::Utc::now);
     let from = query.from.unwrap_or(to - chrono::Duration::hours(1));
@@ -215,7 +215,10 @@ async fn metric_query(
     .fetch_all(&state.base.db)
     .await
     .map_err(attome_db::classify)?;
-    Ok(Json(points))
+    let total = i64::try_from(points.len()).map_err(AppError::internal)?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        points, total, 1, MAX_POINTS,
+    )))
 }
 
 /// U4-T4: the metric names sampled in the last hour.

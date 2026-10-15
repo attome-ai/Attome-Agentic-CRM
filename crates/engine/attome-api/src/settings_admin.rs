@@ -679,7 +679,7 @@ async fn rollback_theme(
     tag = "settings",
     params(("id" = Uuid, Path)),
     responses(
-        (status = 200, description = "Each changed token, before and after", body = Vec<theme_store::TokenChange>),
+        (status = 200, description = "Each changed token, before and after", body = attome_types::PaginatedResponse<theme_store::TokenChange>),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
         (status = 404, description = "No such theme", body = ErrorResponse),
@@ -690,8 +690,15 @@ async fn diff_theme(
     State(state): State<EngineState>,
     _ctx: Authorized<Admin>,
     Path(id): Path<Uuid>,
-) -> Result<Json<Vec<theme_store::TokenChange>>, AppError> {
-    Ok(Json(theme_store::diff(&state.base.db, id).await?))
+) -> Result<Json<attome_types::PaginatedResponse<theme_store::TokenChange>>, AppError> {
+    let changes = theme_store::diff(&state.base.db, id).await?;
+    let total = i64::try_from(changes.len()).map_err(AppError::internal)?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        changes,
+        total,
+        1,
+        total.max(1),
+    )))
 }
 
 /// B13-T4: checks colours without saving anything.
