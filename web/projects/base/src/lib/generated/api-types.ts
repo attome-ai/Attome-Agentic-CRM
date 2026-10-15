@@ -66038,6 +66038,15 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
+            /** @description version_conflict: the record changed since If-Match. `current_version` is its row version now and `current_state` lists `changed_attributes` (name, their_value, changed_by, changed_at; newest first) and `hidden_changes`, the changes to fields the caller cannot read */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
             /** @description Request failed validation */
             422: {
                 headers: {
