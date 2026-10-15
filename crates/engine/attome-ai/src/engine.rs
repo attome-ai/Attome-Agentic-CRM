@@ -14,7 +14,8 @@
 use attome_config::AiSurface;
 use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_AI, ModuleId};
-use attome_server::authz::{Admin, Authorized, SelfService};
+use attome_security::record_action::Read;
+use attome_server::authz::{Admin, Authorized, RecordScoped, SelfService};
 use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json, Router,
@@ -55,6 +56,11 @@ impl EngineModel for ActionModel {
         Router::new()
             .route("/api/v1/actions", get(list_invocable_actions))
             .route("/api/v1/actions/{id}/invoke", post(invoke_action))
+            // S1-T12: a record-bound action, invoked on one record.
+            .route(
+                "/api/v1/{entity}/{id}/actions/{name}",
+                post(invoke_record_action),
+            )
             .route(
                 "/api/v1/ai/suggestions/{id}/outcome",
                 post(record_suggestion_outcome),
@@ -404,6 +410,82 @@ async fn invoke_action(
     Ok(Json(outcome))
 }
 
+/// S1-T12: whether an action works on one record: its arguments require
+/// `entity` and `record_id`.
+pub fn is_record_bound(input_schema: &str) -> bool {
+    serde_json::from_str::<Value>(input_schema)
+        .ok()
+        .and_then(|schema| schema.get("required").and_then(Value::as_array).cloned())
+        .is_some_and(|required| {
+            ["entity", "record_id"]
+                .iter()
+                .all(|key| required.iter().any(|r| r == key))
+        })
+}
+
+/// S1-T12: invokes a record-bound action on the record in the path, through
+/// the same gate as `/api/v1/actions/{id}/invoke`; `entity` and `record_id`
+/// come from the path and replace any in the body. An action that does not
+/// work on one record answers 404 here.
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/{id}/actions/{name}",
+    tag = "action",
+    params(
+        ("entity" = String, Path),
+        ("id" = Uuid, Path),
+        ("name" = String, Path, description = "Action id, e.g. record.summarize"),
+    ),
+    request_body = InvokeRequest,
+    responses(
+        (status = 200, description = "Success", body = ActionOutcome),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "Unknown, unlicensed, disabled, or not a record action", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Delegated,
+        Some("dispatch -> the action's own executor"),
+        "the same dispatch as POST /api/v1/actions/{id}/invoke, as the plain calling human; \
+         whatever the action mutates is audited by its own executor",
+    )))),
+)]
+async fn invoke_record_action(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Read>>,
+    Path((entity, id, name)): Path<(String, Uuid, String)>,
+    Json(body): Json<InvokeRequest>,
+) -> Result<Json<ActionOutcome>, AppError> {
+    let descriptor = REGISTRY.resolve(&name).ok_or(AppError::NotFound)?;
+    if !is_record_bound(descriptor.input_schema) {
+        return Err(AppError::NotFound);
+    }
+    let module = descriptor.module;
+    let mut args = match body.args {
+        Value::Object(map) => map,
+        Value::Null => serde_json::Map::new(),
+        _ => return Err(AppError::Validation("args: an object".into())),
+    };
+    args.insert("entity".into(), Value::String(entity));
+    args.insert("record_id".into(), Value::String(id.to_string()));
+    attome_core::ai_runtime_switch::refresh(&state.base.db).await;
+    let inputs = gate_inputs(&state, module);
+    let action_ctx = ActionContext::user(ctx.into_inner());
+    let outcome = dispatch(
+        &state,
+        &REGISTRY,
+        &EXECUTORS,
+        &name,
+        &action_ctx,
+        &inputs,
+        &Value::Object(args),
+    )
+    .await?;
+    Ok(Json(outcome))
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct SuggestionOutcomeRequest {
     /// `accepted` | `edited` | `rejected`. There is deliberately no `pending`:
@@ -647,6 +729,7 @@ async fn get_model_comparison(
 #[openapi(paths(
     list_invocable_actions,
     invoke_action,
+    invoke_record_action,
     record_suggestion_outcome,
     list_prompts,
     diff_prompts,
@@ -657,4 +740,25 @@ struct ApiDocFragment;
 
 pub fn openapi() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod record_action_tests {
+    use super::is_record_bound;
+
+    /// S1-T12: only actions that take a record are offered on one.
+    #[test]
+    fn record_bound_actions_take_entity_and_record_id() {
+        assert!(is_record_bound(
+            r#"{"type":"object","required":["entity","record_id"],"properties":{}}"#
+        ));
+        assert!(is_record_bound(
+            r#"{"type":"object","required":["entity","record_id","field"]}"#
+        ));
+        assert!(!is_record_bound(
+            r#"{"type":"object","required":["entity"]}"#
+        ));
+        assert!(!is_record_bound(r#"{"type":"object"}"#));
+        assert!(!is_record_bound("not json"));
+    }
 }

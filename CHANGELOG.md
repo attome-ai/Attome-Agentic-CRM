@@ -14,6 +14,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- `POST /api/v1/{entity}/{id}/actions/{name}` invokes a record-bound action (one whose arguments
+  take `entity` and `record_id`) on that record, through the same gate as `/api/v1/actions/{id}/invoke`.
 - `POST /api/v1/{entity}/bulk-edit` changes the same attributes on up to 500 records, picked by id or
   by list filters: `set`, `clear`, `add`/`remove` (multi-select choices) and `increment`. Each record's
   new values are computed from its current ones and applied by the bulk engine through the normal
