@@ -148,6 +148,11 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         config.audit.ingest_backlog_threshold,
     );
 
+    // AB5-T6: read-only mode, from the operator switch and the database-size
+    // ceiling. Per node, like the backlog breaker above: the gate reads this
+    // process's own flag.
+    attome_api::spawn_read_only_refresh(attome_state.clone(), std::time::Duration::from_secs(15));
+
     // D-344 (amends D-167) — durability-capability probe. Same "correctness,
     // not observability" posture and the same per-node reasoning as the
     // ingest-backlog refresh directly above: it maintains

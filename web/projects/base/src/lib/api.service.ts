@@ -393,6 +393,7 @@ function codeToKind(code: unknown): ApiError['kind'] | undefined {
     case 'capability_unavailable':         return 'unavailable';
     case 'overloaded':                     return 'unavailable';
     case 'server_timeout':                 return 'unavailable';
+    case 'read_only':                      return 'unavailable';
     default:                               return undefined;
   }
 }

@@ -11,6 +11,7 @@ pub mod metrics_catalogue;
 pub mod metrics_store;
 pub mod middleware;
 pub mod openapi;
+pub mod read_only;
 pub mod replica_watermark;
 pub mod secrets;
 pub mod security;

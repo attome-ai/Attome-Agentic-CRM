@@ -58,7 +58,8 @@ impl Action for SystemStatus {
                 state
                     .base
                     .audit_ingest_backlog_exceeded
-                    .load(Ordering::Relaxed),
+                    .load(Ordering::Relaxed)
+                    || attome_server::read_only::current(&state.base.read_only).is_some(),
                 state.base.metadata_lagging.load(Ordering::Relaxed),
             )))
         })

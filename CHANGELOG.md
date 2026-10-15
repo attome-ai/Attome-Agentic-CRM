@@ -28,6 +28,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   store as `attome_web_vital_ms`, and loads the signed-in app's code while the sign-in page is idle.
 - New notifications reach the bell over the live channel (`notifications` frames on
   `GET /api/v1/live`) instead of waiting for its 30-second poll, which stays as the fallback.
+- Read-only mode: while the `ops.read_only` setting is on, or the database reaches
+  `deployment.read_only_at_database_bytes`, every write answers 503 `read_only`; reading, signing in and
+  the switch itself still work, and `/api/v1/system/status` gives the reason.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE

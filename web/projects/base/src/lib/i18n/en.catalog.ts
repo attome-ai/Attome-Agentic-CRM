@@ -41,6 +41,8 @@ export const en = {
   rule_violation:               'A business rule rejected this change.',
   transition_not_allowed:       'That state change is not allowed.',
   authoring_locked:             'Configuration authoring is disabled on this deployment.',
+  // AB5-T6 — a client code (`code`), not a kind: the system is read-only for now.
+  read_only:                    'The system is read-only for now. You can still look things up; saving will work again soon.',
   unknown:                      'An unexpected error occurred.',
   // NGB-3.3 — the client-synthesised `getAllPages` ceiling error.
   too_many_pages:               'This list is too large to load in full. Narrow the search or use a filtered view.',

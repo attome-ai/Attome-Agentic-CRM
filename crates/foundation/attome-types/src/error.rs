@@ -209,6 +209,12 @@ pub enum AppError {
     #[error("the query took too long; narrow its filters or run it as an export")]
     QueryTimeout,
 
+    /// AB5-T6: the deployment is read-only for now (an operator's switch, a
+    /// full database, or a recovery). Reading still works; writes answer 503
+    /// `read_only` until it ends.
+    #[error("the system is read-only for now; reading still works")]
+    ReadOnly,
+
     /// The request body exceeds `app.max_body_size_bytes`. Raised by
     /// `attome_server`'s Content-Length guard before any handler runs, or by the
     /// idempotency gate while it buffers the body before acquiring its key —
@@ -324,6 +330,7 @@ impl IntoResponse for AppError {
             AppError::ReauthRequired { .. } => (StatusCode::UNAUTHORIZED, "reauth_required"),
             AppError::ServerTimeout => (StatusCode::SERVICE_UNAVAILABLE, "server_timeout"),
             AppError::QueryTimeout => (StatusCode::GATEWAY_TIMEOUT, "query_timeout"),
+            AppError::ReadOnly => (StatusCode::SERVICE_UNAVAILABLE, "read_only"),
             AppError::PayloadTooLarge => (StatusCode::PAYLOAD_TOO_LARGE, "payload_too_large"),
             AppError::IdempotencyOutcomeUnknown => {
                 (StatusCode::CONFLICT, "idempotency_outcome_unknown")
@@ -1180,6 +1187,7 @@ mod tests {
             AppError::MethodNotAllowed => 23,
             AppError::FieldLocked { .. } => 24,
             AppError::QueryTimeout => 25,
+            AppError::ReadOnly => 26,
         }
     }
 
@@ -1208,6 +1216,7 @@ mod tests {
             },
             AppError::ServerTimeout,
             AppError::QueryTimeout,
+            AppError::ReadOnly,
             AppError::PayloadTooLarge,
             AppError::IdempotencyOutcomeUnknown,
             AppError::IdempotencyReplayUnavailable,

@@ -232,6 +232,7 @@ pub fn area(key: &str) -> &'static str {
         Some("feature") => "features",
         Some("ai") => "ai",
         Some("omnichannel") => "channels",
+        Some("ops") => "operations",
         _ => "other",
     }
 }
@@ -278,6 +279,9 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         }
         "omnichannel.web_chat_offline_message" => {
             "الرد التلقائي لزائر محادثة الويب خارج ساعات العمل."
+        }
+        "ops.read_only" => {
+            "وضع القراءة فقط: ترفض الخوادم كل كتابة ما دام مفعّلًا، وتبقى القراءة وتسجيل الدخول متاحة."
         }
         "omnichannel.web_chat_calendar_ref" => {
             "تقويم ساعات العمل الذي يحكم نافذة محادثة الويب؛ فارغ يعني أنها مفتوحة دائمًا."

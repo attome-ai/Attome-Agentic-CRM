@@ -230,6 +230,7 @@ pub use metrics::{
 pub use openapi::openapi_document;
 pub use registry::ModelRegistry;
 pub use system::{EngineSystem, EngineSystemBuilder, apply_s2s_layer, load_license};
+pub use system_health::spawn_read_only_refresh;
 
 /// Advisory-lock namespace for every key taken under the `"attome-api/…"`
 /// prefix (guidelines §2's `"{crate}/{operation}:{resource}"` convention) —

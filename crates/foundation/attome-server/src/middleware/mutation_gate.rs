@@ -47,6 +47,13 @@ fn should_reject(method: &Method, backlog_exceeded: bool) -> bool {
 }
 
 pub async fn mutation_gate(State(state): State<AppState>, req: Request, next: Next) -> Response {
+    // AB5-T6: read-only mode answers first; sign-in and its own switch pass.
+    if is_mutating(req.method())
+        && crate::read_only::current(&state.read_only).is_some()
+        && !crate::read_only::write_allowed(req.uri().path())
+    {
+        return AppError::ReadOnly.into_response();
+    }
     let tripped = state.audit_ingest_backlog_exceeded.load(Ordering::Relaxed);
     if should_reject(req.method(), tripped) {
         return AppError::Overloaded("audit_ingest_backlog").into_response();

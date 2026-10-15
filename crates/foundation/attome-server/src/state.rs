@@ -6,7 +6,7 @@ use attome_config::AppConfig;
 use attome_db::DbPool;
 use attome_storage::StorageClient;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, AtomicU8};
 use uuid::Uuid;
 
 use crate::capability::{CapabilityRegistry, CapabilityStatuses};
@@ -88,6 +88,11 @@ pub struct AppState {
     /// deployment that never calls it (or hasn't yet) behaves exactly as
     /// before this flag existed.
     pub audit_ingest_backlog_exceeded: Arc<AtomicBool>,
+    /// AB5-T6: why this node refuses writes, as a
+    /// [`crate::read_only::ReadOnlyReason`] (0 = it does not). Same split
+    /// as the backlog flag: this crate owns the flag and the gate,
+    /// `attome_api::spawn_read_only_refresh` decides it.
+    pub read_only: Arc<AtomicU8>,
     /// P-migration-governance — the highest migration version this
     /// binary was compiled against (`MIGRATOR`'s own max version,
     /// `crates/server/src/boot.rs`), so `/health/ready` can confirm the
@@ -209,6 +214,7 @@ impl AppState {
             registry_ready: Arc::new(AtomicBool::new(false)),
             replica_watermark: Arc::new(ArcSwapOption::from(None)),
             audit_ingest_backlog_exceeded: Arc::new(AtomicBool::new(false)),
+            read_only: Arc::new(AtomicU8::new(0)),
             expected_schema_version: None,
             capabilities: Arc::new(crate::capability::CapabilityRegistry::inert()),
             configuration_version: Arc::new(ArcSwapOption::from(None)),

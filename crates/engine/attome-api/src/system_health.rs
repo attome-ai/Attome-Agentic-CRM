@@ -118,6 +118,68 @@ async fn dependencies(State(state): State<EngineState>, _ctx: Authorized<Admin>)
     }))
 }
 
+/// AB5-T6: the read-only reason this node should hold, from the operator
+/// switch and the database-size ceiling. The operator's switch wins.
+fn read_only_reason(
+    operator: bool,
+    database_bytes: Option<i64>,
+    ceiling: Option<u64>,
+) -> Option<attome_server::read_only::ReadOnlyReason> {
+    use attome_server::read_only::ReadOnlyReason;
+    if operator {
+        return Some(ReadOnlyReason::Operator);
+    }
+    match (database_bytes, ceiling) {
+        (Some(size), Some(limit)) if u64::try_from(size).unwrap_or(0) >= limit => {
+            Some(ReadOnlyReason::Disk)
+        }
+        _ => None,
+    }
+}
+
+/// AB5-T6: keeps this node's read-only reason current: the `ops.read_only`
+/// setting (which every node's settings refresh picks up) and, when
+/// `deployment.read_only_at_database_bytes` is set, the database's size.
+/// Process-lifetime supervision; a failed size read keeps the last answer.
+pub fn spawn_read_only_refresh(state: EngineState, interval: std::time::Duration) {
+    tokio::spawn(async move {
+        let mut database_bytes: Option<i64> = None;
+        loop {
+            let operator = attome_core::setting_registry()
+                .get("ops.read_only")
+                .map(|d| state.settings.load().resolve(d, None, None).0)
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let ceiling = state.base.config.deployment.read_only_at_database_bytes;
+            if ceiling.is_some() {
+                match sqlx::query_scalar::<_, i64>("SELECT pg_database_size(current_database())")
+                    .fetch_one(&state.base.db)
+                    .await
+                {
+                    Ok(size) => database_bytes = Some(size),
+                    Err(error) => {
+                        tracing::warn!(%error, "read-only refresh: database size read failed")
+                    }
+                }
+            }
+            let reason = read_only_reason(operator, database_bytes, ceiling);
+            let before = attome_server::read_only::set(&state.base.read_only, reason);
+            if before != reason {
+                match reason {
+                    Some(reason) => tracing::error!(
+                        reason = reason.as_str(),
+                        database_bytes,
+                        "read-only mode ON: every write answers 503 read_only"
+                    ),
+                    None => tracing::info!("read-only mode OFF: writes are accepted again"),
+                }
+            }
+            metrics::gauge!("attome_read_only").set(if reason.is_some() { 1.0 } else { 0.0 });
+            tokio::time::sleep(interval).await;
+        }
+    });
+}
+
 /// AA12-T1: one Web Vitals measurement from a browser.
 #[derive(serde::Deserialize, utoipa::ToSchema)]
 pub(crate) struct WebVital {
@@ -399,6 +461,9 @@ pub struct DegradedFeature {
 pub struct SystemStatus {
     /// Changes are refused for now (the audit backlog guard is holding writes).
     pub read_only: bool,
+    /// AB5-T6: `operator`, `disk` or `recovery` while read-only mode is on.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub read_only_reason: Option<String>,
     pub degraded: Vec<DegradedFeature>,
 }
 
@@ -442,11 +507,14 @@ async fn system_status(
         .into_iter()
         .filter(|c| registry.state(*c) == attome_server::CapabilityState::Unavailable)
         .collect();
+    let read_only = attome_server::read_only::current(&state.base.read_only);
     Json(SystemStatus {
-        read_only: state
-            .base
-            .audit_ingest_backlog_exceeded
-            .load(std::sync::atomic::Ordering::Relaxed),
+        read_only: read_only.is_some()
+            || state
+                .base
+                .audit_ingest_backlog_exceeded
+                .load(std::sync::atomic::Ordering::Relaxed),
+        read_only_reason: read_only.map(|r| r.as_str().to_owned()),
         degraded: degraded_features(&down),
     })
 }
@@ -622,6 +690,26 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 mod status_tests {
     use super::*;
     use attome_server::Capability;
+
+    #[test]
+    fn read_only_follows_the_switch_then_the_size_ceiling() {
+        use attome_server::read_only::ReadOnlyReason;
+        assert_eq!(read_only_reason(false, None, None), None);
+        assert_eq!(
+            read_only_reason(true, None, None),
+            Some(ReadOnlyReason::Operator)
+        );
+        assert_eq!(read_only_reason(false, Some(10), Some(100)), None);
+        assert_eq!(
+            read_only_reason(false, Some(100), Some(100)),
+            Some(ReadOnlyReason::Disk)
+        );
+        assert_eq!(
+            read_only_reason(true, Some(100), Some(100)),
+            Some(ReadOnlyReason::Operator)
+        );
+        assert_eq!(read_only_reason(false, Some(1_000), None), None);
+    }
 
     #[test]
     fn a_vital_area_is_a_short_word_or_other() {

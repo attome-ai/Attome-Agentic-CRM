@@ -241,6 +241,7 @@ describe('ApiService', () => {
       [503, 'capability_unavailable', 'unavailable'],
       [503, 'overloaded', 'unavailable'],
       [503, 'server_timeout', 'unavailable'],
+      [503, 'read_only', 'unavailable'],
     ];
 
     for (const [status, code, kind] of cases) {

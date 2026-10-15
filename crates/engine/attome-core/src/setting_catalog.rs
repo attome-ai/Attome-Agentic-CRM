@@ -29,7 +29,22 @@ pub(crate) fn all() -> Vec<SettingDescriptor> {
     all.extend(action_settings());
     all.extend(ai_settings());
     all.extend(omnichannel_settings());
+    all.extend(ops_settings());
     all
+}
+
+/// AB5-T6: operating switches.
+fn ops_settings() -> Vec<SettingDescriptor> {
+    vec![SettingDescriptor::new(
+        "ops.read_only",
+        "Read-only mode: while true, every write answers 503 `read_only`; reading, \
+         signing in and this switch keep working. Every server follows it within \
+         the read-only refresh interval.",
+        || json!({"type": "boolean"}),
+        &[SettingScope::Deployment],
+        false,
+        || json!(false),
+    )]
 }
 
 fn core_settings() -> Vec<SettingDescriptor> {

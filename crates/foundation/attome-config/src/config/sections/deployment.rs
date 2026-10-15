@@ -64,6 +64,10 @@ pub struct DeploymentSection {
     /// provider, for example. Exact, lowercase host names.
     #[serde(default)]
     pub sovereign_allowed_hosts: Vec<String>,
+    /// AB5-T6: when the database reaches this many bytes the deployment
+    /// turns read-only, before the disk fills. Absent means no ceiling.
+    #[serde(default)]
+    pub read_only_at_database_bytes: Option<u64>,
 }
 
 impl DeploymentSection {
@@ -153,6 +157,7 @@ impl Default for DeploymentSection {
             portal_hosts: Vec::new(),
             sovereign: false,
             sovereign_allowed_hosts: Vec::new(),
+            read_only_at_database_bytes: None,
         }
     }
 }
