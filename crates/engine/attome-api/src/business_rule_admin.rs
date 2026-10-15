@@ -833,6 +833,46 @@ fn test_business(
                     });
                 }
             }
+            PolicyEffect::Required { field, message } => {
+                let empty = req.record.get(field).is_none_or(|v| {
+                    v.is_null()
+                        || v.as_str().is_some_and(|s| s.trim().is_empty())
+                        || v.as_array().is_some_and(Vec::is_empty)
+                });
+                if outcome.holds_fail_closed() && empty {
+                    out.policies_fired.push(p.ordinal);
+                    out.errors.push(TestError {
+                        field: Some(field.to_owned()),
+                        message: Some(
+                            message.map_or_else(|| format!("{field} is required"), str::to_owned),
+                        ),
+                        severity: "error".into(),
+                    });
+                }
+            }
+            PolicyEffect::AllowedValues {
+                field,
+                values,
+                message,
+            } => {
+                if outcome.holds_fail_closed() && !br::value_allowed(req.record.get(field), values)
+                {
+                    out.policies_fired.push(p.ordinal);
+                    out.errors.push(TestError {
+                        field: Some(field.to_owned()),
+                        message: Some(message.map_or_else(
+                            || format!("{field} has a value this rule does not allow"),
+                            str::to_owned,
+                        )),
+                        severity: "error".into(),
+                    });
+                }
+            }
+            PolicyEffect::Tag { .. } => {
+                if outcome.holds_fail_closed() {
+                    out.policies_fired.push(p.ordinal);
+                }
+            }
             PolicyEffect::SetValue { field, source, .. } => match &outcome {
                 ConditionOutcome::True => {
                     out.policies_fired.push(p.ordinal);
