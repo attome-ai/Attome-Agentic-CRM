@@ -272,6 +272,10 @@ pub fn routes() -> Router<EngineState> {
             get(hierarchy::list_ancestors),
         )
         .route(
+            "/api/v1/{entity}/{id}/move-preview",
+            get(hierarchy::move_preview),
+        )
+        .route(
             "/api/v1/{entity}/{id}/descendants",
             get(hierarchy::list_descendants),
         )

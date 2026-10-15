@@ -11,6 +11,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Trees: `GET /api/v1/{entity}/{id}/move-preview?parent=` says how many records a move would carry
+  and whether it would be refused (a cycle, or the depth cap).
 - Record forms show where a record sits in its entity's tree (a breadcrumb of its ancestors, each a
   link), for entities with a self-referencing lookup.
 - Honest totals: `query/execute` with `include_total` counts a matching set only when the planner

@@ -312,8 +312,134 @@ pub(super) async fn list_descendants(
 /// because `#[utoipa::path]` generates a `__path_*` type with the handler's
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
+/// `GET /api/v1/{entity}/{id}/move-preview`.
+#[derive(Debug, serde::Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct MovePreviewQuery {
+    /// The new parent; absent to move the record to the root.
+    pub parent: Option<Uuid>,
+}
+
+/// What moving a record (with everything under it) would do.
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+pub struct MovePreview {
+    /// The record and its descendants: every record that moves.
+    pub moving: i64,
+    /// Whether the move would be accepted.
+    pub allowed: bool,
+    /// Why not, when it would be refused: `cycle` (the new parent is the
+    /// record or under it) or `too_deep` (the tree would pass the depth cap).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refusal: Option<&'static str>,
+}
+
+/// Why a move would be refused, from the subtree's size and height and the
+/// new parent's depth. `None` when it would be accepted.
+pub fn move_refusal(
+    parent_in_subtree: bool,
+    parent_depth: i32,
+    subtree_height: i32,
+) -> Option<&'static str> {
+    if parent_in_subtree {
+        Some("cycle")
+    } else if parent_depth + 1 + subtree_height >= MAX_HIERARCHY_DEPTH as i32 {
+        Some("too_deep")
+    } else {
+        None
+    }
+}
+
+/// A17-T4: what moving a record under `parent` would do, without moving
+/// anything: how many records go with it (the record and its descendants),
+/// and whether the move would be refused for a cycle or the depth cap.
+#[utoipa::path(
+    get,
+    path = "/api/v1/{entity}/{id}/move-preview",
+    tag = "entity",
+    params(("entity" = String, Path), ("id" = Uuid, Path), MovePreviewQuery),
+    responses(
+        (status = 200, description = "What the move would do", body = MovePreview),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "The entity has no hierarchy", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn move_preview(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Read>>,
+    Path((entity_input, record_id)): Path<(String, Uuid)>,
+    axum::extract::Query(query): axum::extract::Query<MovePreviewQuery>,
+) -> Result<Json<MovePreview>, AppError> {
+    let (entity_id, entity_name, attrs, _) = resolve_entity(&state, &entity_input).await?;
+    require_record_access(
+        &state,
+        &ctx,
+        entity_id,
+        &entity_name,
+        record_id,
+        RecordAction::Read,
+    )
+    .await?;
+    let field = hierarchy_field(entity_id, &attrs)?;
+    let table = quote_ident(&entity_name);
+    let field_ident = quote_ident(&field.logicalname);
+    let (moving, parent_in_subtree, height): (i64, bool, i32) = sqlx::query_as(&format!(
+        "WITH RECURSIVE subtree(id, depth) AS ( \
+             SELECT id, 0 FROM {table} WHERE id = $1 \
+             UNION ALL \
+             SELECT c.id, s.depth + 1 FROM {table} c JOIN subtree s ON c.{field_ident} = s.id \
+             WHERE s.depth < $2 AND (c.is_active IS NULL OR c.is_active = true) \
+         ) \
+         SELECT count(*), COALESCE(bool_or(id = $3), false), COALESCE(max(depth), 0) FROM subtree"
+    ))
+    .bind(record_id)
+    .bind(MAX_HIERARCHY_DEPTH as i32)
+    .bind(query.parent)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let parent_depth: i32 = match query.parent {
+        None => -1,
+        Some(parent) => sqlx::query_scalar(&format!(
+            "WITH RECURSIVE chain(id, depth) AS ( \
+                 SELECT {field_ident}, 0 FROM {table} WHERE id = $1 \
+                 UNION ALL \
+                 SELECT t.{field_ident}, chain.depth + 1 FROM {table} t JOIN chain ON t.id = chain.id \
+                 WHERE chain.depth < $2 \
+             ) \
+             SELECT COALESCE(max(depth), 0) FROM chain WHERE id IS NOT NULL"
+        ))
+        .bind(parent)
+        .bind(MAX_HIERARCHY_DEPTH as i32)
+        .fetch_one(&state.base.db)
+        .await
+        .map_err(AppError::internal)?,
+    };
+    let refusal = move_refusal(parent_in_subtree, parent_depth, height);
+    Ok(Json(MovePreview {
+        moving,
+        allowed: refusal.is_none(),
+        refusal,
+    }))
+}
+
+#[cfg(test)]
+mod move_tests {
+    use super::*;
+
+    #[test]
+    fn a_move_is_refused_into_its_own_subtree_or_past_the_depth_cap() {
+        assert_eq!(move_refusal(true, 0, 0), Some("cycle"));
+        assert_eq!(move_refusal(false, 2, 3), None);
+        let cap = MAX_HIERARCHY_DEPTH as i32;
+        assert_eq!(move_refusal(false, cap - 2, 1), Some("too_deep"));
+        assert_eq!(move_refusal(false, -1, 0), None);
+    }
+}
+
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_ancestors, list_descendants))]
+#[openapi(paths(list_ancestors, list_descendants, move_preview))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
