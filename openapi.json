@@ -12443,6 +12443,88 @@
         }
       }
     },
+    "/api/v1/admin/entities/labels/workbench": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "A20-T3: every entity, attribute and choice label with its translation in\n`locale` and where it stands (untranslated, stale, draft, reviewed),\noptionally only one status.",
+        "operationId": "label_workbench",
+        "parameters": [
+          {
+            "name": "locale",
+            "in": "path",
+            "description": "The language, e.g. `ar-SA`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "path",
+            "description": "`untranslated`, `stale`, `draft` or `reviewed`; all when absent.",
+            "required": true,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every label with its translation and status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_WorkbenchRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid locale or status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/entities/labels/xliff": {
       "get": {
         "tags": [
@@ -90561,6 +90643,61 @@
           }
         }
       },
+      "PaginatedResponse_WorkbenchRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "A20-T1/T3: where one label-able text stands in a language.",
+              "required": [
+                "key",
+                "source",
+                "status"
+              ],
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "description": "`<kind>:<object_ref>`, the XLIFF unit id."
+                },
+                "source": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "description": "`untranslated`, `stale` (the source changed since it was translated),\n`draft` (not yet reviewed) or `reviewed`."
+                },
+                "target": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_WritePolicy": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -103516,6 +103653,34 @@
               "null"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "WorkbenchRow": {
+        "type": "object",
+        "description": "A20-T1/T3: where one label-able text stands in a language.",
+        "required": [
+          "key",
+          "source",
+          "status"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "`<kind>:<object_ref>`, the XLIFF unit id."
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "`untranslated`, `stale` (the source changed since it was translated),\n`draft` (not yet reviewed) or `reviewed`."
+          },
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },

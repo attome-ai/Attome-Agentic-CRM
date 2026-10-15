@@ -2127,6 +2127,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/entities/labels/workbench": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A20-T3: every entity, attribute and choice label with its translation in
+         *     `locale` and where it stands (untranslated, stale, draft, reviewed),
+         *     optionally only one status.
+         */
+        get: operations["label_workbench"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/entities/labels/xliff": {
         parameters: {
             query?: never;
@@ -22913,6 +22934,26 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_WorkbenchRow: {
+            items: {
+                /** @description `<kind>:<object_ref>`, the XLIFF unit id. */
+                key: string;
+                source: string;
+                /**
+                 * @description `untranslated`, `stale` (the source changed since it was translated),
+                 *     `draft` (not yet reviewed) or `reviewed`.
+                 */
+                status: string;
+                target?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_WritePolicy: {
             items: {
                 action_id: string;
@@ -28140,6 +28181,18 @@ export interface components {
             status: string;
             /** Format: int64 */
             total_float_days?: number | null;
+        };
+        /** @description A20-T1/T3: where one label-able text stands in a language. */
+        WorkbenchRow: {
+            /** @description `<kind>:<object_ref>`, the XLIFF unit id. */
+            key: string;
+            source: string;
+            /**
+             * @description `untranslated`, `stale` (the source changed since it was translated),
+             *     `draft` (not yet reviewed) or `reviewed`.
+             */
+            status: string;
+            target?: string | null;
         };
         WritePolicy: {
             action_id: string;
@@ -36048,6 +36101,58 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    label_workbench: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The language, e.g. `ar-SA`. */
+                locale: string;
+                /** @description `untranslated`, `stale`, `draft` or `reviewed`; all when absent. */
+                status: string | null;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every label with its translation and status */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_WorkbenchRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid locale or status */
             422: {
                 headers: {
                     [name: string]: unknown;
