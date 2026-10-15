@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- While the AI model is confirmed down, a conversation turn is refused up front with
+  `503 capability_unavailable` (`ai_model`) before anything is written; every `capability_unavailable`
+  response now carries `Retry-After: 30` and `retry_after_sec`.
 - Five more capabilities are probed and reported: `ai_model`, `search_index`, `virus_scanner`,
   `cache` and `connectors`, each naming the features it affects; the status banner explains each in
   English and Arabic. Every period a capability is unavailable is kept in `degraded_period`

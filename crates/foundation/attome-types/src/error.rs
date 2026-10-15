@@ -6,6 +6,10 @@ use axum::{
 use serde_json::json;
 use thiserror::Error;
 
+/// AB5-T3: the `Retry-After` a `capability_unavailable` 503 carries, about
+/// two capability probe rounds.
+pub const CAPABILITY_RETRY_AFTER_SECS: u64 = 30;
+
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("not found")]
@@ -409,6 +413,9 @@ impl IntoResponse for AppError {
         // clients that only parse JSON.
         let retry_after = match &self {
             AppError::TooManyRequests { retry_after_secs } => *retry_after_secs,
+            // AB5-T3: a dependency outage is worth retrying after a probe
+            // round or two.
+            AppError::CapabilityUnavailable(_) => Some(CAPABILITY_RETRY_AFTER_SECS),
             _ => None,
         };
         if let Some(secs) = retry_after {
@@ -659,6 +666,17 @@ mod tests {
             body["message"],
             "capability 'object_storage' is unavailable"
         );
+    }
+
+    /// AB5-T3: a capability 503 says when to try again.
+    #[tokio::test]
+    async fn capability_unavailable_carries_retry_after() {
+        let resp = AppError::CapabilityUnavailable("ai_model").into_response();
+        assert_eq!(
+            resp.headers().get(axum::http::header::RETRY_AFTER),
+            Some(&axum::http::HeaderValue::from_static("30"))
+        );
+        assert_eq!(body_json(resp).await["retry_after_sec"], 30);
     }
 
     /// P-environment-promotion Phase 0 — distinct from `forbidden` by code, so

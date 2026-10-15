@@ -678,6 +678,14 @@ pub async fn run(
     use crate::execute::ActionOutcome;
     use crate::registry::VisibilityInputs;
 
+    // AB5-T3: while the AI model is confirmed down a turn is refused up
+    // front (503 capability_unavailable, Retry-After), before anything is
+    // written, instead of failing half way. Record saves never wait on it.
+    state
+        .base
+        .capabilities
+        .ensure_available(attome_server::capability::Capability::AiModel)?;
+
     let turn_id = Uuid::now_v7();
     let db = &state.base.db;
     let conversation_id = inputs.conversation_id;
