@@ -12,14 +12,64 @@
 //! `"feature.{key}"` in `setting_catalog.rs`'s `feature_flag_settings()` —
 //! `FeatureFlagRegistry::new()` asserts this at boot.
 
-use attome_modules::{MODULE_CORE, MODULE_PROJECT};
+use attome_modules::{MODULE_CONTENT, MODULE_CORE, MODULE_PROJECT};
 
 use crate::feature_flag_descriptor::FeatureFlag;
 
 pub(crate) fn all() -> Vec<FeatureFlag> {
     let mut all = core_flags();
     all.extend(scan_flags());
+    all.extend(e13_flags());
     all
+}
+
+/// E13-T2: the search-optimisation parts of content, off until switched on;
+/// topic clusters build on the page audit.
+fn e13_flags() -> Vec<FeatureFlag> {
+    vec![
+        FeatureFlag::new(
+            "content.seo_audit",
+            MODULE_CONTENT,
+            "Page SEO audit on save and nightly, with page and site scores.",
+            false,
+            &[],
+        ),
+        FeatureFlag::new(
+            "content.seo_clusters",
+            MODULE_CONTENT,
+            "SEO topics with pillar and cluster pages and link-gap checks.",
+            false,
+            &["content.seo_audit"],
+        ),
+        FeatureFlag::new(
+            "content.search_console",
+            MODULE_CONTENT,
+            "Daily Google Search Console and Bing Webmaster data per page through the customer's own connection.",
+            false,
+            &[],
+        ),
+        FeatureFlag::new(
+            "content.instant_indexing",
+            MODULE_CONTENT,
+            "IndexNow and sitemap pings on publish and removal.",
+            false,
+            &[],
+        ),
+        FeatureFlag::new(
+            "content.seo_arabic_paths",
+            MODULE_CONTENT,
+            "Arabic url_path values for Arabic translations.",
+            false,
+            &[],
+        ),
+        FeatureFlag::new(
+            "content.seo_agent",
+            MODULE_CONTENT,
+            "Agent drafting of search titles, descriptions and FAQ blocks.",
+            false,
+            &[],
+        ),
+    ]
 }
 
 /// B16-T9: scanning stays hidden until a deployment switches it on; acting
@@ -89,6 +139,29 @@ fn core_flags() -> Vec<FeatureFlag> {
 
 #[cfg(test)]
 mod tests {
+    /// E13-T2: the SEO flags exist and are off until switched on.
+    #[test]
+    fn e13_flags_registered_and_off_by_default() {
+        let registry = crate::feature_flag_descriptor::registry();
+        for key in [
+            "content.seo_audit",
+            "content.seo_clusters",
+            "content.search_console",
+            "content.instant_indexing",
+            "content.seo_arabic_paths",
+            "content.seo_agent",
+        ] {
+            let flag = registry
+                .get(key)
+                .unwrap_or_else(|| panic!("{key} is registered"));
+            assert!(!flag.default, "{key} is off by default");
+        }
+        assert_eq!(
+            registry.get("content.seo_clusters").map(|f| f.requires),
+            Some(&["content.seo_audit"][..])
+        );
+    }
+
     /// B16-T9: the scan flags exist and are off until switched on.
     #[test]
     fn scan_flags_registered_and_off_by_default() {

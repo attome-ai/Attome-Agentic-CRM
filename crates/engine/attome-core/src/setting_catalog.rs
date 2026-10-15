@@ -262,6 +262,30 @@ fn feature_flag_settings() -> Vec<SettingDescriptor> {
             "feature.scan.continuous_enabled",
             "Stored policy value for the scan.continuous_enabled feature flag (B16-T9).",
         ),
+        scan(
+            "feature.content.seo_audit",
+            "Stored policy value for the content.seo_audit feature flag (E13-T2).",
+        ),
+        scan(
+            "feature.content.seo_clusters",
+            "Stored policy value for the content.seo_clusters feature flag (E13-T2).",
+        ),
+        scan(
+            "feature.content.search_console",
+            "Stored policy value for the content.search_console feature flag (E13-T2).",
+        ),
+        scan(
+            "feature.content.instant_indexing",
+            "Stored policy value for the content.instant_indexing feature flag (E13-T2).",
+        ),
+        scan(
+            "feature.content.seo_arabic_paths",
+            "Stored policy value for the content.seo_arabic_paths feature flag (E13-T2).",
+        ),
+        scan(
+            "feature.content.seo_agent",
+            "Stored policy value for the content.seo_agent feature flag (E13-T2).",
+        ),
         SettingDescriptor::new(
             "feature.core.beta_ui",
             "Stored policy value for the core.beta_ui feature flag (M95, D-430): \

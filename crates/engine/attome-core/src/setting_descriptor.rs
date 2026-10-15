@@ -271,6 +271,22 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
             "سياسة ميزة المسح: قراءة الباركود ورموز QR في الحقول وللبحث عن السجلات."
         }
         "feature.scan.actions_enabled" => "سياسة تشغيل الإجراء المرتبط بنمط الرمز الممسوح.",
+        "feature.content.seo_audit" => {
+            "سياسة تدقيق تحسين محركات البحث للصفحات عند الحفظ وليلًا، مع درجات للصفحة والموقع."
+        }
+        "feature.content.seo_clusters" => {
+            "سياسة موضوعات تحسين البحث مع الصفحات المحورية والفرعية وفحص فجوات الروابط."
+        }
+        "feature.content.search_console" => {
+            "سياسة جلب بيانات Google Search Console وBing Webmaster يوميًا لكل صفحة عبر اتصال العميل."
+        }
+        "feature.content.instant_indexing" => {
+            "سياسة إشعار IndexNow وخرائط الموقع عند النشر والإزالة."
+        }
+        "feature.content.seo_arabic_paths" => "سياسة السماح بمسارات URL عربية للترجمات العربية.",
+        "feature.content.seo_agent" => {
+            "سياسة صياغة الوكيل لعناوين البحث وأوصافه وكتل الأسئلة الشائعة."
+        }
         "feature.scan.continuous_enabled" => "سياسة المسح المتواصل مع عدّاد للرموز المقروءة.",
         "feature.project.gantt_v2_preview" => "سياسة معاينة مخطط جانت الجديد؛ تتطلب وحدة المشاريع.",
         "ai.record_update_field_allowlist" => {
