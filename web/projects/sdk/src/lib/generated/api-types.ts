@@ -15777,6 +15777,13 @@ export interface components {
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_RecordHistoryChange: {
             items: {
+                /** @description `user`, `agent`, `system` or `portal_user`. */
+                actor: string;
+                /**
+                 * Format: uuid
+                 * @description The agent session that made it, when an agent did.
+                 */
+                agent_session_id?: string | null;
                 /**
                  * Format: uuid
                  * @description The `audit_header` row.
@@ -15786,8 +15793,21 @@ export interface components {
                 changed_on: string;
                 /** @description Readable fields only, by field name. */
                 fields: components["schemas"]["RecordHistoryField"][];
+                /**
+                 * @description B2-T1: the change set it belongs to: `batch:<id>` (an import or bulk
+                 *     action), `agent:<session>`, `run:<correlation id>` (a flow run or other
+                 *     correlated work), `request:<id>` (one save), else `change:<audit id>`.
+                 *     Changes with the same value were made together.
+                 */
+                group_id: string;
                 /** @description `created`, `updated`, `soft_deleted`, `restored`, `merged`, … */
                 operation: string;
+                /**
+                 * @description `web_form`, `api`, `mobile`, `import`, `workflow`, `plugin`,
+                 *     `background_job`, `integration` or `migration_tool`; absent when not
+                 *     recorded.
+                 */
+                source?: string | null;
                 user_display_name?: string | null;
                 /** Format: uuid */
                 user_id?: string | null;
@@ -23853,6 +23873,13 @@ export interface components {
         };
         /** @description One change to a record: who made it, when, and which fields moved. */
         RecordHistoryChange: {
+            /** @description `user`, `agent`, `system` or `portal_user`. */
+            actor: string;
+            /**
+             * Format: uuid
+             * @description The agent session that made it, when an agent did.
+             */
+            agent_session_id?: string | null;
             /**
              * Format: uuid
              * @description The `audit_header` row.
@@ -23862,8 +23889,21 @@ export interface components {
             changed_on: string;
             /** @description Readable fields only, by field name. */
             fields: components["schemas"]["RecordHistoryField"][];
+            /**
+             * @description B2-T1: the change set it belongs to: `batch:<id>` (an import or bulk
+             *     action), `agent:<session>`, `run:<correlation id>` (a flow run or other
+             *     correlated work), `request:<id>` (one save), else `change:<audit id>`.
+             *     Changes with the same value were made together.
+             */
+            group_id: string;
             /** @description `created`, `updated`, `soft_deleted`, `restored`, `merged`, … */
             operation: string;
+            /**
+             * @description `web_form`, `api`, `mobile`, `import`, `workflow`, `plugin`,
+             *     `background_job`, `integration` or `migration_tool`; absent when not
+             *     recorded.
+             */
+            source?: string | null;
             user_display_name?: string | null;
             /** Format: uuid */
             user_id?: string | null;

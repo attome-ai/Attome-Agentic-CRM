@@ -71299,9 +71299,23 @@
                 "audit_id",
                 "changed_on",
                 "operation",
+                "group_id",
+                "actor",
                 "fields"
               ],
               "properties": {
+                "actor": {
+                  "type": "string",
+                  "description": "`user`, `agent`, `system` or `portal_user`."
+                },
+                "agent_session_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "The agent session that made it, when an agent did."
+                },
                 "audit_id": {
                   "type": "string",
                   "format": "uuid",
@@ -71318,9 +71332,20 @@
                   },
                   "description": "Readable fields only, by field name."
                 },
+                "group_id": {
+                  "type": "string",
+                  "description": "B2-T1: the change set it belongs to: `batch:<id>` (an import or bulk\naction), `agent:<session>`, `run:<correlation id>` (a flow run or other\ncorrelated work), `request:<id>` (one save), else `change:<audit id>`.\nChanges with the same value were made together."
+                },
                 "operation": {
                   "type": "string",
                   "description": "`created`, `updated`, `soft_deleted`, `restored`, `merged`, …"
+                },
+                "source": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "`web_form`, `api`, `mobile`, `import`, `workflow`, `plugin`,\n`background_job`, `integration` or `migration_tool`; absent when not\nrecorded."
                 },
                 "user_display_name": {
                   "type": [
@@ -92547,9 +92572,23 @@
           "audit_id",
           "changed_on",
           "operation",
+          "group_id",
+          "actor",
           "fields"
         ],
         "properties": {
+          "actor": {
+            "type": "string",
+            "description": "`user`, `agent`, `system` or `portal_user`."
+          },
+          "agent_session_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The agent session that made it, when an agent did."
+          },
           "audit_id": {
             "type": "string",
             "format": "uuid",
@@ -92566,9 +92605,20 @@
             },
             "description": "Readable fields only, by field name."
           },
+          "group_id": {
+            "type": "string",
+            "description": "B2-T1: the change set it belongs to: `batch:<id>` (an import or bulk\naction), `agent:<session>`, `run:<correlation id>` (a flow run or other\ncorrelated work), `request:<id>` (one save), else `change:<audit id>`.\nChanges with the same value were made together."
+          },
           "operation": {
             "type": "string",
             "description": "`created`, `updated`, `soft_deleted`, `restored`, `merged`, …"
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`web_form`, `api`, `mobile`, `import`, `workflow`, `plugin`,\n`background_job`, `integration` or `migration_tool`; absent when not\nrecorded."
           },
           "user_display_name": {
             "type": [
