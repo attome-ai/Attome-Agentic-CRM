@@ -89,6 +89,61 @@ pub(crate) async fn load_survivorship_rules(
     Ok(out)
 }
 
+/// A15-T10: a person's choice of source per field, applied over the
+/// survivorship fill. `picks` maps a field to `"survivor"` (keep the
+/// surviving record's value) or `"merged"` (take the merged record's value,
+/// even an empty one). A picked field is no longer a conflict. A field that
+/// is not a writable attribute of the entity (or a formula) is refused.
+pub(crate) fn apply_picks(
+    attrs: &[AttrInfo],
+    canonical: &Map<String, Value>,
+    duplicate: &Map<String, Value>,
+    picks: &Map<String, Value>,
+    fill: &mut Map<String, Value>,
+    conflicts: &mut Vec<String>,
+) -> Result<(), AppError> {
+    for (field, source) in picks {
+        let known = attrs
+            .iter()
+            .any(|a| &a.logicalname == field && !a.is_formula());
+        if !known {
+            return Err(AppError::Validation(format!(
+                "picks: '{field}' is not a field this merge can set"
+            )));
+        }
+        match source.as_str() {
+            Some("survivor") => {
+                fill.remove(field);
+            }
+            Some("merged") => {
+                let value = duplicate.get(field).cloned().unwrap_or(Value::Null);
+                if canonical.get(field).cloned().unwrap_or(Value::Null) == value {
+                    fill.remove(field);
+                } else {
+                    fill.insert(field.clone(), value);
+                }
+            }
+            _ => {
+                return Err(AppError::Validation(format!(
+                    "picks: '{field}' must be \"survivor\" or \"merged\""
+                )));
+            }
+        }
+        conflicts.retain(|c| c != field);
+    }
+    Ok(())
+}
+
+/// The `picks` object of a merge or merge-preview body (see [`apply_picks`]);
+/// absent is no picks.
+pub(crate) fn picks_of(body: &Value) -> Result<Map<String, Value>, AppError> {
+    match body.get("picks") {
+        None | Some(Value::Null) => Ok(Map::new()),
+        Some(Value::Object(picks)) => Ok(picks.clone()),
+        Some(_) => Err(AppError::Validation("picks must be an object".into())),
+    }
+}
+
 /// The decision itself. `canonical`/`duplicate` are the two rows' full
 /// `row_to_json` objects (system columns included — `modified_at`/`owner_ref`
 /// feed `MostRecent`/`SourcePriority`).
@@ -365,5 +420,43 @@ mod tests {
         let (fill, conflicts) = compute_fill(&attrs, &canonical, &duplicate, &rules);
         assert!(fill.is_empty());
         assert!(conflicts.is_empty());
+    }
+
+    #[test]
+    fn picks_override_the_fill_and_clear_conflicts() {
+        let attrs = vec![attr("email"), attr("phone")];
+        let canonical = obj(&[("email", Value::Null), ("phone", "555-1234".into())]);
+        let duplicate = obj(&[("email", "a@b.com".into()), ("phone", "555-9999".into())]);
+        let (mut fill, mut conflicts) =
+            compute_fill(&attrs, &canonical, &duplicate, &HashMap::new());
+        conflicts.push("phone".into());
+        let picks = obj(&[("email", "survivor".into()), ("phone", "merged".into())]);
+        apply_picks(
+            &attrs,
+            &canonical,
+            &duplicate,
+            &picks,
+            &mut fill,
+            &mut conflicts,
+        )
+        .expect("valid picks");
+        assert!(!fill.contains_key("email"));
+        assert_eq!(fill.get("phone"), Some(&Value::from("555-9999")));
+        assert!(conflicts.is_empty());
+    }
+
+    #[test]
+    fn a_pick_of_an_unknown_field_or_source_is_refused() {
+        let attrs = vec![attr("email")];
+        let empty = Map::new();
+        let mut fill = Map::new();
+        let mut conflicts = Vec::new();
+        for picks in [
+            obj(&[("nope", "merged".into())]),
+            obj(&[("email", "both".into())]),
+        ] {
+            let refused = apply_picks(&attrs, &empty, &empty, &picks, &mut fill, &mut conflicts);
+            assert!(matches!(refused, Err(AppError::Validation(_))));
+        }
     }
 }

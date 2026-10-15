@@ -6299,9 +6299,16 @@ fn merge_preview_undo_and_keep_merged() {
                 .expect("the admin's id");
         let ctx = attome_records::entity_crud::admin_security_context(admin_id);
 
-        let preview = attome_records::entity_crud::merge_preview(&state, &ctx, &account, a, b)
-            .await
-            .expect("preview");
+        let preview = attome_records::entity_crud::merge_preview(
+            &state,
+            &ctx,
+            &account,
+            a,
+            b,
+            &serde_json::Map::new(),
+        )
+        .await
+        .expect("preview");
         assert_eq!(preview.moved.len(), 1, "{preview:?}");
         assert_eq!(preview.moved[0].count, 1);
         assert_eq!(preview.result["note"], "from b");

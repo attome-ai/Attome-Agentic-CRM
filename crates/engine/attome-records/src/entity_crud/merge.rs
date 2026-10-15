@@ -29,7 +29,7 @@ use super::access::{fetch_audit_ctx, require_child_parent_access, require_record
 use super::resolve::resolve_entity;
 use super::response::{EntityRecordResponse, build_response, resolve_lookup_meta};
 use super::row_version::optional_expected_row_version;
-use super::survivorship::{compute_fill, load_survivorship_rules};
+use super::survivorship::{apply_picks, compute_fill, load_survivorship_rules, picks_of};
 use attome_types::ErrorResponse;
 
 /// D-432 / M13 — a synthetic, fully-privileged context for a merge performed
@@ -189,6 +189,8 @@ pub(super) async fn merge_records(
     // guard" — `do_merge_core_with_version` still checks the canonical's own
     // just-read version unconditionally.
     let expected_row_version = optional_expected_row_version(&headers)?;
+    // A15-T10: the fields a person chose the source of.
+    let picks = picks_of(&body)?;
 
     let outcome = do_merge_core_with_version(
         &state,
@@ -199,6 +201,7 @@ pub(super) async fn merge_records(
         claims.sub,
         candidate_id,
         expected_row_version,
+        &picks,
     )
     .await?;
 
@@ -232,6 +235,7 @@ pub async fn do_merge_core(
         actor_user_id,
         candidate_id,
         None,
+        &serde_json::Map::new(),
     )
     .await
 }
@@ -256,6 +260,7 @@ pub async fn do_merge_core_with_version(
     actor_user_id: Uuid,
     candidate_id: Option<Uuid>,
     expected_row_version: Option<i64>,
+    picks: &serde_json::Map<String, Value>,
 ) -> Result<MergeOutcome, AppError> {
     let (entity_id, entity_name, attrs, is_append_only) =
         resolve_entity(state, entity_input).await?;
@@ -466,8 +471,17 @@ pub async fn do_merge_core_with_version(
     // the full decision table. M01 Core C-12: `survivorship_rules` is now
     // resolved before this transaction opened — see that call site's own
     // comment.
-    let (fill, survivorship_conflicts) =
+    let (mut fill, mut survivorship_conflicts) =
         compute_fill(&attrs, canonical_obj, duplicate_obj, &survivorship_rules);
+    // A15-T10: a person's per-field choices win over the rules.
+    apply_picks(
+        &attrs,
+        canonical_obj,
+        duplicate_obj,
+        picks,
+        &mut fill,
+        &mut survivorship_conflicts,
+    )?;
 
     let mut merged_row = canonical_row.clone();
     if !fill.is_empty() {
@@ -940,6 +954,7 @@ pub async fn merge_preview(
     entity_input: &str,
     canonical_id: Uuid,
     duplicate_id: Uuid,
+    picks: &serde_json::Map<String, Value>,
 ) -> Result<MergePreview, AppError> {
     let (entity_id, entity_name, attrs, _) = resolve_entity(state, entity_input).await?;
     for id in [canonical_id, duplicate_id] {
@@ -968,7 +983,15 @@ pub async fn merge_preview(
         return Err(AppError::internal("merge preview rows were not objects"));
     };
     let rules = load_survivorship_rules(db, &entity_name).await?;
-    let (fill, conflicts) = compute_fill(&attrs, canonical_obj, duplicate_obj, &rules);
+    let (mut fill, mut conflicts) = compute_fill(&attrs, canonical_obj, duplicate_obj, &rules);
+    apply_picks(
+        &attrs,
+        canonical_obj,
+        duplicate_obj,
+        picks,
+        &mut fill,
+        &mut conflicts,
+    )?;
     let mut result = canonical_obj.clone();
     for (field, value) in fill {
         result.insert(field, value);
@@ -1304,8 +1327,17 @@ pub(super) async fn merge_preview_route(
         .and_then(Value::as_str)
         .and_then(|s| Uuid::parse_str(s).ok())
         .ok_or_else(|| AppError::Validation("body must have a 'duplicate_id' UUID".into()))?;
+    let picks = picks_of(&body)?;
     Ok(Json(
-        merge_preview(&state, &ctx, &entity_input, canonical_id, duplicate_id).await?,
+        merge_preview(
+            &state,
+            &ctx,
+            &entity_input,
+            canonical_id,
+            duplicate_id,
+            &picks,
+        )
+        .await?,
     ))
 }
 
