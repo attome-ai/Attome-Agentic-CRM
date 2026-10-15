@@ -563,6 +563,8 @@ struct PolicyRow {
     value: Option<Value>,
     expression: Option<String>,
     set_mode: Option<String>,
+    stage: Option<String>,
+    enforce_from: Option<chrono::NaiveDate>,
 }
 
 fn decode_policy(p: PolicyRow) -> Result<PolicyDef, String> {
@@ -576,6 +578,13 @@ fn decode_policy(p: PolicyRow) -> Result<PolicyDef, String> {
         Some(m) => Some(SetMode::parse(m).ok_or_else(|| format!("unknown set_mode '{m}'"))?),
         None => None,
     };
+    let stage = match p.stage.as_deref() {
+        Some(s) => Some(
+            attome_core::business_rules::Stage::parse(s)
+                .ok_or_else(|| format!("unknown stage '{s}'"))?,
+        ),
+        None => None,
+    };
     Ok(PolicyDef {
         policy_type,
         field: p.field_logicalname,
@@ -584,6 +593,8 @@ fn decode_policy(p: PolicyRow) -> Result<PolicyDef, String> {
         value: p.value,
         expression: p.expression,
         mode,
+        stage,
+        enforce_from: p.enforce_from,
         ordinal: p.ordinal,
     })
 }
@@ -659,7 +670,7 @@ pub(crate) async fn assemble_rules(
         }
         let policy_rows: Vec<PolicyRow> = sqlx::query_as(
             "SELECT rule_ref, ordinal, policy_type, field_logicalname, message, severity, \
-                    value, expression, set_mode \
+                    value, expression, set_mode, stage, enforce_from \
              FROM rule_policy WHERE rule_ref = ANY($1) ORDER BY rule_ref, ordinal",
         )
         .bind(&ids)
@@ -1391,8 +1402,8 @@ async fn replace_children(
         sqlx::query(
             "INSERT INTO rule_policy \
                  (rule_ref, ordinal, policy_type, field_logicalname, message, severity, value, \
-                  expression, set_mode) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+                  expression, set_mode, stage, enforce_from) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
         )
         .bind(id)
         .bind(i32::try_from(i).unwrap_or(i32::MAX))
@@ -1403,6 +1414,8 @@ async fn replace_children(
         .bind(p.value.as_ref())
         .bind(p.expression.as_deref())
         .bind(p.mode.map(SetMode::as_str))
+        .bind(p.stage.map(attome_core::business_rules::Stage::as_str))
+        .bind(p.enforce_from)
         .execute(&mut *conn)
         .await
         .map_err(AppError::internal)?;
@@ -2245,6 +2258,8 @@ mod tests {
                 value: None,
                 expression: None,
                 mode: None,
+                stage: None,
+                enforce_from: None,
                 ordinal: 0,
             }],
             target_field: None,

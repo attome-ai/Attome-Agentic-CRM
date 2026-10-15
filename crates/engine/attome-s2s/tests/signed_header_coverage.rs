@@ -122,6 +122,14 @@ const CLASSIFIED: &[(&str, Coverage, &str)] = &[
          different request. The S2S nonce still prevents wholesale replay",
     ),
     (
+        "x-override-reason",
+        UnsignedButInert,
+        "lets a staff caller with the override privilege save past a refusing \
+         business-rule check (A3-T4). The request-meta layer drops it on any \
+         request carrying x-s2s-client-id, so on the S2S path the check refuses \
+         as usual: fail-closed",
+    ),
+    (
         "x-request-id",
         UnsignedButInert,
         "client-supplied correlation id, echoed back; no authorization effect",

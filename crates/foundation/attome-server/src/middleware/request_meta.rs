@@ -84,18 +84,30 @@ pub(crate) async fn capture_request_meta(
         .and_then(|value| value.to_str().ok())
         .map(str::to_owned);
 
+    // A3-T4: a caller asking to save past a refusing check says why. The
+    // header is outside the S2S signature, so a signed request never carries
+    // one: it is dropped there, and the check refuses as usual.
+    let override_reason = req
+        .headers()
+        .get("x-override-reason")
+        .filter(|_| !req.headers().contains_key("x-s2s-client-id"))
+        .and_then(|value| std::str::from_utf8(value.as_bytes()).ok())
+        .map(str::to_owned);
+
     let meta = RequestMeta {
         request_id: request_id.clone(),
         ip_address,
         user_agent,
     };
+    let run = attome_types::request_scope::with_override_reason(
+        override_reason.as_deref(),
+        CURRENT.scope(meta, next.run(req)),
+    );
     // U4-T5: the id also goes where `attome-jobs` can read it, so a job
     // queued by this request names it.
     match request_id {
-        Some(id) => {
-            attome_types::request_scope::scope(id, CURRENT.scope(meta, next.run(req))).await
-        }
-        None => CURRENT.scope(meta, next.run(req)).await,
+        Some(id) => attome_types::request_scope::scope(id, run).await,
+        None => run.await,
     }
 }
 

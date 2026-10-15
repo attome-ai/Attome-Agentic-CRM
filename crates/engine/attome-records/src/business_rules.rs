@@ -51,9 +51,9 @@ use std::sync::{Arc, LazyLock};
 
 use attome_cache::{HotCache, create_hot_cache};
 use attome_core::business_rules::{
-    CompiledCondition, ConditionFieldKind, ConditionOutcome, FieldLock, PolicyEffect, RuleAudience,
-    SetMode, SetValueSource, Severity, combine_locks, compile_condition, condition_context,
-    condition_schema, condition_value,
+    CompiledCondition, ConditionFieldKind, ConditionOutcome, Enforcement, FieldLock, PolicyEffect,
+    RuleAudience, SetMode, SetValueSource, Severity, combine_locks, compile_condition,
+    condition_context, condition_schema, condition_value,
 };
 use attome_core::{AttrInfo, BusinessRuleDef, EngineState};
 use attome_rules::{Compiled, Type, Value as RulesValue};
@@ -231,6 +231,12 @@ pub(crate) struct WritePipeline<'a> {
     /// B4-T3: the tags the judged rules add (`true`) or remove, in rule
     /// order; applied once the record is written.
     tag_actions: Vec<(bool, String)>,
+    /// A3-T4: the caller's reason to save past a refusing check, kept only
+    /// when the caller holds the override privilege.
+    override_reason: Option<String>,
+    /// A3-T4: the refusing checks the last judgement let through on that
+    /// reason; each becomes a security event once the record is written.
+    overridden: Vec<RuleFailure>,
 }
 
 /// What step 1 decided: the rules whose `set_value` policies fire.
@@ -258,13 +264,19 @@ impl<'a> WritePipeline<'a> {
                 .cloned()
                 .collect()
         };
-        Some(Self::with_rules(
-            Some(state),
-            entity,
-            attrs,
-            audience,
-            rules,
-        ))
+        let mut pipeline = Self::with_rules(Some(state), entity, attrs, audience, rules);
+        pipeline.override_reason = match *principal {
+            Principal::Staff(ctx)
+                if ctx.is_admin
+                    || ctx
+                        .privileges
+                        .contains(attome_core::business_rules::OVERRIDE_PRIVILEGE) =>
+            {
+                attome_types::request_scope::override_reason()
+            }
+            _ => None,
+        };
+        Some(pipeline)
     }
 
     fn with_rules(
@@ -285,6 +297,8 @@ impl<'a> WritePipeline<'a> {
             conditions: HashMap::new(),
             m0_outcomes: HashMap::new(),
             tag_actions: Vec::new(),
+            override_reason: None,
+            overridden: Vec::new(),
         }
     }
 
@@ -532,7 +546,7 @@ impl<'a> WritePipeline<'a> {
             };
             outcomes.insert(id, outcome);
         }
-        let warnings = judge_outcomes(
+        let judged = judge_outcomes(
             &self.rules,
             &self.audience,
             &outcomes,
@@ -540,7 +554,13 @@ impl<'a> WritePipeline<'a> {
             self.entity,
             m2,
             write,
+            &Staging {
+                today: self.now.date_naive(),
+                override_reason: self.override_reason.as_deref(),
+            },
         )?;
+        let warnings = judged.warnings;
+        self.overridden = judged.overridden;
         // B4-T3: the tag outcomes of the rules that hold.
         self.tag_actions.clear();
         for rule in &self.rules {
@@ -557,6 +577,46 @@ impl<'a> WritePipeline<'a> {
             }
         }
         Ok(warnings)
+    }
+
+    /// A3-T4: records each refusing check the caller overrode, with the
+    /// reason, as a security event in the write's own transaction.
+    pub(crate) async fn write_overrides(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        record_id: Uuid,
+        actor: Uuid,
+    ) -> Result<(), AppError> {
+        let (Some(state), Some(reason)) = (self.state, self.override_reason.as_deref()) else {
+            return Ok(());
+        };
+        for failure in &self.overridden {
+            attome_audit::security::write_security_event(
+                tx,
+                &attome_audit::audit_service(state),
+                attome_audit::security::SecurityEvent::new(
+                    attome_audit::security::MandatoryCategory::Access,
+                    attome_audit::AuditOperation::Update,
+                    actor,
+                    self.entity,
+                    Some(record_id),
+                )
+                .named("business_rule.override")
+                .comment(format!(
+                    "rule '{}' ({}) overridden on {} {record_id}{}: {reason}",
+                    failure.rule_name,
+                    failure.rule_id,
+                    self.entity,
+                    failure
+                        .field
+                        .as_deref()
+                        .map(|f| format!(", field {f}"))
+                        .unwrap_or_default(),
+                )),
+            )
+            .await?;
+        }
+        Ok(())
     }
 
     /// B4-T3: applies the judged rules' tag outcomes to the written record,
@@ -728,6 +788,24 @@ fn required_locked(
 }
 
 /// The pure half of steps 4–6, given each judged rule's outcome on M2.
+/// A3-T4: the day staged checks are judged on, and the reason a caller with
+/// the override privilege gave to save past a refusing one.
+struct Staging<'a> {
+    today: chrono::NaiveDate,
+    override_reason: Option<&'a str>,
+}
+
+/// What judging found: the warnings to return, and the refusing checks let
+/// through on an override reason.
+struct Judged {
+    warnings: Vec<RuleWarning>,
+    overridden: Vec<RuleFailure>,
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "one call site; the pieces of one write"
+)]
 fn judge_outcomes(
     rules: &[BusinessRuleDef],
     audience: &RuleAudience<'_>,
@@ -736,7 +814,8 @@ fn judge_outcomes(
     entity: &str,
     m2: &Map<String, Value>,
     write: &WriteSides<'_>,
-) -> Result<Vec<RuleWarning>, AppError> {
+    staging: &Staging<'_>,
+) -> Result<Judged, AppError> {
     let holds = |rule: &BusinessRuleDef, with_transient: bool| {
         outcomes.get(&rule.id).is_some_and(|o| {
             o.holds_fail_closed() || (with_transient && *o == ConditionOutcome::Transient)
@@ -811,36 +890,67 @@ fn judge_outcomes(
                 }
                 _ => continue,
             };
+            // A3-T4: a staged check reports, warns or refuses.
+            let enforcement = policy.enforcement(severity, staging.today);
             if *outcome == ConditionOutcome::Transient {
-                transient_block |= severity.blocks();
+                transient_block |= enforcement == Enforcement::Enforce;
                 continue;
             }
             if !outcome.holds_fail_closed() {
                 continue;
             }
             let message = message.unwrap_or_else(|| format!("rule '{}' failed", rule.label()));
-            if severity.blocks() {
-                failures.push(RuleFailure {
+            match enforcement {
+                Enforcement::Enforce => failures.push(RuleFailure {
                     rule_id: rule.id,
                     rule_name: rule.label().to_owned(),
                     field: field.map(str::to_owned),
                     message,
-                });
-            } else {
-                tracing::warn!(
+                }),
+                Enforcement::Warn => {
+                    tracing::warn!(
+                        rule_id = %rule.id,
+                        rule = %rule.name,
+                        entity,
+                        "business rule warning fired (write allowed)"
+                    );
+                    warnings.push(RuleWarning {
+                        rule_id: rule.id,
+                        rule_name: rule.label().to_owned(),
+                        field: field.map(str::to_owned),
+                        message,
+                    });
+                }
+                Enforcement::Report => tracing::info!(
                     rule_id = %rule.id,
                     rule = %rule.name,
                     entity,
-                    "business rule warning fired (write allowed)"
-                );
-                warnings.push(RuleWarning {
-                    rule_id: rule.id,
-                    rule_name: rule.label().to_owned(),
-                    field: field.map(str::to_owned),
-                    message,
-                });
+                    field = field.unwrap_or_default(),
+                    "business rule check failed (report only, write allowed)"
+                ),
             }
         }
+    }
+    // A3-T4: a caller with the override privilege who gave a reason saves
+    // anyway; each overridden check comes back as a warning and is audited.
+    if !failures.is_empty()
+        && let Some(reason) = staging.override_reason
+    {
+        for failure in &failures {
+            warnings.push(RuleWarning {
+                rule_id: failure.rule_id,
+                rule_name: failure.rule_name.clone(),
+                field: failure.field.clone(),
+                message: format!("{} (overridden: {reason})", failure.message),
+            });
+        }
+        if transient_block {
+            return Err(AppError::Overloaded("business_rules.condition_wall_clock"));
+        }
+        return Ok(Judged {
+            warnings,
+            overridden: failures,
+        });
     }
     if let Some(first) = failures.first() {
         return Err(AppError::RuleViolation {
@@ -855,7 +965,10 @@ fn judge_outcomes(
     if transient_block {
         return Err(AppError::Overloaded("business_rules.condition_wall_clock"));
     }
-    Ok(warnings)
+    Ok(Judged {
+        warnings,
+        overridden: Vec::new(),
+    })
 }
 
 #[cfg(test)]
@@ -1211,6 +1324,103 @@ mod tests {
             }]
         );
         assert!(!Severity::Warning.blocks());
+    }
+
+    /// A3-T4: a staged check reports, warns, or refuses from its date.
+    #[tokio::test]
+    async fn a_staged_check_reports_warns_or_refuses_from_its_date() {
+        let attrs = attrs();
+        let record = map(json!({"amount": 5000}));
+        let empty = Map::new();
+        let staged = |stage: Value| {
+            let mut policy =
+                json!({"type": "required", "field": "status", "message": "status is needed"});
+            if let (Some(policy), Some(extra)) = (policy.as_object_mut(), stage.as_object()) {
+                policy.extend(extra.clone());
+            }
+            rule(
+                "Status",
+                1,
+                json!({"field": "amount", "op": "gt", "value": 1000}),
+                vec![policy],
+            )
+        };
+        let judge = |rule: BusinessRuleDef| {
+            let attrs = attrs.clone();
+            let record = record.clone();
+            let empty = empty.clone();
+            async move {
+                let mut p = pipeline(&attrs, STAFF, vec![rule]);
+                p.judge(&record, true, &update(&record, &record, &empty))
+                    .await
+            }
+        };
+
+        let report = judge(staged(json!({"stage": "report"})))
+            .await
+            .expect("report never blocks");
+        assert!(report.is_empty(), "report only logs: {report:?}");
+
+        let warn = judge(staged(json!({"stage": "warn"})))
+            .await
+            .expect("warn never blocks");
+        assert_eq!(warn.len(), 1);
+        assert_eq!(warn[0].message, "status is needed");
+
+        let later = judge(staged(
+            json!({"stage": "enforce", "enforce_from": "2999-01-01"}),
+        ))
+        .await
+        .expect("before its date an enforced check warns");
+        assert_eq!(later.len(), 1);
+
+        let now = judge(staged(
+            json!({"stage": "enforce", "enforce_from": "2000-01-01"}),
+        ))
+        .await;
+        assert!(
+            matches!(now, Err(AppError::RuleViolation { .. })),
+            "{now:?}"
+        );
+    }
+
+    /// A3-T4: with an override reason a refusing check lets the write through,
+    /// says so in a warning, and is kept for the security event.
+    #[tokio::test]
+    async fn an_override_reason_saves_past_a_refusing_check() {
+        let attrs = attrs();
+        let refuse = rule(
+            "Large deal",
+            1,
+            json!({"field": "amount", "op": "gt", "value": 1000}),
+            vec![
+                json!({"type": "error", "severity": "error", "message": "too large", "field": "amount"}),
+            ],
+        );
+        let record = map(json!({"amount": 5000}));
+        let empty = Map::new();
+
+        let mut refused = pipeline(&attrs, STAFF, vec![refuse.clone()]);
+        assert!(
+            refused
+                .judge(&record, true, &update(&record, &record, &empty))
+                .await
+                .is_err()
+        );
+
+        let mut p = pipeline(&attrs, STAFF, vec![refuse.clone()]);
+        p.override_reason = Some("signed off by finance".to_owned());
+        let warnings = p
+            .judge(&record, true, &update(&record, &record, &empty))
+            .await
+            .expect("an override saves");
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(
+            warnings[0].message,
+            "too large (overridden: signed off by finance)"
+        );
+        assert_eq!(p.overridden.len(), 1);
+        assert_eq!(p.overridden[0].rule_id, refuse.id);
     }
 
     /// Every firing error is collected; `rule_id` names the first by display

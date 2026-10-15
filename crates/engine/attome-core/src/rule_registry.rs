@@ -43,7 +43,7 @@ use uuid::Uuid;
 
 use crate::business_rules::{
     AppliesTo, BUSINESS_KIND, BusinessRuleDef, ConditionTree, PolicyDef, PolicyType, RuleAudience,
-    SetMode, Severity,
+    SetMode, Severity, Stage,
 };
 
 /// Redis pub/sub channel: any node that writes `rule` best-effort
@@ -247,6 +247,8 @@ struct PolicyRow {
     value: Option<serde_json::Value>,
     expression: Option<String>,
     set_mode: Option<String>,
+    stage: Option<String>,
+    enforce_from: Option<chrono::NaiveDate>,
 }
 
 impl PolicyRow {
@@ -263,6 +265,11 @@ impl PolicyRow {
             .as_deref()
             .map(|m| SetMode::parse(m).ok_or_else(|| format!("unknown set_mode '{m}'")))
             .transpose()?;
+        let stage = self
+            .stage
+            .as_deref()
+            .map(|s| Stage::parse(s).ok_or_else(|| format!("unknown stage '{s}'")))
+            .transpose()?;
         let ordinal = self.ordinal;
         let def = PolicyDef {
             policy_type,
@@ -272,6 +279,8 @@ impl PolicyRow {
             value: self.value,
             expression: self.expression,
             mode,
+            stage,
+            enforce_from: self.enforce_from,
             ordinal,
         };
         if def.effect().is_none() {
@@ -317,7 +326,7 @@ pub async fn load(db: &DbPool) -> Result<RuleRegistry, AppError> {
 
     let policy_rows: Vec<PolicyRow> = sqlx::query_as(
         "SELECT p.rule_ref, p.ordinal, p.policy_type, p.field_logicalname, p.message, \
-                p.severity, p.value, p.expression, p.set_mode \
+                p.severity, p.value, p.expression, p.set_mode, p.stage, p.enforce_from \
          FROM rule_policy p \
          JOIN rule r ON r.id = p.rule_ref \
          WHERE r.is_deleted = false AND r.kind = $1 \

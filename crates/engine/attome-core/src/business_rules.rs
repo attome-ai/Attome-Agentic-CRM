@@ -326,6 +326,52 @@ impl PolicyType {
     }
 }
 
+/// A3-T4: how a refusing check (`error`, `required`, `allowed_values`) is
+/// rolled out. `Report` only logs a failure, `Warn` lets the write through
+/// with a warning, `Enforce` refuses it — from `enforce_from` when set, and
+/// as a warning before that date.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum Stage {
+    Report,
+    Warn,
+    Enforce,
+}
+
+impl Stage {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Report => "report",
+            Self::Warn => "warn",
+            Self::Enforce => "enforce",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "report" => Some(Self::Report),
+            "warn" => Some(Self::Warn),
+            "enforce" => Some(Self::Enforce),
+            _ => None,
+        }
+    }
+}
+
+/// A3-T4: what a failing check does to the write today.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Enforcement {
+    /// Logged only; the caller hears nothing.
+    Report,
+    /// The write goes through with a warning.
+    Warn,
+    /// The write is refused (unless overridden with a reason).
+    Enforce,
+}
+
+/// A3-T4: the privilege that lets a staff user save a record a check
+/// refuses, with a reason; each override is a security event.
+pub const OVERRIDE_PRIVILEGE: &str = "record.override_rules";
+
 /// Severity of an `error` policy. `Error` fails the write (422
 /// `rule_violation`); `Warning` never blocks: the write succeeds and the
 /// warning is returned to the caller (D-791 rule 6) and logged.
@@ -434,6 +480,13 @@ pub struct PolicyDef {
     pub expression: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mode: Option<SetMode>,
+    /// A3-T4: how this check is rolled out; absent means its severity decides.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stage: Option<Stage>,
+    /// A3-T4: with `stage: enforce`, the first day the check refuses writes;
+    /// before it the check warns.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enforce_from: Option<chrono::NaiveDate>,
     /// `rule_policy.ordinal` — the policy's position in its rule
     /// (the admin API stores the list index). Not on the wire: order is the
     /// list order.
@@ -521,6 +574,28 @@ pub fn value_allowed(value: Option<&Value>, allowed: &[Value]) -> bool {
 }
 
 impl PolicyDef {
+    /// A3-T4: a check that refuses a write, and so can be staged.
+    pub fn is_staged_type(&self) -> bool {
+        matches!(
+            self.policy_type,
+            PolicyType::Error | PolicyType::Required | PolicyType::AllowedValues
+        )
+    }
+
+    /// A3-T4: what this check does to a write today, given the severity it
+    /// would have unstaged.
+    pub fn enforcement(&self, severity: Severity, today: chrono::NaiveDate) -> Enforcement {
+        match self.stage {
+            None if severity.blocks() => Enforcement::Enforce,
+            None | Some(Stage::Warn) => Enforcement::Warn,
+            Some(Stage::Report) => Enforcement::Report,
+            Some(Stage::Enforce) => match self.enforce_from {
+                Some(from) if today < from => Enforcement::Warn,
+                _ => Enforcement::Enforce,
+            },
+        }
+    }
+
     /// `None` for a malformed policy (one [`validate_rule`] refuses).
     pub fn effect(&self) -> Option<PolicyEffect<'_>> {
         match self.policy_type {
@@ -1551,6 +1626,17 @@ fn check_policy(
             ));
         }
     };
+    // A3-T4: only a check that refuses a write is staged, and only an
+    // enforced one has a start date.
+    if policy.is_staged_type() {
+        forbid(
+            policy.enforce_from.is_some() && policy.stage != Some(Stage::Enforce),
+            "enforce_from",
+        );
+    } else {
+        forbid(policy.stage.is_some(), "stage");
+        forbid(policy.enforce_from.is_some(), "enforce_from");
+    }
     match policy.policy_type {
         PolicyType::Hidden | PolicyType::Disabled => {
             forbid(policy.message.is_some(), "message");
@@ -2180,6 +2266,10 @@ mod tests {
             value: None,
             expression: None,
             mode: None,
+            stage: None,
+            enforce_from: None,
+            stage: None,
+            enforce_from: None,
             ordinal: 0,
         }
     }
@@ -2193,6 +2283,10 @@ mod tests {
             value: None,
             expression: None,
             mode: None,
+            stage: None,
+            enforce_from: None,
+            stage: None,
+            enforce_from: None,
             ordinal: 1,
         }
     }
@@ -2315,6 +2409,8 @@ mod tests {
             value: None,
             expression: None,
             mode: None,
+            stage: None,
+            enforce_from: None,
             ordinal: 0,
         };
         assert_eq!(
@@ -2333,6 +2429,8 @@ mod tests {
             value: Some(codes.clone()),
             expression: None,
             mode: None,
+            stage: None,
+            enforce_from: None,
             ordinal: 1,
         };
         let Some(PolicyEffect::AllowedValues { field, values, .. }) = allowed.effect() else {
@@ -2369,6 +2467,8 @@ mod tests {
                 value: Some(json!("Closed")),
                 expression: None,
                 mode: Some(SetMode::Always),
+                stage: None,
+                enforce_from: None,
                 ordinal: 2,
             },
             PolicyDef {
@@ -2379,6 +2479,8 @@ mod tests {
                 value: None,
                 expression: Some("coalesce(amount, 0) + 1".into()),
                 mode: Some(SetMode::Default),
+                stage: None,
+                enforce_from: None,
                 ordinal: 3,
             },
         ];
@@ -2469,6 +2571,8 @@ mod tests {
             value,
             expression: expression.map(str::to_owned),
             mode: Some(SetMode::Always),
+            stage: None,
+            enforce_from: None,
             ordinal: 0,
         };
         assert_eq!(
@@ -2551,6 +2655,47 @@ mod tests {
             serde_json::from_value::<PolicyDef>(json!({ "type": "hidden", "field": "a", "x": 1 }))
                 .is_err()
         );
+    }
+
+    /// A3-T4: an unstaged check follows its severity; a staged one its stage,
+    /// and an enforced one warns before its date.
+    #[test]
+    fn enforcement_follows_stage_and_date() {
+        let day = |d: &str| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").expect("date");
+        let policy = |extra: Value| {
+            let mut v = json!({"type": "required", "field": "status"});
+            if let (Some(v), Some(extra)) = (v.as_object_mut(), extra.as_object()) {
+                v.extend(extra.clone());
+            }
+            serde_json::from_value::<PolicyDef>(v).expect("policy")
+        };
+        let today = day("2026-10-15");
+        assert_eq!(
+            policy(json!({})).enforcement(Severity::Error, today),
+            Enforcement::Enforce
+        );
+        assert_eq!(
+            policy(json!({})).enforcement(Severity::Warning, today),
+            Enforcement::Warn
+        );
+        assert_eq!(
+            policy(json!({"stage": "report"})).enforcement(Severity::Error, today),
+            Enforcement::Report
+        );
+        assert_eq!(
+            policy(json!({"stage": "warn"})).enforcement(Severity::Error, today),
+            Enforcement::Warn
+        );
+        let from = |d: &str| policy(json!({"stage": "enforce", "enforce_from": d}));
+        assert_eq!(
+            from("2026-10-16").enforcement(Severity::Error, today),
+            Enforcement::Warn
+        );
+        assert_eq!(
+            from("2026-10-15").enforcement(Severity::Error, today),
+            Enforcement::Enforce
+        );
+        assert!(policy(json!({"stage": "warn"})).is_staged_type());
     }
 
     /// A recursive schema must not expand inline forever (see

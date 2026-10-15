@@ -182,6 +182,8 @@ const ALLOWED_METHODS: [Method; 7] = [
 ///   `PropagateRequestIdLayer`.
 /// - `x-attome-changeset` — names the open changeset a metadata admin write
 ///   records into (`xrm_foundation::changeset::CHANGESET_HEADER`, D-785).
+/// - `x-override-reason` — why a caller holding the override privilege saves
+///   a record a business-rule check refuses (A3-T4, `middleware::request_meta`).
 ///
 /// A header added to a middleware or handler without being added here fails
 /// only in a real browser, never in a Rust test — so treat this list as part
@@ -191,7 +193,7 @@ const ALLOWED_METHODS: [Method; 7] = [
 /// `signed_header_coverage.rs` checks every header here is classified against
 /// the S2S canonical message. A copy of this list would drift, and a drifted
 /// copy is a test that silently stops testing.
-pub fn allowed_request_headers() -> [HeaderName; 9] {
+pub fn allowed_request_headers() -> [HeaderName; 10] {
     [
         header::ACCEPT,
         header::ACCEPT_LANGUAGE,
@@ -202,6 +204,7 @@ pub fn allowed_request_headers() -> [HeaderName; 9] {
         HeaderName::from_static("x-idempotency-key"),
         HeaderName::from_static("x-request-id"),
         HeaderName::from_static("x-attome-changeset"),
+        HeaderName::from_static("x-override-reason"),
     ]
 }
 

@@ -1917,6 +1917,9 @@ pub async fn create_one_as(
         pipeline
             .apply_tags(&mut **tx, record_id, stamp.created_by)
             .await?;
+        pipeline
+            .write_overrides(tx, record_id, stamp.created_by)
+            .await?;
     }
 
     // D-787 rule 7: a reference-data create inside a changeset is recorded
@@ -2867,6 +2870,7 @@ pub async fn update_one_as(
         pipeline
             .apply_tags(&mut **tx, record_id, modified_by)
             .await?;
+        pipeline.write_overrides(tx, record_id, modified_by).await?;
     }
 
     // D-787 rule 7: a reference-data update inside a changeset is recorded
