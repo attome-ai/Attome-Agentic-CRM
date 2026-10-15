@@ -270,6 +270,10 @@ async fn probe_round(state: &EngineState, worker_stale_after: f64) {
 /// Each AB5-T1 probe's bound, like the others' (D-167).
 const PROBE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2);
 
+/// `attome_search::drain::CONSUMER`, the search drain's cursor name (a test
+/// holds the two equal; this crate takes attome-search only for tests).
+const SEARCH_DRAIN_CONSUMER: &str = "attome-search/index-drain";
+
 /// The search drain counts as down once its oldest unread event is this old.
 const SEARCH_LAG_DOWN_SECS: f64 = 600.0;
 
@@ -299,7 +303,7 @@ async fn probe_search_index(state: &EngineState) -> ProbeOutcome {
 fn search_outcome(consumers: &[attome_core::change_feed::ConsumerHealth]) -> ProbeOutcome {
     match consumers
         .iter()
-        .find(|c| c.consumer == attome_search::drain::CONSUMER)
+        .find(|c| c.consumer == SEARCH_DRAIN_CONSUMER)
     {
         Some(c) if c.status == "active" && c.lag_seconds < SEARCH_LAG_DOWN_SECS => {
             ProbeOutcome::Reachable
@@ -486,6 +490,7 @@ mod tests {
             ProbeOutcome::Unreachable
         );
         assert_eq!(search_outcome(&[]), ProbeOutcome::Indeterminate);
+        assert_eq!(SEARCH_DRAIN_CONSUMER, attome_search::drain::CONSUMER);
     }
 
     /// The whole reason this helper exists rather than an inline `>` on the
