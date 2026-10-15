@@ -1,43 +1,50 @@
 <div class="page-header">
   <div>
-    <h2>Duplicate Records</h2>
-    <p class="subtitle">
-      Candidate duplicates found by the match-rule sweep. Merge folds one
-      record into the other by rule (survivorship); Dismiss marks the pair as
-      not actually a duplicate and the sweep will never re-flag it.
-    </p>
+    <h2>{{ 'duplicatesManager.title' | translate }}</h2>
+    <p class="subtitle">{{ 'duplicatesManager.subtitle' | translate }}</p>
   </div>
   <div class="header-actions">
-    <input
-      class="mono-input"
-      type="text"
-      placeholder="Filter by entity (e.g. contact)"
-      [ngModel]="entityFilter()"
-      (ngModelChange)="entityFilter.set($event)"
-      (keyup.enter)="load()"
-    />
+    <input class="mono-input" type="text" [placeholder]="'duplicatesManager.filterPlaceholder' | translate"
+           [ngModel]="entityFilter()" (ngModelChange)="entityFilter.set($event)" (keyup.enter)="load()" />
     <button class="btn-ghost" (click)="load()" [disabled]="loading()">
-      <i class="las la-sync"></i> Refresh
+      <i class="las la-sync" aria-hidden="true"></i> {{ 'duplicatesManager.refresh' | translate }}
     </button>
   </div>
 </div>
 
+@if (stats().length) {
+  <section class="dup-stats" data-duplicate-stats [attr.aria-label]="'duplicatesManager.stats' | translate">
+    @for (s of stats(); track s.entity) {
+      <span class="badge">{{ 'duplicatesManager.statsRow' | translate: { entity: s.entity, open: s.open, merged: s.merged, dismissed: s.dismissed } }}</span>
+    }
+  </section>
+}
+
+@if (lastMerge(); as m) {
+  <xrm-merge-undo-bar [entity]="m.entity" [mergeId]="m.mergeId" (undone)="onUndone()" (closed)="lastMerge.set(null)" />
+}
+
+@if (merging(); as c) {
+  <xrm-merge-dialog [entity]="c.entity_logicalname" [survivorId]="c.record_a" [mergedId]="c.record_b"
+                    [candidateId]="c.id" (merged)="onMerged(c, $event)" (cancelled)="merging.set(null)" />
+}
+
 @if (loading()) {
-  <p class="state-msg">Loading duplicate candidates…</p>
+  <p class="state-msg">{{ 'duplicatesManager.loading' | translate }}</p>
 } @else if (error()) {
-  <p class="error-msg">{{ error() }}</p>
+  <p class="error-msg" role="alert">{{ error() }}</p>
 } @else if (items().length === 0) {
-  <div class="empty-state"><p>No open duplicate candidates.</p></div>
+  <div class="empty-state"><p>{{ 'duplicatesManager.empty' | translate }}</p></div>
 } @else {
   <div class="table-wrap">
     <table>
       <thead>
         <tr>
-          <th>Entity</th>
-          <th>Record A</th>
-          <th>Record B</th>
-          <th>Score</th>
-          <th>Detected</th>
+          <th>{{ 'duplicatesManager.entity' | translate }}</th>
+          <th>{{ 'duplicatesManager.recordA' | translate }}</th>
+          <th>{{ 'duplicatesManager.recordB' | translate }}</th>
+          <th>{{ 'duplicatesManager.score' | translate }}</th>
+          <th>{{ 'duplicatesManager.detected' | translate }}</th>
           <th></th>
         </tr>
       </thead>
@@ -48,55 +55,56 @@
             <td class="mono-input">{{ c.record_a }}</td>
             <td class="mono-input">{{ c.record_b }}</td>
             <td>
-              {{ scorePercent(c) }}
+              {{ percent(c.score) }}
               @if (c.auto_merge_eligible) {
-                <span class="badge" title="Flagged low-risk; may already have an auto-merge approval pending">auto</span>
+                <span class="badge" [title]="'duplicatesManager.autoTitle' | translate">{{ 'duplicatesManager.auto' | translate }}</span>
               }
             </td>
             <td class="cell-muted">{{ c.detected_at | date:'medium' }}</td>
             <td class="actions">
-              <button class="btn-sm" (click)="toggleMerge(c)" [disabled]="busyId() === c.id">
-                <i class="las la-code-branch"></i> Merge
+              <button class="btn-sm" data-pair-merge (click)="openMerge(c)" [disabled]="busyId() === c.id">
+                <i class="las la-code-branch" aria-hidden="true"></i> {{ 'duplicatesManager.merge' | translate }}
               </button>
-              <button class="btn-sm btn-ghost" (click)="toggleDismiss(c)" [disabled]="busyId() === c.id">
-                <i class="las la-times"></i> Dismiss
+              <button class="btn-sm btn-ghost" data-pair-dismiss (click)="toggleDismiss(c)" [disabled]="busyId() === c.id">
+                <i class="las la-times" aria-hidden="true"></i> {{ 'duplicatesManager.notAMatch' | translate }}
+              </button>
+              <button class="btn-sm btn-ghost" data-pair-explain (click)="toggleExplain(c)">
+                {{ (explainingId() === c.id ? 'duplicatesManager.hideExplain' : 'duplicatesManager.explain') | translate }}
               </button>
             </td>
           </tr>
-          @if (conflictsById()[c.id]; as conflicts) {
-            <tr class="conflict-row">
+          @if (explainingId() === c.id) {
+            <tr class="detail-row" data-pair-explanation>
               <td colspan="6">
-                <p class="error-msg">
-                  Merged, but survivorship could not auto-decide: {{ conflicts.join(', ') }}.
-                  Review the surviving record's field values by hand.
-                </p>
-              </td>
-            </tr>
-          }
-          @if (mergingId() === c.id) {
-            <tr class="merge-row">
-              <td colspan="6">
-                <div class="merge-form">
-                  <p>Which record survives?</p>
-                  <label>
-                    <input type="radio" name="canonical-{{ c.id }}"
-                           [checked]="canonicalChoice()[c.id] === c.record_a"
-                           (change)="pickCanonical(c.id, c.record_a)" />
-                    Record A ({{ c.record_a }})
-                  </label>
-                  <label>
-                    <input type="radio" name="canonical-{{ c.id }}"
-                           [checked]="canonicalChoice()[c.id] === c.record_b"
-                           (change)="pickCanonical(c.id, c.record_b)" />
-                    Record B ({{ c.record_b }})
-                  </label>
-                  <div class="merge-form-actions">
-                    <button class="btn-sm" (click)="confirmMerge(c)" [disabled]="busyId() === c.id">
-                      {{ busyId() === c.id ? 'Merging…' : 'Confirm merge' }}
-                    </button>
-                    <button class="btn-sm btn-ghost" (click)="toggleMerge(c)">Cancel</button>
-                  </div>
-                </div>
+                @if (explanation(); as x) {
+                  <p>{{ 'duplicatesManager.explainSummary' | translate: { score: percent(x.score), threshold: percent(x.threshold) } }}</p>
+                  <table class="explain-table">
+                    <thead>
+                      <tr>
+                        <th>{{ 'duplicatesManager.fieldName' | translate }}</th>
+                        <th>{{ 'duplicatesManager.comparator' | translate }}</th>
+                        <th>{{ 'duplicatesManager.weight' | translate }}</th>
+                        <th>{{ 'duplicatesManager.fieldScore' | translate }}</th>
+                        <th>{{ 'duplicatesManager.keyA' | translate }}</th>
+                        <th>{{ 'duplicatesManager.keyB' | translate }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (f of x.fields; track f.field) {
+                        <tr>
+                          <td class="mono-input">{{ f.field }}</td>
+                          <td>{{ ('duplicatesManager.comparator_' + f.comparator) | translate }}</td>
+                          <td>{{ f.weight }}</td>
+                          <td>{{ f.score === null ? ('duplicatesManager.noEvidence' | translate) : percent(f.score) }}</td>
+                          <td class="mono-input">{{ f.key_a ?? '' }}</td>
+                          <td class="mono-input">{{ f.key_b ?? '' }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                } @else {
+                  <p class="state-msg">{{ 'duplicatesManager.loading' | translate }}</p>
+                }
               </td>
             </tr>
           }
@@ -105,19 +113,14 @@
               <td colspan="6">
                 <div class="dismiss-form">
                   <label>
-                    Note (optional)
-                    <input
-                      class="mono-input"
-                      type="text"
-                      [ngModel]="dismissNote()"
-                      (ngModelChange)="dismissNote.set($event)"
-                      placeholder="e.g. different people, same employer"
-                    />
+                    {{ 'duplicatesManager.note' | translate }}
+                    <input class="mono-input" type="text" [ngModel]="dismissNote()" (ngModelChange)="dismissNote.set($event)"
+                           [placeholder]="'duplicatesManager.notePlaceholder' | translate" />
                   </label>
                   <button class="btn-sm" (click)="confirmDismiss(c)" [disabled]="busyId() === c.id">
-                    {{ busyId() === c.id ? 'Dismissing…' : 'Confirm dismiss' }}
+                    {{ (busyId() === c.id ? 'duplicatesManager.dismissing' : 'duplicatesManager.confirmDismiss') | translate }}
                   </button>
-                  <button class="btn-sm btn-ghost" (click)="toggleDismiss(c)">Cancel</button>
+                  <button class="btn-sm btn-ghost" (click)="toggleDismiss(c)">{{ 'duplicatesManager.cancel' | translate }}</button>
                 </div>
               </td>
             </tr>
@@ -127,3 +130,127 @@
     </table>
   </div>
 }
+
+<!-- A15-T6/T10: the match rules, their scans, and the rule editor. -->
+<section class="dup-rules" data-match-rules>
+  <div class="dup-rules-head">
+    <h3>{{ 'duplicatesManager.rules' | translate }}</h3>
+    <button class="btn-sm" data-rule-new (click)="openEditor()" [disabled]="editorOpen()">
+      <i class="las la-plus" aria-hidden="true"></i> {{ 'duplicatesManager.newRule' | translate }}
+    </button>
+  </div>
+  @if (rules().length === 0) {
+    <p class="state-msg">{{ 'duplicatesManager.noRules' | translate }}</p>
+  } @else {
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>{{ 'duplicatesManager.ruleName' | translate }}</th>
+            <th>{{ 'duplicatesManager.entity' | translate }}</th>
+            <th>{{ 'duplicatesManager.ruleFields' | translate }}</th>
+            <th>{{ 'duplicatesManager.onSave' | translate }}</th>
+            <th>{{ 'duplicatesManager.lastScan' | translate }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rules(); track r.id) {
+            <tr>
+              <td>{{ r.name }}</td>
+              <td class="mono-input">{{ r.entity_logicalname }}</td>
+              <td>{{ fieldsText(r) }}</td>
+              <td>{{ ('duplicatesManager.onSave_' + r.on_save) | translate }}</td>
+              <td class="cell-muted">
+                @if (r.last_scan_at) { {{ r.last_scan_at | date:'medium' }} } @else { {{ 'duplicatesManager.never' | translate }} }
+              </td>
+              <td class="actions">
+                <button class="btn-sm btn-ghost" data-rule-scan (click)="scan(r)" [disabled]="busyId() === r.id">
+                  <i class="las la-search" aria-hidden="true"></i> {{ 'duplicatesManager.scan' | translate }}
+                </button>
+                @if (scanNote()[r.id]; as note) { <span class="cell-muted">{{ note }}</span> }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @if (editorOpen()) {
+    <form class="rule-editor" data-rule-editor (submit)="$event.preventDefault(); saveRule()">
+      <div class="rule-editor-row">
+        <label>
+          <span>{{ 'duplicatesManager.entity' | translate }}</span>
+          <input class="mono-input" type="text" name="entity" [ngModel]="draftEntity()" (ngModelChange)="draftEntity.set($event)" />
+        </label>
+        <label>
+          <span>{{ 'duplicatesManager.ruleName' | translate }}</span>
+          <input type="text" name="name" [ngModel]="draftName()" (ngModelChange)="draftName.set($event)" />
+        </label>
+        <label>
+          <span>{{ 'duplicatesManager.threshold' | translate }}</span>
+          <input type="number" name="threshold" min="0.01" max="1" step="0.05"
+                 [ngModel]="draftThreshold()" (ngModelChange)="draftThreshold.set($event)" />
+        </label>
+        <label>
+          <span>{{ 'duplicatesManager.onSave' | translate }}</span>
+          <select name="on_save" data-rule-on-save [ngModel]="draftOnSave()" (ngModelChange)="draftOnSave.set($event)">
+            @for (m of onSaveModes; track m) {
+              <option [value]="m">{{ ('duplicatesManager.onSave_' + m) | translate }}</option>
+            }
+          </select>
+        </label>
+      </div>
+      @for (f of draftFields(); track $index; let i = $index) {
+        <div class="rule-editor-row">
+          <label>
+            <span>{{ 'duplicatesManager.fieldName' | translate }}</span>
+            <input class="mono-input" type="text" [name]="'field-' + i" [ngModel]="f.field" (ngModelChange)="setField(i, { field: $event })" />
+          </label>
+          <label>
+            <span>{{ 'duplicatesManager.comparator' | translate }}</span>
+            <select [name]="'comparator-' + i" data-rule-comparator [ngModel]="f.comparator" (ngModelChange)="setField(i, { comparator: $event })">
+              @for (c of comparators; track c) {
+                <option [value]="c">{{ ('duplicatesManager.comparator_' + c) | translate }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span>{{ 'duplicatesManager.weight' | translate }}</span>
+            <input type="number" [name]="'weight-' + i" min="0.1" step="0.1" [ngModel]="f.weight" (ngModelChange)="setField(i, { weight: $event })" />
+          </label>
+          <button type="button" class="btn-sm btn-ghost" (click)="removeField(i)" [disabled]="draftFields().length === 1">
+            {{ 'duplicatesManager.removeField' | translate }}
+          </button>
+        </div>
+      }
+      <div class="rule-editor-actions">
+        <button type="button" class="btn-sm btn-ghost" (click)="addField()">{{ 'duplicatesManager.addField' | translate }}</button>
+        <button type="button" class="btn-sm btn-ghost" data-rule-suggest (click)="suggestRules()" [disabled]="!draftEntity().trim() || editorBusy()">
+          <i class="las la-magic" aria-hidden="true"></i> {{ 'duplicatesManager.suggestRules' | translate }}
+        </button>
+        <button type="button" class="btn-sm" data-rule-preview (click)="previewRule()" [disabled]="!canSubmitRule()">
+          {{ 'duplicatesManager.previewRule' | translate }}
+        </button>
+        <button type="submit" class="btn-sm btn-sm-accent" data-rule-save [disabled]="!canSubmitRule() || !rulePreview()">
+          {{ 'duplicatesManager.saveRule' | translate }}
+        </button>
+        <button type="button" class="btn-sm btn-ghost" (click)="editorOpen.set(false)">{{ 'duplicatesManager.cancel' | translate }}</button>
+      </div>
+      @if (rulePreview(); as p) {
+        <p data-rule-preview-result>{{ 'duplicatesManager.previewResult' | translate: { pairs: p.pairs, sampled: p.sampled } }}</p>
+        @if (p.examples.length) {
+          <ul class="rule-examples">
+            @for (e of p.examples; track e.record_a + e.record_b) {
+              <li class="mono-input">{{ e.record_a }} / {{ e.record_b }} ({{ percent(e.score) }})</li>
+            }
+          </ul>
+        }
+      }
+      @if (editorError()) {
+        <p class="error-msg" role="alert">{{ editorError() }}</p>
+      }
+    </form>
+  }
+</section>

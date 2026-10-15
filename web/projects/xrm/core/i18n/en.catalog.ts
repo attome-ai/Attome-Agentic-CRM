@@ -2645,6 +2645,8 @@ export const xrmEn = {
     fieldName: 'Field',
     previewRule: 'Preview',
     previewResult: '{pairs} pairs among {sampled} records.',
+    suggestRules: 'Suggest rules',
+    suggestFailed: 'No suggestion: the AI assistant is not available here.',
     saveRule: 'Save rule',
     onSave_off: 'Off',
     onSave_warn: 'Warn',

@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { ApiService, DuplicateMatchRef } from '@attome/base';
 
 // D-432 / M13 (Master Data Management, scoped to dedup + survivorship only) —
@@ -183,6 +183,14 @@ export interface RulePreview {
   examples: { record_a: string; record_b: string; score: number }[];
 }
 
+/** A15-T8: `duplicates.propose_rules`' result — a draft, never saved. */
+export interface RuleProposal {
+  entity: string;
+  draft: { fields: MatchField[]; threshold: number };
+  preview: RulePreview;
+  saved: false;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DuplicatesService {
   private readonly api = inject(ApiService);
@@ -260,6 +268,15 @@ export class DuplicatesService {
     return this.api.post<DuplicateCandidate>(`/api/v1/admin/data/duplicates/${id}/dismiss`, {
       row_version: rowVersion, note: note ?? null,
     });
+  }
+
+  /** A15-T8: asks the `duplicates.propose_rules` agent action for a rule
+   *  draft and its preview; `null` when the action did not complete (no AI on
+   *  this deployment, or it waits for a confirmation). Saves nothing. */
+  proposeRules(entity: string): Observable<RuleProposal | null> {
+    return this.api.post<{ status: string; result?: RuleProposal }>(
+      '/api/v1/actions/duplicates.propose_rules/invoke', { args: { entity } },
+    ).pipe(map(o => (o.status === 'completed' && o.result ? o.result : null)));
   }
 
   /** A15-T7: why a pair was flagged, field by field. */

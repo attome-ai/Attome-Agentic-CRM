@@ -1,7 +1,6 @@
-/* D-432 / M13 — layout for the merge/dismiss inline forms and the
-   auto-merge/conflict badges. `.badge`/`.error-msg`/`.table-wrap` etc. come
-   from ../../../../../styles/admin-page.css; this file only adds the layout
-   and the row backgrounds this component's own rows need. */
+/* D-432 / M13, A15-T10 — layout for the review queue's inline rows, the
+   counts, the rules and the rule editor. `.badge`/`.error-msg`/`.table-wrap`
+   etc. come from admin-page.css. Logical properties only (RTL). */
 
 .header-actions {
   display: flex;
@@ -9,14 +8,20 @@
   align-items: center;
 }
 
-.merge-row td,
-.dismiss-row td,
-.conflict-row td {
-  background: var(--color-surface-alt, rgba(255, 255, 255, 0.03));
-  padding: 10px 12px;
+.dup-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-block-end: 12px;
 }
 
-.merge-form,
+.dismiss-row td,
+.detail-row td {
+  background: var(--color-surface-alt, rgba(255, 255, 255, 0.03));
+  padding-block: 10px;
+  padding-inline: 12px;
+}
+
 .dismiss-form {
   display: flex;
   gap: 10px;
@@ -24,20 +29,8 @@
   flex-wrap: wrap;
 }
 
-.merge-form p {
-  margin: 0;
-  font-weight: 600;
-}
-
-.merge-form label,
 .dismiss-form label {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-}
-
-.dismiss-form label {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
@@ -46,10 +39,51 @@
 }
 
 .dismiss-form input {
-  min-width: 320px;
+  min-inline-size: 320px;
 }
 
-.merge-form-actions {
+.explain-table {
+  inline-size: 100%;
+}
+
+.dup-rules {
+  margin-block-start: 24px;
+}
+
+.dup-rules-head {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
+}
+
+.rule-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-block-start: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.rule-editor-row,
+.rule-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.rule-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.rule-examples {
+  margin: 0;
+  padding-inline-start: 18px;
 }

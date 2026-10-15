@@ -67,7 +67,7 @@ export type {
   SurvivorshipStrategy, SurvivorshipRule, SurvivorshipRulesPage, CreateSurvivorshipRuleBody,
   CandidateStatus, DuplicateCandidate, DuplicateCandidatesPage, MergeResponse,
   OnSave, DuplicateCheckResult, MergePicks, MergePreview, MergeUndone,
-  FieldExplanation, CandidateExplanation, DuplicateStats, RulePreview,
+  FieldExplanation, CandidateExplanation, DuplicateStats, RulePreview, RuleProposal,
 } from './services/duplicates.service';
 // M36 Phase 0+1 (Predictive Intelligence, D-473) — same "exported from the
 // /data entry point so the record form's banner can use it without pulling

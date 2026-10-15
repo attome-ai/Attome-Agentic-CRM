@@ -2556,6 +2556,8 @@ export const xrmAr = {
     fieldName: 'الحقل',
     previewRule: 'معاينة',
     previewResult: '{pairs} زوجًا بين {sampled} سجلًا.',
+    suggestRules: 'اقترح قواعد',
+    suggestFailed: 'لا اقتراح: المساعد الذكي غير متاح هنا.',
     saveRule: 'حفظ القاعدة',
     onSave_off: 'متوقف',
     onSave_warn: 'تنبيه',

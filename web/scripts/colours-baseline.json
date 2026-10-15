@@ -30,7 +30,6 @@
   "projects/xrm/core/entity/consent/consent-panel.component.css": 8,
   "projects/xrm/core/entity/dispatcher/pages/entity-list-page.component.css": 1,
   "projects/xrm/core/entity/document-folder/document-folder-browser.component.css": 16,
-  "projects/xrm/core/entity/duplicate-banner/duplicate-banner.component.css": 3,
   "projects/xrm/core/entity/field/attachment/attachment.component.css": 3,
   "projects/xrm/core/entity/field/field-input/field-input.component.css": 8,
   "projects/xrm/core/entity/field/file-versions/file-versions.component.css": 2,
