@@ -528,12 +528,19 @@ pub async fn write_label_in_tx(
     }
     let layer = recording.stamp()?;
 
+    // A20-T1: the translation remembers the source it translated, so a later
+    // change to the source shows it as stale; a person's write is reviewed.
+    let source_hash = current_source(tx, object_kind, object_ref)
+        .await?
+        .map(|source| text_hash(&source));
     let id: Uuid = sqlx::query_scalar(
         "INSERT INTO metadata_label \
-             (object_kind, object_ref, locale, display_name, description, owner_layer) \
-         VALUES ($1, $2, $3, $4, $5, $6) \
+             (object_kind, object_ref, locale, display_name, description, owner_layer, \
+              source_hash, status) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'reviewed') \
          ON CONFLICT (object_kind, object_ref, locale) WHERE is_deleted = FALSE \
          DO UPDATE SET display_name = EXCLUDED.display_name, description = EXCLUDED.description, \
+             source_hash = EXCLUDED.source_hash, status = 'reviewed', \
              updated_at = NOW(), row_version = metadata_label.row_version + 1 \
          RETURNING id",
     )
@@ -543,6 +550,7 @@ pub async fn write_label_in_tx(
     .bind(display_name)
     .bind(description)
     .bind(layer.as_str())
+    .bind(source_hash)
     .fetch_one(&mut **tx)
     .await
     .map_err(map_unique_violation)?;
@@ -817,6 +825,172 @@ pub(crate) fn parse_xliff(xml: &str) -> Result<(String, Vec<XliffUnit>), String>
     Ok((target_lang, units))
 }
 
+/// A20-T1: the hash a translation keeps of the source text it translated.
+pub(crate) fn text_hash(text: &str) -> String {
+    use sha2::Digest;
+    hex::encode(sha2::Sha256::digest(text.trim().as_bytes()))
+}
+
+/// A20-T1: the text a label of `object_kind` / `object_ref` translates right
+/// now: an entity's or attribute's name, or a choice's shown label. `None`
+/// for a kind whose source this route does not track.
+async fn current_source(
+    tx: &mut attome_db::Tx<'_>,
+    object_kind: &str,
+    object_ref: &str,
+) -> Result<Option<String>, AppError> {
+    let mut parts = object_ref.splitn(3, '.');
+    let (entity, attr, choice) = (parts.next(), parts.next(), parts.next());
+    let source: Option<String> = match (object_kind, entity, attr, choice) {
+        ("entity", Some(entity), None, None) => sqlx::query_scalar(
+            "SELECT COALESCE(name::text, logicalname::text) FROM entity_info \
+             WHERE logicalname = $1 AND is_active = true",
+        )
+        .bind(entity)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(AppError::internal)?,
+        ("attribute", Some(entity), Some(attr), None) => sqlx::query_scalar(
+            "SELECT COALESCE(a.name::text, a.logicalname::text) \
+             FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
+             WHERE e.logicalname = $1 AND a.logicalname = $2 AND a.is_active = true",
+        )
+        .bind(entity)
+        .bind(attr)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(AppError::internal)?,
+        ("choice_option", Some(entity), Some(attr), Some(choice)) => sqlx::query_scalar(
+            "SELECT COALESCE(a.options->'option_labels'->>$3, $3) \
+             FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
+             WHERE e.logicalname = $1 AND a.logicalname = $2 AND a.is_active = true",
+        )
+        .bind(entity)
+        .bind(attr)
+        .bind(choice)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(AppError::internal)?,
+        _ => None,
+    };
+    Ok(source)
+}
+
+/// A20-T1/T3: where one label-able text stands in a language.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, ToSchema)]
+pub(crate) struct WorkbenchRow {
+    /// `<kind>:<object_ref>`, the XLIFF unit id.
+    pub key: String,
+    pub source: String,
+    pub target: Option<String>,
+    /// `untranslated`, `stale` (the source changed since it was translated),
+    /// `draft` (not yet reviewed) or `reviewed`.
+    pub status: &'static str,
+}
+
+/// A20-T1: a label's status from its source, translation, stored hash and
+/// review state.
+pub(crate) fn workbench_status(
+    source: &str,
+    target: Option<&str>,
+    source_hash: Option<&str>,
+    reviewed: bool,
+) -> &'static str {
+    match target {
+        None => "untranslated",
+        Some(_) if source_hash.is_some_and(|h| h != text_hash(source)) => "stale",
+        Some(_) if !reviewed => "draft",
+        Some(_) => "reviewed",
+    }
+}
+
+#[derive(Deserialize, utoipa::IntoParams)]
+struct WorkbenchQuery {
+    /// The language, e.g. `ar-SA`.
+    locale: String,
+    /// `untranslated`, `stale`, `draft` or `reviewed`; all when absent.
+    status: Option<String>,
+}
+
+/// A20-T3: every entity, attribute and choice label with its translation in
+/// `locale` and where it stands (untranslated, stale, draft, reviewed),
+/// optionally only one status.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/entities/labels/workbench",
+    tag = "admin",
+    params(WorkbenchQuery),
+    responses(
+        (status = 200, description = "Every label with its translation and status", body = attome_types::PaginatedResponse<WorkbenchRow>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Invalid locale or status", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn label_workbench(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    axum::extract::Query(query): axum::extract::Query<WorkbenchQuery>,
+) -> Result<Json<attome_types::PaginatedResponse<WorkbenchRow>>, AppError> {
+    if !is_valid_locale_tag(&query.locale) {
+        return Err(AppError::Validation(
+            "locale must be a BCP-47 tag like ar-SA".into(),
+        ));
+    }
+    let wanted = query
+        .status
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty());
+    if wanted.is_some_and(|s| !["untranslated", "stale", "draft", "reviewed"].contains(&s)) {
+        return Err(AppError::Validation(
+            "status is untranslated, stale, draft or reviewed".into(),
+        ));
+    }
+    let units = label_units(&state, &query.locale).await?;
+    let stored: Vec<(String, String, Option<String>, String)> = sqlx::query_as(
+        "SELECT object_kind, object_ref, source_hash, status FROM metadata_label \
+         WHERE locale = $1 AND is_deleted = false",
+    )
+    .bind(&query.locale)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let meta: std::collections::HashMap<String, (Option<String>, bool)> = stored
+        .into_iter()
+        .map(|(kind, reference, hash, status)| {
+            (format!("{kind}:{reference}"), (hash, status == "reviewed"))
+        })
+        .collect();
+    let items: Vec<WorkbenchRow> = units
+        .into_iter()
+        .map(|unit| {
+            let (hash, reviewed) = meta.get(&unit.id).cloned().unwrap_or((None, true));
+            let status = workbench_status(
+                &unit.source,
+                unit.target.as_deref(),
+                hash.as_deref(),
+                reviewed,
+            );
+            WorkbenchRow {
+                key: unit.id,
+                source: unit.source,
+                target: unit.target,
+                status,
+            }
+        })
+        .filter(|row| wanted.is_none_or(|w| row.status == w))
+        .collect();
+    let total = i64::try_from(items.len()).map_err(AppError::internal)?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        items,
+        total,
+        1,
+        total.max(1),
+    )))
+}
+
 /// Every label-able text with its default and the `locale` translation.
 async fn label_units(state: &EngineState, locale: &str) -> Result<Vec<XliffUnit>, AppError> {
     let db = &state.base.db;
@@ -1074,6 +1248,10 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/entities/labels/xliff",
             get(export_xliff).post(import_xliff),
         )
+        .route(
+            "/api/v1/admin/entities/labels/workbench",
+            get(label_workbench),
+        )
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
@@ -1085,7 +1263,8 @@ pub fn routes() -> Router<EngineState> {
     update_label,
     delete_label,
     export_xliff,
-    import_xliff
+    import_xliff,
+    label_workbench
 ))]
 struct ApiDocFragment;
 
@@ -1095,6 +1274,33 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 
 #[cfg(test)]
 mod xliff_tests {
+
+    #[test]
+    fn a_label_is_stale_once_its_source_changes() {
+        let hash = super::text_hash("Account");
+        assert_eq!(
+            super::workbench_status("Account", None, None, true),
+            "untranslated"
+        );
+        assert_eq!(
+            super::workbench_status("Account", Some("حساب"), Some(&hash), true),
+            "reviewed"
+        );
+        assert_eq!(
+            super::workbench_status("Customer", Some("حساب"), Some(&hash), true),
+            "stale"
+        );
+        assert_eq!(
+            super::workbench_status("Account", Some("حساب"), Some(&hash), false),
+            "draft"
+        );
+        // A label written before hashes were kept is not called stale.
+        assert_eq!(
+            super::workbench_status("Account", Some("حساب"), None, true),
+            "reviewed"
+        );
+    }
+
     use super::*;
 
     #[test]

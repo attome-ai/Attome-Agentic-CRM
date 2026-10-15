@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Translations: a label keeps a hash of the text it translated and whether it is reviewed
+  (migration 0031); `GET /api/v1/admin/entities/labels/workbench?locale=` lists every entity,
+  attribute and choice label as untranslated, stale (its source changed), draft or reviewed.
 - Metadata: an `option_set` kind, a shared list of values with stable codes, English and Arabic
   labels, colours, order and retirement, for choice fields on several entities.
   A choice field whose options name a set (`{"option_set": "<name>"}`) takes the set's published,
