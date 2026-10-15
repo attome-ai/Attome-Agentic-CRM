@@ -137,6 +137,14 @@ connection for this exercise; there's no nginx/reverse-proxy layer to stand
 up just to prove that. The P1.12 pgbouncer/replica exercise (step 5, out of
 scope here) is the one that actually needs a real topology in front.
 
+## Reference profiles
+
+`profiles.json` names the reference machine and dataset for each deployment profile (`solo`,
+`team`, `ha`, `scale`): CPU and memory, a cloud example, records per entity, users, roles and the
+concurrency levels a run steps through. The seeder and the run matrix read it. Every size is marked
+`"status": "proposal"`: these are targets to test, not measurements, until the AA2 runs replace
+them with measured numbers.
+
 ## Layout
 
 ```

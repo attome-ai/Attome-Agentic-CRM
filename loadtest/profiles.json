@@ -1,0 +1,39 @@
+{
+  "_comment": "AA1-T1: the reference machine and dataset per deployment profile. Every benchmark script reads this file. All sizes are proposals until AA2 measures them; none of these numbers is a measurement.",
+  "solo": {
+    "machine": "4 vCPU, 16 GB RAM, NVMe",
+    "cloud_example": "AWS m7i.xlarge",
+    "records_per_entity": 1000000,
+    "users": 50,
+    "roles": 10,
+    "concurrency_levels": [1, 10, 50],
+    "status": "proposal"
+  },
+  "team": {
+    "machine": "8 vCPU, 32 GB RAM, NVMe",
+    "cloud_example": "AWS m7i.2xlarge",
+    "records_per_entity": 20000000,
+    "users": 500,
+    "roles": 25,
+    "concurrency_levels": [10, 50, 200],
+    "status": "proposal"
+  },
+  "ha": {
+    "machine": "16 vCPU, 64 GB RAM, NVMe",
+    "cloud_example": "AWS m7i.4xlarge",
+    "records_per_entity": 100000000,
+    "users": 2000,
+    "roles": 50,
+    "concurrency_levels": [50, 200, 500],
+    "status": "proposal"
+  },
+  "scale": {
+    "machine": "32 vCPU, 128 GB RAM, NVMe",
+    "cloud_example": "AWS m7i.8xlarge",
+    "records_per_entity": 1000000000,
+    "users": 20000,
+    "roles": 100,
+    "concurrency_levels": [200, 1000, 2000],
+    "status": "proposal"
+  }
+}
