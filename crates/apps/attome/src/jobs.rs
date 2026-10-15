@@ -911,6 +911,31 @@ async fn dispatch_platform_job(
         }
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.
+        // A18-T4: a burst of deletions goes to the administrators.
+        EngineJob::BinDeleteAlertSweep => {
+            let bursts = attome_records::entity_crud::take_large_deletes(&db).await?;
+            for burst in bursts {
+                tracing::warn!(
+                    user_id = %burst.user_id, entity = %burst.entity, count = burst.count,
+                    "recycle bin: many records deleted in ten minutes"
+                );
+                attome_ai::quality_monitor::alert_admins(
+                    &db,
+                    &config.notification,
+                    format!(
+                        "{} {} records deleted in ten minutes",
+                        burst.count, burst.entity
+                    ),
+                    format!(
+                        "User {} deleted {} {} records in the last ten minutes. They are in the \
+                         recycle bin and can be restored there.",
+                        burst.user_id, burst.count, burst.entity
+                    ),
+                    &format!("/xrm/bin/{}", burst.entity),
+                )
+                .await;
+            }
+        }
         EngineJob::AiToolCallSweep => {
             let (reclaimed, expired) = attome_ai::tool_call::sweep(&db).await?;
             if reclaimed > 0 || expired > 0 {
@@ -1883,6 +1908,7 @@ const DEDUP_KEY_COMPUTE_METRIC_SNAPSHOTS: &str = "compute-metric-snapshots";
 const DEDUP_KEY_EVENTS_DISPATCH_TICK: &str = "events-dispatch-tick";
 const DEDUP_KEY_AI_QUALITY_MONITOR: &str = "ai-quality-monitor";
 const DEDUP_KEY_AI_TOOL_CALL_SWEEP: &str = "ai-tool-call-sweep";
+const DEDUP_KEY_BIN_DELETE_ALERT: &str = "bin-delete-alert";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -1935,6 +1961,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::AuditV1CutoverCheckpoint => DEDUP_KEY_AUDIT_V1_CUTOVER_CHECKPOINT,
         EngineJob::PruneChangeFeed => DEDUP_KEY_PRUNE_CHANGE_FEED,
         EngineJob::AiToolCallSweep => DEDUP_KEY_AI_TOOL_CALL_SWEEP,
+        EngineJob::BinDeleteAlertSweep => DEDUP_KEY_BIN_DELETE_ALERT,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2226,6 +2253,17 @@ pub fn spawn_ai_tool_call_sweep_scheduler(db: DbPool, interval: std::time::Durat
         EngineJob::AiToolCallSweep,
         DEDUP_KEY_AI_TOOL_CALL_SWEEP,
         "ai tool-call sweep",
+    );
+}
+
+/// A18-T4: every few minutes, reports bursts of deletion to administrators.
+pub fn spawn_bin_delete_alert_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::BinDeleteAlertSweep,
+        DEDUP_KEY_BIN_DELETE_ALERT,
+        "recycle bin delete alert",
     );
 }
 

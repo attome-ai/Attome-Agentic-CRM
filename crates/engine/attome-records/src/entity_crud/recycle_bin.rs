@@ -444,6 +444,58 @@ pub(super) async fn put_bin_setting(
     Ok(Json(setting))
 }
 
+/// A person who deleted at least an entity's `alert_threshold` records of it
+/// in the last ten minutes (A18-T4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LargeDelete {
+    pub user_id: Uuid,
+    pub entity: String,
+    pub count: i64,
+}
+
+/// A18-T4: the bursts of deletion to report now. Each person is reported
+/// once an hour at most: the ones returned are marked as reported before the
+/// caller sends anything, so a crash costs an alert, never a repeat storm.
+pub async fn take_large_deletes(db: &attome_db::DbPool) -> Result<Vec<LargeDelete>, AppError> {
+    let mut tx = attome_db::tx::begin(db).await?;
+    let rows: Vec<(Uuid, String, i64)> = sqlx::query_as(
+        "SELECT d.deleted_by, d.entity, COUNT(*) \
+         FROM deletion d LEFT JOIN bin_setting s ON s.entity = d.entity \
+         WHERE d.deleted_at > now() - interval '10 minutes' AND d.deleted_by IS NOT NULL \
+           AND NOT EXISTS (SELECT 1 FROM bin_delete_alert a \
+                           WHERE a.user_ref = d.deleted_by \
+                             AND a.alerted_at > now() - interval '1 hour') \
+         GROUP BY d.deleted_by, d.entity, s.alert_threshold \
+         HAVING COUNT(*) >= COALESCE(s.alert_threshold, 100) \
+         ORDER BY d.deleted_by, d.entity",
+    )
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(attome_db::classify)?;
+    let mut users: Vec<Uuid> = rows.iter().map(|(user, _, _)| *user).collect();
+    users.dedup();
+    if !users.is_empty() {
+        sqlx::query(
+            "INSERT INTO bin_delete_alert (user_ref, alerted_at) \
+             SELECT unnest($1::uuid[]), now() \
+             ON CONFLICT (user_ref) DO UPDATE SET alerted_at = EXCLUDED.alerted_at",
+        )
+        .bind(&users)
+        .execute(&mut *tx)
+        .await
+        .map_err(attome_db::classify)?;
+    }
+    tx.commit().await.map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .map(|(user_id, entity, count)| LargeDelete {
+            user_id,
+            entity,
+            count,
+        })
+        .collect())
+}
+
 /// Records one bin restore may bring back.
 pub const MAX_BIN_RESTORE: usize = 500;
 

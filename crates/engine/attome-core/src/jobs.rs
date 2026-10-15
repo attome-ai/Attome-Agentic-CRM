@@ -392,6 +392,10 @@ pub enum EngineJob {
     /// variant, same re-derive-current-state shape as `AiQualityMonitor`:
     /// the handler (`attome_ai::tool_call::sweep`) reads the table as it is now.
     AiToolCallSweep,
+    /// A18-T4: reports people who deleted many records in a short time to
+    /// the administrators. Bare unit variant; the handler reads the deletion
+    /// ledger as it is now.
+    BinDeleteAlertSweep,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -816,6 +820,7 @@ impl EngineJob {
             | Self::EventsDeliverWebhook { .. }
             | Self::AiQualityMonitor
             | Self::AiToolCallSweep
+            | Self::BinDeleteAlertSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -898,6 +903,7 @@ impl EngineJob {
             EngineJob::DataBulkTransform(_) => "DataBulkTransform",
             EngineJob::AiQualityMonitor => "AiQualityMonitor",
             EngineJob::AiToolCallSweep => "AiToolCallSweep",
+            EngineJob::BinDeleteAlertSweep => "BinDeleteAlertSweep",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -991,6 +997,7 @@ impl EngineJob {
             | Self::EventsDispatchTick
             | Self::AiQualityMonitor
             | Self::AiToolCallSweep
+            | Self::BinDeleteAlertSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1097,6 +1104,7 @@ impl EngineJob {
             | Self::EventsDispatchTick
             | Self::AiQualityMonitor
             | Self::AiToolCallSweep
+            | Self::BinDeleteAlertSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1419,6 +1427,7 @@ mod tests {
     fn ai_quality_monitor_round_trips_as_a_bare_unit_variant() {
         assert_round_trips(EngineJob::AiQualityMonitor);
         assert_round_trips(EngineJob::AiToolCallSweep);
+        assert_round_trips(EngineJob::BinDeleteAlertSweep);
     }
 
     #[test]

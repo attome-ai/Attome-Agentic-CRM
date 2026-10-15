@@ -90,15 +90,16 @@ pub use mutations::field_changes_from_obj;
 /// to call it itself. `pub(crate)`, not `pub` — no crate outside this one
 /// needs it.
 pub(crate) use mutations::sync_file_field_documents;
-/// The record read with its full authorization, minus every transport
-/// concern. `pub` (not `pub(crate)`) so `attome-ai`'s `record.get` reuses
-/// THIS path rather than growing a second one — the same reasoning that makes
-/// `entity_mutation` public for `attome-workflow`'s Create/Update nodes.
 pub use mutations::{
     CreateCheck, CreateCheckWarning, UpdateOutcome, create_record_for, delete_record_for,
     read_record, read_record_bulk, restore_record_for, update_record_for,
     update_record_for_outcome, update_record_for_with_comment, validate_create,
 };
+/// The record read with its full authorization, minus every transport
+/// concern. `pub` (not `pub(crate)`) so `attome-ai`'s `record.get` reuses
+/// THIS path rather than growing a second one — the same reasoning that makes
+/// `entity_mutation` public for `attome-workflow`'s Create/Update nodes.
+pub use recycle_bin::{LargeDelete, take_large_deletes};
 /// M07 Phase A: `POST /{entity}/{id}/transition` takes an optional `If-Match`
 /// (absent = the record's current version) with the same parsing rules as
 /// the delete/restore paths.

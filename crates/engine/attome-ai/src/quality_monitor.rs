@@ -233,7 +233,7 @@ async fn alert_significant_drop(
 
 /// Sends one alert to every administrator, best effort: a failure is logged
 /// and never fails the caller's job (the caller has already logged the fact).
-pub(crate) async fn alert_admins(
+pub async fn alert_admins(
     db: &DbPool,
     notification_cfg: &NotificationSection,
     subject: String,

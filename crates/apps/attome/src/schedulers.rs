@@ -73,6 +73,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     // expires unconfirmed proposals. Once a minute: a crashed confirm's
     // proposal is confirmable again within CONFIRM_LEASE plus a minute.
     crate::jobs::spawn_ai_tool_call_sweep_scheduler(db.clone(), std::time::Duration::from_secs(60));
+    // A18-T4: bursts of deletion, checked every five minutes.
+    crate::jobs::spawn_bin_delete_alert_scheduler(db.clone(), std::time::Duration::from_secs(300));
     crate::jobs::spawn_ai_quality_monitor_scheduler(
         db.clone(),
         std::time::Duration::from_secs(24 * 60 * 60),
