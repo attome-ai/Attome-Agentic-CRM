@@ -3336,6 +3336,163 @@ fn history_search_finds_a_value_crossing() {
     })
 }
 
+/// B4-T3: merging a tag moves its links (a record carrying both keeps one),
+/// its name then finds the other tag, undo moves the links back, and the
+/// sweep removes links past their expiry.
+#[test]
+fn tag_merge_undo_and_expiry() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let (logicalname, admin_cookie, app) = provision_test_entity(system, "tagmerge").await;
+        let send = |method: &str, uri: String, body: Option<serde_json::Value>| {
+            Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json")
+                .body(body.map_or_else(Body::empty, |b| Body::from(b.to_string())))
+                .unwrap()
+        };
+        let alpha = format!("alpha-{logicalname}");
+        let beta = format!("beta-{logicalname}");
+        let mut records = Vec::new();
+        for _ in 0..2 {
+            let res = app
+                .clone()
+                .oneshot(send(
+                    "POST",
+                    format!("/api/v1/{logicalname}"),
+                    Some(serde_json::json!({"title": "tagged"})),
+                ))
+                .await
+                .expect("create");
+            assert_eq!(res.status(), StatusCode::CREATED);
+            records.push(body_json(res).await["id"].as_str().expect("id").to_owned());
+        }
+        let tag = |record: &str, name: &str| {
+            send(
+                "POST",
+                format!("/api/v1/{logicalname}/{record}/tags"),
+                Some(serde_json::json!({"name": name})),
+            )
+        };
+        let names = |page: &Value| -> Vec<String> {
+            page["items"]
+                .as_array()
+                .map(|items| {
+                    items
+                        .iter()
+                        .filter_map(|t| t["name"].as_str().map(str::to_owned))
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+        let res = app
+            .clone()
+            .oneshot(tag(&records[0], &alpha))
+            .await
+            .expect("tag");
+        assert_eq!(res.status(), StatusCode::OK);
+        let alpha_id = body_json(res).await["items"][0]["id"]
+            .as_str()
+            .expect("tag id")
+            .to_owned();
+        app.clone()
+            .oneshot(tag(&records[1], &alpha))
+            .await
+            .expect("tag");
+        let res = app
+            .clone()
+            .oneshot(tag(&records[1], &beta))
+            .await
+            .expect("tag");
+        let beta_id = body_json(res).await["items"]
+            .as_array()
+            .and_then(|items| items.iter().find(|t| t["name"] == beta.as_str()))
+            .and_then(|t| t["id"].as_str())
+            .expect("beta id")
+            .to_owned();
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                format!("/api/v1/admin/tags/{alpha_id}/merge"),
+                Some(serde_json::json!({"into": beta_id})),
+            ))
+            .await
+            .expect("merge");
+        assert_eq!(res.status(), StatusCode::OK);
+        let merged = body_json(res).await;
+        assert_eq!(merged["moved"], 1, "{merged}");
+        assert_eq!(merged["dropped"], 1, "{merged}");
+        let res = app
+            .clone()
+            .oneshot(send(
+                "GET",
+                format!("/api/v1/{logicalname}/{}/tags", records[0]),
+                None,
+            ))
+            .await
+            .expect("tags");
+        assert_eq!(names(&body_json(res).await), vec![beta.clone()]);
+        // The merged name now finds the other tag.
+        let res = app
+            .clone()
+            .oneshot(tag(&records[0], &alpha))
+            .await
+            .expect("tag by old name");
+        assert_eq!(names(&body_json(res).await), vec![beta.clone()]);
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                format!("/api/v1/admin/tags/{alpha_id}/unmerge"),
+                None,
+            ))
+            .await
+            .expect("unmerge");
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(body_json(res).await["moved"], 1);
+        let res = app
+            .clone()
+            .oneshot(send(
+                "GET",
+                format!("/api/v1/{logicalname}/{}/tags", records[0]),
+                None,
+            ))
+            .await
+            .expect("tags");
+        assert_eq!(names(&body_json(res).await), vec![alpha.clone()]);
+
+        // An expired link goes at the next sweep.
+        sqlx::query(
+            "UPDATE tag_link SET expires_at = now() - interval '1 minute' \
+             WHERE entity = $1 AND record_id = $2::uuid",
+        )
+        .bind(&logicalname)
+        .bind(&records[0])
+        .execute(&state.base.db)
+        .await
+        .expect("expire the link");
+        let removed = attome_records::entity_crud::tags::sweep_expired_links(&state.base.db)
+            .await
+            .expect("sweep");
+        assert!(removed >= 1);
+        let res = app
+            .oneshot(send(
+                "GET",
+                format!("/api/v1/{logicalname}/{}/tags", records[0]),
+                None,
+            ))
+            .await
+            .expect("tags");
+        assert!(names(&body_json(res).await).is_empty());
+    })
+}
+
 /// F026 (P2.2): `POST .../restore` undeletes a soft-deleted record. Delete
 /// now also bumps `row_version` (P-data-lifecycle's `on_target_delete` work
 /// stamps `modified_by`/`modified_at`/`row_version` on every soft-delete, not

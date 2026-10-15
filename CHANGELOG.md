@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Tags: `POST /api/v1/admin/tags/{tag_id}/merge` moves a shared tag's links into another (its
+  name then finds the other tag) and `/unmerge` undoes it (migration 0028); an hourly job removes
+  tag links past their expiry.
 - Request trail: a job queued while serving a request stores its id (`request_id` in the job
   envelope), and `GET /api/v1/admin/ops/requests/{request_id}` lists the request's jobs and audit
   events.

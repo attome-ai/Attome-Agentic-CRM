@@ -911,6 +911,13 @@ async fn dispatch_platform_job(
         }
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.
+        // B4-T3: tag links past their expiry go.
+        EngineJob::TagExpirySweep => {
+            let removed = attome_records::entity_crud::tags::sweep_expired_links(&db).await?;
+            if removed > 0 {
+                tracing::info!(removed, "tags: expired tag links removed");
+            }
+        }
         // A18-T4: a burst of deletions goes to the administrators.
         EngineJob::BinDeleteAlertSweep => {
             let bursts = attome_records::entity_crud::take_large_deletes(&db).await?;
@@ -1909,6 +1916,7 @@ const DEDUP_KEY_EVENTS_DISPATCH_TICK: &str = "events-dispatch-tick";
 const DEDUP_KEY_AI_QUALITY_MONITOR: &str = "ai-quality-monitor";
 const DEDUP_KEY_AI_TOOL_CALL_SWEEP: &str = "ai-tool-call-sweep";
 const DEDUP_KEY_BIN_DELETE_ALERT: &str = "bin-delete-alert";
+const DEDUP_KEY_TAG_EXPIRY: &str = "tag-expiry";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -1962,6 +1970,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::PruneChangeFeed => DEDUP_KEY_PRUNE_CHANGE_FEED,
         EngineJob::AiToolCallSweep => DEDUP_KEY_AI_TOOL_CALL_SWEEP,
         EngineJob::BinDeleteAlertSweep => DEDUP_KEY_BIN_DELETE_ALERT,
+        EngineJob::TagExpirySweep => DEDUP_KEY_TAG_EXPIRY,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2264,6 +2273,17 @@ pub fn spawn_bin_delete_alert_scheduler(db: DbPool, interval: std::time::Duratio
         EngineJob::BinDeleteAlertSweep,
         DEDUP_KEY_BIN_DELETE_ALERT,
         "recycle bin delete alert",
+    );
+}
+
+/// B4-T3: every hour, removes tag links past their expiry.
+pub fn spawn_tag_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::TagExpirySweep,
+        DEDUP_KEY_TAG_EXPIRY,
+        "tag expiry",
     );
 }
 

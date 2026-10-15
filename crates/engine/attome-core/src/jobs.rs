@@ -396,6 +396,8 @@ pub enum EngineJob {
     /// the administrators. Bare unit variant; the handler reads the deletion
     /// ledger as it is now.
     BinDeleteAlertSweep,
+    /// B4-T3: removes tag links whose expiry has passed. Bare unit variant.
+    TagExpirySweep,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -821,6 +823,7 @@ impl EngineJob {
             | Self::AiQualityMonitor
             | Self::AiToolCallSweep
             | Self::BinDeleteAlertSweep
+            | Self::TagExpirySweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -904,6 +907,7 @@ impl EngineJob {
             EngineJob::AiQualityMonitor => "AiQualityMonitor",
             EngineJob::AiToolCallSweep => "AiToolCallSweep",
             EngineJob::BinDeleteAlertSweep => "BinDeleteAlertSweep",
+            EngineJob::TagExpirySweep => "TagExpirySweep",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -998,6 +1002,7 @@ impl EngineJob {
             | Self::AiQualityMonitor
             | Self::AiToolCallSweep
             | Self::BinDeleteAlertSweep
+            | Self::TagExpirySweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1105,6 +1110,7 @@ impl EngineJob {
             | Self::AiQualityMonitor
             | Self::AiToolCallSweep
             | Self::BinDeleteAlertSweep
+            | Self::TagExpirySweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1428,6 +1434,7 @@ mod tests {
         assert_round_trips(EngineJob::AiQualityMonitor);
         assert_round_trips(EngineJob::AiToolCallSweep);
         assert_round_trips(EngineJob::BinDeleteAlertSweep);
+        assert_round_trips(EngineJob::TagExpirySweep);
     }
 
     #[test]

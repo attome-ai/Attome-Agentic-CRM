@@ -207,8 +207,11 @@ pub async fn add_tag(
 
     let db = &state.base.db;
     let tag: TagView = match (input.tag_id, input.name.as_deref()) {
+        // B4-T3: a merged tag's id leads to the tag it went into.
         (Some(id), None) => sqlx::query_as(&format!(
-            "SELECT {TAG_COLUMNS} FROM tag t WHERE t.id = $1 AND (t.owner_user IS NULL OR t.owner_user = $2)"
+            "SELECT {TAG_COLUMNS} FROM tag t \
+             WHERE t.id = (SELECT COALESCE(m.merged_into, m.id) FROM tag m WHERE m.id = $1) \
+               AND (t.owner_user IS NULL OR t.owner_user = $2)"
         ))
         .bind(id)
         .bind(ctx.user_id)
@@ -282,9 +285,12 @@ async fn find_or_create(
     input: &AddTag,
 ) -> Result<TagView, AppError> {
     let db = &state.base.db;
+    // B4-T3: a merged tag's name leads to the tag it went into.
     let existing: Option<TagView> = sqlx::query_as(&format!(
-        "SELECT {TAG_COLUMNS} FROM tag t WHERE t.normalized_name = normalize_ar($1) \
-           AND (($2 AND t.owner_user = $3) OR (NOT $2 AND t.owner_user IS NULL))"
+        "SELECT {TAG_COLUMNS} FROM tag t \
+         WHERE t.id = (SELECT COALESCE(m.merged_into, m.id) FROM tag m \
+                       WHERE m.normalized_name = normalize_ar($1) \
+                         AND (($2 AND m.owner_user = $3) OR (NOT $2 AND m.owner_user IS NULL)))"
     ))
     .bind(name)
     .bind(input.personal)
@@ -406,7 +412,7 @@ pub async fn suggest(
         "SELECT t.id, t.name, t.colour, (t.owner_user IS NOT NULL) AS personal, \
                 (SELECT COUNT(*) FROM tag_link l WHERE l.tag_id = t.id) AS uses \
          FROM tag t \
-         WHERE (t.owner_user IS NULL OR t.owner_user = $1) \
+         WHERE (t.owner_user IS NULL OR t.owner_user = $1) AND t.merged_into IS NULL \
            AND starts_with(t.normalized_name, normalize_ar($2)) \
          ORDER BY uses DESC, t.name LIMIT $3",
     )
@@ -416,6 +422,195 @@ pub async fn suggest(
     .fetch_all(db)
     .await
     .map_err(attome_db::classify)
+}
+
+/// Tag links one merge or expiry statement touches.
+const TAG_BATCH: i64 = 1000;
+
+/// B4-T3: removes tag links whose expiry has passed, in batches; returns how
+/// many went.
+pub async fn sweep_expired_links(db: &attome_db::DbPool) -> Result<u64, AppError> {
+    let mut removed = 0;
+    loop {
+        let done = sqlx::query(
+            "DELETE FROM tag_link WHERE ctid IN ( \
+                 SELECT ctid FROM tag_link WHERE expires_at <= now() LIMIT $1)",
+        )
+        .bind(TAG_BATCH)
+        .execute(db)
+        .await
+        .map_err(attome_db::classify)?
+        .rows_affected();
+        removed += done;
+        if done < TAG_BATCH as u64 {
+            return Ok(removed);
+        }
+    }
+}
+
+/// `POST /api/v1/admin/tags/{tag_id}/merge`.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct MergeTag {
+    /// The shared tag to merge into.
+    pub into: Uuid,
+}
+
+/// What a merge or its undo did.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct TagMergeResult {
+    /// Links moved to the other tag.
+    pub moved: u64,
+    /// Links dropped because the record already carried the other tag (a
+    /// merge only; an undo cannot bring these back).
+    pub dropped: u64,
+}
+
+/// A shared tag that has not been merged away.
+async fn live_shared_tag(db: &attome_db::DbPool, id: Uuid) -> Result<String, AppError> {
+    let row: Option<(String, Option<Uuid>, Option<Uuid>)> =
+        sqlx::query_as("SELECT name, owner_user, merged_into FROM tag WHERE id = $1")
+            .bind(id)
+            .fetch_optional(db)
+            .await
+            .map_err(attome_db::classify)?;
+    match row {
+        Some((name, None, None)) => Ok(name),
+        Some((_, Some(_), _)) => Err(AppError::Validation(
+            "a personal tag cannot be merged".into(),
+        )),
+        Some((_, None, Some(_))) => Err(AppError::Conflict("that tag was already merged")),
+        None => Err(AppError::NotFound),
+    }
+}
+
+/// B4-T3: merges shared tag `source` into shared tag `into`: its links move
+/// over in batches (a record that carried both keeps one), and `source`
+/// stays only as a pointer, so its name still finds `into`. Undo with
+/// [`unmerge_tag`].
+pub async fn merge_tag(
+    state: &EngineState,
+    user: Uuid,
+    source: Uuid,
+    into: Uuid,
+) -> Result<TagMergeResult, AppError> {
+    if source == into {
+        return Err(AppError::Validation(
+            "a tag cannot merge into itself".into(),
+        ));
+    }
+    let db = &state.base.db;
+    let source_name = live_shared_tag(db, source).await?;
+    let into_name = live_shared_tag(db, into).await?;
+    let mut moved = 0;
+    loop {
+        let done = sqlx::query(
+            "UPDATE tag_link SET tag_id = $2, merged_from = $1 WHERE ctid IN ( \
+                 SELECT l.ctid FROM tag_link l WHERE l.tag_id = $1 \
+                   AND NOT EXISTS (SELECT 1 FROM tag_link d WHERE d.tag_id = $2 \
+                                     AND d.entity = l.entity AND d.record_id = l.record_id) \
+                 LIMIT $3)",
+        )
+        .bind(source)
+        .bind(into)
+        .bind(TAG_BATCH)
+        .execute(db)
+        .await
+        .map_err(attome_db::classify)?
+        .rows_affected();
+        moved += done;
+        if done < TAG_BATCH as u64 {
+            break;
+        }
+    }
+    let dropped = sqlx::query("DELETE FROM tag_link WHERE tag_id = $1")
+        .bind(source)
+        .execute(db)
+        .await
+        .map_err(attome_db::classify)?
+        .rows_affected();
+    let marked =
+        sqlx::query("UPDATE tag SET merged_into = $2 WHERE id = $1 AND merged_into IS NULL")
+            .bind(source)
+            .bind(into)
+            .execute(db)
+            .await
+            .map_err(attome_db::classify)?
+            .rows_affected();
+    if marked == 0 {
+        return Err(AppError::Conflict("that tag was already merged"));
+    }
+    attome_audit::write_business_event(
+        state,
+        "tag",
+        source,
+        AuditOperation::Update,
+        "tag.merged",
+        user,
+        None,
+        None,
+        format!(
+            "tag \"{source_name}\" merged into \"{into_name}\": {moved} moved, {dropped} dropped"
+        ),
+    )
+    .await;
+    Ok(TagMergeResult { moved, dropped })
+}
+
+/// B4-T3: undoes a merge: the links it moved go back to `source`, which is a
+/// tag of its own again.
+pub async fn unmerge_tag(
+    state: &EngineState,
+    user: Uuid,
+    source: Uuid,
+) -> Result<TagMergeResult, AppError> {
+    let db = &state.base.db;
+    let row: Option<(String, Option<Uuid>)> =
+        sqlx::query_as("SELECT name, merged_into FROM tag WHERE id = $1")
+            .bind(source)
+            .fetch_optional(db)
+            .await
+            .map_err(attome_db::classify)?;
+    let (name, into) = match row {
+        Some((name, Some(into))) => (name, into),
+        Some((_, None)) => return Err(AppError::Conflict("that tag is not merged")),
+        None => return Err(AppError::NotFound),
+    };
+    let mut moved = 0;
+    loop {
+        let done = sqlx::query(
+            "UPDATE tag_link SET tag_id = $1, merged_from = NULL WHERE ctid IN ( \
+                 SELECT ctid FROM tag_link WHERE tag_id = $2 AND merged_from = $1 LIMIT $3)",
+        )
+        .bind(source)
+        .bind(into)
+        .bind(TAG_BATCH)
+        .execute(db)
+        .await
+        .map_err(attome_db::classify)?
+        .rows_affected();
+        moved += done;
+        if done < TAG_BATCH as u64 {
+            break;
+        }
+    }
+    sqlx::query("UPDATE tag SET merged_into = NULL WHERE id = $1")
+        .bind(source)
+        .execute(db)
+        .await
+        .map_err(attome_db::classify)?;
+    attome_audit::write_business_event(
+        state,
+        "tag",
+        source,
+        AuditOperation::Update,
+        "tag.unmerged",
+        user,
+        None,
+        None,
+        format!("tag \"{name}\" merge undone: {moved} moved back"),
+    )
+    .await;
+    Ok(TagMergeResult { moved, dropped: 0 })
 }
 
 /// B4-T4: the records carrying a tag, across entities, that the caller may
@@ -811,8 +1006,64 @@ fn page_of<T>(items: Vec<T>) -> PaginatedResponse<T> {
     PaginatedResponse::new(items, total, 1, total.max(1))
 }
 
+/// B4-T3: merges a shared tag into another; its links move over and its
+/// name keeps finding the other tag. Administrators only.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/tags/{tag_id}/merge",
+    tag = "admin",
+    params(("tag_id" = Uuid, Path)),
+    request_body = MergeTag,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "Merged", body = TagMergeResult),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No such tag", body = ErrorResponse),
+        (status = 409, description = "One of the tags was already merged", body = ErrorResponse),
+        (status = 422, description = "A personal tag, or a tag into itself", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn merge_tag_route(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(tag_id): Path<Uuid>,
+    Json(body): Json<MergeTag>,
+) -> Result<Json<TagMergeResult>, AppError> {
+    Ok(Json(
+        merge_tag(&state, ctx.user_id, tag_id, body.into).await?,
+    ))
+}
+
+/// B4-T3: undoes a tag merge. Administrators only.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/tags/{tag_id}/unmerge",
+    tag = "admin",
+    params(("tag_id" = Uuid, Path)),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 200, description = "The merge is undone", body = TagMergeResult),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No such tag", body = ErrorResponse),
+        (status = 409, description = "The tag is not merged", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn unmerge_tag_route(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(tag_id): Path<Uuid>,
+) -> Result<Json<TagMergeResult>, AppError> {
+    Ok(Json(unmerge_tag(&state, ctx.user_id, tag_id).await?))
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(
+    merge_tag_route,
+    unmerge_tag_route,
     list_record_tags,
     add_record_tag,
     remove_record_tag,

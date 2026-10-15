@@ -172,6 +172,14 @@ pub fn routes() -> Router<EngineState> {
         )
         .route("/api/v1/tags/suggest", get(tags::suggest_tags))
         .route(
+            "/api/v1/admin/tags/{tag_id}/merge",
+            axum::routing::post(tags::merge_tag_route),
+        )
+        .route(
+            "/api/v1/admin/tags/{tag_id}/unmerge",
+            axum::routing::post(tags::unmerge_tag_route),
+        )
+        .route(
             "/api/v1/tags/{tag_id}/records",
             get(tags::list_tagged_records),
         )
