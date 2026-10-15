@@ -79,6 +79,30 @@ pub struct BulkEditSubmitted {
     pub matched: usize,
     /// Picked records already holding the requested values.
     pub unchanged: usize,
+    /// B5-T3: what to send to `POST /api/v1/{entity}/bulk-edit/undo` to put
+    /// the changed records back. Kept by the caller, like a clone's undo
+    /// list.
+    pub undo: Vec<UndoItem>,
+}
+
+/// B5-T3: one record's values before a bulk edit, and the row version the
+/// edit leaves it at.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UndoItem {
+    pub id: Uuid,
+    /// The record's row version once the edit has applied; an undo only
+    /// reverts a record still at it.
+    pub row_version: i64,
+    /// The changed attributes' values before the edit.
+    #[schema(value_type = Object)]
+    pub values: Map<String, Value>,
+}
+
+/// B5-T3: a bulk edit to put back.
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct BulkEditUndoRequest {
+    /// The `undo` list the bulk edit returned.
+    pub undo: Vec<UndoItem>,
 }
 
 /// B5-T2: one record as the edit would change it.
@@ -113,6 +137,7 @@ pub struct BulkEditPlan {
     pub matched: usize,
     pub unchanged: usize,
     pub samples: Vec<PreviewRecord>,
+    pub undo: Vec<UndoItem>,
 }
 
 /// Records a preview shows before and after.
@@ -420,6 +445,7 @@ pub async fn plan_bulk_edit(
     let matched = rows.len();
     let mut items = Vec::new();
     let mut samples = Vec::new();
+    let mut undo = Vec::new();
     for row in rows {
         let Value::Object(row) = row else { continue };
         let Some(id) = row
@@ -443,9 +469,20 @@ pub async fn plan_bulk_edit(
                 after: patch.clone(),
             });
         }
+        let row_version = row.get("row_version").and_then(Value::as_i64);
+        if let Some(version) = row_version {
+            undo.push(UndoItem {
+                id,
+                row_version: version + 1,
+                values: patch
+                    .keys()
+                    .map(|name| (name.clone(), row.get(name).cloned().unwrap_or(Value::Null)))
+                    .collect(),
+            });
+        }
         items.push(BulkItem {
             id: Some(id),
-            expected_row_version: row.get("row_version").and_then(Value::as_i64),
+            expected_row_version: row_version,
             data: Value::Object(patch),
         });
     }
@@ -455,6 +492,7 @@ pub async fn plan_bulk_edit(
         matched,
         unchanged,
         samples,
+        undo,
     })
 }
 
@@ -486,6 +524,7 @@ async fn bulk_edit(
         items,
         matched,
         unchanged,
+        undo,
         ..
     } = plan_bulk_edit(&state, &ctx, &entity, &request).await?;
     if items.is_empty() {
@@ -496,6 +535,7 @@ async fn bulk_edit(
                 total: 0,
                 matched,
                 unchanged,
+                undo: Vec::new(),
             }),
         ));
     }
@@ -507,6 +547,7 @@ async fn bulk_edit(
             total: submitted.total,
             matched,
             unchanged,
+            undo,
         }),
     ))
 }
@@ -547,6 +588,61 @@ async fn bulk_edit_preview(
     }))
 }
 
+/// B5-T3: puts a bulk edit back. The undo list goes in as a bulk update
+/// carrying each record's post-edit row version, so a record changed since
+/// the edit is reported as a conflict and left as it is; every record still
+/// goes through the normal update path with the caller's own access.
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/bulk-edit/undo",
+    tag = "entity",
+    params(("entity" = String, Path)),
+    request_body = BulkEditUndoRequest,
+    responses(
+        (status = 202, description = "The undo is running as a bulk update", body = BulkEditSubmitted),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the entity's bulk or update privilege", body = ErrorResponse),
+        (status = 422, description = "An empty or oversized undo list", body = ErrorResponse),
+        (status = 503, description = "No batch worker can run the undo", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::BulkAccepted)])))),
+)]
+async fn bulk_edit_undo(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Bulk>>,
+    _jobs: Available<BatchJobs>,
+    Path(entity): Path<String>,
+    Json(request): Json<BulkEditUndoRequest>,
+) -> Result<(StatusCode, Json<BulkEditSubmitted>), AppError> {
+    if request.undo.is_empty() || request.undo.len() > MAX_BULK_EDIT_RECORDS {
+        return Err(AppError::Validation(format!(
+            "undo: 1 to {MAX_BULK_EDIT_RECORDS} records"
+        )));
+    }
+    let count = request.undo.len();
+    let items: Vec<BulkItem> = request
+        .undo
+        .into_iter()
+        .map(|item| BulkItem {
+            id: Some(item.id),
+            expected_row_version: Some(item.row_version),
+            data: Value::Object(item.values),
+        })
+        .collect();
+    let submitted = submit_bulk(&state, &ctx, &entity, "update", items, false).await?;
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(BulkEditSubmitted {
+            id: Some(submitted.id),
+            total: submitted.total,
+            matched: count,
+            unchanged: 0,
+            undo: Vec::new(),
+        }),
+    ))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/{entity}/bulk-edit", post(bulk_edit))
@@ -554,10 +650,11 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/{entity}/bulk-edit/preview",
             post(bulk_edit_preview),
         )
+        .route("/api/v1/{entity}/bulk-edit/undo", post(bulk_edit_undo))
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(bulk_edit, bulk_edit_preview))]
+#[openapi(paths(bulk_edit, bulk_edit_preview, bulk_edit_undo))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

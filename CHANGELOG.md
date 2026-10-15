@@ -18,6 +18,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   overwritten.
 - `POST /api/v1/{entity}/bulk-edit/preview` shows what a bulk edit would do without doing it: how
   many records match, change and stay as they are, and the first 20 before and after.
+- A bulk edit returns an `undo` list; `POST /api/v1/{entity}/bulk-edit/undo` puts the records back,
+  skipping (and reporting) any record changed since the edit.
 - `query/execute` takes `seek`: a keyset page that starts at a sort value ("jump to M"), bound and
   type-checked like a filter, with a `next_cursor`; not together with `after_id` (422).
 - While the AI model is confirmed down, a conversation turn is refused up front with

@@ -80,6 +80,12 @@ const GATED_HANDLERS: &[(&str, &str, &str)] = &[
          edit is accepted and never applied.",
     ),
     (
+        "bulk_edit_undo",
+        "BatchJobs",
+        "Returns 202 for the bulk update that puts a bulk edit back (B5-T3); with no worker \
+         the undo is accepted and never applied.",
+    ),
+    (
         "enqueue_bulk_transform",
         "BatchJobs",
         "Returns 202 'durably accepted, applied later' for a bulk transform job. With no live batch worker, 'later' is never.",
