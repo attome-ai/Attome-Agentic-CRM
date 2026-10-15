@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- `GET /api/v1/admin/change-feed/consumers` lists every change-feed consumer (the platform's own and
+  subscriptions) with its status, unread events, lag and last read; the governance Change Feed page
+  shows them, and `change_feed_consumer_lag_seconds{consumer}` exports the lag.
 - Deploy history: each node records a `start` row (process start to ready) and a `drain` row
   (shutdown signal to exit) with its version and who started it (`ATTOME_DEPLOYED_BY`);
   `GET /api/v1/admin/deploys` lists the last 100 for administrators. Migration `0037_deploy_event`.

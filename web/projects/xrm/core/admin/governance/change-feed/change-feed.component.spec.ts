@@ -8,7 +8,7 @@ import { ChangeFeedComponent, dateInputToIso } from './change-feed.component';
 
 describe('ChangeFeedComponent', () => {
   let fixture: ComponentFixture<ChangeFeedComponent>;
-  let svc: { listChanges: ReturnType<typeof vi.fn> };
+  let svc: { listChanges: ReturnType<typeof vi.fn>; listConsumers: ReturnType<typeof vi.fn> };
 
   async function render() {
     await TestBed.configureTestingModule({
@@ -38,7 +38,10 @@ describe('ChangeFeedComponent', () => {
 
   beforeEach(() => {
     TestBed.resetTestingModule();
-    svc = { listChanges: vi.fn().mockReturnValue(page(['e1', 's1'], 'c2', 120)) };
+    svc = {
+      listChanges: vi.fn().mockReturnValue(page(['e1', 's1'], 'c2', 120)),
+      listConsumers: vi.fn().mockReturnValue(of({ items: [] })),
+    };
   });
 
   it('loads the first page (no cursor) of a window pinned at load time', async () => {

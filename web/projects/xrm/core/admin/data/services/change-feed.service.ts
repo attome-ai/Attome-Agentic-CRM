@@ -24,6 +24,22 @@ export const CHANGE_KINDS: readonly ChangeKind[] = [
   'content', 'license', 'security', 'ai', 'settings',
 ];
 
+/**
+ * L7-T7 — one change-feed consumer's health, from
+ * `GET /api/v1/admin/change-feed/consumers`
+ * (`attome_core::change_feed::ConsumerHealth`).
+ */
+export interface ChangeConsumer {
+  consumer: string;
+  kind: 'internal' | 'external';
+  status: 'active' | 'expired';
+  lag_events: number;
+  lag_seconds: number;
+  last_read_at: string;
+  last_event_at: string | null;
+  max_lag_hours: number;
+}
+
 export interface ChangeFeedFilter {
   kind?: ChangeKind;
   /** ISO-8601 instant; the server defaults to `to - 30 days`. */
@@ -44,5 +60,10 @@ export class ChangeFeedService {
     if (filter.from) params['from'] = filter.from;
     if (filter.to)   params['to'] = filter.to;
     return this.api.get<ChangeFeedPage>('/api/v1/admin/changes', params);
+  }
+
+  /** L7-T7: every consumer of the change feed with its lag. */
+  listConsumers(): Observable<{ items: ChangeConsumer[] }> {
+    return this.api.get<{ items: ChangeConsumer[] }>('/api/v1/admin/change-feed/consumers');
   }
 }

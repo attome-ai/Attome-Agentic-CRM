@@ -105,6 +105,7 @@ export type {
   CatalogGlossaryTerm, CatalogSearch,
 } from './services/data-catalog.service';
 export { ChangeFeedService, CHANGE_KINDS } from './services/change-feed.service';
+export type { ChangeConsumer } from './services/change-feed.service';
 export type { ChangeFeedEntry, ChangeFeedPage, ChangeKind, ChangeFeedFilter } from './services/change-feed.service';
 export { StateModelsService } from './services/state-models.service';
 export type {

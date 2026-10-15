@@ -897,14 +897,44 @@ async fn list_changes(
     ))
 }
 
+/// L7-T7: how every change-feed consumer is keeping up, the platform's own
+/// and subscriptions alike.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/change-feed/consumers",
+    tag = "admin",
+    responses(
+        (status = 200, description = "Every consumer with its lag", body = attome_types::PaginatedResponse<attome_core::change_feed::ConsumerHealth>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn list_consumers(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+) -> Result<Json<attome_types::PaginatedResponse<attome_core::change_feed::ConsumerHealth>>, AppError>
+{
+    let consumers = attome_core::change_feed::consumer_health(&state.base.db).await?;
+    let total = i64::try_from(consumers.len()).map_err(AppError::internal)?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        consumers,
+        total,
+        1,
+        total.max(1),
+    )))
+}
+
 pub fn routes() -> Router<EngineState> {
-    Router::new().route("/api/v1/admin/changes", get(list_changes))
+    Router::new()
+        .route("/api/v1/admin/changes", get(list_changes))
+        .route("/api/v1/admin/change-feed/consumers", get(list_consumers))
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document; merged in by `crate::openapi()`.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_changes))]
+#[openapi(paths(list_changes, list_consumers))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

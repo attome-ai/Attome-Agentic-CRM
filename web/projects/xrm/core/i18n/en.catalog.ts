@@ -1287,6 +1287,13 @@ export const xrmEn = {
       noGlossary: 'No glossary terms name this entity.',
     },
     changes: {
+      consumers: {
+        title: 'Who reads the change feed', none: 'Nothing reads the change feed yet.',
+        name: 'Consumer', kind: 'Kind', status: 'Status', unread: 'Unread events', lag: 'Behind by',
+        lastRead: 'Last read',
+        kinds: { internal: 'Platform', external: 'Subscription' },
+        statuses: { active: 'Keeping up', expired: 'Expired: fell too far behind' },
+      },
       title: 'Change Feed',
       subtitle: 'Configuration changes across the deployment, newest first: metadata, bundles, publishes, licences, security grants, AI models and settings.',
       kind: 'Kind',

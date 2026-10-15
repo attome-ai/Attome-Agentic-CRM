@@ -381,6 +381,96 @@ pub fn max_lag_hours_for(consumer: &str) -> i32 {
     }
 }
 
+/// L7-T7: the most unread events counted per consumer; past it the count
+/// reads as this value (the lag in seconds still tells how far behind).
+pub const LAG_COUNT_CAP: i64 = 100_000;
+
+/// L7-T7: how one change-feed consumer is keeping up.
+#[derive(Clone, Debug, serde::Serialize, utoipa::ToSchema)]
+pub struct ConsumerHealth {
+    pub consumer: String,
+    /// `internal` (the platform's own) or `external` (a subscription).
+    pub kind: String,
+    /// `active`, or `expired` once it fell past its allowed lag.
+    pub status: String,
+    /// Events written after its cursor, up to [`LAG_COUNT_CAP`].
+    pub lag_events: i64,
+    /// Age of its oldest unread event; 0 when it has read everything.
+    pub lag_seconds: f64,
+    /// When it last advanced its cursor.
+    pub last_read_at: chrono::DateTime<chrono::Utc>,
+    /// The time of the last event it read, if any.
+    pub last_event_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub max_lag_hours: i32,
+}
+
+/// `internal` for the platform's own consumers, `external` otherwise.
+pub fn consumer_kind(consumer: &str) -> &'static str {
+    if INTERNAL_PREFIXES.iter().any(|p| consumer.starts_with(p)) {
+        "internal"
+    } else {
+        "external"
+    }
+}
+
+/// One [`consumer_health`] row as read: consumer, status, unread events, lag
+/// seconds, last read, last event time, allowed lag.
+type HealthRow = (
+    String,
+    String,
+    i64,
+    f64,
+    chrono::DateTime<chrono::Utc>,
+    Option<chrono::DateTime<chrono::Utc>>,
+    i32,
+);
+
+/// L7-T7: every registered consumer's lag, by name.
+pub async fn consumer_health<'e, E>(db: E) -> Result<Vec<ConsumerHealth>, AppError>
+where
+    E: sqlx::PgExecutor<'e>,
+{
+    let rows: Vec<HealthRow> = sqlx::query_as(
+        "SELECT c.consumer, c.status, \
+                (SELECT count(*) FROM (SELECT 1 FROM entity_change_event e \
+                   WHERE e.commit_xid > c.last_commit_xid LIMIT $1) unread)::bigint, \
+                COALESCE((SELECT EXTRACT(EPOCH FROM now() - min(e.created_at))::float8 \
+                            FROM entity_change_event e \
+                           WHERE e.commit_xid > c.last_commit_xid), 0)::float8, \
+                c.updated_at, c.last_created_at, c.max_lag_hours \
+           FROM change_consumer_cursor c ORDER BY c.consumer",
+    )
+    .bind(LAG_COUNT_CAP)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(rows
+        .into_iter()
+        .map(
+            |(
+                consumer,
+                status,
+                lag_events,
+                lag_seconds,
+                last_read_at,
+                last_event_at,
+                max_lag_hours,
+            )| {
+                ConsumerHealth {
+                    kind: consumer_kind(&consumer).to_owned(),
+                    consumer,
+                    status,
+                    lag_events,
+                    lag_seconds: lag_seconds.max(0.0),
+                    last_read_at,
+                    last_event_at,
+                    max_lag_hours,
+                }
+            },
+        )
+        .collect())
+}
+
 /// L7-T1: marks expired every active consumer whose oldest unread event is
 /// older than its `max_lag_hours`, and returns their names. [`prune`] then
 /// ignores them, so one stuck consumer cannot keep the whole feed forever.
@@ -546,6 +636,14 @@ mod tests {
                 op.as_str()
             );
         }
+    }
+
+    /// L7-T7: the platform's own consumers read as internal.
+    #[test]
+    fn consumer_kind_tells_internal_from_external() {
+        assert_eq!(consumer_kind("attome-search/index"), "internal");
+        assert_eq!(consumer_kind("attome-workflow/triggers"), "internal");
+        assert_eq!(consumer_kind("webhook:erp"), "external");
     }
 
     #[test]

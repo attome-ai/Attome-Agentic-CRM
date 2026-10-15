@@ -374,6 +374,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "مستهلكو موجز التغييرات الذين انتهت صلاحيتهم لتأخرهم كثيرًا.",
     },
     MetricInfo {
+        name: "change_feed_consumer_lag_seconds",
+        kind: "gauge",
+        unit: "seconds",
+        en: "Age of each change-feed consumer's oldest unread event.",
+        ar: "عمر أقدم حدث لم يقرأه كل مستهلك لموجز التغييرات.",
+    },
+    MetricInfo {
         name: "db_bloat_dead_tuples",
         kind: "gauge",
         unit: "rows",

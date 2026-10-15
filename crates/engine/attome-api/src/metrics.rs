@@ -152,6 +152,7 @@ pub fn spawn_upload_scan_backlog_refresh(state: AppState, interval: Duration) {
         loop {
             refresh_upload_scan_backlog_once(&state.db).await;
             refresh_idempotency_stuck_once(&state.db).await;
+            refresh_change_feed_lag_once(&state.db).await;
             tokio::time::sleep(interval).await;
         }
     });
@@ -181,6 +182,26 @@ async fn refresh_upload_scan_backlog_once(db: &DbPool) {
         }
         Err(e) => {
             tracing::warn!(error = %e, "metrics refresh: upload-scan backlog query failed");
+        }
+    }
+}
+
+/// L7-T7: each change-feed consumer's lag, as
+/// `change_feed_consumer_lag_seconds{consumer}`. Consumers are few and named
+/// by the platform or an administrator, so the label set stays small.
+async fn refresh_change_feed_lag_once(db: &DbPool) {
+    match attome_core::change_feed::consumer_health(db).await {
+        Ok(consumers) => {
+            for consumer in consumers {
+                metrics::gauge!(
+                    "change_feed_consumer_lag_seconds",
+                    "consumer" => consumer.consumer,
+                )
+                .set(consumer.lag_seconds);
+            }
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "metrics refresh: change-feed consumer lag failed");
         }
     }
 }

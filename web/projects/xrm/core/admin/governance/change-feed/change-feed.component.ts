@@ -10,6 +10,7 @@ import {
   type ChangeFeedEntry, type ChangeFeedFilter, type ChangeKind,
 } from '@attome/xrm/core/admin/data';
 import { GovernanceNavComponent } from '../nav/governance-nav.component';
+import { ChangeConsumersComponent } from './change-consumers.component';
 
 /**
  * `<input type="date">` value (`YYYY-MM-DD`, the viewer's calendar day) to
@@ -40,7 +41,10 @@ export function dateInputToIso(value: string, endOfDay: boolean): string | undef
   selector: 'xrm-change-feed',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, LocalDatePipe, LocalNumberPipe, TranslatePipe, GovernanceNavComponent],
+  imports: [
+    FormsModule, LocalDatePipe, LocalNumberPipe, TranslatePipe, GovernanceNavComponent,
+    ChangeConsumersComponent,
+  ],
   styleUrls: ['../../../../styles/admin-page.css', '../governance.css', './change-feed.component.css'],
   templateUrl: './change-feed.component.html',
 })
