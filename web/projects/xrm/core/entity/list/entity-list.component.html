@@ -405,14 +405,14 @@
               }
             </span>
             } @else if (isCellLinked(col, colIndex, row)) {
-            <button type="button" class="cell-link" [class.cell-route-link]="col.is_clickable"
+            <button type="button" class="cell-link" dir="auto" [class.cell-route-link]="col.is_clickable"
               [class.cell-link-empty]="!cellDisplayValue(row, col)"
               [title]="col.is_clickable ? ('entityList.openLinkedRecord' | translate) : cellDisplayValue(row, col)"
               (click)="handleCellNavigation(row, col, colIndex)">
               {{ cellDisplayValue(row, col) || '—' }}
             </button>
             } @else {
-            <span class="cell-text"
+            <span class="cell-text" dir="auto"
               [title]="cellDisplayValue(row, col)">
               {{ cellDisplayValue(row, col) }}
             </span>

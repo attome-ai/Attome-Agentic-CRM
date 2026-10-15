@@ -12,6 +12,7 @@
  * operators valid for the field's type) and again on every `query/execute`.
  * Nothing here decides access (D-429).
  */
+import { compareText } from '@attome/base';
 import type { ChoiceOptions, FieldSchema } from '@attome/xrm';
 import {
   ColumnFilterDraft, DATE_OPERATORS, FilterKind, LOOKUP_OPERATORS, NUMBER_OPERATORS, QueryFilter,
@@ -34,12 +35,12 @@ export interface AdvancedCondition {
  * is an index hint (an unindexed filter only logs a warning server-side), not
  * a permission, so it does not narrow this list. A field the caller cannot
  * read is refused by the server with "unknown filter field"; the builder does
- * not try to predict that.
+ * not try to predict that. Names sort in the reader's `locale` (B21-T2).
  */
-export function advancedFindFields(fields: readonly FieldSchema[]): FieldSchema[] {
+export function advancedFindFields(fields: readonly FieldSchema[], locale?: string): FieldSchema[] {
   return fields
     .filter(f => f.field_type !== 'file')
-    .sort((a, b) => (a.display_name || a.name).localeCompare(b.display_name || b.name));
+    .sort((a, b) => compareText(a.display_name || a.name, b.display_name || b.name, locale));
 }
 
 export function isMultiChoice(field: FieldSchema): boolean {

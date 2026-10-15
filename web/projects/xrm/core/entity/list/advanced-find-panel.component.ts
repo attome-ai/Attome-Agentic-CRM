@@ -3,7 +3,7 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import type { Subscription } from 'rxjs';
-import { ApiError, TranslatePipe } from '@attome/base';
+import { ApiError, LangService, TranslatePipe } from '@attome/base';
 import type { FieldSchema } from '@attome/xrm';
 import { EntityService } from '../services/entity.service';
 import { FieldInputComponent } from '../field/field-input/field-input.component';
@@ -62,6 +62,7 @@ export class AdvancedFindPanelComponent {
   readonly closed     = output<void>();
 
   private readonly entitySvc = inject(EntityService);
+  private readonly lang = inject(LangService);
 
   readonly loading    = signal(true);
   readonly error      = signal<string | null>(null);
@@ -95,7 +96,7 @@ export class AdvancedFindPanelComponent {
     this.schemaSub = this.entitySvc.getSchema(entity).subscribe({
       next: schema => {
         const columns = this.columnNames();
-        const fields = advancedFindFields(schema.fields)
+        const fields = advancedFindFields(schema.fields, this.lang.intlLocale())
           .filter(f => !columns?.length || columns.includes(f.name));
         this.fields.set(fields);
         const { conditions, kept } = filtersToConditions(this.filters(), fields, this.nextKey);

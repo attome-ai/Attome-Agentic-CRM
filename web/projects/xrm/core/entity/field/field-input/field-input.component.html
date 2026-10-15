@@ -24,7 +24,7 @@
   @switch (field().field_type) {
 
     @case ('text') {
-      <input [id]="field().name" [type]="textType()" class="xf-input"
+      <input [id]="field().name" [type]="textType()" class="xf-input" dir="auto"
              [class.is-invalid]="showRequiredError()"
              [attr.aria-invalid]="showRequiredError()"
              [formControlName]="field().name"
@@ -137,7 +137,7 @@
         @if (lookupOpen()) {
           <div class="lookup-popup" #popup>
             <div class="lookup-search-row">
-              <input #searchInput type="text" [placeholder]="'fieldInput.searchPlaceholder' | translate"
+              <input #searchInput type="text" dir="auto" [placeholder]="'fieldInput.searchPlaceholder' | translate"
                      [value]="lookupSearch()"
                      (input)="onSearchInput($any($event.target).value)" />
               <button type="button" class="btn-icon" (click)="closeLookup()">×</button>
@@ -281,7 +281,7 @@
     }
 
     @default {
-      <input [id]="field().name" type="text"
+      <input [id]="field().name" type="text" dir="auto"
              [formControlName]="field().name" />
     }
   }
