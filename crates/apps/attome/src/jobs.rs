@@ -1664,6 +1664,9 @@ pub async fn prune_change_feed(
     config: &AppConfig,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut conn = db.acquire().await?;
+    // L7-T1: a consumer too far behind is expired first, so the prune below
+    // moves past it; each one is an operator alert.
+    attome_core::change_feed::expire_lagging(&mut conn).await?;
     let retention =
         std::time::Duration::from_secs(config.change_feed.retention_days as u64 * 24 * 60 * 60);
     let deleted = attome_core::change_feed::prune(&mut conn, retention).await?;

@@ -227,6 +227,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         ar: "1 لكل عقدة خزّنت مقاييسها في هذه الدقيقة، حسب العقدة والإصدار.",
     },
     MetricInfo {
+        name: "attome_read_only",
+        kind: "gauge",
+        unit: "flag",
+        en: "1 while the deployment is read-only (an operator switch or the database size ceiling).",
+        ar: "قيمة 1 ما دام النشر للقراءة فقط (بمفتاح المشغّل أو بلوغ حد حجم قاعدة البيانات).",
+    },
+    MetricInfo {
         name: "attome_readiness_check",
         kind: "gauge",
         unit: "flag",
@@ -239,6 +246,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         unit: "seconds",
         en: "Time of one readiness check.",
         ar: "زمن فحص جاهزية واحد.",
+    },
+    MetricInfo {
+        name: "attome_web_vital_ms",
+        kind: "histogram",
+        unit: "milliseconds",
+        en: "Page speed measured in browsers: largest contentful paint and interaction to next paint, by screen area.",
+        ar: "سرعة الصفحات كما تقيسها المتصفحات: أكبر عرض للمحتوى وزمن الاستجابة للتفاعل، حسب منطقة الشاشة.",
     },
     MetricInfo {
         name: "audit_chain_anchor_failures_total",
@@ -351,6 +365,13 @@ pub const CATALOGUE: &[MetricInfo] = &[
         unit: "state",
         en: "Each optional dependency's state: 1 up, 0 down.",
         ar: "حالة كل خدمة اختيارية: 1 تعمل و0 متوقفة.",
+    },
+    MetricInfo {
+        name: "change_feed_consumer_expired_total",
+        kind: "counter",
+        unit: "consumers",
+        en: "Change-feed consumers expired for falling too far behind.",
+        ar: "مستهلكو موجز التغييرات الذين انتهت صلاحيتهم لتأخرهم كثيرًا.",
     },
     MetricInfo {
         name: "db_bloat_dead_tuples",

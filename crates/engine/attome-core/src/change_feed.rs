@@ -230,11 +230,15 @@ pub async fn emit_tx(
 /// reading the same existing row, not have one of them reset the other's
 /// position to zero.
 pub async fn cursor(conn: &mut PgConnection, consumer: &str) -> Result<CursorPosition, AppError> {
-    sqlx::query("INSERT INTO change_consumer_cursor (consumer) VALUES ($1) ON CONFLICT (consumer) DO NOTHING")
-        .bind(consumer)
-        .execute(&mut *conn)
-        .await
-        .map_err(AppError::internal)?;
+    sqlx::query(
+        "INSERT INTO change_consumer_cursor (consumer, max_lag_hours) VALUES ($1, $2) \
+         ON CONFLICT (consumer) DO NOTHING",
+    )
+    .bind(consumer)
+    .bind(max_lag_hours_for(consumer))
+    .execute(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
 
     let row: (i64, Option<Uuid>) = sqlx::query_as(
         "SELECT last_commit_xid::text::bigint, last_id \
@@ -354,6 +358,63 @@ const PRUNE_BATCH_LIMIT: i64 = 10_000;
 /// since there is exactly one feed table to prune.
 const PRUNE_LOCK_KEY: &str = "attome-core/change-feed-prune";
 
+/// L7-T1: how far behind an outside consumer (a webhook subscription) may
+/// fall before it is expired: a week.
+pub const DEFAULT_MAX_LAG_HOURS: i32 = 168;
+/// L7-T1: the platform's own consumers get a month.
+pub const INTERNAL_MAX_LAG_HOURS: i32 = 720;
+/// The name prefixes of the platform's own consumers.
+const INTERNAL_PREFIXES: &[&str] = &[
+    "attome-workflow/",
+    "attome-search/",
+    "mdm/",
+    "catalog/",
+    "attome-service/",
+];
+
+/// L7-T1: the lag a new cursor for `consumer` allows.
+pub fn max_lag_hours_for(consumer: &str) -> i32 {
+    if INTERNAL_PREFIXES.iter().any(|p| consumer.starts_with(p)) {
+        INTERNAL_MAX_LAG_HOURS
+    } else {
+        DEFAULT_MAX_LAG_HOURS
+    }
+}
+
+/// L7-T1: marks expired every active consumer whose oldest unread event is
+/// older than its `max_lag_hours`, and returns their names. [`prune`] then
+/// ignores them, so one stuck consumer cannot keep the whole feed forever.
+/// An expired consumer keeps reading from where it is; the events pruned
+/// past it are gone, which is why expiry is logged and counted for an
+/// operator: each one logs a warning and counts in
+/// `change_feed_consumer_expired_total`.
+pub async fn expire_lagging(conn: &mut PgConnection) -> Result<Vec<String>, AppError> {
+    let expired: Vec<String> = sqlx::query_scalar(
+        "UPDATE change_consumer_cursor c \
+            SET status = 'expired', expired_at = NOW() \
+          WHERE c.status = 'active' \
+            AND EXISTS ( \
+                SELECT 1 FROM entity_change_event e \
+                 WHERE e.commit_xid > c.last_commit_xid \
+                   AND e.created_at < NOW() - make_interval(hours => c.max_lag_hours) \
+            ) \
+      RETURNING c.consumer",
+    )
+    .fetch_all(conn)
+    .await
+    .map_err(AppError::internal)?;
+    for consumer in &expired {
+        tracing::warn!(
+            consumer = %consumer,
+            "change feed: consumer fell too far behind and is expired; events older than \
+             retention are pruned past it, so it must resynchronise"
+        );
+        metrics::counter!("change_feed_consumer_expired_total", "consumer" => consumer.clone())
+            .increment(1);
+    }
+    Ok(expired)
+}
+
 /// Deletes feed rows every consumer is finished with.
 ///
 /// "Every consumer" is the load-bearing word, and it means both models:
@@ -403,7 +464,8 @@ pub async fn prune(conn: &mut PgConnection, min_age: std::time::Duration) -> Res
                    WHERE e.processed_at IS NOT NULL \
                      AND e.created_at < NOW() - make_interval(secs => $1) \
                      AND e.commit_xid <= COALESCE( \
-                             (SELECT MIN(last_commit_xid) FROM change_consumer_cursor), \
+                             (SELECT MIN(last_commit_xid) FROM change_consumer_cursor \
+                               WHERE status = 'active'), \
                              e.commit_xid \
                          ) \
                    LIMIT $2 \
@@ -429,6 +491,23 @@ pub async fn prune(conn: &mut PgConnection, min_age: std::time::Duration) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// L7-T1: the platform's own consumers may fall further behind.
+    #[test]
+    fn internal_consumers_get_the_longer_lag() {
+        assert_eq!(
+            max_lag_hours_for("attome-search/index-drain"),
+            INTERNAL_MAX_LAG_HOURS
+        );
+        assert_eq!(
+            max_lag_hours_for("attome-workflow/entry"),
+            INTERNAL_MAX_LAG_HOURS
+        );
+        assert_eq!(
+            max_lag_hours_for("events/subscription-1"),
+            DEFAULT_MAX_LAG_HOURS
+        );
+    }
 
     #[test]
     fn operation_wire_values_round_trip() {
