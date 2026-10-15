@@ -1662,6 +1662,122 @@ async fn process_partial_failure_marks_one_item_failed_and_completes_the_rest() 
     );
 }
 
+/// A16-T6: a bulk update of three rows with one stale applies the other
+/// two and reports the stale row as a conflict carrying the record's current
+/// version, both in the item ledger and in the operation's errors.
+#[tokio::test]
+async fn bulk_conflict_rows_apply_the_rest_and_report_the_stale_one() {
+    let system = skip_if_no_db!(test_system().await);
+    let (user_id, _, admin_cookie) = seed_user(&system, true).await;
+    let state = system.state().clone();
+    let app = full_app(system);
+    let (logicalname, _) = provision_entity(&app, &admin_cookie, "conflictrows", false).await;
+
+    let mut record_ids = Vec::new();
+    for title in ["r1", "r2", "r3"] {
+        let res = app
+            .clone()
+            .oneshot(req(
+                "POST",
+                &format!("/api/v1/{logicalname}"),
+                &admin_cookie,
+                Some(&json!({ "title": title })),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        record_ids.push(body_json(res).await["id"].as_str().unwrap().to_owned());
+    }
+    // Someone else edits r2 after the caller read it at version 0.
+    let mut patch = req(
+        "PATCH",
+        &format!("/api/v1/{logicalname}/{}", record_ids[1]),
+        &admin_cookie,
+        Some(&json!({ "title": "theirs" })),
+    );
+    patch
+        .headers_mut()
+        .insert("if-match", "\"0\"".parse().unwrap());
+    let res = app.clone().oneshot(patch).await.unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+
+    let body = bulk_body(
+        "update",
+        None,
+        record_ids
+            .iter()
+            .map(|id| json!({ "id": id, "expected_row_version": 0, "data": { "title": "mine" } }))
+            .collect(),
+    );
+    let res = app
+        .clone()
+        .oneshot(req(
+            "POST",
+            &format!("/api/v1/{logicalname}/bulk"),
+            &admin_cookie,
+            Some(&body),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::ACCEPTED);
+    let bulk_op_id: Uuid = body_json(res).await["id"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap();
+    attome_records::bulk::process(
+        &state,
+        bulk_op_id,
+        &logicalname,
+        "update",
+        Vec::new(),
+        user_id,
+    )
+    .await
+    .expect("a conflicting row does not fail the operation");
+
+    let res = app
+        .clone()
+        .oneshot(req(
+            "GET",
+            &format!("/api/v1/{logicalname}/bulk/{bulk_op_id}?include_items=true"),
+            &admin_cookie,
+            None,
+        ))
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::OK);
+    let status = body_json(res).await;
+    assert_eq!(status["succeeded"], 2, "{status}");
+    assert_eq!(status["failed"], 1, "{status}");
+    let outcomes: Vec<&str> = status["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|item| item["outcome"].as_str().unwrap())
+        .collect();
+    assert_eq!(outcomes, ["ok", "conflict", "ok"], "{status}");
+    let conflict = &status["items"][1]["conflict"];
+    assert_eq!(conflict["current_version"], 1, "{status}");
+    assert_eq!(status["errors"][0]["index"], 1, "{status}");
+    assert_eq!(status["errors"][0]["status"], "conflict", "{status}");
+
+    // The two fresh rows took the caller's value; the stale one kept theirs.
+    for (index, title) in [(0, "mine"), (1, "theirs"), (2, "mine")] {
+        let res = app
+            .clone()
+            .oneshot(req(
+                "GET",
+                &format!("/api/v1/{logicalname}/{}", record_ids[index]),
+                &admin_cookie,
+                None,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(body_json(res).await["data"]["title"], title);
+    }
+}
+
 // ── 9. Staged import: dry-run, then approve ─────────────────────────────────
 
 /// `POST .../staged-import` dry-runs every record (one real update that

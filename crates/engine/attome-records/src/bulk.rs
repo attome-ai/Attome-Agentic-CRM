@@ -288,9 +288,21 @@ struct BulkItemStatus {
     item_index: i32,
     record_id: Option<Uuid>,
     status: String,
+    /// A16-T6: `ok`, `conflict` (the row's `expected_row_version` was stale;
+    /// see `conflict`), `error`, or `pending` while the row has not run.
+    outcome: String,
     error: Option<String>,
+    /// A16-T6: for a conflict, the record's current version and what changed
+    /// since the row's version (`current_version`, `current_state`).
+    #[schema(value_type = Option<Object>)]
+    conflict: Option<Value>,
     attempts: i32,
 }
+
+/// A16-T6: a ledger row's outcome, from its status and conflict.
+const ITEM_OUTCOME_SQL: &str = "CASE WHEN status = 'succeeded' THEN 'ok' \
+     WHEN conflict IS NOT NULL THEN 'conflict' \
+     WHEN status IN ('failed', 'rejected') THEN 'error' ELSE 'pending' END";
 
 #[derive(Deserialize, Default, IntoParams)]
 struct BulkStatusQuery {
@@ -891,13 +903,14 @@ async fn status_inner(
             PageBase::One,
             DEFAULT_ITEM_PAGE_SIZE,
         );
-        let items: Vec<BulkItemStatus> = sqlx::query_as(
-            "SELECT item_index, record_id, status, error, attempts
+        let items: Vec<BulkItemStatus> = sqlx::query_as(&format!(
+            "SELECT item_index, record_id, status, {ITEM_OUTCOME_SQL} AS outcome, error, conflict,
+                    attempts
              FROM automation_bulk_operation_item
              WHERE bulk_operation_id = $1 AND is_deleted = false
              ORDER BY item_index
-             LIMIT $2 OFFSET $3",
-        )
+             LIMIT $2 OFFSET $3"
+        ))
         .bind(bulk_op_id)
         .bind(window.page_size)
         .bind(window.offset)
@@ -1045,12 +1058,13 @@ async fn mark_item_failed(
     batch_id: Uuid,
     item_index: i32,
     error: &str,
+    conflict: Option<&Value>,
 ) -> Result<(), AppError> {
     let item_table = ledger.item_table();
     let id_column = ledger.id_column();
     sqlx::query(&format!(
         "UPDATE {item_table}
-         SET status = 'failed', error = $3, attempts = attempts + 1,
+         SET status = 'failed', error = $3, conflict = $4, attempts = attempts + 1,
              updated_at = NOW(), row_version = row_version + 1
          WHERE {id_column} = $1 AND item_index = $2
            AND status <> 'succeeded' AND is_deleted = false"
@@ -1058,6 +1072,7 @@ async fn mark_item_failed(
     .bind(batch_id)
     .bind(item_index)
     .bind(error)
+    .bind(conflict)
     .execute(&state.base.db)
     .await
     .map_err(AppError::internal)?;
@@ -1748,7 +1763,32 @@ async fn process_ledger(
                 // permanent business-level failure.
                 return Err(error);
             }
-            mark_item_failed(state, ledger, batch_id, item_index, &error.to_string()).await?;
+            // A16-T6: a stale row is a conflict with what changed since its
+            // version; the other rows still apply.
+            let conflict = match (&error, record.id, record.expected_row_version) {
+                (AppError::VersionConflict, Some(record_id), Some(expected)) => {
+                    Some(conflict_body(
+                        crate::entity_crud::history::version_conflict(
+                            state,
+                            &security,
+                            &entity_name,
+                            record_id,
+                            expected,
+                        )
+                        .await,
+                    ))
+                }
+                _ => None,
+            };
+            mark_item_failed(
+                state,
+                ledger,
+                batch_id,
+                item_index,
+                &error.to_string(),
+                conflict.as_ref(),
+            )
+            .await?;
         }
     }
 
@@ -1765,8 +1805,8 @@ async fn process_ledger(
             .fetch_one(&state.base.db)
             .await
             .map_err(AppError::internal)?;
-            let errors: Vec<(i32, Option<String>)> = sqlx::query_as(&format!(
-                "SELECT item_index, error FROM {item_table}
+            let errors: Vec<(i32, Option<String>, Option<Value>)> = sqlx::query_as(&format!(
+                "SELECT item_index, error, conflict FROM {item_table}
                  WHERE {id_column} = $1 AND status = 'failed' AND is_deleted = false
                  ORDER BY item_index"
             ))
@@ -1777,7 +1817,12 @@ async fn process_ledger(
             let errors = Value::Array(
                 errors
                     .into_iter()
-                    .map(|(index, error)| json!({ "index": index, "error": error }))
+                    .map(|(index, error, conflict)| match conflict {
+                        Some(conflict) => json!({
+                            "index": index, "status": "conflict", "error": error, "conflict": conflict,
+                        }),
+                        None => json!({ "index": index, "status": "error", "error": error }),
+                    })
                     .collect(),
             );
             sqlx::query(
@@ -1817,10 +1862,19 @@ async fn process_ledger(
             .fetch_one(&state.base.db)
             .await
             .map_err(AppError::internal)?;
-            let items: Vec<(i32, String, Option<Uuid>, Option<String>)> = sqlx::query_as(&format!(
-                "SELECT item_index, status, record_id, error FROM {item_table}
-                 WHERE {id_column} = $1 AND is_deleted = false
-                 ORDER BY item_index"
+            #[allow(clippy::type_complexity)]
+            let items: Vec<(
+                i32,
+                String,
+                String,
+                Option<Uuid>,
+                Option<String>,
+                Option<Value>,
+            )> = sqlx::query_as(&format!(
+                "SELECT item_index, status, {ITEM_OUTCOME_SQL}, record_id, error, conflict
+                     FROM {item_table}
+                     WHERE {id_column} = $1 AND is_deleted = false
+                     ORDER BY item_index"
             ))
             .bind(batch_id)
             .fetch_all(&state.base.db)
@@ -1829,8 +1883,11 @@ async fn process_ledger(
             let report = Value::Array(
                 items
                     .into_iter()
-                    .map(|(index, status, record_id, error)| {
-                        json!({ "index": index, "status": status, "record_id": record_id, "error": error })
+                    .map(|(index, status, outcome, record_id, error, conflict)| {
+                        json!({
+                            "index": index, "status": status, "outcome": outcome,
+                            "record_id": record_id, "error": error, "conflict": conflict,
+                        })
                     })
                     .collect(),
             );
@@ -1875,6 +1932,19 @@ async fn process_ledger(
     }
 
     Ok(())
+}
+
+/// A16-T6: the stored form of a row's version conflict: the body a single
+/// PATCH answers with (`current_version`, `current_state`), or only a null
+/// version when the record's details could not be read.
+fn conflict_body(error: AppError) -> Value {
+    match error {
+        AppError::VersionConflictAt {
+            current_version,
+            current_state,
+        } => json!({ "current_version": current_version, "current_state": current_state }),
+        _ => json!({ "current_version": null }),
+    }
 }
 
 /// Worker-side processing for `EngineJob::BulkEntityOperation`.
