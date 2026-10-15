@@ -168,7 +168,7 @@ export abstract class EngineFormBase implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly recordChanges = inject(RecordChangeNotifier);
   /** Resolves the dialog and language services only when Duplicate needs them. */
-  private readonly injector = inject(Injector);
+  private readonly formInjector = inject(Injector);
 
   // `protected`, not `private`: a subclass that calls a bespoke, non-generic
   // write endpoint of its own (e.g. `DashboardEditorComponent`'s lifecycle
@@ -284,8 +284,8 @@ export abstract class EngineFormBase implements OnInit {
         .then(page => page.items)
         .catch(() => []);
       if (found.length) {
-        const lang = this.injector.get(LangService);
-        const copyThem = await this.injector.get(DialogService).confirm({
+        const lang = this.formInjector.get(LangService);
+        const copyThem = await this.formInjector.get(DialogService).confirm({
           message: lang.translate('xrmForm.duplicateWithChildren', {
             details: found.map(c => `${c.entity} (${c.count})`).join(', '),
           }),
