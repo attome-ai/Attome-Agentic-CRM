@@ -1240,6 +1240,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/change-feed/consumers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * L7-T7: how every change-feed consumer is keeping up, the platform's own
+         *     and subscriptions alike.
+         */
+        get: operations["list_consumers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/changes": {
         parameters: {
             query?: never;
@@ -15378,6 +15398,36 @@ export interface components {
             privacy_version?: string | null;
             terms_version?: string | null;
         };
+        /** @description L7-T7: how one change-feed consumer is keeping up. */
+        ConsumerHealth: {
+            consumer: string;
+            /** @description `internal` (the platform's own) or `external` (a subscription). */
+            kind: string;
+            /**
+             * Format: int64
+             * @description Events written after its cursor, up to [`LAG_COUNT_CAP`].
+             */
+            lag_events: number;
+            /**
+             * Format: double
+             * @description Age of its oldest unread event; 0 when it has read everything.
+             */
+            lag_seconds: number;
+            /**
+             * Format: date-time
+             * @description The time of the last event it read, if any.
+             */
+            last_event_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When it last advanced its cursor.
+             */
+            last_read_at: string;
+            /** Format: int32 */
+            max_lag_hours: number;
+            /** @description `active`, or `expired` once it fell past its allowed lag. */
+            status: string;
+        };
         /**
          * @description A reusable container of pages — a pure organizational grouping, not a URL
          *     namespace (`url_path` uniqueness stays global across all spaces; see
@@ -20518,6 +20568,44 @@ export interface components {
                  */
                 last_indexed_at?: string | null;
                 name?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_ConsumerHealth: {
+            items: {
+                consumer: string;
+                /** @description `internal` (the platform's own) or `external` (a subscription). */
+                kind: string;
+                /**
+                 * Format: int64
+                 * @description Events written after its cursor, up to [`LAG_COUNT_CAP`].
+                 */
+                lag_events: number;
+                /**
+                 * Format: double
+                 * @description Age of its oldest unread event; 0 when it has read everything.
+                 */
+                lag_seconds: number;
+                /**
+                 * Format: date-time
+                 * @description The time of the last event it read, if any.
+                 */
+                last_event_at?: string | null;
+                /**
+                 * Format: date-time
+                 * @description When it last advanced its cursor.
+                 */
+                last_read_at: string;
+                /** Format: int32 */
+                max_lag_hours: number;
+                /** @description `active`, or `expired` once it fell past its allowed lag. */
+                status: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -32617,6 +32705,44 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_consumers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every consumer with its lag */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ConsumerHealth"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
