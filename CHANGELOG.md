@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Menus count each item's opens per day (migration 0033, `POST /api/v1/model/navigation/{id}/opened`);
+  `GET /api/v1/admin/model/navigation/{id}/usage` lists each item's opens and flags the ones nobody
+  opened in 60 days.
 - Isolation: a deployment makes its own id on first boot (migration 0032); on the production profile
   each server claims the cache with it and refuses to start when another deployment already has
   that Redis database.

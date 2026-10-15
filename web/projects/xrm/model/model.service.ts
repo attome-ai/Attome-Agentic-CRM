@@ -281,6 +281,11 @@ export class ModelService {
   }
 
   /** A published menu as this user sees it (A21-T2). */
+  /** A21-T5: counts one open of a menu item (`<group>/<item>`). */
+  menuItemOpened(id: string, item: string): Observable<void> {
+    return this.api.post<void>(`/api/v1/model/navigation/${encodeURIComponent(id)}/opened`, { item });
+  }
+
   menu(id: string): Observable<MenuView> {
     return this.api.get<MenuView>(`/api/v1/model/navigation/${encodeURIComponent(id)}`);
   }

@@ -72,4 +72,9 @@ export class AppMenuComponent {
   href(link: MenuLink): string | null {
     return link && 'href' in link ? link.href : null;
   }
+
+  /** A21-T5: counts the open; a failure is of no concern to the person. */
+  opened(group: string, item: string): void {
+    this.model.menuItemOpened(this.menuId(), `${group}/${item}`).subscribe({ error: () => undefined });
+  }
 }

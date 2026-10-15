@@ -11,10 +11,10 @@
             <li class="am-item" [attr.data-item]="group.label + '/' + item.label">
               @let target = link(item);
               @if (route(target); as r) {
-                <a [routerLink]="r">{{ item.label }}</a>
+                <a [routerLink]="r" (click)="opened(group.label, item.label)">{{ item.label }}</a>
               } @else {
                 @if (href(target); as h) {
-                  <a [href]="h" target="_blank" rel="noopener noreferrer">{{ item.label }}</a>
+                  <a [href]="h" target="_blank" rel="noopener noreferrer" (click)="opened(group.label, item.label)">{{ item.label }}</a>
                 } @else {
                   <span class="am-pending">{{ item.label }}</span>
                 }

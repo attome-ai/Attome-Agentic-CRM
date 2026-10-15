@@ -1258,6 +1258,160 @@ async fn menu(
     }))
 }
 
+/// `POST /api/v1/model/navigation/{id}/opened`.
+#[derive(Deserialize, ToSchema)]
+pub(crate) struct MenuItemOpened {
+    /// The item, as `<group label>/<item label>`.
+    item: String,
+}
+
+/// A21-T5: counts one open of a menu item for today.
+#[utoipa::path(
+    post,
+    path = "/api/v1/model/navigation/{id}/opened",
+    tag = "model",
+    params(("id" = Uuid, Path)),
+    request_body = MenuItemOpened,
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::Telemetry,
+        None,
+        "counts a menu item's opens; no business or security effect"
+    )))),
+    responses(
+        (status = 204, description = "Counted"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 422, description = "No item, or an item over 300 characters", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn menu_item_opened(
+    State(state): State<EngineState>,
+    _ctx: Authorized<SelfService>,
+    Path(id): Path<Uuid>,
+    Json(body): Json<MenuItemOpened>,
+) -> Result<axum::http::StatusCode, AppError> {
+    let item = body.item.trim();
+    if item.is_empty() || item.chars().count() > 300 {
+        return Err(AppError::Validation("item is 1 to 300 characters".into()));
+    }
+    sqlx::query(
+        "INSERT INTO menu_item_use (menu_id, item, day, opens) VALUES ($1, $2, CURRENT_DATE, 1) \
+         ON CONFLICT (menu_id, item, day) DO UPDATE SET opens = menu_item_use.opens + 1",
+    )
+    .bind(id)
+    .bind(item)
+    .execute(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
+/// One menu item's use over the period.
+#[derive(Serialize, ToSchema, Debug, PartialEq, Eq)]
+pub(crate) struct MenuItemUsage {
+    /// `<group label>/<item label>`.
+    item: String,
+    opens: i64,
+    last_opened: Option<chrono::NaiveDate>,
+    /// Not opened in the period: a candidate to hide.
+    unused: bool,
+}
+
+#[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+struct MenuUsageQuery {
+    /// Days to look back, 1 to 365 (default 60).
+    days: Option<i64>,
+}
+
+/// The `<group>/<item>` paths of every item in a cooked menu.
+pub(crate) fn menu_item_paths(menu: &Value) -> Vec<String> {
+    menu["groups"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .flat_map(|group| {
+            let group_label = group["label"].as_str().unwrap_or_default().to_owned();
+            group["items"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(move |item| {
+                    item["label"]
+                        .as_str()
+                        .map(|label| format!("{group_label}/{label}"))
+                })
+        })
+        .collect()
+}
+
+/// A21-T5: each item of a published menu with its opens over the last
+/// `days` (default 60), the items nobody opened flagged `unused`.
+/// Administrators only.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/model/navigation/{id}/usage",
+    tag = "model",
+    params(("id" = Uuid, Path), MenuUsageQuery),
+    responses(
+        (status = 200, description = "Each item's opens, the unused ones flagged", body = attome_types::PaginatedResponse<MenuItemUsage>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+        (status = 404, description = "No such published menu", body = ErrorResponse),
+        (status = 422, description = "days is out of range", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn menu_usage(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+    axum::extract::Query(query): axum::extract::Query<MenuUsageQuery>,
+) -> Result<Json<attome_types::PaginatedResponse<MenuItemUsage>>, AppError> {
+    let days = query.days.unwrap_or(60);
+    if !(1..=365).contains(&days) {
+        return Err(AppError::Validation("days is 1 to 365".into()));
+    }
+    if cooked().snapshot().version == 0 {
+        refresh_cooked(&state).await?;
+    }
+    let cooked_menu = cooked()
+        .get::<Value>("navigation", &format!("navigation:{id}"))
+        .ok_or(AppError::NotFound)?;
+    let rows: Vec<(String, i64, Option<chrono::NaiveDate>)> = sqlx::query_as(
+        "SELECT item, SUM(opens)::bigint, MAX(day) FROM menu_item_use \
+         WHERE menu_id = $1 AND day > CURRENT_DATE - $2::int GROUP BY item",
+    )
+    .bind(id)
+    .bind(i32::try_from(days).map_err(AppError::internal)?)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    let used: std::collections::HashMap<String, (i64, Option<chrono::NaiveDate>)> = rows
+        .into_iter()
+        .map(|(item, opens, last)| (item, (opens, last)))
+        .collect();
+    let items: Vec<MenuItemUsage> = menu_item_paths(&cooked_menu)
+        .into_iter()
+        .map(|item| {
+            let (opens, last_opened) = used.get(&item).copied().unwrap_or((0, None));
+            MenuItemUsage {
+                unused: opens == 0,
+                item,
+                opens,
+                last_opened,
+            }
+        })
+        .collect();
+    let total = i64::try_from(items.len()).map_err(AppError::internal)?;
+    Ok(Json(attome_types::PaginatedResponse::new(
+        items,
+        total,
+        1,
+        total.max(1),
+    )))
+}
+
 /// One object as a readable text file (Y1-T10).
 #[derive(Serialize, Deserialize, ToSchema)]
 pub(crate) struct ModelFile {
@@ -1451,6 +1605,11 @@ pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/model/kinds", get(list_kinds))
         .route("/api/v1/model/navigation/{id}", get(menu))
+        .route(
+            "/api/v1/model/navigation/{id}/opened",
+            axum::routing::post(menu_item_opened),
+        )
+        .route("/api/v1/admin/model/navigation/{id}/usage", get(menu_usage))
         .route("/api/v1/admin/model/export", get(export_files))
         .route("/api/v1/admin/model/import", post(import_files))
         .route("/api/v1/admin/model/blueprint/plan", post(blueprint_plan))
@@ -1483,6 +1642,8 @@ pub fn routes() -> Router<EngineState> {
 #[derive(utoipa::OpenApi)]
 #[openapi(
     paths(
+        menu_item_opened,
+        menu_usage,
         list_kinds,
         list_objects,
         get_object,
@@ -1538,6 +1699,22 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 mod menu_tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn menu_item_paths_name_each_item_by_group() {
+        let menu = json!({ "groups": [
+            { "label": "Sales", "items": [{ "label": "Accounts" }, { "label": "Deals" }] },
+            { "label": "Help", "items": [{ "label": "Guide" }] }
+        ] });
+        assert_eq!(
+            menu_item_paths(&menu),
+            vec![
+                "Sales/Accounts".to_owned(),
+                "Sales/Deals".to_owned(),
+                "Help/Guide".to_owned()
+            ]
+        );
+    }
 
     #[test]
     fn a_menu_shows_each_role_only_its_items_and_landing() {
