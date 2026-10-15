@@ -88,6 +88,22 @@ export function cleanPolicy(p: PolicyDef): PolicyDef {
       else if (p.value !== undefined) out.value = p.value;
       return out;
     }
+    // A11-T1: required while the condition holds.
+    case 'required': {
+      const out: PolicyDef = { type: 'required', field: p.field ?? '' };
+      if (p.message?.trim()) out.message = p.message.trim();
+      return out;
+    }
+    // A11-T1: only the listed codes while the condition holds.
+    case 'allowed_values': {
+      const out: PolicyDef = { type: 'allowed_values', field: p.field ?? '', value: p.value ?? [] };
+      if (p.message?.trim()) out.message = p.message.trim();
+      return out;
+    }
+    // B4-T3: tag or untag the record.
+    case 'add_tag':
+    case 'remove_tag':
+      return { type: p.type, value: typeof p.value === 'string' ? p.value.trim() : '' };
   }
 }
 
