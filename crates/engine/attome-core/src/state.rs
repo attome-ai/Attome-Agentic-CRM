@@ -420,6 +420,20 @@ impl EngineState {
         let (value, _source) = self.settings.load().resolve(descriptor, None, None);
         value.as_str().unwrap_or("en-US").to_owned()
     }
+
+    /// B21-T3: the `core.locale` a user has chosen, else the deployment's.
+    /// An organization-level choice is not consulted here (the caller's
+    /// organization is not at hand on every path).
+    pub fn user_locale(&self, user_id: uuid::Uuid) -> String {
+        let Some(descriptor) = crate::setting_registry().get("core.locale") else {
+            return "en-US".to_owned();
+        };
+        let (value, _source) = self
+            .settings
+            .load()
+            .resolve(descriptor, Some(user_id), None);
+        value.as_str().unwrap_or("en-US").to_owned()
+    }
 }
 
 impl FromRef<EngineState> for AppState {

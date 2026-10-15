@@ -1826,10 +1826,29 @@ pub async fn execute_stored_query_with_definition(
     } else {
         "ASC"
     };
+    // B21-T3: an Arabic reader's text column sorts by the ICU Arabic
+    // collation. Not with a seek, whose bound compares in the column's own
+    // collation and would then disagree with the order.
+    let sorts_text = !body.order_by.is_empty()
+        && FilterSchema::cast(&filter_schema, &body.order_by) == Ok("text")
+        && !filter_schema.is_multi_choice(&body.order_by);
+    let collate = if sorts_text
+        && body.seek.is_none()
+        && is_arabic_locale(&state.user_locale(ctx.user_id))
+        && arabic_collation_available(&state.base.db).await
+    {
+        Some(ARABIC_COLLATION)
+    } else {
+        None
+    };
     let order_sql = if body.order_by.is_empty() {
         String::new()
     } else if whitelist.contains(&body.order_by) {
-        format!("ORDER BY {} {}", quote_ident(&body.order_by), dir)
+        format!(
+            "ORDER BY {} {}",
+            sort_expr(&quote_ident(&body.order_by), collate),
+            dir
+        )
     } else {
         return Err(AppError::Validation(format!(
             "unknown order_by field: {}",
@@ -1959,6 +1978,8 @@ pub async fn execute_stored_query_with_definition(
         };
         let sort_col = quote_ident(sort_col);
         let cursor_op = if dir == "DESC" { "<" } else { ">" };
+        // B21-T3: the keyset bound compares in the same collation it sorts by.
+        let sort_by = sort_expr(&format!("t.{sort_col}"), collate);
 
         // `after_id` present: continue an existing page, anchored via a
         // subquery that looks the cursor's sort value up from the DB by id rather
@@ -1982,7 +2003,7 @@ pub async fn execute_stored_query_with_definition(
             // page empty, as before.
             let mut cursor_conds = conds.clone();
             cursor_conds.push(format!(
-                "(t.{sort_col}, t.id) {cursor_op} (                    (SELECT c.{sort_col} FROM ({base_sql}) AS c WHERE c.id = ${cursor_param}),                    ${cursor_param}::uuid)"
+                "({sort_by}, t.id) {cursor_op} (                    (SELECT c.{sort_col} FROM ({base_sql}) AS c WHERE c.id = ${cursor_param}),                    ${cursor_param}::uuid)"
             ));
             let cursor_where = format!("WHERE {}", cursor_conds.join(" AND "));
             let limit_param = cursor_param + 1;
@@ -1990,7 +2011,7 @@ pub async fn execute_stored_query_with_definition(
                 "SELECT row_to_json(t.*) AS __row
                      FROM ({base_sql}) AS t
                      {cursor_where}
-                     ORDER BY t.{sort_col} {dir}, t.id {dir}
+                     ORDER BY {sort_by} {dir}, t.id {dir}
                      LIMIT ${limit_param}"
             )
         } else {
@@ -1999,7 +2020,7 @@ pub async fn execute_stored_query_with_definition(
                 "SELECT row_to_json(t.*) AS __row
                  FROM ({base_sql}) AS t
                  {where_sql}
-                 ORDER BY t.{sort_col} {dir}, t.id {dir}
+                 ORDER BY {sort_by} {dir}, t.id {dir}
                  LIMIT ${limit_param}"
             )
         };
@@ -2546,6 +2567,78 @@ mod contract_tests {
 /// ```powershell
 /// cargo test -p attome-records --lib query_exec::proptests
 /// ```
+/// B21-T3: the ICU collation Arabic text sorts by (alif before ba, hamza
+/// forms and tatweel handled), present when PostgreSQL was built with ICU.
+const ARABIC_COLLATION: &str = "ar-x-icu";
+
+/// Whether this server's PostgreSQL has [`ARABIC_COLLATION`]; asked once and
+/// kept for the process (a catalog fact that does not change while it runs).
+/// A failed probe is not kept, so the next sort asks again.
+static ARABIC_COLLATION_AVAILABLE: tokio::sync::OnceCell<bool> = tokio::sync::OnceCell::const_new();
+
+async fn arabic_collation_available(db: &DbPool) -> bool {
+    let probe = ARABIC_COLLATION_AVAILABLE
+        .get_or_try_init(|| async {
+            sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS (SELECT 1 FROM pg_collation WHERE collname = $1)",
+            )
+            .bind(ARABIC_COLLATION)
+            .fetch_one(db)
+            .await
+        })
+        .await;
+    match probe {
+        Ok(available) => {
+            if !*available {
+                tracing::debug!("no ICU Arabic collation; Arabic text sorts by the default one");
+            }
+            *available
+        }
+        Err(e) => {
+            tracing::warn!(error = %e, "could not look up the ICU Arabic collation");
+            false
+        }
+    }
+}
+
+/// B21-T3: whether a BCP-47 tag is Arabic (`ar`, `ar-SA`, `ar_EG`).
+fn is_arabic_locale(tag: &str) -> bool {
+    let tag = tag.trim().to_ascii_lowercase();
+    tag == "ar" || tag.starts_with("ar-") || tag.starts_with("ar_")
+}
+
+/// B21-T3: a sort key, under `collation` when one is given.
+fn sort_expr(column_sql: &str, collation: Option<&str>) -> String {
+    match collation {
+        Some(collation) => format!("{column_sql} COLLATE \"{collation}\""),
+        None => column_sql.to_owned(),
+    }
+}
+
+#[cfg(test)]
+mod arabic_collation_tests {
+    use super::*;
+
+    #[test]
+    fn arabic_collation_applies_to_arabic_locales_only() {
+        for tag in ["ar", "ar-SA", "AR-eg", "ar_EG"] {
+            assert!(is_arabic_locale(tag), "{tag}");
+        }
+        for tag in ["en-US", "fr", "arn", "", "a"] {
+            assert!(!is_arabic_locale(tag), "{tag}");
+        }
+    }
+
+    #[test]
+    fn arabic_collation_sort_expression() {
+        assert_eq!(
+            sort_expr("\"name\"", Some(ARABIC_COLLATION)),
+            "\"name\" COLLATE \"ar-x-icu\""
+        );
+        assert_eq!(sort_expr("t.\"name\"", None), "t.\"name\"");
+    }
+}
+
 #[cfg(test)]
 mod proptests {
     use super::*;

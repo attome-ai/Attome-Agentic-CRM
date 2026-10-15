@@ -33,10 +33,16 @@ pub fn csv_escape(field: &str) -> String {
     }
 }
 
+/// B21-T3: the byte-order mark a CSV file starts with, so spreadsheet
+/// programs (Excel above all) read it as UTF-8 and show Arabic correctly.
+pub const CSV_BOM: &str = "\u{feff}";
+
 /// Renders `rows` (each a JSON object keyed by column name) as CSV text,
-/// `header` first. Bytes, not `String` — the caller uploads this directly.
+/// [`CSV_BOM`] and `header` first. Bytes, not `String` — the caller uploads
+/// this directly.
 pub fn render_csv(header: &[String], rows: &[Value]) -> Vec<u8> {
-    let mut out = csv_header_line(header);
+    let mut out = CSV_BOM.to_owned();
+    out.push_str(&csv_header_line(header));
     out.push('\n');
     for row in rows {
         out.push_str(&csv_line(header, row));
@@ -118,7 +124,7 @@ mod tests {
         let header = vec!["a".to_string(), "b".to_string()];
         let rows = vec![serde_json::json!({"a": "x,y", "b": "he said \"hi\""})];
         let csv = String::from_utf8(render_csv(&header, &rows)).unwrap();
-        assert_eq!(csv, "a,b\n\"x,y\",\"he said \"\"hi\"\"\"\n");
+        assert_eq!(csv, "\u{feff}a,b\n\"x,y\",\"he said \"\"hi\"\"\"\n");
     }
 
     #[test]
@@ -126,7 +132,7 @@ mod tests {
         let header = vec!["a".to_string(), "b".to_string()];
         let rows = vec![serde_json::json!({"a": "only-a"})];
         let csv = String::from_utf8(render_csv(&header, &rows)).unwrap();
-        assert_eq!(csv, "a,b\nonly-a,\n");
+        assert_eq!(csv, "\u{feff}a,b\nonly-a,\n");
     }
 
     #[test]
@@ -136,7 +142,7 @@ mod tests {
         assert_eq!(csv_header_line(&header), "a,\"b,c\"");
         assert_eq!(csv_line(&header, &row), "true,1.5");
         let csv = String::from_utf8(render_csv(&header, std::slice::from_ref(&row))).unwrap();
-        assert_eq!(csv, "a,\"b,c\"\ntrue,1.5\n");
+        assert_eq!(csv, "\u{feff}a,\"b,c\"\ntrue,1.5\n");
     }
 
     #[test]

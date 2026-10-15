@@ -732,7 +732,12 @@ pub async fn process(
             .await
         }
         "csv" => {
-            let header_line = attome_report::render::csv_header_line(&header);
+            // B21-T3: a byte-order mark first, so Excel reads Arabic as UTF-8.
+            let header_line = format!(
+                "{}{}",
+                attome_report::render::CSV_BOM,
+                attome_report::render::csv_header_line(&header)
+            );
             let header_for_rows = header.clone();
             let dates = DatePresentation::for_user(state, payload.user_id, &attrs).await;
             run_query_and_stream(

@@ -14,6 +14,16 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- A text or number field may be an external id: `options.external_id: {"system": "<name>"}` makes
+  its value unique among the entity's live records (a unique index built online); an entity may hold
+  ids for several systems.
+- A bulk operation or staged import reports a row with a stale `expected_row_version` as a conflict
+  (`outcome: "conflict"` and the record's `current_version` and changes) and applies the other rows
+  (migration `0047`); `GET /api/v1/admin/conflicts?days=N` counts version conflicts per entity and
+  source (migration `0048`).
+- A user whose locale is Arabic gets text columns sorted by the ICU Arabic collation (`ar-x-icu`,
+  when PostgreSQL has ICU). CSV exports and report CSVs start with a UTF-8 byte-order mark, so Excel
+  shows Arabic correctly.
 - `query/execute` filters take dynamic values resolved for the caller and the day: `@me`, `@my_team`,
   `@my_unit`, `@today`, `@this_month` and `@last_n_days(n)`, so one saved view such as "my open deals
   this month" works for everyone.
