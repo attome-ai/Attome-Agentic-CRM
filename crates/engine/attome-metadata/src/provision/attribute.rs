@@ -6,7 +6,10 @@ use attome_types::AppError;
 use tokio::sync::Semaphore;
 use uuid::Uuid;
 
-use super::identifiers::{attribute_index_name, external_id_index_name, valid_identifier};
+use super::ddl::exec_ddl_locked;
+use super::identifiers::{
+    attribute_index_name, external_id_index_name, field_constraint_name, valid_identifier,
+};
 
 /// Caps how many `sync_attribute_index` calls in this process may hold a
 /// direct migrator-role connection open at once. `create_migrator_connection`
@@ -382,6 +385,106 @@ async fn sync_external_id_index_on_connection(
             }
         }
     }
+}
+
+/// A3-T6: how many rows a table may hold for a new field constraint to be
+/// checked against them inline; a bigger table keeps it `NOT VALID`.
+const FIELD_CONSTRAINT_VALIDATE_ROW_LIMIT: i64 = 10_000;
+
+/// A3-T6: makes a field's database CHECK constraints match its settings: a
+/// number range (`range`, inclusive bounds) and a strict required value.
+/// Each is replaced, added `NOT VALID` (no scan, and every later write is
+/// held to it), then validated against the existing rows when the table is
+/// small; a bigger table keeps it `NOT VALID` rather than scan on the request
+/// (guidelines §9). Existing rows that break a rule refuse the change, and
+/// the constraint is removed again.
+pub async fn sync_field_constraints(
+    db: &DbPool,
+    entity_logicalname: &str,
+    field_logicalname: &str,
+    range: Option<(Option<f64>, Option<f64>)>,
+    strict_required: bool,
+) -> Result<(), AppError> {
+    if !valid_identifier(entity_logicalname) || !valid_identifier(field_logicalname) {
+        return Err(AppError::internal(format!(
+            "invalid identifier: entity={entity_logicalname}, field={field_logicalname}"
+        )));
+    }
+    let table = attome_core::quote_ident(entity_logicalname);
+    let column = attome_core::quote_ident(field_logicalname);
+    let range_name = field_constraint_name(entity_logicalname, field_logicalname, "rng")?;
+    let required_name = field_constraint_name(entity_logicalname, field_logicalname, "req")?;
+    let mut wanted: Vec<(String, String)> = Vec::new();
+    if let Some((min, max)) = range {
+        let bounds: Vec<String> = [(min, ">="), (max, "<=")]
+            .into_iter()
+            .filter_map(|(bound, op)| {
+                bound
+                    .filter(|b| b.is_finite())
+                    .map(|b| format!("{column} {op} {b}"))
+            })
+            .collect();
+        if !bounds.is_empty() {
+            wanted.push((range_name.clone(), bounds.join(" AND ")));
+        }
+    }
+    if strict_required {
+        wanted.push((required_name.clone(), format!("{column} IS NOT NULL")));
+    }
+    for name in [&range_name, &required_name] {
+        exec_ddl_locked(
+            db,
+            &[],
+            &format!(
+                "ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {}",
+                attome_core::quote_ident(name)
+            ),
+        )
+        .await
+        .map_err(AppError::internal)?;
+    }
+    if wanted.is_empty() {
+        return Ok(());
+    }
+    let small =
+        !table_row_count_exceeds(db, entity_logicalname, FIELD_CONSTRAINT_VALIDATE_ROW_LIMIT)
+            .await?;
+    for (name, check) in wanted {
+        let quoted = attome_core::quote_ident(&name);
+        exec_ddl_locked(
+            db,
+            &[],
+            &format!("ALTER TABLE {table} ADD CONSTRAINT {quoted} CHECK ({check}) NOT VALID"),
+        )
+        .await
+        .map_err(AppError::internal)?;
+        if !small {
+            tracing::info!(
+                entity = %entity_logicalname, field = %field_logicalname, constraint = %name,
+                "field constraint added NOT VALID: new writes are held to it, existing rows are not checked"
+            );
+            continue;
+        }
+        if let Err(e) = exec_ddl_locked(
+            db,
+            &[],
+            &format!("ALTER TABLE {table} VALIDATE CONSTRAINT {quoted}"),
+        )
+        .await
+        {
+            let _ = exec_ddl_locked(
+                db,
+                &[],
+                &format!("ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {quoted}"),
+            )
+            .await;
+            tracing::info!(error = %e, constraint = %name, "existing rows break a new field constraint");
+            return Err(AppError::Validation(format!(
+                "{field_logicalname}: existing records break this rule ({check}); fix them first"
+            )));
+        }
+    }
+    Ok(())
 }
 
 /// Registers an entity in `entity_info` and ensures its physical

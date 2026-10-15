@@ -3021,6 +3021,7 @@ fn external_id_field_is_unique_per_entity() {
     attome_testkit::run_shared(async {
         let system = skip_if_no_db!(test_system().await);
         let admin_cookie = seed_admin(&system).await;
+        let db = system.state().base.db.clone();
         let app = full_app(system);
         let (logicalname, entity_id) = create_entity(&app, &admin_cookie, "extid").await;
         create_field(
@@ -3115,6 +3116,39 @@ fn external_id_field_is_unique_per_entity() {
             .await
             .expect("same code");
         assert_eq!(res.status(), StatusCode::CONFLICT);
+
+        // A3-T6: a number range and a strict required value are CHECK
+        // constraints in the database too.
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"score","name":"Score","field_type":"number","options":{"min":0,"max":10}}"#,
+        )
+        .await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"region","name":"Region","field_type":"text","is_required":true,"options":{"strict":true}}"#,
+        )
+        .await;
+        let constraints: Vec<String> = sqlx::query_scalar(
+            "SELECT conname::text FROM pg_constraint WHERE conrelid = to_regclass($1) AND contype = 'c' ORDER BY 1",
+        )
+        .bind(&logicalname)
+        .fetch_all(&db)
+        .await
+        .expect("constraints");
+        for wanted in [
+            format!("ck_{logicalname}_region_req"),
+            format!("ck_{logicalname}_score_rng"),
+        ] {
+            assert!(
+                constraints.contains(&wanted),
+                "{wanted} missing: {constraints:?}"
+            );
+        }
     })
 }
 

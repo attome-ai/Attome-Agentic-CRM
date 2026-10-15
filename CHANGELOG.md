@@ -17,6 +17,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - A text or number field may be an external id: `options.external_id: {"system": "<name>"}` makes
   its value unique among the entity's live records (a unique index built online); an entity may hold
   ids for several systems.
+- `options.unique: true` makes a text, number, date or lookup field unique among live records (an
+  online unique index). A number or currency field's `min`/`max`, and a required field with
+  `options.strict: true`, are also CHECK constraints in the database, validated against existing rows
+  when the table is small and otherwise held for new writes.
 - `POST /api/v1/{entity}/upsert?key=<attribute>` matches on an external id (or a business-key
   attribute) read from `data`; with neither `match` nor `key` it matches on the business key. A lookup
   value in a create, update or upsert may be `{"by": "<external id of the target>", "value": ...}`;

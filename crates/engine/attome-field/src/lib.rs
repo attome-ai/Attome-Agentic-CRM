@@ -516,6 +516,9 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
     if let Some(unique) = options.get("unique") {
         validate_unique(field_type, unique)?;
     }
+    if options.get("strict").is_some_and(|s| !s.is_boolean()) {
+        return Err(AppError::Validation("strict: true or false".into()));
+    }
     // The default, the scan settings and the external id are checked above;
     // each type's own shape below.
     let stripped;
@@ -524,13 +527,15 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
             if map.contains_key("default")
                 || map.contains_key("scan")
                 || map.contains_key("external_id")
-                || map.contains_key("unique") =>
+                || map.contains_key("unique")
+                || map.contains_key("strict") =>
         {
             let mut map = map.clone();
             map.remove("default");
             map.remove("scan");
             map.remove("external_id");
             map.remove("unique");
+            map.remove("strict");
             if map.is_empty() {
                 // Only a default or scan settings: nothing else to check.
                 return Ok(());
@@ -725,6 +730,37 @@ pub fn is_unique(options: Option<&Value>) -> bool {
             .unwrap_or(false)
 }
 
+/// A3-T6: a required field with `options.strict: true` is also refused
+/// empty by the database (a CHECK constraint), not only by the engine.
+pub fn strict_required(is_required: bool, options: Option<&Value>) -> bool {
+    is_required
+        && options
+            .and_then(|o| o.get("strict"))
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+}
+
+/// A3-T6: a number or currency field's `min`/`max`, which the database also
+/// holds the column to (a CHECK constraint); `None` for other types or when
+/// neither bound is set.
+pub fn number_range(
+    field_type: &str,
+    options: Option<&Value>,
+) -> Option<(Option<f64>, Option<f64>)> {
+    if !matches!(field_type, "number" | "currency") {
+        return None;
+    }
+    let options = options?;
+    let bound = |key: &str| {
+        options
+            .get(key)
+            .and_then(Value::as_f64)
+            .filter(|v| v.is_finite())
+    };
+    let (min, max) = (bound("min"), bound("max"));
+    (min.is_some() || max.is_some()).then_some((min, max))
+}
+
 /// A3-T6: `options.unique` is a boolean on a text, number, date or lookup
 /// field (a unique lookup makes the relationship one to one).
 fn validate_unique(field_type: &FieldType, unique: &Value) -> Result<(), AppError> {
@@ -854,6 +890,24 @@ mod tests {
         )));
         assert!(!is_unique(Some(&serde_json::json!({ "unique": false }))));
         assert!(!is_unique(None));
+    }
+
+    /// A3-T6: the database-held range and strict required.
+    #[test]
+    fn unique_attribute_range_and_strict() {
+        let options = serde_json::json!({ "min": 0, "max": 100 });
+        assert_eq!(
+            number_range("number", Some(&options)),
+            Some((Some(0.0), Some(100.0)))
+        );
+        assert_eq!(number_range("text", Some(&options)), None);
+        assert_eq!(number_range("number", Some(&serde_json::json!({}))), None);
+        let strict = serde_json::json!({ "strict": true });
+        assert!(strict_required(true, Some(&strict)));
+        assert!(!strict_required(false, Some(&strict)));
+        assert!(!strict_required(true, None));
+        validate_options(&FieldType::Text, &strict).unwrap();
+        assert!(validate_options(&FieldType::Text, &serde_json::json!({ "strict": 1 })).is_err());
     }
 
     #[test]

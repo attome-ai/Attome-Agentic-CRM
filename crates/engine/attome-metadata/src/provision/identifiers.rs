@@ -117,6 +117,12 @@ pub fn external_id_index_name(entity: &str, field: &str) -> Result<String, AppEr
     field_index_name("uxei", "ext", entity, field)
 }
 
+/// A3-T6: the name of a field's own CHECK constraint (`suffix` says which),
+/// named like [`attribute_index_name`].
+pub fn field_constraint_name(entity: &str, field: &str, suffix: &str) -> Result<String, AppError> {
+    field_index_name("ck", suffix, entity, field)
+}
+
 fn field_index_name(
     prefix: &str,
     suffix: &str,

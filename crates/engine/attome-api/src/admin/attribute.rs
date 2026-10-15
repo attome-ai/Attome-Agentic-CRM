@@ -877,6 +877,20 @@ pub(crate) async fn do_create_attribute_recorded(
         .await?;
     }
     // A29-T1: an external id is unique among the entity's live records.
+    // A3-T6: a number range and a strict required value, held by the
+    // database as well.
+    let range = attome_field::number_range(&field_type, body.options.as_ref());
+    let strict = attome_field::strict_required(body.is_required, body.options.as_ref());
+    if range.is_some() || strict {
+        provision::sync_field_constraints(
+            &state.base.db_migrator,
+            &entity_logicalname,
+            &logicalname,
+            range,
+            strict,
+        )
+        .await?;
+    }
     if attome_field::is_unique(body.options.as_ref()) {
         provision::sync_external_id_index(
             state.base.config.as_ref(),
@@ -1221,6 +1235,15 @@ pub(crate) async fn do_update_attribute_recorded(
     let new_lookup = resolve_lookup_target(&state.base.db_migrator, new_lookup_ref).await?;
     let new_lookup_name: Option<String> = new_lookup.as_ref().map(|(_, name)| name.clone());
     let field_logicalname = cur.logicalname.clone().ok_or(AppError::NotFound)?;
+    // A3-T6: the database-held range and strict required follow the field.
+    let new_constraints = (
+        attome_field::number_range(&new_ft_str, new_options.as_ref()),
+        attome_field::strict_required(new_req, new_options.as_ref()),
+    );
+    let constraints_changed = (
+        attome_field::number_range(&current_ft, cur.options.as_ref()),
+        attome_field::strict_required(cur.required.unwrap_or(false), cur.options.as_ref()),
+    ) != new_constraints;
     if unique_changed && new_unique {
         let duplicates = provision::count_duplicate_values(
             &state.base.db_migrator,
@@ -1498,6 +1521,16 @@ pub(crate) async fn do_update_attribute_recorded(
         .await?;
     }
 
+    if constraints_changed {
+        provision::sync_field_constraints(
+            &state.base.db_migrator,
+            &entity_logicalname,
+            &field_logicalname,
+            new_constraints.0,
+            new_constraints.1,
+        )
+        .await?;
+    }
     if unique_changed {
         provision::sync_external_id_index(
             state.base.config.as_ref(),
