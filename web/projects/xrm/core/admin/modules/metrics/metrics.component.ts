@@ -1,10 +1,19 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { ApiError, ApiService, TranslatePipe } from '@attome/base';
+import { ApiError, ApiService, LangService, TranslatePipe } from '@attome/base';
 
 /** `system_health::MetricPoint`. */
 export interface MetricPoint {
   at: string;
   value: number;
+}
+
+/** `metrics_catalogue::MetricInfo` (U4-T2). */
+export interface MetricInfo {
+  name: string;
+  kind: string;
+  unit: string;
+  en: string;
+  ar: string;
 }
 
 /** A time range and the seconds per point it is drawn at. */
@@ -50,6 +59,7 @@ const HEIGHT = 200;
           }
         </span>
       </header>
+      @if (meaning(); as m) { <p class="om-muted" data-meaning>{{ m }}</p> }
       @if (error(); as message) { <p class="om-error" role="alert">{{ message }}</p> }
       @if (names().length === 0 && !error()) {
         <p class="om-muted">{{ 'metricsPage.empty' | translate }}</p>
@@ -80,6 +90,8 @@ const HEIGHT = 200;
 })
 export class OpsMetricsComponent implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly lang = inject(LangService);
+  private readonly catalogue = signal<MetricInfo[]>([]);
 
   readonly ranges = RANGES;
   readonly width = WIDTH;
@@ -89,6 +101,14 @@ export class OpsMetricsComponent implements OnInit {
   readonly range = signal<RangeKey>('hour');
   readonly points = signal<MetricPoint[]>([]);
   readonly error = signal<string | null>(null);
+
+  /** U4-T2: what the chosen metric means, with its unit, in the interface language. */
+  readonly meaning = computed(() => {
+    const info = this.catalogue().find(m => m.name === this.name());
+    if (!info) return '';
+    const text = this.lang.current?.() === 'ar' ? info.ar : info.en;
+    return `${text} (${info.unit})`;
+  });
 
   /** The SVG polyline: time across, value up, scaled to the box. */
   readonly line = computed(() => polyline(this.points(), WIDTH, HEIGHT));
@@ -100,6 +120,10 @@ export class OpsMetricsComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.api.get<{ items: MetricInfo[] }>('/api/v1/admin/ops/metrics/catalogue').subscribe({
+      next: page => this.catalogue.set(page.items),
+      error: () => this.catalogue.set([]),
+    });
     this.api.get<{ items: string[] }>('/api/v1/admin/ops/metrics/names').subscribe({
       next: page => this.names.set(page.items),
       error: (e: ApiError) => this.error.set(e.message),

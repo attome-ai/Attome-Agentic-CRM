@@ -123,6 +123,7 @@ pub fn routes() -> Router<EngineState> {
         .route("/health/dependencies", get(dependencies))
         .route("/api/v1/admin/latency", get(latency))
         .route("/api/v1/admin/ops/metrics/names", get(metric_names))
+        .route("/api/v1/admin/ops/metrics/catalogue", get(metric_catalogue))
         .route("/api/v1/admin/ops/metrics/query", get(metric_query))
 }
 
@@ -221,6 +222,32 @@ async fn metric_query(
     )))
 }
 
+/// U4-T2: every metric this server emits, with its kind, unit and meaning in
+/// English and Arabic.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/ops/metrics/catalogue",
+    tag = "operations",
+    responses(
+        (status = 200, description = "The metric catalogue, by name", body = attome_types::PaginatedResponse<attome_server::metrics_catalogue::MetricInfo>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller is not an administrator", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn metric_catalogue(
+    _ctx: Authorized<Admin>,
+) -> Json<attome_types::PaginatedResponse<attome_server::metrics_catalogue::MetricInfo>> {
+    let items = attome_server::metrics_catalogue::CATALOGUE.to_vec();
+    let total = items.len() as i64;
+    Json(attome_types::PaginatedResponse::new(
+        items,
+        total,
+        1,
+        total.max(1),
+    ))
+}
+
 /// U4-T4: the metric names sampled in the last hour.
 #[utoipa::path(
     get,
@@ -291,7 +318,7 @@ async fn latency(_ctx: Authorized<Admin>) -> Json<LatencyReport> {
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(dependencies, latency, metric_query, metric_names))]
+#[openapi(paths(dependencies, latency, metric_query, metric_names, metric_catalogue))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
