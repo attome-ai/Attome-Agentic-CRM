@@ -4,7 +4,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ApiError, CommandRegistry, LangService } from '@attome/base';
+import { ApiError, CommandRegistry, LangService, MetadataVersion } from '@attome/base';
 import { DialogService } from '@attome/base/dialog';
 import { firstValueFrom } from 'rxjs';
 import { BusinessRuleClient, ChoiceOptions, EntitySchema, FieldSchema } from '@attome/xrm';
@@ -184,6 +184,10 @@ export abstract class EngineFormBase implements OnInit {
     // from mid-confirmation; without this it would fire against a destroyed
     // component.
     this.destroyRef.onDestroy(() => this.clearSavedTimer());
+    // Y8-T8: a newer metadata version while the form is open.
+    this.formInjector.get(MetadataVersion).changes
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.modelChanged.set(true));
     // B10-T1: this record's actions come first in the command palette while
     // the form is open.
     this.destroyRef.onDestroy(this.formInjector.get(CommandRegistry).register(
@@ -274,6 +278,9 @@ export abstract class EngineFormBase implements OnInit {
       error: () => this.loading.set(false),
     });
   }
+
+  /** Y8-T8: the entity's design changed on the server while this form was open. */
+  readonly modelChanged = signal(false);
 
   /** B7-T3: whether a copy is being made. */
   readonly duplicating = signal(false);

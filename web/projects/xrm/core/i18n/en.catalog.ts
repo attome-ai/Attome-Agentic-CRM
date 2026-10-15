@@ -101,6 +101,7 @@ export const xrmEn = {
     duplicate: 'Duplicate',
     duplicateWithChildren: 'This record has related records: {details}. Copy them with it?',
     duplicateCopyChildren: 'Copy them too', duplicateRecordOnly: 'Only this record',
+    modelChanged: 'An administrator changed the fields of this form while it was open. Save your work, then reopen the form to see them.',
     cmdSave: 'Save this record', cmdDuplicate: 'Duplicate this record', cmdReload: 'Reload this record',
     loadingRecord: 'Loading record…', editRecord: 'Edit record', newRecord: 'New record',
     edit: 'Edit', new: 'New', back: 'Back', save: 'Save', cancel: 'Cancel',

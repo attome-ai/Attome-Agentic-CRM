@@ -86,6 +86,7 @@ export const xrmAr = {
     duplicate: 'تكرار',
     duplicateWithChildren: 'لهذا السجل سجلات مرتبطة: {details}. هل تُنسخ معه؟',
     duplicateCopyChildren: 'انسخها أيضًا', duplicateRecordOnly: 'هذا السجل فقط',
+    modelChanged: 'غيّر أحد المسؤولين حقول هذا النموذج أثناء فتحه. احفظ عملك ثم أعد فتح النموذج لرؤيتها.',
     cmdSave: 'حفظ هذا السجل', cmdDuplicate: 'تكرار هذا السجل', cmdReload: 'إعادة تحميل هذا السجل',
     loadingRecord: 'جاري تحميل السجل…', editRecord: 'تعديل السجل', newRecord: 'سجل جديد',
     edit: 'تعديل', new: 'جديد', back: 'رجوع', save: 'حفظ', cancel: 'إلغاء',
