@@ -1088,7 +1088,9 @@ impl EngineSystemBuilder {
         )
         .await??;
         state.entities.swap(registry);
-        let last_applied = Arc::new(AtomicI64::new(last_id));
+        // Y8-T7: the same counter the response header reads.
+        let last_applied = state.base.metadata_version.clone();
+        last_applied.store(last_id, Ordering::Release);
 
         // M07 Phase 1 (D-406) — state-lifecycle registry pre-warm. Small,
         // admin-authored table (state machines change by human edit, not by

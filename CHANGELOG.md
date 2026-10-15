@@ -11,6 +11,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Every API response carries `Attome-Metadata-Version`, the last metadata change the answering node
+  has applied (exposed to browsers through CORS), so clients notice a new model.
 - Status banner: `GET /api/v1/system/status` tells any signed-in person which features are down or
   slow (as message keys) and whether changes are paused; the shell shows it in English and Arabic.
 - Trees: `GET /api/v1/{entity}/{id}/move-preview?parent=` says how many records a move would carry

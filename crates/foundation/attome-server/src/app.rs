@@ -113,6 +113,9 @@ pub fn cors_layer(config: &AppConfig) -> CorsLayer {
         .max_age(CORS_MAX_AGE)
 }
 
+/// Y8-T7 — the response header naming the metadata version a node serves.
+pub const METADATA_VERSION_HEADER: &str = "attome-metadata-version";
+
 /// A2 (BSV-F06) — how long a browser may cache the preflight. Ten minutes is
 /// below most browsers' 2 h clamp and turns a per-request preflight on a
 /// non-simple cross-origin call into one per ten minutes.
@@ -126,9 +129,10 @@ const CORS_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(600);
 /// one deliberate edit away from being readable. `pub` for the same reason as
 /// `allowed_request_headers`: a test in another crate can assert against the
 /// real contract rather than a copy that can drift.
-pub(crate) fn exposed_response_headers() -> [HeaderName; 9] {
+pub(crate) fn exposed_response_headers() -> [HeaderName; 10] {
     [
         HeaderName::from_static("x-request-id"),
+        HeaderName::from_static(METADATA_VERSION_HEADER),
         header::RETRY_AFTER,
         HeaderName::from_static("x-ratelimit-limit"),
         HeaderName::from_static("x-ratelimit-remaining"),

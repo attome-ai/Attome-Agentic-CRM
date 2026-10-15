@@ -199,6 +199,24 @@ impl ServerBuilder {
             )),
             None => with_liveness,
         };
-        app::apply_outer_layers(with_web, &self.config)
+        // Y8-T7: every response names the metadata version this node serves,
+        // so a browser, an SDK client or an agent notices a new model.
+        let version = self.state.metadata_version.clone();
+        let with_version = with_web.layer(middleware::map_response(
+            move |mut response: axum::response::Response| {
+                let applied = version.load(std::sync::atomic::Ordering::Relaxed);
+                async move {
+                    if applied > 0
+                        && let Ok(value) = axum::http::HeaderValue::from_str(&applied.to_string())
+                    {
+                        response
+                            .headers_mut()
+                            .insert(app::METADATA_VERSION_HEADER, value);
+                    }
+                    response
+                }
+            },
+        ));
+        app::apply_outer_layers(with_version, &self.config)
     }
 }

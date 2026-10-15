@@ -153,6 +153,11 @@ pub struct AppState {
     /// ready meanwhile, so a load balancer stops sending this node work it
     /// would answer from stale metadata. Per-node and observational.
     pub metadata_lagging: Arc<AtomicBool>,
+    /// Y8-T7 — the last metadata change this node's registry has applied
+    /// (`metadata_change_log.id`), sent on every response as
+    /// `Attome-Metadata-Version` so clients notice a new model. `0` until
+    /// the registry is warm.
+    pub metadata_version: Arc<std::sync::atomic::AtomicI64>,
     /// S3 (BSV-F15) — the same drain event as `AppState::draining`, in a form a
     /// long-lived stream can `.await`: a stream that holds the graceful-shutdown
     /// deadline open (xrm-ai's chat stream, trd-engine's quote stream) creates
@@ -210,6 +215,7 @@ impl AppState {
             draining: Arc::new(AtomicBool::new(false)),
             started: Arc::new(AtomicBool::new(false)),
             metadata_lagging: Arc::new(AtomicBool::new(false)),
+            metadata_version: Arc::new(std::sync::atomic::AtomicI64::new(0)),
             // S3 — no receivers at construction, so the initial `send` is a
             // no-op; `shutdown_signal()` subscribes on demand.
             drain_signal: tokio::sync::watch::channel(false).0,
