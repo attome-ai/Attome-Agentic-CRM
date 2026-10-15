@@ -19,6 +19,7 @@ const CONTROLS: Record<PersonalKey, Control> = {
   'core.theme':          { kind: 'choice', options: ['auto', 'light', 'dark'] },
   'core.text_size':      { kind: 'choice', options: ['normal', 'large'] },
   'core.reduced_motion': { kind: 'toggle' },
+  'core.simple_mode':    { kind: 'toggle' },
 };
 
 /** The catalogue key of a setting's label: `core.time_zone` -> `settingsPage.time_zone`. */

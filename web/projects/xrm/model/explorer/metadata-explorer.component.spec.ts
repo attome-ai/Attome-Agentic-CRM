@@ -35,6 +35,10 @@ describe('MetadataExplorerComponent', () => {
         { version_no: 1, state: 'published', content_hash: 'h1', created_by: null, created_at: '2026-10-13T00:00:00Z' },
       ]))),
       diff: vi.fn().mockReturnValue(of(page([{ op: 'replace', path: '/name', value: 'New' }]))),
+      menuUsage: vi.fn().mockReturnValue(of(page([
+        { item: 'Sales/Deals', opens: 40, last_opened: '2026-10-14', unused: false },
+        { item: 'Sales/Old quotes', opens: 0, last_opened: null, unused: true },
+      ]))),
       version: vi.fn().mockImplementation((_k: string, _id: string, v: number) =>
         of({ id: 'o1', kind: 'form', name: 'Contact form', version_no: v, kind_schema_version: 1,
              state: v === 2 ? 'draft' : 'published', doc: { name: v === 2 ? 'New' : 'Old' },
@@ -53,6 +57,26 @@ describe('MetadataExplorerComponent', () => {
   }
 
   beforeEach(() => TestBed.resetTestingModule());
+
+  it('suggests hiding the menu items nobody opened (AK6-T2)', () => {
+    const fixture = setup(key => key);
+    const explorer = fixture.componentInstance;
+    explorer.selectKind('navigation');
+    explorer.selectObject({ id: 'm1', name: 'Sales menu' } as never);
+    fixture.detectChanges();
+    expect(svc['menuUsage']).toHaveBeenCalledWith('m1');
+    expect(explorer.unusedItems()).toEqual(['Sales/Old quotes']);
+    const note = fixture.nativeElement.querySelector('[data-unused-items]') as HTMLElement;
+    expect(note.textContent).toContain('Sales/Old quotes');
+    expect(note.textContent).not.toContain('Sales/Deals');
+  });
+
+  it('asks for no usage for other kinds (AK6-T2)', () => {
+    const fixture = setup(key => key);
+    fixture.componentInstance.selectKind('form');
+    fixture.componentInstance.selectObject({ id: 'o1', name: 'Contact form' } as never);
+    expect(svc['menuUsage']).not.toHaveBeenCalled();
+  });
 
   it('renders kind list', () => {
     const fixture = setup(key => key);

@@ -4,7 +4,7 @@ import { ApiService, LangService, ThemeService, UserPreferencesService } from '@
 import { Observable, of } from 'rxjs';
 import { describe, expect, it, vi } from 'vitest';
 import { PersonalSettingsPageComponent, labelKey, optionKey } from './personal-settings-page.component';
-import { PersonalSettingsService, REDUCED_MOTION_CLASS, TEXT_LARGE_CLASS } from './personal-settings.service';
+import { PersonalSettingsService, REDUCED_MOTION_CLASS, SIMPLE_MODE_CLASS, TEXT_LARGE_CLASS } from './personal-settings.service';
 
 const ITEMS = [
   { key: 'core.locale', value: 'en-US', source: 'default' },
@@ -74,6 +74,14 @@ describe('PersonalSettingsPageComponent', () => {
     component.save('core.reduced_motion', true);
     expect(document.documentElement.classList.contains(TEXT_LARGE_CLASS)).toBe(true);
     expect(document.documentElement.classList.contains(REDUCED_MOTION_CLASS)).toBe(true);
+  });
+
+  it('simple mode hides the advanced actions (AK6-T2)', () => {
+    const { component } = setup();
+    component.save('core.simple_mode', true);
+    expect(document.documentElement.classList.contains(SIMPLE_MODE_CLASS)).toBe(true);
+    component.save('core.simple_mode', false);
+    expect(document.documentElement.classList.contains(SIMPLE_MODE_CLASS)).toBe(false);
   });
 
   it('names labels and options from the catalogue', () => {

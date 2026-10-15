@@ -33,6 +33,8 @@ export class MetadataExplorerComponent implements OnInit {
   readonly left     = signal<ObjectVersion | null>(null);
   readonly right    = signal<ObjectVersion | null>(null);
   readonly error    = signal<string | null>(null);
+  /** AK6-T2: a navigation object's items nobody opened in 60 days. */
+  readonly unusedItems = signal<string[]>([]);
 
   /** Both sides chosen and different: the diff can be shown. */
   readonly comparing = computed(() => {
@@ -74,6 +76,13 @@ export class MetadataExplorerComponent implements OnInit {
     if (!kind) return;
     this.object.set(object);
     this.clearDiff();
+    this.unusedItems.set([]);
+    if (kind === 'navigation') {
+      this.model.menuUsage(object.id).subscribe({
+        next: page => this.unusedItems.set(page.items.filter(u => u.unused).map(u => u.item)),
+        error: () => this.unusedItems.set([]),
+      });
+    }
     this.model.history(kind, object.id).subscribe({
       next: page => {
         this.versions.set(page.items);

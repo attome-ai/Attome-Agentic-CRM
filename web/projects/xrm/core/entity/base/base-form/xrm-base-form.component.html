@@ -41,7 +41,7 @@
           <xrm-remind-me [entity]="f.name()" [recordId]="recordId" />
           <!-- B7-T3 — a copy through the ordinary create. -->
           @if (!readOnly()) {
-            <button type="button" class="xf-btn xf-btn-secondary" data-testid="entity-duplicate"
+            <button type="button" class="xf-btn xf-btn-secondary" data-testid="entity-duplicate" data-advanced
                     [disabled]="f.duplicating()" (click)="f.duplicate()">
               <i class="las la-copy" aria-hidden="true"></i>
               {{ 'xrmForm.duplicate' | translate }}
@@ -51,7 +51,7 @@
                a read-only form cannot be reassigned. -->
           @if (!readOnly()) {
             <xrm-record-access-actions variant="form" [entity]="f.name()" [recordIds]="accessRecordIds()"
-              (changed)="onAccessChanged()" />
+              (changed)="onAccessChanged()" data-advanced />
           }
         }
         <button type="button" class="xf-btn xf-btn-secondary" (click)="f.cancel()">

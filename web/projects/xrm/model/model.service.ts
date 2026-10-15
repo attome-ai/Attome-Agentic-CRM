@@ -138,6 +138,16 @@ export interface MenuItem {
   badge?:  string;
 }
 
+/** One menu item's use (`GET /api/v1/admin/model/navigation/{id}/usage`). */
+export interface MenuItemUsage {
+  /** `<group label>/<item label>`. */
+  item: string;
+  opens: number;
+  last_opened: string | null;
+  /** Not opened in the period: a candidate to hide. */
+  unused: boolean;
+}
+
 /** A published menu filtered for the caller (`GET /api/v1/model/navigation/{id}`). */
 export interface MenuView {
   id:      string;
@@ -284,6 +294,13 @@ export class ModelService {
   /** A21-T5: counts one open of a menu item (`<group>/<item>`). */
   menuItemOpened(id: string, item: string): Observable<void> {
     return this.api.post<void>(`/api/v1/model/navigation/${encodeURIComponent(id)}/opened`, { item });
+  }
+
+  /** AK6-T2 / A21-T5: how often each item of a menu was opened in the last `days`. */
+  menuUsage(id: string, days = 60): Observable<Page<MenuItemUsage>> {
+    return this.api.get<Page<MenuItemUsage>>(
+      `/api/v1/admin/model/navigation/${encodeURIComponent(id)}/usage`, { days: String(days) },
+    );
   }
 
   menu(id: string): Observable<MenuView> {

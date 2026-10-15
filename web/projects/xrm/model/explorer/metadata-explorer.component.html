@@ -52,6 +52,16 @@
 
     @if (object(); as o) {
       <div class="mx-panel">
+        @if (unusedItems().length) {
+          <div class="mx-unused" role="note" data-unused-items>
+            <strong>{{ 'metadataExplorer.unusedTitle' | translate }}</strong>
+            <ul>
+              @for (item of unusedItems(); track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          </div>
+        }
         <h3>{{ 'metadataExplorer.history' | translate }}</h3>
         <ol class="mx-list">
           @for (v of versions(); track v.version_no) {

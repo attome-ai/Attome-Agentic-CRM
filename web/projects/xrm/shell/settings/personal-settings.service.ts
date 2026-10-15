@@ -15,13 +15,15 @@ export interface PersonalSetting {
 /** The personal settings the settings screen offers, in display order. */
 export const PERSONAL_KEYS = [
   'core.locale', 'core.time_zone', 'core.calendar', 'core.digits', 'core.date_format',
-  'core.start_page', 'core.theme', 'core.text_size', 'core.reduced_motion',
+  'core.start_page', 'core.theme', 'core.text_size', 'core.reduced_motion', 'core.simple_mode',
 ] as const;
 export type PersonalKey = typeof PERSONAL_KEYS[number];
 
 /** The root classes the text-size and motion settings turn on. */
 export const TEXT_LARGE_CLASS = 'attome-text-large';
 export const REDUCED_MOTION_CLASS = 'attome-reduced-motion';
+/** AK6-T2: hides every element marked `data-advanced`. */
+export const SIMPLE_MODE_CLASS = 'attome-simple-mode';
 
 /**
  * B11-T2: the signed-in person's settings (`/api/v1/settings/me`), applied
@@ -100,5 +102,6 @@ export class PersonalSettingsService {
     const root = this.document.documentElement;
     root.classList.toggle(TEXT_LARGE_CLASS, this.value('core.text_size') === 'large');
     root.classList.toggle(REDUCED_MOTION_CLASS, this.value('core.reduced_motion') === true);
+    root.classList.toggle(SIMPLE_MODE_CLASS, this.value('core.simple_mode') === true);
   }
 }

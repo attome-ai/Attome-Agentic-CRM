@@ -312,6 +312,7 @@ export const xrmEn = {
     noObjects: 'No objects of this kind yet.', previous: 'Previous', next: 'Next',
     from: 'From', to: 'To', diff: 'Changes', noChanges: 'The two versions are the same.',
     state: { draft: 'Draft', published: 'Published' },
+    unusedTitle: 'Nobody opened these items in the last 60 days; consider hiding them:',
   },
   activitiesPanel: {
     type: 'Activity type', task: 'Task', phoneCall: 'Phone call',
@@ -1514,6 +1515,7 @@ export const xrmEn = {
     locale: 'Language', time_zone: 'Time zone', calendar: 'Calendar', digits: 'Digits',
     date_format: 'Date order', start_page: 'Start page', theme: 'Theme', text_size: 'Text size',
     reduced_motion: 'Reduce motion',
+    simple_mode: 'Simple mode (hide advanced actions)',
     source: { organization: 'Set by your organization', deployment: 'Set for everyone' },
     option: {
       en_US: 'English', ar_SA: 'العربية',

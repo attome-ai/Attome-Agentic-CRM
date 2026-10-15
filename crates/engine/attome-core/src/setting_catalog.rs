@@ -187,6 +187,15 @@ fn personal_settings() -> Vec<SettingDescriptor> {
             false,
             || json!(false),
         ),
+        SettingDescriptor::new(
+            "core.simple_mode",
+            "Simple mode (AK6-T2): hide advanced actions such as duplicating, sharing \
+             and changesets, for people who only need the everyday ones.",
+            || json!({"type": "boolean"}),
+            PERSONAL,
+            false,
+            || json!(false),
+        ),
     ]
 }
 

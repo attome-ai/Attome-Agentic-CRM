@@ -259,6 +259,9 @@ pub fn description_ar(key: &str) -> Option<&'static str> {
         "core.theme" => "سمة الألوان: فاتح أو داكن أو تلقائي (حسب الجهاز).",
         "core.text_size" => "حجم النص: عادي أو كبير.",
         "core.reduced_motion" => "إيقاف الحركات والانتقالات.",
+        "core.simple_mode" => {
+            "الوضع المبسّط: إخفاء الإجراءات المتقدمة مثل النسخ والمشاركة ومجموعات التغييرات."
+        }
         "auth.session_ttl_minutes" => "توضيحي فقط: مدة الجلسة تُضبط في ملف الإعداد عند الإقلاع.",
         "feature.core.beta_ui" => "سياسة ميزة الواجهة التجريبية: قيمة عامة واستثناءات لكل مستخدم.",
         "feature.core.beta_ui_advanced_panels" => {

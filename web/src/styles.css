@@ -83,6 +83,11 @@ button { font-family: inherit; }
 }
 /* B11-T2: the person's own text size and motion settings. */
 html.attome-text-large { font-size: 112.5%; }
+/* AK6-T2: simple mode hides the advanced actions. */
+html.attome-simple-mode [data-advanced] {
+  display: none !important;
+}
+
 html.attome-reduced-motion *,
 html.attome-reduced-motion *::before,
 html.attome-reduced-motion *::after {

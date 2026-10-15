@@ -280,6 +280,7 @@ export const xrmAr = {
     noObjects: 'لا توجد عناصر من هذا النوع بعد.', previous: 'السابق', next: 'التالي',
     from: 'من', to: 'إلى', diff: 'التغييرات', noChanges: 'النسختان متطابقتان.',
     state: { draft: 'مسودة', published: 'منشور' },
+    unusedTitle: 'لم يفتح أحد هذه العناصر خلال آخر 60 يومًا؛ فكّر في إخفائها:',
   },
   activitiesPanel: {
     type: 'نوع النشاط', task: 'مهمة', phoneCall: 'مكالمة هاتفية',
@@ -1437,6 +1438,7 @@ export const xrmAr = {
     locale: 'اللغة', time_zone: 'المنطقة الزمنية', calendar: 'التقويم', digits: 'الأرقام',
     date_format: 'ترتيب التاريخ', start_page: 'صفحة البداية', theme: 'المظهر', text_size: 'حجم النص',
     reduced_motion: 'تقليل الحركة',
+    simple_mode: 'الوضع المبسّط (إخفاء الإجراءات المتقدمة)',
     source: { organization: 'حددته جهتك', deployment: 'محدد للجميع' },
     option: {
       en_US: 'English', ar_SA: 'العربية',

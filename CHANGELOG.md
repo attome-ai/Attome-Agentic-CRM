@@ -36,6 +36,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   each `VAR_FILE` a placeholder reads, naming the variable only.
 - The command palette offers a question (three words or more, or ending in a question mark) to the
   copilot, which answers it from the data through the query planner.
+- Simple mode (`core.simple_mode`, a personal setting) hides advanced actions such as duplicating,
+  sharing and changesets; the metadata explorer lists a menu's items nobody opened in 60 days.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE
