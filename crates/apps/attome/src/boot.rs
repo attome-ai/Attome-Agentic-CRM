@@ -607,6 +607,12 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     // set, otherwise it is a clone of the general one.
     let (redis, redis_coordination) = attome_cache::Store::from_config(config).await?;
     warn_if_coordination_store_is_not_durable(config, &redis_coordination).await;
+    // Y5-T2: a production deployment claims its cache, and refuses to start
+    // when another deployment already has it.
+    if config.app.deployment_profile == "production" {
+        let id = attome_server::isolation::claim(&db, &redis).await?;
+        tracing::info!(deployment = %id, "cache claimed for this deployment");
+    }
     let storage = attome_storage::create_storage_client(config).await?;
     // P1.4 / P-job-queue-hardening (D-165): two `job_type` namespaces backed
     // by the checked-in migrations/0014_apalis_jobs.sql +

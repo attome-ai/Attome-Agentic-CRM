@@ -5,6 +5,7 @@ pub mod authz;
 pub mod builder;
 pub mod capability;
 pub mod health;
+pub mod isolation;
 pub mod metrics;
 pub mod metrics_catalogue;
 pub mod metrics_store;
