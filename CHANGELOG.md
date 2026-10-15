@@ -13,6 +13,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ### Added
 - Clone with children: `POST /api/v1/{entity}/{id}/clone` takes `children` (entity and lookup
   field) and copies each readable child record under the new record, up to 200.
+- Clone: the result lists every record made (`undo`); `POST /api/v1/{entity}/{id}/clone/undo`
+  moves them to the recycle bin while none has changed, and `POST /api/v1/{entity}/clone` copies
+  up to 50 records with the same overrides.
 - Recycle bin: every delete records who, when, why and its operation (migration 0024);
   `DELETE /api/v1/{entity}/{id}?reason=` and the `Attome-Operation-Id` header,
   `POST /api/v1/{entity}/delete-impact`, `POST /api/v1/bin/restore`,

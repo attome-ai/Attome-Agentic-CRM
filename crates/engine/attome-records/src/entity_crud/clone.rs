@@ -13,12 +13,17 @@
 //! this one) to copy too: each child record the caller can read is copied
 //! the same way, its lookup pointed at the new record. At most 200 children.
 //! The caller needs the create privilege on every entity copied into.
+//!
+//! B7-T2: `POST /api/v1/{entity}/clone` copies up to 50 records with the
+//! same overrides, and `POST /api/v1/{entity}/{id}/clone/undo` removes what a
+//! clone made while none of it has changed since (the recycle bin keeps it,
+//! as one delete operation).
 
 use std::collections::HashSet;
 
 use attome_core::{EngineState, FieldType, quote_ident};
 use attome_security::SecurityContextExt;
-use attome_security::record_action::Read;
+use attome_security::record_action::{Delete, Read};
 use attome_server::authz::{Authorized, RecordScoped};
 use attome_server::security::SecurityContext;
 use attome_types::{AppError, ErrorResponse};
@@ -99,6 +104,18 @@ pub struct CloneResult {
     pub left_out: Vec<String>,
     /// The child relationships copied with it.
     pub children: Vec<ClonedChildren>,
+    /// Every record made, children first, at the version it was made with:
+    /// the body of `POST /api/v1/{entity}/{id}/clone/undo`. Empty for a
+    /// preview.
+    pub undo: Vec<CloneUndoItem>,
+}
+
+/// One record a clone made, at the version the clone left it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct CloneUndoItem {
+    pub entity: String,
+    pub id: Uuid,
+    pub row_version: i64,
 }
 
 /// The body a copy of `data` is created from: the copyable fields, then the
@@ -182,7 +199,7 @@ pub async fn clone_record(
         child_sets.push((child, ids));
     }
     let (body, left_out) = copyable(state, &entity, &attrs, &data, &request.overrides).await?;
-    let id = if request.preview {
+    let created = if request.preview {
         None
     } else {
         Some(
@@ -193,19 +210,221 @@ pub async fn clone_record(
                 &entity,
                 Value::Object(body.clone()),
             )
-            .await?
-            .0,
+            .await?,
         )
     };
+    let id = created.as_ref().map(|(id, _)| *id);
+    let mut undo = Vec::new();
     let mut children = Vec::with_capacity(child_sets.len());
     for (child, ids) in child_sets {
-        children.push(copy_children(state, ctx, child, &ids, id).await?);
+        children.push(copy_children(state, ctx, child, &ids, id, &mut undo).await?);
+    }
+    if let Some((id, record)) = &created {
+        undo.push(CloneUndoItem {
+            entity: entity.clone(),
+            id: *id,
+            row_version: record.row_version(),
+        });
     }
     Ok(CloneResult {
         id,
         body,
         left_out,
         children,
+        undo,
+    })
+}
+
+/// The most records one bulk clone copies.
+pub const MAX_BULK_CLONE: usize = 50;
+
+/// `POST /api/v1/{entity}/clone`.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct BulkCloneRequest {
+    /// The records to copy, 1 to 50.
+    pub ids: Vec<Uuid>,
+    /// Values every copy takes in place of its source's, by field.
+    #[serde(default)]
+    #[schema(value_type = Object)]
+    pub overrides: Map<String, Value>,
+}
+
+/// One record a bulk clone copied.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BulkCloned {
+    pub source: Uuid,
+    pub id: Uuid,
+    /// The copy's undo list, as a single clone returns it.
+    pub undo: Vec<CloneUndoItem>,
+}
+
+/// One record a bulk clone could not copy.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BulkCloneFailure {
+    pub source: Uuid,
+    /// `not_found`, `forbidden`, `invalid` (the copy failed validation),
+    /// `conflict` (a unique value) or `failed`.
+    pub code: &'static str,
+}
+
+/// What a bulk clone did.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct BulkCloneResult {
+    pub cloned: Vec<BulkCloned>,
+    pub failed: Vec<BulkCloneFailure>,
+}
+
+/// Copies each record as a single clone with the same overrides would,
+/// reporting the ones that could not be copied.
+pub async fn bulk_clone(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    request: &BulkCloneRequest,
+) -> Result<BulkCloneResult, AppError> {
+    if request.ids.is_empty() || request.ids.len() > MAX_BULK_CLONE {
+        return Err(AppError::Validation(format!(
+            "clone 1 to {MAX_BULK_CLONE} records"
+        )));
+    }
+    let (_, entity, _, _) = resolve_entity(state, entity_input).await?;
+    ctx.require(&entity, "create")?;
+    let one = CloneRequest {
+        overrides: request.overrides.clone(),
+        preview: false,
+        children: Vec::new(),
+    };
+    let mut result = BulkCloneResult {
+        cloned: Vec::new(),
+        failed: Vec::new(),
+    };
+    for source in &request.ids {
+        let code = match clone_record(state, ctx, &entity, *source, &one).await {
+            Ok(CloneResult {
+                id: Some(id), undo, ..
+            }) => {
+                result.cloned.push(BulkCloned {
+                    source: *source,
+                    id,
+                    undo,
+                });
+                continue;
+            }
+            Ok(_) => "failed",
+            Err(AppError::NotFound) => "not_found",
+            Err(AppError::Forbidden) => "forbidden",
+            Err(AppError::Validation(_) | AppError::FieldValidation(_)) => "invalid",
+            Err(AppError::Conflict(_) | AppError::VersionConflict) => "conflict",
+            Err(error) => {
+                tracing::warn!(%error, %entity, record_id = %source,
+                    "bulk clone could not copy a record");
+                "failed"
+            }
+        };
+        result.failed.push(BulkCloneFailure {
+            source: *source,
+            code,
+        });
+    }
+    Ok(result)
+}
+
+/// `POST /api/v1/{entity}/{id}/clone/undo`: the clone's `undo` list.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct CloneUndoRequest {
+    pub items: Vec<CloneUndoItem>,
+}
+
+/// What undoing a clone did.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct CloneUndoResult {
+    /// Records moved to the recycle bin.
+    pub removed: usize,
+    /// Their delete operation:
+    /// `POST /api/v1/bin/operations/{operation_id}/restore` brings them back.
+    pub operation_id: String,
+}
+
+/// The order an undo removes records in: the clone's own record last, after
+/// the children that point at it.
+pub fn undo_order<'a>(
+    items: &'a [CloneUndoItem],
+    entity: &str,
+    id: Uuid,
+) -> Vec<&'a CloneUndoItem> {
+    let (root, rest): (Vec<_>, Vec<_>) = items
+        .iter()
+        .partition(|item| item.entity == entity && item.id == id);
+    rest.into_iter().chain(root).collect()
+}
+
+/// Removes what a clone made while none of it changed since: every record
+/// must still be live at the version the clone returned, or nothing is
+/// removed. The records go to the recycle bin as one delete operation.
+pub async fn undo_clone(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    record_id: Uuid,
+    items: &[CloneUndoItem],
+) -> Result<CloneUndoResult, AppError> {
+    if items.is_empty() || items.len() > MAX_CLONE_CHILDREN + 1 {
+        return Err(AppError::Validation(format!(
+            "an undo names 1 to {} records",
+            MAX_CLONE_CHILDREN + 1
+        )));
+    }
+    let (_, entity, _, _) = resolve_entity(state, entity_input).await?;
+    if !items
+        .iter()
+        .any(|i| i.entity == entity && i.id == record_id)
+    {
+        return Err(AppError::Validation(
+            "the undo list does not name this record".into(),
+        ));
+    }
+    // Check every record before removing any, so a changed one stops the
+    // whole undo.
+    let ordered = undo_order(items, &entity, record_id);
+    let mut checked = Vec::with_capacity(ordered.len());
+    for item in ordered {
+        let (_, name, _, append_only) = resolve_entity(state, &item.entity).await?;
+        if append_only {
+            return Err(AppError::Forbidden);
+        }
+        ctx.require(&name, "delete")?;
+        let current: Option<(i64, bool)> = sqlx::query_as(&format!(
+            "SELECT row_version, is_active FROM {} WHERE id = $1",
+            quote_ident(&name)
+        ))
+        .bind(item.id)
+        .fetch_optional(&state.base.db)
+        .await
+        .map_err(attome_db::classify)?;
+        match current {
+            Some((version, true)) if version == item.row_version => {}
+            Some(_) => {
+                return Err(AppError::Conflict(
+                    "a copy changed or was deleted since the clone; remove the copies one by one",
+                ));
+            }
+            None => return Err(AppError::NotFound),
+        }
+        let root = name == entity && item.id == record_id;
+        checked.push((name, item.id, item.row_version, root));
+    }
+    let origin =
+        crate::entity_mutation::DeleteOrigin::new(crate::entity_mutation::DeleteKind::Request)
+            .reason(Some("clone undone"));
+    for (name, id, version, root) in &checked {
+        // Removing a child can update the record's rollups, and with them its
+        // version; the record was checked above, so it goes without one.
+        let expected = (!root).then_some(*version);
+        super::delete_record_for(state, ctx, ctx.user_id, name, *id, expected, &origin).await?;
+    }
+    Ok(CloneUndoResult {
+        removed: checked.len(),
+        operation_id: origin.operation_id.clone(),
     })
 }
 
@@ -265,6 +484,7 @@ async fn copy_children(
     child: &CloneChild,
     ids: &[Uuid],
     new_parent: Option<Uuid>,
+    undo: &mut Vec<CloneUndoItem>,
 ) -> Result<ClonedChildren, AppError> {
     let (_, entity, attrs, _) = resolve_entity(state, &child.entity).await?;
     let mut out = ClonedChildren {
@@ -291,8 +511,13 @@ async fn copy_children(
         let mut overrides = Map::new();
         overrides.insert(child.field.clone(), Value::String(parent.to_string()));
         let (body, _) = copyable(state, &entity, &attrs, &data, &overrides).await?;
-        let (copy, _) =
+        let (copy, record) =
             super::create_record_for(state, ctx, ctx.user_id, &entity, Value::Object(body)).await?;
+        undo.push(CloneUndoItem {
+            entity: entity.clone(),
+            id: copy,
+            row_version: record.row_version(),
+        });
         out.ids.push(copy);
     }
     Ok(out)
@@ -368,8 +593,70 @@ pub(super) async fn record_children(
     )))
 }
 
+/// B7-T2: copies up to 50 records, each as a single clone with the same
+/// `overrides` would; the ones that could not be copied are listed.
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/clone",
+    tag = "entity",
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Create)])))),
+    params(("entity" = String, Path)),
+    request_body = BulkCloneRequest,
+    responses(
+        (status = 200, description = "The copies made, and the records that could not be copied", body = BulkCloneResult),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not create records of this entity", body = ErrorResponse),
+        (status = 422, description = "No ids, or more than 50", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn bulk_clone_route(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Read>>,
+    Path(entity): Path<String>,
+    Json(request): Json<BulkCloneRequest>,
+) -> Result<Json<BulkCloneResult>, AppError> {
+    Ok(Json(bulk_clone(&state, &ctx, &entity, &request).await?))
+}
+
+/// B7-T2: removes what a clone made, while none of it has changed: each
+/// record in the clone's `undo` list must still be live at its version. The
+/// records go to the recycle bin as one delete operation.
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/{id}/clone/undo",
+    tag = "entity",
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::SoftDelete)])))),
+    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    request_body = CloneUndoRequest,
+    responses(
+        (status = 200, description = "The copies are in the recycle bin", body = CloneUndoResult),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller may not delete one of the copies", body = ErrorResponse),
+        (status = 404, description = "A copy no longer exists", body = ErrorResponse),
+        (status = 409, description = "A copy changed or was deleted since the clone; nothing was removed", body = ErrorResponse),
+        (status = 422, description = "The list is empty, too long, or does not name this record", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+pub(super) async fn undo_clone_route(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<Delete>>,
+    Path((entity, id)): Path<(String, Uuid)>,
+    Json(body): Json<CloneUndoRequest>,
+) -> Result<Json<CloneUndoResult>, AppError> {
+    Ok(Json(
+        undo_clone(&state, &ctx, &entity, id, &body.items).await?,
+    ))
+}
+
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(clone_record_route, record_children))]
+#[openapi(paths(
+    clone_record_route,
+    record_children,
+    bulk_clone_route,
+    undo_clone_route
+))]
 struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {
@@ -425,5 +712,24 @@ mod tests {
         assert_eq!(body, *json!({"name": "Acme (copy)"}).as_object().unwrap());
         assert_eq!(left_out.len(), 3, "{left_out:?}");
         assert!(left_out.iter().any(|l| l.starts_with("number:")));
+    }
+
+    #[test]
+    fn clone_routes_undo_removes_the_record_after_its_children() {
+        let root = Uuid::now_v7();
+        let item = |entity: &str, id: Uuid| CloneUndoItem {
+            entity: entity.to_owned(),
+            id,
+            row_version: 1,
+        };
+        let items = vec![
+            item("invoice", root),
+            item("invoice_line", Uuid::now_v7()),
+            item("invoice_line", Uuid::now_v7()),
+        ];
+        let order = undo_order(&items, "invoice", root);
+        assert_eq!(order.len(), 3);
+        assert_eq!(order[2].id, root, "the clone's own record goes last");
+        assert!(order[..2].iter().all(|i| i.entity == "invoice_line"));
     }
 }

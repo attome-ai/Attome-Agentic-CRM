@@ -248,6 +248,14 @@ pub fn routes() -> Router<EngineState> {
             axum::routing::post(clone::clone_record_route),
         )
         .route(
+            "/api/v1/{entity}/{id}/clone/undo",
+            axum::routing::post(clone::undo_clone_route),
+        )
+        .route(
+            "/api/v1/{entity}/clone",
+            axum::routing::post(clone::bulk_clone_route),
+        )
+        .route(
             "/api/v1/{entity}/{id}/hard-delete",
             axum::routing::delete(mutations::hard_delete_record),
         )

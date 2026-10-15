@@ -2975,6 +2975,157 @@ fn masked_text_pattern_is_enforced_on_write_and_validated_on_creation() {
     })
 }
 
+/// B7-T2: a bulk clone copies each record with the overrides, a preview
+/// creates nothing, and undoing a clone removes the copy while it is
+/// unchanged; once the copy is edited, undo is a 409 and removes nothing.
+#[test]
+fn clone_routes_bulk_clone_and_undo() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (logicalname, admin_cookie, app) = provision_test_entity(system, "clone").await;
+        let post = |uri: String, body: serde_json::Value| {
+            Request::builder()
+                .method("POST")
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body.to_string()))
+                .unwrap()
+        };
+
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{logicalname}"),
+                serde_json::json!({"title": "source", "amount": 5}),
+            ))
+            .await
+            .expect("create");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let source = body_json(res).await["id"]
+            .as_str()
+            .expect("record id")
+            .to_owned();
+
+        // A preview creates nothing and has nothing to undo.
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{logicalname}/{source}/clone"),
+                serde_json::json!({"preview": true, "overrides": {"title": "preview"}}),
+            ))
+            .await
+            .expect("preview");
+        assert_eq!(res.status(), StatusCode::OK);
+        let preview = body_json(res).await;
+        assert!(preview["id"].is_null());
+        assert_eq!(preview["body"]["title"], "preview");
+        assert_eq!(preview["undo"], serde_json::json!([]));
+
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{logicalname}/clone"),
+                serde_json::json!({"ids": [source, Uuid::now_v7()], "overrides": {"title": "copy"}}),
+            ))
+            .await
+            .expect("bulk clone");
+        assert_eq!(res.status(), StatusCode::OK);
+        let bulk = body_json(res).await;
+        assert_eq!(bulk["cloned"].as_array().map(Vec::len), Some(1), "{bulk}");
+        assert_eq!(bulk["failed"][0]["code"], "not_found", "{bulk}");
+        let copy = bulk["cloned"][0]["id"]
+            .as_str()
+            .expect("copy id")
+            .to_owned();
+        let undo = bulk["cloned"][0]["undo"].clone();
+
+        let get = |id: String| {
+            Request::builder()
+                .method("GET")
+                .uri(format!("/api/v1/{logicalname}/{id}"))
+                .header("cookie", &admin_cookie)
+                .body(Body::empty())
+                .unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(get(copy.clone()))
+            .await
+            .expect("get copy");
+        assert_eq!(res.status(), StatusCode::OK);
+        let copied = body_json(res).await;
+        assert_eq!(copied["data"]["title"], "copy");
+        assert!(
+            !copied["data"]["amount"].is_null(),
+            "the copy keeps the source's values"
+        );
+
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{logicalname}/{copy}/clone/undo"),
+                serde_json::json!({"items": undo}),
+            ))
+            .await
+            .expect("undo");
+        assert_eq!(res.status(), StatusCode::OK);
+        let undone = body_json(res).await;
+        assert_eq!(undone["removed"], 1);
+        assert!(undone["operation_id"].is_string());
+        let res = app
+            .clone()
+            .oneshot(get(copy))
+            .await
+            .expect("get undone copy");
+        assert_eq!(
+            res.status(),
+            StatusCode::NOT_FOUND,
+            "the copy is in the recycle bin"
+        );
+
+        // A copy edited after the clone is not undone.
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{logicalname}/{source}/clone"),
+                serde_json::json!({}),
+            ))
+            .await
+            .expect("clone");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let single = body_json(res).await;
+        let copy = single["id"].as_str().expect("copy id").to_owned();
+        let version = single["undo"][0]["row_version"].as_i64().expect("version");
+        let res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri(format!("/api/v1/{logicalname}/{copy}"))
+                    .header("cookie", &admin_cookie)
+                    .header("content-type", "application/json")
+                    .header("if-match", format!("\"{version}\""))
+                    .body(Body::from(r#"{"title":"edited"}"#))
+                    .unwrap(),
+            )
+            .await
+            .expect("edit copy");
+        assert_eq!(res.status(), StatusCode::OK);
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{logicalname}/{copy}/clone/undo"),
+                serde_json::json!({"items": single["undo"]}),
+            ))
+            .await
+            .expect("undo edited");
+        assert_eq!(res.status(), StatusCode::CONFLICT);
+        let res = app.oneshot(get(copy)).await.expect("get edited copy");
+        assert_eq!(res.status(), StatusCode::OK, "nothing was removed");
+    })
+}
+
 /// F026 (P2.2): `POST .../restore` undeletes a soft-deleted record. Delete
 /// now also bumps `row_version` (P-data-lifecycle's `on_target_delete` work
 /// stamps `modified_by`/`modified_at`/`row_version` on every soft-delete, not
