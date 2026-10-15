@@ -228,6 +228,9 @@ pub(crate) struct WritePipeline<'a> {
     conditions: HashMap<Uuid, ConditionSlot>,
     /// Outcomes on M0 (step 1), reused in step 4 when M2 equals M0.
     m0_outcomes: HashMap<Uuid, ConditionOutcome>,
+    /// B4-T3: the tags the judged rules add (`true`) or remove, in rule
+    /// order; applied once the record is written.
+    tag_actions: Vec<(bool, String)>,
 }
 
 /// What step 1 decided: the rules whose `set_value` policies fire.
@@ -281,6 +284,7 @@ impl<'a> WritePipeline<'a> {
             now: Utc::now(),
             conditions: HashMap::new(),
             m0_outcomes: HashMap::new(),
+            tag_actions: Vec::new(),
         }
     }
 
@@ -510,6 +514,7 @@ impl<'a> WritePipeline<'a> {
                         | PolicyEffect::Error { .. }
                         | PolicyEffect::Required { .. }
                         | PolicyEffect::AllowedValues { .. }
+                        | PolicyEffect::Tag { .. }
                 )
             });
             if !judged {
@@ -527,7 +532,7 @@ impl<'a> WritePipeline<'a> {
             };
             outcomes.insert(id, outcome);
         }
-        judge_outcomes(
+        let warnings = judge_outcomes(
             &self.rules,
             &self.audience,
             &outcomes,
@@ -535,7 +540,74 @@ impl<'a> WritePipeline<'a> {
             self.entity,
             m2,
             write,
-        )
+        )?;
+        // B4-T3: the tag outcomes of the rules that hold.
+        self.tag_actions.clear();
+        for rule in &self.rules {
+            if !outcomes
+                .get(&rule.id)
+                .is_some_and(ConditionOutcome::holds_fail_closed)
+            {
+                continue;
+            }
+            for policy in rule.policies_for(&self.audience) {
+                if let Some(PolicyEffect::Tag { add, name }) = policy.effect() {
+                    self.tag_actions.push((add, name.trim().to_owned()));
+                }
+            }
+        }
+        Ok(warnings)
+    }
+
+    /// B4-T3: applies the judged rules' tag outcomes to the written record,
+    /// in the write's own transaction. A tag that does not exist yet is
+    /// created as a shared tag; a merged tag's name leads to the tag it went
+    /// into.
+    pub(crate) async fn apply_tags(
+        &self,
+        tx: &mut sqlx::PgConnection,
+        record_id: Uuid,
+        user: Option<Uuid>,
+    ) -> Result<(), AppError> {
+        let by = user.unwrap_or(Uuid::nil());
+        for (add, name) in &self.tag_actions {
+            if *add {
+                sqlx::query(
+                    "INSERT INTO tag (name, created_by) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                )
+                .bind(name)
+                .bind(by)
+                .execute(&mut *tx)
+                .await
+                .map_err(attome_db::classify)?;
+                sqlx::query(
+                    "INSERT INTO tag_link (tag_id, entity, record_id, created_by) \
+                     SELECT COALESCE(t.merged_into, t.id), $2, $3, $4 FROM tag t \
+                     WHERE t.normalized_name = normalize_ar($1) AND t.owner_user IS NULL \
+                     ON CONFLICT (tag_id, entity, record_id) DO NOTHING",
+                )
+                .bind(name)
+                .bind(self.entity)
+                .bind(record_id)
+                .bind(by)
+                .execute(&mut *tx)
+                .await
+                .map_err(attome_db::classify)?;
+            } else {
+                sqlx::query(
+                    "DELETE FROM tag_link WHERE entity = $2 AND record_id = $3 AND tag_id IN ( \
+                         SELECT COALESCE(t.merged_into, t.id) FROM tag t \
+                         WHERE t.normalized_name = normalize_ar($1) AND t.owner_user IS NULL)",
+                )
+                .bind(name)
+                .bind(self.entity)
+                .bind(record_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(attome_db::classify)?;
+            }
+        }
+        Ok(())
     }
 }
 

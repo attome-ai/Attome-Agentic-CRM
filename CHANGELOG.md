@@ -11,6 +11,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Business rules: `add_tag` and `remove_tag` outcomes tag or untag the record written while the
+  condition holds (migration 0030).
 - Business rules: two outcomes, `required` (a field is required while the condition holds) and
   `allowed_values` (a field takes only the listed codes while it holds), enforced on every server
   write (migration 0029). A default value is the existing `set_value` with `mode: default`.

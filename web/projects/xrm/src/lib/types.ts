@@ -96,7 +96,8 @@ export interface ConditionLeaf {
 /** `ConditionTree` (`#[serde(untagged)]`). */
 export type ConditionTree = ConditionAll | ConditionAny | ConditionExpression | ConditionLeaf;
 
-export type PolicyType = 'hidden' | 'disabled' | 'error' | 'set_value' | 'required' | 'allowed_values';
+export type PolicyType = 'hidden' | 'disabled' | 'error' | 'set_value' | 'required' | 'allowed_values'
+  | 'add_tag' | 'remove_tag';
 export type RuleSeverity = 'error' | 'warning';
 export type SetMode = 'always' | 'default';
 

@@ -544,6 +544,105 @@ fn rule_outcomes_required_and_allowed_values_are_enforced() {
     })
 }
 
+/// B4-T3: a rule tags the record it holds for and untags it once it holds
+/// for `remove_tag` instead.
+#[test]
+fn rule_outcomes_add_and_remove_tags() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+
+        let logicalname = format!("rule_tag_{}", Uuid::now_v7().simple());
+        provision_entity_with_fields(&app, &admin_cookie, &logicalname, &[("amount", "number")])
+            .await;
+        let tag = format!("big-{logicalname}");
+        create_rule(
+            &app,
+            &admin_cookie,
+            serde_json::json!({
+                "entity_logicalname": logicalname,
+                "name": "tag_big",
+                "condition": { "expression": "amount > 1000" },
+                "policies": [{ "type": "add_tag", "value": tag }],
+            }),
+        )
+        .await;
+        create_rule(
+            &app,
+            &admin_cookie,
+            serde_json::json!({
+                "entity_logicalname": logicalname,
+                "name": "untag_small",
+                "condition": { "expression": "amount <= 1000" },
+                "policies": [{ "type": "remove_tag", "value": tag }],
+            }),
+        )
+        .await;
+        let tags_of = |id: String| {
+            Request::builder()
+                .method("GET")
+                .uri(format!("/api/v1/{logicalname}/{id}/tags"))
+                .header("cookie", &admin_cookie)
+                .body(Body::empty())
+                .unwrap()
+        };
+        let names = |page: &Value| -> Vec<String> {
+            page["items"]
+                .as_array()
+                .map(|items| {
+                    items
+                        .iter()
+                        .filter_map(|t| t["name"].as_str().map(str::to_owned))
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+
+        let res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/v1/{logicalname}"))
+                    .header("cookie", &admin_cookie)
+                    .header("content-type", "application/json")
+                    .body(Body::from(r#"{"amount": 5000}"#))
+                    .unwrap(),
+            )
+            .await
+            .expect("create");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let created = body_json(res).await;
+        let id = created["id"].as_str().expect("id").to_owned();
+        let version = created["row_version"].as_i64().expect("version");
+        let res = app
+            .clone()
+            .oneshot(tags_of(id.clone()))
+            .await
+            .expect("tags");
+        assert_eq!(names(&body_json(res).await), vec![tag.clone()]);
+
+        let res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("PATCH")
+                    .uri(format!("/api/v1/{logicalname}/{id}"))
+                    .header("cookie", &admin_cookie)
+                    .header("content-type", "application/json")
+                    .header("if-match", format!("\"{version}\""))
+                    .body(Body::from(r#"{"amount": 10}"#))
+                    .unwrap(),
+            )
+            .await
+            .expect("update");
+        assert_eq!(res.status(), StatusCode::OK);
+        let res = app.oneshot(tags_of(id)).await.expect("tags");
+        assert!(names(&body_json(res).await).is_empty());
+    })
+}
+
 /// `kind = calculation`: the derived field is stored on the row (not a
 /// virtual/computed-on-read value), recomputed from the caller's own body —
 /// M45 plan §5.

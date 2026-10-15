@@ -1908,6 +1908,13 @@ pub async fn create_one_as(
     )
     .await?;
 
+    // B4-T3: the tags the rules that hold add or remove.
+    if let Some(pipeline) = &rules {
+        pipeline
+            .apply_tags(&mut **tx, record_id, stamp.created_by)
+            .await?;
+    }
+
     // D-787 rule 7: a reference-data create inside a changeset is recorded
     // as `upsert_record` (no-op outside the generic handler's scope).
     record_reference_write(
@@ -2849,6 +2856,13 @@ pub async fn update_one_as(
             &new_row,
         )
         .await?;
+    }
+
+    // B4-T3: the tags the rules that hold add or remove.
+    if let Some(pipeline) = &rules {
+        pipeline
+            .apply_tags(&mut **tx, record_id, modified_by)
+            .await?;
     }
 
     // D-787 rule 7: a reference-data update inside a changeset is recorded

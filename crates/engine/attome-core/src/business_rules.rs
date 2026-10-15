@@ -287,6 +287,10 @@ pub enum PolicyType {
     /// A11-T1: the field takes only the codes in `value` (a list) while the
     /// condition holds.
     AllowedValues,
+    /// B4-T3: the record gets the shared tag named in `value`.
+    AddTag,
+    /// B4-T3: the record loses the shared tag named in `value`.
+    RemoveTag,
 }
 
 impl PolicyType {
@@ -298,6 +302,8 @@ impl PolicyType {
             Self::SetValue => "set_value",
             Self::Required => "required",
             Self::AllowedValues => "allowed_values",
+            Self::AddTag => "add_tag",
+            Self::RemoveTag => "remove_tag",
         }
     }
 
@@ -309,6 +315,8 @@ impl PolicyType {
             "set_value" => Self::SetValue,
             "required" => Self::Required,
             "allowed_values" => Self::AllowedValues,
+            "add_tag" => Self::AddTag,
+            "remove_tag" => Self::RemoveTag,
             _ => return None,
         })
     }
@@ -486,6 +494,11 @@ pub enum PolicyEffect<'a> {
         values: &'a [Value],
         message: Option<&'a str>,
     },
+    /// B4-T3: the written record gets (`add`) or loses the shared tag `name`.
+    Tag {
+        add: bool,
+        name: &'a str,
+    },
 }
 
 /// A11-T1: whether `value` is allowed by an `allowed_values` list. Empty is
@@ -544,6 +557,10 @@ impl PolicyDef {
                 field: self.field.as_deref()?,
                 values: self.value.as_ref()?.as_array()?.as_slice(),
                 message: self.message.as_deref(),
+            }),
+            PolicyType::AddTag | PolicyType::RemoveTag => Some(PolicyEffect::Tag {
+                add: self.policy_type == PolicyType::AddTag,
+                name: self.value.as_ref()?.as_str()?,
             }),
         }
     }
@@ -1561,6 +1578,22 @@ fn check_policy(
             forbid(policy.severity.is_some(), "severity");
             forbid(policy.expression.is_some(), "expression");
             forbid(policy.mode.is_some(), "mode");
+        }
+        PolicyType::AddTag | PolicyType::RemoveTag => {
+            forbid(policy.field.is_some(), "field");
+            forbid(policy.message.is_some(), "message");
+            forbid(policy.severity.is_some(), "severity");
+            forbid(policy.expression.is_some(), "expression");
+            forbid(policy.mode.is_some(), "mode");
+            let name = policy.value.as_ref().and_then(Value::as_str).map(str::trim);
+            if !name.is_some_and(|n| !n.is_empty() && n.chars().count() <= 80) {
+                issues.push(RuleIssue::new(
+                    format!("{path}.value"),
+                    "policy_shape",
+                    format!("a {type_name} policy needs a tag name of 1 to 80 characters"),
+                ));
+            }
+            return;
         }
     }
 
