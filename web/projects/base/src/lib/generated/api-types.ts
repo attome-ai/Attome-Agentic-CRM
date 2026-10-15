@@ -3963,6 +3963,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/model/navigation/{id}/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A21-T5: each item of a published menu with its opens over the last
+         *     `days` (default 60), the items nobody opened flagged `unused`.
+         *     Administrators only.
+         */
+        get: operations["menu_usage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/model/{kind}": {
         parameters: {
             query?: never;
@@ -8862,6 +8883,23 @@ export interface paths {
         get: operations["menu"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/model/navigation/{id}/opened": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A21-T5: counts one open of a menu item for today. */
+        post: operations["menu_item_opened"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18783,6 +18821,22 @@ export interface components {
         };
         /** @enum {string} */
         MeasureFn: "count" | "count_distinct" | "sum" | "avg" | "min" | "max" | "median";
+        /** @description `POST /api/v1/model/navigation/{id}/opened`. */
+        MenuItemOpened: {
+            /** @description The item, as `<group label>/<item label>`. */
+            item: string;
+        };
+        /** @description One menu item's use over the period. */
+        MenuItemUsage: {
+            /** @description `<group label>/<item label>`. */
+            item: string;
+            /** Format: date */
+            last_opened?: string | null;
+            /** Format: int64 */
+            opens: number;
+            /** @description Not opened in the period: a candidate to hide. */
+            unused: boolean;
+        };
         /** @description A menu as one caller sees it (A21-T2). */
         MenuView: {
             groups: Record<string, never>[];
@@ -21278,6 +21332,25 @@ export interface components {
                 name: string;
                 /** @description `read`, `reversible` or `consequential`. */
                 risk: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_MenuItemUsage: {
+            items: {
+                /** @description `<group label>/<item label>`. */
+                item: string;
+                /** Format: date */
+                last_opened?: string | null;
+                /** Format: int64 */
+                opens: number;
+                /** @description Not opened in the period: a candidate to hide. */
+                unused: boolean;
             }[];
             /** Format: int64 */
             page: number;
@@ -42083,6 +42156,67 @@ export interface operations {
             };
         };
     };
+    menu_usage: {
+        parameters: {
+            query?: {
+                /** @description Days to look back, 1 to 365 (default 60). */
+                days?: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Each item's opens, the unused ones flagged */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_MenuItemUsage"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller is not an administrator */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such published menu */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description days is out of range */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_objects: {
         parameters: {
             query?: {
@@ -58076,6 +58210,48 @@ export interface operations {
             };
             /** @description No published menu with this id */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    menu_item_opened: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MenuItemOpened"];
+            };
+        };
+        responses: {
+            /** @description Counted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No item, or an item over 300 characters */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

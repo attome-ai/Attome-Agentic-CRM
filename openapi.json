@@ -21564,6 +21564,96 @@
         ]
       }
     },
+    "/api/v1/admin/model/navigation/{id}/usage": {
+      "get": {
+        "tags": [
+          "model"
+        ],
+        "summary": "A21-T5: each item of a published menu with its opens over the last\n`days` (default 60), the items nobody opened flagged `unused`.\nAdministrators only.",
+        "operationId": "menu_usage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "description": "Days to look back, 1 to 365 (default 60).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Each item's opens, the unused ones flagged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_MenuItemUsage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller is not an administrator",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such published menu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "days is out of range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/admin/model/{kind}": {
       "get": {
         "tags": [
@@ -45908,6 +45998,74 @@
             "api_key": []
           }
         ]
+      }
+    },
+    "/api/v1/model/navigation/{id}/opened": {
+      "post": {
+        "tags": [
+          "model"
+        ],
+        "summary": "A21-T5: counts one open of a menu item for today.",
+        "operationId": "menu_item_opened",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MenuItemOpened"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Counted"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No item, or an item over 300 characters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "counts a menu item's opens; no business or security effect",
+          "reason": "telemetry",
+          "via": null
+        }
       }
     },
     "/api/v1/my-work/counts": {
@@ -78997,6 +79155,49 @@
           "median"
         ]
       },
+      "MenuItemOpened": {
+        "type": "object",
+        "description": "`POST /api/v1/model/navigation/{id}/opened`.",
+        "required": [
+          "item"
+        ],
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "The item, as `<group label>/<item label>`."
+          }
+        }
+      },
+      "MenuItemUsage": {
+        "type": "object",
+        "description": "One menu item's use over the period.",
+        "required": [
+          "item",
+          "opens",
+          "unused"
+        ],
+        "properties": {
+          "item": {
+            "type": "string",
+            "description": "`<group label>/<item label>`."
+          },
+          "last_opened": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "opens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unused": {
+            "type": "boolean",
+            "description": "Not opened in the period: a candidate to hide."
+          }
+        }
+      },
       "MenuView": {
         "type": "object",
         "description": "A menu as one caller sees it (A21-T2).",
@@ -85894,6 +86095,63 @@
                 "risk": {
                   "type": "string",
                   "description": "`read`, `reversible` or `consequential`."
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_MenuItemUsage": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One menu item's use over the period.",
+              "required": [
+                "item",
+                "opens",
+                "unused"
+              ],
+              "properties": {
+                "item": {
+                  "type": "string",
+                  "description": "`<group label>/<item label>`."
+                },
+                "last_opened": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date"
+                },
+                "opens": {
+                  "type": "integer",
+                  "format": "int64"
+                },
+                "unused": {
+                  "type": "boolean",
+                  "description": "Not opened in the period: a candidate to hide."
                 }
               }
             }
