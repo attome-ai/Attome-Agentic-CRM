@@ -1,4 +1,35 @@
     :host {
+      --t: var(--color-text-primary);
+      --ac: var(--color-accent);
+      --dg: var(--color-danger);
+      --bg: var(--color-bg);
+      --sh: var(--color-card-shadow);
+      --bg2: var(--color-bg-alt);
+      --t2: var(--color-text-secondary);
+      --ach: var(--color-accent-hover);
+      --on: var(--color-on-accent);
+      --pr: var(--color-primary);
+      --i8: color-mix(in srgb, var(--t) 8%, transparent);
+      --i6: color-mix(in srgb, var(--t) 6%, transparent);
+      --i10: color-mix(in srgb, var(--t) 10%, transparent);
+      --i4: color-mix(in srgb, var(--t) 4%, transparent);
+      --a40: color-mix(in srgb, var(--ac) 40%, transparent);
+      --a60-ink: color-mix(in srgb, var(--ac) 60%, var(--t));
+      --a15: color-mix(in srgb, var(--ac) 15%, transparent);
+      --a25: color-mix(in srgb, var(--ac) 25%, transparent);
+      --a20: color-mix(in srgb, var(--ac) 20%, transparent);
+      --i15: color-mix(in srgb, var(--t) 15%, transparent);
+      --a4: color-mix(in srgb, var(--ac) 4%, transparent);
+      --d10: color-mix(in srgb, var(--dg) 10%, transparent);
+      --d30: color-mix(in srgb, var(--dg) 30%, transparent);
+      --d60-ink: color-mix(in srgb, var(--dg) 60%, var(--t));
+      --a30: color-mix(in srgb, var(--ac) 30%, transparent);
+      --i12: color-mix(in srgb, var(--t) 12%, transparent);
+      --i20: color-mix(in srgb, var(--t) 20%, transparent);
+      --d15: color-mix(in srgb, var(--dg) 15%, transparent);
+      --a12: color-mix(in srgb, var(--ac) 12%, transparent);
+      --a40-ink: color-mix(in srgb, var(--ac) 40%, var(--t));
+      --a50: color-mix(in srgb, var(--ac) 50%, transparent);
       display: block;
       width: 100%;
     }
@@ -9,13 +40,13 @@
       min-height: 560px;
       max-height: 720px;
       height: 640px;
-      background: var(--color-bg);
-      border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+      background: var(--bg);
+      border: 1px solid var(--i8);
       border-radius: 14px;
       overflow: hidden;
-      box-shadow: 0 8px 32px var(--color-card-shadow);
+      box-shadow: 0 8px 32px var(--sh);
       font-family: inherit;
-      color: var(--color-text-primary, #e2e8f0);
+      color: var(--t);
     }
 
     /* ── Left Sidebar ──────────────────────────────────────────────────── */
@@ -23,8 +54,8 @@
       width: 290px;
       min-width: 250px;
       flex-shrink: 0;
-      background: var(--color-bg-alt);
-      border-inline-end: 1px solid color-mix(in srgb, var(--color-text-primary) 7%, transparent);
+      background: var(--bg2);
+      border-inline-end: 1px solid var(--i8);
       display: flex;
       flex-direction: column;
     }
@@ -34,14 +65,14 @@
       align-items: center;
       justify-content: space-between;
       padding: 16px 18px;
-      border-bottom: 1px solid color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+      border-bottom: 1px solid var(--i6);
     }
 
     .xnp-sidebar-title {
       margin: 0;
       font-size: 15px;
       font-weight: 700;
-      color: var(--color-text-primary, #f1f5f9);
+      color: var(--t);
       letter-spacing: -0.01em;
     }
 
@@ -49,9 +80,9 @@
       width: 30px;
       height: 30px;
       border-radius: 7px;
-      border: 1px solid color-mix(in srgb, var(--color-text-primary) 10%, transparent);
-      background: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
-      color: var(--color-text-secondary, #94a3b8);
+      border: 1px solid var(--i10);
+      background: var(--i4);
+      color: var(--t2);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -61,10 +92,10 @@
     }
 
     .xnp-add-btn:hover, .xnp-add-btn-active {
-      background: var(--color-accent-hover);
-      border-color: var(--color-accent);
-      color: var(--color-on-accent);
-      box-shadow: 0 2px 8px color-mix(in srgb, var(--color-accent) 40%, transparent);
+      background: var(--ach);
+      border-color: var(--ac);
+      color: var(--on);
+      box-shadow: 0 2px 8px var(--a40);
     }
 
     .xnp-history-list {
@@ -84,12 +115,12 @@
     }
 
     .xnp-history-item:hover {
-      background: color-mix(in srgb, var(--color-text-primary) 3%, transparent);
+      background: var(--i4);
     }
 
     .xnp-history-item.xnp-active {
-      background: color-mix(in srgb, var(--color-accent) 9%, transparent);
-      border-inline-start-color: var(--color-accent);
+      background: var(--a12);
+      border-inline-start-color: var(--ac);
     }
 
     .xnp-item-header {
@@ -103,7 +134,7 @@
     .xnp-item-author {
       font-size: 11px;
       font-weight: 600;
-      color: var(--color-text-primary, #e2e8f0);
+      color: var(--t);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -121,37 +152,37 @@
       align-items: center;
       gap: 2px;
       font-size: 10px;
-      color: var(--color-text-secondary, #94a3b8);
+      color: var(--t2);
       font-weight: 600;
     }
 
     .xnp-badge-replies {
-      color: var(--color-primary);
+      color: var(--pr);
     }
 
     .xnp-item-time {
       font-size: 11px;
-      color: var(--color-text-secondary, #64748b);
+      color: var(--t2);
     }
 
     .xnp-item-title {
       margin: 0 0 2px 0;
       font-size: 13px;
       font-weight: 700;
-      color: var(--color-text-primary, #f1f5f9);
+      color: var(--t);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .xnp-active .xnp-item-title {
-      color: color-mix(in srgb, var(--color-accent) 60%, var(--color-text-primary));
+      color: var(--a60-ink);
     }
 
     .xnp-item-snippet {
       margin: 0;
       font-size: 12px;
-      color: var(--color-text-secondary, #64748b);
+      color: var(--t2);
       line-height: 1.35;
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -162,7 +193,7 @@
     .xnp-empty {
       padding: 40px 20px;
       text-align: center;
-      color: var(--color-text-secondary, #64748b);
+      color: var(--t2);
       font-size: 13px;
       display: flex;
       flex-direction: column;
@@ -176,8 +207,8 @@
 
     .xnp-btn-inline {
       border: none;
-      background: color-mix(in srgb, var(--color-accent) 15%, transparent);
-      color: color-mix(in srgb, var(--color-accent) 60%, var(--color-text-primary));
+      background: var(--a15);
+      color: var(--a60-ink);
       padding: 6px 12px;
       border-radius: 6px;
       font-size: 12px;
@@ -187,7 +218,7 @@
     }
 
     .xnp-btn-inline:hover {
-      background: color-mix(in srgb, var(--color-accent) 25%, transparent);
+      background: var(--a25);
     }
 
     /* ── Right Main Area ───────────────────────────────────────────────── */
@@ -195,7 +226,7 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      background: var(--color-bg);
+      background: var(--bg);
       position: relative;
       min-width: 0;
       overflow: hidden;
@@ -215,7 +246,7 @@
       align-items: center;
       justify-content: space-between;
       padding-bottom: 20px;
-      border-bottom: 1px solid color-mix(in srgb, var(--color-text-primary) 7%, transparent);
+      border-bottom: 1px solid var(--i8);
       margin-bottom: 20px;
     }
 
@@ -229,14 +260,14 @@
       margin: 0;
       font-size: 18px;
       font-weight: 700;
-      color: var(--color-text-primary, #f8fafc);
+      color: var(--t);
       letter-spacing: -0.01em;
     }
 
     .xnp-pane-subtitle {
       margin: 2px 0 0 0;
       font-size: 12px;
-      color: var(--color-text-secondary, #94a3b8);
+      color: var(--t2);
     }
 
     .xnp-form-body {
@@ -259,30 +290,30 @@
     .xnp-form-label {
       font-size: 13px;
       font-weight: 600;
-      color: var(--color-text-secondary, #cbd5e1);
+      color: var(--t2);
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
     .xnp-req {
-      color: var(--color-danger);
+      color: var(--dg);
       font-weight: 700;
     }
 
     .xnp-label-hint {
       font-size: 11px;
-      color: var(--color-text-secondary, #64748b);
+      color: var(--t2);
       font-weight: 400;
       margin-inline-start: 4px;
     }
 
     .xnp-form-input {
       padding: 10px 14px;
-      background: var(--color-bg-alt);
-      border: 1px solid color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+      background: var(--bg2);
+      border: 1px solid var(--i10);
       border-radius: 8px;
-      color: var(--color-text-primary, #f8fafc);
+      color: var(--t);
       font-size: 14px;
       font-family: inherit;
       outline: none;
@@ -290,16 +321,16 @@
     }
 
     .xnp-form-input:focus {
-      border-color: var(--color-accent);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent);
+      border-color: var(--ac);
+      box-shadow: 0 0 0 3px var(--a20);
     }
 
     .xnp-form-textarea {
       padding: 12px 14px;
-      background: var(--color-bg-alt);
-      border: 1px solid color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+      background: var(--bg2);
+      border: 1px solid var(--i10);
       border-radius: 8px;
-      color: var(--color-text-primary, #f8fafc);
+      color: var(--t);
       font-size: 13px;
       line-height: 1.5;
       font-family: inherit;
@@ -310,8 +341,8 @@
     }
 
     .xnp-form-textarea:focus {
-      border-color: var(--color-accent);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 20%, transparent);
+      border-color: var(--ac);
+      box-shadow: 0 0 0 3px var(--a20);
     }
 
     .xnp-dropzone {
@@ -319,33 +350,33 @@
       align-items: center;
       gap: 14px;
       padding: 14px 18px;
-      background: var(--color-bg-alt);
-      border: 1px dashed color-mix(in srgb, var(--color-text-primary) 15%, transparent);
+      background: var(--bg2);
+      border: 1px dashed var(--i15);
       border-radius: 8px;
       cursor: pointer;
       transition: all 0.15s ease;
     }
 
     .xnp-dropzone:hover {
-      border-color: var(--color-accent);
-      background: color-mix(in srgb, var(--color-accent) 4%, transparent);
+      border-color: var(--ac);
+      background: var(--a4);
     }
 
     .xnp-dropzone-icon {
       width: 36px;
       height: 36px;
       border-radius: 8px;
-      background: color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+      background: var(--i6);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--color-accent);
+      color: var(--ac);
       font-size: 20px;
     }
 
     .xnp-dropzone-text {
       font-size: 13px;
-      color: var(--color-text-secondary, #cbd5e1);
+      color: var(--t2);
       display: flex;
       flex-direction: column;
       gap: 2px;
@@ -353,7 +384,7 @@
 
     .xnp-dropzone-sub {
       font-size: 11px;
-      color: var(--color-text-secondary, #64748b);
+      color: var(--t2);
     }
 
     .xnp-selected-attachments {
@@ -368,16 +399,16 @@
       align-items: center;
       gap: 8px;
       padding: 6px 12px;
-      background: var(--color-bg-alt);
-      border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+      background: var(--bg2);
+      border: 1px solid var(--a25);
       border-radius: 8px;
       font-size: 12px;
-      color: var(--color-text-primary, #e2e8f0);
+      color: var(--t);
     }
 
     .xnp-pill-new {
       border-style: dashed;
-      border-color: var(--color-accent);
+      border-color: var(--ac);
     }
 
     .xnp-att-pill-name {
@@ -390,13 +421,13 @@
 
     .xnp-att-pill-size {
       font-size: 11px;
-      color: var(--color-text-secondary, #94a3b8);
+      color: var(--t2);
     }
 
     .xnp-att-pill-remove {
       border: none;
       background: transparent;
-      color: var(--color-text-secondary, #94a3b8);
+      color: var(--t2);
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -405,15 +436,15 @@
     }
 
     .xnp-att-pill-remove:hover {
-      color: var(--color-danger);
+      color: var(--dg);
     }
 
     .xnp-error-alert {
       padding: 10px 14px;
-      background: color-mix(in srgb, var(--color-danger) 10%, transparent);
-      border: 1px solid color-mix(in srgb, var(--color-danger) 30%, transparent);
+      background: var(--d10);
+      border: 1px solid var(--d30);
       border-radius: 8px;
-      color: color-mix(in srgb, var(--color-danger) 60%, var(--color-text-primary));
+      color: var(--d60-ink);
       font-size: 13px;
       display: flex;
       align-items: center;
@@ -435,14 +466,14 @@
       justify-content: flex-end;
       gap: 12px;
       padding-top: 18px;
-      border-top: 1px solid color-mix(in srgb, var(--color-text-primary) 7%, transparent);
+      border-top: 1px solid var(--i8);
       margin-top: 18px;
     }
 
     .xnp-btn-primary {
       padding: 10px 22px;
-      background: var(--color-accent-hover);
-      color: var(--color-on-accent);
+      background: var(--ach);
+      color: var(--on);
       border: none;
       border-radius: 8px;
       font-size: 13px;
@@ -455,7 +486,7 @@
     }
 
     .xnp-btn-primary:hover:not(:disabled) {
-      background: var(--color-accent-hover);
+      background: var(--ach);
     }
 
     .xnp-btn-primary:disabled {
@@ -465,9 +496,9 @@
 
     .xnp-btn-secondary {
       padding: 10px 18px;
-      background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
-      color: var(--color-text-secondary, #cbd5e1);
-      border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+      background: var(--i6);
+      color: var(--t2);
+      border: 1px solid var(--i8);
       border-radius: 8px;
       font-size: 13px;
       font-weight: 600;
@@ -476,14 +507,14 @@
     }
 
     .xnp-btn-secondary:hover {
-      background: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+      background: var(--i10);
     }
 
     .xnp-btn-ghost {
       padding: 6px 12px;
       background: transparent;
-      color: var(--color-text-secondary, #94a3b8);
-      border: 1px solid color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+      color: var(--t2);
+      border: 1px solid var(--i10);
       border-radius: 6px;
       font-size: 12px;
       font-weight: 600;
@@ -495,8 +526,8 @@
     }
 
     .xnp-btn-ghost:hover {
-      background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
-      color: var(--color-text-primary, #f1f5f9);
+      background: var(--i6);
+      color: var(--t);
     }
 
     /* ── Screen 2: Note Detail & Chat ──────────────────────────────────── */
@@ -513,8 +544,8 @@
       align-items: center;
       justify-content: space-between;
       padding: 16px 24px;
-      border-bottom: 1px solid color-mix(in srgb, var(--color-text-primary) 7%, transparent);
-      background: var(--color-bg-alt);
+      border-bottom: 1px solid var(--i8);
+      background: var(--bg2);
     }
 
     .xnp-detail-title-box {
@@ -527,19 +558,19 @@
       margin: 0;
       font-size: 16px;
       font-weight: 700;
-      color: var(--color-text-primary, #f8fafc);
+      color: var(--t);
     }
 
     .xnp-detail-meta {
       font-size: 11px;
-      color: var(--color-text-secondary, #64748b);
+      color: var(--t2);
       display: flex;
       align-items: center;
       gap: 6px;
     }
 
     .xnp-detail-meta strong {
-      color: var(--color-text-secondary, #94a3b8);
+      color: var(--t2);
     }
 
     .xnp-dot {
@@ -554,9 +585,9 @@
 
     .xnp-btn-edit-note {
       padding: 6px 14px;
-      background: color-mix(in srgb, var(--color-accent) 15%, transparent);
-      color: color-mix(in srgb, var(--color-accent) 60%, var(--color-text-primary));
-      border: 1px solid color-mix(in srgb, var(--color-accent) 30%, transparent);
+      background: var(--a15);
+      color: var(--a60-ink);
+      border: 1px solid var(--a30);
       border-radius: 6px;
       font-size: 12px;
       font-weight: 600;
@@ -568,9 +599,9 @@
     }
 
     .xnp-btn-edit-note:hover {
-      background: var(--color-accent-hover);
-      color: var(--color-on-accent);
-      border-color: var(--color-accent);
+      background: var(--ach);
+      color: var(--on);
+      border-color: var(--ac);
     }
 
     .xnp-timeline-container {
@@ -595,7 +626,7 @@
       top: 18px;
       bottom: 18px;
       width: 2px;
-      background: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+      background: var(--i10);
       z-index: 1;
     }
 
@@ -611,9 +642,9 @@
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: var(--color-bg-alt);
-      border: 1px solid color-mix(in srgb, var(--color-text-primary) 18%, transparent);
-      color: color-mix(in srgb, var(--color-accent) 60%, var(--color-text-primary));
+      background: var(--bg2);
+      border: 1px solid var(--i20);
+      color: var(--a60-ink);
       font-size: 12px;
       font-weight: 700;
       display: flex;
@@ -622,18 +653,18 @@
       flex-shrink: 0;
       position: relative;
       z-index: 3;
-      box-shadow: 0 0 0 4px var(--color-bg);
+      box-shadow: 0 0 0 4px var(--bg);
       user-select: none;
     }
 
     .xnp-card {
       flex: 1;
-      background: var(--color-bg-alt);
-      border: 1px solid color-mix(in srgb, var(--color-text-primary) 7%, transparent);
+      background: var(--bg2);
+      border: 1px solid var(--i8);
       border-radius: 12px;
       padding: 14px 18px;
       position: relative;
-      box-shadow: 0 4px 16px var(--color-card-shadow);
+      box-shadow: 0 4px 16px var(--sh);
     }
 
     .xnp-card-header {
@@ -652,12 +683,12 @@
     }
 
     .xnp-author-name {
-      color: var(--color-text-primary, #f8fafc);
+      color: var(--t);
       font-weight: 700;
     }
 
     .xnp-author-action {
-      color: var(--color-text-secondary, #94a3b8);
+      color: var(--t2);
       font-weight: 400;
     }
 
@@ -671,7 +702,7 @@
     .xnp-card-time {
       font-size: 11px;
       font-weight: 400;
-      color: var(--color-text-secondary, #94a3b8);
+      color: var(--t2);
       white-space: nowrap;
     }
 
@@ -685,9 +716,9 @@
       width: 28px;
       height: 28px;
       border-radius: 6px;
-      border: 1px solid color-mix(in srgb, var(--color-text-primary) 8%, transparent);
-      background: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
-      color: var(--color-text-secondary, #cbd5e1);
+      border: 1px solid var(--i8);
+      background: var(--i4);
+      color: var(--t2);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -696,9 +727,9 @@
     }
 
     .xnp-menu-btn:hover {
-      background: color-mix(in srgb, var(--color-text-primary) 12%, transparent);
-      color: var(--color-text-primary, #ffffff);
-      border-color: color-mix(in srgb, var(--color-text-primary) 20%, transparent);
+      background: var(--i12);
+      color: var(--t);
+      border-color: var(--i20);
     }
 
     .xnp-menu-dropdown {
@@ -706,12 +737,12 @@
       inset-inline-end: 0;
       top: 100%;
       margin-top: 4px;
-      background: var(--color-bg-alt);
-      border: 1px solid color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+      background: var(--bg2);
+      border: 1px solid var(--i10);
       border-radius: 8px;
       padding: 4px;
       min-width: 140px;
-      box-shadow: 0 10px 25px var(--color-card-shadow);
+      box-shadow: 0 10px 25px var(--sh);
       z-index: 50;
     }
 
@@ -723,7 +754,7 @@
       padding: 8px 12px;
       font-size: 12px;
       font-weight: 500;
-      color: var(--color-text-primary, #e2e8f0);
+      color: var(--t);
       border: none;
       background: transparent;
       border-radius: 6px;
@@ -733,21 +764,21 @@
     }
 
     .xnp-menu-item:hover {
-      background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+      background: var(--i8);
     }
 
     .xnp-menu-delete {
-      color: var(--color-danger);
+      color: var(--dg);
     }
 
     .xnp-menu-delete:hover {
-      background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+      background: var(--d15);
     }
 
     .xnp-card-body {
       font-size: 13px;
       line-height: 1.6;
-      color: var(--color-text-primary, #cbd5e1);
+      color: var(--t);
       white-space: pre-wrap;
       word-break: break-word;
     }
@@ -781,7 +812,7 @@
       gap: 12px;
       margin-top: 16px;
       padding-top: 12px;
-      border-top: 1px solid color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+      border-top: 1px solid var(--i6);
     }
 
     .xnp-attachment-tile {
@@ -789,8 +820,8 @@
       align-items: center;
       gap: 12px;
       padding: 10px 14px;
-      background: var(--color-bg);
-      border: 1px solid color-mix(in srgb, var(--color-text-primary) 7%, transparent);
+      background: var(--bg);
+      border: 1px solid var(--i8);
       border-radius: 8px;
       cursor: pointer;
       transition: all 0.15s ease;
@@ -799,8 +830,8 @@
     }
 
     .xnp-attachment-tile:hover {
-      background: var(--color-bg-alt);
-      border-color: color-mix(in srgb, var(--color-accent) 30%, transparent);
+      background: var(--bg2);
+      border-color: var(--a30);
       transform: translateY(-1px);
     }
 
@@ -808,11 +839,11 @@
       width: 32px;
       height: 32px;
       border-radius: 6px;
-      background: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+      background: var(--i4);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--color-accent);
+      color: var(--ac);
       font-size: 18px;
       flex-shrink: 0;
     }
@@ -827,7 +858,7 @@
     .xnp-att-name {
       font-size: 12px;
       font-weight: 600;
-      color: var(--color-text-primary, #e2e8f0);
+      color: var(--t);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -835,14 +866,14 @@
 
     .xnp-att-size {
       font-size: 11px;
-      color: var(--color-text-secondary, #64748b);
+      color: var(--t2);
     }
 
     /* ── Bottom Reply Composer ─────────────────────────────────────────── */
     .xnp-composer-wrap {
       padding: 14px 24px 18px 24px;
-      background: var(--color-bg-alt);
-      border-top: 1px solid color-mix(in srgb, var(--color-text-primary) 7%, transparent);
+      background: var(--bg2);
+      border-top: 1px solid var(--i8);
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -859,11 +890,11 @@
       align-items: center;
       gap: 6px;
       padding: 4px 10px;
-      background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-      border: 1px solid color-mix(in srgb, var(--color-accent) 25%, transparent);
+      background: var(--a12);
+      border: 1px solid var(--a25);
       border-radius: 20px;
       font-size: 11px;
-      color: color-mix(in srgb, var(--color-accent) 40%, var(--color-text-primary));
+      color: var(--a40-ink);
     }
 
     .xnp-chip-name {
@@ -875,14 +906,14 @@
     }
 
     .xnp-chip-size {
-      color: var(--color-accent);
+      color: var(--ac);
       opacity: 0.8;
     }
 
     .xnp-chip-remove {
       border: none;
       background: transparent;
-      color: color-mix(in srgb, var(--color-accent) 40%, var(--color-text-primary));
+      color: var(--a40-ink);
       cursor: pointer;
       padding: 0 2px;
       display: flex;
@@ -891,23 +922,23 @@
     }
 
     .xnp-chip-remove:hover {
-      color: var(--color-danger);
+      color: var(--dg);
     }
 
     .xnp-composer {
       display: flex;
       align-items: center;
       gap: 10px;
-      background: var(--color-bg-alt);
-      border: 1px solid color-mix(in srgb, var(--color-text-primary) 9%, transparent);
+      background: var(--bg2);
+      border: 1px solid var(--i10);
       border-radius: 10px;
       padding: 6px 8px 6px 12px;
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
     .xnp-composer:focus-within {
-      border-color: color-mix(in srgb, var(--color-accent) 50%, transparent);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
+      border-color: var(--a50);
+      box-shadow: 0 0 0 3px var(--a15);
     }
 
     .xnp-hidden-input {
@@ -920,7 +951,7 @@
       border-radius: 6px;
       border: none;
       background: transparent;
-      color: var(--color-text-secondary, #94a3b8);
+      color: var(--t2);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -931,15 +962,15 @@
     }
 
     .xnp-attach-btn:hover {
-      background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
-      color: var(--color-text-primary, #f1f5f9);
+      background: var(--i8);
+      color: var(--t);
     }
 
     .xnp-input {
       flex: 1;
       border: none;
       background: transparent;
-      color: var(--color-text-primary, #f1f5f9);
+      color: var(--t);
       font-size: 13px;
       line-height: 1.4;
       resize: none;
@@ -951,13 +982,13 @@
     }
 
     .xnp-input::placeholder {
-      color: var(--color-text-secondary, #475569);
+      color: var(--t2);
     }
 
     .xnp-send-btn {
       padding: 8px 18px;
-      background: var(--color-accent-hover);
-      color: var(--color-on-accent);
+      background: var(--ach);
+      color: var(--on);
       border: none;
       border-radius: 7px;
       font-size: 13px;
@@ -972,7 +1003,7 @@
     }
 
     .xnp-send-btn:hover:not(:disabled) {
-      background: var(--color-accent-hover);
+      background: var(--ach);
     }
 
     .xnp-send-btn:disabled {
@@ -999,7 +1030,7 @@
       .xnp-sidebar {
         width: 100%;
         border-inline-end: none;
-        border-bottom: 1px solid color-mix(in srgb, var(--color-text-primary) 7%, transparent);
+        border-bottom: 1px solid var(--i8);
         max-height: 220px;
       }
     }
