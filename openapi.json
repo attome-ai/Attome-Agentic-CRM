@@ -70644,7 +70644,12 @@
           "exact",
           "normalized",
           "trigram",
-          "embedding"
+          "embedding",
+          "phone",
+          "email",
+          "id",
+          "name",
+          "phonetic"
         ]
       },
       "CompareCell": {
@@ -80126,6 +80131,13 @@
         "properties": {
           "comparator": {
             "$ref": "#/components/schemas/Comparator"
+          },
+          "default_country": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A15-T3: `phone` only — the country a local number (leading `0`)\nbelongs to: `SA` or its calling code `966`."
           },
           "field": {
             "type": "string"

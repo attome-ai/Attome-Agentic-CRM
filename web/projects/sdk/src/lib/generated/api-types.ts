@@ -15232,7 +15232,7 @@ export interface components {
             thread_id: string;
         };
         /** @enum {string} */
-        Comparator: "exact" | "normalized" | "trigram" | "embedding";
+        Comparator: "exact" | "normalized" | "trigram" | "embedding" | "phone" | "email" | "id" | "name" | "phonetic";
         CompareCell: {
             /** Format: double */
             baseline_value?: number | null;
@@ -19106,6 +19106,11 @@ export interface components {
         };
         MatchField: {
             comparator: components["schemas"]["Comparator"];
+            /**
+             * @description A15-T3: `phone` only — the country a local number (leading `0`)
+             *     belongs to: `SA` or its calling code `966`.
+             */
+            default_country?: string | null;
             field: string;
             /**
              * @description REVIEW-2026-09-02 finding #5 — see this module's doc comment,
