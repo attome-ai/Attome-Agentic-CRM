@@ -104394,6 +104394,18 @@
         "name": "Authorization",
         "description": "`Authorization: ApiKey <public_key>:<secret>`, issued by POST /api/v1/auth/api-keys."
       },
+      "portal_session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Secure-wp_{portal}_session",
+        "description": "A web portal user's session cookie, issued by the portal's sign-in; `{portal}` is the portal's keyword (`wp_{portal}_session` on plain-http local dev). Valid only on that portal's own routes."
+      },
+      "s2s_hmac": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-s2s-signature",
+        "description": "A system-to-system call, signed. Send `x-s2s-client-id`, `x-s2s-key-id`, `x-s2s-timestamp` (Unix milliseconds, within 300 seconds of the server's clock), `x-s2s-nonce` (single use: a repeat is refused) and `x-s2s-signature`: the hex HMAC-SHA256, keyed by the hex-decoded client secret, of `METHOD`, `PATH_AND_QUERY`, the hex SHA-256 of the body, `TIMESTAMP` and `NONCE`, joined by newlines in that order."
+      },
       "session_cookie": {
         "type": "apiKey",
         "in": "cookie",
