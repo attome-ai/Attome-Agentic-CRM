@@ -371,6 +371,27 @@ async fn fresh_database_bootstraps_end_to_end() {
         version_body["application_version"]
     );
 
+    // AF3-T1: a fresh install needs no licence or module configuration and
+    // runs with every module on, core included (V2-D473: no licences).
+    let modules = boot.system.state().modules.load();
+    let off: Vec<&str> = attome_modules::MODULE_MAP
+        .iter()
+        .filter(|(_, id)| !modules.has(*id))
+        .map(|(name, _)| *name)
+        .collect();
+    assert!(
+        off.is_empty(),
+        "a fresh install must run every module; off: {off:?}"
+    );
+    let configured: i64 = sqlx::query_scalar("SELECT count(*) FROM module_configuration")
+        .fetch_one(&base_state.db)
+        .await
+        .expect("read module_configuration");
+    assert_eq!(
+        configured, 0,
+        "a fresh install writes no module configuration"
+    );
+
     // ── Step 4: the seeds actually produced a usable deployment ──────────────
     // `/health/ready` only proves the process booted; it says nothing about
     // whether the built-in features have their metadata. That is precisely the
