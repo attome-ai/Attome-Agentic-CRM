@@ -33,7 +33,7 @@ export const xrmEn = {
     dateToday: 'Today', datePast7Days: 'Past 7 days', datePastMonth: 'Past month', datePastYear: 'Past year',
     dateOn: 'On date', dateAfter: 'On or after', dateBefore: 'On or before', all: 'All', yes: 'Yes', no: 'No',
     loadingRecords: 'Loading records…', openLinkedRecord: 'Open linked record',
-    showingRange: 'Showing {start}–{end} of {total}', pageInfo: 'Page {current} / {total}',
+    showingRange: 'Showing {start}–{end} of {total}', showingRangeAbout: 'Showing {start}–{end} of about {total}', pageInfo: 'Page {current} / {total}',
     sortedAscending: 'Sorted ascending', sortedDescending: 'Sorted descending', sortByField: 'Sort by {field}',
     filterCount: '{count, plural, one {# filter} other {# filters}}',
     deleteConfirm: '{count, plural, one {Delete # selected record?} other {Delete # selected records?}}',

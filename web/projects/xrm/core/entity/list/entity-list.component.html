@@ -428,7 +428,7 @@
 
   <div class="list-footer">
     <div class="footer-meta">
-      <span class="total-text">{{ 'entityList.showingRange' | translate: { start: rangeStart(), end: rangeEnd(), total: total() } }}</span>
+      <span class="total-text">{{ (totalEstimated() ? 'entityList.showingRangeAbout' : 'entityList.showingRange') | translate: { start: rangeStart(), end: rangeEnd(), total: total() } }}</span>
     </div>
 
     <div class="footer-right">

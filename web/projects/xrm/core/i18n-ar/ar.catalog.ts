@@ -29,7 +29,7 @@ export const xrmAr = {
     datePast7Days: 'آخر 7 أيام', datePastMonth: 'الشهر الماضي', datePastYear: 'السنة الماضية',
     dateOn: 'في تاريخ', dateAfter: 'في أو بعد', dateBefore: 'في أو قبل', all: 'الكل', yes: 'نعم', no: 'لا',
     loadingRecords: 'جاري تحميل السجلات…', openLinkedRecord: 'فتح السجل المرتبط',
-    showingRange: 'عرض {start}–{end} من {total}', pageInfo: 'صفحة {current} / {total}',
+    showingRange: 'عرض {start}–{end} من {total}', showingRangeAbout: 'عرض {start}–{end} من حوالي {total}', pageInfo: 'صفحة {current} / {total}',
     sortedAscending: 'مرتب تصاعدياً', sortedDescending: 'مرتب تنازلياً', sortByField: 'ترتيب حسب {field}',
     filterCount: '{count, plural, one {تصفية واحدة} two {تصفيتان} other {# تصفيات}}',
     deleteConfirm: '{count, plural, one {حذف السجل المحدد؟} two {حذف السجلين المحددين؟} other {حذف # سجلات محددة؟}}',

@@ -223,6 +223,8 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
   // ── State ──────────────────────────────────────────────────────────────────
   readonly columns_ = signal<Col[]>([]);
   readonly total    = signal(0);
+  /** A13-T2: the total is an estimate. */
+  readonly totalEstimated = signal(false);
   readonly viewId  = signal<string | null>(null);
   readonly availableViews = signal<AvailableView[]>([]);
   readonly viewMenuOpen = signal(false);
@@ -675,6 +677,7 @@ export class EntityListComponent extends ListBase<EntityRecord> implements OnDes
         // conforming server response; the fallback only guards a
         // contract-violating response, not real cursor-mode behavior.
         this.total.set(res.data.total ?? 0);
+        this.totalEstimated.set(res.data.total_estimated === true);
         this.loading.set(false);
       },
       error: (err: ApiError) => {

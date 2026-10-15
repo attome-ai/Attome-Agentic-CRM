@@ -62,6 +62,8 @@ export interface QueryExecResponse {
     // null in cursor mode (D-126) — only meaningful when include_total: true
     // was sent (or query.cursor_default is false server-side).
     total:       number | null;
+    // A13-T2: `total` is the planner's estimate (a large result is not counted).
+    total_estimated?: boolean;
     page:        number;
     page_size:   number;
     total_pages: number | null;
