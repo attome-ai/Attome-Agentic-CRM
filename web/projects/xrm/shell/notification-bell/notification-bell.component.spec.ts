@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { ApiService, LangService, LiveChannel } from '@attome/base';
 import { Observable, defer, of, throwError } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,6 +9,7 @@ import {
   NOTIFICATION_POLL_MS,
   NotificationBellComponent,
   XrmNotif,
+  groupNotifications,
   notificationPollDelay,
 } from './notification-bell.component';
 
@@ -187,6 +188,42 @@ describe('NotificationBellComponent polling (T7-4)', () => {
     fixture.destroy();
     vi.advanceTimersByTime(NOTIFICATION_POLL_MS * 3);
     expect(api.polls).toBe(1);
+  });
+});
+
+describe('notification groups (J11-T2)', () => {
+  const notif = (id: string, type: number, route: string | undefined, isRead = false): XrmNotif =>
+    ({ id, title: id, message: '', type, isRead, timestamp: 0, route });
+
+  it('groups by kind and record, newest first', () => {
+    const groups = groupNotifications([
+      notif('a', 0, '/xrm/account/1'),
+      notif('b', 2, '/xrm/account/1'),
+      notif('c', 0, '/xrm/account/1', true),
+      notif('d', 0, undefined),
+      notif('e', 0, undefined),
+    ]);
+    expect(groups.map(g => g.items.map(n => n.id))).toEqual([['a', 'c'], ['b'], ['d'], ['e']]);
+    expect(groups[0].latest.id).toBe('a');
+    expect(groups[0].unread).toBe(1);
+  });
+
+  it('opening a group reads all of it and follows its link', () => {
+    const api = new StubApi();
+    const posts: string[] = [];
+    const post = api.post.bind(api);
+    api.post = (url: string) => { posts.push(url); return post(url); };
+    const { fixture, component } = mount(api);
+    component.notifications.set([notif('a', 0, '/xrm/account/1'), notif('c', 0, '/xrm/account/1')]);
+    component.unreadCount.set(2);
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    expect(component.groups().length).toBe(1);
+    component.onGroupClick(component.groups()[0]);
+    fixture.detectChanges();
+    expect(component.unreadCount()).toBe(0);
+    expect(posts.filter(u => u.endsWith('/notification/read')).length).toBe(2);
+    expect(navigate).toHaveBeenCalledWith('/xrm/account/1');
   });
 });
 

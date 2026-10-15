@@ -101,3 +101,11 @@
   color: var(--color-accent);
   border-color: var(--color-accent);
 }
+
+/* J11-T2: how many more notifications a grouped row stands for. */
+.notif-more {
+  display: inline-block;
+  margin-block-start: 2px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}

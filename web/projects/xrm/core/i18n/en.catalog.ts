@@ -638,6 +638,7 @@ export const xrmEn = {
     pin: 'Pin (Ctrl+1–9)', unpin: 'Unpin', removeFavourite: 'Remove',
     recent: 'Recent', clearRecent: 'Clear', noRecent: 'Records you open appear here.',
     notifications: 'Notifications', markAsRead: 'Mark as read', clearAll: 'Clear all',
+    moreLikeThis: '+{count} more like this',
     caughtUp: "You're all caught up", noNotifications: 'No notifications right now',
     theme: 'Theme', language: 'Language',
     themeLight: 'Light', themeDark: 'Dark', themeSystem: 'System default', signOut: 'Sign out',

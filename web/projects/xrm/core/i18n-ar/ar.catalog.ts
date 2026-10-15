@@ -601,6 +601,7 @@ export const xrmAr = {
     pin: 'تثبيت (Ctrl+1–9)', unpin: 'إلغاء التثبيت', removeFavourite: 'إزالة',
     recent: 'الأخيرة', clearRecent: 'مسح', noRecent: 'تظهر هنا السجلات التي تفتحها.',
     notifications: 'الإشعارات', markAsRead: 'تعليم كمقروء', clearAll: 'مسح الكل',
+    moreLikeThis: '+{count} أخرى مثلها',
     caughtUp: 'لا جديد لديك', noNotifications: 'لا توجد إشعارات حالياً',
     theme: 'المظهر', language: 'اللغة',
     themeLight: 'فاتح', themeDark: 'داكن', themeSystem: 'افتراضي النظام', signOut: 'تسجيل الخروج',

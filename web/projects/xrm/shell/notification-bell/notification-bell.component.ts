@@ -1,6 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import {
-  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, inject, OnInit, signal,
+  ChangeDetectionStrategy, Component, DestroyRef, ElementRef, computed, inject, OnInit, signal,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
@@ -17,6 +17,38 @@ export interface XrmNotif {
   isRead:    boolean;
   timestamp: number;   // unix epoch seconds
   route?:    string;
+}
+
+/**
+ * J11-T2: notifications of one kind about one record, shown as one row: the
+ * newest, with how many more there are.
+ */
+export interface NotifGroup {
+  key:    string;
+  latest: XrmNotif;
+  items:  XrmNotif[];
+  unread: number;
+}
+
+/**
+ * Groups notifications by kind and record (the link they open), newest
+ * first as the server sends them. One without a link stays on its own.
+ */
+export function groupNotifications(list: XrmNotif[]): NotifGroup[] {
+  const groups: NotifGroup[] = [];
+  const byKey = new Map<string, NotifGroup>();
+  for (const n of list) {
+    const key = n.route ? `${n.type}|${n.route}` : `one|${n.id}`;
+    let group = byKey.get(key);
+    if (!group) {
+      group = { key, latest: n, items: [], unread: 0 };
+      byKey.set(key, group);
+      groups.push(group);
+    }
+    group.items.push(n);
+    if (!n.isRead) group.unread += 1;
+  }
+  return groups;
 }
 
 /** The steady-state poll cadence while the tab is visible and the API is healthy. */
@@ -93,6 +125,8 @@ export class NotificationBellComponent implements OnInit {
   readonly notifications = signal<XrmNotif[]>([]);
   readonly unreadCount   = signal(0);
   readonly isOpen        = signal(false);
+  /** J11-T2: the notifications by kind and record. */
+  readonly groups        = computed(() => groupNotifications(this.notifications()));
 
   /** Polls that failed since the last success; drives `notificationPollDelay`. */
   private consecutiveFailures = 0;
@@ -166,6 +200,32 @@ export class NotificationBellComponent implements OnInit {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     this.onNotifClick(notification);
+  }
+
+  /** J11-T2: opening a group reads every notification in it and follows its link. */
+  onGroupClick(group: NotifGroup): void {
+    this.readGroup(group);
+    if (group.latest.route) { this.router.navigateByUrl(group.latest.route); this.isOpen.set(false); }
+  }
+
+  onGroupKeydown(event: KeyboardEvent, group: NotifGroup): void {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    this.onGroupClick(group);
+  }
+
+  markGroupRead(group: NotifGroup, event: Event): void {
+    event.stopPropagation();
+    this.readGroup(group);
+  }
+
+  private readGroup(group: NotifGroup): void {
+    const unread = group.items.filter(n => !n.isRead).map(n => n.id);
+    if (unread.length === 0) return;
+    const ids = new Set(unread);
+    this.notifications.update(list => list.map(n => ids.has(n.id) ? { ...n, isRead: true } : n));
+    this.unreadCount.update(c => Math.max(0, c - unread.length));
+    for (const id of unread) this.api.post('/api/v1/notification/read', { id }).subscribe();
   }
 
   markRead(id: string, event: Event): void {

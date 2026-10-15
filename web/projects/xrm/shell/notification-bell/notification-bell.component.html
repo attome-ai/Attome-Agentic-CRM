@@ -22,9 +22,11 @@
         <small>{{ 'shell.noNotifications' | translate }}</small>
       </div>
     } @else {
-      @for (n of notifications(); track n.id) {
-        <div class="notif-item" [class.unread]="!n.isRead" role="button" tabindex="0"
-             (click)="onNotifClick(n)" (keydown)="onNotifKeydown($event, n)">
+      @for (g of groups(); track g.key) {
+        @let n = g.latest;
+        <div class="notif-item" [class.unread]="g.unread > 0" role="button" tabindex="0"
+             [attr.data-group]="g.key"
+             (click)="onGroupClick(g)" (keydown)="onGroupKeydown($event, g)">
           <div class="notif-icon-bubble"
                [style.color]="notifIconColor(n.type)"
                [style.background]="notifIconBg(n.type)">
@@ -34,10 +36,13 @@
             <strong class="notif-title">{{ n.title }}</strong>
             <p class="notif-msg">{{ n.message }}</p>
             <time class="notif-time">{{ formatTime(n.timestamp) }}</time>
+            @if (g.items.length > 1) {
+              <span class="notif-more">{{ 'shell.moreLikeThis' | translate: { count: g.items.length - 1 } }}</span>
+            }
           </div>
-          @if (!n.isRead) {
+          @if (g.unread > 0) {
             <button class="notif-mark-btn" [title]="'shell.markAsRead' | translate"
-                    (click)="markRead(n.id, $event)">
+                    (click)="markGroupRead(g, $event)">
               <i class="las la-check"></i>
             </button>
           }
