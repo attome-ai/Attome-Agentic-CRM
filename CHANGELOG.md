@@ -11,6 +11,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Record history: each change names its change set (`group_id`: an import or bulk batch, an agent
+  session, a flow run or one save), who made it (`actor`) and through what (`source`).
 - Clone with children: `POST /api/v1/{entity}/{id}/clone` takes `children` (entity and lookup
   field) and copies each readable child record under the new record, up to 200.
 - Clone: the result lists every record made (`undo`); `POST /api/v1/{entity}/{id}/clone/undo`

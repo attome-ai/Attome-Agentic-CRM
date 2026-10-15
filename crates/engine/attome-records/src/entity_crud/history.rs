@@ -27,6 +27,10 @@
 //!
 //! **Paging.** A keyset over `(changed_on DESC, id DESC)` of the change
 //! headers, with the same opaque cursor codec as the timeline (tag `change`).
+//!
+//! **Groups (B2-T1).** Each change names the save, import, flow run or agent
+//! session it belonged to (`group_id`), who made it (`actor`) and through
+//! what (`source`), so a client can fold one run's many changes into one.
 
 use std::collections::HashMap;
 
@@ -64,8 +68,71 @@ pub struct RecordHistoryChange {
     pub operation: String,
     pub user_id: Option<Uuid>,
     pub user_display_name: Option<String>,
+    /// B2-T1: the change set it belongs to: `batch:<id>` (an import or bulk
+    /// action), `agent:<session>`, `run:<correlation id>` (a flow run or other
+    /// correlated work), `request:<id>` (one save), else `change:<audit id>`.
+    /// Changes with the same value were made together.
+    pub group_id: String,
+    /// `user`, `agent`, `system` or `portal_user`.
+    pub actor: String,
+    /// `web_form`, `api`, `mobile`, `import`, `workflow`, `plugin`,
+    /// `background_job`, `integration` or `migration_tool`; absent when not
+    /// recorded.
+    pub source: Option<String>,
+    /// The agent session that made it, when an agent did.
+    pub agent_session_id: Option<Uuid>,
     /// Readable fields only, by field name.
     pub fields: Vec<RecordHistoryField>,
+}
+
+/// B2-T1: the change set a history entry belongs to, from the most specific
+/// grouping the audit header recorded.
+pub fn change_group(
+    batch_id: Option<Uuid>,
+    agent_session_id: Option<Uuid>,
+    correlation_id: Option<Uuid>,
+    request_id: Option<&str>,
+    audit_id: Uuid,
+) -> String {
+    if let Some(id) = batch_id {
+        return format!("batch:{id}");
+    }
+    if let Some(id) = agent_session_id {
+        return format!("agent:{id}");
+    }
+    if let Some(id) = correlation_id {
+        return format!("run:{id}");
+    }
+    match request_id.map(str::trim).filter(|r| !r.is_empty()) {
+        Some(request) => format!("request:{request}"),
+        None => format!("change:{audit_id}"),
+    }
+}
+
+/// `audit_header.initiator` as a word.
+pub fn actor_label(initiator: Option<i32>) -> &'static str {
+    match initiator {
+        Some(1) => "agent",
+        Some(2) => "system",
+        Some(3) => "portal_user",
+        _ => "user",
+    }
+}
+
+/// `audit_header.source` as a word.
+pub fn source_label(source: Option<i32>) -> Option<&'static str> {
+    Some(match source? {
+        0 => "web_form",
+        1 => "api",
+        2 => "mobile",
+        3 => "import",
+        4 => "workflow",
+        5 => "plugin",
+        6 => "background_job",
+        7 => "integration",
+        8 => "migration_tool",
+        _ => return None,
+    })
 }
 
 /// One field's old → new pair within a change.
@@ -101,14 +168,22 @@ pub struct RecordHistoryQuery {
     pub field: Option<String>,
 }
 
-type HeaderRow = (
-    Uuid,
-    Option<i32>,
-    DateTime<Utc>,
-    i64,
-    Option<Uuid>,
-    Option<String>,
-);
+/// One `audit_header` row as the history reads it.
+#[derive(sqlx::FromRow)]
+struct HeaderRow {
+    id: Uuid,
+    operation: Option<i32>,
+    changed_on: DateTime<Utc>,
+    micros: i64,
+    user_id: Option<Uuid>,
+    user_display_name: Option<String>,
+    initiator: Option<i32>,
+    source: Option<i32>,
+    batch_id: Option<Uuid>,
+    agent_session_id: Option<Uuid>,
+    correlation_id: Option<Uuid>,
+    request_id: Option<String>,
+}
 
 type DetailRow = (
     Uuid,
@@ -182,9 +257,11 @@ pub async fn record_history(
         ""
     };
     let sql = format!(
-        "SELECT h.id, h.operation::int, h.changed_on, \
-                (EXTRACT(EPOCH FROM h.changed_on) * 1000000)::bigint, \
-                h.user_id, h.user_display_name \
+        "SELECT h.id, h.operation::int AS operation, h.changed_on, \
+                (EXTRACT(EPOCH FROM h.changed_on) * 1000000)::bigint AS micros, \
+                h.user_id, h.user_display_name, h.initiator::int AS initiator, \
+                h.source::int AS source, h.batch_id, h.agent_session_id, h.correlation_id, \
+                h.request_id \
          FROM audit_header h \
          WHERE h.entity_name = $1 AND h.record_id = $2 AND h.changed_on IS NOT NULL \
            AND ( {fieldless}EXISTS (SELECT 1 FROM audit_detail d \
@@ -215,12 +292,12 @@ pub async fn record_history(
     let next_cursor = if has_more {
         headers
             .last()
-            .map(|(id, _, _, micros, _, _)| encode_cursor(*micros, CURSOR_TAG, *id))
+            .map(|h| encode_cursor(h.micros, CURSOR_TAG, h.id))
     } else {
         None
     };
 
-    let header_ids: Vec<Uuid> = headers.iter().map(|h| h.0).collect();
+    let header_ids: Vec<Uuid> = headers.iter().map(|h| h.id).collect();
     let details: Vec<DetailRow> = if header_ids.is_empty() {
         Vec::new()
     } else {
@@ -312,16 +389,24 @@ pub async fn record_history(
 
     let items = headers
         .into_iter()
-        .map(
-            |(id, operation, changed_on, _, user_id, user_display_name)| RecordHistoryChange {
-                audit_id: id,
-                changed_on,
-                operation: audit_operation_label(operation.unwrap_or(-1)).to_owned(),
-                user_id,
-                user_display_name,
-                fields: by_header.remove(&id).unwrap_or_default(),
-            },
-        )
+        .map(|h| RecordHistoryChange {
+            audit_id: h.id,
+            changed_on: h.changed_on,
+            operation: audit_operation_label(h.operation.unwrap_or(-1)).to_owned(),
+            user_id: h.user_id,
+            user_display_name: h.user_display_name,
+            group_id: change_group(
+                h.batch_id,
+                h.agent_session_id,
+                h.correlation_id,
+                h.request_id.as_deref(),
+                h.id,
+            ),
+            actor: actor_label(h.initiator).to_owned(),
+            source: source_label(h.source).map(str::to_owned),
+            agent_session_id: h.agent_session_id,
+            fields: by_header.remove(&h.id).unwrap_or_default(),
+        })
         .collect();
     Ok(CursorPage::new(items, next_cursor))
 }
@@ -362,4 +447,49 @@ struct ApiDocFragment;
 
 pub(super) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn history_groups_by_the_most_specific_change_set() {
+        let (batch, session, run, audit) = (
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+        );
+        assert_eq!(
+            change_group(Some(batch), Some(session), Some(run), Some("r1"), audit),
+            format!("batch:{batch}")
+        );
+        assert_eq!(
+            change_group(None, Some(session), Some(run), Some("r1"), audit),
+            format!("agent:{session}")
+        );
+        assert_eq!(
+            change_group(None, None, Some(run), Some("r1"), audit),
+            format!("run:{run}")
+        );
+        assert_eq!(
+            change_group(None, None, None, Some(" r1 "), audit),
+            "request:r1"
+        );
+        assert_eq!(
+            change_group(None, None, None, Some(""), audit),
+            format!("change:{audit}")
+        );
+    }
+
+    #[test]
+    fn history_names_actors_and_sources() {
+        assert_eq!(actor_label(Some(1)), "agent");
+        assert_eq!(actor_label(None), "user");
+        assert_eq!(source_label(Some(3)), Some("import"));
+        assert_eq!(source_label(Some(4)), Some("workflow"));
+        assert_eq!(source_label(Some(99)), None);
+        assert_eq!(source_label(None), None);
+    }
 }
