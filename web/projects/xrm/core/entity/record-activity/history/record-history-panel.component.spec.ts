@@ -77,6 +77,8 @@ describe('RecordHistoryPanelComponent', () => {
         audit_id: 'h1',
         changed_on: '2026-09-23T10:00:00Z',
         operation: 'updated',
+        group_id: 'run:r1',
+        actor: 'user',
         user_id: null,
         user_display_name: 'Ann',
         fields: [
@@ -90,6 +92,7 @@ describe('RecordHistoryPanelComponent', () => {
     expect(history).toHaveBeenCalledWith('contact', 'rec-1', null);
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelectorAll('[data-testid="history-change"]').length).toBe(1);
+    expect(el.querySelector('[data-testid="history-group"]')?.textContent).toContain('recordHistory.group_run');
     const name = el.querySelector('[data-field="name"]')!;
     expect(name.textContent).toContain('Name');
     expect(name.textContent).toContain('Old');

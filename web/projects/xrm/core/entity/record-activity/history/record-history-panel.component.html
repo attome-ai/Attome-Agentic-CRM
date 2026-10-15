@@ -17,10 +17,14 @@
     <p class="rh-hint" data-testid="history-empty">{{ 'recordHistory.empty' | translate }}</p>
   }
 
-  @for (change of changes(); track change.audit_id) {
-    <article class="rh-change" data-testid="history-change">
+  @for (change of changes(); track change.audit_id; let i = $index) {
+    <article class="rh-change" data-testid="history-change" [attr.data-group]="change.group_id"
+             [class.rh-continues]="continuesGroup(i)">
       <header class="rh-head">
         <span class="rh-op">{{ operationLabel(change) }}</span>
+        @if (groupLabel(change); as group) {
+          <span class="rh-group" data-testid="history-group">{{ group }}</span>
+        }
         <span class="rh-by">
           {{ 'recordHistory.by' | translate: { user: change.user_display_name || ('recordHistory.system' | translate) } }}
         </span>

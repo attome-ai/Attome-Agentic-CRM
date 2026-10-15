@@ -280,6 +280,7 @@ export const xrmAr = {
   },
   // U6 (D-601) — انظر en.catalog.ts
   recordHistory: {
+    group_batch: 'استيراد أو تغيير جماعي', group_agent: 'تشغيل وكيل', group_run: 'تشغيل سير عمل',
     by: 'بواسطة {user}',
     system: 'النظام',
     field: 'الحقل',

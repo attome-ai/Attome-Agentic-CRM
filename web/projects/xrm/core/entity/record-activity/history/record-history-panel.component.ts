@@ -98,6 +98,21 @@ export class RecordHistoryPanelComponent {
     return words.charAt(0).toUpperCase() + words.slice(1);
   }
 
+  /** B2-T1: what the change was part of, when it was more than one save. */
+  groupLabel(change: RecordHistoryChange): string | null {
+    const kind = change.group_id.split(':')[0];
+    return kind === 'batch' || kind === 'agent' || kind === 'run'
+      ? this.lang.translate(`recordHistory.group_${kind}`)
+      : null;
+  }
+
+  /** True when the change listed just above was made in the same change set. */
+  continuesGroup(index: number): boolean {
+    const list = this.changes();
+    const group = list[index]?.group_id ?? '';
+    return index > 0 && !group.startsWith('change:') && list[index - 1].group_id === group;
+  }
+
   operationLabel(change: RecordHistoryChange): string {
     const key = `recordHistory.operations.${change.operation}`;
     const label = this.lang.translate(key);

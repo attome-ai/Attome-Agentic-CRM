@@ -314,6 +314,7 @@ export const xrmEn = {
   },
   // U6 (D-601) — <xrm-record-history-panel>.
   recordHistory: {
+    group_batch: 'Import or bulk change', group_agent: 'Agent run', group_run: 'Flow run',
     by: 'by {user}',
     system: 'System',
     field: 'Field',

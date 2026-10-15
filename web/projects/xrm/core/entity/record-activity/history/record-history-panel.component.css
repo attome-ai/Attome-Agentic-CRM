@@ -58,3 +58,13 @@
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent, #14b8a6) 40%, transparent);
 }
+
+/* B2-T1: the change set a change belongs to; consecutive changes of one set sit together. */
+.rh-group {
+  font-size: 11px;
+  padding-inline: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border, #24324d);
+  color: var(--color-text-secondary, #94a3b8);
+}
+.rh-continues { margin-block-start: -8px; border-start-start-radius: 0; border-start-end-radius: 0; }
