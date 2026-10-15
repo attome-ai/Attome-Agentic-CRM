@@ -15492,6 +15492,8 @@ export interface components {
         CreateCheck: {
             /** @description Why it would not, as the create would say it. */
             error?: string | null;
+            /** @description A3-T1: every failing field, when the create failed on its fields. */
+            failures: components["schemas"]["FieldError"][];
             /** @description The create would succeed. */
             valid: boolean;
             /** @description Business-rule warnings the create would raise. */

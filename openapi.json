@@ -71003,6 +71003,7 @@
         "description": "What a dry-run create found (A3-T3).",
         "required": [
           "valid",
+          "failures",
           "warnings"
         ],
         "properties": {
@@ -71012,6 +71013,13 @@
               "null"
             ],
             "description": "Why it would not, as the create would say it."
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            },
+            "description": "A3-T1: every failing field, when the create failed on its fields."
           },
           "valid": {
             "type": "boolean",
