@@ -13,6 +13,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ### Added
 - Metadata: an `option_set` kind, a shared list of values with stable codes, English and Arabic
   labels, colours, order and retirement, for choice fields on several entities.
+  A choice field whose options name a set (`{"option_set": "<name>"}`) takes the set's published,
+  not retired codes; publishing the set refreshes every entity that uses it.
 - Every API response carries `Attome-Metadata-Version`, the last metadata change the answering node
   has applied (exposed to browsers through CORS), so clients notice a new model.
 - Status banner: `GET /api/v1/system/status` tells any signed-in person which features are down or

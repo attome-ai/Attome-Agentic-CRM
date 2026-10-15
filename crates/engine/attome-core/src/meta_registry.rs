@@ -399,6 +399,21 @@ impl From<AttrRow> for AttrInfo {
     }
 }
 
+/// A5-T1: an attribute's `options`, with a choice field that names an option
+/// set (`{"option_set": "<name>"}`) given that set's published, not retired
+/// codes as `choices`, in order, so every choice check works unchanged.
+const OPTIONS_SQL: &str = "CASE WHEN options ? 'option_set' THEN \
+    options || jsonb_build_object('choices', COALESCE(( \
+        SELECT jsonb_agg(val->'code' ORDER BY COALESCE((val->>'order')::bigint, 9223372036854775807)) \
+        FROM metadata_object o \
+        JOIN LATERAL (SELECT v.doc FROM metadata_object_version v \
+                      WHERE v.object_id = o.id AND v.state = 'published' \
+                      ORDER BY v.version_no DESC LIMIT 1) p ON true \
+        CROSS JOIN LATERAL jsonb_array_elements(p.doc->'values') val \
+        WHERE o.kind = 'option_set' AND o.is_active AND o.name = options->>'option_set' \
+          AND COALESCE((val->>'retired')::boolean, false) = false), '[]'::jsonb)) \
+    ELSE options END";
+
 /// Builds a full registry snapshot from Postgres: one query over
 /// `entity_info`, one grouped query over `attribute_info` — no
 /// N+1. Mirrors the exact `WHERE`/`COALESCE` clauses the pre-1.2
@@ -414,7 +429,7 @@ pub async fn build_registry(db: &DbPool) -> Result<EntityMetaRegistry, AppError>
     .await
     .map_err(AppError::internal)?;
 
-    let attrs: Vec<AttrRow> = sqlx::query_as(
+    let attrs: Vec<AttrRow> = sqlx::query_as(&format!(
         r#"SELECT entity_ref,
                   COALESCE(logicalname, '')      AS logicalname,
                   COALESCE("type", 3)            AS field_type_int,
@@ -427,12 +442,12 @@ pub async fn build_registry(db: &DbPool) -> Result<EntityMetaRegistry, AppError>
                   lookup_entity_ref,
                   COALESCE(on_target_delete, 'orphan') AS on_target_delete,
                   COALESCE(data_classification, 'general') AS data_classification,
-                  options
+                  {OPTIONS_SQL} AS options
            FROM attribute_info
            WHERE (is_active IS NULL OR is_active = true)
              AND entity_ref IS NOT NULL AND logicalname IS NOT NULL AND logicalname <> ''
-           ORDER BY entity_ref"#,
-    )
+           ORDER BY entity_ref"#
+    ))
     .fetch_all(db)
     .await
     .map_err(AppError::internal)?;
@@ -515,7 +530,7 @@ pub async fn fetch_entity_snapshots(
     // of an entity that turned out inactive would be fetched and discarded.
     let found_ids: Vec<Uuid> = entities.iter().map(|row| row.id).collect();
 
-    let attrs: Vec<AttrRow> = sqlx::query_as(
+    let attrs: Vec<AttrRow> = sqlx::query_as(&format!(
         r#"SELECT entity_ref,
                   COALESCE(logicalname, '')      AS logicalname,
                   COALESCE("type", 3)            AS field_type_int,
@@ -528,11 +543,11 @@ pub async fn fetch_entity_snapshots(
                   lookup_entity_ref,
                   COALESCE(on_target_delete, 'orphan') AS on_target_delete,
                   COALESCE(data_classification, 'general') AS data_classification,
-                  options
+                  {OPTIONS_SQL} AS options
            FROM attribute_info
            WHERE (is_active IS NULL OR is_active = true)
-             AND entity_ref = ANY($1) AND logicalname IS NOT NULL AND logicalname <> ''"#,
-    )
+             AND entity_ref = ANY($1) AND logicalname IS NOT NULL AND logicalname <> ''"#
+    ))
     .bind(&found_ids)
     .fetch_all(db)
     .await

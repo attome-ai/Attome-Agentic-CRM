@@ -111,6 +111,21 @@ pub async fn publish(
     .execute(&mut **tx)
     .await
     .map_err(AppError::internal)?;
+    // A5-T1: an entity whose choice field uses this option set takes the new
+    // values: its registry entry is re-read through the metadata change log.
+    if kind.name() == crate::kinds::OPTION_SET {
+        sqlx::query(
+            "INSERT INTO metadata_change_log (entity_ref, logicalname, change_kind) \
+             SELECT DISTINCT e.id, e.logicalname, 'upsert' \
+             FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
+             WHERE a.options->>'option_set' = $1 \
+               AND (a.is_active IS NULL OR a.is_active) AND (e.is_active IS NULL OR e.is_active)",
+        )
+        .bind(&set.objects[0].name)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+    }
     Ok(Published {
         object_id,
         version_no,
