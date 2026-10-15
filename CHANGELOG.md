@@ -11,6 +11,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- `query/execute` takes `seek`: a keyset page that starts at a sort value ("jump to M"), bound and
+  type-checked like a filter, with a `next_cursor`; not together with `after_id` (422).
 - While the AI model is confirmed down, a conversation turn is refused up front with
   `503 capability_unavailable` (`ai_model`) before anything is written; every `capability_unavailable`
   response now carries `Retry-After: 30` and `retry_after_sec`.

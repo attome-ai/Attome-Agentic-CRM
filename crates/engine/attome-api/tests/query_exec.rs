@@ -1224,6 +1224,92 @@ fn keyset_cursor_pages_through_in_order_matching_offset_and_terminates() {
     })
 }
 
+/// AA4-T4: a raw text-keyed table with five names, readable by the query
+/// role, and a stored query over it.
+async fn seek_fixture(system: &TestSystem) -> Uuid {
+    let db = &system.state().base.db;
+    let table = format!("test_seek_{}", Uuid::now_v7().simple());
+    sqlx::query(&format!(
+        r#"CREATE TABLE "{table}" (id UUID PRIMARY KEY, name TEXT NOT NULL)"#
+    ))
+    .execute(db)
+    .await
+    .expect("create seek table");
+    sqlx::query(&format!(r#"GRANT SELECT ON "{table}" TO attome_readonly"#))
+        .execute(db)
+        .await
+        .expect("grant seek table");
+    for name in ["alpha", "bravo", "charlie", "delta", "echo"] {
+        sqlx::query(&format!(
+            r#"INSERT INTO "{table}" (id, name) VALUES ($1, $2)"#
+        ))
+        .bind(Uuid::now_v7())
+        .bind(name)
+        .execute(db)
+        .await
+        .expect("insert seek row");
+    }
+    seed_query(
+        system,
+        &format!("SELECT id, name FROM \"{table}\""),
+        None,
+        false,
+    )
+    .await
+}
+
+/// AA4-T4: a seek on a text sort starts the page at the value, with a cursor.
+#[test]
+fn seek_on_text_sort_starts_at_value() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let qid = seek_fixture(&system).await;
+        let app = full_app(system);
+        let body = execute_body(
+            app,
+            &admin_cookie,
+            serde_json::json!({"query_id": qid, "page_size": 2, "order_by": "name", "seek": "c"}),
+        )
+        .await;
+        let names: Vec<&str> = body["data"]["records"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|r| r["name"].as_str().unwrap())
+            .collect();
+        assert_eq!(names, ["charlie", "delta"]);
+        assert!(body["data"]["next_cursor"].is_string(), "{body}");
+    })
+}
+
+/// AA4-T4: seek and after_id together are refused.
+#[test]
+fn seek_with_after_id_is_422() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let admin_cookie = seed_admin(&system).await;
+        let qid = seek_fixture(&system).await;
+        let app = full_app(system);
+        let req = Request::builder()
+            .method("POST")
+            .uri("/api/v1/query/execute")
+            .header("cookie", &admin_cookie)
+            .header("sec-fetch-site", "same-origin")
+            .header("content-type", "application/json")
+            .body(Body::from(
+                serde_json::json!({
+                    "query_id": qid, "order_by": "name", "seek": "c",
+                    "after_id": Uuid::now_v7(),
+                })
+                .to_string(),
+            ))
+            .unwrap();
+        let res = app.oneshot(req).await.expect("request");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    })
+}
+
 // ── P-stored-query-containment (D-126) ──────────────────────────────────────
 
 /// POSTs to `/api/v1/admin/queries` (query_admin.rs) — unlike `seed_query`

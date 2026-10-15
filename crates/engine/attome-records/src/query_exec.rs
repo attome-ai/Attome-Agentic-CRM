@@ -69,6 +69,14 @@ pub struct ExecuteQueryRequest {
     /// ignored whenever cursor mode is in effect.
     #[serde(default)]
     after_id: Option<Uuid>,
+    /// AA4-T4: start a keyset page at this sort value ("jump to M", "jump
+    /// to March"): the first page holds the rows whose `order_by` value is
+    /// at or after it (at or before it for `desc`), with a `next_cursor` as
+    /// usual. Coerced and bound like a filter value on the sort column, so a
+    /// value of the wrong type is a 422; no rows are counted to find the
+    /// place. Not with `after_id` (422).
+    #[serde(default)]
+    seek: Option<Value>,
     /// M01 Core P3 gap (D-455) — narrows a single-entity query to rows
     /// linked, through a named M:M relationship, to one anchor record on
     /// the relationship's other side. `AppError::Validation` (422) for a
@@ -122,6 +130,7 @@ impl ExecuteQueryRequest {
             filters,
             include_total: false,
             after_id: None,
+            seek: None,
             related_to: None,
             query_version_id,
         }
@@ -1755,6 +1764,44 @@ pub async fn execute_stored_query_with_definition(
         conds.push(cond);
         params.extend(binds);
     }
+    // AA4-T4: a seek is a bound comparison on the sort column, compiled like
+    // a filter so it is coerced and cast the same way.
+    if let Some(seek) = &body.seek {
+        if body.after_id.is_some() {
+            return Err(AppError::Validation(
+                "seek_and_after_id: give seek or after_id, not both".into(),
+            ));
+        }
+        let sort_field = if body.order_by.is_empty() {
+            "id"
+        } else {
+            body.order_by.as_str()
+        };
+        if !whitelist.iter().any(|w| w == sort_field) {
+            return Err(AppError::Validation(format!(
+                "unknown order_by field: {sort_field}"
+            )));
+        }
+        let value = match seek {
+            Value::String(_) => seek.clone(),
+            Value::Number(_) | Value::Bool(_) => Value::String(seek.to_string()),
+            _ => {
+                return Err(AppError::Validation(
+                    "seek: a string, number or boolean".into(),
+                ));
+            }
+        };
+        let descending = body.order_dir.eq_ignore_ascii_case("desc");
+        let seek_filter = attome_core::filter::Filter {
+            field: sort_field.to_owned(),
+            op: if descending { "lte" } else { "gte" }.to_owned(),
+            value: Some(value),
+        };
+        let (cond, binds) =
+            attome_core::filter::compile(&seek_filter, &filter_schema, params.len() + 1)?;
+        conds.push(cond);
+        params.extend(binds);
+    }
 
     let where_sql = if conds.is_empty() {
         String::new()
@@ -1869,8 +1916,9 @@ pub async fn execute_stored_query_with_definition(
     // A report may be an aggregate with no `id` column to page by, so it never
     // starts a fresh cursor page; it runs in offset mode unless the caller
     // continues a cursor.
-    let use_cursor =
-        body.after_id.is_some() || (!body.include_total && cursor_default && !qrow.is_report);
+    let use_cursor = body.after_id.is_some()
+        || body.seek.is_some()
+        || (!body.include_total && cursor_default && !qrow.is_report);
     // AA4-T3: an offset page reads and discards every row before it; past the
     // configured depth, keyset paging is the only answer.
     let max_offset = state.base.config.query.max_offset_rows.max(0);
