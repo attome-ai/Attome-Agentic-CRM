@@ -11,6 +11,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Clone with children: `POST /api/v1/{entity}/{id}/clone` takes `children` (entity and lookup
+  field) and copies each readable child record under the new record, up to 200.
 - Recycle bin: every delete records who, when, why and its operation (migration 0024);
   `DELETE /api/v1/{entity}/{id}?reason=` and the `Attome-Operation-Id` header,
   `POST /api/v1/{entity}/delete-impact`, `POST /api/v1/bin/restore`,
@@ -236,6 +238,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   smoke test.
 
 ### Breaking
+- `POST /api/v1/{entity}/{id}/clone` now needs the create privilege on the entity (and on every
+  child entity it copies); it used to need only read access.
 - `DELETE /api/v1/{entity}/{id}/hard-delete` needs the new `{entity}.hard_delete` privilege besides
   `delete`; an entity whose bin setting requires a reason answers `422` to a delete without one.
 - Boot refuses an `inference.generation.base_url` outside the deployment unless

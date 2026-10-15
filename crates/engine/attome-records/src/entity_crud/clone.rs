@@ -8,10 +8,16 @@
 //! images (a copy would share the stored object), formulas (recomputed), and
 //! fields an engine owns. `overrides` replaces any copied value; `preview`
 //! returns the body without creating anything.
+//!
+//! B7-T1: `children` names child relationships (an entity and its lookup to
+//! this one) to copy too: each child record the caller can read is copied
+//! the same way, its lookup pointed at the new record. At most 200 children.
+//! The caller needs the create privilege on every entity copied into.
 
 use std::collections::HashSet;
 
-use attome_core::{EngineState, FieldType};
+use attome_core::{EngineState, FieldType, quote_ident};
+use attome_security::SecurityContextExt;
 use attome_security::record_action::Read;
 use attome_server::authz::{Authorized, RecordScoped};
 use attome_server::security::SecurityContext;
@@ -52,7 +58,34 @@ pub struct CloneRequest {
     /// Return the copy's body without creating it.
     #[serde(default)]
     pub preview: bool,
+    /// Child records to copy with it, by relationship.
+    #[serde(default)]
+    pub children: Vec<CloneChild>,
 }
+
+/// A child relationship: records of `entity` whose `field` points at the
+/// record being copied.
+#[derive(Debug, Clone, Deserialize, ToSchema)]
+pub struct CloneChild {
+    pub entity: String,
+    pub field: String,
+}
+
+/// What a clone did with one child relationship.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ClonedChildren {
+    pub entity: String,
+    pub field: String,
+    /// The copies' ids; empty for a preview.
+    pub ids: Vec<Uuid>,
+    /// Child records found and readable (copied, or that would be).
+    pub count: usize,
+    /// Child records the caller cannot read, left behind.
+    pub skipped: usize,
+}
+
+/// The most child records one clone copies.
+pub const MAX_CLONE_CHILDREN: usize = 200;
 
 /// What a clone made, or would make.
 #[derive(Debug, Serialize, ToSchema)]
@@ -64,6 +97,8 @@ pub struct CloneResult {
     pub body: Map<String, Value>,
     /// Fields of the source left out of the copy, and why.
     pub left_out: Vec<String>,
+    /// The child relationships copied with it.
+    pub children: Vec<ClonedChildren>,
 }
 
 /// The body a copy of `data` is created from: the copyable fields, then the
@@ -120,40 +155,147 @@ pub async fn clone_record(
 ) -> Result<CloneResult, AppError> {
     let source = super::read_record(state, ctx, entity_input, record_id).await?;
     let data = source.data().as_object().cloned().unwrap_or_default();
-    let (_, entity, attrs, _) = resolve_entity(state, entity_input).await?;
+    let (entity_id, entity, attrs, _) = resolve_entity(state, entity_input).await?;
+    // A copy is a create: `create_record_for` leaves the privilege to us.
+    ctx.require(&entity, "create")?;
+    let relationships = state.entities.load().dependents_of(entity_id);
+    let mut child_sets = Vec::with_capacity(request.children.len());
+    let mut total = 0usize;
+    for child in &request.children {
+        if !relationships
+            .iter()
+            .any(|(e, f, _)| *e == child.entity && *f == child.field)
+        {
+            return Err(AppError::Validation(format!(
+                "{}.{} is not a lookup to {entity}",
+                child.entity, child.field
+            )));
+        }
+        ctx.require(&child.entity, "create")?;
+        let ids = child_ids(state, &child.entity, &child.field, record_id).await?;
+        total += ids.len();
+        if total > MAX_CLONE_CHILDREN {
+            return Err(AppError::Validation(format!(
+                "a clone copies at most {MAX_CLONE_CHILDREN} child records"
+            )));
+        }
+        child_sets.push((child, ids));
+    }
+    let (body, left_out) = copyable(state, &entity, &attrs, &data, &request.overrides).await?;
+    let id = if request.preview {
+        None
+    } else {
+        Some(
+            super::create_record_for(
+                state,
+                ctx,
+                ctx.user_id,
+                &entity,
+                Value::Object(body.clone()),
+            )
+            .await?
+            .0,
+        )
+    };
+    let mut children = Vec::with_capacity(child_sets.len());
+    for (child, ids) in child_sets {
+        children.push(copy_children(state, ctx, child, &ids, id).await?);
+    }
+    Ok(CloneResult {
+        id,
+        body,
+        left_out,
+        children,
+    })
+}
+
+/// The body a copy of `data` (a record of `entity`) is created from.
+async fn copyable(
+    state: &EngineState,
+    entity: &str,
+    attrs: &[attome_core::AttrInfo],
+    data: &Map<String, Value>,
+    overrides: &Map<String, Value>,
+) -> Result<(Map<String, Value>, Vec<String>), AppError> {
     let numbered: HashSet<String> =
-        attome_metadata::autovalue::numbered_fields(&state.base.db, &entity)
+        attome_metadata::autovalue::numbered_fields(&state.base.db, entity)
             .await?
             .into_iter()
             .collect();
     let engine = state.engine_managed_fields.clone();
-    let (body, left_out) = copy_body(
-        &attrs,
-        &data,
+    Ok(copy_body(
+        attrs,
+        data,
         &numbered,
-        |field| engine.contains(&(entity.clone(), field.to_owned())),
-        &request.overrides,
-    );
-    if request.preview {
-        return Ok(CloneResult {
-            id: None,
-            body,
-            left_out,
-        });
+        |field| engine.contains(&(entity.to_owned(), field.to_owned())),
+        overrides,
+    ))
+}
+
+/// The live child records of `parent` through `entity.field`, oldest first,
+/// one more than the limit at most (so an overflow is seen).
+async fn child_ids(
+    state: &EngineState,
+    entity: &str,
+    field: &str,
+    parent: Uuid,
+) -> Result<Vec<Uuid>, AppError> {
+    let live = match state.entities.load().get(entity) {
+        Some(meta) if meta.is_append_only => "",
+        Some(_) => " AND is_active = true",
+        None => return Err(AppError::NotFound),
+    };
+    sqlx::query_scalar(&format!(
+        "SELECT id FROM {} WHERE {} = $1{live} ORDER BY created_at, id LIMIT $2",
+        quote_ident(entity),
+        quote_ident(field)
+    ))
+    .bind(parent)
+    .bind(i64::try_from(MAX_CLONE_CHILDREN + 1).unwrap_or(i64::MAX))
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(attome_db::classify)
+}
+
+/// Copies one relationship's child records under `new_parent` (or, for a
+/// preview, counts the ones that would be copied).
+async fn copy_children(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    child: &CloneChild,
+    ids: &[Uuid],
+    new_parent: Option<Uuid>,
+) -> Result<ClonedChildren, AppError> {
+    let (_, entity, attrs, _) = resolve_entity(state, &child.entity).await?;
+    let mut out = ClonedChildren {
+        entity: entity.clone(),
+        field: child.field.clone(),
+        ids: Vec::new(),
+        count: 0,
+        skipped: 0,
+    };
+    for id in ids {
+        let record = match super::read_record(state, ctx, &entity, *id).await {
+            Ok(record) => record,
+            Err(AppError::NotFound | AppError::Forbidden) => {
+                out.skipped += 1;
+                continue;
+            }
+            Err(error) => return Err(error),
+        };
+        out.count += 1;
+        let Some(parent) = new_parent else {
+            continue;
+        };
+        let data = record.data().as_object().cloned().unwrap_or_default();
+        let mut overrides = Map::new();
+        overrides.insert(child.field.clone(), Value::String(parent.to_string()));
+        let (body, _) = copyable(state, &entity, &attrs, &data, &overrides).await?;
+        let (copy, _) =
+            super::create_record_for(state, ctx, ctx.user_id, &entity, Value::Object(body)).await?;
+        out.ids.push(copy);
     }
-    let (id, _) = super::create_record_for(
-        state,
-        ctx,
-        ctx.user_id,
-        &entity,
-        Value::Object(body.clone()),
-    )
-    .await?;
-    Ok(CloneResult {
-        id: Some(id),
-        body,
-        left_out,
-    })
+    Ok(out)
 }
 
 /// B7-T2: copies a record: the new record starts with the source's values
