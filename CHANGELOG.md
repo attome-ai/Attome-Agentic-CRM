@@ -76,6 +76,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - A change-feed consumer that falls too far behind (a week for webhook subscriptions, a month for the
   platform's own) is marked expired, logged and counted (`change_feed_consumer_expired_total`), and the
   prune moves past it instead of keeping the whole feed.
+- An attribute's `options.scan` (formats, GS1 batch and expiry fields, what an unknown code does) is
+  validated: only on text, number and lookup fields, with known formats, else 422.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE

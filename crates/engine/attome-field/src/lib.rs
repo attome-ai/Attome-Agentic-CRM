@@ -507,14 +507,19 @@ fn write_mask_cache() -> std::sync::RwLockWriteGuard<'static, HashMap<String, Ar
 /// options blob (no-op); only a *present* blob is shape-checked.
 pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), AppError> {
     validate_default(field_type, options)?;
-    // The default is checked above; each type's own shape below.
+    if let Some(scan) = options.get("scan") {
+        validate_scan(field_type, scan)?;
+    }
+    // The default and the scan settings are checked above; each type's own
+    // shape below.
     let stripped;
     let options = match options.as_object() {
-        Some(map) if map.contains_key("default") => {
+        Some(map) if map.contains_key("default") || map.contains_key("scan") => {
             let mut map = map.clone();
             map.remove("default");
+            map.remove("scan");
             if map.is_empty() {
-                // A default alone: nothing else to check, for any field type.
+                // Only a default or scan settings: nothing else to check.
                 return Ok(());
             }
             stripped = Value::Object(map);
@@ -589,6 +594,100 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
     Ok(())
 }
 
+/// B16-T3: the code formats a scan-enabled field reads.
+pub const SCAN_FORMATS: &[&str] = &[
+    "ean_13",
+    "ean_8",
+    "upc_a",
+    "upc_e",
+    "code_128",
+    "code_39",
+    "qr_code",
+    "data_matrix",
+    "pdf417",
+];
+
+/// B16-T3: `options.scan` — a field filled by scanning a code.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScanOptions {
+    #[serde(default = "scan_enabled_default")]
+    pub enabled: bool,
+    /// The formats read; at least one of [`SCAN_FORMATS`].
+    pub formats: Vec<String>,
+    /// The field a GS1 code's batch (AI 10) fills.
+    #[serde(default)]
+    pub gs1_batch_attribute: Option<String>,
+    /// The field a GS1 code's expiry date (AI 17) fills.
+    #[serde(default)]
+    pub gs1_expiry_attribute: Option<String>,
+    /// What a code matching no record does: `reject` or `offer_create`.
+    #[serde(default = "scan_on_unknown_default")]
+    pub on_unknown: String,
+}
+
+fn scan_enabled_default() -> bool {
+    true
+}
+
+fn scan_on_unknown_default() -> String {
+    "reject".to_owned()
+}
+
+/// B16-T3: a scan setting is for a text, number or lookup field, names known
+/// formats, says `reject` or `offer_create` for an unknown code, and names
+/// its GS1 target fields by logical name. That those fields exist on the
+/// entity is checked where the entity is known.
+fn validate_scan(field_type: &FieldType, scan: &Value) -> Result<(), AppError> {
+    if !matches!(
+        field_type,
+        FieldType::Text | FieldType::Number | FieldType::Lookup
+    ) {
+        return Err(AppError::Validation(format!(
+            "scan: a {field_type} field cannot be filled by scanning; use a text, number or lookup field"
+        )));
+    }
+    let scan: ScanOptions = serde_json::from_value(scan.clone())
+        .map_err(|e| AppError::Validation(format!("scan: {e}")))?;
+    if scan.formats.is_empty() {
+        return Err(AppError::Validation(
+            "scan.formats: name at least one format".into(),
+        ));
+    }
+    if let Some(unknown) = scan
+        .formats
+        .iter()
+        .find(|f| !SCAN_FORMATS.contains(&f.as_str()))
+    {
+        return Err(AppError::Validation(format!(
+            "scan.formats: '{unknown}' is not one of {}",
+            SCAN_FORMATS.join("|")
+        )));
+    }
+    if !matches!(scan.on_unknown.as_str(), "reject" | "offer_create") {
+        return Err(AppError::Validation(
+            "scan.on_unknown: reject or offer_create".into(),
+        ));
+    }
+    for (key, name) in [
+        ("gs1_batch_attribute", &scan.gs1_batch_attribute),
+        ("gs1_expiry_attribute", &scan.gs1_expiry_attribute),
+    ] {
+        if let Some(name) = name
+            && !(!name.is_empty()
+                && name.len() <= 64
+                && name
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_'))
+        {
+            return Err(AppError::Validation(format!(
+                "scan.{key}: '{name}' is not a field logical name"
+            )));
+        }
+    }
+    Ok(())
+}
+
 /// A28-T1: `options.default`, when present, is `{"kind": "fixed", "value":
 /// <a value of the field's type>}`, `{"kind": "today"}` or `{"kind": "now"}`
 /// (date fields), or `{"kind": "current_user"}` (lookup fields).
@@ -624,6 +723,49 @@ fn type_err(expected: &str, got: &Value) -> AppError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// B16-T3: a text field can be scanned.
+    #[test]
+    fn scan_options_accepted_on_text() {
+        let options = serde_json::json!({
+            "scan": {
+                "formats": ["ean_13", "qr_code"],
+                "gs1_batch_attribute": "batch_no",
+                "on_unknown": "offer_create"
+            }
+        });
+        assert!(validate_options(&FieldType::Text, &options).is_ok());
+        let with_pattern =
+            serde_json::json!({ "pattern": "[0-9]+", "scan": { "formats": ["code_128"] } });
+        assert!(validate_options(&FieldType::Text, &with_pattern).is_ok());
+    }
+
+    #[test]
+    fn scan_options_rejected_on_bool() {
+        let options = serde_json::json!({ "scan": { "formats": ["ean_13"] } });
+        let err = validate_options(&FieldType::Bool, &options).unwrap_err();
+        assert!(err.to_string().contains("scan"), "{err}");
+    }
+
+    #[test]
+    fn scan_options_unknown_format_422() {
+        for scan in [
+            serde_json::json!({ "formats": ["morse"] }),
+            serde_json::json!({ "formats": [] }),
+            serde_json::json!({ "formats": ["ean_13"], "on_unknown": "ignore" }),
+            serde_json::json!({ "formats": ["ean_13"], "gs1_expiry_attribute": "Bad Name" }),
+            serde_json::json!({ "formats": ["ean_13"], "extra": true }),
+        ] {
+            let options = serde_json::json!({ "scan": scan });
+            assert!(
+                matches!(
+                    validate_options(&FieldType::Text, &options),
+                    Err(AppError::Validation(_))
+                ),
+                "{options}"
+            );
+        }
+    }
 
     #[test]
     fn normalize_trims_and_rewrites_digits_where_the_field_says_so() {
