@@ -15932,6 +15932,154 @@
         }
       }
     },
+    "/api/v1/admin/i18n/overrides": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "B20-T3: rewords one built-in interface text in one language.\nAdministrators only.",
+        "operationId": "put_ui_text_override",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UiTextOverride"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Saved"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid locale, key or text",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "B20-T3: goes back to the built-in wording of one text in one language.\nAdministrators only.",
+        "operationId": "delete_ui_text_override",
+        "parameters": [
+          {
+            "name": "locale",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The built-in wording is back"
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such override",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "entity",
+              "operation": "soft_delete"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/admin/integrations/systems": {
       "post": {
         "tags": [
@@ -44649,6 +44797,66 @@
           },
           "422": {
             "description": "A missing or non-numeric value, a sensitive field, or a malformed cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/i18n/overrides": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "B20-T3: the built-in interface text this deployment rewords, in `locale`,\nfor the app to lay over its own catalogue.",
+        "operationId": "ui_text_overrides",
+        "parameters": [
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "The language, e.g. `ar` or `ar-SA`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Catalogue key to the deployment's wording",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UiTextOverrides"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid locale",
             "content": {
               "application/json": {
                 "schema": {
@@ -74901,7 +75109,7 @@
           },
           "error": {
             "type": "string",
-            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`conflict`, `version_conflict`, `idempotency_conflict`,\n`validation_error`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `payload_too_large`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
+            "description": "Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,\n`conflict`, `version_conflict`, `idempotency_conflict`,\n`validation_error`, `feature_unavailable`, `feature_hidden`,\n`rate_limit_exceeded`, `overloaded`, `capability_unavailable`,\n`metadata_authoring_locked`, `transition_not_allowed`,\n`rule_violation`, `field_locked`, `field_locked_required`,\n`reauth_required`, `server_timeout`, `query_timeout`, `payload_too_large`,\n`idempotency_outcome_unknown`, `idempotency_replay_unavailable`,\n`method_not_allowed`, or\n`internal_error` — one per `AppError` variant (`FieldLocked` answers\ntwo: plain and required) (`attome-types/src/error.rs`); M01 Core C-23\nfound this list four codes short of the taxonomy it documents."
           },
           "field": {
             "type": [
@@ -101678,6 +101886,45 @@
             "type": "integer",
             "format": "int64",
             "description": "`turn.started` events in the window."
+          }
+        }
+      },
+      "UiTextOverride": {
+        "type": "object",
+        "description": "`PUT /api/v1/admin/i18n/overrides`.",
+        "required": [
+          "locale",
+          "key",
+          "text"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "The built-in text's catalogue key, e.g. `xrmForm.save`."
+          },
+          "locale": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string",
+            "description": "What to show instead, at most 500 characters."
+          }
+        }
+      },
+      "UiTextOverrides": {
+        "type": "object",
+        "description": "This deployment's rewordings of built-in interface text in one language.",
+        "required": [
+          "locale",
+          "texts"
+        ],
+        "properties": {
+          "locale": {
+            "type": "string"
+          },
+          "texts": {
+            "type": "object",
+            "description": "Catalogue key (`xrmForm.save`) to the text shown instead."
           }
         }
       },

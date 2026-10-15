@@ -2752,6 +2752,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/i18n/overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * B20-T3: rewords one built-in interface text in one language.
+         *     Administrators only.
+         */
+        put: operations["put_ui_text_override"];
+        post?: never;
+        /**
+         * B20-T3: goes back to the built-in wording of one text in one language.
+         *     Administrators only.
+         */
+        delete: operations["delete_ui_text_override"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/integrations/systems": {
         parameters: {
             query?: never;
@@ -8581,6 +8605,26 @@ export interface paths {
          *     searched.
          */
         get: operations["search_history_route"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/i18n/overrides": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * B20-T3: the built-in interface text this deployment rewords, in `locale`,
+         *     for the app to lay over its own catalogue.
+         */
+        get: operations["ui_text_overrides"];
         put?: never;
         post?: never;
         delete?: never;
@@ -17058,7 +17102,7 @@ export interface components {
              *     `rate_limit_exceeded`, `overloaded`, `capability_unavailable`,
              *     `metadata_authoring_locked`, `transition_not_allowed`,
              *     `rule_violation`, `field_locked`, `field_locked_required`,
-             *     `reauth_required`, `server_timeout`, `payload_too_large`,
+             *     `reauth_required`, `server_timeout`, `query_timeout`, `payload_too_large`,
              *     `idempotency_outcome_unknown`, `idempotency_replay_unavailable`,
              *     `method_not_allowed`, or
              *     `internal_error` — one per `AppError` variant (`FieldLocked` answers
@@ -27359,6 +27403,20 @@ export interface components {
              * @description `turn.started` events in the window.
              */
             started: number;
+        };
+        /** @description `PUT /api/v1/admin/i18n/overrides`. */
+        UiTextOverride: {
+            /** @description The built-in text's catalogue key, e.g. `xrmForm.save`. */
+            key: string;
+            locale: string;
+            /** @description What to show instead, at most 500 characters. */
+            text: string;
+        };
+        /** @description This deployment's rewordings of built-in interface text in one language. */
+        UiTextOverrides: {
+            locale: string;
+            /** @description Catalogue key (`xrmForm.save`) to the text shown instead. */
+            texts: Record<string, never>;
         };
         /**
          * @description A 401 from a route guarded by a step-up (D-510): either the standard
@@ -38399,6 +38457,103 @@ export interface operations {
             };
             /** @description A move of more than one day, or a month outside 29-30 days */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_ui_text_override: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UiTextOverride"];
+            };
+        };
+        responses: {
+            /** @description Saved */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid locale, key or text */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_ui_text_override: {
+        parameters: {
+            query: {
+                locale: string;
+                key: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The built-in wording is back */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such override */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -57320,6 +57475,47 @@ export interface operations {
                 };
             };
             /** @description A missing or non-numeric value, a sensitive field, or a malformed cursor */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ui_text_overrides: {
+        parameters: {
+            query: {
+                /** @description The language, e.g. `ar` or `ar-SA`. */
+                locale: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Catalogue key to the deployment's wording */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UiTextOverrides"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Invalid locale */
             422: {
                 headers: {
                     [name: string]: unknown;
