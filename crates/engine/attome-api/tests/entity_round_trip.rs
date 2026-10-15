@@ -4011,6 +4011,50 @@ fn upsert_by_external_id_and_lookup_by_external_id() {
             err["message"].as_str().unwrap_or("").contains("99999"),
             "{err}"
         );
+
+        // A29-T3: merging a second account into the first keeps its SAP id:
+        // a lookup by that id now finds the survivor.
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{account}"),
+                r#"{"sap_no":"20077","title":"Acme duplicate"}"#,
+            ))
+            .await
+            .expect("second account");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let duplicate_id = body_json(res).await["id"].as_str().expect("id").to_owned();
+        let res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/v1/{account}/{record_id}/merge"))
+                    .header("cookie", &admin_cookie)
+                    .header("content-type", "application/json")
+                    .body(Body::from(format!(
+                        r#"{{"duplicate_id":"{duplicate_id}"}}"#
+                    )))
+                    .unwrap(),
+            )
+            .await
+            .expect("merge");
+        assert!(res.status().is_success(), "merge: {}", res.status());
+        let res = app
+            .clone()
+            .oneshot(post(
+                format!("/api/v1/{deal}"),
+                r#"{"account_ref":{"by":"sap_no","value":"20077"}}"#,
+            ))
+            .await
+            .expect("lookup by the merged id");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let created = body_json(res).await;
+        assert_eq!(
+            created["data"]["account_ref"],
+            record_id.as_str(),
+            "{created}"
+        );
     })
 }
 

@@ -492,15 +492,20 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
     <ApiDocFragment as utoipa::OpenApi>::openapi()
 }
 
-/// A29-T2: whether an attribute holds an external id
-/// (`options.external_id.system`).
-fn is_external_id(attr: &AttrInfo) -> bool {
+/// A29-T2: the system an attribute holds external ids for
+/// (`options.external_id.system`), if it does.
+pub(super) fn external_id_system_of(attr: &AttrInfo) -> Option<&str> {
     attr.options
         .as_ref()
         .and_then(|o| o.get("external_id"))
         .and_then(|e| e.get("system"))
         .and_then(Value::as_str)
-        .is_some_and(|s| !s.is_empty())
+        .filter(|s| !s.is_empty())
+}
+
+/// A29-T2: whether an attribute holds an external id.
+fn is_external_id(attr: &AttrInfo) -> bool {
+    external_id_system_of(attr).is_some()
 }
 
 /// A29-T2: the `match` an upsert without one uses: `key` (an external-id
@@ -609,7 +614,7 @@ pub(super) async fn resolve_lookups_by_external_id(
                 "{field}.value: give the external id"
             )));
         };
-        let found: Option<Uuid> = sqlx::query_scalar(&format!(
+        let mut found: Option<Uuid> = sqlx::query_scalar(&format!(
             "SELECT id FROM {} WHERE {} = $1{} AND is_active = TRUE",
             quote_ident(&target_name),
             quote_ident(&by_attr.logicalname),
@@ -619,6 +624,22 @@ pub(super) async fn resolve_lookups_by_external_id(
         .fetch_optional(&state.base.db)
         .await
         .map_err(AppError::internal)?;
+        // A29-T3: an id a merged record held now links to the survivor.
+        if found.is_none()
+            && let Some(system) = external_id_system_of(by_attr)
+        {
+            found = sqlx::query_scalar(&format!(
+                "SELECT l.record_id FROM external_id_link l JOIN {} t ON t.id = l.record_id \
+                 WHERE l.entity = $1 AND l.system = $2 AND l.external_id = $3 AND t.is_active = TRUE",
+                quote_ident(&target_name)
+            ))
+            .bind(&target_name)
+            .bind(system)
+            .bind(&text)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+        }
         match found {
             Some(id) => {
                 fields.insert(field, Value::String(id.to_string()));

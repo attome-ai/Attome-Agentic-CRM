@@ -684,6 +684,44 @@ pub async fn do_merge_core_with_version(
     // no longer matches 'open' (already merged/dismissed, or simply wrong)
     // must not fail an otherwise-successful merge of the two underlying
     // records.
+    // A29-T3: the survivor keeps every system's id: the merged record's links
+    // move to it, and the merged record's own external ids become links.
+    sqlx::query("UPDATE external_id_link SET record_id = $1 WHERE entity = $2 AND record_id = $3")
+        .bind(canonical_id)
+        .bind(&entity_name)
+        .bind(duplicate_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    for attr in &attrs {
+        let Some(system) = super::upsert::external_id_system_of(attr) else {
+            continue;
+        };
+        let value: Option<String> = sqlx::query_scalar(&format!(
+            "SELECT {}::text FROM {table} WHERE id = $1",
+            quote_ident(&attr.logicalname)
+        ))
+        .bind(duplicate_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(AppError::internal)?
+        .flatten();
+        if let Some(value) = value {
+            sqlx::query(
+                "INSERT INTO external_id_link (entity, record_id, system, external_id) \
+                 VALUES ($1, $2, $3, $4) \
+                 ON CONFLICT (entity, system, external_id) DO UPDATE SET record_id = EXCLUDED.record_id",
+            )
+            .bind(&entity_name)
+            .bind(canonical_id)
+            .bind(system)
+            .bind(value)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+        }
+    }
+
     if let Some(candidate_id) = candidate_id {
         sqlx::query(
             "UPDATE duplicate_candidate \
