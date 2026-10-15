@@ -57411,6 +57411,118 @@
         }
       }
     },
+    "/api/v1/{entity}/{id}/actions/{name}": {
+      "post": {
+        "tags": [
+          "action"
+        ],
+        "summary": "S1-T12: invokes a record-bound action on the record in the path, through\nthe same gate as `/api/v1/actions/{id}/invoke`; `entity` and `record_id`\ncome from the path and replace any in the body. An action that does not\nwork on one record answers 404 here.",
+        "operationId": "invoke_record_action",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "description": "Action id, e.g. record.summarize",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvokeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionOutcome"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown, unlicensed, disabled, or not a record action",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request failed validation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "the same dispatch as POST /api/v1/actions/{id}/invoke, as the plain calling human; whatever the action mutates is audited by its own executor",
+          "reason": "delegated",
+          "via": "dispatch -> the action's own executor"
+        }
+      }
+    },
     "/api/v1/{entity}/{id}/ancestors": {
       "get": {
         "tags": [
