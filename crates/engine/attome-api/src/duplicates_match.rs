@@ -199,9 +199,135 @@ pub struct MatchSweepStats {
     pub auto_merge_submitted: usize,
 }
 
+/// A15-T6: the rows one scan page reads.
+pub const MATCH_SCAN_PAGE: i64 = 500;
+
+/// A15-T6: `EngineJob::DataMatchScan`'s handler — one page of a full scan of
+/// a rule's entity: the next [`MATCH_SCAN_PAGE`] live rows after `after_id`,
+/// each with its match keys written and scored against its peers (the same
+/// evaluation the sweep runs on a changed record). A full page enqueues the
+/// next one; a short page ends the scan and stamps the rule's
+/// `last_scan_at`. A rule deleted or switched off meanwhile ends it.
+pub async fn run_match_scan(
+    state: &EngineState,
+    rule_id: Uuid,
+    after_id: Option<Uuid>,
+) -> Result<MatchSweepStats, AppError> {
+    let mut stats = MatchSweepStats::default();
+    let row: Option<(String, Value, f64, bool)> = sqlx::query_as(
+        "SELECT entity_logicalname, fields, threshold::float8, auto_merge FROM match_rule \
+          WHERE id = $1 AND is_active AND NOT is_deleted",
+    )
+    .bind(rule_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((entity, fields_json, threshold, auto_merge)) = row else {
+        return Ok(stats);
+    };
+    let fields: Vec<MatchField> = serde_json::from_value(fields_json)
+        .map_err(|e| AppError::internal(format!("corrupt match_rule({rule_id}).fields: {e}")))?;
+    let (_, entity_name, _, is_append_only) =
+        attome_records::entity_crud::resolve_entity(state, &entity).await?;
+    if is_append_only {
+        return Ok(stats);
+    }
+    let ids: Vec<Uuid> = sqlx::query_scalar(&format!(
+        "SELECT id FROM {} WHERE is_active = true AND ($1::uuid IS NULL OR id > $1) \
+         ORDER BY id LIMIT $2",
+        quote_ident(&entity_name)
+    ))
+    .bind(after_id)
+    .bind(MATCH_SCAN_PAGE)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let rules = [MatchRule {
+        id: rule_id,
+        fields,
+        threshold,
+        auto_merge,
+    }];
+    for id in &ids {
+        evaluate_rules(state, &entity_name, *id, &rules, &mut stats).await?;
+        stats.events_processed += 1;
+    }
+    match ids.last() {
+        Some(last) if ids.len() as i64 == MATCH_SCAN_PAGE => {
+            attome_jobs::enqueue_dedup(
+                &state.base.db,
+                attome_core::jobs::EngineJob::DataMatchScan {
+                    rule_id,
+                    after_id: Some(*last),
+                },
+                &format!("match-scan:{rule_id}:{last}"),
+            )
+            .await
+            .map_err(AppError::internal)?;
+        }
+        _ => {
+            sqlx::query("UPDATE match_rule SET last_scan_at = now() WHERE id = $1")
+                .bind(rule_id)
+                .execute(&state.base.db)
+                .await
+                .map_err(AppError::internal)?;
+        }
+    }
+    Ok(stats)
+}
+
+/// A15-T6: starts a full scan of one rule (deduplicated: a start already
+/// queued is not queued twice). `Ok(true)` when a scan was queued.
+pub async fn start_match_scan(db: &attome_db::DbPool, rule_id: Uuid) -> Result<bool, AppError> {
+    attome_jobs::enqueue_dedup(
+        db,
+        attome_core::jobs::EngineJob::DataMatchScan {
+            rule_id,
+            after_id: None,
+        },
+        &format!("match-scan:{rule_id}:start"),
+    )
+    .await
+    .map_err(AppError::internal)
+}
+
+/// A15-T6: starts the scans whose schedule is due: a rule with
+/// `scan_schedule` `hourly`, `daily` or `weekly` (with or without a leading
+/// `@`) whose last scan finished longer ago than that, or never.
+pub async fn start_due_scans(db: &attome_db::DbPool) -> Result<usize, AppError> {
+    let due: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT id FROM match_rule \
+          WHERE is_active AND NOT is_deleted AND scan_schedule IS NOT NULL \
+            AND (CASE ltrim(lower(trim(scan_schedule)), '@') \
+                   WHEN 'hourly' THEN interval '1 hour' \
+                   WHEN 'daily' THEN interval '1 day' \
+                   WHEN 'weekly' THEN interval '7 days' END) IS NOT NULL \
+            AND (last_scan_at IS NULL OR last_scan_at < now() - \
+                 (CASE ltrim(lower(trim(scan_schedule)), '@') \
+                   WHEN 'hourly' THEN interval '1 hour' \
+                   WHEN 'daily' THEN interval '1 day' \
+                   ELSE interval '7 days' END))",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut started = 0;
+    for rule_id in due {
+        if start_match_scan(db, rule_id).await? {
+            started += 1;
+        }
+    }
+    Ok(started)
+}
+
 /// `EngineJob::DataMatchSweep`'s handler — see `attome_core::jobs::EngineJob::
 /// DataMatchSweep`'s doc comment for the job contract.
 pub async fn run_match_sweep(state: &EngineState) -> Result<MatchSweepStats, AppError> {
+    // A15-T6: the scheduled full scans that are due start here, on the
+    // sweep's own tick; a failure to start one never stops the sweep.
+    if let Err(e) = start_due_scans(&state.base.db).await {
+        tracing::warn!(error = %e, "mdm match sweep: could not start the due scans");
+    }
     let mut stats = MatchSweepStats::default();
     let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
     let events = change_feed::read_batch(&mut conn, CONSUMER, OUTBOX_BATCH_LIMIT).await?;
@@ -296,6 +422,17 @@ async fn evaluate_record(
     stats: &mut MatchSweepStats,
 ) -> Result<(), AppError> {
     let rules = load_active_match_rules(&state.base.db, entity_logicalname).await?;
+    evaluate_rules(state, entity_logicalname, record_id, &rules, stats).await
+}
+
+/// Evaluates `rules` (all on one entity) for one record.
+async fn evaluate_rules(
+    state: &EngineState,
+    entity_logicalname: &str,
+    record_id: Uuid,
+    rules: &[MatchRule],
+    stats: &mut MatchSweepStats,
+) -> Result<(), AppError> {
     if rules.is_empty() {
         return Ok(());
     }
@@ -311,7 +448,7 @@ async fn evaluate_record(
         attrs.iter().map(|a| a.logicalname.as_str()).collect();
     let table = quote_ident(&entity_name);
 
-    for rule in &rules {
+    for rule in rules {
         // A rule naming a field that no longer exists on this entity (a
         // field was deleted after the rule was saved) is skipped for that
         // field's contribution entirely, same "degrade, don't crash the

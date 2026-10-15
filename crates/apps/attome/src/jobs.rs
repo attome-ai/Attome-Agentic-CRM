@@ -970,6 +970,18 @@ async fn dispatch_platform_job(
                 );
             }
         }
+        // A15-T6 — one page of a match rule's full scan; it enqueues the next.
+        EngineJob::DataMatchScan { rule_id, after_id } => {
+            let stats =
+                attome_api::duplicates_match::run_match_scan(&attome_state, rule_id, after_id)
+                    .await?;
+            tracing::info!(
+                %rule_id,
+                rows = stats.events_processed,
+                candidates_written = stats.candidates_written,
+                "mdm match scan: page done"
+            );
+        }
         // M61 Phase 1 (API Management, D-438) — drains the Redis usage-
         // counter buffer into api_usage. Runtime pool + the
         // coordination Redis role (same role apikey_touch's write-coalescing

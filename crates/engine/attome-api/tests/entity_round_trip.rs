@@ -6005,6 +6005,94 @@ fn phone_and_arabic_name_rules_match_variants_with_field_scores() {
     })
 }
 
+/// A15-T6: a full scan over rows that existed before the rule pairs them:
+/// three records with one phone number in two forms give three candidates,
+/// and the finished scan stamps the rule's last scan.
+#[test]
+fn scan_finds_existing_pairs() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (logicalname, entity_id) = create_entity(&app, &admin_cookie, "match_scan").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"phone","name":"Phone","field_type":"text"}"#,
+        )
+        .await;
+        sync_registry(&state).await;
+        let send = |uri: String, body: String| {
+            Request::builder()
+                .method("POST")
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json")
+                .body(Body::from(body))
+                .unwrap()
+        };
+        for phone in ["0501234567", "+966501234567", "00966 50 123 4567"] {
+            let res = app
+                .clone()
+                .oneshot(send(
+                    format!("/api/v1/{logicalname}"),
+                    format!(r#"{{"phone":"{phone}"}}"#),
+                ))
+                .await
+                .expect("record");
+            assert_eq!(res.status(), StatusCode::CREATED);
+        }
+        let res = app
+            .clone()
+            .oneshot(send(
+                "/api/v1/admin/data/match-rules".to_owned(),
+                format!(
+                    r#"{{"entity":"{logicalname}","name":"scan","threshold":1.0,"scan_schedule":"daily",
+                        "fields":[{{"field":"phone","comparator":"phone","weight":1.0,"default_country":"SA"}}]}}"#
+                ),
+            ))
+            .await
+            .expect("rule");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let rule = body_json(res).await;
+        assert_eq!(rule["scan_schedule"], "daily", "{rule}");
+        let rule_id: Uuid = rule["id"].as_str().unwrap().parse().unwrap();
+
+        let stats = attome_api::duplicates_match::run_match_scan(&state, rule_id, None)
+            .await
+            .expect("scan");
+        assert_eq!(stats.events_processed, 3);
+        let pairs: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM duplicate_candidate WHERE entity_logicalname = $1",
+        )
+        .bind(&logicalname)
+        .fetch_one(&db)
+        .await
+        .expect("count");
+        assert_eq!(pairs, 3);
+        let scanned: Option<chrono::DateTime<chrono::Utc>> =
+            sqlx::query_scalar("SELECT last_scan_at FROM match_rule WHERE id = $1")
+                .bind(rule_id)
+                .fetch_one(&db)
+                .await
+                .expect("last scan");
+        assert!(scanned.is_some());
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                format!("/api/v1/admin/data/match-rules/{rule_id}/scan"),
+                String::new(),
+            ))
+            .await
+            .expect("scan route");
+        assert_eq!(res.status(), StatusCode::ACCEPTED);
+    })
+}
+
 /// D-432 / M13 — a small matching-precision fixture: an `exact`-comparator
 /// rule on `name` at `threshold = 1.0` must flag the one genuine duplicate
 /// pair and must NOT flag the unrelated third record (no false positive) —

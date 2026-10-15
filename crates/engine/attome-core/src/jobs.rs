@@ -431,6 +431,16 @@ pub enum EngineJob {
     /// match rules on every tick rather than replaying an enqueue-time
     /// snapshot of which rules existed.
     DataMatchSweep,
+    /// A15-T6: one page of a full scan of a match rule's entity: the next
+    /// 500 live rows after `after_id` get their match keys written and are
+    /// each scored against their peers; the handler enqueues the page after,
+    /// so a scan resumes from its last page after a restart. Enqueued
+    /// dedup-keyed `match-scan:<rule>:<after_id or start>`
+    /// (`attome_api::duplicates_match::run_match_scan`).
+    DataMatchScan {
+        rule_id: Uuid,
+        after_id: Option<Uuid>,
+    },
     /// M61 Phase 1 (API Management, D-438) — nightly rollup: drains the Redis
     /// write-coalescing buffer `attome_server::api_usage` populates on every
     /// authenticated request (one `HINCRBY` per (day, method, route,
@@ -794,7 +804,8 @@ impl EngineJob {
             | Self::RollbackMigrationRun { .. }
             | Self::ReportRun { .. }
             | Self::LegalMatterCollect { .. }
-            | Self::LegalMatterRelease { .. } => true,
+            | Self::LegalMatterRelease { .. }
+            | Self::DataMatchScan { .. } => true,
 
             // Everything else: bounded work, latency-sensitive, or cheap.
             Self::SendEmail(_)
@@ -911,6 +922,7 @@ impl EngineJob {
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
+            EngineJob::DataMatchScan { .. } => "DataMatchScan",
             EngineJob::ApiUsageRollup => "ApiUsageRollup",
             EngineJob::ContentScheduledPublishSweep => "ContentScheduledPublishSweep",
             EngineJob::DataQualityScoreSweep => "DataQualityScoreSweep",
@@ -1005,6 +1017,7 @@ impl EngineJob {
             | Self::TagExpirySweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
+            | Self::DataMatchScan { .. }
             | Self::ApiUsageRollup
             | Self::ContentScheduledPublishSweep
             | Self::DataQualityScoreSweep
@@ -1145,6 +1158,7 @@ impl EngineJob {
             | Self::BackfillRecipientForNewUser { .. }
             | Self::BuildAttributeIndex { .. }
             | Self::BuildBusinessKeyIndex { .. }
+            | Self::DataMatchScan { .. }
             | Self::BulkEntityOperation(_)
             | Self::ApplyStagedImport(_)
             | Self::ScanUploadedFile { .. }
@@ -1853,6 +1867,18 @@ mod tests {
     #[test]
     fn data_match_sweep_round_trips_as_a_bare_unit_variant() {
         assert_round_trips(EngineJob::DataMatchSweep);
+        // A15-T6
+        assert_round_trips(EngineJob::DataMatchScan {
+            rule_id: Uuid::now_v7(),
+            after_id: Some(Uuid::now_v7()),
+        });
+        assert!(
+            EngineJob::DataMatchScan {
+                rule_id: Uuid::now_v7(),
+                after_id: None
+            }
+            .is_batch()
+        );
         assert!(!EngineJob::DataMatchSweep.is_batch());
     }
 

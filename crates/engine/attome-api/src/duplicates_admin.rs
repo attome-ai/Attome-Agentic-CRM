@@ -101,7 +101,24 @@ fn validate_match_fields(
 }
 
 const MATCH_RULE_COLUMNS: &str = "id, entity_logicalname, name, is_active, fields, \
-     threshold::float8, auto_merge, row_version, created_at, updated_at, created_by";
+     threshold::float8, auto_merge, row_version, created_at, updated_at, created_by, \
+     scan_schedule, last_scan_at";
+
+/// A15-T6: the schedules a full scan may run on.
+const SCAN_SCHEDULES: [&str; 3] = ["hourly", "daily", "weekly"];
+
+/// A15-T6: `""` clears the schedule; anything else must be one of
+/// [`SCAN_SCHEDULES`].
+fn scan_schedule_of(raw: Option<&str>) -> Result<Option<Option<String>>, AppError> {
+    match raw.map(|s| s.trim().trim_start_matches('@').to_ascii_lowercase()) {
+        None => Ok(None),
+        Some(s) if s.is_empty() => Ok(Some(None)),
+        Some(s) if SCAN_SCHEDULES.contains(&s.as_str()) => Ok(Some(Some(s))),
+        Some(s) => Err(AppError::Validation(format!(
+            "scan_schedule: '{s}' is not hourly, daily or weekly"
+        ))),
+    }
+}
 
 #[derive(sqlx::FromRow)]
 struct MatchRuleRow {
@@ -116,6 +133,8 @@ struct MatchRuleRow {
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
     created_by: Uuid,
+    scan_schedule: Option<String>,
+    last_scan_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -131,6 +150,10 @@ struct MatchRuleView {
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
     created_by: Uuid,
+    /// A15-T6: `hourly`, `daily` or `weekly`; `null`: scans run only on demand.
+    scan_schedule: Option<String>,
+    /// A15-T6: when the last full scan finished.
+    last_scan_at: Option<DateTime<Utc>>,
 }
 
 impl TryFrom<MatchRuleRow> for MatchRuleView {
@@ -151,6 +174,8 @@ impl TryFrom<MatchRuleRow> for MatchRuleView {
             created_at: row.created_at,
             updated_at: row.updated_at,
             created_by: row.created_by,
+            scan_schedule: row.scan_schedule,
+            last_scan_at: row.last_scan_at,
         })
     }
 }
@@ -225,6 +250,9 @@ struct CreateMatchRuleBody {
     threshold: f64,
     #[serde(default)]
     auto_merge: bool,
+    /// A15-T6: `hourly`, `daily` or `weekly` full scans; absent: on demand.
+    #[serde(default)]
+    scan_schedule: Option<String>,
 }
 
 fn default_true() -> bool {
@@ -264,13 +292,15 @@ async fn create_match_rule(
     let known: HashSet<&str> = attrs.iter().map(|a| a.logicalname.as_str()).collect();
     validate_match_fields(&known, &body.fields)?;
     let fields_json = serde_json::to_value(&body.fields).map_err(AppError::internal)?;
+    let scan_schedule = scan_schedule_of(body.scan_schedule.as_deref())?.flatten();
 
     let rule_id = Uuid::now_v7();
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let row: MatchRuleRow = sqlx::query_as(&format!(
         "INSERT INTO match_rule \
-             (id, entity_logicalname, name, is_active, fields, threshold, auto_merge, row_version, created_by) \
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8) \
+             (id, entity_logicalname, name, is_active, fields, threshold, auto_merge, row_version, \
+              created_by, scan_schedule) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, $9) \
          RETURNING {MATCH_RULE_COLUMNS}"
     ))
     .bind(rule_id)
@@ -281,6 +311,7 @@ async fn create_match_rule(
     .bind(body.threshold)
     .bind(body.auto_merge)
     .bind(ctx.user_id)
+    .bind(&scan_schedule)
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -310,7 +341,19 @@ async fn create_match_rule(
         )
         .await?;
     attome_db::tx::commit(tx).await?;
+    // A15-T6: the existing rows get their keys and are scored by a scan.
+    if row.is_active {
+        start_scan_best_effort(&state, rule_id).await;
+    }
     Ok((StatusCode::CREATED, Json(row.try_into()?)))
+}
+
+/// A15-T6: starts a rule's full scan after a save; a failure to queue it is
+/// logged and leaves the save in place (the scan route starts it again).
+async fn start_scan_best_effort(state: &EngineState, rule_id: Uuid) {
+    if let Err(e) = crate::duplicates_match::start_match_scan(&state.base.db, rule_id).await {
+        tracing::warn!(error = %e, %rule_id, "match rule saved, but its scan could not be queued");
+    }
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -320,6 +363,8 @@ struct UpdateMatchRuleBody {
     fields: Option<Vec<MatchField>>,
     threshold: Option<f64>,
     auto_merge: Option<bool>,
+    /// A15-T6: `hourly`, `daily`, `weekly`, or `""` to scan on demand only.
+    scan_schedule: Option<String>,
     row_version: i64,
 }
 
@@ -381,6 +426,7 @@ async fn update_match_rule(
         None => None,
     };
 
+    let scan_schedule = scan_schedule_of(body.scan_schedule.as_deref())?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let row: Option<MatchRuleRow> = sqlx::query_as(&format!(
         "UPDATE match_rule \
@@ -389,6 +435,7 @@ async fn update_match_rule(
              fields = COALESCE($5, fields), \
              threshold = COALESCE($6, threshold), \
              auto_merge = COALESCE($7, auto_merge), \
+             scan_schedule = CASE WHEN $8 THEN $9 ELSE scan_schedule END, \
              row_version = row_version + 1, \
              updated_at = NOW() \
          WHERE id = $1 AND row_version = $2 AND NOT is_deleted \
@@ -401,6 +448,8 @@ async fn update_match_rule(
     .bind(&fields_json)
     .bind(body.threshold)
     .bind(body.auto_merge)
+    .bind(scan_schedule.is_some())
+    .bind(scan_schedule.clone().flatten())
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -448,7 +497,85 @@ async fn update_match_rule(
         )
         .await?;
     attome_db::tx::commit(tx).await?;
+    // A15-T6: new fields need keys for the rows already there.
+    if body.fields.is_some() && row.is_active {
+        start_scan_best_effort(&state, id).await;
+    }
     Ok(Json(row.try_into()?))
+}
+
+/// A15-T6: whether a scan was queued (`false`: one is queued already).
+#[derive(Debug, Serialize, ToSchema)]
+struct MatchScanStarted {
+    queued: bool,
+}
+
+/// `POST /api/v1/admin/data/match-rules/{id}/scan` — `system.admin` only.
+/// A15-T6: scans every live row of the rule's entity in pages of 500 in the
+/// background (keys written, each row scored against its peers, candidates
+/// recorded); a restart resumes from the last page.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/data/match-rules/{id}/scan",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 202, description = "The scan is queued", body = MatchScanStarted),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such rule", body = ErrorResponse),
+        (status = 422, description = "The rule is switched off", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Configuration, AuditOperation::Update)])))),
+)]
+async fn scan_match_rule(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<(StatusCode, Json<MatchScanStarted>), AppError> {
+    let rule: Option<(String, bool)> = sqlx::query_as(
+        "SELECT entity_logicalname, is_active FROM match_rule WHERE id = $1 AND NOT is_deleted",
+    )
+    .bind(id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let (entity_logicalname, is_active) = rule.ok_or(AppError::NotFound)?;
+    if !is_active {
+        return Err(AppError::Validation(
+            "the rule is switched off; switch it on to scan".into(),
+        ));
+    }
+    let queued = crate::duplicates_match::start_match_scan(&state.base.db, id).await?;
+    let (user_ctx, org_ref) = entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    audit_service(&state)
+        .write_in_tx(
+            &mut tx,
+            AuditEvent {
+                organization_ref: org_ref,
+                category: AuditCategory::Configuration,
+                entity_name: Some(entity_logicalname),
+                record_id: Some(id),
+                operation: AuditOperation::Update,
+                version_before: None,
+                version_after: None,
+                user_context: user_ctx,
+                changed_on: Utc::now(),
+                source: AuditSource::Api,
+                request_context: AuditRequestContext::default(),
+                correlation_id: None,
+                batch_id: None,
+                event_name: Some("match_scan_started".to_owned()),
+                event_comment: None,
+                changed_fields: vec![],
+                snapshot_json: None,
+            },
+        )
+        .await?;
+    attome_db::tx::commit(tx).await?;
+    Ok((StatusCode::ACCEPTED, Json(MatchScanStarted { queued })))
 }
 
 /// `DELETE /api/v1/admin/data/match-rules/{id}` — `system.admin` only.
@@ -1151,6 +1278,10 @@ pub fn routes() -> Router<EngineState> {
             axum::routing::put(update_match_rule).delete(delete_match_rule),
         )
         .route(
+            "/api/v1/admin/data/match-rules/{id}/scan",
+            post(scan_match_rule),
+        )
+        .route(
             "/api/v1/admin/data/survivorship-rules",
             get(list_survivorship_rules).post(create_survivorship_rule),
         )
@@ -1182,6 +1313,7 @@ pub fn routes() -> Router<EngineState> {
     create_match_rule,
     update_match_rule,
     delete_match_rule,
+    scan_match_rule,
     list_survivorship_rules,
     create_survivorship_rule,
     delete_survivorship_rule,

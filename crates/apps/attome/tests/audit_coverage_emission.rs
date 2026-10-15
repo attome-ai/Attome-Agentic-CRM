@@ -3978,6 +3978,15 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"is_active": false, "row_version": row_version})),
             )
         }
+        "POST /api/v1/admin/data/match-rules/{id}/scan" => {
+            let (id, _) = match_rule(fx).await;
+            request(
+                "POST",
+                &format!("/api/v1/admin/data/match-rules/{id}/scan"),
+                t,
+                None,
+            )
+        }
         "DELETE /api/v1/admin/data/match-rules/{id}" => {
             let (id, _) = match_rule(fx).await;
             request(

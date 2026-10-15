@@ -14,6 +14,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Duplicate rules compare `phone`, `email`, `id`, `name` and `phonetic` keys (Arabic names meet their
+  Latin spellings), keep each candidate's per-field scores, and scan a whole table in the background:
+  `POST /api/v1/admin/data/match-rules/{id}/scan`, on save, and on `scan_schedule` (`hourly`, `daily`,
+  `weekly`; migration `0062`).
 - Autonumber rules gain a `sequence_key` (`{branch}`: one counter per branch, per period), a
   `hijri_yearly` reset, `{field}` and `{lookup.field}` tokens in the format, and `assign_when`
   (`status = issued`): the number is given when a create or an update first meets it
