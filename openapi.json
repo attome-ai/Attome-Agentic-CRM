@@ -99324,6 +99324,7 @@
       },
       "RulePreview": {
         "type": "object",
+        "description": "What a draft rule would flag over a sample.",
         "required": [
           "sampled",
           "pairs",
@@ -99345,7 +99346,7 @@
           "sampled": {
             "type": "integer",
             "format": "int64",
-            "description": "Rows read (at most 5,000)."
+            "description": "Rows read."
           }
         }
       },
@@ -99374,6 +99375,7 @@
       },
       "RulePreviewPair": {
         "type": "object",
+        "description": "One pair a draft rule would flag.",
         "required": [
           "record_a",
           "record_b",

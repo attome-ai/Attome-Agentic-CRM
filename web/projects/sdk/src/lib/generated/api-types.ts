@@ -26252,6 +26252,7 @@ export interface components {
             message: string;
             path: string;
         };
+        /** @description What a draft rule would flag over a sample. */
         RulePreview: {
             /** @description Up to 20 of them, highest score first. */
             examples: components["schemas"]["RulePreviewPair"][];
@@ -26262,7 +26263,7 @@ export interface components {
             pairs: number;
             /**
              * Format: int64
-             * @description Rows read (at most 5,000).
+             * @description Rows read.
              */
             sampled: number;
         };
@@ -26272,6 +26273,7 @@ export interface components {
             /** Format: double */
             threshold: number;
         };
+        /** @description One pair a draft rule would flag. */
         RulePreviewPair: {
             /** Format: uuid */
             record_a: string;
