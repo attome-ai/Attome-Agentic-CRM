@@ -31,6 +31,7 @@
 pub mod advisories;
 mod contract;
 pub mod intake;
+pub mod notes;
 pub mod parity;
 pub mod release;
 pub mod repro;
@@ -599,6 +600,10 @@ fn tag_release(version: &str) -> Result<String, (u8, String)> {
     let ledger_text = std::fs::read_to_string(root.join(release::LEDGER)).ok();
     let ledger = release::ledger_add_release(ledger_text.as_deref(), version, &today)
         .map_err(|error| (2u8, error))?;
+    // AC6-T1: the version's notes in English and Arabic.
+    let areas = notes::sections(&changelog, version).map_err(|error| (2u8, error))?;
+    let notes_en = format!("release-notes/v{version}.en.md");
+    let notes_ar = format!("release-notes/v{version}.ar.md");
 
     let write = |rel: &str, text: &str| {
         let path = root.join(rel);
@@ -610,12 +615,21 @@ fn tag_release(version: &str) -> Result<String, (u8, String)> {
     write("CHANGELOG.md", &changelog)?;
     write("Cargo.toml", &cargo)?;
     write(release::LEDGER, &ledger)?;
+    write(notes_en.as_str(), &notes::english(version, &today, &areas))?;
+    write(notes_ar.as_str(), &notes::arabic(version, &today, &areas))?;
 
     let git = |args: &[&str], what: &str| {
         run(Command::new("git").args(args), &root, what).map_err(|error| (1u8, error))
     };
     git(
-        &["add", "CHANGELOG.md", "Cargo.toml", release::LEDGER],
+        &[
+            "add",
+            "CHANGELOG.md",
+            "Cargo.toml",
+            release::LEDGER,
+            notes_en.as_str(),
+            notes_ar.as_str(),
+        ],
         "git add",
     )?;
     git(

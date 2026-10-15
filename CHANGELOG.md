@@ -38,6 +38,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   copilot, which answers it from the data through the query planner.
 - Simple mode (`core.simple_mode`, a personal setting) hides advanced actions such as duplicating,
   sharing and changesets; the metadata explorer lists a menu's items nobody opened in 60 days.
+- `attome release tag` writes the version's notes in English and Arabic (`release-notes/v<version>.en.md`
+  and `.ar.md`), breaking changes first; Arabic entries are marked until their translation is reviewed.
 - Every password, key and client secret in the configuration is a `Secret`: it never prints, never
   serializes, and has no `Display`, so code reads it with `expose()` where it is handed on.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE
