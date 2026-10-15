@@ -221,6 +221,29 @@ mod code {
     pub const HEADER_MISMATCH: i32 = -32020;
     /// The requested protocol version is one this server does not implement.
     pub const UNSUPPORTED_PROTOCOL_VERSION: i32 = -32022;
+    /// AB7-T7: this server is restarting; retry (JSON-RPC's server-error range).
+    pub const SERVER_RESTARTING: i32 = -32000;
+}
+
+/// AB7-T7: the answer of a server that is draining for a restart: a
+/// retryable 503 with `Retry-After: 2` and a JSON-RPC error, so an agent
+/// mid-task retries and lands on the next process. A write it resends with
+/// the same idempotency key is applied once.
+fn draining_response(id: Value) -> Response {
+    let mut response = (
+        StatusCode::SERVICE_UNAVAILABLE,
+        Json(JsonRpcResponse::err(
+            id,
+            code::SERVER_RESTARTING,
+            "server restarting, retry",
+        )),
+    )
+        .into_response();
+    response.headers_mut().insert(
+        axum::http::header::RETRY_AFTER,
+        axum::http::HeaderValue::from_static("2"),
+    );
+    response
 }
 
 /// The modern revision this surface implements (plan item M1.2, finding F-5).
@@ -307,6 +330,7 @@ pub fn routes() -> Router<EngineState> {
         (status = 200, description = "JSON-RPC response", body = JsonRpcResponse),
         (status = 202, description = "Notification accepted; no response body"),
         (status = 401, description = "Missing or invalid credentials", body = attome_types::ErrorResponse),
+        (status = 503, description = "The server is restarting: retry after `Retry-After` seconds (JSON-RPC error -32000)", body = JsonRpcResponse),
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
@@ -319,6 +343,15 @@ async fn mcp_endpoint(
     let is_notification = request.id.is_none();
     let id = request.id.clone().unwrap_or(Value::Null);
     let security = ctx.into_inner();
+
+    // AB7-T7: a node draining for a restart takes no new MCP work.
+    if state
+        .base
+        .draining
+        .load(std::sync::atomic::Ordering::Relaxed)
+    {
+        return draining_response(id);
+    }
 
     // M1.6 / finding F-7. The transport requires a server to validate `Origin`
     // on every connection and answer 403 when one is present and invalid —
@@ -1048,6 +1081,26 @@ pub fn openapi_fragment() -> utoipa::openapi::OpenApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// AB7-T7: a draining server's answer tells the agent to retry.
+    #[tokio::test]
+    async fn mcp_returns_retryable_during_drain() {
+        let response = draining_response(serde_json::json!(7));
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        assert_eq!(
+            response
+                .headers()
+                .get(axum::http::header::RETRY_AFTER)
+                .unwrap(),
+            "2"
+        );
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(body["id"], 7);
+        assert_eq!(body["error"]["code"], code::SERVER_RESTARTING);
+    }
 
     /// This module's own production source, with `//` comments and the whole
     /// `#[cfg(test)]` block removed.
