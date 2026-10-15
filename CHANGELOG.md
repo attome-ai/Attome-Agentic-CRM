@@ -14,6 +14,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- `query/execute` filters take dynamic values resolved for the caller and the day: `@me`, `@my_team`,
+  `@my_unit`, `@today`, `@this_month` and `@last_n_days(n)`, so one saved view such as "my open deals
+  this month" works for everyone.
 - A `409 version_conflict` on `PATCH /api/v1/{entity}/{id}` now says what changed since the caller's
   `If-Match`: `current_version`, and `current_state.changed_attributes` (name, the other writer's
   value, who and when) with `hidden_changes` counting changes to fields the caller cannot read.

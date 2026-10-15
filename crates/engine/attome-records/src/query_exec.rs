@@ -1753,6 +1753,14 @@ pub async fn execute_stored_query_with_definition(
                 })
         }),
     };
+    // A13-T1: `@me`, `@my_team`, `@this_month` and the like, for this caller
+    // today.
+    let dynamic = attome_core::filter::DynamicValues {
+        user_id: ctx.user_id,
+        team_ids: ctx.team_ids.clone(),
+        unit_ids: ctx.accessible_org_ids.clone(),
+        today: chrono::Utc::now().date_naive(),
+    };
     for f in &body.filters {
         if !whitelist.contains(&f.field) {
             return Err(AppError::Validation(format!(
@@ -1760,9 +1768,11 @@ pub async fn execute_stored_query_with_definition(
                 f.field
             )));
         }
-        let (cond, binds) = attome_core::filter::compile(f, &filter_schema, params.len() + 1)?;
-        conds.push(cond);
-        params.extend(binds);
+        for f in attome_core::filter::expand_dynamic(f, &dynamic)? {
+            let (cond, binds) = attome_core::filter::compile(&f, &filter_schema, params.len() + 1)?;
+            conds.push(cond);
+            params.extend(binds);
+        }
     }
     // AA4-T4: a seek is a bound comparison on the sort column, compiled like
     // a filter so it is coerced and cast the same way.

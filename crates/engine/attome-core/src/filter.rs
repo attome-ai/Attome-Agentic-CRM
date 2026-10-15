@@ -285,6 +285,117 @@ pub fn is_multi_choice_attr(attr: &AttrInfo) -> bool {
 /// the other three callers' narrower grammars (no multi-select support) gain
 /// that capability by migrating onto this rather than losing anything they
 /// already had.
+/// A13-T1: what the dynamic filter values stand for, for one caller at one
+/// moment.
+#[derive(Clone, Debug)]
+pub struct DynamicValues {
+    pub user_id: uuid::Uuid,
+    pub team_ids: Vec<uuid::Uuid>,
+    /// The caller's business units (and those below them).
+    pub unit_ids: Vec<uuid::Uuid>,
+    pub today: chrono::NaiveDate,
+}
+
+/// The most days `@last_n_days(n)` reaches back.
+const MAX_DYNAMIC_DAYS: i64 = 3660;
+
+/// A13-T1: replaces a dynamic value with what it stands for, so a saved view
+/// such as "my open deals this month" works for every user. `@me` is the
+/// caller; `@my_team` and `@my_unit` the caller's teams and units (`eq`
+/// becomes `in`); `@today`, `@this_month` and `@last_n_days(n)` a date range
+/// in UTC, turned into bounds (`eq` becomes from the start to before the end;
+/// `gt`, `gte`, `lt`, `lte` compare with the matching edge). A value that is
+/// not exactly one of these, `@`-prefixed or not, is left as written.
+pub fn expand_dynamic(filter: &Filter, dynamic: &DynamicValues) -> Result<Vec<Filter>, AppError> {
+    let Some(token) = filter.value.as_ref().and_then(Value::as_str).map(str::trim) else {
+        return Ok(vec![filter.clone()]);
+    };
+    let with = |op: &str, value: Value| Filter {
+        field: filter.field.clone(),
+        op: op.to_owned(),
+        value: Some(value),
+    };
+    let ids = |ids: &[uuid::Uuid]| {
+        // An empty set matches nothing rather than everything.
+        let ids: Vec<Value> = if ids.is_empty() {
+            vec![Value::String(uuid::Uuid::nil().to_string())]
+        } else {
+            ids.iter().map(|id| Value::String(id.to_string())).collect()
+        };
+        Value::Array(ids)
+    };
+    let refuse = || {
+        Err(AppError::Validation(format!(
+            "{}: {token} works with eq{}",
+            filter.field,
+            if token == "@me" { " and neq" } else { "" }
+        )))
+    };
+    let range = match token {
+        "@me" => {
+            return match filter.op.as_str() {
+                "eq" | "neq" => Ok(vec![with(
+                    &filter.op,
+                    Value::String(dynamic.user_id.to_string()),
+                )]),
+                _ => refuse(),
+            };
+        }
+        "@my_team" | "@my_unit" => {
+            let set = if token == "@my_team" {
+                &dynamic.team_ids
+            } else {
+                &dynamic.unit_ids
+            };
+            return match filter.op.as_str() {
+                "eq" | "in" => Ok(vec![with("in", ids(set))]),
+                _ => refuse(),
+            };
+        }
+        "@today" => (dynamic.today, dynamic.today + chrono::Duration::days(1)),
+        "@this_month" => {
+            use chrono::Datelike;
+            let start = dynamic.today.with_day(1).unwrap_or(dynamic.today);
+            let end = start
+                .checked_add_months(chrono::Months::new(1))
+                .unwrap_or(start + chrono::Duration::days(31));
+            (start, end)
+        }
+        other => match other
+            .strip_prefix("@last_n_days(")
+            .and_then(|rest| rest.strip_suffix(')'))
+            .map(|n| n.trim().parse::<i64>())
+        {
+            Some(Ok(n)) if (1..=MAX_DYNAMIC_DAYS).contains(&n) => (
+                dynamic.today - chrono::Duration::days(n),
+                dynamic.today + chrono::Duration::days(1),
+            ),
+            Some(_) => {
+                return Err(AppError::Validation(format!(
+                    "{}: @last_n_days takes 1 to {MAX_DYNAMIC_DAYS}",
+                    filter.field
+                )));
+            }
+            None => return Ok(vec![filter.clone()]),
+        },
+    };
+    let (start, end) = range;
+    let date = |d: chrono::NaiveDate| Value::String(d.format("%Y-%m-%d").to_string());
+    Ok(match filter.op.as_str() {
+        "eq" => vec![with("gte", date(start)), with("lt", date(end))],
+        "gte" => vec![with("gte", date(start))],
+        "gt" => vec![with("gte", date(end))],
+        "lt" => vec![with("lt", date(start))],
+        "lte" => vec![with("lt", date(end))],
+        _ => {
+            return Err(AppError::Validation(format!(
+                "{}: {token} works with eq, gt, gte, lt and lte",
+                filter.field
+            )));
+        }
+    })
+}
+
 pub fn compile(
     filter: &Filter,
     schema: &dyn FilterSchema,
@@ -477,6 +588,89 @@ pub fn compile(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn dynamic() -> DynamicValues {
+        DynamicValues {
+            user_id: uuid::Uuid::from_u128(7),
+            team_ids: vec![uuid::Uuid::from_u128(8)],
+            unit_ids: Vec::new(),
+            today: chrono::NaiveDate::from_ymd_opt(2026, 10, 15).unwrap(),
+        }
+    }
+
+    fn text_filter(field: &str, op: &str, value: &str) -> Filter {
+        Filter {
+            field: field.to_owned(),
+            op: op.to_owned(),
+            value: Some(Value::String(value.to_owned())),
+        }
+    }
+
+    /// A13-T1: dynamic values resolve for the caller and the day.
+    #[test]
+    fn dynamic_values_expand_for_the_caller() {
+        let me = expand_dynamic(&text_filter("owner_ref", "eq", "@me"), &dynamic()).unwrap();
+        assert_eq!(
+            me[0].value,
+            Some(Value::String(uuid::Uuid::from_u128(7).to_string()))
+        );
+
+        let team = expand_dynamic(&text_filter("team_ref", "eq", "@my_team"), &dynamic()).unwrap();
+        assert_eq!(team[0].op, "in");
+        assert_eq!(
+            team[0].value,
+            Some(serde_json::json!([uuid::Uuid::from_u128(8).to_string()]))
+        );
+
+        let unit = expand_dynamic(&text_filter("org_ref", "eq", "@my_unit"), &dynamic()).unwrap();
+        assert_eq!(
+            unit[0].value,
+            Some(serde_json::json!([uuid::Uuid::nil().to_string()]))
+        );
+
+        let month =
+            expand_dynamic(&text_filter("created_at", "eq", "@this_month"), &dynamic()).unwrap();
+        assert_eq!(
+            month
+                .iter()
+                .map(|f| (f.op.as_str(), f.value.clone()))
+                .collect::<Vec<_>>(),
+            vec![
+                ("gte", Some(Value::String("2026-10-01".into()))),
+                ("lt", Some(Value::String("2026-11-01".into()))),
+            ]
+        );
+
+        let recent = expand_dynamic(
+            &text_filter("created_at", "gte", "@last_n_days(7)"),
+            &dynamic(),
+        )
+        .unwrap();
+        assert_eq!(recent[0].value, Some(Value::String("2026-10-08".into())));
+
+        let today = expand_dynamic(&text_filter("due", "lte", "@today"), &dynamic()).unwrap();
+        assert_eq!(
+            (today[0].op.as_str(), today[0].value.clone()),
+            ("lt", Some(Value::String("2026-10-16".into())))
+        );
+    }
+
+    #[test]
+    fn literal_and_unsupported_values() {
+        let handle = text_filter("twitter", "eq", "@attome");
+        assert_eq!(expand_dynamic(&handle, &dynamic()).unwrap(), vec![handle]);
+        assert!(expand_dynamic(&text_filter("owner_ref", "gt", "@me"), &dynamic()).is_err());
+        assert!(
+            expand_dynamic(&text_filter("created_at", "contains", "@today"), &dynamic()).is_err()
+        );
+        assert!(
+            expand_dynamic(
+                &text_filter("created_at", "gte", "@last_n_days(0)"),
+                &dynamic()
+            )
+            .is_err()
+        );
+    }
 
     #[test]
     fn parameter_cast_covers_every_known_data_type() {
