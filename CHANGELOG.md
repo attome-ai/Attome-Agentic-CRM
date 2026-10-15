@@ -13,6 +13,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ### Added
 - A query that runs past its time limit answers `504 query_timeout` with a hint to narrow it or run
   it as an export (was a masked 500).
+- `query.timeouts_ms.interactive` (default 500) and `query.timeouts_ms.report` (default 5000) set how
+  long a query may run; they were fixed values.
 - Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE
   /api/v1/admin/i18n/overrides`, a `ui_text` label, migration 0034); the app lays
   `GET /api/v1/i18n/overrides` over its catalogue.

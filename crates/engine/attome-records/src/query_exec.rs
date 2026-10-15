@@ -1568,7 +1568,14 @@ pub async fn execute_stored_query_with_definition(
     // LOCAL statement_timeout — a fast-read 500ms default, 5s for queries
     // flagged is_report (guidelines §14.1).
     let mut tx = attome_db::tx::begin(db).await?;
-    let timeout_ms = if qrow.is_report { 5000 } else { 500 };
+    // AA4-T7: the deployment's limits, by kind of request.
+    let limits = state.base.config.query.timeouts_ms;
+    let timeout_ms = if qrow.is_report {
+        limits.report
+    } else {
+        limits.interactive
+    }
+    .max(1);
     sqlx::query(&format!("SET LOCAL statement_timeout = {timeout_ms}"))
         .execute(&mut *tx)
         .await

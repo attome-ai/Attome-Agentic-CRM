@@ -259,6 +259,39 @@ pub struct QuerySection {
     /// `after_id` (keyset paging), which costs the same at any depth.
     #[serde(default = "default_query_max_offset_rows")]
     pub max_offset_rows: i64,
+    /// AA4-T7: how long a query may run, by kind of request. A query past
+    /// its limit answers `504 query_timeout` with a hint to run it as an
+    /// export.
+    #[serde(default)]
+    pub timeouts_ms: QueryTimeouts,
+}
+
+/// AA4-T7: statement time limits in milliseconds, by kind of request.
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+pub struct QueryTimeouts {
+    /// A person waiting on a list or a view (default 500).
+    #[serde(default = "default_interactive_timeout_ms")]
+    pub interactive: u32,
+    /// A stored query flagged as a report (default 5000).
+    #[serde(default = "default_report_timeout_ms")]
+    pub report: u32,
+}
+
+impl Default for QueryTimeouts {
+    fn default() -> Self {
+        Self {
+            interactive: default_interactive_timeout_ms(),
+            report: default_report_timeout_ms(),
+        }
+    }
+}
+
+fn default_interactive_timeout_ms() -> u32 {
+    500
+}
+
+fn default_report_timeout_ms() -> u32 {
+    5000
 }
 
 impl Default for QuerySection {
@@ -267,6 +300,7 @@ impl Default for QuerySection {
             validate_on_execute: false,
             cursor_default: true,
             max_offset_rows: default_query_max_offset_rows(),
+            timeouts_ms: QueryTimeouts::default(),
         }
     }
 }
