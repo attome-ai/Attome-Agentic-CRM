@@ -1027,6 +1027,10 @@ pub struct ExecData {
     /// requests skip it rather than pay for a total the typical cursor
     /// caller (export/infinite-scroll/API integration) doesn't need.
     total: Option<i64>,
+    /// A13-T2: `true` when `total` is the planner's estimate rather than a
+    /// count: a matching set of [`EXACT_TOTAL_LIMIT`] rows or more is not
+    /// counted, as counting it would scan it all.
+    total_estimated: bool,
     page: i64,
     page_size: i64,
     total_pages: Option<i64>,
@@ -1082,6 +1086,40 @@ where
     plan.pointer("/0/Plan/Total Cost")
         .and_then(Value::as_f64)
         .ok_or_else(|| AppError::internal("PostgreSQL returned an invalid query plan"))
+}
+
+/// A13-T2: the size from which a total is the planner's estimate, not a count.
+pub const EXACT_TOTAL_LIMIT: i64 = 100_000;
+
+/// The planner's estimate of how many rows `base_sql` (with its WHERE)
+/// matches; nothing is read.
+async fn estimate_rows<'e, E>(
+    executor: E,
+    base_sql: &str,
+    where_sql: &str,
+    params: &[String],
+) -> Result<i64, AppError>
+where
+    E: sqlx::PgExecutor<'e>,
+{
+    let explain_sql = format!("EXPLAIN (FORMAT JSON) SELECT 1 FROM ({base_sql}) AS t {where_sql}");
+    let mut explain = sqlx::query_scalar::<_, Value>(&explain_sql);
+    for param in params {
+        explain = explain.bind(param.clone());
+    }
+    let plan = explain
+        .fetch_one(executor)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(plan_rows(&plan))
+}
+
+/// The top plan node's row estimate in `EXPLAIN (FORMAT JSON)` output, `0`
+/// when absent.
+fn plan_rows(plan: &Value) -> i64 {
+    plan.pointer("/0/Plan/Plan Rows")
+        .and_then(Value::as_f64)
+        .map_or(0, |rows| rows.round() as i64)
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -1824,6 +1862,14 @@ pub async fn execute_stored_query_with_definition(
         )));
     }
 
+    // A13-T2: a large matching set gets the planner's estimate, not a count.
+    let estimated_total = if body.include_total && !use_cursor {
+        let estimate = estimate_rows(&mut *tx, &base_sql, &where_sql, &params).await?;
+        (estimate >= EXACT_TOTAL_LIMIT).then_some(estimate)
+    } else {
+        None
+    };
+    let total_estimated = estimated_total.is_some();
     let (mut records, total, total_pages, next_cursor): (
         Vec<Value>,
         Option<i64>,
@@ -1912,7 +1958,7 @@ pub async fn execute_stored_query_with_definition(
             .and_then(|s| Uuid::parse_str(s).ok());
 
         (records, None, None, next_cursor)
-    } else if body.include_total {
+    } else if body.include_total && estimated_total.is_none() {
         // ── DATA + COUNT, one query (P1.11b) ──────────────────────────────
         // COUNT(*) OVER() is a window aggregate computed over the whole
         // matching set before LIMIT/OFFSET apply, so every returned row
@@ -1977,7 +2023,10 @@ pub async fn execute_stored_query_with_definition(
             .map(|(row,)| row)
             .collect();
         tx.commit().await.map_err(AppError::internal)?;
-        (records, None, None, None)
+        // A13-T2: the estimate stands in for the count it would cost.
+        let total_pages =
+            estimated_total.map(|total| (total + page_size - 1).max(0) / page_size.max(1));
+        (records, estimated_total, total_pages, None)
     };
 
     // P-entity-contract-hardening item (a): list responses return the raw
@@ -2087,6 +2136,7 @@ pub async fn execute_stored_query_with_definition(
             columns,
             records,
             total,
+            total_estimated,
             page,
             page_size,
             total_pages,
@@ -2133,6 +2183,16 @@ pub fn routes() -> Router<EngineState> {
 
 #[cfg(test)]
 mod contract_tests {
+
+    #[test]
+    fn a_plan_s_row_estimate_is_read_from_its_top_node() {
+        let plan =
+            serde_json::json!([{ "Plan": { "Node Type": "Seq Scan", "Plan Rows": 250000.0 } }]);
+        assert_eq!(super::plan_rows(&plan), 250_000);
+        assert_eq!(super::plan_rows(&serde_json::json!([])), 0);
+        assert!(super::plan_rows(&plan) >= super::EXACT_TOTAL_LIMIT);
+    }
+
     use super::*;
 
     #[test]
