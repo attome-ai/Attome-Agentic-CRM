@@ -7,9 +7,9 @@
  */
 
 /** Hebrew, Arabic, Syriac, Thaana, NKo and the Arabic presentation forms. */
-const RTL_CHAR = /[֐-ࣿיִ-﷿ﹰ-﻿]/;
+const RTL_CHAR = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
 /** Latin, Greek and Cyrillic letters. */
-const LTR_CHAR = /[A-Za-zÀ-ɏͰ-ϿЀ-ӿ]/;
+const LTR_CHAR = /[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]/;
 
 /**
  * The direction `value` reads in, from its first strong character (the
