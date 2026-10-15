@@ -33,7 +33,8 @@ pub fn descriptor() -> ActionDescriptor {
     ActionDescriptor::new(
         RECORD_DELETED,
         "List an entity's deleted records you may see, newest deletion first, 20 at a \
-         time: id, name, when and by whom. Use record.restore to bring one back. Does \
+         time: id, name, when, by whom, why, and the operation it was deleted in. Use \
+         record.restore to bring one back. Does \
          NOT list live records; use search.records or query.execute for those.",
         RiskTier::Read,
         Effect::Read,
@@ -81,6 +82,8 @@ impl Action for RecordDeleted {
                     "name": r.label,
                     "deleted_at": r.deleted_at,
                     "deleted_by": r.deleted_by,
+                    "reason": r.reason,
+                    "operation_id": r.operation_id,
                 })).collect::<Vec<_>>(),
             })))
         })
