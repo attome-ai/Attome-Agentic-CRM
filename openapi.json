@@ -51298,6 +51298,45 @@
         ]
       }
     },
+    "/api/v1/system/status": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "AB5-T2: what is down or slow right now, for any signed-in person: the\nfeatures affected, as message keys, and whether changes are refused. No\ndependency names or errors are shown.",
+        "operationId": "system_status",
+        "responses": {
+          "200": {
+            "description": "The degraded features and whether changes are refused",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/tags/suggest": {
       "get": {
         "tags": [
@@ -58424,6 +58463,94 @@
         }
       }
     },
+    "/api/v1/{entity}/{id}/move-preview": {
+      "get": {
+        "tags": [
+          "entity"
+        ],
+        "summary": "A17-T4: what moving a record under `parent` would do, without moving\nanything: how many records go with it (the record and its descendants),\nand whether the move would be refused for a cycle or the depth cap.",
+        "operationId": "move_preview",
+        "parameters": [
+          {
+            "name": "entity",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "parent",
+            "in": "query",
+            "description": "The new parent; absent to move the record to the root.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the move would do",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovePreview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required privilege",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The entity has no hierarchy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/{entity}/{id}/related/{relationship}": {
       "get": {
         "tags": [
@@ -63647,6 +63774,13 @@
             ],
             "description": "`null` for rows whose `group_by` field is itself NULL. Always a\ndisplay string (or null) — the group_by column is cast to `text` in\nSQL rather than decoded per its native type, since a bucket label is\nfor display, not further computation."
           },
+          "label_2": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A13-T2: the `then_by` value, when the request named one."
+          },
           "value": {
             "type": "number",
             "format": "double"
@@ -63704,6 +63838,13 @@
             "description": "`\"value_desc\"` (default), `\"value_asc\"`, `\"label_asc\"`, `\"label_desc\"`.\nTies break on the label, so equal values never swap between runs.",
             "default": "value_desc",
             "example": "value_desc"
+          },
+          "then_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A13-T2: a second field to bucket on within each `group_by` bucket\n(needs `group_by`); each bucket then carries `label_2`."
           }
         }
       },
@@ -72590,6 +72731,24 @@
           }
         }
       },
+      "DegradedFeature": {
+        "type": "object",
+        "description": "One feature that is down or slow right now.",
+        "required": [
+          "feature",
+          "message_key"
+        ],
+        "properties": {
+          "feature": {
+            "type": "string",
+            "description": "`files`, `email`, `notifications`, `imports` or `bulk`."
+          },
+          "message_key": {
+            "type": "string",
+            "description": "The translation key of the message to show; never a raw error."
+          }
+        }
+      },
       "DelegateBody": {
         "type": "object",
         "required": [
@@ -74737,6 +74896,7 @@
         "required": [
           "columns",
           "records",
+          "total_estimated",
           "page",
           "page_size"
         ],
@@ -74774,6 +74934,10 @@
             ],
             "format": "int64",
             "description": "`None` in keyset/cursor mode (P1.11(g)) — `COUNT(*) OVER()` scans the\nfull matching set regardless of OFFSET vs keyset, a cost independent\nof (and additional to) the O(offset) problem keyset fixes, so cursor\nrequests skip it rather than pay for a total the typical cursor\ncaller (export/infinite-scroll/API integration) doesn't need."
+          },
+          "total_estimated": {
+            "type": "boolean",
+            "description": "A13-T2: `true` when `total` is the planner's estimate rather than a\ncount: a matching set of [`EXACT_TOTAL_LIMIT`] rows or more is not\ncounted, as counting it would scan it all."
           },
           "total_pages": {
             "type": [
@@ -79716,6 +79880,32 @@
               "null"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "MovePreview": {
+        "type": "object",
+        "description": "What moving a record (with everything under it) would do.",
+        "required": [
+          "moving",
+          "allowed"
+        ],
+        "properties": {
+          "allowed": {
+            "type": "boolean",
+            "description": "Whether the move would be accepted."
+          },
+          "moving": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The record and its descendants: every record that moves."
+          },
+          "refusal": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why not, when it would be refused: `cycle` (the new parent is the\nrecord or under it) or `too_deep` (the tree would pass the depth cap)."
           }
         }
       },
@@ -91233,7 +91423,11 @@
           "hidden",
           "disabled",
           "error",
-          "set_value"
+          "set_value",
+          "required",
+          "allowed_values",
+          "add_tag",
+          "remove_tag"
         ]
       },
       "PollResponse": {
@@ -99381,6 +99575,26 @@
           },
           "status": {
             "type": "string"
+          }
+        }
+      },
+      "SystemStatus": {
+        "type": "object",
+        "description": "What a signed-in person should know about the system right now.",
+        "required": [
+          "read_only",
+          "degraded"
+        ],
+        "properties": {
+          "degraded": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DegradedFeature"
+            }
+          },
+          "read_only": {
+            "type": "boolean",
+            "description": "Changes are refused for now (the audit backlog guard is holding writes)."
           }
         }
       },

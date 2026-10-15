@@ -10050,6 +10050,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/system/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * AB5-T2: what is down or slow right now, for any signed-in person: the
+         *     features affected, as message keys, and whether changes are refused. No
+         *     dependency names or errors are shown.
+         */
+        get: operations["system_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tags/suggest": {
         parameters: {
             query?: never;
@@ -11308,6 +11329,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/{id}/move-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A17-T4: what moving a record under `parent` would do, without moving
+         *     anything: how many records go with it (the record and its descendants),
+         *     and whether the move would be refused for a cycle or the depth cap.
+         */
+        get: operations["move_preview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/{id}/related/{relationship}": {
         parameters: {
             query?: never;
@@ -12552,6 +12594,8 @@ export interface components {
              *     for display, not further computation.
              */
             label?: string | null;
+            /** @description A13-T2: the `then_by` value, when the request named one. */
+            label_2?: string | null;
             /** Format: double */
             value: number;
         };
@@ -12586,6 +12630,11 @@ export interface components {
              * @example value_desc
              */
             order: string;
+            /**
+             * @description A13-T2: a second field to bucket on within each `group_by` bucket
+             *     (needs `group_by`); each bucket then carries `label_2`.
+             */
+            then_by?: string | null;
         };
         AggregateResponse: {
             /** Format: int64 */
@@ -16184,6 +16233,13 @@ export interface components {
              */
             unresolved: number;
         };
+        /** @description One feature that is down or slow right now. */
+        DegradedFeature: {
+            /** @description `files`, `email`, `notifications`, `imports` or `bulk`. */
+            feature: string;
+            /** @description The translation key of the message to show; never a raw error. */
+            message_key: string;
+        };
         DelegateBody: {
             /** Format: uuid */
             to_user_id: string;
@@ -17063,6 +17119,12 @@ export interface components {
              *     caller (export/infinite-scroll/API integration) doesn't need.
              */
             total?: number | null;
+            /**
+             * @description A13-T2: `true` when `total` is the planner's estimate rather than a
+             *     count: a matching set of [`EXACT_TOTAL_LIMIT`] rows or more is not
+             *     counted, as counting it would scan it all.
+             */
+            total_estimated: boolean;
             /** Format: int64 */
             total_pages?: number | null;
         };
@@ -19043,6 +19105,21 @@ export interface components {
         MovePageBody: {
             /** Format: uuid */
             parent_page_id?: string | null;
+        };
+        /** @description What moving a record (with everything under it) would do. */
+        MovePreview: {
+            /** @description Whether the move would be accepted. */
+            allowed: boolean;
+            /**
+             * Format: int64
+             * @description The record and its descendants: every record that moves.
+             */
+            moving: number;
+            /**
+             * @description Why not, when it would be refused: `cycle` (the new parent is the
+             *     record or under it) or `too_deep` (the tree would pass the depth cap).
+             */
+            refusal?: string | null;
         };
         /**
          * @description One authoritative action a caller may take on a [`MyWorkItem`] — never
@@ -23143,7 +23220,7 @@ export interface components {
             value?: unknown;
         };
         /** @enum {string} */
-        PolicyType: "hidden" | "disabled" | "error" | "set_value";
+        PolicyType: "hidden" | "disabled" | "error" | "set_value" | "required" | "allowed_values" | "add_tag" | "remove_tag";
         PollResponse: {
             notifications: components["schemas"]["NotifOut"][];
             /** Format: int64 */
@@ -26491,6 +26568,12 @@ export interface components {
             kind: string;
             name: string;
             status: string;
+        };
+        /** @description What a signed-in person should know about the system right now. */
+        SystemStatus: {
+            degraded: components["schemas"]["DegradedFeature"][];
+            /** @description Changes are refused for now (the audit backlog guard is holding writes). */
+            read_only: boolean;
         };
         TagGroup: {
             colour?: string | null;
@@ -61521,6 +61604,35 @@ export interface operations {
             };
         };
     };
+    system_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The degraded features and whether changes are refused */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     suggest_tags: {
         parameters: {
             query?: never;
@@ -65941,6 +66053,59 @@ export interface operations {
                 };
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    move_preview: {
+        parameters: {
+            query?: {
+                /** @description The new parent; absent to move the record to the root. */
+                parent?: string;
+            };
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the move would do */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MovePreview"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The entity has no hierarchy */
             422: {
                 headers: {
                     [name: string]: unknown;
