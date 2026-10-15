@@ -185,6 +185,8 @@ pub const KNOWN_OBJECT_KINDS: &[&str] = &[
     "view",
     "sidebar",
     "dashboard",
+    // B20-T3: a deployment's rewording of built-in interface text.
+    "ui_text",
 ];
 
 /// A bare BCP-47 language tag, matching `core.locale`'s own descriptor

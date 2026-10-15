@@ -4,7 +4,8 @@ import {
 import { FormsModule } from '@angular/forms';
 import { Router, RouterOutlet } from '@angular/router';
 import {
-  BrandService, CommandRegistry, LangService, ShortcutRegistry, TranslatePipe, isTypingTarget,
+  BrandService, CommandRegistry, LangService, ShortcutRegistry, TranslatePipe, UiTextOverrides,
+  isTypingTarget,
 } from '@attome/base';
 import { AdminService, SidebarItem } from '@attome/xrm/core/admin/data';
 import { entityFormRoute, entityListRoute, urlPathToLogical } from '@attome/xrm/core/entity';
@@ -123,6 +124,7 @@ export class ShellComponent implements OnInit {
   protected readonly favourites = inject(FavouritesService);
   private readonly personalSettings = inject(PersonalSettingsService);
   private readonly brand = inject(BrandService);
+  private readonly uiText = inject(UiTextOverrides);
   private readonly lang = inject(LangService);
   private readonly search = inject(SearchService);
   private readonly commandRegistry = inject(CommandRegistry);
@@ -315,6 +317,8 @@ export class ShellComponent implements OnInit {
     );
     // B13-T8: the caller's brand adds their business unit's theme.
     this.brand.loadMine();
+    // B20-T3: this deployment's rewording of built-in text.
+    this.uiText.start();
     // B11-T2: the person's settings apply at once; a chosen start page opens
     // when they land on the app's front door.
     this.personalSettings.load().subscribe({

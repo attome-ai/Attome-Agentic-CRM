@@ -209,6 +209,13 @@ export class LangService {
     ));
   }
 
+  /** B20-T3: lays a deployment's rewordings (catalogue key to text) over `lang`. */
+  applyOverrides(lang: Lang, texts: Record<string, string>): void {
+    if (!Object.keys(texts).length) return;
+    this.transloco.setTranslation(nestKeys(texts), lang, { merge: true });
+    this.catalogVersion.update(v => v + 1);
+  }
+
   private addLayer(layer: LayerCatalog): void {
     this.mergeEn(layer);
     if (this.registered.has('ar')) void this.track(this.mergeAr(layer));
@@ -251,4 +258,22 @@ export class LangService {
     this.doc.documentElement.lang = lang;
     this.doc.documentElement.dir  = lang === 'ar' ? 'rtl' : 'ltr';
   }
+}
+
+/** `{"a.b": "x"}` as `{a: {b: "x"}}`, the shape a catalogue has. */
+export function nestKeys(flat: Record<string, string>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, text] of Object.entries(flat)) {
+    const parts = key.split('.');
+    let node = out;
+    parts.forEach((part, i) => {
+      if (i === parts.length - 1) {
+        node[part] = text;
+      } else {
+        const next = node[part];
+        node = (typeof next === 'object' && next !== null ? next : (node[part] = {})) as Record<string, unknown>;
+      }
+    });
+  }
+  return out;
 }

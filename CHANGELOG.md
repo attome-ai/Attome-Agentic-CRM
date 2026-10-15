@@ -11,6 +11,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 - rustls 0.23.46 (RUSTSEC-2026-0346 to 0349).
 
 ### Added
+- Interface wording: a deployment rewords built-in text per language (`PUT`/`DELETE
+  /api/v1/admin/i18n/overrides`, a `ui_text` label, migration 0034); the app lays
+  `GET /api/v1/i18n/overrides` over its catalogue.
 - Menus count each item's opens per day (migration 0033, `POST /api/v1/model/navigation/{id}/opened`);
   `GET /api/v1/admin/model/navigation/{id}/usage` lists each item's opens and flags the ones nobody
   opened in 60 days.

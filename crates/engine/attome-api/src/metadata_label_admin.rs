@@ -1234,6 +1234,241 @@ async fn import_xliff(
     }))
 }
 
+/// B20-T3: whether `key` is a usable interface-text key: dotted words of
+/// letters, digits and `_`, at most 200 characters.
+pub(crate) fn valid_ui_key(key: &str) -> bool {
+    !key.is_empty()
+        && key.len() <= 200
+        && key.split('.').all(|part| {
+            !part.is_empty() && part.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+        })
+}
+
+#[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+struct UiTextQuery {
+    /// The language, e.g. `ar` or `ar-SA`.
+    locale: String,
+}
+
+/// This deployment's rewordings of built-in interface text in one language.
+#[derive(Serialize, ToSchema)]
+struct UiTextOverrides {
+    locale: String,
+    /// Catalogue key (`xrmForm.save`) to the text shown instead.
+    #[schema(value_type = Object)]
+    texts: std::collections::BTreeMap<String, String>,
+}
+
+/// B20-T3: the built-in interface text this deployment rewords, in `locale`,
+/// for the app to lay over its own catalogue.
+#[utoipa::path(
+    get,
+    path = "/api/v1/i18n/overrides",
+    tag = "admin",
+    params(UiTextQuery),
+    responses(
+        (status = 200, description = "Catalogue key to the deployment's wording", body = UiTextOverrides),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 422, description = "Invalid locale", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn ui_text_overrides(
+    State(state): State<EngineState>,
+    _ctx: Authorized<attome_server::authz::SelfService>,
+    axum::extract::Query(query): axum::extract::Query<UiTextQuery>,
+) -> Result<Json<UiTextOverrides>, AppError> {
+    if !is_valid_locale_tag(&query.locale) {
+        return Err(AppError::Validation(
+            "locale must be a BCP-47 tag like ar-SA".into(),
+        ));
+    }
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT object_ref, display_name FROM metadata_label \
+         WHERE object_kind = 'ui_text' AND locale = $1 AND is_deleted = false",
+    )
+    .bind(&query.locale)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(Json(UiTextOverrides {
+        locale: query.locale,
+        texts: rows.into_iter().collect(),
+    }))
+}
+
+/// `PUT /api/v1/admin/i18n/overrides`.
+#[derive(Deserialize, ToSchema)]
+struct UiTextOverride {
+    locale: String,
+    /// The built-in text's catalogue key, e.g. `xrmForm.save`.
+    key: String,
+    /// What to show instead, at most 500 characters.
+    text: String,
+}
+
+/// B20-T3: rewords one built-in interface text in one language.
+/// Administrators only.
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/i18n/overrides",
+    tag = "admin",
+    request_body = UiTextOverride,
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Entity, AuditOperation::Update)])))),
+    responses(
+        (status = 204, description = "Saved"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Invalid locale, key or text", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn put_ui_text_override(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    recording: RecordingCtx,
+    Json(body): Json<UiTextOverride>,
+) -> Result<StatusCode, AppError> {
+    let key = body.key.trim();
+    let text = body.text.trim();
+    if !is_valid_locale_tag(&body.locale) {
+        return Err(AppError::Validation(
+            "locale must be a BCP-47 tag like ar-SA".into(),
+        ));
+    }
+    if !valid_ui_key(key) {
+        return Err(AppError::Validation(
+            "key is a catalogue key like xrmForm.save".into(),
+        ));
+    }
+    if text.is_empty() || text.chars().count() > 500 {
+        return Err(AppError::Validation("text is 1 to 500 characters".into()));
+    }
+    recording.preflight(&state.base.db).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    let id = write_label_in_tx(
+        &mut tx,
+        &recording,
+        "ui_text",
+        key,
+        &body.locale,
+        text,
+        None,
+    )
+    .await?;
+    let (user_ctx, org_ref) =
+        attome_records::entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    audit_service(&state)
+        .write_in_tx(
+            &mut tx,
+            AuditEvent {
+                organization_ref: org_ref,
+                category: AuditCategory::Entity,
+                entity_name: Some("metadata_label".to_owned()),
+                record_id: Some(id),
+                operation: AuditOperation::Update,
+                version_before: None,
+                version_after: None,
+                user_context: user_ctx,
+                changed_on: chrono::Utc::now(),
+                source: AuditSource::Api,
+                request_context: AuditRequestContext::default(),
+                correlation_id: None,
+                batch_id: None,
+                event_name: Some("ui_text_overridden".to_owned()),
+                event_comment: Some(format!("{key} ({})", body.locale)),
+                changed_fields: vec![],
+                snapshot_json: None,
+            },
+        )
+        .await?;
+    record_label_op(&mut tx, &recording, Op::SetLabel, id).await?;
+    attome_db::tx::commit(tx).await?;
+    refresh_local_labels(&state).await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+struct UiTextKeyQuery {
+    locale: String,
+    key: String,
+}
+
+/// B20-T3: goes back to the built-in wording of one text in one language.
+/// Administrators only.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/admin/i18n/overrides",
+    tag = "admin",
+    params(UiTextKeyQuery),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(AuditCategory::Entity, AuditOperation::SoftDelete)])))),
+    responses(
+        (status = 204, description = "The built-in wording is back"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such override", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn delete_ui_text_override(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    recording: RecordingCtx,
+    axum::extract::Query(query): axum::extract::Query<UiTextKeyQuery>,
+) -> Result<StatusCode, AppError> {
+    let key = query.key.trim();
+    recording.preflight(&state.base.db).await?;
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    acquire_label_write_lock(&mut tx, "ui_text", key, &query.locale).await?;
+    let removed: Option<(Uuid, String)> = sqlx::query_as(
+        "UPDATE metadata_label SET is_deleted = TRUE, updated_at = NOW() \
+         WHERE object_kind = 'ui_text' AND object_ref = $1 AND locale = $2 AND is_deleted = FALSE \
+         RETURNING id, owner_layer",
+    )
+    .bind(key)
+    .bind(&query.locale)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((id, owner_layer)) = removed else {
+        return Err(AppError::NotFound);
+    };
+    recording.check_owner(parse_layer(&owner_layer)?)?;
+    append_label_change_log(&mut tx, "ui_text", key, &query.locale, true).await?;
+    let (user_ctx, org_ref) =
+        attome_records::entity_crud::fetch_audit_ctx(&state, ctx.user_id).await;
+    audit_service(&state)
+        .write_in_tx(
+            &mut tx,
+            AuditEvent {
+                organization_ref: org_ref,
+                category: AuditCategory::Entity,
+                entity_name: Some("metadata_label".to_owned()),
+                record_id: Some(id),
+                operation: AuditOperation::SoftDelete,
+                version_before: None,
+                version_after: None,
+                user_context: user_ctx,
+                changed_on: chrono::Utc::now(),
+                source: AuditSource::Api,
+                request_context: AuditRequestContext::default(),
+                correlation_id: None,
+                batch_id: None,
+                event_name: Some("ui_text_override_cleared".to_owned()),
+                event_comment: Some(format!("{key} ({})", query.locale)),
+                changed_fields: vec![],
+                snapshot_json: None,
+            },
+        )
+        .await?;
+    record_label_op(&mut tx, &recording, Op::ClearLabel, id).await?;
+    attome_db::tx::commit(tx).await?;
+    refresh_local_labels(&state).await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route(
@@ -1252,6 +1487,11 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/entities/labels/workbench",
             get(label_workbench),
         )
+        .route("/api/v1/i18n/overrides", get(ui_text_overrides))
+        .route(
+            "/api/v1/admin/i18n/overrides",
+            axum::routing::put(put_ui_text_override).delete(delete_ui_text_override),
+        )
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
@@ -1264,7 +1504,10 @@ pub fn routes() -> Router<EngineState> {
     delete_label,
     export_xliff,
     import_xliff,
-    label_workbench
+    label_workbench,
+    ui_text_overrides,
+    put_ui_text_override,
+    delete_ui_text_override
 ))]
 struct ApiDocFragment;
 
@@ -1274,6 +1517,16 @@ pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {
 
 #[cfg(test)]
 mod xliff_tests {
+
+    #[test]
+    fn ui_text_override_keys_are_catalogue_keys() {
+        assert!(super::valid_ui_key("xrmForm.save"));
+        assert!(super::valid_ui_key("entityList.showingRange"));
+        assert!(!super::valid_ui_key(""));
+        assert!(!super::valid_ui_key("a..b"));
+        assert!(!super::valid_ui_key("has space"));
+        assert!(!super::valid_ui_key("x-y"));
+    }
 
     #[test]
     fn a_label_is_stale_once_its_source_changes() {
