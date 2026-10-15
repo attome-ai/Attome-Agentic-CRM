@@ -1269,12 +1269,97 @@ pub async fn undo_merge(
     })
 }
 
+// ── A15-T7: the preview and undo routes ─────────────────────────────────────
+
+/// `POST /api/v1/{entity}/{id}/merge/preview` — what merging `duplicate_id`
+/// into the record at `id` would do (see [`merge_preview`]); writes nothing.
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/{id}/merge/preview",
+    tag = "entity",
+    params(("entity" = String, Path), ("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "What the merge would move, start and produce", body = MergePreview),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "A record is missing or not visible to the caller", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "runs survivorship and counts related rows without writing"
+    )))),
+)]
+pub(super) async fn merge_preview_route(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<attome_security::record_action::Read>>,
+    Path((entity_input, canonical_id)): Path<(String, Uuid)>,
+    Json(body): Json<Value>,
+) -> Result<Json<MergePreview>, AppError> {
+    let duplicate_id = body
+        .get("duplicate_id")
+        .and_then(Value::as_str)
+        .and_then(|s| Uuid::parse_str(s).ok())
+        .ok_or_else(|| AppError::Validation("body must have a 'duplicate_id' UUID".into()))?;
+    Ok(Json(
+        merge_preview(&state, &ctx, &entity_input, canonical_id, duplicate_id).await?,
+    ))
+}
+
+/// `POST /api/v1/{entity}/merges/{merge_id}/undo` — undoes a merge as one
+/// unit (see [`undo_merge`]). Needs `{entity}.update` and `{entity}.delete`
+/// (it rewrites the survivor and brings the merged records back) and access
+/// to the survivor; `If-Match` may carry the survivor's row version.
+#[utoipa::path(
+    post,
+    path = "/api/v1/{entity}/merges/{merge_id}/undo",
+    tag = "entity",
+    params(
+        ("entity" = String, Path),
+        ("merge_id" = Uuid, Path),
+        ("If-Match" = Option<String>, Header, description = "The survivor's row_version"),
+    ),
+    responses(
+        (status = 200, description = "The merge is undone", body = MergeUndone),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such merge of this entity", body = ErrorResponse),
+        (status = 409, description = "The survivor changed since the merge, or it was undone already", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Update), (attome_audit::AuditCategory::Entity, attome_audit::AuditOperation::Restore)])))),
+)]
+pub(super) async fn undo_merge_route(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped<UpdateAndDelete>>,
+    Extension(claims): Extension<SessionClaims>,
+    Path((entity_input, merge_id)): Path<(String, Uuid)>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<MergeUndone>, AppError> {
+    let (_, entity_name, _, _) = resolve_entity(&state, &entity_input).await?;
+    let logged: Option<String> =
+        sqlx::query_scalar("SELECT entity_logicalname FROM merge_log WHERE id = $1")
+            .bind(merge_id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    if logged.as_deref() != Some(entity_name.as_str()) {
+        return Err(AppError::NotFound);
+    }
+    let expected = optional_expected_row_version(&headers)?;
+    Ok(Json(
+        undo_merge(&state, &ctx, claims.sub, merge_id, expected).await?,
+    ))
+}
+
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
 /// because `#[utoipa::path]` generates a `__path_*` type with the handler's
 /// own visibility, and these handlers are module-private — the crate's
 /// `openapi()` merges every fragment back into one document.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(merge_records))]
+#[openapi(paths(merge_records, merge_preview_route, undo_merge_route))]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

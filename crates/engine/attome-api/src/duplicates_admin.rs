@@ -1295,6 +1295,411 @@ async fn candidates_for_record(
     Ok(Json(items))
 }
 
+// ── A15-T7: check, explain, rule preview, stats ─────────────────────────────
+
+#[derive(Deserialize, ToSchema)]
+struct DuplicateCheckBody {
+    entity: String,
+    /// The record's values, as a create or update would send them.
+    #[schema(value_type = Object)]
+    values: Value,
+    /// The record being edited, never its own duplicate.
+    #[serde(default)]
+    record_id: Option<Uuid>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+struct DuplicateCheckResult {
+    /// What saving would do: `warn`, `allow_with_reason` or `block`; `null`
+    /// when nothing matches.
+    action: Option<String>,
+    matches: Vec<attome_records::duplicate_check::DuplicateMatch>,
+    /// Matches the caller may not read.
+    hidden: i64,
+}
+
+/// `POST /api/v1/data/duplicates/check` — A15-T7: what saving these values
+/// would meet under the entity's duplicate rules (the check a create or
+/// update runs), without saving anything. The caller needs read access to
+/// the entity.
+#[utoipa::path(
+    post,
+    path = "/api/v1/data/duplicates/check",
+    tag = "entity",
+    request_body = DuplicateCheckBody,
+    responses(
+        (status = 200, description = "The matches and what saving would do", body = DuplicateCheckResult),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::ReadOnly,
+        None,
+        "looks the values up under the duplicate rules and writes nothing"
+    )))),
+)]
+async fn check_duplicates(
+    State(state): State<EngineState>,
+    ctx: attome_server::authz::Authorized<attome_server::authz::SelfService>,
+    Json(body): Json<DuplicateCheckBody>,
+) -> Result<Json<DuplicateCheckResult>, AppError> {
+    let (entity_id, entity_name, _, _) = entity_crud::resolve_entity(&state, &body.entity).await?;
+    attome_security::SecurityContextExt::require(&*ctx, &entity_name, "read")?;
+    let values = body
+        .values
+        .as_object()
+        .ok_or_else(|| AppError::Validation("values must be an object".into()))?;
+    let outcome = attome_records::duplicate_check::check(
+        &state,
+        &ctx,
+        entity_id,
+        &entity_name,
+        body.record_id,
+        values,
+    )
+    .await?;
+    let action = outcome.action.and_then(|a| match a {
+        attome_core::match_rule::OnSave::Off => None,
+        attome_core::match_rule::OnSave::Warn => Some("warn".to_owned()),
+        attome_core::match_rule::OnSave::AllowWithReason => Some("allow_with_reason".to_owned()),
+        attome_core::match_rule::OnSave::Block => Some("block".to_owned()),
+    });
+    Ok(Json(DuplicateCheckResult {
+        action,
+        matches: outcome.visible,
+        hidden: outcome.hidden,
+    }))
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+struct FieldExplanation {
+    field: String,
+    comparator: Comparator,
+    weight: f64,
+    /// 1 matched, 0 differed, `null` no evidence (a side without a value).
+    score: Option<f64>,
+    /// Each record's key for a key comparator (phone, email, id, name,
+    /// phonetic); `null` otherwise or when the record has none.
+    key_a: Option<String>,
+    key_b: Option<String>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+struct CandidateExplanation {
+    candidate_id: Uuid,
+    rule_id: Uuid,
+    score: f64,
+    threshold: f64,
+    fields: Vec<FieldExplanation>,
+}
+
+/// `GET /api/v1/admin/data/duplicates/{id}/explain` — A15-T7: why a pair was
+/// flagged: per field of its rule, the comparator, the weight, the score the
+/// sweep stored and, for key comparators, both records' keys.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/data/duplicates/{id}/explain",
+    tag = "admin",
+    params(("id" = Uuid, Path)),
+    responses(
+        (status = 200, description = "The per-field explanation", body = CandidateExplanation),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such candidate", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn explain_candidate(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<CandidateExplanation>, AppError> {
+    let db = &state.base.db;
+    let row: Option<(Uuid, Uuid, Uuid, f64, Option<Value>, Value, f64)> = sqlx::query_as(
+        "SELECT c.record_a, c.record_b, c.match_rule_id, c.score::float8, c.field_scores, \
+                r.fields, r.threshold::float8 \
+           FROM duplicate_candidate c JOIN match_rule r ON r.id = c.match_rule_id \
+          WHERE c.id = $1",
+    )
+    .bind(id)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let (record_a, record_b, rule_id, score, field_scores, fields, threshold) =
+        row.ok_or(AppError::NotFound)?;
+    let fields: Vec<MatchField> = serde_json::from_value(fields)
+        .map_err(|e| AppError::internal(format!("corrupt match_rule.fields: {e}")))?;
+    let keys: Vec<(Uuid, String, String)> = sqlx::query_as(
+        "SELECT record_id, field, key FROM match_key \
+          WHERE match_rule_id = $1 AND record_id = ANY($2)",
+    )
+    .bind(rule_id)
+    .bind(vec![record_a, record_b])
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let key_of = |record: Uuid, field: &str| {
+        keys.iter()
+            .find(|(r, f, _)| *r == record && f == field)
+            .map(|(_, _, k)| k.clone())
+    };
+    let explained = fields
+        .iter()
+        .map(|f| FieldExplanation {
+            field: f.field.clone(),
+            comparator: f.comparator,
+            weight: f.weight,
+            score: field_scores
+                .as_ref()
+                .and_then(|s| s.get(&f.field))
+                .and_then(Value::as_f64),
+            key_a: f
+                .comparator
+                .is_key()
+                .then(|| key_of(record_a, &f.field))
+                .flatten(),
+            key_b: f
+                .comparator
+                .is_key()
+                .then(|| key_of(record_b, &f.field))
+                .flatten(),
+        })
+        .collect();
+    Ok(Json(CandidateExplanation {
+        candidate_id: id,
+        rule_id,
+        score,
+        threshold,
+        fields: explained,
+    }))
+}
+
+/// The rows a rule preview reads.
+const RULE_PREVIEW_SAMPLE: i64 = 5_000;
+/// The example pairs a rule preview returns.
+const RULE_PREVIEW_EXAMPLES: usize = 20;
+
+#[derive(Deserialize, ToSchema)]
+struct RulePreviewBody {
+    entity: String,
+    fields: Vec<MatchField>,
+    threshold: f64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+struct RulePreviewPair {
+    record_a: Uuid,
+    record_b: Uuid,
+    score: f64,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+struct RulePreview {
+    /// Rows read (at most 5,000).
+    sampled: i64,
+    /// Pairs the rule would flag among them.
+    pairs: i64,
+    /// Up to 20 of them, highest score first.
+    examples: Vec<RulePreviewPair>,
+}
+
+/// The value one field of a draft rule compares, for the preview: the key
+/// for a key comparator, the trimmed lowercased text for `normalized`, the
+/// text for `exact`; `trigram` is left to the sweep.
+fn preview_key(field: &MatchField, value: &str) -> Option<String> {
+    match field.comparator {
+        Comparator::Exact => Some(value.to_owned()),
+        Comparator::Normalized => Some(
+            value
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ")
+                .to_lowercase(),
+        ),
+        c if c.is_key() => field.key_of(value),
+        _ => None,
+    }
+    .filter(|k| !k.is_empty())
+}
+
+/// `POST /api/v1/admin/data/match-rules/preview` — A15-T7: how many pairs a
+/// draft rule would flag over a sample of the entity's live records (5,000
+/// rows), with up to 20 examples. Pairs are found on the fields' keys
+/// (exact, normalized and key comparators; trigram fields count as no
+/// evidence here) and scored as the sweep scores them. Writes nothing.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/data/match-rules/preview",
+    tag = "admin",
+    request_body = RulePreviewBody,
+    responses(
+        (status = 200, description = "Pairs the draft rule would flag", body = RulePreview),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 422, description = "Request failed validation", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+    extensions(("x-audit-exempt" = json!(attome_audit::security::x_audit_exempt(
+        attome_audit::security::ExemptReason::DryRun,
+        None,
+        "scores a draft rule over a sample and writes nothing"
+    )))),
+)]
+async fn preview_match_rule(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Json(body): Json<RulePreviewBody>,
+) -> Result<Json<RulePreview>, AppError> {
+    if body.threshold <= 0.0 || body.threshold > 1.0 {
+        return Err(AppError::Validation(
+            "threshold must be greater than 0 and at most 1".into(),
+        ));
+    }
+    let (_, entity_name, attrs, _) = entity_crud::resolve_entity(&state, &body.entity).await?;
+    let known: HashSet<&str> = attrs.iter().map(|a| a.logicalname.as_str()).collect();
+    validate_match_fields(&known, &body.fields)?;
+    let cols = body
+        .fields
+        .iter()
+        .map(|f| {
+            format!(
+                "{}::text AS {}",
+                attome_core::quote_ident(&f.field),
+                attome_core::quote_ident(&f.field)
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let rows: Vec<(Uuid, Value)> = sqlx::query_as(&format!(
+        "SELECT id, (SELECT row_to_json(x) FROM (SELECT {cols}) x)::jsonb FROM {} \
+          WHERE is_active = true ORDER BY id LIMIT $1",
+        attome_core::quote_ident(&entity_name)
+    ))
+    .bind(RULE_PREVIEW_SAMPLE)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    // Each record's key per field.
+    let keyed: Vec<(Uuid, Vec<Option<String>>)> = rows
+        .iter()
+        .map(|(id, values)| {
+            let keys = body
+                .fields
+                .iter()
+                .map(|f| {
+                    values
+                        .get(&f.field)
+                        .and_then(Value::as_str)
+                        .and_then(|v| preview_key(f, v))
+                })
+                .collect();
+            (*id, keys)
+        })
+        .collect();
+    // Candidate pairs share a key on at least one field.
+    let mut groups: std::collections::HashMap<(usize, &str), Vec<usize>> =
+        std::collections::HashMap::new();
+    for (i, (_, keys)) in keyed.iter().enumerate() {
+        for (f, key) in keys.iter().enumerate() {
+            if let Some(key) = key {
+                groups.entry((f, key.as_str())).or_default().push(i);
+            }
+        }
+    }
+    let mut seen: HashSet<(usize, usize)> = HashSet::new();
+    let mut found: Vec<RulePreviewPair> = Vec::new();
+    for members in groups.values() {
+        for (n, &i) in members.iter().enumerate() {
+            for &j in &members[n + 1..] {
+                let pair = (i.min(j), i.max(j));
+                if !seen.insert(pair) {
+                    continue;
+                }
+                let (a, b) = (&keyed[pair.0], &keyed[pair.1]);
+                let evidence: Vec<(f64, bool)> = body
+                    .fields
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(f, field)| match (&a.1[f], &b.1[f]) {
+                        (Some(x), Some(y)) => Some((field.weight, x == y)),
+                        _ => None,
+                    })
+                    .collect();
+                if let Some(score) = attome_core::match_rule::weighted_score(&evidence)
+                    && score >= body.threshold
+                {
+                    found.push(RulePreviewPair {
+                        record_a: a.0,
+                        record_b: b.0,
+                        score,
+                    });
+                }
+            }
+        }
+    }
+    let pairs = found.len() as i64;
+    found.sort_by(|x, y| y.score.total_cmp(&x.score));
+    found.truncate(RULE_PREVIEW_EXAMPLES);
+    Ok(Json(RulePreview {
+        sampled: rows.len() as i64,
+        pairs,
+        examples: found,
+    }))
+}
+
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+struct DuplicateStatsQuery {
+    /// One entity; absent: every entity.
+    entity: Option<String>,
+}
+
+#[derive(Debug, sqlx::FromRow, Serialize, ToSchema)]
+struct DuplicateStats {
+    entity: String,
+    open: i64,
+    merged: i64,
+    dismissed: i64,
+}
+
+/// `GET /api/v1/admin/data/duplicates/stats` — A15-T7: duplicate pairs per
+/// entity by status (open, merged, dismissed), for the data-quality view.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/data/duplicates/stats",
+    tag = "admin",
+    params(DuplicateStatsQuery),
+    responses(
+        (status = 200, description = "Counts per entity", body = PaginatedResponse<DuplicateStats>),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn duplicate_stats(
+    State(state): State<EngineState>,
+    _ctx: Authorized<Admin>,
+    Query(q): Query<DuplicateStatsQuery>,
+) -> Result<Json<PaginatedResponse<DuplicateStats>>, AppError> {
+    let items: Vec<DuplicateStats> = sqlx::query_as(
+        "SELECT entity_logicalname AS entity, \
+                count(*) FILTER (WHERE status = 'open') AS open, \
+                count(*) FILTER (WHERE status = 'merged') AS merged, \
+                count(*) FILTER (WHERE status = 'dismissed') AS dismissed \
+           FROM duplicate_candidate \
+          WHERE ($1::text IS NULL OR entity_logicalname = $1) \
+          GROUP BY entity_logicalname ORDER BY entity_logicalname",
+    )
+    .bind(&q.entity)
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    let total = items.len() as i64;
+    Ok(Json(PaginatedResponse::new(items, total, 1, total.max(1))))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route(
@@ -1309,6 +1714,16 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/admin/data/match-rules/{id}/scan",
             post(scan_match_rule),
         )
+        .route(
+            "/api/v1/admin/data/match-rules/preview",
+            post(preview_match_rule),
+        )
+        .route("/api/v1/data/duplicates/check", post(check_duplicates))
+        .route(
+            "/api/v1/admin/data/duplicates/{id}/explain",
+            get(explain_candidate),
+        )
+        .route("/api/v1/admin/data/duplicates/stats", get(duplicate_stats))
         .route(
             "/api/v1/admin/data/survivorship-rules",
             get(list_survivorship_rules).post(create_survivorship_rule),
@@ -1342,6 +1757,10 @@ pub fn routes() -> Router<EngineState> {
     update_match_rule,
     delete_match_rule,
     scan_match_rule,
+    preview_match_rule,
+    check_duplicates,
+    explain_candidate,
+    duplicate_stats,
     list_survivorship_rules,
     create_survivorship_rule,
     delete_survivorship_rule,

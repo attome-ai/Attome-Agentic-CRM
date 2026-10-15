@@ -6391,6 +6391,224 @@ fn merge_preview_undo_and_keep_merged() {
     })
 }
 
+/// A15-T7: the duplicate routes. `explain` shows a flagged pair's field
+/// scores and both keys; a rule preview counts pairs and writes nothing; the
+/// check route finds the match a save would meet; the stats count the pair;
+/// undoing a merge needs delete as well as update.
+#[test]
+fn duplicate_routes_explain_preview_check_stats_and_undo_permission() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let db = state.base.db.clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (entity, entity_id) = create_entity(&app, &admin_cookie, "dup_routes").await;
+        create_field(
+            &app,
+            &admin_cookie,
+            &entity_id,
+            r#"{"logicalname":"phone","name":"Phone","field_type":"text"}"#,
+        )
+        .await;
+        sync_registry(&state).await;
+        let call = |method: &str, uri: String, body: Option<String>, cookie: &str| {
+            Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("cookie", cookie)
+                .header("content-type", "application/json")
+                .body(body.map(Body::from).unwrap_or_else(Body::empty))
+                .unwrap()
+        };
+        let rule =
+            r#"[{"field":"phone","comparator":"phone","weight":1.0,"default_country":"SA"}]"#;
+        let mut ids = Vec::new();
+        for phone in ["0501234567", "+966501234567"] {
+            let res = app
+                .clone()
+                .oneshot(call(
+                    "POST",
+                    format!("/api/v1/{entity}"),
+                    Some(format!(r#"{{"phone":"{phone}"}}"#)),
+                    &admin_cookie,
+                ))
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::CREATED);
+            ids.push(body_json(res).await["id"].as_str().unwrap().to_owned());
+        }
+
+        // The preview writes nothing.
+        let res = app
+            .clone()
+            .oneshot(call(
+                "POST",
+                "/api/v1/admin/data/match-rules/preview".into(),
+                Some(format!(
+                    r#"{{"entity":"{entity}","threshold":1.0,"fields":{rule}}}"#
+                )),
+                &admin_cookie,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let preview = body_json(res).await;
+        assert_eq!(preview["pairs"], 1, "{preview}");
+        let rules: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM match_rule WHERE entity_logicalname = $1")
+                .bind(&entity)
+                .fetch_one(&db)
+                .await
+                .unwrap();
+        assert_eq!(rules, 0, "the preview saved no rule");
+
+        let res = app
+            .clone()
+            .oneshot(call(
+                "POST",
+                "/api/v1/admin/data/match-rules".into(),
+                Some(format!(
+                    r#"{{"entity":"{entity}","name":"phone","threshold":1.0,"on_save":"warn","fields":{rule}}}"#
+                )),
+                &admin_cookie,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let rule_id: Uuid = body_json(res).await["id"]
+            .as_str()
+            .unwrap()
+            .parse()
+            .unwrap();
+        attome_api::duplicates_match::run_match_scan(&state, rule_id, None)
+            .await
+            .expect("scan");
+
+        let candidate: Uuid =
+            sqlx::query_scalar("SELECT id FROM duplicate_candidate WHERE entity_logicalname = $1")
+                .bind(&entity)
+                .fetch_one(&db)
+                .await
+                .expect("the pair is flagged");
+        let res = app
+            .clone()
+            .oneshot(call(
+                "GET",
+                format!("/api/v1/admin/data/duplicates/{candidate}/explain"),
+                None,
+                &admin_cookie,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let explained = body_json(res).await;
+        let field = &explained["fields"][0];
+        assert_eq!(field["score"], 1.0, "{explained}");
+        assert_eq!(field["key_a"], "+966501234567", "{explained}");
+        assert_eq!(field["key_b"], "+966501234567", "{explained}");
+
+        let res = app
+            .clone()
+            .oneshot(call(
+                "POST",
+                "/api/v1/data/duplicates/check".into(),
+                Some(format!(
+                    r#"{{"entity":"{entity}","values":{{"phone":"00966501234567"}}}}"#
+                )),
+                &admin_cookie,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        let checked = body_json(res).await;
+        assert_eq!(checked["action"], "warn", "{checked}");
+        assert_eq!(
+            checked["matches"].as_array().map(Vec::len),
+            Some(2),
+            "{checked}"
+        );
+
+        let res = app
+            .clone()
+            .oneshot(call(
+                "GET",
+                format!("/api/v1/admin/data/duplicates/stats?entity={entity}"),
+                None,
+                &admin_cookie,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+        assert_eq!(body_json(res).await["items"][0]["open"], 1);
+
+        // Merge, then try to undo as a user who may update but not delete.
+        let res = app
+            .clone()
+            .oneshot(call(
+                "POST",
+                format!("/api/v1/{entity}/{}/merge", ids[0]),
+                Some(format!(r#"{{"duplicate_id":"{}"}}"#, ids[1])),
+                &admin_cookie,
+            ))
+            .await
+            .unwrap();
+        assert!(res.status().is_success());
+        let merge_id = body_json(res).await["merge_log_id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        let user_id = Uuid::now_v7();
+        let email = format!("undo-{user_id}@test.local");
+        sqlx::query(
+            "INSERT INTO user_account (id, email, user_name, is_active) VALUES ($1, $2, $3, true)",
+        )
+        .bind(user_id)
+        .bind(&email)
+        .bind(format!("undo-{user_id}"))
+        .execute(&db)
+        .await
+        .unwrap();
+        for action in ["read", "update"] {
+            let res = app
+                .clone()
+                .oneshot(call(
+                    "POST",
+                    "/api/v1/admin/security/grants".into(),
+                    Some(format!(
+                        r#"{{"user_email":"{email}","privilege_key":"{entity}.{action}"}}"#
+                    )),
+                    &admin_cookie,
+                ))
+                .await
+                .unwrap();
+            assert_eq!(res.status(), StatusCode::CREATED);
+        }
+        let res = app
+            .clone()
+            .oneshot(call(
+                "POST",
+                format!("/api/v1/{entity}/merges/{merge_id}/undo"),
+                None,
+                &session_cookie(user_id),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::FORBIDDEN);
+        let res = app
+            .clone()
+            .oneshot(call(
+                "POST",
+                format!("/api/v1/{entity}/merges/{merge_id}/undo"),
+                None,
+                &admin_cookie,
+            ))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), StatusCode::OK);
+    })
+}
+
 /// D-432 / M13 — a small matching-precision fixture: an `exact`-comparator
 /// rule on `name` at `threshold = 1.0` must flag the one genuine duplicate
 /// pair and must NOT flag the unrelated third record (no false positive) —

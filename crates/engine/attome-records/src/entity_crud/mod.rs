@@ -309,6 +309,14 @@ pub fn routes() -> Router<EngineState> {
             axum::routing::post(merge::merge_records),
         )
         .route(
+            "/api/v1/{entity}/{id}/merge/preview",
+            axum::routing::post(merge::merge_preview_route),
+        )
+        .route(
+            "/api/v1/{entity}/merges/{merge_id}/undo",
+            axum::routing::post(merge::undo_merge_route),
+        )
+        .route(
             "/api/v1/{entity}/{id}/related/{relationship}",
             get(related::list_related)
                 .post(related::link_related)
