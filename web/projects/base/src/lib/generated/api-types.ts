@@ -2229,6 +2229,22 @@ export interface paths {
         patch: operations["update_entity"];
         trace?: never;
     };
+    "/api/v1/admin/entities/{entity_id}/ddl-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_ddl_log"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/entities/{entity_id}/fields": {
         parameters: {
             query?: never;
@@ -16338,6 +16354,30 @@ export interface components {
         };
         /** @enum {string} */
         DateBucket: "day" | "week" | "month" | "quarter" | "year" | "hijri_month" | "hijri_year";
+        /** @description One DDL statement as the ledger recorded it. */
+        DdlLogEntry: {
+            /** Format: uuid */
+            actor?: string | null;
+            /** Format: int32 */
+            attempts: number;
+            /** Format: int32 */
+            duration_ms: number;
+            entity: string;
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            metadata_change_id?: number | null;
+            /** @description `ok`, `lock_timeout` or `failed`. */
+            outcome: string;
+            /** Format: int64 */
+            rows_touched?: number | null;
+            /** Format: date-time */
+            started_at: string;
+            /** @description The DDL text (never values; at most 4000 characters). */
+            statement: string;
+            /** @description The statement's leading keywords, e.g. `ALTER TABLE`. */
+            statement_kind: string;
+        };
         DeadLetterJobSummary: {
             /** Format: int32 */
             attempts: number;
@@ -20716,6 +20756,38 @@ export interface components {
                 /** Format: int64 */
                 row_count?: number | null;
                 status: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_DdlLogEntry: {
+            items: {
+                /** Format: uuid */
+                actor?: string | null;
+                /** Format: int32 */
+                attempts: number;
+                /** Format: int32 */
+                duration_ms: number;
+                entity: string;
+                /** Format: uuid */
+                id: string;
+                /** Format: int64 */
+                metadata_change_id?: number | null;
+                /** @description `ok`, `lock_timeout` or `failed`. */
+                outcome: string;
+                /** Format: int64 */
+                rows_touched?: number | null;
+                /** Format: date-time */
+                started_at: string;
+                /** @description The DDL text (never values; at most 4000 characters). */
+                statement: string;
+                /** @description The statement's leading keywords, e.g. `ALTER TABLE`. */
+                statement_kind: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -36888,6 +36960,66 @@ export interface operations {
             };
             /** @description Request failed validation (business_key_invalid, business_key_missing) */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_ddl_log: {
+        parameters: {
+            query?: {
+                /**
+                 * @description One-based (D-347): page 1 is the first page. Values below 1 are
+                 *     clamped up to 1 rather than rejected, matching the legacy lists.
+                 */
+                page?: number;
+                /**
+                 * @description Rows per page, clamped to `1..=MAX_PAGE_SIZE`. Defaults to
+                 *     `DEFAULT_PAGE_SIZE`.
+                 */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The entity's DDL statements, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_DdlLogEntry"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks system.admin */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such entity */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
