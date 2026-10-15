@@ -585,7 +585,7 @@ impl<'a> WritePipeline<'a> {
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         record_id: Uuid,
-        actor: Uuid,
+        actor: Option<Uuid>,
     ) -> Result<(), AppError> {
         let (Some(state), Some(reason)) = (self.state, self.override_reason.as_deref()) else {
             return Ok(());
@@ -597,7 +597,7 @@ impl<'a> WritePipeline<'a> {
                 attome_audit::security::SecurityEvent::new(
                     attome_audit::security::MandatoryCategory::Access,
                     attome_audit::AuditOperation::Update,
-                    actor,
+                    actor.unwrap_or(Uuid::nil()),
                     self.entity,
                     Some(record_id),
                 )
