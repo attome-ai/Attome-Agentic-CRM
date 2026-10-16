@@ -429,6 +429,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.LabelWorkbenchComponent),
           },
           {
+            // AA13-T11: service levels and the deployment's own targets.
+            path: 'slo',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.SloComponent),
+          },
+          {
             // A30-T3: this deployment's environment variable values.
             path: 'env-variables',
             canActivate: [authGuard],

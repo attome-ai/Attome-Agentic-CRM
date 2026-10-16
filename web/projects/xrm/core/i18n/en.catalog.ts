@@ -211,6 +211,13 @@ export const xrmEn = {
       email: 'Email', models: 'AI models', other: 'Other',
     },
   },
+  sloPage: {
+    title: 'Service levels',
+    intro: 'Each service-level class over the last 30 days: the share of its error budget left and its latency targets. Set this deployment’s own targets within half to three times the reference.',
+    budget: 'Error budget left', budgetLeft: '{percent}% of the error budget left',
+    setTarget: 'Set targets', useReference: 'Use the reference', save: 'Save', cancel: 'Cancel',
+    status: { ok: 'On track', at_risk: 'At risk', exhausted: 'Budget spent', unmeasured: 'Not measured here' },
+  },
   envVariablesPage: {
     title: 'Environment variables',
     intro: 'Settings whose value differs per environment. Definitions come with the configuration; each deployment sets its own values here.',

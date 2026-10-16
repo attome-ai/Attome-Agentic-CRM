@@ -15,3 +15,4 @@ export { OpsOverviewComponent } from './ops-overview/ops-overview.component';
 export { DeploysComponent } from './deploys/deploys.component';
 export { LabelWorkbenchComponent } from './label-workbench/label-workbench.component';
 export { EnvVariablesComponent } from './env-variables/env-variables.component';
+export { SloComponent } from './slo/slo.component';
