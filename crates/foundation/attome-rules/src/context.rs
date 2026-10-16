@@ -111,12 +111,10 @@ impl Context {
         base: String,
         rates: Vec<(String, f64)>,
     ) -> Result<Self, RulesError> {
-        let base_code =
-            crate::currency::known(&base).ok_or_else(|| RulesError::UnknownCurrency(base))?;
+        let base_code = crate::currency::known(&base).ok_or(RulesError::UnknownCurrency(base))?;
         let mut table = HashMap::with_capacity(rates.len() + 1);
         for (code, rate) in rates {
-            let known =
-                crate::currency::known(&code).ok_or_else(|| RulesError::UnknownCurrency(code))?;
+            let known = crate::currency::known(&code).ok_or(RulesError::UnknownCurrency(code))?;
             if !rate.is_finite() || rate <= 0.0 {
                 return Err(RulesError::Eval(format!(
                     "the rate for {known} must be a finite positive number"

@@ -72,7 +72,7 @@ use attome_audit::security::{AuditHook, HookEvent, MandatoryCategory, SecurityEv
 use attome_audit::{AuditOperation, audit_service};
 use attome_core::EngineState;
 use attome_security::MetadataRollout;
-use attome_server::authz::{Admin, Authorized, Privilege, RecordScoped};
+use attome_server::authz::{Admin, Authorized, Privilege, RecordScoped, SelfService};
 use attome_types::ErrorResponse;
 use attome_types::{AppError, PaginatedResponse};
 use attome_types::{DEFAULT_PAGE_SIZE, PageBase, PageWindow};
@@ -2116,7 +2116,7 @@ struct OutOfOfficeEnded {
 )]
 async fn put_out_of_office(
     State(state): State<EngineState>,
-    ctx: Authorized<RecordScoped>,
+    ctx: Authorized<SelfService>,
     Json(body): Json<OutOfOfficeBody>,
 ) -> Result<Json<OutOfOfficeResponse>, AppError> {
     let delegation_id = attome_audit::approval::upsert_absence_delegation(
@@ -2146,7 +2146,7 @@ async fn put_out_of_office(
 )]
 async fn delete_out_of_office(
     State(state): State<EngineState>,
-    ctx: Authorized<RecordScoped>,
+    ctx: Authorized<SelfService>,
 ) -> Result<Json<OutOfOfficeEnded>, AppError> {
     let ended =
         attome_audit::approval::end_absence_delegation(&state, ctx.user_id, "out_of_office")

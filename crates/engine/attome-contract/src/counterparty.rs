@@ -276,7 +276,7 @@ pub async fn decide(
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
-pub struct DecideBody {
+pub struct CounterpartyDecideBody {
     pub decision: Decision,
 }
 
@@ -285,7 +285,7 @@ pub struct DecideBody {
     path = "/api/v1/contract/counterparty-proposals/{id}/decide",
     tag = "contract",
     params(("id" = Uuid, Path, description = "The proposal")),
-    request_body = DecideBody,
+    request_body = CounterpartyDecideBody,
     responses(
         (status = 200, description = "The proposal was confirmed (the contract's account is set) or dismissed", body = DecisionResult),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -300,7 +300,7 @@ pub(crate) async fn post_decide(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<CounterpartyConfirm>>,
     Path(id): Path<Uuid>,
-    Json(body): Json<DecideBody>,
+    Json(body): Json<CounterpartyDecideBody>,
 ) -> Result<Json<DecisionResult>, AppError> {
     Ok(Json(decide(&state, ctx.user_id, id, body.decision).await?))
 }
@@ -355,7 +355,7 @@ pub(crate) async fn post_run(
 #[derive(utoipa::OpenApi)]
 #[openapi(
     paths(post_decide, post_run),
-    components(schemas(Decision, DecideBody, DecisionResult, RunQueued))
+    components(schemas(Decision, CounterpartyDecideBody, DecisionResult, RunQueued))
 )]
 pub(crate) struct ApiDocFragment;
 
