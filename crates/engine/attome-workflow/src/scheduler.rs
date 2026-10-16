@@ -29,6 +29,7 @@ use attome_core::EngineState;
 use attome_records::mutation_ring::{
     GrantInvalidation, MutationActor, MutationAudit, MutationRing, MutationSideEffects,
 };
+use attome_security::SecurityContextExt;
 use attome_server::middleware::idempotency_durable;
 use attome_server::security::SecurityContext;
 use attome_types::AppError;
@@ -74,6 +75,84 @@ fn system_security_context(user_id: Uuid) -> SecurityContext {
         role_ids: None,
         service_principal: false,
     }
+}
+
+/// M1-T3: who a flow's nodes act as. The graph's `settings.run_as` is
+/// `starter` (the default: the user who started the run) or
+/// `flow_identity` (`settings.run_as_user_id`, a service account holding the
+/// roles the flow needs). A run with no human starter (an entity or
+/// schedule trigger) acts as the user who published the version. The
+/// context is the identity's own, resolved fresh, so a flow can do nothing
+/// its run-as identity may not. Only a run with no starter and no publisher
+/// (versions published before publishers were recorded) keeps the old
+/// administrator context.
+async fn run_as_context(
+    state: &EngineState,
+    instance: &InstanceRow,
+    graph_json: &Value,
+) -> Result<SecurityContext, AppError> {
+    let settings = graph_json.get("settings");
+    let mode = settings
+        .and_then(|s| s.get("run_as"))
+        .and_then(Value::as_str)
+        .unwrap_or("starter");
+    let user_id = match mode {
+        "flow_identity" => settings
+            .and_then(|s| s.get("run_as_user_id"))
+            .and_then(Value::as_str)
+            .and_then(|s| Uuid::parse_str(s).ok())
+            .ok_or_else(|| {
+                AppError::Validation(
+                    "a flow that runs as its own identity needs settings.run_as_user_id".into(),
+                )
+            })?,
+        "starter" => {
+            let human = instance
+                .started_by
+                .filter(|id| *id != crate::entity_trigger::workflow_system_user_id());
+            match human {
+                Some(id) => id,
+                None => {
+                    let publisher: Option<Uuid> = sqlx::query_scalar(
+                        "SELECT published_by FROM workflow_definition_version WHERE id = $1",
+                    )
+                    .bind(instance.definition_version_id)
+                    .fetch_optional(&state.base.db)
+                    .await
+                    .map_err(AppError::internal)?
+                    .flatten();
+                    match publisher {
+                        Some(id) => id,
+                        None => {
+                            return Ok(system_security_context(
+                                instance.started_by.unwrap_or(Uuid::nil()),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        other => {
+            return Err(AppError::Validation(format!(
+                "settings.run_as {other:?} is not `starter` or `flow_identity`"
+            )));
+        }
+    };
+    let active: Option<bool> =
+        sqlx::query_scalar("SELECT is_active FROM user_account WHERE id = $1")
+            .bind(user_id)
+            .fetch_optional(&state.base.db)
+            .await
+            .map_err(AppError::internal)?;
+    if active != Some(true) {
+        tracing::warn!(
+            instance_id = %instance.id,
+            %user_id,
+            "workflow run-as identity is missing or inactive; the flow cannot act"
+        );
+        return Err(AppError::Forbidden);
+    }
+    attome_security::resolve_uncached(&state.base.db, user_id).await
 }
 
 /// A wait-capable node reached during a pass — collected until the
@@ -169,9 +248,10 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
         tracing::warn!(%instance_id, "workflow execute: instance not found, dropping job");
         return Ok(PassOutcome::NoOp);
     };
+    // `queued` (M1-T5) waits for `promote_queued` to make it `running`.
     if matches!(
         instance.status.as_str(),
-        "completed" | "failed" | "cancelled"
+        "queued" | "completed" | "failed" | "cancelled"
     ) {
         return Ok(PassOutcome::NoOp);
     }
@@ -231,9 +311,10 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
     // derive `Clone` (see its own doc comment). Every existing call site
     // that takes `&SecurityContext` keeps working unchanged — `&Arc<T>`
     // coerces to `&T` at the call site.
-    let sys_ctx = std::sync::Arc::new(system_security_context(
-        instance.started_by.unwrap_or(Uuid::nil()),
-    ));
+    //
+    // M1-T3: the nodes act as the flow's run-as identity, resolved fresh from
+    // Postgres for every pass, never an administrator context.
+    let sys_ctx = std::sync::Arc::new(run_as_context(state, &instance, &graph_json).await?);
 
     let mut pending_waits: Vec<PendingWait> = Vec::new();
     let mut instance_failed = false;
@@ -1403,6 +1484,15 @@ async fn execute_entity_write(
              user exists yet for an instance with no starting principal",
         )
     })?;
+    // M1-T3: the run-as identity needs the entity privilege itself.
+    ctx.require(
+        entity_name,
+        if matches!(node_type, NodeType::CreateRecord) {
+            "create"
+        } else {
+            "update"
+        },
+    )?;
     let operation = if matches!(node_type, NodeType::CreateRecord) {
         "workflow.create_record"
     } else {

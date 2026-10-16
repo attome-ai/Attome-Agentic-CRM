@@ -64,7 +64,7 @@ pub const CONSUMER: &str = "attome-workflow/entry";
 /// UI. Lazily ensured (`ensure_system_user`) rather than seeded in a
 /// migration: this is workflow-owned application state, not infrastructure
 /// DDL (guidelines §4's DDL-ownership split).
-fn workflow_system_user_id() -> Uuid {
+pub(crate) fn workflow_system_user_id() -> Uuid {
     Uuid::from_u128(0x0000_0000_0000_0000_0000_0057_0f10_0001)
 }
 

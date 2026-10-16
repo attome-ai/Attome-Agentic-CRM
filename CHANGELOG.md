@@ -8,6 +8,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
 ## [Unreleased]
 
 ### Security
+- Workflow nodes no longer act as an administrator: a flow runs as its starter (an entity- or
+  schedule-triggered run as the version's publisher), or as its own service account with
+  `settings.run_as: "flow_identity"` + `run_as_user_id`; record writes need the entity privilege.
 - A new password found in an offline breached-password set is refused (a small list ships;
   `auth.breach_list_file` loads the full Have I Been Pwned SHA-1 download, checked locally), and
   a password reset may not reuse the current password or any of the last five (migration `0040`).

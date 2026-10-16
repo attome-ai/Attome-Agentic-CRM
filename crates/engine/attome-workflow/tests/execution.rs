@@ -211,6 +211,23 @@ async fn test_state() -> Option<EngineState> {
 }
 
 async fn seed_user(db: &attome_db::DbPool) -> Uuid {
+    let user_id = seed_plain_user(db).await;
+    // M1-T3: a flow acts as its starter, so the engine tests start as an
+    // administrator; `a_starter_without_access_cannot_write_through_a_flow`
+    // uses a plain user.
+    sqlx::query(
+        "INSERT INTO user_account_mm_privilege (id, user_ref, privilege_ref, is_active, created_at) \
+         SELECT $1, $2, id, true, NOW() FROM privilege WHERE key = 'system.admin'",
+    )
+    .bind(Uuid::now_v7())
+    .bind(user_id)
+    .execute(db)
+    .await
+    .expect("grant system.admin");
+    user_id
+}
+
+async fn seed_plain_user(db: &attome_db::DbPool) -> Uuid {
     let user_id = Uuid::now_v7();
     sqlx::query("INSERT INTO user_account (id, user_name, email, is_active) VALUES ($1, $2, $2 || '@test.invalid', true)")
         .bind(user_id)
@@ -3806,4 +3823,73 @@ async fn a_capped_flow_queues_extra_runs() {
         .await
         .expect("promote");
     assert_eq!(status(second).await, "running");
+}
+
+/// M1-T3: a flow acts as its starter, so a starter without the entity's
+/// create privilege cannot create a record through it.
+#[tokio::test]
+async fn a_starter_without_access_cannot_write_through_a_flow() {
+    let state = skip_if_no_db!(test_state().await);
+    let user_id = seed_plain_user(&state.base.db).await;
+
+    let entity_id = attome_metadata::provision::ensure_entity(
+        &state.base.db,
+        "wf_run_as_test_entity",
+        "Workflow Run-As Test Entity",
+        None,
+        false,
+    )
+    .await
+    .expect("provision test entity");
+    attome_metadata::provision::ensure_attribute(
+        &state.base.db,
+        entity_id,
+        "name",
+        "Name",
+        "text",
+        false,
+        false,
+        false,
+        false,
+        None,
+        None,
+    )
+    .await
+    .expect("provision name attribute");
+    state.entities.swap(
+        attome_core::build_registry(&state.base.db)
+            .await
+            .expect("build registry"),
+    );
+    let before: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM wf_run_as_test_entity")
+        .fetch_one(&state.base.db)
+        .await
+        .expect("count rows");
+
+    let graph = json!({
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": {"trigger_type": "manual"}},
+            {"id": "cr", "type": "create_record", "config": {"entity": "wf_run_as_test_entity"}}
+        ],
+        "edges": [{"from_node": "t", "from_port": "out", "to_node": "cr", "to_port": "data"}]
+    });
+    let version_id = publish_workflow(&state.base.db, "run-as-starter-test", graph).await;
+    let instance_id = attome_workflow::instance_admin::start_instance_internal(
+        &state,
+        version_id,
+        None,
+        Some(user_id),
+        None,
+        json!({"name": "not allowed"}),
+    )
+    .await
+    .expect("start instance");
+    // The node fails; the pass may report it or settle the instance failed.
+    let _ = attome_workflow::scheduler::execute_instance(&state, instance_id).await;
+
+    let after: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM wf_run_as_test_entity")
+        .fetch_one(&state.base.db)
+        .await
+        .expect("count rows");
+    assert_eq!(after, before, "the flow must not create the record");
 }
