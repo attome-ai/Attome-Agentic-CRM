@@ -4,7 +4,7 @@ use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_SALES, ModuleId};
 use axum::{
     Router,
-    routing::{post, put},
+    routing::{patch, post, put},
 };
 
 /// Registered in `attome::boot::register_engines`.
@@ -27,13 +27,18 @@ impl EngineModel for SalesModel {
     }
 
     /// D7-T4: splits are written only through `PUT .../splits`, which checks
-    /// their rules and stores their amounts.
+    /// their rules and stores their amounts. D7-T2: team members only
+    /// through the team routes, which grant and revoke their share of the
+    /// deal in the same transaction.
     fn engine_owned_entities(&self) -> &'static [&'static str] {
-        &["opportunity_split"]
+        &["opportunity_split", "opportunity_team_member"]
     }
 
     fn engine_managed_fields(&self) -> &'static [(&'static str, &'static str)] {
-        &[("opportunity_split", "amount")]
+        &[
+            ("opportunity_split", "amount"),
+            ("opportunity_team_member", "share_id"),
+        ]
     }
 
     fn routes(&self) -> Router<EngineState> {
@@ -45,6 +50,15 @@ impl EngineModel for SalesModel {
             .route(
                 "/api/v1/sales/opportunities/{id}/splits",
                 put(crate::split_store::put_sales_splits),
+            )
+            .route(
+                "/api/v1/sales/opportunities/{id}/team",
+                post(crate::team::post_sales_team_member),
+            )
+            .route(
+                "/api/v1/sales/opportunities/{id}/team/{member_id}",
+                patch(crate::team::patch_sales_team_member)
+                    .delete(crate::team::delete_sales_team_member),
             )
     }
 }

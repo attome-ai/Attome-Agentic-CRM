@@ -24,6 +24,7 @@ pub mod scoring;
 pub mod scoring_run;
 pub mod split_store;
 pub mod splits;
+pub mod team;
 
 pub use model::SalesModel;
 
@@ -36,5 +37,6 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 32;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <dialer::claim::ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(<split_store::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<team::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

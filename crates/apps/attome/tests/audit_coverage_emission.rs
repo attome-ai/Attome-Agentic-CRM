@@ -66,6 +66,19 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/sales/opportunities/{id}/team",
+        "needs the sales pack's opportunity and team entities, which this harness does not install; \
+         the member's share and its Access event are written in one transaction by attome-sales's team.rs",
+    ),
+    (
+        "PATCH /api/v1/sales/opportunities/{id}/team/{member_id}",
+        "needs the sales pack's opportunity and team entities, which this harness does not install",
+    ),
+    (
+        "DELETE /api/v1/sales/opportunities/{id}/team/{member_id}",
+        "needs the sales pack's opportunity and team entities, which this harness does not install",
+    ),
+    (
         "PUT /api/v1/admin/env-variables/{name}",
         "needs a published environment_variable definition; attome-api's model_admin.rs environment_variable_values_are_set_per_deployment defines, publishes and sets one, and the clear driver below audits the same Configuration path",
     ),

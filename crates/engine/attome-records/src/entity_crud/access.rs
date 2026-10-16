@@ -836,20 +836,57 @@ pub async fn grant_creator_share(
     record_id: Uuid,
     user_id: Uuid,
 ) -> Result<(), AppError> {
-    sqlx::query(
+    grant_user_share_in_tx(tx, entity_id, record_id, user_id, 1, user_id).await?;
+    Ok(())
+}
+
+/// Gives one user a share of one record: `capability` 0 to view, 1 to act
+/// (`rls::Capability`). Idempotent; the share's id, existing or new. The
+/// record-rule predicate reads `record_share` live, so there is no cache to
+/// invalidate (D7-T2's deal team members are granted this way).
+pub async fn grant_user_share_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    entity_id: Uuid,
+    record_id: Uuid,
+    user_id: Uuid,
+    capability: i16,
+    granted_by: Uuid,
+) -> Result<Uuid, AppError> {
+    if !(0..=1).contains(&capability) {
+        return Err(AppError::internal(
+            "a share capability is 0 (view) or 1 (act)",
+        ));
+    }
+    sqlx::query_scalar(
         "INSERT INTO record_share \
             (record_id, entity_ref, principal_type, principal_id, capability, granted_by) \
-         VALUES ($1, $2, 0, $3, 1, $3) \
+         VALUES ($1, $2, 0, $3, $4, $5) \
          ON CONFLICT (record_id, entity_ref, principal_type, principal_id, capability) \
-         DO NOTHING",
+         DO UPDATE SET granted_by = record_share.granted_by \
+         RETURNING id",
     )
     .bind(record_id)
     .bind(entity_id)
     .bind(user_id)
-    .execute(&mut **tx)
+    .bind(capability)
+    .bind(granted_by)
+    .fetch_one(&mut **tx)
     .await
-    .map_err(AppError::internal)?;
-    Ok(())
+    .map_err(AppError::internal)
+}
+
+/// Removes one share by id; whether a row went.
+pub async fn revoke_share_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    share_id: Uuid,
+) -> Result<bool, AppError> {
+    Ok(sqlx::query("DELETE FROM record_share WHERE id = $1")
+        .bind(share_id)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?
+        .rows_affected()
+        > 0)
 }
 
 /// M01 Core C-12: resolves the `(AccessLevel, owner_visible)` pair

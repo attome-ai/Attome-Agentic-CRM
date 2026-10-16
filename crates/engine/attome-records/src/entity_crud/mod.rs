@@ -58,8 +58,9 @@ mod tests;
 pub use access::resolve_cascade_dependent_access;
 pub use access::{
     LEDGER_ENTITIES, POLYMORPHIC_AUDIT_ENTITIES, POLYMORPHIC_CHILD_ENTITIES, fetch_audit_ctx,
-    grant_creator_share, guard_cascade_dependent_access, referenced_record_visible,
-    require_record_access, require_record_access_with, resolve_record_access_inputs,
+    grant_creator_share, grant_user_share_in_tx, guard_cascade_dependent_access,
+    referenced_record_visible, require_record_access, require_record_access_with,
+    resolve_record_access_inputs, revoke_share_in_tx,
 };
 // Used only inside this crate — kept crate-private. C-10: `mutation_ring`
 // (a sibling top-level module, external to this directory) is now a fourth

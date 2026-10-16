@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Deal teams: `POST /api/v1/sales/opportunities/{id}/team`, `PATCH` and `DELETE .../team/{member_id}`
+  add, change and remove members; a user member gets a view or act share of the deal in the same
+  transaction (refused above what their own roles allow, `access_above_role`), the owner cannot be
+  removed, and each change writes an Access event. `opportunity_team_member` is now written only
+  through these routes.
 - Deal splits: `PUT /api/v1/sales/opportunities/{id}/splits` replaces a deal's splits under its lock,
   checks that each revenue split type totals 100% and that members are on the deal's team, and stores
   each split's amount (rounded once, remainder to the owner). On a won deal the change needs a reason
