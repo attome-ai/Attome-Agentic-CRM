@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/hr/offers/{id}/hire` (`employee.create`): an accepted job offer becomes an
+  employee (name, start date, salary, posting title), linked to the user account with the
+  candidate's email when one exists; a second hire of the same offer is refused.
 - Table health: `GET /api/v1/admin/entities/{entity_id}/health` and `GET /api/v1/admin/table-health` report
   each entity table's size, live and dead rows, last autovacuum, unused indexes, lookups with no index
   and seven-day growth, from the statistics views only; a daily job keeps the size samples (migration

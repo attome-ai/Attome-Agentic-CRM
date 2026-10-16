@@ -4,6 +4,7 @@
 //! pack's metadata; this crate holds the engine code that acts on them.
 //! Mounted with the core module, as the pack is.
 
+pub mod hire;
 pub mod leave;
 pub mod model;
 pub mod payroll_export;
@@ -19,5 +20,6 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 43;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = <leave::ApiDocFragment as utoipa::OpenApi>::openapi();
     doc.merge(<payroll_export::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<hire::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
