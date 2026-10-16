@@ -11,6 +11,7 @@ mod hierarchy;
 /// U6 (basic-units plan B-R12, D-601): `/{entity}/{id}/history`, the
 /// record-scoped, field-security-filtered change history.
 pub mod history;
+mod key_address;
 /// M01-core C-05: the shared, RLS-aware lookup/polymorphic-reference
 /// display-name batch — see its module doc comment.
 mod lookup_names;
@@ -153,6 +154,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(scan::openapi_fragment());
     doc.merge(recycle_bin::openapi_fragment());
     doc.merge(new_record::openapi_fragment());
+    doc.merge(key_address::openapi_fragment());
     doc
 }
 
@@ -250,6 +252,11 @@ pub fn routes() -> Router<EngineState> {
             get(mutations::get_record)
                 .patch(mutations::update_record)
                 .delete(mutations::delete_record),
+        )
+        // S1-T6: a record addressed by its business key.
+        .route(
+            "/api/v1/{entity}/key/{keyspec}",
+            get(key_address::get_by_key).patch(key_address::patch_by_key),
         )
         .route(
             "/api/v1/{entity}/{id}/restore",

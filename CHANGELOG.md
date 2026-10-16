@@ -28,6 +28,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `GET` / `PATCH /api/v1/{entity}/key/{keyspec}` address a record by its business key (or an
+  external id, or a key an upsert indexed), e.g. `/api/v1/account/key/accountnumber=A-100`.
 - `POST /api/v1/composite`: up to 25 record creates, updates and deletes in one request, each on
   its own (a failure is reported, the rest run), later ones using earlier results through
   `${ref.field}`. Entities can no longer be named `composite`, `query`, `search`, `graph` or

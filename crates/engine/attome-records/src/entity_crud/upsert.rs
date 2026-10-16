@@ -13,7 +13,6 @@ use axum::{
     http::StatusCode,
 };
 use serde_json::Value;
-use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -259,13 +258,15 @@ async fn upsert_record_inner(
                 .and_then(|v| json_to_str(v, attr))
         })
         .collect::<Vec<_>>();
-    let key_material = match_attrs
+    // S1-T6: the one name computation, shared with key addressing.
+    let match_names = match_attrs
         .iter()
         .map(|a| a.logicalname.as_str())
-        .collect::<Vec<_>>()
-        .join("_");
-    let digest = format!("{:x}", Sha256::digest(key_material.as_bytes()));
-    let index_name = quote_ident(&format!("ux_{entity_name}_upsert_{}", &digest[..16]));
+        .collect::<Vec<_>>();
+    let index_name = quote_ident(&super::key_address::upsert_index_name(
+        &entity_name,
+        &match_names,
+    ));
     // CREATE INDEX CONCURRENTLY is production DDL, not ordinary record I/O —
     // gate provisioning a genuinely new upsert key behind system.admin so a
     // caller with plain entity create+update privilege can't trigger
@@ -563,7 +564,7 @@ pub(super) async fn refuse_integration_only_fields(
 }
 
 /// A29-T2: whether an attribute holds an external id.
-fn is_external_id(attr: &AttrInfo) -> bool {
+pub(super) fn is_external_id(attr: &AttrInfo) -> bool {
     external_id_system_of(attr).is_some()
 }
 

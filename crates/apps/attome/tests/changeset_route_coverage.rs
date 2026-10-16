@@ -56,6 +56,8 @@ const EXTRA_ROUTES: &[&str] = &[
     "/api/v1/{entity}",
     "/api/v1/{entity}/{id}",
     "/api/v1/{entity}/upsert",
+    // S1-T6: the same update, addressed by business key.
+    "/api/v1/{entity}/key/{keyspec}",
     // B13 UI text overrides: labels are metadata a changeset carries
     // (`set_label` / `clear_label`), though the path is not an authoring
     // prefix the production gate guards.
@@ -68,6 +70,7 @@ const RECORDED: &[(&str, &[&str])] = &[
     ("POST /api/v1/{entity}", &["upsert_record"]),
     ("PATCH /api/v1/{entity}/{id}", &["upsert_record"]),
     ("POST /api/v1/{entity}/upsert", &["upsert_record"]),
+    ("PATCH /api/v1/{entity}/key/{keyspec}", &["upsert_record"]),
     // Entities and fields (lane L3).
     ("POST /api/v1/admin/entities", &["create_entity"]),
     (

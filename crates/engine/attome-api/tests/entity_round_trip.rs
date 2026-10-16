@@ -9478,3 +9478,94 @@ fn composite_create_then_update_by_reference() {
         assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
     })
 }
+
+/// S1-T6: a record is read and updated by its declared business key; a
+/// non-key attribute is 422; PATCH by key needs If-Match.
+#[test]
+fn get_and_patch_by_business_key() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let state = system.state().clone();
+        let admin_cookie = seed_admin(&system).await;
+        let app = full_app(system);
+        let (entity, entity_id) = create_entity(&app, &admin_cookie, "keyed").await;
+        for body in [
+            r#"{"logicalname":"code","name":"Code","field_type":"text"}"#,
+            r#"{"logicalname":"title","name":"Title","field_type":"text"}"#,
+        ] {
+            create_field(&app, &admin_cookie, &entity_id, body).await;
+        }
+        let req = Request::builder()
+            .method("PATCH")
+            .uri(format!("/api/v1/admin/entities/{entity_id}"))
+            .header("cookie", &admin_cookie)
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"business_key":["code"]}"#))
+            .unwrap();
+        let res = app.clone().oneshot(req).await.expect("declare key");
+        assert_eq!(res.status(), StatusCode::OK, "{}", body_json(res).await);
+        sync_registry(&state).await;
+
+        let req = Request::builder()
+            .method("POST")
+            .uri(format!("/api/v1/{entity}"))
+            .header("cookie", &admin_cookie)
+            .header("content-type", "application/json")
+            .body(Body::from(r#"{"code":"A-100","title":"First"}"#))
+            .unwrap();
+        let res = app.clone().oneshot(req).await.expect("create");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let created = body_json(res).await;
+
+        let get = |uri: String| {
+            Request::builder()
+                .method("GET")
+                .uri(uri)
+                .header("cookie", &admin_cookie)
+                .body(Body::empty())
+                .unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(get(format!("/api/v1/{entity}/key/code=A-100")))
+            .await
+            .expect("by key");
+        assert_eq!(res.status(), StatusCode::OK);
+        let found = body_json(res).await;
+        assert_eq!(found["id"], created["id"], "{found}");
+
+        let res = app
+            .clone()
+            .oneshot(get(format!("/api/v1/{entity}/key/title=First")))
+            .await
+            .expect("non-key");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let res = app
+            .clone()
+            .oneshot(get(format!("/api/v1/{entity}/key/code=NOPE")))
+            .await
+            .expect("missing");
+        assert_eq!(res.status(), StatusCode::NOT_FOUND);
+
+        let patch = |if_match: Option<String>| {
+            let mut req = Request::builder()
+                .method("PATCH")
+                .uri(format!("/api/v1/{entity}/key/code=A-100"))
+                .header("cookie", &admin_cookie)
+                .header("content-type", "application/json");
+            if let Some(v) = if_match {
+                req = req.header("if-match", v);
+            }
+            req.body(Body::from(r#"{"title":"Second"}"#)).unwrap()
+        };
+        let res = app.clone().oneshot(patch(None)).await.expect("no if-match");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let version = created["row_version"].as_i64().expect("row_version");
+        let res = app
+            .clone()
+            .oneshot(patch(Some(format!("\"{version}\""))))
+            .await
+            .expect("patch");
+        assert_eq!(res.status(), StatusCode::OK, "{}", body_json(res).await);
+    })
+}
