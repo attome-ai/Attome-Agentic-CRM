@@ -7262,6 +7262,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/approvals/out-of-office": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * `PUT /api/v1/approvals/out-of-office` (Z10-T7) — the signed-in user hands
+         *     their approval standing to another user while they are away. Acts only on
+         *     the caller's own id; an overlapping earlier out-of-office delegation is
+         *     replaced. `attome_audit::approval::upsert_absence_delegation` checks the
+         *     window and the delegate and writes the `Access` + `Grant` event with the
+         *     delegation.
+         */
+        put: operations["put_out_of_office"];
+        post?: never;
+        /**
+         * `DELETE /api/v1/approvals/out-of-office` (Z10-T7) — ends the signed-in
+         *     user's current and future out-of-office delegations.
+         */
+        delete: operations["delete_out_of_office"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/approvals/{id}/decide": {
         parameters: {
             query?: never;
@@ -20988,6 +21016,28 @@ export interface components {
             user_email?: string | null;
             /** Format: uuid */
             user_id: string;
+        };
+        OutOfOfficeBody: {
+            /**
+             * Format: uuid
+             * @description Who decides your approvals while you are away.
+             */
+            to_user: string;
+            /** Format: date-time */
+            valid_from: string;
+            /** Format: date-time */
+            valid_to: string;
+        };
+        OutOfOfficeEnded: {
+            /**
+             * Format: int64
+             * @description How many current or future out-of-office delegations were ended.
+             */
+            ended: number;
+        };
+        OutOfOfficeResponse: {
+            /** Format: uuid */
+            delegation_id: string;
         };
         OutcomeKindSummary: {
             /** Format: double */
@@ -56283,6 +56333,77 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_out_of_office: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OutOfOfficeBody"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutOfOfficeResponse"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Delegating to yourself, an empty window, or an inactive delegate */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_out_of_office: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutOfOfficeEnded"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

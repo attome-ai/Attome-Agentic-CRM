@@ -39915,6 +39915,120 @@
         }
       }
     },
+    "/api/v1/approvals/out-of-office": {
+      "put": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "`PUT /api/v1/approvals/out-of-office` (Z10-T7) — the signed-in user hands\ntheir approval standing to another user while they are away. Acts only on\nthe caller's own id; an overlapping earlier out-of-office delegation is\nreplaced. `attome_audit::approval::upsert_absence_delegation` checks the\nwindow and the delegate and writes the `Access` + `Grant` event with the\ndelegation.",
+        "operationId": "put_out_of_office",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutOfOfficeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutOfOfficeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Delegating to yourself, an empty window, or an inactive delegate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "grant"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      },
+      "delete": {
+        "tags": [
+          "approvals"
+        ],
+        "summary": "`DELETE /api/v1/approvals/out-of-office` (Z10-T7) — ends the signed-in\nuser's current and future out-of-office delegations.",
+        "operationId": "delete_out_of_office",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutOfOfficeEnded"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "access",
+              "operation": "revoke"
+            }
+          ],
+          "policy": "mandatory"
+        }
+      }
+    },
     "/api/v1/approvals/{id}/decide": {
       "post": {
         "tags": [
@@ -86676,6 +86790,55 @@
             ]
           },
           "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "OutOfOfficeBody": {
+        "type": "object",
+        "required": [
+          "to_user",
+          "valid_from",
+          "valid_to"
+        ],
+        "properties": {
+          "to_user": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Who decides your approvals while you are away."
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_to": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "OutOfOfficeEnded": {
+        "type": "object",
+        "required": [
+          "ended"
+        ],
+        "properties": {
+          "ended": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many current or future out-of-office delegations were ended.",
+            "minimum": 0
+          }
+        }
+      },
+      "OutOfOfficeResponse": {
+        "type": "object",
+        "required": [
+          "delegation_id"
+        ],
+        "properties": {
+          "delegation_id": {
             "type": "string",
             "format": "uuid"
           }
