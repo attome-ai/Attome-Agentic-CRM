@@ -291,6 +291,7 @@ fn admin_lists_kinds_and_an_unknown_kind_is_404() {
                 "agent",
                 "attribute",
                 "entity",
+                "environment_variable",
                 "eval_suite",
                 "form",
                 "navigation",
@@ -737,5 +738,128 @@ fn a_blueprint_plans_applies_and_rolls_back() {
             plan["items"][0]["status"], "same",
             "back to the first version"
         );
+    });
+}
+
+/// A30-T1: an environment variable is defined as metadata and published; its
+/// value is this deployment's own, checked against the type, kept in the
+/// history, and cleared back to the default.
+#[test]
+fn environment_variable_values_are_set_per_deployment() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let db = system.state().base.db.clone();
+        let (_, cookie) = seed_admin(&db).await;
+        let app = full_app(system);
+        let name = format!("erp_url_{}", &Uuid::now_v7().simple().to_string()[..12]);
+        let id = Uuid::now_v7();
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/environment_variable/{id}/commands"),
+                &cookie,
+                serde_json::json!({
+                    "base_hash": "",
+                    "name": name,
+                    "commands": [
+                        { "op": "set", "path": "/type", "value": "url" },
+                        { "op": "set", "path": "/required", "value": true }
+                    ]
+                }),
+            ))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let body = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        let resp = app
+            .clone()
+            .oneshot(post_req(
+                &format!("/api/v1/admin/model/environment_variable/{id}/publish"),
+                &cookie,
+                serde_json::json!({}),
+            ))
+            .await
+            .unwrap();
+        let status = resp.status();
+        let body = body_json(resp).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+
+        let put = |value: serde_json::Value, version: Option<i64>| {
+            Request::builder()
+                .method("PUT")
+                .uri(format!("/api/v1/admin/env-variables/{name}"))
+                .header("cookie", &cookie)
+                .header("origin", "http://localhost:4200")
+                .header("sec-fetch-site", "same-origin")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    serde_json::json!({ "value": value, "row_version": version }).to_string(),
+                ))
+                .unwrap()
+        };
+        let resp = app
+            .clone()
+            .oneshot(put(serde_json::json!("not a url"), None))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let resp = app
+            .clone()
+            .oneshot(put(serde_json::json!("https://erp.test.local"), None))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
+        let resp = app
+            .clone()
+            .oneshot(put(serde_json::json!("https://erp2.test.local"), Some(7)))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::CONFLICT, "a stale row version");
+
+        let resp = app
+            .clone()
+            .oneshot(get_req("/api/v1/admin/env-variables", &cookie))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let listed = body_json(resp).await;
+        let mine = listed["items"]
+            .as_array()
+            .expect("items")
+            .iter()
+            .find(|v| v["name"] == name.as_str())
+            .cloned()
+            .expect("the published variable is listed");
+        assert_eq!(mine["type"], "url");
+        assert_eq!(mine["value"], "https://erp.test.local");
+        assert_eq!(mine["is_set"], true);
+
+        let resp = app
+            .clone()
+            .oneshot(get_req(
+                &format!("/api/v1/admin/env-variables/{name}/history"),
+                &cookie,
+            ))
+            .await
+            .unwrap();
+        let history = body_json(resp).await;
+        assert_eq!(history["total"], 1, "{history}");
+
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("DELETE")
+                    .uri(format!("/api/v1/admin/env-variables/{name}"))
+                    .header("cookie", &cookie)
+                    .header("origin", "http://localhost:4200")
+                    .header("sec-fetch-site", "same-origin")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::NO_CONTENT);
     });
 }

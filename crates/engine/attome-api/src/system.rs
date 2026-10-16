@@ -160,6 +160,8 @@ impl EngineSystem {
             .merge(crate::slo_admin::routes())
             // AC7-T11: what this deployment runs.
             .merge(crate::sbom_admin::routes())
+            // A30-T1: environment variable values.
+            .merge(crate::env_variable_admin::routes())
             .merge(crate::business_rule_admin::routes())
             .merge(crate::metadata_label_admin::routes())
             .merge(

@@ -25,6 +25,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Environment variables: a new `environment_variable` metadata kind (type text, number, boolean, url
+  or secret; required; default; descriptions) travels with configuration, while each deployment sets
+  its own values at `/api/v1/admin/env-variables` (set, clear, history; a secret is encrypted and never
+  read back). Agents edit definitions through `model.environment_variable.*` (migration `0067`).
 - `GET /api/v1/admin/sbom`: the release's CycloneDX bill of materials (the release gate's, embedded at
   build time with `ATTOME_EMBED_SBOM`; other builds derive one from `Cargo.lock`) and the configuration
   packs installed.

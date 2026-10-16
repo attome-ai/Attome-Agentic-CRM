@@ -2,6 +2,7 @@
 //! adapters, rules, flows, ...) live in the engine that owns them.
 
 pub mod agent;
+pub mod environment_variable;
 pub mod eval_suite;
 pub mod form;
 pub mod navigation;
@@ -10,6 +11,7 @@ pub mod prompt_override;
 pub mod reply_template;
 
 pub use agent::{AGENT, AgentKind};
+pub use environment_variable::{ENVIRONMENT_VARIABLE, EnvironmentVariableKind};
 pub use eval_suite::{EVAL_SUITE, EvalSuiteKind};
 pub use form::{ATTRIBUTE, ENTITY, FORM, FormKind};
 pub use navigation::{NAVIGATION, NavigationKind};

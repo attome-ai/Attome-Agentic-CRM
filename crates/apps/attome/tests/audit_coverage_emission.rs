@@ -66,6 +66,10 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "PUT /api/v1/admin/env-variables/{name}",
+        "needs a published environment_variable definition; attome-api's model_admin.rs environment_variable_values_are_set_per_deployment defines, publishes and sets one, and the clear driver below audits the same Configuration path",
+    ),
+    (
         "POST /api/v1/admin/mcp-servers/{id}/import",
         "calls the registered MCP server's tools/list, and this harness runs no MCP \
          server; the import's own event is written in the same transaction as the tool \
@@ -1625,6 +1629,23 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
         // HardDelete, so the emission test must drive it.
         "DELETE /api/v1/admin/profiler/stats" => {
             request("DELETE", "/api/v1/admin/profiler/stats", t, None)
+        }
+
+        // ── environment variables (A30-T1) ──────────────────────────────────
+        "DELETE /api/v1/admin/env-variables/{name}" => {
+            sqlx::query(
+                "INSERT INTO environment_variable_value (name, value, updated_by) VALUES ('emission_env', '\"x\"'::jsonb, $1) ON CONFLICT (name) DO NOTHING",
+            )
+            .bind(Uuid::nil())
+            .execute(&fx.base.db)
+            .await
+            .expect("seed an environment variable value");
+            request(
+                "DELETE",
+                "/api/v1/admin/env-variables/emission_env",
+                t,
+                None,
+            )
         }
 
         // ── SLO targets (AA13-T8) ───────────────────────────────────────────
