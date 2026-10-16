@@ -51,6 +51,7 @@ pub mod entity_mutation;
 pub mod mutation_ring;
 pub mod query_admin;
 pub mod query_exec;
+pub mod query_spec;
 pub mod rule_engine;
 pub mod rw_pin;
 
