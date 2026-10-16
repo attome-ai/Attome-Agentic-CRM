@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:88d3be00565237d243abd6be03791e39c861c384e0e33ef5a83fbe69bbde8cfa",
+  "checksum": "sha256:cc711b0b4c730538797d333b95138353fa6a527f30944f392951e3a72e52a3d6",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-collections.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -19,8 +19,7 @@
           "is_customized": false,
           "logicalname": "ai_collection_rule",
           "primary_name_attribute": "name"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -39,8 +38,7 @@
           "is_customized": false,
           "logicalname": "ai_payment_promise",
           "primary_name_attribute": "invoice_number"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",

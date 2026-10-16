@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:a7947d67ca9767d3ac0ad47ed29b6f93cf6cad605fd344d51543094c5dcbd7ec",
+  "checksum": "sha256:e0a11eec7127daae97634e7d4c3dbb674f6d237dea2b5220a6851ff5292ea4e7",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-scan.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -19,8 +19,7 @@
           "is_customized": false,
           "logicalname": "scan_action",
           "primary_name_attribute": "name"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",

@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:498400f268589e81bf6d285210f87c26a83a5b03bccb7d687d42ca4efc605d5e",
+  "checksum": "sha256:c78f7774b897a261d41931c80ee73a5542e8994fdce777b03a0690b9ac931798",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-sales-scoring.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -19,8 +19,7 @@
           "is_customized": false,
           "logicalname": "points_model",
           "primary_name_attribute": "name"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -39,8 +38,7 @@
           "is_customized": false,
           "logicalname": "points_rule",
           "primary_name_attribute": "label"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -59,8 +57,7 @@
           "is_customized": false,
           "logicalname": "points_score",
           "primary_name_attribute": "record_id"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",

@@ -66,6 +66,10 @@ const PASSWORD: &str = "audit-emission-password-1";
 /// cannot silently outlive its route.
 const UNDRIVABLE: &[(&str, &str)] = &[
     (
+        "POST /api/v1/contract/counterparty-match/run",
+        "needs the contract pack's contract entity, which this harness does not install (the route answers 404);          attome-testapp's contract_counterparty test drives the run and its Configuration event",
+    ),
+    (
         "POST /api/v1/commission/plans/{id}/publish",
         "needs the commission pack's plan, version and component entities, which this harness does not install",
     ),
@@ -1695,11 +1699,6 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             .await
             .expect("seed S2 override");
             request("DELETE", "/api/v1/admin/slo/targets/S2", t, None)
-        }
-
-        // ── contract counterparty matching (W1-T3) ──────────────────────────
-        "POST /api/v1/contract/counterparty-match/run" => {
-            request("POST", "/api/v1/contract/counterparty-match/run", t, None)
         }
 
         // ── metrics (D-786) ─────────────────────────────────────────────────

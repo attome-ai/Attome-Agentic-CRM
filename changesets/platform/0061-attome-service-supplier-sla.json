@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:f544aefef1e4d33e1710f81cc2482344cd5d199b8b41e76f96d1a121a8be6a7c",
+  "checksum": "sha256:200d85a11fa483ee6685e958c01742158e3c8036af88c71ded353e8f35978d25",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-service-supplier-sla.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -19,8 +19,7 @@
           "is_customized": false,
           "logicalname": "supplier_sla_clock",
           "primary_name_attribute": "vendor_name"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",

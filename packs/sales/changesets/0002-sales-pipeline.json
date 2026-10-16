@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:3b5767c4e25b92489fcb6701faea47be4824dbd137f28340bac994e68bf3b0d7",
+  "checksum": "sha256:6666b923f01d9ab0f8883a963296b305d0f1b6bca9c7fba98aaad34e2b87b274",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Sales pipelines (D5-T1): stages as records with order, default probability and a stalled limit per pipeline; probability, weighted amount, pipeline, won and lost reasons, main competitor and a close-date push counter on the opportunity; contact roles on deals.",
   "format": "attome-changeset/v1",
@@ -12,10 +12,6 @@
     {
       "args": {
         "definition": {
-          "business_key": [
-            "pipeline",
-            "stage"
-          ],
           "category": "Other",
           "display_name": "Opportunity Stage",
           "is_append_only": false,
@@ -228,6 +224,32 @@
     },
     {
       "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "pipeline",
+            "stage"
+          ],
+          "category": "Other",
+          "display_name": "Opportunity Stage",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "opportunity_stage",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "opportunity_stage"
+      }
+    },
+    {
+      "args": {
         "definition": {
           "data_classification": "general",
           "display_name": "Pipeline",
@@ -253,7 +275,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 9,
+      "seq": 10,
       "target": {
         "entity": "opportunity",
         "field": "pipeline"
@@ -282,7 +304,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 10,
+      "seq": 11,
       "target": {
         "entity": "opportunity",
         "field": "probability"
@@ -311,7 +333,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "entity": "opportunity",
         "field": "weighted_amount"
@@ -347,7 +369,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "entity": "opportunity",
         "field": "won_reason"
@@ -384,7 +406,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 13,
+      "seq": 14,
       "target": {
         "entity": "opportunity",
         "field": "lost_reason"
@@ -410,7 +432,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 14,
+      "seq": 15,
       "target": {
         "entity": "opportunity",
         "field": "competitor_ref"
@@ -441,7 +463,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 15,
+      "seq": 16,
       "target": {
         "entity": "opportunity",
         "field": "close_date_push_count"
@@ -461,7 +483,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 16,
+      "seq": 17,
       "target": {
         "entity": "opportunity_contact_role"
       }
@@ -486,7 +508,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 17,
+      "seq": 18,
       "target": {
         "entity": "opportunity_contact_role",
         "field": "opportunity_ref"
@@ -512,7 +534,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 18,
+      "seq": 19,
       "target": {
         "entity": "opportunity_contact_role",
         "field": "contact_ref"
@@ -549,7 +571,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 19,
+      "seq": 20,
       "target": {
         "entity": "opportunity_contact_role",
         "field": "role"
@@ -575,7 +597,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 20,
+      "seq": 21,
       "target": {
         "entity": "opportunity_contact_role",
         "field": "is_primary"
@@ -599,7 +621,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 21,
+      "seq": 22,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -626,7 +648,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 22,
+      "seq": 23,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -648,33 +670,6 @@
           "probability": 50,
           "sort_order": 3,
           "stage": "proposal",
-          "stalled_after_days": 21
-        }
-      },
-      "op": "upsert_record",
-      "phase": "expand",
-      "seq": 23,
-      "target": {
-        "entity": "opportunity_stage",
-        "key": {
-          "pipeline": "new_business",
-          "stage": "proposal"
-        }
-      }
-    },
-    {
-      "args": {
-        "key_fields": [
-          "pipeline",
-          "stage"
-        ],
-        "values": {
-          "is_closed": false,
-          "name": "Negotiation",
-          "pipeline": "new_business",
-          "probability": 75,
-          "sort_order": 4,
-          "stage": "negotiation",
           "stalled_after_days": 21
         }
       },
@@ -685,6 +680,33 @@
         "entity": "opportunity_stage",
         "key": {
           "pipeline": "new_business",
+          "stage": "proposal"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Negotiation",
+          "pipeline": "new_business",
+          "probability": 75,
+          "sort_order": 4,
+          "stage": "negotiation",
+          "stalled_after_days": 21
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "new_business",
           "stage": "negotiation"
         }
       }
@@ -706,7 +728,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 25,
+      "seq": 26,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -732,7 +754,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 26,
+      "seq": 27,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -754,33 +776,6 @@
           "probability": 10,
           "sort_order": 1,
           "stage": "prospecting",
-          "stalled_after_days": 14
-        }
-      },
-      "op": "upsert_record",
-      "phase": "expand",
-      "seq": 27,
-      "target": {
-        "entity": "opportunity_stage",
-        "key": {
-          "pipeline": "renewal",
-          "stage": "prospecting"
-        }
-      }
-    },
-    {
-      "args": {
-        "key_fields": [
-          "pipeline",
-          "stage"
-        ],
-        "values": {
-          "is_closed": false,
-          "name": "Qualification",
-          "pipeline": "renewal",
-          "probability": 20,
-          "sort_order": 2,
-          "stage": "qualification",
           "stalled_after_days": 14
         }
       },
@@ -791,6 +786,33 @@
         "entity": "opportunity_stage",
         "key": {
           "pipeline": "renewal",
+          "stage": "prospecting"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Qualification",
+          "pipeline": "renewal",
+          "probability": 20,
+          "sort_order": 2,
+          "stage": "qualification",
+          "stalled_after_days": 14
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "renewal",
           "stage": "qualification"
         }
       }
@@ -813,7 +835,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 29,
+      "seq": 30,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -840,7 +862,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 30,
+      "seq": 31,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -866,7 +888,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 31,
+      "seq": 32,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -892,7 +914,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 32,
+      "seq": 33,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -919,7 +941,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 33,
+      "seq": 34,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -946,7 +968,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 34,
+      "seq": 35,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -973,7 +995,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 35,
+      "seq": 36,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -1000,7 +1022,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 36,
+      "seq": 37,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -1026,7 +1048,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 37,
+      "seq": 38,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -1052,7 +1074,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 38,
+      "seq": 39,
       "target": {
         "entity": "opportunity_stage",
         "key": {
@@ -1067,7 +1089,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 39,
+      "seq": 40,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_stage",
@@ -1080,7 +1102,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 40,
+      "seq": 41,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_contact_role",
@@ -1093,7 +1115,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 41,
+      "seq": 42,
       "target": {
         "locale": "ar",
         "object_key": "opportunity.pipeline",
@@ -1106,7 +1128,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 42,
+      "seq": 43,
       "target": {
         "locale": "ar",
         "object_key": "opportunity.probability",
@@ -1119,7 +1141,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 43,
+      "seq": 44,
       "target": {
         "locale": "ar",
         "object_key": "opportunity.weighted_amount",
@@ -1132,7 +1154,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 44,
+      "seq": 45,
       "target": {
         "locale": "ar",
         "object_key": "opportunity.won_reason",
@@ -1145,7 +1167,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 45,
+      "seq": 46,
       "target": {
         "locale": "ar",
         "object_key": "opportunity.lost_reason",
@@ -1158,7 +1180,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 46,
+      "seq": 47,
       "target": {
         "locale": "ar",
         "object_key": "opportunity.competitor_ref",
@@ -1171,7 +1193,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 47,
+      "seq": 48,
       "target": {
         "locale": "ar",
         "object_key": "opportunity.close_date_push_count",
@@ -1184,7 +1206,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 48,
+      "seq": 49,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_stage.name",
@@ -1197,7 +1219,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 49,
+      "seq": 50,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_stage.stage",
@@ -1210,7 +1232,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 50,
+      "seq": 51,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_stage.pipeline",
@@ -1223,7 +1245,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 51,
+      "seq": 52,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_stage.sort_order",
@@ -1236,7 +1258,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 52,
+      "seq": 53,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_stage.probability",
@@ -1249,7 +1271,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 53,
+      "seq": 54,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_stage.stalled_after_days",
@@ -1262,7 +1284,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 54,
+      "seq": 55,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_stage.is_closed",
@@ -1275,7 +1297,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 55,
+      "seq": 56,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_contact_role.opportunity_ref",
@@ -1288,7 +1310,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 56,
+      "seq": 57,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_contact_role.contact_ref",
@@ -1301,7 +1323,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 57,
+      "seq": 58,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_contact_role.role",
@@ -1314,7 +1336,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 58,
+      "seq": 59,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_contact_role.is_primary",

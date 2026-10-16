@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:0dc7a7a3310a400951c383796787f961687bc0375bfbfd25877b13de0995e394",
+  "checksum": "sha256:aa4b1819c04303bda208551a72d489feb29e4c46faec48e09e807646190e9800",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Org chart (D23-T2): reports-to, dotted line, department and former-employee fields on contact. Enrichment (D24-T2): legal names, CR and VAT numbers, ISIC industry, size and revenue bands, founding year, head office, logo, social links and technologies on account; department, seniority, email verification, mobile, city, country and LinkedIn on contact and lead. The ISIC code list entity with its 21 sections (D24-T3 seeds the full list). Lead qualification fields (D3-T1): budget, authority, need, timeline and disqualify reason.",
   "format": "attome-changeset/v1",
@@ -12,9 +12,6 @@
     {
       "args": {
         "definition": {
-          "business_key": [
-            "code"
-          ],
           "category": "Other",
           "display_name": "Industry Code",
           "is_append_only": false,
@@ -171,6 +168,31 @@
     },
     {
       "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "code"
+          ],
+          "category": "Other",
+          "display_name": "Industry Code",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "isic_code",
+          "primary_name_attribute": "label_en"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "isic_code"
+      }
+    },
+    {
+      "args": {
         "definition": {
           "data_classification": "general",
           "display_name": "Reports To",
@@ -189,7 +211,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 7,
+      "seq": 8,
       "target": {
         "entity": "contact",
         "field": "reports_to"
@@ -215,7 +237,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 8,
+      "seq": 9,
       "target": {
         "entity": "contact",
         "field": "dotted_line_ref"
@@ -241,7 +263,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 9,
+      "seq": 10,
       "target": {
         "entity": "contact",
         "field": "department"
@@ -267,7 +289,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 10,
+      "seq": 11,
       "target": {
         "entity": "contact",
         "field": "department_ar"
@@ -293,7 +315,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "entity": "contact",
         "field": "is_former_employee"
@@ -319,7 +341,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "entity": "contact",
         "field": "left_on"
@@ -356,7 +378,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 13,
+      "seq": 14,
       "target": {
         "entity": "contact",
         "field": "seniority"
@@ -390,7 +412,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 14,
+      "seq": 15,
       "target": {
         "entity": "contact",
         "field": "email_verification_status"
@@ -416,7 +438,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 15,
+      "seq": 16,
       "target": {
         "entity": "contact",
         "field": "mobile_phone"
@@ -442,7 +464,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 16,
+      "seq": 17,
       "target": {
         "entity": "contact",
         "field": "city"
@@ -468,7 +490,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 17,
+      "seq": 18,
       "target": {
         "entity": "contact",
         "field": "country_code"
@@ -494,7 +516,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 18,
+      "seq": 19,
       "target": {
         "entity": "contact",
         "field": "linkedin_url"
@@ -520,7 +542,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 19,
+      "seq": 20,
       "target": {
         "entity": "lead",
         "field": "department"
@@ -557,7 +579,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 20,
+      "seq": 21,
       "target": {
         "entity": "lead",
         "field": "seniority"
@@ -591,7 +613,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 21,
+      "seq": 22,
       "target": {
         "entity": "lead",
         "field": "email_verification_status"
@@ -617,7 +639,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 22,
+      "seq": 23,
       "target": {
         "entity": "lead",
         "field": "mobile_phone"
@@ -643,7 +665,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 23,
+      "seq": 24,
       "target": {
         "entity": "lead",
         "field": "city"
@@ -669,7 +691,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 24,
+      "seq": 25,
       "target": {
         "entity": "lead",
         "field": "country_code"
@@ -695,7 +717,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 25,
+      "seq": 26,
       "target": {
         "entity": "lead",
         "field": "linkedin_url"
@@ -721,7 +743,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 26,
+      "seq": 27,
       "target": {
         "entity": "lead",
         "field": "budget"
@@ -755,7 +777,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 27,
+      "seq": 28,
       "target": {
         "entity": "lead",
         "field": "authority"
@@ -781,7 +803,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 28,
+      "seq": 29,
       "target": {
         "entity": "lead",
         "field": "need"
@@ -816,7 +838,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 29,
+      "seq": 30,
       "target": {
         "entity": "lead",
         "field": "timeline"
@@ -854,7 +876,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 30,
+      "seq": 31,
       "target": {
         "entity": "lead",
         "field": "disqualify_reason"
@@ -880,7 +902,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 31,
+      "seq": 32,
       "target": {
         "entity": "account",
         "field": "legal_name_en"
@@ -906,7 +928,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 32,
+      "seq": 33,
       "target": {
         "entity": "account",
         "field": "legal_name_ar"
@@ -932,7 +954,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 33,
+      "seq": 34,
       "target": {
         "entity": "account",
         "field": "cr_number"
@@ -958,7 +980,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 34,
+      "seq": 35,
       "target": {
         "entity": "account",
         "field": "vat_number"
@@ -984,7 +1006,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 35,
+      "seq": 36,
       "target": {
         "entity": "account",
         "field": "isic_code_ref"
@@ -1021,7 +1043,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 36,
+      "seq": 37,
       "target": {
         "entity": "account",
         "field": "employee_band"
@@ -1056,7 +1078,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 37,
+      "seq": 38,
       "target": {
         "entity": "account",
         "field": "revenue_band"
@@ -1082,7 +1104,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 38,
+      "seq": 39,
       "target": {
         "entity": "account",
         "field": "founded_year"
@@ -1108,7 +1130,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 39,
+      "seq": 40,
       "target": {
         "entity": "account",
         "field": "hq_address"
@@ -1134,7 +1156,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 40,
+      "seq": 41,
       "target": {
         "entity": "account",
         "field": "logo_url"
@@ -1160,7 +1182,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 41,
+      "seq": 42,
       "target": {
         "entity": "account",
         "field": "social_links"
@@ -1186,7 +1208,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 42,
+      "seq": 43,
       "target": {
         "entity": "account",
         "field": "technologies"
@@ -1212,7 +1234,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 43,
+      "seq": 44,
       "target": {
         "entity": "account",
         "field": "proposed_parent_ref"
@@ -1224,7 +1246,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 44,
+      "seq": 45,
       "target": {
         "locale": "ar",
         "object_key": "isic_code",
@@ -1237,7 +1259,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 45,
+      "seq": 46,
       "target": {
         "locale": "ar",
         "object_key": "isic_code.code",
@@ -1250,7 +1272,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 46,
+      "seq": 47,
       "target": {
         "locale": "ar",
         "object_key": "isic_code.level",
@@ -1263,7 +1285,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 47,
+      "seq": 48,
       "target": {
         "locale": "ar",
         "object_key": "isic_code.label_en",
@@ -1276,7 +1298,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 48,
+      "seq": 49,
       "target": {
         "locale": "ar",
         "object_key": "isic_code.label_ar",
@@ -1289,7 +1311,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 49,
+      "seq": 50,
       "target": {
         "locale": "ar",
         "object_key": "isic_code.parent_ref",
@@ -1302,7 +1324,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 50,
+      "seq": 51,
       "target": {
         "locale": "ar",
         "object_key": "contact.reports_to",
@@ -1315,7 +1337,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 51,
+      "seq": 52,
       "target": {
         "locale": "ar",
         "object_key": "contact.dotted_line_ref",
@@ -1328,7 +1350,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 52,
+      "seq": 53,
       "target": {
         "locale": "ar",
         "object_key": "contact.department",
@@ -1341,7 +1363,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 53,
+      "seq": 54,
       "target": {
         "locale": "ar",
         "object_key": "contact.department_ar",
@@ -1354,7 +1376,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 54,
+      "seq": 55,
       "target": {
         "locale": "ar",
         "object_key": "contact.is_former_employee",
@@ -1367,7 +1389,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 55,
+      "seq": 56,
       "target": {
         "locale": "ar",
         "object_key": "contact.left_on",
@@ -1380,7 +1402,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 56,
+      "seq": 57,
       "target": {
         "locale": "ar",
         "object_key": "contact.seniority",
@@ -1393,7 +1415,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 57,
+      "seq": 58,
       "target": {
         "locale": "ar",
         "object_key": "contact.email_verification_status",
@@ -1406,7 +1428,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 58,
+      "seq": 59,
       "target": {
         "locale": "ar",
         "object_key": "contact.mobile_phone",
@@ -1419,7 +1441,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 59,
+      "seq": 60,
       "target": {
         "locale": "ar",
         "object_key": "contact.city",
@@ -1432,7 +1454,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 60,
+      "seq": 61,
       "target": {
         "locale": "ar",
         "object_key": "contact.country_code",
@@ -1445,7 +1467,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 61,
+      "seq": 62,
       "target": {
         "locale": "ar",
         "object_key": "contact.linkedin_url",
@@ -1458,7 +1480,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 62,
+      "seq": 63,
       "target": {
         "locale": "ar",
         "object_key": "lead.department",
@@ -1471,7 +1493,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 63,
+      "seq": 64,
       "target": {
         "locale": "ar",
         "object_key": "lead.seniority",
@@ -1484,7 +1506,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 64,
+      "seq": 65,
       "target": {
         "locale": "ar",
         "object_key": "lead.email_verification_status",
@@ -1497,7 +1519,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 65,
+      "seq": 66,
       "target": {
         "locale": "ar",
         "object_key": "lead.mobile_phone",
@@ -1510,7 +1532,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 66,
+      "seq": 67,
       "target": {
         "locale": "ar",
         "object_key": "lead.city",
@@ -1523,7 +1545,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 67,
+      "seq": 68,
       "target": {
         "locale": "ar",
         "object_key": "lead.country_code",
@@ -1536,7 +1558,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 68,
+      "seq": 69,
       "target": {
         "locale": "ar",
         "object_key": "lead.linkedin_url",
@@ -1549,7 +1571,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 69,
+      "seq": 70,
       "target": {
         "locale": "ar",
         "object_key": "lead.budget",
@@ -1562,7 +1584,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 70,
+      "seq": 71,
       "target": {
         "locale": "ar",
         "object_key": "lead.authority",
@@ -1575,7 +1597,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 71,
+      "seq": 72,
       "target": {
         "locale": "ar",
         "object_key": "lead.need",
@@ -1588,7 +1610,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 72,
+      "seq": 73,
       "target": {
         "locale": "ar",
         "object_key": "lead.timeline",
@@ -1601,7 +1623,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 73,
+      "seq": 74,
       "target": {
         "locale": "ar",
         "object_key": "lead.disqualify_reason",
@@ -1614,7 +1636,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 74,
+      "seq": 75,
       "target": {
         "locale": "ar",
         "object_key": "account.legal_name_en",
@@ -1627,7 +1649,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 75,
+      "seq": 76,
       "target": {
         "locale": "ar",
         "object_key": "account.legal_name_ar",
@@ -1640,7 +1662,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 76,
+      "seq": 77,
       "target": {
         "locale": "ar",
         "object_key": "account.cr_number",
@@ -1653,7 +1675,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 77,
+      "seq": 78,
       "target": {
         "locale": "ar",
         "object_key": "account.vat_number",
@@ -1666,7 +1688,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 78,
+      "seq": 79,
       "target": {
         "locale": "ar",
         "object_key": "account.isic_code_ref",
@@ -1679,7 +1701,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 79,
+      "seq": 80,
       "target": {
         "locale": "ar",
         "object_key": "account.employee_band",
@@ -1692,7 +1714,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 80,
+      "seq": 81,
       "target": {
         "locale": "ar",
         "object_key": "account.revenue_band",
@@ -1705,7 +1727,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 81,
+      "seq": 82,
       "target": {
         "locale": "ar",
         "object_key": "account.founded_year",
@@ -1718,7 +1740,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 82,
+      "seq": 83,
       "target": {
         "locale": "ar",
         "object_key": "account.hq_address",
@@ -1731,7 +1753,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 83,
+      "seq": 84,
       "target": {
         "locale": "ar",
         "object_key": "account.logo_url",
@@ -1744,7 +1766,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 84,
+      "seq": 85,
       "target": {
         "locale": "ar",
         "object_key": "account.social_links",
@@ -1757,7 +1779,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 85,
+      "seq": 86,
       "target": {
         "locale": "ar",
         "object_key": "account.technologies",
@@ -1770,7 +1792,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 86,
+      "seq": 87,
       "target": {
         "locale": "ar",
         "object_key": "account.proposed_parent_ref",
@@ -1791,7 +1813,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 87,
+      "seq": 88,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -1813,7 +1835,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 88,
+      "seq": 89,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -1835,7 +1857,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 89,
+      "seq": 90,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -1857,7 +1879,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 90,
+      "seq": 91,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -1879,7 +1901,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 91,
+      "seq": 92,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -1901,7 +1923,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 92,
+      "seq": 93,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -1923,7 +1945,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 93,
+      "seq": 94,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -1945,7 +1967,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 94,
+      "seq": 95,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -1967,7 +1989,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 95,
+      "seq": 96,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -1989,7 +2011,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 96,
+      "seq": 97,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -2011,7 +2033,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 97,
+      "seq": 98,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -2033,7 +2055,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 98,
+      "seq": 99,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -2055,7 +2077,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 99,
+      "seq": 100,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -2077,7 +2099,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 100,
+      "seq": 101,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -2099,7 +2121,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 101,
+      "seq": 102,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -2121,7 +2143,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 102,
+      "seq": 103,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -2143,7 +2165,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 103,
+      "seq": 104,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -2165,7 +2187,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 104,
+      "seq": 105,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -2187,7 +2209,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 105,
+      "seq": 106,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -2209,7 +2231,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 106,
+      "seq": 107,
       "target": {
         "entity": "isic_code",
         "key": {
@@ -2231,7 +2253,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 107,
+      "seq": 108,
       "target": {
         "entity": "isic_code",
         "key": {

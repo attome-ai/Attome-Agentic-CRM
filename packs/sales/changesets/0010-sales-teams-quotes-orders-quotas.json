@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:f6b9b32c9a2f2cf4675f6b0f856383c31790bb285b779891e2c4442819758ed8",
+  "checksum": "sha256:df7fba86888e6e67ff5ca823c765fda07ff0bf4811dd0d584ac511f35d599c70",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Deal teams and splits (D7-T1): team roles, opportunity team members, split types, splits and default team members, with seeded roles and split types. Quotes (D9-T1): number, version and primary flag, validity, terms, totals and a VAT estimate on the quote, discount and tax on its lines. Orders (D10-T1): order lines that mirror quote lines, totals, payment terms and delivery address. Quotas (D12-T1): a quota per person, position and period with its measure.",
   "format": "attome-changeset/v1",
@@ -12,9 +12,6 @@
     {
       "args": {
         "definition": {
-          "business_key": [
-            "name"
-          ],
           "category": "Other",
           "display_name": "Team Role",
           "is_append_only": false,
@@ -85,6 +82,31 @@
     },
     {
       "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "name"
+          ],
+          "category": "Other",
+          "display_name": "Team Role",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "sales_team_role",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "sales_team_role"
+      }
+    },
+    {
+      "args": {
         "definition": {
           "category": "Other",
           "display_name": "Deal Team Member",
@@ -97,7 +119,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 4,
+      "seq": 5,
       "target": {
         "entity": "opportunity_team_member"
       }
@@ -122,7 +144,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 5,
+      "seq": 6,
       "target": {
         "entity": "opportunity_team_member",
         "field": "name"
@@ -148,7 +170,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 6,
+      "seq": 7,
       "target": {
         "entity": "opportunity_team_member",
         "field": "opportunity_ref"
@@ -174,7 +196,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 7,
+      "seq": 8,
       "target": {
         "entity": "opportunity_team_member",
         "field": "user_ref"
@@ -200,7 +222,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 8,
+      "seq": 9,
       "target": {
         "entity": "opportunity_team_member",
         "field": "partner_contact_ref"
@@ -226,7 +248,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 9,
+      "seq": 10,
       "target": {
         "entity": "opportunity_team_member",
         "field": "team_role_ref"
@@ -258,7 +280,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 10,
+      "seq": 11,
       "target": {
         "entity": "opportunity_team_member",
         "field": "access_level"
@@ -284,7 +306,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 11,
+      "seq": 12,
       "target": {
         "entity": "opportunity_team_member",
         "field": "share_id"
@@ -293,9 +315,6 @@
     {
       "args": {
         "definition": {
-          "business_key": [
-            "name"
-          ],
           "category": "Other",
           "display_name": "Split Type",
           "is_append_only": false,
@@ -307,7 +326,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 12,
+      "seq": 13,
       "target": {
         "entity": "sales_split_type"
       }
@@ -332,7 +351,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 13,
+      "seq": 14,
       "target": {
         "entity": "sales_split_type",
         "field": "name"
@@ -358,7 +377,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 14,
+      "seq": 15,
       "target": {
         "entity": "sales_split_type",
         "field": "name_ar"
@@ -384,7 +403,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 15,
+      "seq": 16,
       "target": {
         "entity": "sales_split_type",
         "field": "must_total_100"
@@ -417,7 +436,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 16,
+      "seq": 17,
       "target": {
         "entity": "sales_split_type",
         "field": "amount_basis"
@@ -443,7 +462,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 17,
+      "seq": 18,
       "target": {
         "entity": "sales_split_type",
         "field": "counts_as_revenue"
@@ -469,10 +488,35 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 18,
+      "seq": 19,
       "target": {
         "entity": "sales_split_type",
         "field": "is_partner_type"
+      }
+    },
+    {
+      "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "name"
+          ],
+          "category": "Other",
+          "display_name": "Split Type",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "sales_split_type",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "sales_split_type"
       }
     },
     {
@@ -489,7 +533,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 19,
+      "seq": 21,
       "target": {
         "entity": "opportunity_split"
       }
@@ -514,7 +558,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 20,
+      "seq": 22,
       "target": {
         "entity": "opportunity_split",
         "field": "opportunity_ref"
@@ -540,7 +584,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 21,
+      "seq": 23,
       "target": {
         "entity": "opportunity_split",
         "field": "member_ref"
@@ -566,7 +610,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 22,
+      "seq": 24,
       "target": {
         "entity": "opportunity_split",
         "field": "split_type_ref"
@@ -592,7 +636,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 23,
+      "seq": 25,
       "target": {
         "entity": "opportunity_split",
         "field": "line_ref"
@@ -618,7 +662,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 24,
+      "seq": 26,
       "target": {
         "entity": "opportunity_split",
         "field": "percent"
@@ -644,7 +688,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 25,
+      "seq": 27,
       "target": {
         "entity": "opportunity_split",
         "field": "amount"
@@ -670,7 +714,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 26,
+      "seq": 28,
       "target": {
         "entity": "opportunity_split",
         "field": "change_reason"
@@ -690,7 +734,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 27,
+      "seq": 29,
       "target": {
         "entity": "user_default_team_member"
       }
@@ -715,7 +759,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 28,
+      "seq": 30,
       "target": {
         "entity": "user_default_team_member",
         "field": "owner_user_ref"
@@ -741,7 +785,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 29,
+      "seq": 31,
       "target": {
         "entity": "user_default_team_member",
         "field": "member_user_ref"
@@ -767,7 +811,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 30,
+      "seq": 32,
       "target": {
         "entity": "user_default_team_member",
         "field": "team_role_ref"
@@ -799,7 +843,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 31,
+      "seq": 33,
       "target": {
         "entity": "user_default_team_member",
         "field": "access_level"
@@ -819,7 +863,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 32,
+      "seq": 34,
       "target": {
         "entity": "order_line"
       }
@@ -844,7 +888,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 33,
+      "seq": 35,
       "target": {
         "entity": "order_line",
         "field": "order_ref"
@@ -870,7 +914,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 34,
+      "seq": 36,
       "target": {
         "entity": "order_line",
         "field": "product_ref"
@@ -896,7 +940,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 35,
+      "seq": 37,
       "target": {
         "entity": "order_line",
         "field": "quantity"
@@ -922,7 +966,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 36,
+      "seq": 38,
       "target": {
         "entity": "order_line",
         "field": "unit_price"
@@ -948,7 +992,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 37,
+      "seq": 39,
       "target": {
         "entity": "order_line",
         "field": "discount_amount"
@@ -974,7 +1018,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 38,
+      "seq": 40,
       "target": {
         "entity": "order_line",
         "field": "tax_amount"
@@ -1000,7 +1044,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 39,
+      "seq": 41,
       "target": {
         "entity": "order_line",
         "field": "line_total"
@@ -1026,7 +1070,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 40,
+      "seq": 42,
       "target": {
         "entity": "order_line",
         "field": "quote_line_ref"
@@ -1046,7 +1090,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 41,
+      "seq": 43,
       "target": {
         "entity": "sales_quota"
       }
@@ -1071,7 +1115,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 42,
+      "seq": 44,
       "target": {
         "entity": "sales_quota",
         "field": "user_ref"
@@ -1097,7 +1141,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 43,
+      "seq": 45,
       "target": {
         "entity": "sales_quota",
         "field": "position_key"
@@ -1123,7 +1167,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 44,
+      "seq": 46,
       "target": {
         "entity": "sales_quota",
         "field": "period_label"
@@ -1149,7 +1193,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 45,
+      "seq": 47,
       "target": {
         "entity": "sales_quota",
         "field": "period_start"
@@ -1175,7 +1219,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 46,
+      "seq": 48,
       "target": {
         "entity": "sales_quota",
         "field": "period_end"
@@ -1211,7 +1255,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 47,
+      "seq": 49,
       "target": {
         "entity": "sales_quota",
         "field": "measure"
@@ -1237,7 +1281,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 48,
+      "seq": 50,
       "target": {
         "entity": "sales_quota",
         "field": "target"
@@ -1263,7 +1307,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 49,
+      "seq": 51,
       "target": {
         "entity": "sales_quota",
         "field": "currency"
@@ -1289,7 +1333,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 50,
+      "seq": 52,
       "target": {
         "entity": "quote",
         "field": "quote_number"
@@ -1315,7 +1359,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 51,
+      "seq": 53,
       "target": {
         "entity": "quote",
         "field": "version"
@@ -1341,7 +1385,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 52,
+      "seq": 54,
       "target": {
         "entity": "quote",
         "field": "is_primary"
@@ -1367,7 +1411,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 53,
+      "seq": 55,
       "target": {
         "entity": "quote",
         "field": "valid_from"
@@ -1393,7 +1437,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 54,
+      "seq": 56,
       "target": {
         "entity": "quote",
         "field": "payment_terms"
@@ -1419,7 +1463,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 55,
+      "seq": 57,
       "target": {
         "entity": "quote",
         "field": "terms"
@@ -1445,7 +1489,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 56,
+      "seq": 58,
       "target": {
         "entity": "quote",
         "field": "subtotal"
@@ -1471,7 +1515,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 57,
+      "seq": 59,
       "target": {
         "entity": "quote",
         "field": "discount_total"
@@ -1497,7 +1541,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 58,
+      "seq": 60,
       "target": {
         "entity": "quote",
         "field": "vat_estimate"
@@ -1523,7 +1567,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 59,
+      "seq": 61,
       "target": {
         "entity": "quote",
         "field": "grand_total"
@@ -1549,7 +1593,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 60,
+      "seq": 62,
       "target": {
         "entity": "quote_line",
         "field": "discount_amount"
@@ -1575,7 +1619,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 61,
+      "seq": 63,
       "target": {
         "entity": "quote_line",
         "field": "tax_amount"
@@ -1601,7 +1645,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 62,
+      "seq": 64,
       "target": {
         "entity": "order",
         "field": "order_number"
@@ -1627,7 +1671,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 63,
+      "seq": 65,
       "target": {
         "entity": "order",
         "field": "payment_terms"
@@ -1653,7 +1697,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 64,
+      "seq": 66,
       "target": {
         "entity": "order",
         "field": "delivery_address"
@@ -1679,7 +1723,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 65,
+      "seq": 67,
       "target": {
         "entity": "order",
         "field": "subtotal"
@@ -1705,7 +1749,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 66,
+      "seq": 68,
       "target": {
         "entity": "order",
         "field": "discount_total"
@@ -1731,7 +1775,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 67,
+      "seq": 69,
       "target": {
         "entity": "order",
         "field": "tax_total"
@@ -1757,7 +1801,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 68,
+      "seq": 70,
       "target": {
         "entity": "order",
         "field": "grand_total"
@@ -1769,7 +1813,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 69,
+      "seq": 71,
       "target": {
         "locale": "ar",
         "object_key": "sales_team_role",
@@ -1782,7 +1826,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 70,
+      "seq": 72,
       "target": {
         "locale": "ar",
         "object_key": "sales_team_role.name",
@@ -1795,7 +1839,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 71,
+      "seq": 73,
       "target": {
         "locale": "ar",
         "object_key": "sales_team_role.name_ar",
@@ -1808,7 +1852,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 72,
+      "seq": 74,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_team_member",
@@ -1821,7 +1865,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 73,
+      "seq": 75,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_team_member.name",
@@ -1834,7 +1878,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 74,
+      "seq": 76,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_team_member.opportunity_ref",
@@ -1847,7 +1891,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 75,
+      "seq": 77,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_team_member.user_ref",
@@ -1860,7 +1904,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 76,
+      "seq": 78,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_team_member.partner_contact_ref",
@@ -1873,7 +1917,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 77,
+      "seq": 79,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_team_member.team_role_ref",
@@ -1886,7 +1930,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 78,
+      "seq": 80,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_team_member.access_level",
@@ -1899,7 +1943,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 79,
+      "seq": 81,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_team_member.share_id",
@@ -1912,7 +1956,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 80,
+      "seq": 82,
       "target": {
         "locale": "ar",
         "object_key": "sales_split_type",
@@ -1925,7 +1969,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 81,
+      "seq": 83,
       "target": {
         "locale": "ar",
         "object_key": "sales_split_type.name",
@@ -1938,7 +1982,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 82,
+      "seq": 84,
       "target": {
         "locale": "ar",
         "object_key": "sales_split_type.name_ar",
@@ -1951,7 +1995,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 83,
+      "seq": 85,
       "target": {
         "locale": "ar",
         "object_key": "sales_split_type.must_total_100",
@@ -1964,7 +2008,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 84,
+      "seq": 86,
       "target": {
         "locale": "ar",
         "object_key": "sales_split_type.amount_basis",
@@ -1977,7 +2021,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 85,
+      "seq": 87,
       "target": {
         "locale": "ar",
         "object_key": "sales_split_type.counts_as_revenue",
@@ -1990,7 +2034,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 86,
+      "seq": 88,
       "target": {
         "locale": "ar",
         "object_key": "sales_split_type.is_partner_type",
@@ -2003,7 +2047,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 87,
+      "seq": 89,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_split",
@@ -2016,7 +2060,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 88,
+      "seq": 90,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_split.opportunity_ref",
@@ -2029,7 +2073,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 89,
+      "seq": 91,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_split.member_ref",
@@ -2042,7 +2086,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 90,
+      "seq": 92,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_split.split_type_ref",
@@ -2055,7 +2099,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 91,
+      "seq": 93,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_split.line_ref",
@@ -2068,7 +2112,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 92,
+      "seq": 94,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_split.percent",
@@ -2081,7 +2125,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 93,
+      "seq": 95,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_split.amount",
@@ -2094,7 +2138,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 94,
+      "seq": 96,
       "target": {
         "locale": "ar",
         "object_key": "opportunity_split.change_reason",
@@ -2107,7 +2151,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 95,
+      "seq": 97,
       "target": {
         "locale": "ar",
         "object_key": "user_default_team_member",
@@ -2120,7 +2164,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 96,
+      "seq": 98,
       "target": {
         "locale": "ar",
         "object_key": "user_default_team_member.owner_user_ref",
@@ -2133,7 +2177,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 97,
+      "seq": 99,
       "target": {
         "locale": "ar",
         "object_key": "user_default_team_member.member_user_ref",
@@ -2146,7 +2190,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 98,
+      "seq": 100,
       "target": {
         "locale": "ar",
         "object_key": "user_default_team_member.team_role_ref",
@@ -2159,7 +2203,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 99,
+      "seq": 101,
       "target": {
         "locale": "ar",
         "object_key": "user_default_team_member.access_level",
@@ -2172,7 +2216,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 100,
+      "seq": 102,
       "target": {
         "locale": "ar",
         "object_key": "order_line",
@@ -2185,7 +2229,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 101,
+      "seq": 103,
       "target": {
         "locale": "ar",
         "object_key": "order_line.order_ref",
@@ -2198,7 +2242,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 102,
+      "seq": 104,
       "target": {
         "locale": "ar",
         "object_key": "order_line.product_ref",
@@ -2211,7 +2255,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 103,
+      "seq": 105,
       "target": {
         "locale": "ar",
         "object_key": "order_line.quantity",
@@ -2224,7 +2268,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 104,
+      "seq": 106,
       "target": {
         "locale": "ar",
         "object_key": "order_line.unit_price",
@@ -2237,7 +2281,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 105,
+      "seq": 107,
       "target": {
         "locale": "ar",
         "object_key": "order_line.discount_amount",
@@ -2250,7 +2294,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 106,
+      "seq": 108,
       "target": {
         "locale": "ar",
         "object_key": "order_line.tax_amount",
@@ -2263,7 +2307,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 107,
+      "seq": 109,
       "target": {
         "locale": "ar",
         "object_key": "order_line.line_total",
@@ -2276,7 +2320,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 108,
+      "seq": 110,
       "target": {
         "locale": "ar",
         "object_key": "order_line.quote_line_ref",
@@ -2289,7 +2333,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 109,
+      "seq": 111,
       "target": {
         "locale": "ar",
         "object_key": "sales_quota",
@@ -2302,7 +2346,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 110,
+      "seq": 112,
       "target": {
         "locale": "ar",
         "object_key": "sales_quota.user_ref",
@@ -2315,7 +2359,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 111,
+      "seq": 113,
       "target": {
         "locale": "ar",
         "object_key": "sales_quota.position_key",
@@ -2328,7 +2372,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 112,
+      "seq": 114,
       "target": {
         "locale": "ar",
         "object_key": "sales_quota.period_label",
@@ -2341,7 +2385,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 113,
+      "seq": 115,
       "target": {
         "locale": "ar",
         "object_key": "sales_quota.period_start",
@@ -2354,7 +2398,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 114,
+      "seq": 116,
       "target": {
         "locale": "ar",
         "object_key": "sales_quota.period_end",
@@ -2367,7 +2411,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 115,
+      "seq": 117,
       "target": {
         "locale": "ar",
         "object_key": "sales_quota.measure",
@@ -2380,7 +2424,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 116,
+      "seq": 118,
       "target": {
         "locale": "ar",
         "object_key": "sales_quota.target",
@@ -2393,7 +2437,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 117,
+      "seq": 119,
       "target": {
         "locale": "ar",
         "object_key": "sales_quota.currency",
@@ -2406,7 +2450,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 118,
+      "seq": 120,
       "target": {
         "locale": "ar",
         "object_key": "quote.quote_number",
@@ -2419,7 +2463,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 119,
+      "seq": 121,
       "target": {
         "locale": "ar",
         "object_key": "quote.version",
@@ -2432,7 +2476,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 120,
+      "seq": 122,
       "target": {
         "locale": "ar",
         "object_key": "quote.is_primary",
@@ -2445,7 +2489,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 121,
+      "seq": 123,
       "target": {
         "locale": "ar",
         "object_key": "quote.valid_from",
@@ -2458,7 +2502,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 122,
+      "seq": 124,
       "target": {
         "locale": "ar",
         "object_key": "quote.payment_terms",
@@ -2471,7 +2515,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 123,
+      "seq": 125,
       "target": {
         "locale": "ar",
         "object_key": "quote.terms",
@@ -2484,7 +2528,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 124,
+      "seq": 126,
       "target": {
         "locale": "ar",
         "object_key": "quote.subtotal",
@@ -2497,7 +2541,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 125,
+      "seq": 127,
       "target": {
         "locale": "ar",
         "object_key": "quote.discount_total",
@@ -2510,7 +2554,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 126,
+      "seq": 128,
       "target": {
         "locale": "ar",
         "object_key": "quote.vat_estimate",
@@ -2523,7 +2567,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 127,
+      "seq": 129,
       "target": {
         "locale": "ar",
         "object_key": "quote.grand_total",
@@ -2536,7 +2580,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 128,
+      "seq": 130,
       "target": {
         "locale": "ar",
         "object_key": "quote_line.discount_amount",
@@ -2549,7 +2593,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 129,
+      "seq": 131,
       "target": {
         "locale": "ar",
         "object_key": "quote_line.tax_amount",
@@ -2562,7 +2606,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 130,
+      "seq": 132,
       "target": {
         "locale": "ar",
         "object_key": "order.order_number",
@@ -2575,7 +2619,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 131,
+      "seq": 133,
       "target": {
         "locale": "ar",
         "object_key": "order.payment_terms",
@@ -2588,7 +2632,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 132,
+      "seq": 134,
       "target": {
         "locale": "ar",
         "object_key": "order.delivery_address",
@@ -2601,7 +2645,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 133,
+      "seq": 135,
       "target": {
         "locale": "ar",
         "object_key": "order.subtotal",
@@ -2614,7 +2658,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 134,
+      "seq": 136,
       "target": {
         "locale": "ar",
         "object_key": "order.discount_total",
@@ -2627,7 +2671,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 135,
+      "seq": 137,
       "target": {
         "locale": "ar",
         "object_key": "order.tax_total",
@@ -2640,7 +2684,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 136,
+      "seq": 138,
       "target": {
         "locale": "ar",
         "object_key": "order.grand_total",
@@ -2659,7 +2703,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 137,
+      "seq": 139,
       "target": {
         "entity": "sales_team_role",
         "key": {
@@ -2679,7 +2723,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 138,
+      "seq": 140,
       "target": {
         "entity": "sales_team_role",
         "key": {
@@ -2699,7 +2743,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 139,
+      "seq": 141,
       "target": {
         "entity": "sales_team_role",
         "key": {
@@ -2719,7 +2763,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 140,
+      "seq": 142,
       "target": {
         "entity": "sales_team_role",
         "key": {
@@ -2743,7 +2787,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 141,
+      "seq": 143,
       "target": {
         "entity": "sales_split_type",
         "key": {
@@ -2767,7 +2811,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 142,
+      "seq": 144,
       "target": {
         "entity": "sales_split_type",
         "key": {

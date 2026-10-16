@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:0a6528cacfd605069b94f8bb79612f40b10f47758a12dbea057d8763463bb27a",
+  "checksum": "sha256:a83cb0c96c6d623b17a5ce11f77fc3128b3bcf9ce5ce5bc330f8c8678010c244",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-work-share.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -19,8 +19,7 @@
           "is_customized": false,
           "logicalname": "ai_work_measure",
           "primary_name_attribute": "process_key"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",

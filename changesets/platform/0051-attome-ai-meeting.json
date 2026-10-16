@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:8b26ca54493e337082aa4af7b99fb3e543529f31ef89621612bab7ce718ddfb7",
+  "checksum": "sha256:46d8ae5e1db309b9434adf63264048a44ea2bf892552f7c0577d7f4540cf275e",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-meeting.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -19,8 +19,7 @@
           "is_customized": false,
           "logicalname": "ai_meeting_brief",
           "primary_name_attribute": "meeting_id"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -39,8 +38,7 @@
           "is_customized": false,
           "logicalname": "ai_meeting_notes",
           "primary_name_attribute": "meeting_id"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",

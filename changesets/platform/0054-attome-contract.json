@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:9117b057748e8cdd17c49bf61f4fbf92ee99e0369c94e894dd0470737e48a24f",
+  "checksum": "sha256:c09a356384e468266aabc5a01e24f34bb04ed2769ecd8677257fd7dfdd99d670",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-contract.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -19,8 +19,7 @@
           "is_customized": false,
           "logicalname": "contract_comparison",
           "primary_name_attribute": "contract_id"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -39,8 +38,7 @@
           "is_customized": false,
           "logicalname": "contract_import",
           "primary_name_attribute": "status"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -59,8 +57,7 @@
           "is_customized": false,
           "logicalname": "contract_playbook_rule",
           "primary_name_attribute": "clause_key"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -79,8 +76,7 @@
           "is_customized": false,
           "logicalname": "contract_version",
           "primary_name_attribute": "version_no"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",

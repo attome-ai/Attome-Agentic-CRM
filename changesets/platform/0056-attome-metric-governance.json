@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:c4dd5ced4b14fa1a3b79bd3184b4c978ec286101186f12ec2d209476767f0415",
+  "checksum": "sha256:42ec572b7126bab41923d22886d62429c73a27f760ddbd02bfcab64992ec758b",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-metric-governance.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -79,8 +79,7 @@
           "is_customized": false,
           "logicalname": "metric_comment",
           "primary_name_attribute": "body"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -99,8 +98,7 @@
           "is_customized": false,
           "logicalname": "metric_scorecard",
           "primary_name_attribute": "name"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -119,8 +117,7 @@
           "is_customized": false,
           "logicalname": "metric_scorecard_item",
           "primary_name_attribute": "metric_ref"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",

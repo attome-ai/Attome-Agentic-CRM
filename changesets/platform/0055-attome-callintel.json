@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:59ede17dfa4362db840180a605ee3973850fde34d47aeb688611c52539df7498",
+  "checksum": "sha256:a8f0cfb379c07981ababc651f3bb3f88f8f88824cd7d7228aec04a7b9851a4ae",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-callintel.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -19,8 +19,7 @@
           "is_customized": false,
           "logicalname": "call_analysis",
           "primary_name_attribute": "activity_id"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -39,8 +38,7 @@
           "is_customized": false,
           "logicalname": "call_comment",
           "primary_name_attribute": "body"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -59,8 +57,7 @@
           "is_customized": false,
           "logicalname": "call_daily_aggregate",
           "primary_name_attribute": "metric"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -79,8 +76,7 @@
           "is_customized": false,
           "logicalname": "call_finding",
           "primary_name_attribute": "text"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -99,8 +95,7 @@
           "is_customized": false,
           "logicalname": "call_library",
           "primary_name_attribute": "name"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -119,8 +114,7 @@
           "is_customized": false,
           "logicalname": "call_library_item",
           "primary_name_attribute": "title"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -139,8 +133,7 @@
           "is_customized": false,
           "logicalname": "call_scorecard",
           "primary_name_attribute": "name"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -159,8 +152,7 @@
           "is_customized": false,
           "logicalname": "call_scorecard_answer",
           "primary_name_attribute": "question_key"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
@@ -179,8 +171,7 @@
           "is_customized": false,
           "logicalname": "call_tracker",
           "primary_name_attribute": "name"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",

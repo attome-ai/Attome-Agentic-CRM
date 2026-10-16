@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:4f763e1468a383d2c3399218a81038b15d80d84dcc567ce61740dd79d1687fbc",
+  "checksum": "sha256:3a4552ceeef8cf1d69095a0e9d3e4808a3f65d42381f83815fd1baaf873bb59c",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Region presets (X12-T1): the country, tax-rate and identity-document reference entities every region shares, and Saudi Arabia: SAR, VAT 15% with zero-rated and exempt categories, the national ID, Iqama and CR formats (the ID and Iqama check digit is Luhn), the +966 mobile format, the national address format, and a Sunday-to-Thursday business calendar in Asia/Riyadh with the fixed-date public holidays (Founding Day, National Day). Eid holidays follow the moon sighting and are added per year (Z12).",
   "format": "attome-changeset/v1",
@@ -12,9 +12,6 @@
     {
       "args": {
         "definition": {
-          "business_key": [
-            "code"
-          ],
           "category": "Other",
           "display_name": "Country",
           "is_append_only": false,
@@ -437,10 +434,32 @@
     },
     {
       "args": {
+        "changed": [
+          "business_key"
+        ],
         "definition": {
           "business_key": [
             "code"
           ],
+          "category": "Other",
+          "display_name": "Country",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "region_country",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "region_country"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "category": "Other",
           "display_name": "Tax Rate",
           "is_append_only": false,
@@ -452,7 +471,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 17,
+      "seq": 18,
       "target": {
         "entity": "region_tax_rate"
       }
@@ -477,7 +496,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 18,
+      "seq": 19,
       "target": {
         "entity": "region_tax_rate",
         "field": "country_code"
@@ -503,7 +522,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 19,
+      "seq": 20,
       "target": {
         "entity": "region_tax_rate",
         "field": "country_ref"
@@ -529,7 +548,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 20,
+      "seq": 21,
       "target": {
         "entity": "region_tax_rate",
         "field": "code"
@@ -555,7 +574,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 21,
+      "seq": 22,
       "target": {
         "entity": "region_tax_rate",
         "field": "name"
@@ -581,7 +600,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 22,
+      "seq": 23,
       "target": {
         "entity": "region_tax_rate",
         "field": "name_ar"
@@ -616,7 +635,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 23,
+      "seq": 24,
       "target": {
         "entity": "region_tax_rate",
         "field": "category"
@@ -642,7 +661,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 24,
+      "seq": 25,
       "target": {
         "entity": "region_tax_rate",
         "field": "rate"
@@ -668,7 +687,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 25,
+      "seq": 26,
       "target": {
         "entity": "region_tax_rate",
         "field": "effective_from"
@@ -694,7 +713,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 26,
+      "seq": 27,
       "target": {
         "entity": "region_tax_rate",
         "field": "effective_to"
@@ -702,10 +721,32 @@
     },
     {
       "args": {
+        "changed": [
+          "business_key"
+        ],
         "definition": {
           "business_key": [
             "code"
           ],
+          "category": "Other",
+          "display_name": "Tax Rate",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "region_tax_rate",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "region_tax_rate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
           "category": "Other",
           "display_name": "Identity Document Kind",
           "is_append_only": false,
@@ -717,7 +758,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 27,
+      "seq": 29,
       "target": {
         "entity": "region_id_kind"
       }
@@ -742,7 +783,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 28,
+      "seq": 30,
       "target": {
         "entity": "region_id_kind",
         "field": "country_code"
@@ -768,7 +809,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 29,
+      "seq": 31,
       "target": {
         "entity": "region_id_kind",
         "field": "country_ref"
@@ -794,7 +835,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 30,
+      "seq": 32,
       "target": {
         "entity": "region_id_kind",
         "field": "code"
@@ -820,7 +861,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 31,
+      "seq": 33,
       "target": {
         "entity": "region_id_kind",
         "field": "name"
@@ -846,7 +887,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 32,
+      "seq": 34,
       "target": {
         "entity": "region_id_kind",
         "field": "name_ar"
@@ -878,7 +919,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 33,
+      "seq": 35,
       "target": {
         "entity": "region_id_kind",
         "field": "applies_to"
@@ -904,7 +945,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 34,
+      "seq": 36,
       "target": {
         "entity": "region_id_kind",
         "field": "pattern"
@@ -938,10 +979,35 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 35,
+      "seq": 37,
       "target": {
         "entity": "region_id_kind",
         "field": "check_digit"
+      }
+    },
+    {
+      "args": {
+        "changed": [
+          "business_key"
+        ],
+        "definition": {
+          "business_key": [
+            "code"
+          ],
+          "category": "Other",
+          "display_name": "Identity Document Kind",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "region_id_kind",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "region_id_kind"
       }
     },
     {
@@ -950,7 +1016,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 36,
+      "seq": 39,
       "target": {
         "locale": "ar",
         "object_key": "region_country",
@@ -963,7 +1029,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 37,
+      "seq": 40,
       "target": {
         "locale": "ar",
         "object_key": "region_country.code",
@@ -976,7 +1042,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 38,
+      "seq": 41,
       "target": {
         "locale": "ar",
         "object_key": "region_country.name",
@@ -989,7 +1055,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 39,
+      "seq": 42,
       "target": {
         "locale": "ar",
         "object_key": "region_country.name_ar",
@@ -1002,7 +1068,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 40,
+      "seq": 43,
       "target": {
         "locale": "ar",
         "object_key": "region_country.currency_code",
@@ -1015,7 +1081,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 41,
+      "seq": 44,
       "target": {
         "locale": "ar",
         "object_key": "region_country.currency_minor_units",
@@ -1028,7 +1094,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 42,
+      "seq": 45,
       "target": {
         "locale": "ar",
         "object_key": "region_country.vat_standard_rate",
@@ -1041,7 +1107,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 43,
+      "seq": 46,
       "target": {
         "locale": "ar",
         "object_key": "region_country.phone_prefix",
@@ -1054,7 +1120,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 44,
+      "seq": 47,
       "target": {
         "locale": "ar",
         "object_key": "region_country.mobile_pattern",
@@ -1067,7 +1133,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 45,
+      "seq": 48,
       "target": {
         "locale": "ar",
         "object_key": "region_country.address_format",
@@ -1080,7 +1146,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 46,
+      "seq": 49,
       "target": {
         "locale": "ar",
         "object_key": "region_country.postal_code_pattern",
@@ -1093,7 +1159,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 47,
+      "seq": 50,
       "target": {
         "locale": "ar",
         "object_key": "region_country.calendar_name",
@@ -1106,7 +1172,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 48,
+      "seq": 51,
       "target": {
         "locale": "ar",
         "object_key": "region_country.default_date_calendar",
@@ -1119,7 +1185,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 49,
+      "seq": 52,
       "target": {
         "locale": "ar",
         "object_key": "region_country.week_start",
@@ -1132,7 +1198,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 50,
+      "seq": 53,
       "target": {
         "locale": "ar",
         "object_key": "region_country.time_zone",
@@ -1145,7 +1211,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 51,
+      "seq": 54,
       "target": {
         "locale": "ar",
         "object_key": "region_country.einvoicing_system",
@@ -1158,7 +1224,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 52,
+      "seq": 55,
       "target": {
         "locale": "ar",
         "object_key": "region_tax_rate",
@@ -1171,7 +1237,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 53,
+      "seq": 56,
       "target": {
         "locale": "ar",
         "object_key": "region_tax_rate.country_code",
@@ -1184,7 +1250,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 54,
+      "seq": 57,
       "target": {
         "locale": "ar",
         "object_key": "region_tax_rate.country_ref",
@@ -1197,7 +1263,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 55,
+      "seq": 58,
       "target": {
         "locale": "ar",
         "object_key": "region_tax_rate.code",
@@ -1210,7 +1276,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 56,
+      "seq": 59,
       "target": {
         "locale": "ar",
         "object_key": "region_tax_rate.name",
@@ -1223,7 +1289,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 57,
+      "seq": 60,
       "target": {
         "locale": "ar",
         "object_key": "region_tax_rate.name_ar",
@@ -1236,7 +1302,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 58,
+      "seq": 61,
       "target": {
         "locale": "ar",
         "object_key": "region_tax_rate.category",
@@ -1249,7 +1315,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 59,
+      "seq": 62,
       "target": {
         "locale": "ar",
         "object_key": "region_tax_rate.rate",
@@ -1262,7 +1328,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 60,
+      "seq": 63,
       "target": {
         "locale": "ar",
         "object_key": "region_tax_rate.effective_from",
@@ -1275,7 +1341,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 61,
+      "seq": 64,
       "target": {
         "locale": "ar",
         "object_key": "region_tax_rate.effective_to",
@@ -1288,7 +1354,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 62,
+      "seq": 65,
       "target": {
         "locale": "ar",
         "object_key": "region_id_kind",
@@ -1301,7 +1367,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 63,
+      "seq": 66,
       "target": {
         "locale": "ar",
         "object_key": "region_id_kind.country_code",
@@ -1314,7 +1380,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 64,
+      "seq": 67,
       "target": {
         "locale": "ar",
         "object_key": "region_id_kind.country_ref",
@@ -1327,7 +1393,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 65,
+      "seq": 68,
       "target": {
         "locale": "ar",
         "object_key": "region_id_kind.code",
@@ -1340,7 +1406,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 66,
+      "seq": 69,
       "target": {
         "locale": "ar",
         "object_key": "region_id_kind.name",
@@ -1353,7 +1419,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 67,
+      "seq": 70,
       "target": {
         "locale": "ar",
         "object_key": "region_id_kind.name_ar",
@@ -1366,7 +1432,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 68,
+      "seq": 71,
       "target": {
         "locale": "ar",
         "object_key": "region_id_kind.applies_to",
@@ -1379,7 +1445,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 69,
+      "seq": 72,
       "target": {
         "locale": "ar",
         "object_key": "region_id_kind.pattern",
@@ -1392,7 +1458,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 70,
+      "seq": 73,
       "target": {
         "locale": "ar",
         "object_key": "region_id_kind.check_digit",
@@ -1424,7 +1490,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 71,
+      "seq": 74,
       "target": {
         "entity": "region_country",
         "key": {
@@ -1449,7 +1515,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 72,
+      "seq": 75,
       "target": {
         "entity": "region_tax_rate",
         "key": {
@@ -1474,7 +1540,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 73,
+      "seq": 76,
       "target": {
         "entity": "region_tax_rate",
         "key": {
@@ -1499,7 +1565,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 74,
+      "seq": 77,
       "target": {
         "entity": "region_tax_rate",
         "key": {
@@ -1524,7 +1590,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 75,
+      "seq": 78,
       "target": {
         "entity": "region_id_kind",
         "key": {
@@ -1549,7 +1615,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 76,
+      "seq": 79,
       "target": {
         "entity": "region_id_kind",
         "key": {
@@ -1574,7 +1640,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 77,
+      "seq": 80,
       "target": {
         "entity": "region_id_kind",
         "key": {
@@ -1599,7 +1665,7 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 78,
+      "seq": 81,
       "target": {
         "entity": "region_id_kind",
         "key": {
@@ -1658,7 +1724,7 @@
       },
       "op": "upsert_calendar",
       "phase": "expand",
-      "seq": 79,
+      "seq": 82,
       "target": {
         "calendar": "Saudi Arabia Business Week"
       }
@@ -1672,7 +1738,7 @@
       },
       "op": "add_calendar_holiday",
       "phase": "expand",
-      "seq": 80,
+      "seq": 83,
       "target": {
         "calendar": "Saudi Arabia Business Week",
         "date": "2026-02-22"
@@ -1687,7 +1753,7 @@
       },
       "op": "add_calendar_holiday",
       "phase": "expand",
-      "seq": 81,
+      "seq": 84,
       "target": {
         "calendar": "Saudi Arabia Business Week",
         "date": "2026-09-23"
@@ -1702,7 +1768,7 @@
       },
       "op": "add_calendar_holiday",
       "phase": "expand",
-      "seq": 82,
+      "seq": 85,
       "target": {
         "calendar": "Saudi Arabia Business Week",
         "date": "2027-02-22"
@@ -1717,7 +1783,7 @@
       },
       "op": "add_calendar_holiday",
       "phase": "expand",
-      "seq": 83,
+      "seq": 86,
       "target": {
         "calendar": "Saudi Arabia Business Week",
         "date": "2027-09-23"

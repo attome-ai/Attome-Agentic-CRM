@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:9b1278c27778ceb1173451d52d8fdd1a64dcd6cdb463ed60882eec3702c47e0f",
+  "checksum": "sha256:806174c824fdc1e0151ddb288efb463069117a8d5d9b271b908a49a7d89c750f",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-contract-counterparty.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -34,8 +34,7 @@
           "is_customized": false,
           "logicalname": "counterparty_match_proposal",
           "primary_name_attribute": "counterparty_text"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",

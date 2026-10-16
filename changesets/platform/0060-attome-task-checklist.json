@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:d23ee2e3a7a19a13ef9a227db85d424fa9363dc565fcb02735e5b0e26b67e551",
+  "checksum": "sha256:0384f59b7d68b9433c3a49f89f4b866de400c0834e73a0429f2c8df92bad53e1",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-task-checklist.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -19,8 +19,7 @@
           "is_customized": false,
           "logicalname": "task_checklist_item",
           "primary_name_attribute": "title"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",

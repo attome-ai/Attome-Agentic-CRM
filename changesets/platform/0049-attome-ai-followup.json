@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:907166799b713ca14ebd7f6c1b7939386042a68cf6e4d4e77feadff09074884d",
+  "checksum": "sha256:3a0f85945c76ca30a08d15aa571bf51c6d60a96493bdbf2e55138fe9c6f26236",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-ai-followup.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -19,8 +19,7 @@
           "is_customized": false,
           "logicalname": "ai_followup_rule",
           "primary_name_attribute": "name"
-        },
-        "list_views": false
+        }
       },
       "op": "create_entity",
       "phase": "expand",
