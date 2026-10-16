@@ -8549,6 +8549,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_usage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/bin/operations/{operation_id}/restore": {
         parameters: {
             query?: never;
@@ -19620,6 +19636,15 @@ export interface components {
              */
             embedding_model?: string | null;
         };
+        IngestResult: {
+            /** Format: int64 */
+            accepted: number;
+            /**
+             * Format: int64
+             * @description Records whose idempotency key was already stored.
+             */
+            duplicates: number;
+        };
         /** @description One installed configuration pack. */
         InstalledPack: {
             /** @description `product`, `project` or `customer`. */
@@ -29817,6 +29842,22 @@ export interface components {
             /** Format: int32 */
             write_access_level?: number;
             write_owner_visible?: boolean;
+        };
+        UsageBatch: {
+            records: components["schemas"]["UsageIn"][];
+        };
+        /** @description One usage record as the sender reports it. */
+        UsageIn: {
+            /** @description The sender's key for this record; repeating it is harmless. */
+            idempotency_key: string;
+            /** @description What was used, such as `api_calls` or `storage_gb_hours`. */
+            metric: string;
+            /** Format: date-time */
+            occurred_at: string;
+            /** Format: double */
+            quantity: number;
+            /** Format: uuid */
+            subscription_line_id: string;
         };
         /**
          * @description U11-T1: what this deployment runs and who uses it. There are no seats or
@@ -59505,6 +59546,57 @@ export interface operations {
                 content?: never;
             };
             /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_usage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsageBatch"];
+            };
+        };
+        responses: {
+            /** @description Stored; repeated idempotency keys counted as duplicates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngestResult"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks subscription_usage.write */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Empty batch, more than 1000 records, or an invalid record */
             422: {
                 headers: {
                     [name: string]: unknown;

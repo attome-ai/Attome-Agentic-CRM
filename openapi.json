@@ -44652,6 +44652,83 @@
         }
       }
     },
+    "/api/v1/billing/usage": {
+      "post": {
+        "tags": [
+          "billing"
+        ],
+        "operationId": "post_usage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsageBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Stored; repeated idempotency keys counted as duplicates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngestResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks subscription_usage.write",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Empty batch, more than 1000 records, or an invalid record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/bin/operations/{operation_id}/restore": {
       "post": {
         "tags": [
@@ -83205,6 +83282,26 @@
           }
         }
       },
+      "IngestResult": {
+        "type": "object",
+        "required": [
+          "accepted",
+          "duplicates"
+        ],
+        "properties": {
+          "accepted": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "duplicates": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Records whose idempotency key was already stored.",
+            "minimum": 0
+          }
+        }
+      },
       "InstalledPack": {
         "type": "object",
         "description": "One installed configuration pack.",
@@ -110103,6 +110200,53 @@
           },
           "write_owner_visible": {
             "type": "boolean"
+          }
+        }
+      },
+      "UsageBatch": {
+        "type": "object",
+        "required": [
+          "records"
+        ],
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageIn"
+            }
+          }
+        }
+      },
+      "UsageIn": {
+        "type": "object",
+        "description": "One usage record as the sender reports it.",
+        "required": [
+          "subscription_line_id",
+          "metric",
+          "quantity",
+          "occurred_at",
+          "idempotency_key"
+        ],
+        "properties": {
+          "idempotency_key": {
+            "type": "string",
+            "description": "The sender's key for this record; repeating it is harmless."
+          },
+          "metric": {
+            "type": "string",
+            "description": "What was used, such as `api_calls` or `storage_gb_hours`."
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "quantity": {
+            "type": "number",
+            "format": "double"
+          },
+          "subscription_line_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
