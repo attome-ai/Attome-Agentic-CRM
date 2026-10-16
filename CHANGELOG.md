@@ -32,6 +32,20 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Rule language V2 functions: `normalize_ar`, `concat`, `substr`, `replace`, `abs`, `floor`,
+  `ceil`, `power`, `clamp`, the currency functions `round_currency`, `convert` (rates supplied by
+  the caller's context) and `minor_units`, and `matches(text, pattern)` with a literal,
+  size-limited, linear-time pattern; V1 expressions are unchanged.
+- Procurement engine and pack (`procurement` module): requisitions, purchase orders, goods
+  receipts and vendor bills, a budget check (warn or block) and monthly vendor scorecards.
+- GRC regulatory changes linked to the controls, requirements and policies they touch; metric
+  governance (scorecards, commentary, certification, dimensions, cascading targets) and a
+  notification when a metric crosses into a worse status; call-analysis entities with tracker
+  matching; scan-action bindings.
+- Database tables for nurture state and hand-offs, list membership, property layers,
+  deliverability rollups and DMARC reports, website events (monthly partitions), metric snapshot
+  dimensions, calendar v2 and the lineage graph (migrations 0082 to 0090). New migrations must be
+  expand-only; removals go to the contract set (`crates/apps/attome/contract/README.md`).
 - Metered usage: `POST /api/v1/billing/usage` takes up to 1000 usage records per call with an
   idempotency key each; a repeated key is counted as a duplicate and not stored again
   (privilege `subscription_usage.write`, migration 0088).
