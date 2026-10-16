@@ -930,6 +930,15 @@ async fn dispatch_platform_job(
         }
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.
+        // D18-T1: points scores, nightly.
+        EngineJob::PointsScoring => {
+            let run = attome_sales::scoring_run::run(&attome_state, chrono::Utc::now()).await?;
+            tracing::info!(
+                models = run.models,
+                records = run.records,
+                "points scoring: run finished"
+            );
+        }
         // V2-T2: the next task of every completed recurring task.
         EngineJob::RecurringTaskRoll => {
             let created =
@@ -1997,6 +2006,7 @@ const DEDUP_KEY_BIN_DELETE_ALERT: &str = "bin-delete-alert";
 const DEDUP_KEY_TAG_EXPIRY: &str = "tag-expiry";
 const DEDUP_KEY_CONTRACT_KEY_DATES: &str = "contract-key-dates";
 const DEDUP_KEY_RECURRING_TASK_ROLL: &str = "recurring-task-roll";
+const DEDUP_KEY_POINTS_SCORING: &str = "points-scoring";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2053,6 +2063,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::TagExpirySweep => DEDUP_KEY_TAG_EXPIRY,
         EngineJob::ContractKeyDates => DEDUP_KEY_CONTRACT_KEY_DATES,
         EngineJob::RecurringTaskRoll => DEDUP_KEY_RECURRING_TASK_ROLL,
+        EngineJob::PointsScoring => DEDUP_KEY_POINTS_SCORING,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2366,6 +2377,17 @@ pub fn spawn_tag_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
         EngineJob::TagExpirySweep,
         DEDUP_KEY_TAG_EXPIRY,
         "tag expiry",
+    );
+}
+
+/// D18-T1: once a day, every points model rescored so decay applies.
+pub fn spawn_points_scoring_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::PointsScoring,
+        DEDUP_KEY_POINTS_SCORING,
+        "points scoring",
     );
 }
 

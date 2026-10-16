@@ -17,9 +17,10 @@ impl EngineModel for SalesModel {
         MODULE_SALES
     }
 
-    /// The sales records are the pack's metadata, not this crate's seed.
+    /// The sales records are the pack's metadata, not this crate's seed;
+    /// the points models are `platform-bundles/attome-sales-scoring.json`.
     fn owned_entities(&self) -> &'static [&'static str] {
-        &[]
+        &["points_model", "points_rule", "points_score"]
     }
 
     fn routes(&self) -> Router<EngineState> {

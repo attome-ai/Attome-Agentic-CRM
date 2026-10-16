@@ -166,6 +166,18 @@ const UNGATED_BY_DESIGN: &[(&str, &str)] = &[
         "attome-contract claims it through EngineModel::owned_entities at runtime",
     ),
     (
+        "points_model",
+        "attome-sales claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "points_rule",
+        "attome-sales claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "points_score",
+        "attome-sales claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
         "contract_comparison",
         "attome-contract claims it through EngineModel::owned_entities at runtime",
     ),

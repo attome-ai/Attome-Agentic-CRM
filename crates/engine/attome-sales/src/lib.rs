@@ -19,6 +19,7 @@ pub mod orgchart;
 pub mod price_resolution;
 pub mod pricing;
 pub mod scoring;
+pub mod scoring_run;
 pub mod splits;
 
 pub use model::SalesModel;

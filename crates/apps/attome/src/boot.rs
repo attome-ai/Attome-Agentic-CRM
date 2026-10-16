@@ -1093,6 +1093,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-task-checklist",
         // G9-T3: supplier SLA clocks.
         "attome-service-supplier-sla",
+        // D18-T1: points models, rules and stored scores.
+        "attome-sales-scoring",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

@@ -8,6 +8,9 @@ import { QuoteLineFormComponent } from './forms/quote-line-form/quote-line-form.
 import { TerritoryFormComponent } from './forms/territory-form/territory-form.component';
 import { CallAnalysisFormComponent } from './forms/call-analysis-form/call-analysis-form.component';
 import { CallTrackerFormComponent } from './forms/call-tracker-form/call-tracker-form.component';
+import { PointsModelFormComponent } from './forms/points-model-form/points-model-form.component';
+import { PointsRuleFormComponent } from './forms/points-rule-form/points-rule-form.component';
+import { PointsScoreFormComponent } from './forms/points-score-form/points-score-form.component';
 import { CallFindingFormComponent } from './forms/call-finding-form/call-finding-form.component';
 import { CallScorecardFormComponent } from './forms/call-scorecard-form/call-scorecard-form.component';
 import { CallScorecardAnswerFormComponent } from './forms/call-scorecard-answer-form/call-scorecard-answer-form.component';
@@ -34,6 +37,9 @@ export function registerSalesEntityForms(registry: EntityRouteRegistry): void {
   registry.register('territory', { formComponent: TerritoryFormComponent });
   registry.register('call_analysis', { formComponent: CallAnalysisFormComponent });
   registry.register('call_tracker', { formComponent: CallTrackerFormComponent });
+  registry.register('points_model', { formComponent: PointsModelFormComponent });
+  registry.register('points_rule', { formComponent: PointsRuleFormComponent });
+  registry.register('points_score', { formComponent: PointsScoreFormComponent });
   registry.register('call_finding', { formComponent: CallFindingFormComponent });
   registry.register('call_scorecard', { formComponent: CallScorecardFormComponent });
   registry.register('call_scorecard_answer', { formComponent: CallScorecardAnswerFormComponent });

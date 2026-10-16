@@ -76,6 +76,11 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     // A18-T4: bursts of deletion, checked every five minutes.
     crate::jobs::spawn_bin_delete_alert_scheduler(db.clone(), std::time::Duration::from_secs(300));
     crate::jobs::spawn_tag_expiry_scheduler(db.clone(), std::time::Duration::from_secs(3600));
+    // D18-T1: lead and contact points scores, nightly.
+    crate::jobs::spawn_points_scoring_scheduler(
+        db.clone(),
+        std::time::Duration::from_secs(24 * 60 * 60),
+    );
     // V2-T2: completed recurring tasks get their next task within 15 minutes.
     crate::jobs::spawn_recurring_task_roll_scheduler(
         db.clone(),

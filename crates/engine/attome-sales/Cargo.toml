@@ -13,10 +13,16 @@ publish.workspace      = true
 [dependencies]
 attome-core.workspace    = true
 attome-modules.workspace = true
+attome-records.workspace = true
+attome-rules.workspace   = true
+attome-types.workspace   = true
 axum.workspace           = true
 chrono.workspace         = true
 rust_decimal.workspace   = true
 serde.workspace          = true
+serde_json.workspace     = true
+sqlx.workspace           = true
+tracing.workspace        = true
 utoipa.workspace         = true
 uuid.workspace           = true
 

@@ -212,6 +212,7 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
       'order', 'price_list', 'price_list_item', 'product', 'quote', 'quote_line', 'territory',
       'call_analysis', 'call_tracker', 'call_finding', 'call_scorecard', 'call_scorecard_answer',
       'call_comment', 'call_library', 'call_library_item', 'call_daily_aggregate',
+      'points_model', 'points_rule', 'points_score',
     ]],
     [vendorSupplier, ['vendor', 'vendor_compliance_document', 'vendor_evaluation']],
   ];

@@ -409,6 +409,9 @@ pub enum EngineJob {
     /// V2-T2: creates the next task for every completed recurring task.
     /// Bare unit variant.
     RecurringTaskRoll,
+    /// D18-T1: scores every record of every enabled points model. Bare
+    /// unit variant.
+    PointsScoring,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -849,6 +852,7 @@ impl EngineJob {
             | Self::ContractKeyDates
             | Self::ContractCounterpartyMatch
             | Self::RecurringTaskRoll
+            | Self::PointsScoring
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -936,6 +940,7 @@ impl EngineJob {
             EngineJob::ContractKeyDates => "ContractKeyDates",
             EngineJob::ContractCounterpartyMatch => "ContractCounterpartyMatch",
             EngineJob::RecurringTaskRoll => "RecurringTaskRoll",
+            EngineJob::PointsScoring => "PointsScoring",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1035,6 +1040,7 @@ impl EngineJob {
             | Self::ContractKeyDates
             | Self::ContractCounterpartyMatch
             | Self::RecurringTaskRoll
+            | Self::PointsScoring
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1147,6 +1153,7 @@ impl EngineJob {
             | Self::ContractKeyDates
             | Self::ContractCounterpartyMatch
             | Self::RecurringTaskRoll
+            | Self::PointsScoring
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1475,6 +1482,7 @@ mod tests {
         assert_round_trips(EngineJob::ContractKeyDates);
         assert_round_trips(EngineJob::ContractCounterpartyMatch);
         assert_round_trips(EngineJob::RecurringTaskRoll);
+        assert_round_trips(EngineJob::PointsScoring);
     }
 
     #[test]

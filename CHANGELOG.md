@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Points scoring runs: `points_model` and `points_rule` define fit rules (rule-language conditions on
+  the lead or contact) and behaviour rules (activities of a type, fading with the model's half-life);
+  a nightly job stores each record's score and its reasons in `points_score`.
 - Supplier SLAs: setting a ticket's `supplier_vendor_id` (with `supplier_target_minutes`) starts a
   supplier clock; it stops when the work comes back or the ticket resolves, and is met or breached
   against the supplier's own target, reported per supplier apart from the customer's SLA.
