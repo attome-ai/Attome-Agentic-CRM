@@ -15,6 +15,7 @@ pub mod enrichment;
 pub mod flags;
 pub mod model;
 pub mod orgchart;
+pub mod price_resolution;
 pub mod pricing;
 pub mod scoring;
 pub mod splits;
