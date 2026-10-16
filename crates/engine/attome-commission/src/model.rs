@@ -27,35 +27,35 @@ impl EngineModel for CommissionModel {
         Router::new()
             .route(
                 "/api/v1/commission/periods/{id}/runs",
-                post(crate::run::post_run),
+                post(crate::run::commission_post_run),
             )
             .route(
                 "/api/v1/commission/statements/me",
-                get(crate::statement::get_my_statement),
+                get(crate::statement::commission_get_my_statement),
             )
             .route(
                 "/api/v1/commission/statements",
-                get(crate::statement::get_statements),
+                get(crate::statement::commission_get_statements),
             )
             .route(
                 "/api/v1/commission/estimate",
-                post(crate::statement::post_estimate),
+                post(crate::statement::commission_post_estimate),
             )
             .route(
                 "/api/v1/commission/disputes",
-                post(crate::dispute::post_dispute),
+                post(crate::dispute::commission_post_dispute),
             )
             .route(
                 "/api/v1/commission/disputes/{id}/decision",
-                post(crate::dispute::post_decision),
+                post(crate::dispute::commission_post_decision),
             )
             .route(
                 "/api/v1/commission/adjustments",
-                post(crate::dispute::post_adjustment),
+                post(crate::dispute::commission_post_adjustment),
             )
             .route(
                 "/api/v1/commission/periods/{id}/submit",
-                post(crate::close::post_submit),
+                post(crate::close::commission_post_submit),
             )
     }
 }

@@ -299,7 +299,7 @@ fn row_from_json(row: &serde_json::Value) -> Option<RawRow> {
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-pub(crate) async fn get_my_statement(
+pub(crate) async fn commission_get_my_statement(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<StatementRead>>,
     Query(q): Query<MyStatementQuery>,
@@ -325,7 +325,7 @@ pub(crate) async fn get_my_statement(
     ),
     security(("session_cookie" = []), ("api_key" = [])),
 )]
-pub(crate) async fn get_statements(
+pub(crate) async fn commission_get_statements(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<StatementRead>>,
     Query(q): Query<StatementQuery>,
@@ -404,7 +404,7 @@ type ParticipantRow = (Uuid, Uuid);
         "read-only estimate",
     )))),
 )]
-pub(crate) async fn post_estimate(
+pub(crate) async fn commission_post_estimate(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<StatementRead>>,
     Json(body): Json<CommissionEstimateBody>,
@@ -481,7 +481,11 @@ pub(crate) async fn post_estimate(
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(get_my_statement, get_statements, post_estimate),
+    paths(
+        commission_get_my_statement,
+        commission_get_statements,
+        commission_post_estimate
+    ),
     components(schemas(CommissionStatementRow, CommissionEstimateBody, CommissionEstimate))
 )]
 pub(crate) struct ApiDocFragment;

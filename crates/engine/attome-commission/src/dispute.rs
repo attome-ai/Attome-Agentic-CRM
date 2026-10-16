@@ -265,7 +265,7 @@ pub struct CommissionDisputeCreated {
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
 )]
-pub(crate) async fn post_dispute(
+pub(crate) async fn commission_post_dispute(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<DisputeCreate>>,
     Json(body): Json<CommissionDisputeBody>,
@@ -350,7 +350,7 @@ pub struct CommissionDisputeDecisionBody {
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
 )]
-pub(crate) async fn post_decision(
+pub(crate) async fn commission_post_decision(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<DisputeDecide>>,
     Path(dispute): Path<Uuid>,
@@ -482,7 +482,7 @@ pub struct CommissionAdjustmentBody {
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
 )]
-pub(crate) async fn post_adjustment(
+pub(crate) async fn commission_post_adjustment(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<AdjustmentCreate>>,
     Json(body): Json<CommissionAdjustmentBody>,
@@ -505,7 +505,11 @@ pub(crate) async fn post_adjustment(
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(post_dispute, post_decision, post_adjustment),
+    paths(
+        commission_post_dispute,
+        commission_post_decision,
+        commission_post_adjustment
+    ),
     components(schemas(
         CommissionDisputeBody,
         CommissionDisputeCreated,

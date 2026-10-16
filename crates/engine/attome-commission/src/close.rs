@@ -97,7 +97,7 @@ pub struct CommissionPeriodSubmitted {
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Update)])))),
 )]
-pub(crate) async fn post_submit(
+pub(crate) async fn commission_post_submit(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<PeriodUpdate>>,
     Path(period): Path<Uuid>,
@@ -337,7 +337,7 @@ pub fn is_closed(status: Option<&str>) -> bool {
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(post_submit),
+    paths(commission_post_submit),
     components(schemas(CommissionPeriodSubmitted, CommissionPeriodClosed))
 )]
 pub(crate) struct ApiDocFragment;

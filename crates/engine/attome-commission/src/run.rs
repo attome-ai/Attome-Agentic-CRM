@@ -388,7 +388,7 @@ pub struct CommissionRunStarted {
     security(("session_cookie" = []), ("api_key" = [])),
     extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::BusinessEvent, attome_audit::AuditOperation::Create)])))),
 )]
-pub(crate) async fn post_run(
+pub(crate) async fn commission_post_run(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<CompRunCreate>>,
     Path(period): Path<Uuid>,
@@ -442,7 +442,7 @@ pub(crate) async fn post_run(
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-    paths(post_run),
+    paths(commission_post_run),
     components(schemas(CommissionRunBody, CommissionRunStarted))
 )]
 pub(crate) struct ApiDocFragment;
