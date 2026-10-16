@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `GET /api/v1/sales/price-lists/{id}/products?q=&sku=&on=` lists the products a line can use on a
+  date with their list price and quantity breaks, searched by name or SKU, filtered by the caller's
+  product record rules.
 - Opportunity lines: `GET/POST /api/v1/sales/opportunities/{id}/lines`, `PATCH`/`DELETE .../lines/{line_id}`
   and `POST .../deal-discount` (`If-Match` with the deal's row version) price every line together in one
   transaction, store each line total and the deal's one-time, recurring and contract totals and amount,

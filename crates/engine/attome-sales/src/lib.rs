@@ -7,6 +7,7 @@
 //! module.
 
 pub mod attainment;
+pub mod catalogue;
 pub mod competitors;
 pub mod cpq;
 pub mod cpq_pricing;
@@ -44,5 +45,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<team_defaults::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<owner_change::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<opportunity_lines::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<catalogue::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
