@@ -286,6 +286,30 @@ fn feature_flag_settings() -> Vec<SettingDescriptor> {
             "feature.content.seo_agent",
             "Stored policy value for the content.seo_agent feature flag (E13-T2).",
         ),
+        scan(
+            "feature.marketing.tracking",
+            "Stored policy value for the marketing.tracking feature flag (E14-T1).",
+        ),
+        scan(
+            "feature.marketing.tracking_external_sites",
+            "Stored policy value for the marketing.tracking_external_sites feature flag (E14-T1).",
+        ),
+        scan(
+            "feature.marketing.tracking_identify",
+            "Stored policy value for the marketing.tracking_identify feature flag (E14-T1).",
+        ),
+        scan(
+            "feature.marketing.tracking_company",
+            "Stored policy value for the marketing.tracking_company feature flag (E14-T1).",
+        ),
+        scan(
+            "feature.marketing.tracking_custom_events",
+            "Stored policy value for the marketing.tracking_custom_events feature flag (E14-T1).",
+        ),
+        scan(
+            "feature.marketing.tracking_alerts",
+            "Stored policy value for the marketing.tracking_alerts feature flag (E14-T1).",
+        ),
         SettingDescriptor::new(
             "feature.core.beta_ui",
             "Stored policy value for the core.beta_ui feature flag (M95, D-430): \

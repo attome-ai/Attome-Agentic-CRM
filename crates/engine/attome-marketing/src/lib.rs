@@ -5,6 +5,7 @@
 //! tasks add it. Gated on the `marketing` module.
 
 pub mod model;
+pub mod tracking;
 
 pub use model::MarketingModel;
 

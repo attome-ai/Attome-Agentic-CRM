@@ -12,7 +12,7 @@
 //! `"feature.{key}"` in `setting_catalog.rs`'s `feature_flag_settings()` —
 //! `FeatureFlagRegistry::new()` asserts this at boot.
 
-use attome_modules::{MODULE_CONTENT, MODULE_CORE, MODULE_PROJECT};
+use attome_modules::{MODULE_CONTENT, MODULE_CORE, MODULE_MARKETING, MODULE_PROJECT};
 
 use crate::feature_flag_descriptor::FeatureFlag;
 
@@ -20,7 +20,57 @@ pub(crate) fn all() -> Vec<FeatureFlag> {
     let mut all = core_flags();
     all.extend(scan_flags());
     all.extend(e13_flags());
+    all.extend(e14_flags());
     all
+}
+
+/// E14-T1: website tracking, off until switched on; every part of it needs
+/// tracking itself on.
+fn e14_flags() -> Vec<FeatureFlag> {
+    vec![
+        FeatureFlag::new(
+            "marketing.tracking",
+            MODULE_MARKETING,
+            "Track visits to Attome-served pages, anonymously until a visitor is known.",
+            false,
+            &[],
+        ),
+        FeatureFlag::new(
+            "marketing.tracking_external_sites",
+            MODULE_MARKETING,
+            "Track the customer's own websites through a tracking script.",
+            false,
+            &["marketing.tracking"],
+        ),
+        FeatureFlag::new(
+            "marketing.tracking_identify",
+            MODULE_MARKETING,
+            "Link a visitor to a contact when they fill a form or click a tracked email.",
+            false,
+            &["marketing.tracking"],
+        ),
+        FeatureFlag::new(
+            "marketing.tracking_company",
+            MODULE_MARKETING,
+            "Identify a visitor's company from its network address.",
+            false,
+            &["marketing.tracking"],
+        ),
+        FeatureFlag::new(
+            "marketing.tracking_custom_events",
+            MODULE_MARKETING,
+            "Record custom events sent from a tracked page.",
+            false,
+            &["marketing.tracking"],
+        ),
+        FeatureFlag::new(
+            "marketing.tracking_alerts",
+            MODULE_MARKETING,
+            "Alert a contact's owner when a known visitor comes back.",
+            false,
+            &["marketing.tracking"],
+        ),
+    ]
 }
 
 /// E13-T2: the search-optimisation parts of content, off until switched on;

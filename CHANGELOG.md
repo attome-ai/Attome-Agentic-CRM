@@ -28,6 +28,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Website tracking feature flags, all off by default: `marketing.tracking` and its parts
+  (external sites, identify, company, custom events, alerts).
 - Engine crates for the business modules, each behind its own module switch: `attome-sales`
   (dialer, org charts, enrichment, competitors), `attome-callintel`, `attome-marketing`,
   `attome-billing`, `attome-commission`, `attome-partner`, `attome-fulfilment`,
