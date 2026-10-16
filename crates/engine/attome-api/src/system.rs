@@ -158,6 +158,8 @@ impl EngineSystem {
             .merge(crate::app_admin::routes())
             // AA13-T8: SLO budgets and the deployment's own targets.
             .merge(crate::slo_admin::routes())
+            // AC7-T11: what this deployment runs.
+            .merge(crate::sbom_admin::routes())
             .merge(crate::business_rule_admin::routes())
             .merge(crate::metadata_label_admin::routes())
             .merge(

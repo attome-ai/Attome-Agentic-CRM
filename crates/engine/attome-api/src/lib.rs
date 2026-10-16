@@ -51,6 +51,8 @@ mod changes_admin;
 /// translation, the JCS checksum and the review summary. `pub` for the same
 /// reason `bundle` is: the apply engine and `crates/server` consume it.
 pub mod changeset;
+/// AC7-T11 — `/api/v1/admin/sbom`.
+mod sbom_admin;
 /// AA13-T8 — `/api/v1/admin/slo`.
 mod slo_admin;
 // `kind = "chart"` view_metadata schema/validator. D-528 moved it to

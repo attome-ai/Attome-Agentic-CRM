@@ -25,6 +25,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `GET /api/v1/admin/sbom`: the release's CycloneDX bill of materials (the release gate's, embedded at
+  build time with `ATTOME_EMBED_SBOM`; other builds derive one from `Cargo.lock`) and the configuration
+  packs installed.
 - `GET /api/v1/admin/slo`: every SLO class with its status and 30-day error budget, computed by the
   server from its built-in metrics store (no Prometheus needed), its reference latency targets and
   any target the deployment set. `PUT /api/v1/admin/slo/targets/{class_id}` sets the deployment's own
