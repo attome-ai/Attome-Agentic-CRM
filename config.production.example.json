@@ -223,6 +223,7 @@
     "batch_worker_concurrency": 3,
     "history_retention_days": 30,
     "dead_letter_retention_days": 90,
+    "workflow_payload_retention_days": 30,
     "_comment_run_worker_inline": "validate_production_profile requires false — the job worker must run as its own scaled `worker` binary/process (crates/server/src/bin/worker.rs), not inline in the HTTP-serving process. Deploy it via docker-compose.yml's `worker` service, which is gated behind the \"worker-split\" Compose profile — release.yml's release notes now run `docker compose --profile worker-split up -d` (not a plain `up -d`, which would silently start `server` with jobs.run_worker_inline=false and no worker at all). __TODO__/VERIFY: no Docker daemon reachable in this environment to live-boot the profile and confirm `worker` actually starts and drains a job — same bar as this file's other live-verify TODOs.",
     "run_worker_inline": false
   },

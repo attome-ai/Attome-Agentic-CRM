@@ -265,6 +265,7 @@
     "batch_worker_concurrency": 3,
     "history_retention_days": 30,
     "dead_letter_retention_days": 90,
+    "workflow_payload_retention_days": 30,
     "run_worker_inline": true
   },
   "query": {

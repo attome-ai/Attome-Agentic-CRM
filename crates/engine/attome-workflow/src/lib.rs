@@ -9,6 +9,7 @@ pub mod instance_admin;
 pub mod instance_control;
 pub mod model;
 pub mod node_types;
+pub mod retention;
 pub mod schedule_trigger;
 pub mod scheduler;
 pub mod simulate;

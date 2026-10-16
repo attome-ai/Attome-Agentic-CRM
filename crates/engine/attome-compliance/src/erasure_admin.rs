@@ -183,6 +183,11 @@ pub async fn do_erase_record(
     if report_erased > 0 {
         tracing::info!(record_id = %record_id, report_erased, "erasure: release-report conflict items deleted");
     }
+    // M3-T4: workflow step payloads that mention the record go too.
+    let payloads_erased = attome_core::run_payload::erase_record(&mut tx, record_id).await?;
+    if payloads_erased > 0 {
+        tracing::info!(record_id = %record_id, payloads_erased, "erasure: workflow step payloads cleared");
+    }
 
     let (user_ctx, organization_ref) = attome_audit::fetch_audit_ctx(state, actor_id).await;
 

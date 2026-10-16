@@ -28,6 +28,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Workflow step payloads are cleared `jobs.workflow_payload_retention_days` (default 30) after the
+  step finished, by the daily prune; the step summary stays. Erasing a record clears the inline
+  step payloads that mention it.
 - Workflow run control: `POST /api/v1/workflow/instances/{id}/retry` (a failed run again from its
   failed step), `/pause`, `/resume`, `/move` to a newer published version, and
   `GET .../move-preview` showing where each waiting step lands. Runs gain the `paused` status.

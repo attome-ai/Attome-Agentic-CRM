@@ -62,6 +62,14 @@ pub async fn read_object(client: &StorageClient, key: &str) -> Result<Vec<u8>, S
     Ok(result.bytes().await?.to_vec())
 }
 
+/// Deletes one object; a key that holds nothing is not an error.
+pub async fn delete_object(client: &StorageClient, key: &str) -> Result<(), StorageError> {
+    match client.store().delete(&path_of(key)?).await {
+        Ok(()) | Err(object_store::Error::NotFound { .. }) => Ok(()),
+        Err(e) => Err(e.into()),
+    }
+}
+
 /// Writes one object, replacing what the key held.
 pub async fn write_object(
     client: &StorageClient,

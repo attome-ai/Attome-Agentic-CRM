@@ -65,6 +65,11 @@ pub struct JobsSection {
     /// safety-critical switch, so it is not validated there.
     #[serde(default = "default_jobs_dead_letter_retention_days")]
     pub dead_letter_retention_days: i64,
+    /// M3-T4 — how long a finished workflow step keeps its recorded input
+    /// and output before the daily prune clears them (the step's summary
+    /// stays).
+    #[serde(default = "default_jobs_workflow_payload_retention_days")]
+    pub workflow_payload_retention_days: i64,
     /// P-worker-process-split — `true` (default, today's behavior unchanged)
     /// runs the apalis job `Monitor` inline inside the `server` process, same
     /// as before this flag existed. A deployment that has split the worker
@@ -93,6 +98,7 @@ impl Default for JobsSection {
             batch_worker_concurrency: default_jobs_batch_worker_concurrency(),
             history_retention_days: default_jobs_history_retention_days(),
             dead_letter_retention_days: default_jobs_dead_letter_retention_days(),
+            workflow_payload_retention_days: default_jobs_workflow_payload_retention_days(),
             run_worker_inline: default_true(),
         }
     }
@@ -114,6 +120,10 @@ fn default_jobs_history_retention_days() -> i64 {
 /// silently shortens how long an operator has to triage a dead letter.
 fn default_jobs_dead_letter_retention_days() -> i64 {
     90
+}
+
+fn default_jobs_workflow_payload_retention_days() -> i64 {
+    30
 }
 
 // ── Idempotency section (P-idempotency-hardening §4.4/§4.5) ────────────────────

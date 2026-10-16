@@ -731,6 +731,12 @@ async fn dispatch_platform_job(
         }
         EngineJob::PruneApalisJobHistory => {
             prune_apalis_job_history(&db, &config).await?;
+            // M3-T4: the same daily prune clears old workflow step payloads.
+            attome_workflow::retention::prune_payloads(
+                &attome_state,
+                config.jobs.workflow_payload_retention_days,
+            )
+            .await?;
         }
         EngineJob::RevalidateQueryPlans => {
             let summary =
