@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Recurring revenue: a nightly snapshot of each account's MRR per currency (migration `0091`) and
+  `GET /api/v1/billing/metrics/recurring?as_of=&period_days=` (privilege `subscription_metrics.read`)
+  with MRR, ARR, new, expansion, contraction, churn and net retention per currency.
 - `POST /api/v1/sales/call-lists/{id}/claim` (privilege `call_list.call`) gives a caller the next
   pending member of a call list, never the same one to two callers; members with do-not-call, no
   `sales_calls` consent (when that purpose exists) or too many attempts are skipped, and those outside

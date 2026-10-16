@@ -1,7 +1,10 @@
 //! `EngineModel` registration: mounted only when the `billing` module is on.
 use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_BILLING, ModuleId};
-use axum::{Router, routing::post};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 
 /// Registered in `attome::boot::register_engines`.
 #[derive(Debug)]
@@ -22,6 +25,11 @@ impl EngineModel for BillingModel {
 
     fn routes(&self) -> Router<EngineState> {
         // F3-T7: metered usage ingest.
-        Router::new().route("/api/v1/billing/usage", post(crate::usage::post_usage))
+        Router::new()
+            .route("/api/v1/billing/usage", post(crate::usage::post_usage))
+            .route(
+                "/api/v1/billing/metrics/recurring",
+                get(crate::metrics::get_recurring),
+            )
     }
 }

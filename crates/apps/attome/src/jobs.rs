@@ -930,6 +930,12 @@ async fn dispatch_platform_job(
         }
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.
+        // F3-T10: the recurring-revenue snapshot, nightly.
+        EngineJob::MrrSnapshot => {
+            let rows =
+                attome_billing::metrics::snapshot(&db, chrono::Utc::now().date_naive()).await?;
+            tracing::info!(rows, "recurring revenue: snapshot stored");
+        }
         // D11-T2: forecast cells, nightly.
         EngineJob::ForecastRecompute => {
             let run = attome_sales::forecast::run(&db, chrono::Utc::now()).await?;
@@ -2024,6 +2030,7 @@ const DEDUP_KEY_RECURRING_TASK_ROLL: &str = "recurring-task-roll";
 const DEDUP_KEY_POINTS_SCORING: &str = "points-scoring";
 const DEDUP_KEY_DEAL_RISK: &str = "deal-risk";
 const DEDUP_KEY_FORECAST_RECOMPUTE: &str = "forecast-recompute";
+const DEDUP_KEY_MRR_SNAPSHOT: &str = "mrr-snapshot";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2083,6 +2090,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::PointsScoring => DEDUP_KEY_POINTS_SCORING,
         EngineJob::DealRiskEvaluation => DEDUP_KEY_DEAL_RISK,
         EngineJob::ForecastRecompute => DEDUP_KEY_FORECAST_RECOMPUTE,
+        EngineJob::MrrSnapshot => DEDUP_KEY_MRR_SNAPSHOT,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2396,6 +2404,17 @@ pub fn spawn_tag_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
         EngineJob::TagExpirySweep,
         DEDUP_KEY_TAG_EXPIRY,
         "tag expiry",
+    );
+}
+
+/// F3-T10: once a day, the recurring-revenue snapshot.
+pub fn spawn_mrr_snapshot_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::MrrSnapshot,
+        DEDUP_KEY_MRR_SNAPSHOT,
+        "mrr snapshot",
     );
 }
 

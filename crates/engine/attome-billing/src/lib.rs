@@ -4,6 +4,7 @@
 //! metadata from the matching pack; this crate holds the engine code that acts on them as later
 //! tasks add it. Gated on the `billing` module.
 
+pub mod metrics;
 pub mod model;
 pub mod payment;
 pub mod subscription;
@@ -19,5 +20,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 35;
 /// This crate's slice of the workspace OpenAPI document, merged in by
 /// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    <usage::ApiDocFragment as utoipa::OpenApi>::openapi()
+    let mut doc = <usage::ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(<metrics::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc
 }

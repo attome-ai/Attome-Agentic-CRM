@@ -1,0 +1,38 @@
+{
+  "author": "packs",
+  "checksum": "sha256:622a20f065b90d9cd7e9f24c22060aed878a98e93c09aa28bbd7498eab4cf132",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "F3-T10: the subscription_metrics.read privilege that lets a role read MRR, ARR and their movements from GET /api/v1/billing/metrics/recurring.",
+  "format": "attome-changeset/v1",
+  "id": "01a14501-799e-77c6-a053-d88cd8a3a200",
+  "layer": "product",
+  "name": "billing-recurring-metrics",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "description": "Reads recurring revenue measures.",
+          "key": "subscription_metrics.read",
+          "name": "Read Recurring Revenue"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "privilege": "subscription_metrics.read"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "billing",
+  "seq": 4,
+  "title": "Pack: recurring revenue privilege"
+}

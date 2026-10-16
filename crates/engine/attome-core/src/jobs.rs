@@ -417,6 +417,8 @@ pub enum EngineJob {
     /// D11-T2: recomputes every open forecast period's cells and takes the
     /// weekly snapshot. Bare unit variant.
     ForecastRecompute,
+    /// F3-T10: stores today's recurring-revenue snapshot. Bare unit variant.
+    MrrSnapshot,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -860,6 +862,7 @@ impl EngineJob {
             | Self::PointsScoring
             | Self::DealRiskEvaluation
             | Self::ForecastRecompute
+            | Self::MrrSnapshot
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -950,6 +953,7 @@ impl EngineJob {
             EngineJob::PointsScoring => "PointsScoring",
             EngineJob::DealRiskEvaluation => "DealRiskEvaluation",
             EngineJob::ForecastRecompute => "ForecastRecompute",
+            EngineJob::MrrSnapshot => "MrrSnapshot",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1052,6 +1056,7 @@ impl EngineJob {
             | Self::PointsScoring
             | Self::DealRiskEvaluation
             | Self::ForecastRecompute
+            | Self::MrrSnapshot
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1167,6 +1172,7 @@ impl EngineJob {
             | Self::PointsScoring
             | Self::DealRiskEvaluation
             | Self::ForecastRecompute
+            | Self::MrrSnapshot
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1498,6 +1504,7 @@ mod tests {
         assert_round_trips(EngineJob::PointsScoring);
         assert_round_trips(EngineJob::DealRiskEvaluation);
         assert_round_trips(EngineJob::ForecastRecompute);
+        assert_round_trips(EngineJob::MrrSnapshot);
     }
 
     #[test]
