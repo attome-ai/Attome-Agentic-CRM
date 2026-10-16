@@ -131,6 +131,7 @@ pub mod provider_models;
 pub mod publish_gate;
 pub mod quality_monitor;
 pub mod registry;
+pub mod relationship_strength;
 pub mod runtime_switch;
 pub mod sanitize_input;
 pub mod scope_switch;
