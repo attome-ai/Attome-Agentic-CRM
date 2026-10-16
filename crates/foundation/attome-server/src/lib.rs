@@ -18,6 +18,7 @@ pub mod read_only;
 pub mod replica_watermark;
 pub mod secrets;
 pub mod security;
+pub mod slo;
 pub mod ssrf_guard;
 pub mod state;
 pub mod step_up;
