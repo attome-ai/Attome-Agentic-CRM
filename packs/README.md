@@ -96,7 +96,8 @@ inspection and disposition.
 
 The human-resources pack's `0002` adds positions, leave types and balances and labelled HR documents
 (a health document is special-category data); the customer-service pack's `0002` adds entitlements
-and their usage ledger (G10).
+and their usage ledger (G10), and its `0003` links a case to its entitlement and the entitlement to
+its SLA policy, which the SLA engine applies before the policy rules (G9-T2).
 
 ## itsm
 

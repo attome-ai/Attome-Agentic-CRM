@@ -1,0 +1,101 @@
+{
+  "author": "packs",
+  "checksum": "sha256:a5140b91c23b08c79b2cb4fc81176a3a4320be14424b37365ee6e327edbec049",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "G9-T2: the ticket names the entitlement it is raised under, and the entitlement names its SLA policy; when the entitlement is active and in its period, the SLA engine applies that policy before the policy rules.",
+  "format": "attome-changeset/v1",
+  "id": "01a144a3-f7a5-739e-a3ee-67e0aa9d296d",
+  "layer": "product",
+  "name": "customer-service-entitlement-sla",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Entitlement",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "entitlement_ref",
+          "lookup_entity": "entitlement",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "service_ticket",
+        "field": "entitlement_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "SLA Policy",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "sla_policy_ref",
+          "lookup_entity": "service_sla_policy",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "entitlement",
+        "field": "sla_policy_ref"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاستحقاق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "locale": "ar",
+        "object_key": "service_ticket.entitlement_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سياسة مستوى الخدمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "locale": "ar",
+        "object_key": "entitlement.sla_policy_ref",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "customer-service",
+  "seq": 3,
+  "title": "Pack: a case raised under an entitlement takes its SLA policy"
+}

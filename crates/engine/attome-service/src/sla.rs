@@ -627,6 +627,70 @@ async fn select_policy_for_ticket(
     select_policy(db, priority).await
 }
 
+/// G9-T2: whether an entitlement covers a ticket opened at `now` — active
+/// (or with no status set) and inside its period, each end open when unset.
+fn entitlement_applies(
+    status: Option<&str>,
+    period_start: Option<DateTime<Utc>>,
+    period_end: Option<DateTime<Utc>>,
+    now: DateTime<Utc>,
+) -> bool {
+    status.is_none_or(|s| s == "active")
+        && period_start.is_none_or(|start| start <= now)
+        && period_end.is_none_or(|end| end >= now)
+}
+
+/// The entitlement columns G9-T2 reads: policy, status and period.
+type EntitlementRow = (
+    Option<Uuid>,
+    Option<String>,
+    Option<DateTime<Utc>>,
+    Option<DateTime<Utc>>,
+);
+
+/// G9-T2: the SLA policy of the entitlement the ticket is raised under (the
+/// customer-service pack's `service_ticket.entitlement_ref` and
+/// `entitlement.sla_policy_ref`), when that entitlement covers the ticket
+/// now and names an active policy. `None` on a deployment without the pack,
+/// a ticket with no entitlement, or an entitlement that does not apply, so
+/// selection falls back to the policy rules.
+async fn entitlement_policy(db: &DbPool, ticket_id: Uuid) -> Result<Option<SlaPolicy>, AppError> {
+    let installed: bool = sqlx::query_scalar(
+        "SELECT to_regclass('entitlement') IS NOT NULL             AND EXISTS (SELECT 1 FROM information_schema.columns                         WHERE table_schema = current_schema() AND table_name = 'service_ticket'                           AND column_name = 'entitlement_ref')             AND EXISTS (SELECT 1 FROM information_schema.columns                         WHERE table_schema = current_schema() AND table_name = 'entitlement'                           AND column_name = 'sla_policy_ref')",
+    )
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    if !installed {
+        return Ok(None);
+    }
+    let row: Option<EntitlementRow> =
+        sqlx::query_as(
+            "SELECT e.sla_policy_ref, e.status::text,                     e.period_start::timestamptz, e.period_end::timestamptz              FROM service_ticket t JOIN entitlement e ON e.id = t.entitlement_ref              WHERE t.id = $1 AND (e.is_active IS NULL OR e.is_active = true)",
+        )
+        .bind(ticket_id)
+        .fetch_optional(db)
+        .await
+        .map_err(AppError::internal)?;
+    let Some((Some(policy_id), status, start, end)) = row else {
+        return Ok(None);
+    };
+    if !entitlement_applies(status.as_deref(), start, end, Utc::now()) {
+        return Ok(None);
+    }
+    let active: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM service_sla_policy          WHERE id = $1 AND (is_active IS NULL OR is_active = true))",
+    )
+    .bind(policy_id)
+    .fetch_one(db)
+    .await
+    .map_err(AppError::internal)?;
+    if !active {
+        return Ok(None);
+    }
+    policy_by_id(db, policy_id).await
+}
+
 /// The exact policy already assigned to a ticket (`service_ticket.sla_policy_id`)
 /// — used by `clock.rs`'s pause/resume, which must recompute the *same*
 /// policy's due date from a remaining budget, not re-run priority selection
@@ -705,10 +769,16 @@ pub async fn apply_policy(
             .map_err(AppError::internal)?;
     let (priority, ticket_type, severity) = row.ok_or(AppError::NotFound)?;
 
-    let Some(policy) =
-        select_policy_for_ticket(db, ticket_type.as_deref(), &priority, severity.as_deref())
-            .await?
-    else {
+    // G9-T2: the entitlement's SLA first (a case under a contract gets the
+    // contract's SLA), then the policy rules.
+    let selected = match entitlement_policy(db, ticket_id).await? {
+        Some(policy) => Some(policy),
+        None => {
+            select_policy_for_ticket(db, ticket_type.as_deref(), &priority, severity.as_deref())
+                .await?
+        }
+    };
+    let Some(policy) = selected else {
         return Ok(None);
     };
 
@@ -997,6 +1067,42 @@ pub async fn sweep_warnings(
     }
 
     Ok(warned)
+}
+
+#[cfg(test)]
+mod sla_policy_selection {
+    use super::entitlement_applies;
+    use chrono::{Duration, Utc};
+
+    #[test]
+    fn an_active_entitlement_in_its_period_applies() {
+        let now = Utc::now();
+        assert!(entitlement_applies(
+            Some("active"),
+            Some(now - Duration::days(30)),
+            Some(now + Duration::days(30)),
+            now
+        ));
+        assert!(entitlement_applies(None, None, None, now), "open-ended");
+    }
+
+    #[test]
+    fn an_expired_or_exhausted_entitlement_falls_back_to_the_rules() {
+        let now = Utc::now();
+        assert!(!entitlement_applies(Some("exhausted"), None, None, now));
+        assert!(!entitlement_applies(
+            Some("active"),
+            None,
+            Some(now - Duration::days(1)),
+            now
+        ));
+        assert!(!entitlement_applies(
+            Some("active"),
+            Some(now + Duration::days(1)),
+            None,
+            now
+        ));
+    }
 }
 
 #[cfg(test)]
