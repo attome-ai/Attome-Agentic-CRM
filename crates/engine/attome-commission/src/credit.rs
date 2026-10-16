@@ -182,6 +182,13 @@ pub async fn credit_from_source(
         .await
         .map_err(AppError::internal)?;
     }
+    // F10-T9: the period's preview catches up with the new credit.
+    attome_jobs::enqueue_in_tx(
+        &mut tx,
+        attome_core::jobs::EngineJob::CommissionRecalcPreview { period_id: period },
+    )
+    .await
+    .map_err(AppError::internal)?;
     attome_db::tx::commit(tx).await?;
     Ok(true)
 }

@@ -1,0 +1,394 @@
+{
+  "author": "packs",
+  "checksum": "sha256:7699f48c8ba1775c5b918f57edb3a0edde803ae029e119f096b308a1e88f3388",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "F10-T9: what a recalculation of an open period would pay each participant, before and after, kept as a preview until sales ops apply it. Amounts are in the Commission Amounts field profile like every other pay amount.",
+  "format": "attome-changeset/v1",
+  "id": "01a14557-347c-78e9-b592-31cd7f8af8a5",
+  "layer": "product",
+  "name": "commission-recalc-preview",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Recalculation Preview",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "comp_recalc_preview",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "comp_recalc_preview"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "comp_recalc_preview",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Period",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "period_ref",
+          "lookup_entity": "comp_period",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "comp_recalc_preview",
+        "field": "period_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Participant",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "participant_ref",
+          "lookup_entity": "plan_participant",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "comp_recalc_preview",
+        "field": "participant_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "confidential",
+          "display_name": "Current Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "old_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "comp_recalc_preview",
+        "field": "old_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "confidential",
+          "display_name": "Recalculated Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "new_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "comp_recalc_preview",
+        "field": "new_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "pending",
+              "applied",
+              "discarded"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "comp_recalc_preview",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "display_name": "معاينة إعادة الاحتساب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_recalc_preview",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_recalc_preview.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفترة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_recalc_preview.period_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المشارك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_recalc_preview.participant_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ الحالي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_recalc_preview.old_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ بعد إعادة الاحتساب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_recalc_preview.new_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_recalc_preview.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on comp_recalc_preview",
+          "key": "comp_recalc_preview.read",
+          "name": "comp_recalc_preview.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "comp_recalc_preview.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on comp_recalc_preview",
+          "key": "comp_recalc_preview.update",
+          "name": "comp_recalc_preview.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "privilege": "comp_recalc_preview.update"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "comp_recalc_preview.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "privilege": "comp_recalc_preview.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "privilege": "comp_recalc_preview.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "comp_recalc_preview",
+        "field": "old_amount",
+        "profile": "Commission Amounts"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "comp_recalc_preview",
+        "field": "new_amount",
+        "profile": "Commission Amounts"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "commission",
+  "seq": 3,
+  "title": "Pack: commission recalculation preview"
+}

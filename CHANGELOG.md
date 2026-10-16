@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Commission recalculation previews (`comp_recalc_preview`, commission pack `0003`): publishing a plan
+  or crediting an open period recomputes it into per-participant previews (current and recalculated
+  amount) without touching statements; `POST /api/v1/commission/periods/{id}/recalc/apply` starts the
+  calculation runs and marks the previews applied. Closed periods are never previewed.
 - `POST /api/v1/commission/plans/{id}/publish` compiles a plan's draft version and publishes it with the
   hash of what compiled; overlapping or unreadable rate tables are refused with the component named.
 - Commission credits from won deals: each revenue split of a deal at `closed_won` credits its member's

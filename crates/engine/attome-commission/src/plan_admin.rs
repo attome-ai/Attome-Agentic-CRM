@@ -142,6 +142,10 @@ pub(crate) async fn commission_post_publish(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
+    // F10-T9: open periods get a preview of what the new version pays.
+    if let Err(e) = crate::recalc::enqueue_open_periods(&state).await {
+        tracing::warn!(%plan, error = %e, "plan published; queueing the recalculation previews failed");
+    }
     Ok(Json(CommissionPlanPublished {
         plan_id: plan,
         version_id: version,

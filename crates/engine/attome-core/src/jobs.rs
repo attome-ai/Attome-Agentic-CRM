@@ -311,6 +311,9 @@ pub enum EngineJob {
     /// enqueued by `POST /api/v1/commission/periods/{id}/runs`. Pure
     /// pointer; the run's `cursor` makes a retry resume.
     CommissionRun { run_id: Uuid },
+    /// F10-T9: recomputes an open period into recalculation previews,
+    /// leaving statements alone.
+    CommissionRecalcPreview { period_id: Uuid },
     /// TECHNICAL-DUE-DILIGENCE-2026-08-24 finding 3.2 (T2-2) — the async half
     /// of `attome_server::entity_mutation::apply_dependents_on_delete`'s
     /// `OnTargetDelete::CascadeDeactivate` handling. A dependent group at or
@@ -854,6 +857,7 @@ impl EngineJob {
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::CommissionRun { .. }
+            | Self::CommissionRecalcPreview { .. }
             | Self::CascadeDeactivateDependents { .. }
             | Self::DataExport(_)
             | Self::DataProfile(_)
@@ -983,6 +987,7 @@ impl EngineJob {
             EngineJob::CrawlWebsite { .. } => "CrawlWebsite",
             EngineJob::SalesDefaultTeamApply { .. } => "SalesDefaultTeamApply",
             EngineJob::CommissionRun { .. } => "CommissionRun",
+            EngineJob::CommissionRecalcPreview { .. } => "CommissionRecalcPreview",
             EngineJob::CascadeDeactivateDependents { .. } => "CascadeDeactivateDependents",
             EngineJob::ComputeMetricSnapshots => "ComputeMetricSnapshots",
             EngineJob::EventsDispatchTick => "EventsDispatchTick",
@@ -1157,6 +1162,7 @@ impl EngineJob {
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::CommissionRun { .. }
+            | Self::CommissionRecalcPreview { .. }
             | Self::FleetRolloutStep { .. } => JobPriority::Normal,
         }
     }
@@ -1291,6 +1297,7 @@ impl EngineJob {
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::CommissionRun { .. }
+            | Self::CommissionRecalcPreview { .. }
             | Self::CascadeDeactivateDependents { .. }
             | Self::DataExport(_)
             | Self::DataProfile(_)
@@ -1862,6 +1869,13 @@ mod tests {
     #[test]
     fn workflow_entity_trigger_dispatch_round_trips_as_a_bare_unit_variant() {
         assert_round_trips(EngineJob::WorkflowEntityTriggerDispatch);
+    }
+
+    #[test]
+    fn commission_recalc_preview_round_trips() {
+        assert_round_trips(EngineJob::CommissionRecalcPreview {
+            period_id: Uuid::now_v7(),
+        });
     }
 
     #[test]
