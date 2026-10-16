@@ -10500,6 +10500,22 @@ export interface paths {
         patch: operations["patch_sales_line"];
         trace?: never;
     };
+    "/api/v1/sales/opportunities/{id}/schedules/shift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_schedule_shift"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/opportunities/{id}/splits": {
         parameters: {
             query?: never;
@@ -10562,6 +10578,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["patch_sales_team_member"];
+        trace?: never;
+    };
+    "/api/v1/sales/opportunity-lines/{line_id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_line_schedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/price-lists/{id}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sales_price_list_products"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/scan/find": {
@@ -24683,6 +24731,26 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_SalesProductPrice: {
+            items: {
+                breaks: components["schemas"]["PriceBreak"][];
+                list_price?: string | null;
+                name?: string | null;
+                name_ar?: string | null;
+                /** Format: uuid */
+                product_id: string;
+                sku?: string | null;
+                /** Format: uuid */
+                unit_ref?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_ScanHit: {
             items: {
                 /** @description The field that matched. */
@@ -26102,6 +26170,11 @@ export interface components {
             before: Record<string, never>;
             /** Format: uuid */
             id: string;
+        };
+        PriceBreak: {
+            discount_percent?: string | null;
+            min_quantity?: string | null;
+            price?: string | null;
         };
         /**
          * @description `privilege` — privileges are platform-minted per entity
@@ -28052,6 +28125,53 @@ export interface components {
             /** Format: int64 */
             splits_moved: number;
         };
+        SalesProductPrice: {
+            breaks: components["schemas"]["PriceBreak"][];
+            list_price?: string | null;
+            name?: string | null;
+            name_ar?: string | null;
+            /** Format: uuid */
+            product_id: string;
+            sku?: string | null;
+            /** Format: uuid */
+            unit_ref?: string | null;
+        };
+        SalesSchedule: {
+            /** Format: uuid */
+            line_id: string;
+            rows: components["schemas"]["ScheduleRow"][];
+        };
+        SalesScheduleBody: {
+            method: components["schemas"]["ScheduleMethod"];
+            /** Format: int32 */
+            months?: number | null;
+            /** @description Percentages per month, totalling 100. */
+            pattern?: string[] | null;
+            /** @description Hand-entered rows, totalling the line. */
+            rows?: components["schemas"]["ScheduleRow"][] | null;
+            /**
+             * Format: date
+             * @description The first period, for `even` and `pattern`.
+             */
+            start?: string | null;
+        };
+        SalesScheduleShiftBody: {
+            /**
+             * Format: int32
+             * @description Whole months; negative moves earlier.
+             */
+            months: number;
+        };
+        SalesScheduleShifted: {
+            /** Format: uuid */
+            opportunity_id: string;
+            queued: boolean;
+            /**
+             * Format: int64
+             * @description Rows moved now; zero when a job moves them.
+             */
+            rows_shifted: number;
+        };
         SalesSplitsBody: {
             /** @description Required when the deal is won. */
             change_reason?: string | null;
@@ -28179,6 +28299,11 @@ export interface components {
             status: string;
         };
         /**
+         * @description How a schedule is made.
+         * @enum {string}
+         */
+        ScheduleMethod: "even" | "pattern" | "manual";
+        /**
          * @description Full replace, not a partial patch — both fields are always written
          *     exactly as given (`null` clears), so there is no absent-vs-null
          *     ambiguity to resolve (the trap `UpdatePageBody`'s `seo_title`/
@@ -28191,6 +28316,13 @@ export interface components {
             publish_at?: string | null;
             /** Format: date-time */
             unpublish_at?: string | null;
+        };
+        /** @description One schedule row. */
+        ScheduleRow: {
+            /** Format: date */
+            period_start: string;
+            quantity?: string | null;
+            revenue: string;
         };
         /**
          * @description P-online-schema-change §4(d) — separately polled resource, same reasoning
@@ -66475,6 +66607,78 @@ export interface operations {
             };
         };
     };
+    post_sales_schedule_shift: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesScheduleShiftBody"];
+            };
+        };
+        responses: {
+            /** @description The deal's schedule rows are moved, or a job is queued to move them */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesScheduleShifted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity, or schedules are switched off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The deal is being changed by another request */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Zero months, or more than 240 either way */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     put_sales_splits: {
         parameters: {
             query?: never;
@@ -66824,6 +67028,137 @@ export interface operations {
             };
             /** @description Access above the member's roles (access_above_role) */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_line_schedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opportunity line */
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesScheduleBody"];
+            };
+        };
+        responses: {
+            /** @description The line's schedule is replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesSchedule"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update the line's opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such line, or schedules are switched off */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The deal is being changed by another request */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A pattern not totalling 100, rows not totalling the line, or a missing start or months */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_sales_price_list_products: {
+        parameters: {
+            query?: {
+                /** @description Words in the product's English or Arabic name. */
+                q?: string;
+                /** @description An exact SKU or barcode. */
+                sku?: string;
+                /** @description The date the line is for; today when absent. */
+                on?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The price list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The products a line can use on the date, with list prices and breaks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SalesProductPrice"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks product.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such price list */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

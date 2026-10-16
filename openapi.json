@@ -53926,6 +53926,115 @@
         }
       }
     },
+    "/api/v1/sales/opportunities/{id}/schedules/shift": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_sales_schedule_shift",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The opportunity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesScheduleShiftBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The deal's schedule rows are moved, or a job is queued to move them",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesScheduleShifted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update this opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such opportunity, or schedules are switched off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The deal is being changed by another request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Zero months, or more than 240 either way",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/sales/opportunities/{id}/splits": {
       "put": {
         "tags": [
@@ -54470,6 +54579,231 @@
           ],
           "policy": "mandatory"
         }
+      }
+    },
+    "/api/v1/sales/opportunity-lines/{line_id}/schedule": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_sales_line_schedule",
+        "parameters": [
+          {
+            "name": "line_id",
+            "in": "path",
+            "description": "The opportunity line",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesScheduleBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The line's schedule is replaced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesSchedule"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update the line's opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such line, or schedules are switched off",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The deal is being changed by another request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A pattern not totalling 100, rows not totalling the line, or a missing start or months",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/sales/price-lists/{id}/products": {
+      "get": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "get_sales_price_list_products",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The price list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Words in the product's English or Arabic name.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sku",
+            "in": "query",
+            "description": "An exact SKU or barcode.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "on",
+            "in": "query",
+            "description": "The date the line is for; today when absent.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The products a line can use on the date, with list prices and breaks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_SalesProductPrice"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks product.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such price list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/api/v1/scan/find": {
@@ -98791,6 +99125,83 @@
           }
         }
       },
+      "PaginatedResponse_SalesProductPrice": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "product_id",
+                "breaks"
+              ],
+              "properties": {
+                "breaks": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PriceBreak"
+                  }
+                },
+                "list_price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "name_ar": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "product_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sku": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "unit_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "PaginatedResponse_ScanHit": {
         "type": "object",
         "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
@@ -102690,6 +103101,29 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "PriceBreak": {
+        "type": "object",
+        "properties": {
+          "discount_percent": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_quantity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "price": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -107328,6 +107762,158 @@
           }
         }
       },
+      "SalesProductPrice": {
+        "type": "object",
+        "required": [
+          "product_id",
+          "breaks"
+        ],
+        "properties": {
+          "breaks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PriceBreak"
+            }
+          },
+          "list_price": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name_ar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "product_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unit_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "SalesSchedule": {
+        "type": "object",
+        "required": [
+          "line_id",
+          "rows"
+        ],
+        "properties": {
+          "line_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleRow"
+            }
+          }
+        }
+      },
+      "SalesScheduleBody": {
+        "type": "object",
+        "required": [
+          "method"
+        ],
+        "properties": {
+          "method": {
+            "$ref": "#/components/schemas/ScheduleMethod"
+          },
+          "months": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "pattern": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Percentages per month, totalling 100."
+          },
+          "rows": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ScheduleRow"
+            },
+            "description": "Hand-entered rows, totalling the line."
+          },
+          "start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The first period, for `even` and `pattern`."
+          }
+        }
+      },
+      "SalesScheduleShiftBody": {
+        "type": "object",
+        "required": [
+          "months"
+        ],
+        "properties": {
+          "months": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Whole months; negative moves earlier."
+          }
+        }
+      },
+      "SalesScheduleShifted": {
+        "type": "object",
+        "required": [
+          "opportunity_id",
+          "rows_shifted",
+          "queued"
+        ],
+        "properties": {
+          "opportunity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "queued": {
+            "type": "boolean"
+          },
+          "rows_shifted": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Rows moved now; zero when a job moves them.",
+            "minimum": 0
+          }
+        }
+      },
       "SalesSplitsBody": {
         "type": "object",
         "required": [
@@ -107664,6 +108250,15 @@
           }
         }
       },
+      "ScheduleMethod": {
+        "type": "string",
+        "description": "How a schedule is made.",
+        "enum": [
+          "even",
+          "pattern",
+          "manual"
+        ]
+      },
       "SchedulePageBody": {
         "type": "object",
         "description": "Full replace, not a partial patch — both fields are always written\nexactly as given (`null` clears), so there is no absent-vs-null\nambiguity to resolve (the trap `UpdatePageBody`'s `seo_title`/\n`seo_description` sentinel-empty-string convention exists to avoid for a\nstring field; a plain `Option<DateTime<Utc>>` full-replace is the\nsimpler fix for a field with no such sentinel).",
@@ -107681,6 +108276,29 @@
               "null"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "ScheduleRow": {
+        "type": "object",
+        "description": "One schedule row.",
+        "required": [
+          "period_start",
+          "revenue"
+        ],
+        "properties": {
+          "period_start": {
+            "type": "string",
+            "format": "date"
+          },
+          "quantity": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "revenue": {
+            "type": "string"
           }
         }
       },
