@@ -6,6 +6,7 @@
 //! it. Gated on the `contract` module.
 
 pub mod amendment;
+pub mod dates;
 pub mod model;
 
 pub use model::ContractModel;

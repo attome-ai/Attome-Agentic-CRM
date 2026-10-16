@@ -32,6 +32,14 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Contract key dates run nightly: each active contract's notice deadline is kept current, a
+  "Renew, renegotiate or terminate" task opens for its owner 30 days before it, obligation owners
+  are reminded 7 days before a due date, overdue obligations go to the contract owner, and a
+  completed recurring obligation (`monthly`, `quarterly`, `FREQ=...;INTERVAL=n`) creates the next.
+- Staged imports with a mapping match choice cells to their stored values or labels, folding Arabic
+  spelling variants, case and separators; text matching nothing is reported on its row.
+- Price resolution for sales lines (account price, then contracted price, then the price list with
+  quantity breaks and unit conversion) and the CPQ pricing waterfall that records each step.
 - Rule language V2 functions: `normalize_ar`, `concat`, `substr`, `replace`, `abs`, `floor`,
   `ceil`, `power`, `clamp`, the currency functions `round_currency`, `convert` (rates supplied by
   the caller's context) and `minor_units`, and `matches(text, pattern)` with a literal,

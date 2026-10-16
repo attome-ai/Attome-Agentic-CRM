@@ -15,6 +15,7 @@ attome-api.workspace      = true
 attome-auth.workspace     = true
 attome-cache.workspace    = true
 attome-config.workspace   = true
+attome-contract.workspace = true
 attome-core.workspace     = true
 attome-db.workspace       = true
 attome-modules.workspace  = true

@@ -398,6 +398,10 @@ pub enum EngineJob {
     BinDeleteAlertSweep,
     /// B4-T3: removes tag links whose expiry has passed. Bare unit variant.
     TagExpirySweep,
+    /// W1-T4: the nightly contract key-date run (notice deadlines, renewal
+    /// tasks, obligation reminders and escalations, recurring obligations).
+    /// Bare unit variant; the handler reads the tables as they are now.
+    ContractKeyDates,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -835,6 +839,7 @@ impl EngineJob {
             | Self::AiToolCallSweep
             | Self::BinDeleteAlertSweep
             | Self::TagExpirySweep
+            | Self::ContractKeyDates
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -919,6 +924,7 @@ impl EngineJob {
             EngineJob::AiToolCallSweep => "AiToolCallSweep",
             EngineJob::BinDeleteAlertSweep => "BinDeleteAlertSweep",
             EngineJob::TagExpirySweep => "TagExpirySweep",
+            EngineJob::ContractKeyDates => "ContractKeyDates",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1015,6 +1021,7 @@ impl EngineJob {
             | Self::AiToolCallSweep
             | Self::BinDeleteAlertSweep
             | Self::TagExpirySweep
+            | Self::ContractKeyDates
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1124,6 +1131,7 @@ impl EngineJob {
             | Self::AiToolCallSweep
             | Self::BinDeleteAlertSweep
             | Self::TagExpirySweep
+            | Self::ContractKeyDates
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1449,6 +1457,7 @@ mod tests {
         assert_round_trips(EngineJob::AiToolCallSweep);
         assert_round_trips(EngineJob::BinDeleteAlertSweep);
         assert_round_trips(EngineJob::TagExpirySweep);
+        assert_round_trips(EngineJob::ContractKeyDates);
     }
 
     #[test]

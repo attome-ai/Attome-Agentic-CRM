@@ -930,6 +930,24 @@ async fn dispatch_platform_job(
         }
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.
+        // W1-T4: contract key dates, nightly.
+        EngineJob::ContractKeyDates => {
+            let run = attome_contract::dates::run(
+                &db,
+                &config.notification,
+                attome_contract::dates::KeyDateSettings::default(),
+                chrono::Utc::now().date_naive(),
+            )
+            .await?;
+            tracing::info!(
+                deadlines = run.deadlines_written,
+                renewal_tasks = run.renewal_tasks,
+                reminders = run.reminders,
+                escalations = run.escalations,
+                rolled_forward = run.rolled_forward,
+                "contract key dates: run finished"
+            );
+        }
         // B4-T3: tag links past their expiry go.
         EngineJob::TagExpirySweep => {
             let removed = attome_records::entity_crud::tags::sweep_expired_links(&db).await?;
@@ -1959,6 +1977,7 @@ const DEDUP_KEY_AI_QUALITY_MONITOR: &str = "ai-quality-monitor";
 const DEDUP_KEY_AI_TOOL_CALL_SWEEP: &str = "ai-tool-call-sweep";
 const DEDUP_KEY_BIN_DELETE_ALERT: &str = "bin-delete-alert";
 const DEDUP_KEY_TAG_EXPIRY: &str = "tag-expiry";
+const DEDUP_KEY_CONTRACT_KEY_DATES: &str = "contract-key-dates";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2013,6 +2032,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::AiToolCallSweep => DEDUP_KEY_AI_TOOL_CALL_SWEEP,
         EngineJob::BinDeleteAlertSweep => DEDUP_KEY_BIN_DELETE_ALERT,
         EngineJob::TagExpirySweep => DEDUP_KEY_TAG_EXPIRY,
+        EngineJob::ContractKeyDates => DEDUP_KEY_CONTRACT_KEY_DATES,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2326,6 +2346,17 @@ pub fn spawn_tag_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
         EngineJob::TagExpirySweep,
         DEDUP_KEY_TAG_EXPIRY,
         "tag expiry",
+    );
+}
+
+/// W1-T4: once a day, the contract key-date run.
+pub fn spawn_contract_key_dates_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::ContractKeyDates,
+        DEDUP_KEY_CONTRACT_KEY_DATES,
+        "contract key dates",
     );
 }
 
