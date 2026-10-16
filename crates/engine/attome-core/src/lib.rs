@@ -120,7 +120,6 @@ pub mod partition_maintenance;
 pub mod reconcile;
 /// Solution 7 Phase 2 (D-788 rule 9) — the 30-day encrypted recovery archive.
 pub mod recovery_archive;
-pub mod run_payload;
 /// M01 Core P3 gap (D-455) — the generic many-to-many relationship-metadata
 /// registry snapshot, consulted by `attome-server`'s `/related/{relationship}`
 /// handlers and `attome-metadata`'s bundle-apply reconcile path.
@@ -129,6 +128,7 @@ pub mod relationship_registry;
 /// the record baseline (the three-way "customer wins" rule).
 pub mod release_report;
 pub mod rule_registry;
+pub mod run_payload;
 /// Boot-cost fix — skip-gate wrapping the ~30 `*::seed::seed(db)` functions
 /// called from `crates/server/src/boot.rs`/`EngineSystem::build()`, backed by
 /// `seed_watermark` (migration `0388_seed_watermark.sql`).

@@ -326,8 +326,11 @@ async fn read_points(db: &DbPool, metric: &str, minutes: i64) -> Result<Vec<Poin
         .collect())
 }
 
+/// A stored alert row: state, pending since, firing since.
+type StoredStateRow = (String, Option<DateTime<Utc>>, Option<DateTime<Utc>>);
+
 async fn stored_state(db: &DbPool, name: &str) -> Result<AlertState, sqlx::Error> {
-    let row: Option<(String, Option<DateTime<Utc>>, Option<DateTime<Utc>>)> =
+    let row: Option<StoredStateRow> =
         sqlx::query_as("SELECT state, pending_since, firing_since FROM ops_alert WHERE name = $1")
             .bind(name)
             .fetch_optional(db)

@@ -112,7 +112,6 @@ use axum::{
 use base64::Engine as _;
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sqlx::postgres::PgRow;
 use std::cmp::Ordering;
 use utoipa::{IntoParams, ToSchema};

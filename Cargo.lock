@@ -181,6 +181,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arrayvec"
+version = "0.7.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3fb67a6e08acf24fdeccbac2cb6ac4305825bd1f117462e0e6f2f193345ad56"
+
+[[package]]
 name = "async-compression"
 version = "0.4.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -556,7 +562,13 @@ dependencies = [
  "attome-core",
  "attome-modules",
  "axum",
+ "chrono",
+ "rust_decimal",
+ "serde",
+ "serde_json",
+ "thiserror",
  "utoipa",
+ "uuid",
 ]
 
 [[package]]
@@ -1396,6 +1408,10 @@ dependencies = [
 [[package]]
 name = "attome-release"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "attome-report"
@@ -1482,18 +1498,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "attome-sdk"
-version = "0.1.0"
-
-[[package]]
 name = "attome-sales"
 version = "0.1.0"
 dependencies = [
  "attome-core",
  "attome-modules",
  "axum",
+ "rust_decimal",
+ "serde",
  "utoipa",
+ "uuid",
 ]
+
+[[package]]
+name = "attome-sdk"
+version = "0.1.0"
 
 [[package]]
 name = "attome-search"
@@ -1802,7 +1821,10 @@ dependencies = [
  "attome-core",
  "attome-modules",
  "axum",
+ "chrono",
+ "serde",
  "utoipa",
+ "uuid",
 ]
 
 [[package]]
@@ -4782,6 +4804,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "rust_decimal"
+version = "1.43.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7653272e75dcac41dc199fbea6f5797633994fafd339943c06c9af16bf29cd3a"
+dependencies = [
+ "arrayvec",
+ "borsh",
+ "bytes",
+ "num-traits",
+ "rand 0.8.8",
+ "rand 0.9.5",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "rust_xlsxwriter"
 version = "0.99.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6248,6 +6287,7 @@ dependencies = [
  "cfg-if",
  "once_cell",
  "rustversion",
+ "serde",
  "wasm-bindgen-macro",
  "wasm-bindgen-shared",
 ]
