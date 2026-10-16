@@ -38,6 +38,7 @@ attome-profiler.workspace     = true
 attome-project.workspace      = true
 attome-commission.workspace = true
 attome-sales.workspace = true
+attome-hr.workspace = true
 attome-records.workspace      = true
 attome-report.workspace       = true
 attome-rules.workspace        = true

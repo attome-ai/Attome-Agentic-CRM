@@ -73,6 +73,7 @@
 //! | 40 | `attome-contract/`   | `attome_contract::ADVISORY_LOCK_NAMESPACE` |
 //! | 41 | `attome-offline/`    | `attome_offline::ADVISORY_LOCK_NAMESPACE` |
 //! | 42 | `attome-procurement/` | `attome_procurement::ADVISORY_LOCK_NAMESPACE` |
+//! | 43 | `attome-hr/`         | `attome_hr::ADVISORY_LOCK_NAMESPACE` |
 //!
 //! A key's prefix decides its namespace, not the crate the SQL is written in:
 //! `attome-api`'s rewrap handler locks `"attome-auth/rewrap:{domain}"` under
@@ -175,6 +176,7 @@ const NAMESPACES: &[(i32, &str)] = &[
         attome_procurement::ADVISORY_LOCK_NAMESPACE,
         "attome-procurement/",
     ),
+    (attome_hr::ADVISORY_LOCK_NAMESPACE, "attome-hr/"),
 ];
 
 /// The whole point of the registry: two subsystems sharing an id would put
@@ -202,8 +204,8 @@ fn every_namespace_id_is_distinct() {
 fn registry_covers_every_declared_namespace() {
     assert_eq!(
         NAMESPACES.len(),
-        42,
-        "NAMESPACES no longer lists 41 entries — update the registry table in this \
+        43,
+        "NAMESPACES no longer lists 43 entries — update the registry table in this \
          file's header and this count together, so the documented table and the \
          collision-checked list cannot drift apart."
     );

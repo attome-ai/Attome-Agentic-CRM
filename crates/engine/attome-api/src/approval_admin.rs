@@ -111,6 +111,7 @@ pub const KNOWN_ACTION_TYPES: &[&str] = &[
     attome_commission::dispute::ACTION_ADJUSTMENT_APPLY,
     attome_commission::close::ACTION_PERIOD_CLOSE,
     attome_sales::split_store::ACTION_SPLIT_CHANGE,
+    attome_hr::leave::ACTION_LEAVE_DECIDE,
     attome_security::admin::ACTION_ROLE_GRANT,
     attome_compliance::retention_admin::ACTION_RETENTION_APPROVE,
     attome_records::query_admin::ACTION_QUERY_PUBLISH,
@@ -1054,6 +1055,24 @@ async fn dispatch_approved(
             .await?;
             serde_json::to_value(&response).map_err(AppError::internal)?
         }
+        attome_hr::leave::ACTION_LEAVE_DECIDE => {
+            // W6-T2: the manager's approval of a leave request.
+            #[derive(serde::Deserialize)]
+            struct LeavePayload {
+                leave_request_id: Uuid,
+                days: u32,
+            }
+            let payload: LeavePayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let response = attome_hr::leave::do_approve_leave(
+                state,
+                payload.leave_request_id,
+                payload.days,
+                approver_id,
+            )
+            .await?;
+            serde_json::to_value(&response).map_err(AppError::internal)?
+        }
         attome_sales::split_store::ACTION_SPLIT_CHANGE => {
             // D7-T5: an approved split change on a won deal, applied only if
             // the deal is unchanged since it was proposed.
@@ -1790,6 +1809,8 @@ async fn do_decide(
         // F10-T7: a rejected period close goes back to open.
         attome_commission::close::settle_rejected(state, &request, decider_id, comment.as_deref())
             .await;
+        // W6-T2: a rejected leave request becomes rejected.
+        attome_hr::leave::settle_rejected(state, &request, decider_id).await;
     }
 
     // D-518: the action runs only under this call's claim. A concurrent

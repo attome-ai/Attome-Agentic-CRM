@@ -32,6 +32,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Human resources engine `attome-hr`: `POST /api/v1/hr/leave-requests/{id}/submit` counts the working days
+  on the default calendar, checks the balance and opens the approval (`hr.leave_decide`), which moves
+  the days to taken; `GET /api/v1/hr/availability` lists a user's days on approved leave; and
+  `GET /api/v1/hr/payroll-export?from=&to=&template=generic|wps` hands the period's salaries, unpaid
+  leave days and approved commission to payroll as CSV (salary and national id grants required,
+  each export audited).
 - Undo of bulk line changes: a deal discount or quote sync answers with a `snapshot_id`;
   `POST /api/v1/sales/undo/{snapshot_id}` restores the lines and reprices, for its author within
   30 minutes and only while the lines are untouched since (migration `0100`). Snapshots are removed

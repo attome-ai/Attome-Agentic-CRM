@@ -1,0 +1,34 @@
+[package]
+name         = "attome-hr"
+description  = "Attome's human resources engine: leave, availability and the payroll hand-off."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+homepage.workspace     = true
+publish.workspace      = true
+
+[dependencies]
+attome-approval.workspace = true
+attome-audit.workspace = true
+attome-core.workspace = true
+attome-db.workspace = true
+attome-modules.workspace = true
+attome-records.workspace = true
+attome-security.workspace = true
+attome-server.workspace = true
+attome-types.workspace = true
+axum.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tracing.workspace = true
+utoipa.workspace = true
+uuid.workspace = true
+
+[lints]
+workspace = true

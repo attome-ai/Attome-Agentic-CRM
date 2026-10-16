@@ -1613,6 +1613,7 @@ pub fn register_engines(
         // B18-T1: gated on the `offline` module.
         .register(attome_offline::OfflineModel)
         .register(attome_procurement::ProcurementModel)
+        .register(attome_hr::HrModel)
         // Route-mounting/license-gating only (D-383) — attome-compliance's own
         // seeds (`consent_seed`, `legal_matter_seed`) also run from inside
         // `.build()`, same shape as attome-project/attome-service/attome-grc/
