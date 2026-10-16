@@ -222,6 +222,7 @@ pub(crate) async fn post_sales_copy_account_team(
             "give at least one account role".into(),
         ));
     }
+    crate::flags::require(&state, &ctx, crate::flags::DEAL_TEAMS).await?;
     let entity = crate::team::opportunity_entity_id(&state)?;
     attome_records::entity_crud::require_record_access(
         &state,
@@ -309,6 +310,7 @@ pub(crate) async fn post_sales_default_team_preview(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
 ) -> Result<Json<SalesDefaultTeamPreview>, AppError> {
+    crate::flags::require(&state, &ctx, crate::flags::DEAL_TEAMS).await?;
     Ok(Json(SalesDefaultTeamPreview {
         opportunity_ids: deals_to_change(&state.base.db, ctx.user_id).await?,
     }))
@@ -338,6 +340,7 @@ pub(crate) async fn post_sales_default_team_apply(
     State(state): State<EngineState>,
     ctx: Authorized<SelfService>,
 ) -> Result<(StatusCode, Json<SalesDefaultTeamApply>), AppError> {
+    crate::flags::require(&state, &ctx, crate::flags::DEAL_TEAMS).await?;
     attome_jobs::enqueue_on_pool(
         &state.base.db,
         attome_core::jobs::EngineJob::SalesDefaultTeamApply {

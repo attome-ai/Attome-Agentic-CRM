@@ -464,6 +464,10 @@ pub(crate) async fn put_sales_splits(
     Path(opportunity): Path<Uuid>,
     Json(body): Json<SalesSplitsBody>,
 ) -> Result<(StatusCode, Json<SalesSplitsOutcome>), AppError> {
+    crate::flags::require(&state, &ctx, crate::flags::SPLITS).await?;
+    if body.splits.iter().any(|s| s.line_id.is_some()) {
+        crate::flags::require(&state, &ctx, crate::flags::LINE_SPLITS).await?;
+    }
     let entity_id = state
         .entities
         .load()

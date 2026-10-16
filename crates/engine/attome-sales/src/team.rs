@@ -97,6 +97,7 @@ async fn require_deal_update(
     ctx: &SecurityContext,
     opportunity: Uuid,
 ) -> Result<Uuid, AppError> {
+    crate::flags::require(state, ctx, crate::flags::DEAL_TEAMS).await?;
     let entity = opportunity_entity(state)?;
     attome_records::entity_crud::require_record_access(
         state,
@@ -327,6 +328,9 @@ pub(crate) async fn post_sales_team_member(
         ));
     }
     let entity = require_deal_update(&state, &ctx, opportunity).await?;
+    if body.partner_contact_ref.is_some() {
+        crate::flags::require(&state, &ctx, crate::flags::PARTNER_MEMBERS).await?;
+    }
     if let Some(user) = body.user_ref {
         check_member_access(&state, user, body.access_level).await?;
     }
