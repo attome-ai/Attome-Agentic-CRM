@@ -29,6 +29,7 @@
 //! `format` and `clippy` can never be overridden (they are always fixable).
 
 pub mod advisories;
+pub mod chaos;
 mod contract;
 pub mod intake;
 pub mod notes;
