@@ -1927,6 +1927,7 @@ async fn audit_duplicate_skip(
         .named("duplicate_check_skipped"),
     )
     .await
+    .map(|_| ())
 }
 
 /// A15-T4: the reason a request gives for saving a likely duplicate.
