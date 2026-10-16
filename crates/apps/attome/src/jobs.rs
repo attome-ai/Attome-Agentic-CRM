@@ -931,7 +931,7 @@ async fn dispatch_platform_job(
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.
         // E30-T1: loyalty earning and expiry, nightly.
-        EngineJob::LoyaltyNightly => {
+        EngineJob::MarketingNightly => {
             let now = chrono::Utc::now();
             let orders = attome_marketing::loyalty::earn_from_orders(&db, now).await?;
             let expired = attome_marketing::loyalty::expire_due(&db, now).await?;
@@ -939,12 +939,16 @@ async fn dispatch_platform_job(
             let referrals = attome_marketing::referral::reward_converted(&db, now).await?;
             // E20-T1: target accounts rescored on the same nightly pass.
             let target_accounts = attome_marketing::abm::rescore(&db, now).await?;
+            // E6-T5: bounces and complaints reach the people who own the address.
+            let effects = attome_marketing::deliverability::effects::apply(&db).await?;
             tracing::info!(
                 orders,
                 expired,
                 referrals,
                 target_accounts,
-                "loyalty: points earned and expired"
+                invalidated = effects.invalidated,
+                consent_withdrawn = effects.withdrawn,
+                "marketing nightly: run finished"
             );
         }
         // M10-T1: due timers become one job each.
@@ -2081,7 +2085,7 @@ const DEDUP_KEY_FORECAST_RECOMPUTE: &str = "forecast-recompute";
 const DEDUP_KEY_MRR_SNAPSHOT: &str = "mrr-snapshot";
 const DEDUP_KEY_WEBCRAWL_RECRAWL_DUE: &str = "webcrawl-recrawl-due";
 const DEDUP_KEY_TIMER_SWEEP: &str = "timer-sweep";
-const DEDUP_KEY_LOYALTY_NIGHTLY: &str = "loyalty-nightly";
+const DEDUP_KEY_MARKETING_NIGHTLY: &str = "marketing-nightly";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2144,7 +2148,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::MrrSnapshot => DEDUP_KEY_MRR_SNAPSHOT,
         EngineJob::WebcrawlRecrawlDue => DEDUP_KEY_WEBCRAWL_RECRAWL_DUE,
         EngineJob::TimerSweep => DEDUP_KEY_TIMER_SWEEP,
-        EngineJob::LoyaltyNightly => DEDUP_KEY_LOYALTY_NIGHTLY,
+        EngineJob::MarketingNightly => DEDUP_KEY_MARKETING_NIGHTLY,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2462,13 +2466,13 @@ pub fn spawn_tag_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
 }
 
 /// E30-T1: once a day, loyalty earning and expiry.
-pub fn spawn_loyalty_scheduler(db: DbPool, interval: std::time::Duration) {
+pub fn spawn_marketing_nightly_scheduler(db: DbPool, interval: std::time::Duration) {
     spawn_dedup_scheduler(
         db,
         interval,
-        EngineJob::LoyaltyNightly,
-        DEDUP_KEY_LOYALTY_NIGHTLY,
-        "loyalty nightly",
+        EngineJob::MarketingNightly,
+        DEDUP_KEY_MARKETING_NIGHTLY,
+        "marketing nightly",
     );
 }
 

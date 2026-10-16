@@ -32,6 +32,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Bounces and complaints reach the person: a nightly pass marks the email of a contact or lead whose
+  address hard-bounced `invalid`, and withdraws marketing consent on email for each complaint, once.
 - Target account lists (migration `0097`): each account on a list is rescored nightly from its
   contacts' activity of the last 90 days, with the buying roles covered and missing, and moves from
   identified to aware to engaged on its own.

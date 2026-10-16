@@ -1116,6 +1116,7 @@ dependencies = [
 name = "attome-marketing"
 version = "0.1.0"
 dependencies = [
+ "attome-compliance",
  "attome-core",
  "attome-db",
  "attome-modules",
@@ -1123,6 +1124,7 @@ dependencies = [
  "axum",
  "chrono",
  "chrono-tz",
+ "serde_json",
  "sqlx",
  "utoipa",
  "uuid",
