@@ -163,3 +163,72 @@ fn the_library_core_pack_installs_once() {
         }
     });
 }
+
+/// E1-T1, E7-T1, E9-T1: the marketing pack, on top of the crm pack, adds
+/// campaigns, lists, events and nurture programmes, and a lifecycle stage on
+/// leads.
+#[test]
+fn the_marketing_pack_installs_once_on_the_crm_pack() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        installs_once(&app, "crm", &["lead", "contact"]).await;
+        installs_once(
+            &app,
+            "marketing",
+            &[
+                "campaign",
+                "marketing_list",
+                "marketing_nurture_program",
+                "marketing_nurture_track",
+                "marketing_nurture_content",
+            ],
+        )
+        .await;
+        let lead_fields: Vec<String> = sqlx::query_scalar(
+            "SELECT a.logicalname FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
+             WHERE e.logicalname = 'lead' ORDER BY a.logicalname",
+        )
+        .fetch_all(app.db())
+        .await
+        .expect("read lead fields");
+        for field in ["campaign_ref", "lifecycle_stage", "wake_up_on"] {
+            assert!(lead_fields.iter().any(|f| f == field), "lead.{field}");
+        }
+    });
+}
+
+/// F10-T13: the commission pack's pay roles; every amount is sensitive and
+/// readable only through the Commission Amounts profile.
+#[test]
+fn the_commission_pack_installs_once_with_masked_amounts() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        installs_once(
+            &app,
+            "commission",
+            &["comp_plan", "comp_statement_line", "comp_payout"],
+        )
+        .await;
+        let open: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref \
+             WHERE e.logicalname IN ('comp_credit', 'comp_statement_line', 'comp_payout') \
+               AND a.logicalname = 'amount' AND NOT a.is_sensitive",
+        )
+        .fetch_one(app.db())
+        .await
+        .expect("read amount fields");
+        assert_eq!(open, 0, "pay amounts are sensitive");
+        let roles: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM role WHERE name IN \
+             ('Commission Seller', 'Commission Manager', 'Sales Ops', 'Commission Finance')",
+        )
+        .fetch_one(app.db())
+        .await
+        .expect("count roles");
+        assert_eq!(roles, 4, "the four pay roles, once");
+    });
+}
