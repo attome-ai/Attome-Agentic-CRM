@@ -2226,11 +2226,19 @@ async fn staged_import(
                 "mapping_ref targets entity '{mapping_target_entity}', not '{entity_name}'"
             )));
         }
+        let choice_matchers = crate::data_mapping::load_choice_matchers(
+            &state.base.db,
+            &entity_name,
+            &attrs,
+            &mapping_fields,
+        )
+        .await?;
         for (index, record) in body.records.iter_mut().enumerate() {
             if let Err(error) = crate::data_mapping::apply_mapping_to_record(
                 &state.base.db,
                 &attrs,
                 &mapping_fields,
+                &choice_matchers,
                 record,
             )
             .await

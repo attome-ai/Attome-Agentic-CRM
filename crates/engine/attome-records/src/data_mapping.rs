@@ -14,11 +14,15 @@
 //! column, never evaluated here — see D-408. An unset or set-but-
 //! unevaluated `transform` is identity/passthrough either way.
 
+use std::collections::HashMap;
+
 use attome_types::AppError;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::ToSchema;
 use uuid::Uuid;
+
+use crate::import_choice_match::ChoiceMatcher;
 
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct DataMappingField {
@@ -127,6 +131,7 @@ pub(crate) async fn apply_mapping_to_record(
     db: &attome_db::DbPool,
     target_attrs: &[attome_core::AttrInfo],
     fields: &[DataMappingField],
+    choices: &ChoiceMatchers,
     record: &mut crate::bulk::BulkRecordEnvelope,
 ) -> Result<(), AppError> {
     let source_obj = record
@@ -144,10 +149,140 @@ pub(crate) async fn apply_mapping_to_record(
         } else {
             resolve_lookup_value(db, target_attrs, field, raw_value).await?
         };
+        let value = match choices.get(&field.target) {
+            Some((matcher, multi)) => match_choice_value(matcher, *multi, &field.target, value)?,
+            None => value,
+        };
         mapped.insert(field.target.clone(), value);
     }
     record.data = Value::Object(mapped);
     Ok(())
+}
+
+/// A6-T3: the matcher and multi-select flag of each mapped choice attribute,
+/// by attribute name.
+pub(crate) type ChoiceMatchers = HashMap<String, (ChoiceMatcher, bool)>;
+
+/// A mapped choice attribute: its name, options and inline labels.
+type WantedChoice = (String, attome_field::ChoiceOptions, Vec<(String, String)>);
+
+/// Builds a [`ChoiceMatcher`] for every mapped target attribute that is a
+/// choice field with a closed list, from its stored values, the labels kept
+/// in its options (`option_labels`) and every translated `choice_option`
+/// label in `metadata_label`. One query for the whole import, none when no
+/// mapped attribute is a choice.
+pub(crate) async fn load_choice_matchers(
+    db: &attome_db::DbPool,
+    entity_name: &str,
+    target_attrs: &[attome_core::AttrInfo],
+    fields: &[DataMappingField],
+) -> Result<ChoiceMatchers, AppError> {
+    let mut wanted: Vec<WantedChoice> = Vec::new();
+    for field in fields {
+        let Some(attr) = target_attrs.iter().find(|a| a.logicalname == field.target) else {
+            continue;
+        };
+        if attome_core::FieldType::from_int(attr.field_type_int)
+            != Some(attome_core::FieldType::Choice)
+        {
+            continue;
+        }
+        let Some(options) = attr.options.as_ref() else {
+            continue;
+        };
+        let Ok(parsed) = serde_json::from_value::<attome_field::ChoiceOptions>(options.clone())
+        else {
+            continue;
+        };
+        if parsed.choices.is_empty() || wanted.iter().any(|w| w.0 == field.target) {
+            continue;
+        }
+        let inline: Vec<(String, String)> = options
+            .get("option_labels")
+            .and_then(Value::as_object)
+            .map(|labels| {
+                labels
+                    .iter()
+                    .filter_map(|(k, v)| v.as_str().map(|v| (k.clone(), v.to_owned())))
+                    .collect()
+            })
+            .unwrap_or_default();
+        wanted.push((field.target.clone(), parsed, inline));
+    }
+    if wanted.is_empty() {
+        return Ok(HashMap::new());
+    }
+    let refs: Vec<String> = wanted
+        .iter()
+        .flat_map(|(attr, opts, _)| {
+            opts.choices
+                .iter()
+                .map(move |value| format!("{entity_name}.{attr}.{value}"))
+        })
+        .collect();
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT object_ref, display_name FROM metadata_label \
+         WHERE object_kind = 'choice_option' AND is_deleted = false AND object_ref = ANY($1)",
+    )
+    .bind(&refs)
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)?;
+    let mut out = HashMap::new();
+    for (attr, opts, mut labels) in wanted {
+        let prefix = format!("{entity_name}.{attr}.");
+        labels.extend(rows.iter().filter_map(|(object_ref, label)| {
+            object_ref
+                .strip_prefix(&prefix)
+                .map(|value| (value.to_owned(), label.clone()))
+        }));
+        out.insert(
+            attr,
+            (ChoiceMatcher::new(&opts.choices, &labels), opts.multi),
+        );
+    }
+    Ok(out)
+}
+
+/// Maps a cell to the stored choice value(s) it names; a value already in
+/// stored form passes through unchanged. An empty cell is null; non-text
+/// cells are left for the field validator.
+fn match_choice_value(
+    matcher: &ChoiceMatcher,
+    multi: bool,
+    attr: &str,
+    value: Value,
+) -> Result<Value, AppError> {
+    let invalid = |e: crate::import_choice_match::ChoiceMatchError| {
+        AppError::Validation(format!("{attr}: {e}"))
+    };
+    match value {
+        Value::String(text) if text.trim().is_empty() => Ok(Value::Null),
+        Value::String(text) if multi => Ok(Value::Array(
+            matcher
+                .match_many(&text)
+                .map_err(invalid)?
+                .into_iter()
+                .map(Value::String)
+                .collect(),
+        )),
+        Value::String(text) => Ok(Value::String(
+            matcher.match_one(&text).map_err(invalid)?.to_owned(),
+        )),
+        Value::Array(items) if multi => {
+            let mut out = Vec::with_capacity(items.len());
+            for item in items {
+                match item {
+                    Value::String(text) => out.push(Value::String(
+                        matcher.match_one(&text).map_err(invalid)?.to_owned(),
+                    )),
+                    other => out.push(other),
+                }
+            }
+            Ok(Value::Array(out))
+        }
+        other => Ok(other),
+    }
 }
 
 /// Loaded by `bulk::staged_import` when the caller passes `mapping_ref`.

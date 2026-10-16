@@ -42,6 +42,7 @@ pub mod data_mapping;
 pub mod duplicate_check;
 pub mod entity_crud;
 pub mod entity_mutation;
+pub mod import_choice_match;
 /// C-10 — the shared mutation-commit orchestration helper (creator share,
 /// file mirror, audit write, commit, post-commit invalidation, rw-pin).
 /// `pub`, not `pub(crate)`: `attome-server::communication` and
