@@ -165,6 +165,42 @@ const UNGATED_BY_DESIGN: &[(&str, &str)] = &[
         "contract_playbook_rule",
         "attome-contract claims it through EngineModel::owned_entities at runtime",
     ),
+    (
+        "call_analysis",
+        "attome-callintel claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "call_tracker",
+        "attome-callintel claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "call_finding",
+        "attome-callintel claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "call_scorecard",
+        "attome-callintel claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "call_scorecard_answer",
+        "attome-callintel claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "call_comment",
+        "attome-callintel claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "call_library",
+        "attome-callintel claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "call_library_item",
+        "attome-callintel claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "call_daily_aggregate",
+        "attome-callintel claims it through EngineModel::owned_entities at runtime",
+    ),
 ];
 
 fn owner(model_name: &'static str, module_id: ModuleId) -> EntityModuleOwner {

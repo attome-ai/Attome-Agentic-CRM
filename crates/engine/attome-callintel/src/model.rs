@@ -17,7 +17,18 @@ impl EngineModel for CallintelModel {
     }
 
     fn owned_entities(&self) -> &'static [&'static str] {
-        &[]
+        // D22-T2: `platform-bundles/attome-callintel.json`.
+        &[
+            "call_analysis",
+            "call_tracker",
+            "call_finding",
+            "call_scorecard",
+            "call_scorecard_answer",
+            "call_comment",
+            "call_library",
+            "call_library_item",
+            "call_daily_aggregate",
+        ]
     }
 
     fn routes(&self) -> Router<EngineState> {

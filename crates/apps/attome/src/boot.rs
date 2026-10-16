@@ -1078,6 +1078,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-ai-work-share",
         "attome-ai-work-share-data",
         "attome-contract",
+        // D22-T2: the call-analysis entities.
+        "attome-callintel",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }
