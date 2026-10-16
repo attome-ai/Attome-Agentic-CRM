@@ -83,9 +83,16 @@ impl From<SsrfGuardError> for FetchError {
     }
 }
 
+#[derive(Default)]
 pub struct FetchedPage {
     pub content_type: String,
     pub body: String,
+    /// K6-T2: the validators to send next time (`ETag`, `Last-Modified`).
+    pub etag: Option<String>,
+    pub last_modified: Option<String>,
+    /// K6-T2: the server answered 304, so `body` is empty and the stored
+    /// page is still current.
+    pub not_modified: bool,
 }
 
 impl std::fmt::Debug for FetchedPage {
@@ -116,15 +123,42 @@ pub async fn fetch_safely(
     max_bytes: usize,
     user_agent: &str,
 ) -> Result<FetchedPage, FetchError> {
+    fetch_conditional(client, url, max_bytes, user_agent, None, None).await
+}
+
+/// [`fetch_safely`] with the validators from the last crawl (K6-T2): a 304
+/// answer comes back as `not_modified` with no body.
+pub async fn fetch_conditional(
+    client: &ssrf_guard::GuardedClient,
+    url: &Url,
+    max_bytes: usize,
+    user_agent: &str,
+    etag: Option<&str>,
+    last_modified: Option<&str>,
+) -> Result<FetchedPage, FetchError> {
     let mut current = url.clone();
     for _ in 0..=MAX_REDIRECTS {
         validate_url(&current).await?;
 
-        let resp = client
+        let mut request = client
             .get(current.clone())?
-            .header(reqwest::header::USER_AGENT, user_agent)
-            .send()
-            .await?;
+            .header(reqwest::header::USER_AGENT, user_agent);
+        if let Some(tag) = etag {
+            request = request.header(reqwest::header::IF_NONE_MATCH, tag);
+        }
+        if let Some(since) = last_modified {
+            request = request.header(reqwest::header::IF_MODIFIED_SINCE, since);
+        }
+        let resp = request.send().await?;
+
+        if resp.status() == reqwest::StatusCode::NOT_MODIFIED {
+            return Ok(FetchedPage {
+                not_modified: true,
+                etag: etag.map(str::to_owned),
+                last_modified: last_modified.map(str::to_owned),
+                ..FetchedPage::default()
+            });
+        }
 
         if resp.status().is_redirection() {
             let location = resp
@@ -149,8 +183,22 @@ pub async fn fetch_safely(
             .unwrap_or("")
             .to_string();
 
+        let header = |name: reqwest::header::HeaderName| {
+            resp.headers()
+                .get(name)
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_owned)
+        };
+        let etag = header(reqwest::header::ETAG);
+        let last_modified = header(reqwest::header::LAST_MODIFIED);
         let body = read_capped_body(resp, max_bytes).await?;
-        return Ok(FetchedPage { content_type, body });
+        return Ok(FetchedPage {
+            content_type,
+            body,
+            etag,
+            last_modified,
+            not_modified: false,
+        });
     }
     Err(FetchError::TooManyRedirects)
 }
@@ -189,9 +237,18 @@ pub fn build_client(
 #[derive(Debug, Default, Clone)]
 pub struct RobotsRules {
     disallow: Vec<String>,
+    /// K6-T2: the `Crawl-delay` of the `*` block, in seconds.
+    crawl_delay: Option<f64>,
 }
 
 impl RobotsRules {
+    /// The `Crawl-delay` the site asks for, capped at a minute.
+    pub fn crawl_delay(&self) -> Option<std::time::Duration> {
+        self.crawl_delay
+            .filter(|d| d.is_finite() && *d > 0.0)
+            .map(|d| std::time::Duration::from_secs_f64(d.min(60.0)))
+    }
+
     pub fn allows(&self, path: &str) -> bool {
         !self
             .disallow
@@ -207,6 +264,7 @@ impl RobotsRules {
     /// dedicated `User-agent` stanza.
     pub fn parse(body: &str) -> Self {
         let mut disallow = Vec::new();
+        let mut crawl_delay = None;
         let mut in_wildcard_block = false;
         for line in body.lines() {
             let line = line.split('#').next().unwrap_or("").trim();
@@ -223,10 +281,16 @@ impl RobotsRules {
                 "disallow" if in_wildcard_block && !value.is_empty() => {
                     disallow.push(value.to_string());
                 }
+                "crawl-delay" if in_wildcard_block => {
+                    crawl_delay = value.parse::<f64>().ok();
+                }
                 _ => {}
             }
         }
-        Self { disallow }
+        Self {
+            disallow,
+            crawl_delay,
+        }
     }
 }
 
@@ -291,6 +355,21 @@ mod tests {
         assert!(!rules.allows("/private/sub"));
         assert!(!rules.allows("/admin"));
         assert!(rules.allows("/"));
+    }
+
+    #[test]
+    fn robots_crawl_delay_is_read_and_capped() {
+        let rules = RobotsRules::parse("User-agent: *\nCrawl-delay: 2.5\n");
+        assert_eq!(
+            rules.crawl_delay(),
+            Some(std::time::Duration::from_millis(2500))
+        );
+        let greedy = RobotsRules::parse("User-agent: *\nCrawl-delay: 3600\n");
+        assert_eq!(
+            greedy.crawl_delay(),
+            Some(std::time::Duration::from_secs(60))
+        );
+        assert_eq!(RobotsRules::parse("User-agent: *\n").crawl_delay(), None);
     }
 
     #[test]

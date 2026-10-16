@@ -9,8 +9,17 @@
 //! via two different links has one unambiguous position in the tree either
 //! way, and the tree the "Crawled Pages Details" page renders doesn't depend
 //! on which link the crawler happened to follow first.
+//!
+//! K6-T2 makes the crawl scope-aware and polite ([`walk_with`]): include and
+//! exclude patterns (exclude wins), seeding from the sitemap with only the
+//! entries changed since the last crawl, conditional requests with the
+//! stored `ETag`/`Last-Modified` (a 304 or an unchanged text hash marks the
+//! page unchanged and skips extraction), the site's `Crawl-delay` or one
+//! second between requests, an identifying user agent, and a stop after
+//! [`MAX_CONSECUTIVE_ERRORS`] errors in a row.
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::time::Duration;
 
 use reqwest::Url;
 use scraper::{Html, Selector};
@@ -26,6 +35,18 @@ pub trait Fetcher {
         &self,
         url: &Url,
     ) -> impl std::future::Future<Output = Result<FetchedPage, String>> + Send;
+
+    /// A fetch that sends the validators from the last crawl; a fetcher
+    /// without conditional support just fetches.
+    fn fetch_conditional(
+        &self,
+        url: &Url,
+        etag: Option<&str>,
+        last_modified: Option<&str>,
+    ) -> impl std::future::Future<Output = Result<FetchedPage, String>> + Send {
+        let _ = (etag, last_modified);
+        self.fetch(url)
+    }
 }
 
 pub struct RealFetcher {
@@ -46,6 +67,24 @@ impl Fetcher for RealFetcher {
             .await
             .map_err(|e| e.to_string())
     }
+
+    async fn fetch_conditional(
+        &self,
+        url: &Url,
+        etag: Option<&str>,
+        last_modified: Option<&str>,
+    ) -> Result<FetchedPage, String> {
+        safety::fetch_conditional(
+            &self.client,
+            url,
+            self.max_bytes,
+            &self.user_agent,
+            etag,
+            last_modified,
+        )
+        .await
+        .map_err(|e| e.to_string())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -57,6 +96,13 @@ pub struct DiscoveredPage {
     pub status: &'static str,
     pub size_bytes: Option<i32>,
     pub content: Option<String>,
+    /// K6-T2: the validators and text hash to store for the next crawl.
+    pub etag: Option<String>,
+    pub last_modified: Option<String>,
+    pub content_hash: Option<String>,
+    /// K6-T2: the page did not change since the last crawl (a 304, or the
+    /// same text hash); its stored content stays.
+    pub unchanged: bool,
 }
 
 pub trait PageSink {
@@ -112,6 +158,158 @@ fn parent_of(path: &str) -> Option<String> {
     }
 }
 
+/// The most errors in a row before a crawl stops.
+pub const MAX_CONSECUTIVE_ERRORS: usize = 20;
+
+/// The least time between two requests to the site.
+pub const DEFAULT_HOST_INTERVAL: Duration = Duration::from_secs(1);
+
+/// What the last crawl stored about a page.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct KnownPage {
+    pub etag: Option<String>,
+    pub last_modified: Option<String>,
+    pub content_hash: Option<String>,
+}
+
+/// Scope and politeness of one crawl.
+#[derive(Debug, Clone, Default)]
+pub struct CrawlScope {
+    pub include: Vec<String>,
+    pub exclude: Vec<String>,
+    /// Extra start pages (from the sitemap), after the root.
+    pub seeds: Vec<Url>,
+    /// By path.
+    pub known: HashMap<String, KnownPage>,
+    pub min_interval: Duration,
+}
+
+/// How a crawl ended.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct WalkOutcome {
+    /// Why it stopped early, if it did.
+    pub stopped: Option<String>,
+}
+
+/// Splits a stored pattern list (one per line or comma separated).
+pub fn parse_patterns(text: &str) -> Vec<String> {
+    text.split(['\n', ','])
+        .map(str::trim)
+        .filter(|p| !p.is_empty())
+        .map(str::to_owned)
+        .collect()
+}
+
+/// Whether `text` matches a glob: `*` is any run of characters, `?` one.
+fn glob_match(pattern: &str, text: &str) -> bool {
+    let p: Vec<char> = pattern.chars().collect();
+    let t: Vec<char> = text.chars().collect();
+    let (mut pi, mut ti) = (0, 0);
+    let (mut star, mut mark) = (None, 0);
+    while ti < t.len() {
+        if pi < p.len() && (p[pi] == '?' || p[pi] == t[ti]) {
+            pi += 1;
+            ti += 1;
+        } else if pi < p.len() && p[pi] == '*' {
+            star = Some(pi);
+            mark = ti;
+            pi += 1;
+        } else if let Some(s) = star {
+            pi = s + 1;
+            mark += 1;
+            ti = mark;
+        } else {
+            return false;
+        }
+    }
+    while pi < p.len() && p[pi] == '*' {
+        pi += 1;
+    }
+    pi == p.len()
+}
+
+/// Whether a path is in scope: no include pattern, or one matching it, and
+/// no exclude pattern matching it (exclude wins).
+pub fn in_scope(path: &str, include: &[String], exclude: &[String]) -> bool {
+    if exclude.iter().any(|p| glob_match(p, path)) {
+        return false;
+    }
+    include.is_empty() || include.iter().any(|p| glob_match(p, path))
+}
+
+/// The `<loc>` and `<lastmod>` of each `<url>` in a sitemap.
+pub fn parse_sitemap(xml: &str) -> Vec<(String, Option<String>)> {
+    fn inner<'a>(block: &'a str, tag: &str) -> Option<&'a str> {
+        let open = format!("<{tag}>");
+        let close = format!("</{tag}>");
+        let start = block.find(&open)? + open.len();
+        let end = block[start..].find(&close)? + start;
+        Some(block[start..end].trim())
+    }
+    xml.split("<url>")
+        .skip(1)
+        .filter_map(|block| {
+            let block = block.split("</url>").next().unwrap_or(block);
+            let loc = inner(block, "loc")?.replace("&amp;", "&");
+            Some((loc, inner(block, "lastmod").map(str::to_owned)))
+        })
+        .collect()
+}
+
+fn parse_when(text: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+    let text = text.trim();
+    chrono::DateTime::parse_from_rfc3339(text)
+        .or_else(|_| chrono::DateTime::parse_from_rfc2822(text))
+        .map(|d| d.with_timezone(&chrono::Utc))
+        .ok()
+        .or_else(|| {
+            chrono::NaiveDate::parse_from_str(text, "%Y-%m-%d")
+                .ok()
+                .and_then(|d| d.and_hms_opt(0, 0, 0))
+                .map(|d| d.and_utc())
+        })
+}
+
+/// The sitemap entries worth crawling: same origin, in scope, and either
+/// never crawled or changed (by `lastmod`) since the stored `Last-Modified`.
+pub fn sitemap_seeds(
+    entries: &[(String, Option<String>)],
+    root: &Url,
+    include: &[String],
+    exclude: &[String],
+    known: &HashMap<String, KnownPage>,
+) -> Vec<Url> {
+    entries
+        .iter()
+        .filter_map(|(loc, lastmod)| {
+            let url = Url::parse(loc).ok()?;
+            if !same_origin(&url, root) {
+                return None;
+            }
+            let path = normalize_path(&url);
+            if !in_scope(&path, include, exclude) {
+                return None;
+            }
+            let changed = match (known.get(&path), lastmod.as_deref().and_then(parse_when)) {
+                (None, _) => true,
+                (Some(page), Some(modified)) => page
+                    .last_modified
+                    .as_deref()
+                    .and_then(parse_when)
+                    .is_none_or(|stored| modified > stored),
+                (Some(_), None) => true,
+            };
+            changed.then_some(url)
+        })
+        .collect()
+}
+
+fn text_hash(text: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let digest = Sha256::digest(text.as_bytes());
+    digest.iter().map(|b| format!("{b:02x}")).collect()
+}
+
 fn extract_links(html: &str, base: &Url) -> Vec<Url> {
     let doc = Html::parse_document(html);
     let Ok(sel) = Selector::parse("a[href]") else {
@@ -134,15 +332,36 @@ pub async fn walk<F: Fetcher, S: PageSink>(
     robots: &RobotsRules,
     sink: &mut S,
 ) {
+    walk_with(fetcher, root, limits, robots, &CrawlScope::default(), sink).await;
+}
+
+/// [`walk`] with a scope and politeness settings (K6-T2).
+pub async fn walk_with<F: Fetcher, S: PageSink>(
+    fetcher: &F,
+    root: &Url,
+    limits: &CrawlLimits,
+    robots: &RobotsRules,
+    scope: &CrawlScope,
+    sink: &mut S,
+) -> WalkOutcome {
     let origin = root.clone();
     let root_path = normalize_path(root);
+    let interval = robots
+        .crawl_delay()
+        .map_or(scope.min_interval, |d| d.max(scope.min_interval));
 
     let mut queue = VecDeque::new();
     queue.push_back(root.clone());
     let mut seen = HashSet::new();
     seen.insert(root_path);
+    for seed in &scope.seeds {
+        if seen.insert(normalize_path(seed)) {
+            queue.push_back(seed.clone());
+        }
+    }
 
     let mut visited = 0usize;
+    let mut errors_in_a_row = 0usize;
     while let Some(url) = queue.pop_front() {
         if visited >= limits.max_pages {
             break;
@@ -155,14 +374,46 @@ pub async fn walk<F: Fetcher, S: PageSink>(
         if !robots.allows(&path) {
             continue;
         }
+        // The root is always crawled; everything else must be in scope.
+        if visited > 0 && !in_scope(&path, &scope.include, &scope.exclude) {
+            continue;
+        }
+        if visited > 0 && !interval.is_zero() {
+            tokio::time::sleep(interval).await;
+        }
         visited += 1;
 
-        match fetcher.fetch(&url).await {
+        let known = scope.known.get(&path);
+        let result = fetcher
+            .fetch_conditional(
+                &url,
+                known.and_then(|k| k.etag.as_deref()),
+                known.and_then(|k| k.last_modified.as_deref()),
+            )
+            .await;
+        match result {
+            Ok(page) if page.not_modified => {
+                errors_in_a_row = 0;
+                sink.record(DiscoveredPage {
+                    url_path: path.clone(),
+                    parent_path: parent_of(&path),
+                    depth,
+                    status: "crawled",
+                    size_bytes: None,
+                    content: None,
+                    etag: page.etag,
+                    last_modified: page.last_modified,
+                    content_hash: known.and_then(|k| k.content_hash.clone()),
+                    unchanged: true,
+                })
+                .await;
+            }
             Ok(page) => {
+                errors_in_a_row = 0;
                 let is_html = page.content_type.starts_with("text/html");
                 let is_text = page.content_type.starts_with("text/plain");
                 let size = page.body.len() as i32;
-                let content = if is_html {
+                let content: Option<String> = if is_html {
                     // Visible text only: `<script>`/`<style>`/`<noscript>`
                     // content is code or a fallback, never page content a
                     // knowledge-base import should see (owner decision 4).
@@ -172,13 +423,20 @@ pub async fn walk<F: Fetcher, S: PageSink>(
                 } else {
                     None
                 };
+                let content_hash = content.as_deref().map(text_hash);
+                let unchanged = content_hash.is_some()
+                    && known.and_then(|k| k.content_hash.as_deref()) == content_hash.as_deref();
                 sink.record(DiscoveredPage {
                     url_path: path.clone(),
                     parent_path: parent_of(&path),
                     depth,
                     status: "crawled",
                     size_bytes: Some(size),
-                    content,
+                    content: if unchanged { None } else { content },
+                    etag: page.etag.clone(),
+                    last_modified: page.last_modified.clone(),
+                    content_hash,
+                    unchanged,
                 })
                 .await;
 
@@ -186,7 +444,8 @@ pub async fn walk<F: Fetcher, S: PageSink>(
                     for link in extract_links(&page.body, &url) {
                         if same_origin(&link, &origin) {
                             let lp = normalize_path(&link);
-                            if !seen.contains(&lp) {
+                            if !seen.contains(&lp) && in_scope(&lp, &scope.include, &scope.exclude)
+                            {
                                 seen.insert(lp);
                                 queue.push_back(link);
                             }
@@ -202,16 +461,35 @@ pub async fn walk<F: Fetcher, S: PageSink>(
                     status: "failed",
                     size_bytes: None,
                     content: None,
+                    etag: None,
+                    last_modified: None,
+                    content_hash: None,
+                    unchanged: false,
                 })
                 .await;
+                errors_in_a_row += 1;
+                if errors_in_a_row >= MAX_CONSECUTIVE_ERRORS {
+                    return WalkOutcome {
+                        stopped: Some(format!(
+                            "stopped after {MAX_CONSECUTIVE_ERRORS} errors in a row"
+                        )),
+                    };
+                }
             }
         }
     }
+    WalkOutcome::default()
 }
 
 // ── Production entrypoint ───────────────────────────────────────────────────
 
-const USER_AGENT: &str = "AttomeKnowledgeBaseCrawler/1.0";
+/// K6-T2: the crawler names itself and its version.
+fn user_agent() -> String {
+    format!(
+        "AttomeCrawler/{} (+contact the site's Attome administrator)",
+        env!("CARGO_PKG_VERSION")
+    )
+}
 
 struct DbPageSink<'a> {
     db: &'a attome_db::DbPool,
@@ -221,16 +499,44 @@ struct DbPageSink<'a> {
 
 impl PageSink for DbPageSink<'_> {
     async fn record(&mut self, page: DiscoveredPage) {
+        if page.unchanged {
+            // K6-T2: the stored text stays; only the validators move.
+            let result = sqlx::query(
+                "UPDATE webcrawl_page SET etag = COALESCE($3, etag), \
+                     last_modified = COALESCE($4, last_modified), missing_count = 0, \
+                     updated_at = NOW() \
+                 WHERE target_ref = $1 AND url_path = $2",
+            )
+            .bind(self.target_id)
+            .bind(&page.url_path)
+            .bind(&page.etag)
+            .bind(&page.last_modified)
+            .execute(self.db)
+            .await;
+            match result {
+                Ok(_) => self.recorded += 1,
+                Err(e) => tracing::warn!(
+                    target_id = %self.target_id, url_path = %page.url_path, error = %e,
+                    "webcrawl: failed to mark an unchanged page — continuing the crawl"
+                ),
+            }
+            return;
+        }
         let result = sqlx::query(
             r#"INSERT INTO webcrawl_page
-                   (target_ref, url_path, parent_path, depth, size_bytes, status, content)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)
+                   (target_ref, url_path, parent_path, depth, size_bytes, status, content,
+                    etag, last_modified, content_hash)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                ON CONFLICT (target_ref, url_path) DO UPDATE
                SET parent_path = EXCLUDED.parent_path,
                    depth = EXCLUDED.depth,
                    size_bytes = EXCLUDED.size_bytes,
                    status = EXCLUDED.status,
                    content = EXCLUDED.content,
+                   etag = EXCLUDED.etag,
+                   last_modified = EXCLUDED.last_modified,
+                   content_hash = EXCLUDED.content_hash,
+                   missing_count = 0,
                    row_version = webcrawl_page.row_version + 1,
                    updated_at = NOW()"#,
         )
@@ -241,6 +547,9 @@ impl PageSink for DbPageSink<'_> {
         .bind(page.size_bytes)
         .bind(page.status)
         .bind(&page.content)
+        .bind(&page.etag)
+        .bind(&page.last_modified)
+        .bind(&page.content_hash)
         .execute(self.db)
         .await;
         match result {
@@ -275,6 +584,8 @@ async fn set_target_status(
     Ok(())
 }
 
+type TargetRow = (String, i16, String, String, Option<String>);
+
 /// The job body for `EngineJob::CrawlWebsite`. Never fails the whole job
 /// on a crawl-domain failure (unreachable host, SSRF-rejected address,
 /// timeout) — those are recorded on the target row (`status='failed'`,
@@ -287,14 +598,15 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
     let db = &state.base.db;
     let cfg = state.base.config.webcrawl.clone();
 
-    let row: Option<(String, i16)> = sqlx::query_as(
-        "SELECT url, max_depth FROM webcrawl_target WHERE id = $1 AND is_deleted = FALSE",
+    let row: Option<TargetRow> = sqlx::query_as(
+        "SELECT url, max_depth, include_patterns, exclude_patterns, sitemap_url \
+         FROM webcrawl_target WHERE id = $1 AND is_deleted = FALSE",
     )
     .bind(target_id)
     .fetch_optional(db)
     .await
     .map_err(AppError::internal)?;
-    let Some((url_str, max_depth)) = row else {
+    let Some((url_str, max_depth, include, exclude, sitemap_url)) = row else {
         tracing::info!(target_id = %target_id, "webcrawl: target no longer exists, skipping");
         return Ok(());
     };
@@ -313,11 +625,59 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
         }
     };
 
-    let robots = safety::fetch_robots_rules(&client, &root, USER_AGENT).await;
+    let agent = user_agent();
+    let robots = safety::fetch_robots_rules(&client, &root, &agent).await;
     let fetcher = RealFetcher {
         client,
         max_bytes: cfg.max_page_bytes,
-        user_agent: USER_AGENT.to_string(),
+        user_agent: agent,
+    };
+    let known: HashMap<String, KnownPage> =
+        sqlx::query_as::<_, (String, Option<String>, Option<String>, Option<String>)>(
+            "SELECT url_path, etag, last_modified, content_hash FROM webcrawl_page \
+             WHERE target_ref = $1",
+        )
+        .bind(target_id)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?
+        .into_iter()
+        .map(|(path, etag, last_modified, content_hash)| {
+            (
+                path,
+                KnownPage {
+                    etag,
+                    last_modified,
+                    content_hash,
+                },
+            )
+        })
+        .collect();
+    let include = parse_patterns(&include);
+    let exclude = parse_patterns(&exclude);
+    let mut seeds = Vec::new();
+    if let Some(sitemap) = sitemap_url.as_deref().and_then(|s| Url::parse(s).ok())
+        && same_origin(&sitemap, &root)
+    {
+        match fetcher.fetch(&sitemap).await {
+            Ok(page) => {
+                seeds = sitemap_seeds(
+                    &parse_sitemap(&page.body),
+                    &root,
+                    &include,
+                    &exclude,
+                    &known,
+                );
+            }
+            Err(e) => tracing::info!(%target_id, error = %e, "webcrawl: sitemap not read"),
+        }
+    }
+    let scope = CrawlScope {
+        include,
+        exclude,
+        seeds,
+        known,
+        min_interval: DEFAULT_HOST_INTERVAL,
     };
     let limits = CrawlLimits {
         max_pages: cfg.max_pages as usize,
@@ -329,7 +689,7 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
         target_id,
         recorded: 0,
     };
-    walk(&fetcher, &root, &limits, &robots, &mut sink).await;
+    let outcome = walk_with(&fetcher, &root, &limits, &robots, &scope, &mut sink).await;
 
     let (status, last_error) = if sink.recorded == 0 {
         (
@@ -337,7 +697,7 @@ pub async fn run(state: &EngineState, target_id: Uuid) -> Result<(), AppError> {
             Some("no pages could be crawled — see the root page's own error".to_string()),
         )
     } else {
-        ("completed", None)
+        ("completed", outcome.stopped)
     };
     sqlx::query(
         "UPDATE webcrawl_target \
@@ -370,6 +730,7 @@ mod tests {
                 .map(|(ct, body)| FetchedPage {
                     content_type: ct.to_string(),
                     body: body.clone(),
+                    ..FetchedPage::default()
                 })
                 .ok_or_else(|| "404".to_string())
         }
@@ -498,6 +859,127 @@ mod tests {
         walk(&fetcher, &root, &limits, &robots, &mut sink).await;
 
         assert!(!sink.0.iter().any(|p| p.url_path == "/private"));
+    }
+
+    #[test]
+    fn exclude_beats_include() {
+        let include = parse_patterns("/docs/*, /help/*");
+        let exclude = parse_patterns("/docs/drafts/*");
+        assert!(in_scope("/docs/start", &include, &exclude));
+        assert!(!in_scope("/docs/drafts/x", &include, &exclude));
+        assert!(!in_scope("/blog/post", &include, &exclude));
+        assert!(
+            in_scope("/anything", &[], &[]),
+            "no include pattern: everything"
+        );
+    }
+
+    #[test]
+    fn sitemap_lastmod_filters_urls() {
+        let xml = "<urlset><url><loc>https://example.com/docs/a</loc><lastmod>2026-10-01</lastmod></url>\
+                   <url><loc>https://example.com/docs/b</loc><lastmod>2026-09-01</lastmod></url>\
+                   <url><loc>https://example.com/docs/new</loc></url>\
+                   <url><loc>https://other.example/docs/x</loc></url>\
+                   <url><loc>https://example.com/blog/c</loc></url></urlset>";
+        let entries = parse_sitemap(xml);
+        assert_eq!(entries.len(), 5);
+        let stored = KnownPage {
+            last_modified: Some("Tue, 15 Sep 2026 00:00:00 GMT".into()),
+            ..KnownPage::default()
+        };
+        let known = HashMap::from([
+            ("/docs/a".to_string(), stored.clone()),
+            ("/docs/b".to_string(), stored),
+        ]);
+        let root = Url::parse("https://example.com/").unwrap();
+        let seeds = sitemap_seeds(&entries, &root, &parse_patterns("/docs/*"), &[], &known);
+        let paths: Vec<_> = seeds.iter().map(|u| u.path().to_string()).collect();
+        assert_eq!(paths, vec!["/docs/a", "/docs/new"]);
+    }
+
+    struct NotModified;
+
+    impl Fetcher for NotModified {
+        async fn fetch(&self, _url: &Url) -> Result<FetchedPage, String> {
+            Err("unconditional fetch not expected".into())
+        }
+
+        async fn fetch_conditional(
+            &self,
+            _url: &Url,
+            etag: Option<&str>,
+            _last_modified: Option<&str>,
+        ) -> Result<FetchedPage, String> {
+            Ok(FetchedPage {
+                not_modified: etag == Some("\"v1\""),
+                content_type: "text/html".into(),
+                body: html(&[], "fresh"),
+                ..FetchedPage::default()
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn not_modified_skips_extraction() {
+        let root = Url::parse("https://example.com/").unwrap();
+        let limits = CrawlLimits {
+            max_pages: 5,
+            max_depth: 3,
+        };
+        let scope = CrawlScope {
+            known: HashMap::from([(
+                "/".to_string(),
+                KnownPage {
+                    etag: Some("\"v1\"".into()),
+                    content_hash: Some("abc".into()),
+                    ..KnownPage::default()
+                },
+            )]),
+            ..CrawlScope::default()
+        };
+        let mut sink = VecSink::default();
+        walk_with(
+            &NotModified,
+            &root,
+            &limits,
+            &RobotsRules::default(),
+            &scope,
+            &mut sink,
+        )
+        .await;
+        assert_eq!(sink.0.len(), 1);
+        assert!(sink.0[0].unchanged);
+        assert_eq!(sink.0[0].content, None);
+        assert_eq!(sink.0[0].content_hash.as_deref(), Some("abc"));
+    }
+
+    #[tokio::test]
+    async fn stops_after_20_errors() {
+        let links: Vec<String> = (0..40).map(|i| format!("/missing/{i}")).collect();
+        let link_refs: Vec<&str> = links.iter().map(String::as_str).collect();
+        let mut pages = HashMap::new();
+        pages.insert(
+            "https://example.com/".to_string(),
+            ("text/html", html(&link_refs, "home")),
+        );
+        let fetcher = FakeFetcher(pages);
+        let root = Url::parse("https://example.com/").unwrap();
+        let limits = CrawlLimits {
+            max_pages: 100,
+            max_depth: 3,
+        };
+        let mut sink = VecSink::default();
+        let outcome = walk_with(
+            &fetcher,
+            &root,
+            &limits,
+            &RobotsRules::default(),
+            &CrawlScope::default(),
+            &mut sink,
+        )
+        .await;
+        assert_eq!(sink.0.len(), 1 + MAX_CONSECUTIVE_ERRORS);
+        assert!(outcome.stopped.is_some());
     }
 
     #[test]

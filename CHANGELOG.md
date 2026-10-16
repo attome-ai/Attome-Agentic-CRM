@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Website crawls are scope-aware and polite: include and exclude patterns (exclude wins), sitemap
+  seeding limited to pages changed since the last crawl, `If-None-Match`/`If-Modified-Since` with
+  304 or an unchanged text hash leaving the stored page alone, the site's `Crawl-delay` or one
+  second between requests, an `AttomeCrawler/<version>` user agent, and a stop after 20 errors in a row.
 - Website sources on a `daily` or `weekly` schedule recrawl by themselves: an hourly job queues one
   crawl per due source, never one already queued or running, and nothing while webcrawl is off.
 - Recurring revenue: a nightly snapshot of each account's MRR per currency (migration `0091`) and
