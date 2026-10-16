@@ -75,6 +75,7 @@
 //! detection, sync. This crate is the primitive those build on, not those
 //! features themselves.
 
+pub mod availability;
 pub mod hijri;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
