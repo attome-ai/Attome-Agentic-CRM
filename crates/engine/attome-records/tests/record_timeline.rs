@@ -995,9 +995,11 @@ async fn malformed_cursor_is_a_422() {
     );
 }
 
-/// D-540: a value the audit writer stored encrypted (any `value_mode`) is
-/// never handed out as ciphertext; until audited decryption exists it reads
-/// as masked. A field whose old and new values are both empty is omitted.
+/// D-540: a value the audit writer withheld (`Restricted`, `NotCaptured`, or
+/// `Encrypted` under an erasure key) is never handed out; until audited
+/// decryption exists it reads as masked. `Encrypted` without an erasure key
+/// is stored as written and shown (see `value_withheld`), so this test uses
+/// `Restricted`. A field whose old and new values are both empty is omitted.
 #[tokio::test]
 async fn history_masks_encrypted_values_and_omits_empty_changes() {
     let state = skip_if_no_db!(test_state().await);
@@ -1016,11 +1018,11 @@ async fn history_masks_encrypted_values_and_omits_empty_changes() {
         false,
     )
     .await;
-    sqlx::query("UPDATE audit_detail SET value_mode = 0 WHERE id = $1")
+    sqlx::query("UPDATE audit_detail SET value_mode = 1 WHERE id = $1")
         .bind(encrypted)
         .execute(db)
         .await
-        .expect("mark the detail encrypted");
+        .expect("mark the detail withheld");
     let empty_only = insert_header(db, &entity, record, 1, t + Duration::minutes(1)).await;
     insert_detail(db, empty_only, "name", None, None, false).await;
 
