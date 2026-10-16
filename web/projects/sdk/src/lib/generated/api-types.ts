@@ -10372,6 +10372,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/opportunities/{id}/splits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["put_sales_splits"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/scan/find": {
         parameters: {
             query?: never;
@@ -27732,6 +27748,22 @@ export interface components {
         RuntimeSwitchView: {
             surfaces: components["schemas"]["SurfaceSwitchView"][];
         };
+        SalesSplitsBody: {
+            /** @description Required when the deal is won. */
+            change_reason?: string | null;
+            splits: components["schemas"]["SplitInput"][];
+        };
+        /**
+         * @description The splits after the change, or the approval a won deal's change waits
+         *     on.
+         */
+        SalesSplitsOutcome: {
+            /** Format: uuid */
+            approval_request_id?: string | null;
+            /** Format: uuid */
+            opportunity_id: string;
+            splits: components["schemas"]["StoredSplit"][];
+        };
         SbomResponse: {
             packs: components["schemas"]["InstalledPack"][];
             /** @description The release's CycloneDX 1.5 bill of materials. */
@@ -28586,6 +28618,23 @@ export interface components {
              */
             window_days: number;
         };
+        /** @description One split as a caller gives it. */
+        SplitInput: {
+            /**
+             * Format: uuid
+             * @description For a split of one line rather than the whole deal.
+             */
+            line_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The `opportunity_team_member` the split credits.
+             */
+            member_id: string;
+            /** @description Decimal text, e.g. `"60"` or `"33.34"`. */
+            percent: string;
+            /** Format: uuid */
+            split_type_id: string;
+        };
         /**
          * @description A3-T4: how a refusing check (`error`, `required`, `allowed_values`) is
          *     rolled out. `Report` only logs a failure, `Warn` lets the write through
@@ -28845,6 +28894,18 @@ export interface components {
             credential: string;
             /** @description `totp`, `recovery_code` or `password`. */
             factor: string;
+        };
+        StoredSplit: {
+            amount?: string | null;
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            line_id?: string | null;
+            /** Format: uuid */
+            member_id: string;
+            percent: string;
+            /** Format: uuid */
+            split_type_id: string;
         };
         /**
          * @description One frame's `data`: a stored event, as the stream sends it. The frame's SSE
@@ -65442,6 +65503,87 @@ export interface operations {
             };
             /** @description Caller lacks call_list.call */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    put_sales_splits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesSplitsBody"];
+            };
+        };
+        responses: {
+            /** @description The splits are replaced and their amounts stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesSplitsOutcome"];
+                };
+            };
+            /** @description The deal is won: the change waits on approval */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesSplitsOutcome"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The deal is being changed by another request */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The splits break a rule (a revenue type must total 100%, members must be on the team), or a won deal's change has no reason */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

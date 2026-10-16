@@ -52976,6 +52976,125 @@
         }
       }
     },
+    "/api/v1/sales/opportunities/{id}/splits": {
+      "put": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "put_sales_splits",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The opportunity",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesSplitsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The splits are replaced and their amounts stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesSplitsOutcome"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The deal is won: the change waits on approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesSplitsOutcome"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller may not update this opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such opportunity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The deal is being changed by another request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The splits break a rule (a revenue type must total 100%, members must be on the team), or a won deal's change has no reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/scan/find": {
       "get": {
         "tags": [
@@ -105344,6 +105463,54 @@
           }
         }
       },
+      "SalesSplitsBody": {
+        "type": "object",
+        "required": [
+          "splits"
+        ],
+        "properties": {
+          "change_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Required when the deal is won."
+          },
+          "splits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SplitInput"
+            }
+          }
+        }
+      },
+      "SalesSplitsOutcome": {
+        "type": "object",
+        "description": "The splits after the change, or the approval a won deal's change waits\non.",
+        "required": [
+          "opportunity_id",
+          "splits"
+        ],
+        "properties": {
+          "approval_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "opportunity_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "splits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoredSplit"
+            }
+          }
+        }
+      },
       "SbomResponse": {
         "type": "object",
         "required": [
@@ -107551,6 +107718,38 @@
           }
         }
       },
+      "SplitInput": {
+        "type": "object",
+        "description": "One split as a caller gives it.",
+        "required": [
+          "member_id",
+          "split_type_id",
+          "percent"
+        ],
+        "properties": {
+          "line_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "For a split of one line rather than the whole deal."
+          },
+          "member_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The `opportunity_team_member` the split credits."
+          },
+          "percent": {
+            "type": "string",
+            "description": "Decimal text, e.g. `\"60\"` or `\"33.34\"`."
+          },
+          "split_type_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "Stage": {
         "type": "string",
         "description": "A3-T4: how a refusing check (`error`, `required`, `allowed_values`) is\nrolled out. `Report` only logs a failure, `Warn` lets the write through\nwith a warning, `Enforce` refuses it — from `enforce_from` when set, and\nas a warning before that date.",
@@ -108175,6 +108374,45 @@
           "factor": {
             "type": "string",
             "description": "`totp`, `recovery_code` or `password`."
+          }
+        }
+      },
+      "StoredSplit": {
+        "type": "object",
+        "required": [
+          "id",
+          "member_id",
+          "split_type_id",
+          "percent"
+        ],
+        "properties": {
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "line_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "member_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "percent": {
+            "type": "string"
+          },
+          "split_type_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
