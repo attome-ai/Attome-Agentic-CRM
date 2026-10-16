@@ -29,16 +29,35 @@ use attome_types::ErrorResponse;
 /// zero is a 422 naming the gap, and more than one is a 422 asking for the
 /// (currently unbuilt) disambiguation a `?field=` query param would need,
 /// rather than silently guessing which hierarchy the caller meant.
-fn hierarchy_field(entity_id: Uuid, attrs: &[AttrInfo]) -> Result<&AttrInfo, AppError> {
-    let mut candidates = attrs
-        .iter()
-        .filter(|a| a.field_type_int == 11 && a.lookup_entity_ref == Some(entity_id));
+///
+/// D23-T3: `field` names which self lookup to walk (a contact's `reports_to`
+/// or its dotted-line manager), and must be one; without it the entity must
+/// have exactly one.
+pub(crate) fn hierarchy_field<'a>(
+    entity_id: Uuid,
+    attrs: &'a [AttrInfo],
+    field: Option<&str>,
+) -> Result<&'a AttrInfo, AppError> {
+    let is_self_lookup =
+        |a: &&AttrInfo| a.field_type_int == 11 && a.lookup_entity_ref == Some(entity_id);
+    if let Some(name) = field {
+        return attrs
+            .iter()
+            .filter(is_self_lookup)
+            .find(|a| a.logicalname == name)
+            .ok_or_else(|| {
+                AppError::Validation(format!(
+                    "field: {name} is not a lookup from this entity to itself"
+                ))
+            });
+    }
+    let mut candidates = attrs.iter().filter(is_self_lookup);
     let field = candidates.next().ok_or_else(|| {
         AppError::Validation("entity has no self-referencing hierarchy lookup field".into())
     })?;
     if candidates.next().is_some() {
         return Err(AppError::Validation(
-            "entity has more than one self-referencing lookup field; disambiguation is not supported yet".into(),
+            "entity has more than one self-referencing lookup field; name one with ?field=".into(),
         ));
     }
     Ok(field)
@@ -138,6 +157,15 @@ async fn hierarchy_rows(
         .collect())
 }
 
+/// D23-T3: which self lookup a hierarchy walk follows.
+#[derive(Debug, Default, serde::Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct HierarchyQuery {
+    /// The self-referencing lookup to walk; needed when the entity has more
+    /// than one.
+    pub field: Option<String>,
+}
+
 /// P-api-contract Phase 4(b): returns `attome_types::PaginatedResponse<T>`
 /// instead of a bare `{"items": [...]}` — a genuine breaking response-shape
 /// change for any existing client (see DECISIONS.md and the CHANGELOG
@@ -157,6 +185,7 @@ async fn hierarchy_rows(
     params(
         ("entity" = String, Path),
         ("id" = Uuid, Path),
+        HierarchyQuery,
     ),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<EntityRecordResponse>),
@@ -170,6 +199,7 @@ pub(super) async fn list_ancestors(
     State(state): State<EngineState>,
     ctx: Authorized<RecordScoped<Read>>,
     Path((entity_input, record_id)): Path<(String, Uuid)>,
+    axum::extract::Query(hq): axum::extract::Query<HierarchyQuery>,
 ) -> Result<Json<PaginatedResponse<EntityRecordResponse>>, AppError> {
     let (entity_id, entity_name, attrs, _) = resolve_entity(&state, &entity_input).await?;
     require_record_access(
@@ -181,7 +211,7 @@ pub(super) async fn list_ancestors(
         RecordAction::Read,
     )
     .await?;
-    let field = hierarchy_field(entity_id, &attrs)?;
+    let field = hierarchy_field(entity_id, &attrs, hq.field.as_deref())?;
 
     let table = quote_ident(&entity_name);
     let field_ident = quote_ident(&field.logicalname);
@@ -238,6 +268,7 @@ pub(super) async fn list_ancestors(
     params(
         ("entity" = String, Path),
         ("id" = Uuid, Path),
+        HierarchyQuery,
     ),
     responses(
         (status = 200, description = "Success", body = PaginatedResponse<EntityRecordResponse>),
@@ -251,6 +282,7 @@ pub(super) async fn list_descendants(
     State(state): State<EngineState>,
     ctx: Authorized<RecordScoped<Read>>,
     Path((entity_input, record_id)): Path<(String, Uuid)>,
+    axum::extract::Query(hq): axum::extract::Query<HierarchyQuery>,
 ) -> Result<Json<PaginatedResponse<EntityRecordResponse>>, AppError> {
     let (entity_id, entity_name, attrs, _) = resolve_entity(&state, &entity_input).await?;
     require_record_access(
@@ -262,7 +294,7 @@ pub(super) async fn list_descendants(
         RecordAction::Read,
     )
     .await?;
-    let field = hierarchy_field(entity_id, &attrs)?;
+    let field = hierarchy_field(entity_id, &attrs, hq.field.as_deref())?;
 
     let table = quote_ident(&entity_name);
     let field_ident = quote_ident(&field.logicalname);
@@ -381,7 +413,7 @@ pub(super) async fn move_preview(
         RecordAction::Read,
     )
     .await?;
-    let field = hierarchy_field(entity_id, &attrs)?;
+    let field = hierarchy_field(entity_id, &attrs, None)?;
     let table = quote_ident(&entity_name);
     let field_ident = quote_ident(&field.logicalname);
     let (moving, parent_in_subtree, height): (i64, bool, i32) = sqlx::query_as(&format!(
