@@ -5,6 +5,7 @@
 //! tasks add it. Gated on the `billing` module.
 
 pub mod model;
+pub mod subscription;
 
 pub use model::BillingModel;
 

@@ -177,6 +177,7 @@ rand          = "0.8"
 regex         = "1"
 reqwest       = { version = "0.13", default-features = false, features = ["json", "form", "rustls"] }
 rsa           = "0.9"
+rust_decimal  = { version = "1.36", features = ["serde-with-str"] }
 rust_xlsxwriter = "0.99"
 rustls        = { version = "0.23", default-features = false, features = ["std", "ring"] }
 scraper       = "0.27"

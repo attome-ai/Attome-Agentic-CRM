@@ -14,7 +14,13 @@ publish.workspace      = true
 attome-core.workspace = true
 attome-modules.workspace = true
 axum.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
 utoipa.workspace = true
+uuid.workspace = true
 
 [lints]
 workspace = true
