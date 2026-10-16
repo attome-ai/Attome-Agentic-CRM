@@ -66,6 +66,7 @@ pub mod auth_context;
 pub mod captcha;
 pub mod cookie;
 pub mod email_identity;
+pub mod encrypted_columns;
 pub mod envelope;
 pub mod epoch;
 pub mod invitation;
