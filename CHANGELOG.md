@@ -32,6 +32,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/commission/plans/{id}/publish` compiles a plan's draft version and publishes it with the
+  hash of what compiled; overlapping or unreadable rate tables are refused with the component named.
 - Commission credits from won deals: each revenue split of a deal at `closed_won` credits its member's
   plan participation once (keyed by the split), dated on the close date; a credit dated in a closed
   period lands in the next open one with an adjustment naming the closed period.

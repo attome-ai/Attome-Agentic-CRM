@@ -8,6 +8,7 @@ pub mod close;
 pub mod credit;
 pub mod dispute;
 pub mod model;
+pub mod plan_admin;
 pub mod rules;
 pub mod run;
 pub mod statement;
@@ -25,5 +26,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<statement::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dispute::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<close::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<plan_admin::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
