@@ -1,0 +1,4267 @@
+{
+  "author": "packs",
+  "checksum": "sha256:d3f1e8a5475dd4e73fe620520a47ddd0b0bfa9b24f879ec50dceb5c0c711b2c0",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Procurement (W3-T1): purchase requisitions with lines, purchase orders to a vendor with lines, goods receipts against an order, and vendor bills, each numbered within its series, with their lifecycles, roles and an open-orders report. Needs the vendor-supplier pack.",
+  "format": "attome-changeset/v1",
+  "id": "01a144ab-1a51-71f9-afb6-692f413460fa",
+  "layer": "product",
+  "name": "procurement",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Purchase Requisition",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "purchase_requisition",
+          "primary_name_attribute": "number"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "purchase_requisition"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "number",
+          "lookup_entity": null,
+          "max_length": 40,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Series",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "series",
+          "lookup_entity": null,
+          "max_length": 20,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "series"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Title",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "title",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "title"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Requested By",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "requested_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "requested_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Department",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "department",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "department"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Needed By",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "needed_by",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "needed_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Suggested Vendor",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "suggested_vendor_ref",
+          "lookup_entity": "vendor",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "suggested_vendor_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "currency",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "SAR",
+              "AED",
+              "EGP",
+              "KWD",
+              "BHD",
+              "OMR",
+              "QAR",
+              "USD",
+              "EUR"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "currency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Estimated Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "estimated_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "estimated_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Justification",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "justification",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "justification"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "submitted",
+              "approved",
+              "rejected",
+              "ordered",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "purchase_requisition",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Requisition Line",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "purchase_requisition_line",
+          "primary_name_attribute": "item"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "purchase_requisition_line"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Requisition",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "requisition_ref",
+          "lookup_entity": "purchase_requisition",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "purchase_requisition_line",
+        "field": "requisition_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Item",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "item",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "purchase_requisition_line",
+        "field": "item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "SKU",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "sku",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "purchase_requisition_line",
+        "field": "sku"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Quantity",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "purchase_requisition_line",
+        "field": "quantity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Unit",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "unit",
+          "lookup_entity": null,
+          "max_length": 40,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "purchase_requisition_line",
+        "field": "unit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Unit Price",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "unit_price",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "purchase_requisition_line",
+        "field": "unit_price"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "VAT Rate",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vat_rate",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "purchase_requisition_line",
+        "field": "vat_rate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Line Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "line_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "purchase_requisition_line",
+        "field": "line_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Purchase Order",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "purchase_order",
+          "primary_name_attribute": "number"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "purchase_order"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "number",
+          "lookup_entity": null,
+          "max_length": 40,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "purchase_order",
+        "field": "number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Series",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "series",
+          "lookup_entity": null,
+          "max_length": 20,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "purchase_order",
+        "field": "series"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Vendor",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vendor_ref",
+          "lookup_entity": "vendor",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "purchase_order",
+        "field": "vendor_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Requisition",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "requisition_ref",
+          "lookup_entity": "purchase_requisition",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "purchase_order",
+        "field": "requisition_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Buyer",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "buyer",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "purchase_order",
+        "field": "buyer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Order Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "order_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "purchase_order",
+        "field": "order_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Expected Delivery",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "expected_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "purchase_order",
+        "field": "expected_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "currency",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "SAR",
+              "AED",
+              "EGP",
+              "KWD",
+              "BHD",
+              "OMR",
+              "QAR",
+              "USD",
+              "EUR"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "purchase_order",
+        "field": "currency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Payment Terms (days)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "payment_terms_days",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "purchase_order",
+        "field": "payment_terms_days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Delivery Address",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "delivery_address",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "purchase_order",
+        "field": "delivery_address"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Net Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "net_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "purchase_order",
+        "field": "net_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "VAT",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vat_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "purchase_order",
+        "field": "vat_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "grand_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "purchase_order",
+        "field": "grand_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "issued",
+              "partly_received",
+              "received",
+              "closed",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "purchase_order",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Purchase Order Line",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "purchase_order_line",
+          "primary_name_attribute": "item"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "purchase_order_line"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Purchase Order",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "order_ref",
+          "lookup_entity": "purchase_order",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "purchase_order_line",
+        "field": "order_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Item",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "item",
+          "lookup_entity": null,
+          "max_length": 300,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "purchase_order_line",
+        "field": "item"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "SKU",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "sku",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "purchase_order_line",
+        "field": "sku"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Quantity",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "purchase_order_line",
+        "field": "quantity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Unit",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "unit",
+          "lookup_entity": null,
+          "max_length": 40,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "purchase_order_line",
+        "field": "unit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Unit Price",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "unit_price",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "purchase_order_line",
+        "field": "unit_price"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "VAT Rate",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vat_rate",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "purchase_order_line",
+        "field": "vat_rate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Line Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "line_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "purchase_order_line",
+        "field": "line_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Received",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "received_quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "purchase_order_line",
+        "field": "received_quantity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Billed",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "billed_quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "purchase_order_line",
+        "field": "billed_quantity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Goods Receipt",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "goods_receipt",
+          "primary_name_attribute": "number"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "goods_receipt"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "number",
+          "lookup_entity": null,
+          "max_length": 40,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "goods_receipt",
+        "field": "number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Purchase Order",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "order_ref",
+          "lookup_entity": "purchase_order",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "goods_receipt",
+        "field": "order_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Received On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "received_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "goods_receipt",
+        "field": "received_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Received By",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "received_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "goods_receipt",
+        "field": "received_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Delivery Note",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "delivery_note",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "goods_receipt",
+        "field": "delivery_note"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "posted",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "goods_receipt",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Receipt Line",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "goods_receipt_line",
+          "primary_name_attribute": "order_line_ref"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "goods_receipt_line"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Receipt",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "receipt_ref",
+          "lookup_entity": "goods_receipt",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "goods_receipt_line",
+        "field": "receipt_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Order Line",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "order_line_ref",
+          "lookup_entity": "purchase_order_line",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "goods_receipt_line",
+        "field": "order_line_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Quantity",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "goods_receipt_line",
+        "field": "quantity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Rejected",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "rejected_quantity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "goods_receipt_line",
+        "field": "rejected_quantity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Note",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "note",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "goods_receipt_line",
+        "field": "note"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Vendor Bill",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "vendor_bill",
+          "primary_name_attribute": "number"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "vendor_bill"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "number",
+          "lookup_entity": null,
+          "max_length": 40,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "vendor_bill",
+        "field": "number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Vendor",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vendor_ref",
+          "lookup_entity": "vendor",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "vendor_bill",
+        "field": "vendor_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Purchase Order",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "order_ref",
+          "lookup_entity": "purchase_order",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "vendor_bill",
+        "field": "order_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Vendor Invoice No.",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vendor_invoice_number",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "vendor_bill",
+        "field": "vendor_invoice_number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Bill Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "bill_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "vendor_bill",
+        "field": "bill_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Due Date",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "due_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "vendor_bill",
+        "field": "due_date"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "currency",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "SAR",
+              "AED",
+              "EGP",
+              "KWD",
+              "BHD",
+              "OMR",
+              "QAR",
+              "USD",
+              "EUR"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "vendor_bill",
+        "field": "currency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Net Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "net_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "vendor_bill",
+        "field": "net_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "VAT",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vat_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "vendor_bill",
+        "field": "vat_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Total",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "grand_total",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "vendor_bill",
+        "field": "grand_total"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Match",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "match_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "unmatched",
+              "matched",
+              "price_variance",
+              "quantity_variance"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "vendor_bill",
+        "field": "match_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "posted",
+              "paid",
+              "cancelled"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "vendor_bill",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "display_name": "طلب شراء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرقم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.number",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السلسلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.series",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العنوان"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.title",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مقدم الطلب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.requested_by",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإدارة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.department",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مطلوب بتاريخ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.needed_by",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المورد المقترح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.suggested_vendor_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العملة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.currency",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإجمالي التقديري"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.estimated_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبرر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.justification",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند طلب الشراء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition_line",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "طلب الشراء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition_line.requisition_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الصنف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition_line.item",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رمز الصنف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition_line.sku",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الكمية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition_line.quantity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الوحدة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition_line.unit",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سعر الوحدة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition_line.unit_price",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نسبة الضريبة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition_line.vat_rate",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إجمالي البند"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_requisition_line.line_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أمر شراء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرقم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.number",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السلسلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.series",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المورد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.vendor_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "طلب الشراء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.requisition_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المشتري"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.buyer",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ الأمر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.order_date",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التسليم المتوقع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.expected_date",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العملة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.currency",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "شروط الدفع (أيام)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.payment_terms_days",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عنوان التسليم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.delivery_address",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الصافي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.net_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الضريبة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.vat_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإجمالي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 108,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.grand_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 109,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند أمر الشراء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 110,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order_line",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أمر الشراء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 111,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order_line.order_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الصنف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 112,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order_line.item",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رمز الصنف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 113,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order_line.sku",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الكمية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 114,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order_line.quantity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الوحدة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 115,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order_line.unit",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سعر الوحدة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 116,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order_line.unit_price",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نسبة الضريبة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 117,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order_line.vat_rate",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إجمالي البند"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 118,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order_line.line_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المستلم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 119,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order_line.received_quantity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المفوتر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 120,
+      "target": {
+        "locale": "ar",
+        "object_key": "purchase_order_line.billed_quantity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "استلام بضاعة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 121,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرقم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 122,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt.number",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أمر الشراء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 123,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt.order_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ الاستلام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 124,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt.received_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المستلم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 125,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt.received_by",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إشعار التسليم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 126,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt.delivery_note",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 127,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند الاستلام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 128,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt_line",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاستلام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 129,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt_line.receipt_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند الأمر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 130,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt_line.order_line_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الكمية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 131,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt_line.quantity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المرفوض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 132,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt_line.rejected_quantity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ملاحظة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 133,
+      "target": {
+        "locale": "ar",
+        "object_key": "goods_receipt_line.note",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "فاتورة مورد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 134,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرقم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 135,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill.number",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المورد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 136,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill.vendor_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أمر الشراء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 137,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill.order_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رقم فاتورة المورد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 138,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill.vendor_invoice_number",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ الفاتورة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 139,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill.bill_date",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ الاستحقاق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 140,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill.due_date",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العملة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 141,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill.currency",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الصافي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 142,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill.net_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الضريبة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 143,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill.vat_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإجمالي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 144,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill.grand_total",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المطابقة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 145,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill.match_status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 146,
+      "target": {
+        "locale": "ar",
+        "object_key": "vendor_bill.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on goods_receipt",
+          "key": "goods_receipt.create",
+          "name": "goods_receipt.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 147,
+      "target": {
+        "privilege": "goods_receipt.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on goods_receipt",
+          "key": "goods_receipt.read",
+          "name": "goods_receipt.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 148,
+      "target": {
+        "privilege": "goods_receipt.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on goods_receipt",
+          "key": "goods_receipt.update",
+          "name": "goods_receipt.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 149,
+      "target": {
+        "privilege": "goods_receipt.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on goods_receipt_line",
+          "key": "goods_receipt_line.create",
+          "name": "goods_receipt_line.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 150,
+      "target": {
+        "privilege": "goods_receipt_line.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on goods_receipt_line",
+          "key": "goods_receipt_line.read",
+          "name": "goods_receipt_line.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 151,
+      "target": {
+        "privilege": "goods_receipt_line.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on goods_receipt_line",
+          "key": "goods_receipt_line.update",
+          "name": "goods_receipt_line.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 152,
+      "target": {
+        "privilege": "goods_receipt_line.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on purchase_order",
+          "key": "purchase_order.create",
+          "name": "purchase_order.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 153,
+      "target": {
+        "privilege": "purchase_order.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on purchase_order",
+          "key": "purchase_order.read",
+          "name": "purchase_order.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 154,
+      "target": {
+        "privilege": "purchase_order.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on purchase_order",
+          "key": "purchase_order.update",
+          "name": "purchase_order.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 155,
+      "target": {
+        "privilege": "purchase_order.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on purchase_order_line",
+          "key": "purchase_order_line.create",
+          "name": "purchase_order_line.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 156,
+      "target": {
+        "privilege": "purchase_order_line.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on purchase_order_line",
+          "key": "purchase_order_line.read",
+          "name": "purchase_order_line.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 157,
+      "target": {
+        "privilege": "purchase_order_line.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on purchase_order_line",
+          "key": "purchase_order_line.update",
+          "name": "purchase_order_line.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 158,
+      "target": {
+        "privilege": "purchase_order_line.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on purchase_requisition",
+          "key": "purchase_requisition.create",
+          "name": "purchase_requisition.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 159,
+      "target": {
+        "privilege": "purchase_requisition.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on purchase_requisition",
+          "key": "purchase_requisition.read",
+          "name": "purchase_requisition.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 160,
+      "target": {
+        "privilege": "purchase_requisition.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on purchase_requisition",
+          "key": "purchase_requisition.update",
+          "name": "purchase_requisition.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 161,
+      "target": {
+        "privilege": "purchase_requisition.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on purchase_requisition_line",
+          "key": "purchase_requisition_line.create",
+          "name": "purchase_requisition_line.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 162,
+      "target": {
+        "privilege": "purchase_requisition_line.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on purchase_requisition_line",
+          "key": "purchase_requisition_line.read",
+          "name": "purchase_requisition_line.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 163,
+      "target": {
+        "privilege": "purchase_requisition_line.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on purchase_requisition_line",
+          "key": "purchase_requisition_line.update",
+          "name": "purchase_requisition_line.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 164,
+      "target": {
+        "privilege": "purchase_requisition_line.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on vendor",
+          "key": "vendor.read",
+          "name": "vendor.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 165,
+      "target": {
+        "privilege": "vendor.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on vendor_bill",
+          "key": "vendor_bill.create",
+          "name": "vendor_bill.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 166,
+      "target": {
+        "privilege": "vendor_bill.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on vendor_bill",
+          "key": "vendor_bill.read",
+          "name": "vendor_bill.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 167,
+      "target": {
+        "privilege": "vendor_bill.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on vendor_bill",
+          "key": "vendor_bill.update",
+          "name": "vendor_bill.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 168,
+      "target": {
+        "privilege": "vendor_bill.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Raises purchase requisitions.",
+          "is_customized": false,
+          "name": "Requester",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 169,
+      "target": {
+        "role": "Requester"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 170,
+      "target": {
+        "privilege": "purchase_requisition.read",
+        "role": "Requester"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 171,
+      "target": {
+        "privilege": "purchase_requisition.create",
+        "role": "Requester"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 172,
+      "target": {
+        "privilege": "purchase_requisition.update",
+        "role": "Requester"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 173,
+      "target": {
+        "privilege": "purchase_requisition_line.read",
+        "role": "Requester"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 174,
+      "target": {
+        "privilege": "purchase_requisition_line.create",
+        "role": "Requester"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 175,
+      "target": {
+        "privilege": "purchase_requisition_line.update",
+        "role": "Requester"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Approves requisitions and issues purchase orders.",
+          "is_customized": false,
+          "name": "Buyer",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 176,
+      "target": {
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 177,
+      "target": {
+        "privilege": "purchase_requisition.read",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 178,
+      "target": {
+        "privilege": "purchase_requisition.create",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 179,
+      "target": {
+        "privilege": "purchase_requisition.update",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 180,
+      "target": {
+        "privilege": "purchase_requisition_line.read",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 181,
+      "target": {
+        "privilege": "purchase_requisition_line.create",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 182,
+      "target": {
+        "privilege": "purchase_requisition_line.update",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 183,
+      "target": {
+        "privilege": "purchase_order.read",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 184,
+      "target": {
+        "privilege": "purchase_order.create",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 185,
+      "target": {
+        "privilege": "purchase_order.update",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 186,
+      "target": {
+        "privilege": "purchase_order_line.read",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 187,
+      "target": {
+        "privilege": "purchase_order_line.create",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 188,
+      "target": {
+        "privilege": "purchase_order_line.update",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 189,
+      "target": {
+        "privilege": "vendor.read",
+        "role": "Buyer"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Records goods receipts.",
+          "is_customized": false,
+          "name": "Receiver",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 190,
+      "target": {
+        "role": "Receiver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 191,
+      "target": {
+        "privilege": "purchase_order.read",
+        "role": "Receiver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 192,
+      "target": {
+        "privilege": "purchase_order_line.read",
+        "role": "Receiver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 193,
+      "target": {
+        "privilege": "goods_receipt.read",
+        "role": "Receiver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 194,
+      "target": {
+        "privilege": "goods_receipt.create",
+        "role": "Receiver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 195,
+      "target": {
+        "privilege": "goods_receipt.update",
+        "role": "Receiver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 196,
+      "target": {
+        "privilege": "goods_receipt_line.read",
+        "role": "Receiver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 197,
+      "target": {
+        "privilege": "goods_receipt_line.create",
+        "role": "Receiver"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 198,
+      "target": {
+        "privilege": "goods_receipt_line.update",
+        "role": "Receiver"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Records and posts vendor bills.",
+          "is_customized": false,
+          "name": "AP Clerk",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 199,
+      "target": {
+        "role": "AP Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 200,
+      "target": {
+        "privilege": "vendor_bill.read",
+        "role": "AP Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 201,
+      "target": {
+        "privilege": "vendor_bill.create",
+        "role": "AP Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 202,
+      "target": {
+        "privilege": "vendor_bill.update",
+        "role": "AP Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 203,
+      "target": {
+        "privilege": "purchase_order.read",
+        "role": "AP Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 204,
+      "target": {
+        "privilege": "purchase_order_line.read",
+        "role": "AP Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 205,
+      "target": {
+        "privilege": "goods_receipt.read",
+        "role": "AP Clerk"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 206,
+      "target": {
+        "privilege": "vendor.read",
+        "role": "AP Clerk"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "purchase_requisition",
+          "initial_state": "draft",
+          "is_active": true,
+          "name": "Requisition Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 207,
+      "target": {
+        "entity": "purchase_requisition"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Submit",
+          "required_privilege": null,
+          "to_state": "submitted"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 208,
+      "target": {
+        "entity": "purchase_requisition",
+        "transition": "draft->submitted"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "submitted",
+          "guard_expression": null,
+          "name": "Approve",
+          "required_privilege": null,
+          "to_state": "approved"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 209,
+      "target": {
+        "entity": "purchase_requisition",
+        "transition": "submitted->approved"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "submitted",
+          "guard_expression": null,
+          "name": "Reject",
+          "required_privilege": null,
+          "to_state": "rejected"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 210,
+      "target": {
+        "entity": "purchase_requisition",
+        "transition": "submitted->rejected"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "approved",
+          "guard_expression": null,
+          "name": "Order",
+          "required_privilege": null,
+          "to_state": "ordered"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 211,
+      "target": {
+        "entity": "purchase_requisition",
+        "transition": "approved->ordered"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Cancel",
+          "required_privilege": null,
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 212,
+      "target": {
+        "entity": "purchase_requisition",
+        "transition": "draft->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "submitted",
+          "guard_expression": null,
+          "name": "Cancel",
+          "required_privilege": null,
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 213,
+      "target": {
+        "entity": "purchase_requisition",
+        "transition": "submitted->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "purchase_order",
+          "initial_state": "draft",
+          "is_active": true,
+          "name": "Purchase Order Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 214,
+      "target": {
+        "entity": "purchase_order"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Issue",
+          "required_privilege": null,
+          "to_state": "issued"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 215,
+      "target": {
+        "entity": "purchase_order",
+        "transition": "draft->issued"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "issued",
+          "guard_expression": null,
+          "name": "Receive Part",
+          "required_privilege": null,
+          "to_state": "partly_received"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 216,
+      "target": {
+        "entity": "purchase_order",
+        "transition": "issued->partly_received"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "issued",
+          "guard_expression": null,
+          "name": "Receive",
+          "required_privilege": null,
+          "to_state": "received"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 217,
+      "target": {
+        "entity": "purchase_order",
+        "transition": "issued->received"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 3,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "partly_received",
+          "guard_expression": null,
+          "name": "Receive Rest",
+          "required_privilege": null,
+          "to_state": "received"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 218,
+      "target": {
+        "entity": "purchase_order",
+        "transition": "partly_received->received"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 4,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "received",
+          "guard_expression": null,
+          "name": "Close",
+          "required_privilege": null,
+          "to_state": "closed"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 219,
+      "target": {
+        "entity": "purchase_order",
+        "transition": "received->closed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 5,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Cancel",
+          "required_privilege": null,
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 220,
+      "target": {
+        "entity": "purchase_order",
+        "transition": "draft->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 6,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "issued",
+          "guard_expression": null,
+          "name": "Cancel",
+          "required_privilege": null,
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 221,
+      "target": {
+        "entity": "purchase_order",
+        "transition": "issued->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity_logicalname": "vendor_bill",
+          "initial_state": "draft",
+          "is_active": true,
+          "name": "Vendor Bill Lifecycle",
+          "state_field": "status"
+        }
+      },
+      "op": "upsert_state_model",
+      "phase": "expand",
+      "seq": 222,
+      "target": {
+        "entity": "vendor_bill"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 0,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Post",
+          "required_privilege": null,
+          "to_state": "posted"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 223,
+      "target": {
+        "entity": "vendor_bill",
+        "transition": "draft->posted"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 1,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "posted",
+          "guard_expression": null,
+          "name": "Mark Paid",
+          "required_privilege": null,
+          "to_state": "paid"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 224,
+      "target": {
+        "entity": "vendor_bill",
+        "transition": "posted->paid"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "display_order": 2,
+          "entry_actions": [],
+          "exit_actions": [],
+          "from_state": "draft",
+          "guard_expression": null,
+          "name": "Cancel",
+          "required_privilege": null,
+          "to_state": "cancelled"
+        }
+      },
+      "op": "upsert_state_transition",
+      "phase": "expand",
+      "seq": 225,
+      "target": {
+        "entity": "vendor_bill",
+        "transition": "draft->cancelled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "purchase_order",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Procurement: Open Purchase Orders",
+          "required_privilege": "purchase_order.read",
+          "sql": "SELECT id, number, vendor_ref, order_date, expected_date, grand_total, status FROM purchase_order WHERE is_active IS NOT FALSE AND status IN ('issued', 'partly_received') ORDER BY expected_date",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 226,
+      "target": {
+        "entity": "purchase_order",
+        "query": "Procurement: Open Purchase Orders"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "vendor_bill",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Procurement: Bills Due",
+          "required_privilege": "vendor_bill.read",
+          "sql": "SELECT id, number, vendor_ref, due_date, grand_total, match_status FROM vendor_bill WHERE is_active IS NOT FALSE AND status = 'posted' ORDER BY due_date",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 227,
+      "target": {
+        "entity": "vendor_bill",
+        "query": "Procurement: Bills Due"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 48,
+          "entity": null,
+          "icon": "la-briefcase",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Procurement"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 228,
+      "target": {
+        "path": "Procurement"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-clipboard-check",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Procurement",
+            "Requisitions"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/purchase_requisition/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 229,
+      "target": {
+        "path": "Procurement/Requisitions"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-file-alt",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Procurement",
+            "Purchase Orders"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/purchase_order/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 230,
+      "target": {
+        "path": "Procurement/Purchase Orders"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": "la-cubes",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Procurement",
+            "Goods Receipts"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/goods_receipt/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 231,
+      "target": {
+        "path": "Procurement/Goods Receipts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 4,
+          "entity": null,
+          "icon": "la-file",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Procurement",
+            "Vendor Bills"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/vendor_bill/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 232,
+      "target": {
+        "path": "Procurement/Vendor Bills"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "procurement",
+  "seq": 1,
+  "title": "Pack: procurement"
+}

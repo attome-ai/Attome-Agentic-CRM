@@ -299,6 +299,7 @@ dependencies = [
  "attome-portal",
  "attome-predict",
  "attome-process",
+ "attome-procurement",
  "attome-profiler",
  "attome-project",
  "attome-records",
@@ -1320,6 +1321,16 @@ dependencies = [
  "tracing",
  "utoipa",
  "uuid",
+]
+
+[[package]]
+name = "attome-procurement"
+version = "0.1.0"
+dependencies = [
+ "attome-core",
+ "attome-modules",
+ "axum",
+ "utoipa",
 ]
 
 [[package]]

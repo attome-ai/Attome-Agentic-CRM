@@ -174,6 +174,8 @@ pub const MODULE_WORKFORCE: ModuleId = ModuleId::new(39);
 pub const MODULE_CONTRACT: ModuleId = ModuleId::new(40);
 /// Offline: records on the device, sync and conflict resolution for the mobile app (B18).
 pub const MODULE_OFFLINE: ModuleId = ModuleId::new(41);
+/// Procurement: requisitions, purchase orders, receipts and vendor bills (W3).
+pub const MODULE_PROCUREMENT: ModuleId = ModuleId::new(42);
 
 /// Every module by its configuration name.
 pub const MODULE_MAP: &[(&str, ModuleId)] = &[
@@ -213,6 +215,7 @@ pub const MODULE_MAP: &[(&str, ModuleId)] = &[
     ("workforce", MODULE_WORKFORCE),
     ("contract", MODULE_CONTRACT),
     ("offline", MODULE_OFFLINE),
+    ("procurement", MODULE_PROCUREMENT),
 ];
 
 /// The module named `name` in [`MODULE_MAP`].

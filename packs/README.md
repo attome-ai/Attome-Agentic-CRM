@@ -114,6 +114,15 @@ adds product-mix reports and `0013` the team calling metrics); the crm pack's
 adds events, and its `0004` nurture programmes, tracks and content with a lifecycle stage on leads
 and contacts.
 
+## procurement
+
+Procurement (W3): purchase requisitions and their lines, purchase orders to a vendor with lines
+that track received and billed quantities, goods receipts against order lines, and vendor bills
+with a three-way-match status; each document has a number within its series and a lifecycle.
+The Requester, Buyer, Receiver and AP Clerk roles and the open-orders and bills-due reports ship
+with it. Needs the vendor-supplier pack; the `procurement` engine is gated on the `procurement`
+module.
+
 ## Industry packs
 
 Each industry pack is one changeset of entities, a stage model on its main record, roles with their
