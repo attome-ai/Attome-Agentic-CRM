@@ -160,6 +160,14 @@ impl EngineModel for ActionModel {
             "ai_provider",
             "ai_personality",
             "ai_tone",
+            // The AI agents' records: `platform-bundles/attome-ai-followup.json`,
+            // `-collections`, `-meeting` and `-work-share`.
+            "ai_followup_rule",
+            "ai_collection_rule",
+            "ai_payment_promise",
+            "ai_meeting_brief",
+            "ai_meeting_notes",
+            "ai_work_measure",
         ]
     }
 }

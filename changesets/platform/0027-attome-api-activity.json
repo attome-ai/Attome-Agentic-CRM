@@ -1,6 +1,6 @@
 {
   "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
-  "checksum": "sha256:3e086e716211a123aa2eb4d7486b772859b00cfe4245cdc7ac99d9bf9e476ccd",
+  "checksum": "sha256:e4094611acd39f3359fa05a6994b1454c8909eeb422d7b3952c2cc7c449dd375",
   "closed_at": "2026-09-29T00:00:00Z",
   "description": "Converted from platform-bundles/attome-api-activity.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
@@ -38,7 +38,8 @@
           "options": {
             "choices": [
               "task",
-              "phone_call"
+              "phone_call",
+              "visit"
             ],
             "multi": false
           }

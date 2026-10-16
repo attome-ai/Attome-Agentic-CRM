@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:e3775d11f539433ca73fbf7c7f2f96fac4230f7b13d3b96315df66241b364cb5",
+  "checksum": "sha256:02ee927688f1628314cedab3e6131814d3bb5afbaa263ad4a74a79f0144fe475",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Customers (D1-T1): business and person accounts, communication preferences and personal-data labels on contacts, contact roles across accounts, account teams and typed addresses on any record. Activities (D14-T1): visits, outcomes, attendees, next steps and a consented check-in location.",
   "format": "attome-changeset/v1",
@@ -956,19 +956,6 @@
     },
     {
       "args": {
-        "label": "Visit",
-        "value": "visit"
-      },
-      "op": "add_choice_value",
-      "phase": "expand",
-      "seq": 36,
-      "target": {
-        "entity": "activity",
-        "field": "activity_type"
-      }
-    },
-    {
-      "args": {
         "definition": {
           "data_classification": "general",
           "display_name": "Outcome",
@@ -999,7 +986,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 37,
+      "seq": 36,
       "target": {
         "entity": "activity",
         "field": "outcome"
@@ -1025,7 +1012,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 38,
+      "seq": 37,
       "target": {
         "entity": "activity",
         "field": "attendees"
@@ -1051,7 +1038,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 39,
+      "seq": 38,
       "target": {
         "entity": "activity",
         "field": "next_step"
@@ -1077,7 +1064,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 40,
+      "seq": 39,
       "target": {
         "entity": "activity",
         "field": "check_in_at"
@@ -1103,7 +1090,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 41,
+      "seq": 40,
       "target": {
         "entity": "activity",
         "field": "location_consent"
@@ -1129,7 +1116,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 42,
+      "seq": 41,
       "target": {
         "entity": "activity",
         "field": "check_in_latitude"
@@ -1155,7 +1142,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 43,
+      "seq": 42,
       "target": {
         "entity": "activity",
         "field": "check_in_longitude"
@@ -1167,7 +1154,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 44,
+      "seq": 43,
       "target": {
         "locale": "ar",
         "object_key": "account.account_type",
@@ -1180,7 +1167,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 45,
+      "seq": 44,
       "target": {
         "locale": "ar",
         "object_key": "account.person_contact_ref",
@@ -1193,7 +1180,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 46,
+      "seq": 45,
       "target": {
         "locale": "ar",
         "object_key": "contact.preferred_language",
@@ -1206,7 +1193,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 47,
+      "seq": 46,
       "target": {
         "locale": "ar",
         "object_key": "contact.preferred_channel",
@@ -1219,7 +1206,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 48,
+      "seq": 47,
       "target": {
         "locale": "ar",
         "object_key": "contact.do_not_email",
@@ -1232,7 +1219,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 49,
+      "seq": 48,
       "target": {
         "locale": "ar",
         "object_key": "contact.do_not_call",
@@ -1245,7 +1232,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 50,
+      "seq": 49,
       "target": {
         "locale": "ar",
         "object_key": "contact.do_not_message",
@@ -1258,7 +1245,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 51,
+      "seq": 50,
       "target": {
         "locale": "ar",
         "object_key": "contact.national_id",
@@ -1271,7 +1258,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 52,
+      "seq": 51,
       "target": {
         "locale": "ar",
         "object_key": "contact.iqama_no",
@@ -1284,7 +1271,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 53,
+      "seq": 52,
       "target": {
         "locale": "ar",
         "object_key": "contact.birth_date",
@@ -1297,7 +1284,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 54,
+      "seq": 53,
       "target": {
         "locale": "ar",
         "object_key": "contact_account_role",
@@ -1310,7 +1297,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 55,
+      "seq": 54,
       "target": {
         "locale": "ar",
         "object_key": "contact_account_role.contact_ref",
@@ -1323,7 +1310,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 56,
+      "seq": 55,
       "target": {
         "locale": "ar",
         "object_key": "contact_account_role.account_ref",
@@ -1336,7 +1323,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 57,
+      "seq": 56,
       "target": {
         "locale": "ar",
         "object_key": "contact_account_role.role",
@@ -1349,7 +1336,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 58,
+      "seq": 57,
       "target": {
         "locale": "ar",
         "object_key": "contact_account_role.valid_from",
@@ -1362,7 +1349,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 59,
+      "seq": 58,
       "target": {
         "locale": "ar",
         "object_key": "contact_account_role.valid_to",
@@ -1375,7 +1362,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 60,
+      "seq": 59,
       "target": {
         "locale": "ar",
         "object_key": "contact_account_role.is_primary",
@@ -1388,7 +1375,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 61,
+      "seq": 60,
       "target": {
         "locale": "ar",
         "object_key": "account_team_member",
@@ -1401,7 +1388,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 62,
+      "seq": 61,
       "target": {
         "locale": "ar",
         "object_key": "account_team_member.account_ref",
@@ -1414,7 +1401,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 63,
+      "seq": 62,
       "target": {
         "locale": "ar",
         "object_key": "account_team_member.user_ref",
@@ -1427,7 +1414,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 64,
+      "seq": 63,
       "target": {
         "locale": "ar",
         "object_key": "account_team_member.team_role",
@@ -1440,7 +1427,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 65,
+      "seq": 64,
       "target": {
         "locale": "ar",
         "object_key": "account_team_member.access",
@@ -1453,7 +1440,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 66,
+      "seq": 65,
       "target": {
         "locale": "ar",
         "object_key": "customer_address",
@@ -1466,7 +1453,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 67,
+      "seq": 66,
       "target": {
         "locale": "ar",
         "object_key": "customer_address.name",
@@ -1479,7 +1466,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 68,
+      "seq": 67,
       "target": {
         "locale": "ar",
         "object_key": "customer_address.address_type",
@@ -1492,7 +1479,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 69,
+      "seq": 68,
       "target": {
         "locale": "ar",
         "object_key": "customer_address.line1",
@@ -1505,7 +1492,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 70,
+      "seq": 69,
       "target": {
         "locale": "ar",
         "object_key": "customer_address.line2",
@@ -1518,7 +1505,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 71,
+      "seq": 70,
       "target": {
         "locale": "ar",
         "object_key": "customer_address.city",
@@ -1531,7 +1518,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 72,
+      "seq": 71,
       "target": {
         "locale": "ar",
         "object_key": "customer_address.region",
@@ -1544,7 +1531,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 73,
+      "seq": 72,
       "target": {
         "locale": "ar",
         "object_key": "customer_address.postal_code",
@@ -1557,7 +1544,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 74,
+      "seq": 73,
       "target": {
         "locale": "ar",
         "object_key": "customer_address.country",
@@ -1570,7 +1557,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 75,
+      "seq": 74,
       "target": {
         "locale": "ar",
         "object_key": "customer_address.national_short_address",
@@ -1583,7 +1570,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 76,
+      "seq": 75,
       "target": {
         "locale": "ar",
         "object_key": "customer_address.regarding_entity",
@@ -1596,7 +1583,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 77,
+      "seq": 76,
       "target": {
         "locale": "ar",
         "object_key": "customer_address.regarding_id",
@@ -1609,7 +1596,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 78,
+      "seq": 77,
       "target": {
         "locale": "ar",
         "object_key": "customer_address.is_primary",
@@ -1622,7 +1609,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 79,
+      "seq": 78,
       "target": {
         "locale": "ar",
         "object_key": "activity.outcome",
@@ -1635,7 +1622,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 80,
+      "seq": 79,
       "target": {
         "locale": "ar",
         "object_key": "activity.attendees",
@@ -1648,7 +1635,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 81,
+      "seq": 80,
       "target": {
         "locale": "ar",
         "object_key": "activity.next_step",
@@ -1661,7 +1648,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 82,
+      "seq": 81,
       "target": {
         "locale": "ar",
         "object_key": "activity.check_in_at",
@@ -1674,7 +1661,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 83,
+      "seq": 82,
       "target": {
         "locale": "ar",
         "object_key": "activity.location_consent",
@@ -1687,7 +1674,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 84,
+      "seq": 83,
       "target": {
         "locale": "ar",
         "object_key": "activity.check_in_latitude",
@@ -1700,7 +1687,7 @@
       },
       "op": "set_label",
       "phase": "expand",
-      "seq": 85,
+      "seq": 84,
       "target": {
         "locale": "ar",
         "object_key": "activity.check_in_longitude",

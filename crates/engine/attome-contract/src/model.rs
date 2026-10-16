@@ -17,7 +17,13 @@ impl EngineModel for ContractModel {
     }
 
     fn owned_entities(&self) -> &'static [&'static str] {
-        &[]
+        // `platform-bundles/attome-contract.json`.
+        &[
+            "contract_version",
+            "contract_comparison",
+            "contract_import",
+            "contract_playbook_rule",
+        ]
     }
 
     fn routes(&self) -> Router<EngineState> {

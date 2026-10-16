@@ -13,7 +13,7 @@
       "is_append_only": false,
       "attributes": [
         { "logicalname": "subject", "display_name": "Subject", "field_type": "text", "is_required": true, "is_sortable": true, "is_filterable": true },
-        { "logicalname": "activity_type", "display_name": "Activity Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["task", "phone_call"], "multi": false } },
+        { "logicalname": "activity_type", "display_name": "Activity Type", "field_type": "choice", "is_required": true, "is_sortable": true, "is_filterable": true, "options": { "choices": ["task", "phone_call", "visit"], "multi": false } },
         { "logicalname": "description", "display_name": "Description", "field_type": "text" },
         { "logicalname": "entity_name", "display_name": "Entity Name", "field_type": "text", "is_required": true, "is_filterable": true },
         { "logicalname": "record_id", "display_name": "Record Id", "field_type": "text", "is_required": true, "is_filterable": true },

@@ -149,6 +149,22 @@ const UNGATED_BY_DESIGN: &[(&str, &str)] = &[
          not owned by any single engine, same posture as tag_category/ \
          glossary_term above",
     ),
+    (
+        "contract_version",
+        "attome-contract claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "contract_comparison",
+        "attome-contract claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "contract_import",
+        "attome-contract claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
+        "contract_playbook_rule",
+        "attome-contract claims it through EngineModel::owned_entities at runtime",
+    ),
 ];
 
 fn owner(model_name: &'static str, module_id: ModuleId) -> EntityModuleOwner {
@@ -314,6 +330,18 @@ fn production_map() -> EntityModuleMap {
     // given above.
     map.claim("ai_personality", owner("attome-ai", MODULE_AI));
     map.claim("ai_tone", owner("attome-ai", MODULE_AI));
+    // The AI agents' records (platform-bundles/attome-ai-followup.json,
+    // -collections, -meeting and -work-share).
+    for entity in [
+        "ai_followup_rule",
+        "ai_collection_rule",
+        "ai_payment_promise",
+        "ai_meeting_brief",
+        "ai_meeting_notes",
+        "ai_work_measure",
+    ] {
+        map.claim(entity, owner("attome-ai", MODULE_AI));
+    }
     // D-383 fix (this test's own discovery) — audit_consent/audit_consent_purpose
     // (M24, D-428) and audit_legal_matter (M23, D-456) are ordinary
     // generic-CRUD entities `attome-compliance` provisions directly
