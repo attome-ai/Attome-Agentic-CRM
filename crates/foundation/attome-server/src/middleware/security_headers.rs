@@ -38,6 +38,21 @@ pub(crate) const CSP_POLICY: &str = "default-src 'self'; script-src 'self' https
      connect-src 'self'; frame-src https://accounts.google.com; \
      frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
 
+/// Q21-T3: browser features a page may use. The app is one page for every
+/// route, so the features its own screens need (camera for scanning, B15;
+/// microphone for calls, J7; location for check-in) are allowed to this
+/// origin only, never to a frame from elsewhere; everything else is off.
+pub(crate) const PAGE_PERMISSIONS_POLICY: &str = "camera=(self), microphone=(self), geolocation=(self), payment=(), usb=(), serial=(), hid=(), bluetooth=(), midi=(), display-capture=(), xr-spatial-tracking=(), browsing-topics=()";
+
+/// Q21-T3: an API response or a file uses no browser feature at all.
+pub(crate) const API_PERMISSIONS_POLICY: &str = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=(), bluetooth=(), midi=(), display-capture=()";
+
+/// Q21-T3: a page keeps its own browsing context group. `same-origin-allow-popups`
+/// rather than `same-origin`: the optional Google sign-in (see the module
+/// comment) opens a popup that must reach back to the page; any page that
+/// opens this one from another origin still loses its handle on it.
+pub(crate) const PAGE_OPENER_POLICY: &str = "same-origin-allow-popups";
+
 /// Z5-T10: which kind of response a path serves, for its header set.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Surface {
@@ -137,9 +152,25 @@ pub async fn security_headers(values: SecurityHeaderValues, req: Request, next: 
     match surface {
         Surface::App | Surface::Portal => {
             headers.insert(values.csp_header_name, values.csp);
+            headers.insert(
+                "permissions-policy",
+                HeaderValue::from_static(PAGE_PERMISSIONS_POLICY),
+            );
+            headers.insert(
+                "cross-origin-opener-policy",
+                HeaderValue::from_static(PAGE_OPENER_POLICY),
+            );
         }
         Surface::Api => {
             headers.insert("x-frame-options", HeaderValue::from_static("DENY"));
+            headers.insert(
+                "permissions-policy",
+                HeaderValue::from_static(API_PERMISSIONS_POLICY),
+            );
+            headers.insert(
+                "cross-origin-resource-policy",
+                HeaderValue::from_static("same-origin"),
+            );
         }
     }
     headers.insert("x-content-type-options", values.x_content_type_options);
@@ -284,6 +315,39 @@ mod tests {
         assert_eq!(surface_for("/xrm/dashboard"), Surface::App);
         assert_eq!(surface_for("/api/v1/live"), Surface::Api);
         assert_eq!(surface_for("/apiary"), Surface::App);
+    }
+
+    /// Q21-T3: a page may use the camera, microphone and location for its
+    /// own screens only, and keeps its own browsing context group; an API
+    /// response may use no browser feature and is readable same-origin only.
+    #[tokio::test]
+    async fn isolation_headers_on_pages_and_api_responses() {
+        let app = app_with(values(true));
+        let response = app.oneshot(request_for("/")).await.unwrap();
+        let headers = response.headers();
+        let policy = headers.get("permissions-policy").unwrap().to_str().unwrap();
+        assert!(policy.contains("camera=(self)"), "{policy}");
+        assert!(policy.contains("payment=()"), "{policy}");
+        assert_eq!(
+            headers.get("cross-origin-opener-policy").unwrap(),
+            "same-origin-allow-popups"
+        );
+
+        let app = Router::new()
+            .route("/api/v1/files", get(|| async { StatusCode::OK }))
+            .layer(axum::middleware::from_fn(move |req, next| {
+                security_headers(values(true), req, next)
+            }));
+        let response = app.oneshot(request_for("/api/v1/files")).await.unwrap();
+        let headers = response.headers();
+        let policy = headers.get("permissions-policy").unwrap().to_str().unwrap();
+        assert!(policy.contains("camera=()"), "{policy}");
+        assert!(!policy.contains("(self)"), "{policy}");
+        assert_eq!(
+            headers.get("cross-origin-resource-policy").unwrap(),
+            "same-origin"
+        );
+        assert_eq!(headers.get("x-content-type-options").unwrap(), "nosniff");
     }
 
     #[tokio::test]
