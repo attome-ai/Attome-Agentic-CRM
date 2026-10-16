@@ -183,6 +183,9 @@ fn the_marketing_pack_installs_once_on_the_crm_pack() {
                 "marketing_nurture_program",
                 "marketing_nurture_track",
                 "marketing_nurture_content",
+                "marketing_tracked_site",
+                "marketing_visit_summary",
+                "marketing_watched_page",
             ],
         )
         .await;
@@ -291,5 +294,19 @@ fn the_asset_management_pack_installs_once_with_its_software_dataset() {
         .await
         .expect("count software");
         assert_eq!(seeded, 42, "the end-of-support dataset, once");
+
+        // H6-T2: the licence position queries run against the installed pack.
+        let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(
+            "../../../packs/asset-management/changesets/0004-asset-management-licence-compliance.json",
+        );
+        let doc: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&file).expect("read")).expect("json");
+        for op in doc["operations"].as_array().expect("operations") {
+            let sql = op["args"]["definition"]["sql"].as_str().expect("sql");
+            sqlx::query(sql)
+                .fetch_all(app.db())
+                .await
+                .unwrap_or_else(|e| panic!("{sql}: {e}"));
+        }
     });
 }

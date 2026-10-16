@@ -111,8 +111,8 @@ The sales pack's `0009`–`0011` add forecasts, territories, playbooks, deal tea
 order totals, quotas, and contact-role influence behind the Deal Attitude field profile (`0012`
 adds product-mix reports and `0013` the team calling metrics); the crm pack's
 `0003` adds the contact org chart, enrichment fields and ISIC sections; the marketing pack's `0003`
-adds events, and its `0004` nurture programmes, tracks and content with a lifecycle stage on leads
-and contacts.
+adds events, its `0004` nurture programmes, tracks and content with a lifecycle stage on leads
+and contacts, and its `0005` the website tracking sites, visit summaries and watched pages.
 
 ## procurement
 
@@ -157,7 +157,8 @@ contract-management `0002`, vendor-supplier `0002`, finance `0002` and human-res
 changesets extend those packs (I8, I9, H6, I1, I5, I10, W1, W2, W4, W8).
 The asset-management `0003` keys the software catalogue on name and version and seeds
 end-of-support and end-of-life dates for common operating systems, databases, runtimes and office
-software from endoflife.date (H6-T1).
+software from endoflife.date (H6-T1); its `0004` reports entitled seats against installs and the
+over-deployed products (H6-T2).
 
 ## regions
 

@@ -1,0 +1,65 @@
+{
+  "author": "packs",
+  "checksum": "sha256:f9f652c1e30f25165e70b0b484bf946f0d459161d13efbb24e891d1955be2ccb",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "H6-T2: entitled seats against installs per software product and version, and the products installed on more devices than their licences cover.",
+  "format": "attome-changeset/v1",
+  "id": "01a144c6-4e79-760a-b40e-6c1857b09456",
+  "layer": "product",
+  "name": "asset-management-licence-compliance",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "entity": "software_licence",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "IT Assets: Licence Position",
+          "required_privilege": "software_licence.read",
+          "sql": "WITH entitled AS ( SELECT software_ref, COALESCE(SUM(seats), 0)::bigint AS seats FROM software_licence WHERE is_active IS NOT FALSE AND (valid_to IS NULL OR valid_to >= NOW()) AND (valid_from IS NULL OR valid_from <= NOW()) GROUP BY software_ref), installed AS ( SELECT software_ref, COUNT(*)::bigint AS installs FROM software_install WHERE is_active IS NOT FALSE GROUP BY software_ref) SELECT p.id AS software_ref, p.name, p.version, COALESCE(e.seats, 0) AS entitled_seats, COALESCE(i.installs, 0) AS installs, COALESCE(i.installs, 0) - COALESCE(e.seats, 0) AS shortfall FROM software_product p LEFT JOIN entitled e ON e.software_ref = p.id LEFT JOIN installed i ON i.software_ref = p.id WHERE p.is_active IS NOT FALSE ORDER BY shortfall DESC, p.name",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "software_licence",
+        "query": "IT Assets: Licence Position"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "software_licence",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "IT Assets: Over-Deployed Software",
+          "required_privilege": "software_licence.read",
+          "sql": "SELECT t.software_ref, t.name, t.version, t.entitled_seats, t.installs, t.shortfall FROM (WITH entitled AS ( SELECT software_ref, COALESCE(SUM(seats), 0)::bigint AS seats FROM software_licence WHERE is_active IS NOT FALSE AND (valid_to IS NULL OR valid_to >= NOW()) AND (valid_from IS NULL OR valid_from <= NOW()) GROUP BY software_ref), installed AS ( SELECT software_ref, COUNT(*)::bigint AS installs FROM software_install WHERE is_active IS NOT FALSE GROUP BY software_ref) SELECT p.id AS software_ref, p.name, p.version, COALESCE(e.seats, 0) AS entitled_seats, COALESCE(i.installs, 0) AS installs, COALESCE(i.installs, 0) - COALESCE(e.seats, 0) AS shortfall FROM software_product p LEFT JOIN entitled e ON e.software_ref = p.id LEFT JOIN installed i ON i.software_ref = p.id WHERE p.is_active IS NOT FALSE) t WHERE t.shortfall > 0 ORDER BY t.shortfall DESC",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "software_licence",
+        "query": "IT Assets: Over-Deployed Software"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "asset-management",
+  "seq": 4,
+  "title": "Pack: software licence compliance"
+}
