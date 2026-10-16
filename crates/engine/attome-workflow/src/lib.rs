@@ -6,6 +6,7 @@ pub mod entity_trigger;
 pub mod escalation;
 pub mod graph;
 pub mod instance_admin;
+pub mod instance_control;
 pub mod model;
 pub mod node_types;
 pub mod schedule_trigger;
@@ -34,6 +35,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 7;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = admin::openapi_fragment();
     doc.merge(instance_admin::openapi_fragment());
+    doc.merge(instance_control::openapi_fragment());
     doc.merge(dead_letter_admin::openapi_fragment());
     doc.merge(simulate::openapi_fragment());
     doc

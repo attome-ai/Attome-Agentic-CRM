@@ -253,10 +253,11 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
         tracing::warn!(%instance_id, "workflow execute: instance not found, dropping job");
         return Ok(PassOutcome::NoOp);
     };
-    // `queued` (M1-T5) waits for `promote_queued` to make it `running`.
+    // `queued` (M1-T5) waits for `promote_queued` to make it `running`;
+    // `paused` (M3-T3) waits for a resume.
     if matches!(
         instance.status.as_str(),
-        "queued" | "completed" | "failed" | "cancelled"
+        "queued" | "paused" | "completed" | "failed" | "cancelled"
     ) {
         return Ok(PassOutcome::NoOp);
     }

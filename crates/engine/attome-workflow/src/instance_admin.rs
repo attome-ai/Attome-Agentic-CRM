@@ -228,7 +228,7 @@ async fn cancel_instance(
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let rows = sqlx::query(
         "UPDATE workflow_instance SET status = 'cancelled', completed_at = NOW(), row_version = row_version + 1 \
-         WHERE id = $1 AND row_version = $2 AND status IN ('queued', 'running', 'waiting')",
+         WHERE id = $1 AND row_version = $2 AND status IN ('queued', 'running', 'waiting', 'paused')",
     )
     .bind(instance_id)
     .bind(body.row_version)

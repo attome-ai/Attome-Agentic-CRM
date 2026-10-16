@@ -28,6 +28,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Workflow run control: `POST /api/v1/workflow/instances/{id}/retry` (a failed run again from its
+  failed step), `/pause`, `/resume`, `/move` to a newer published version, and
+  `GET .../move-preview` showing where each waiting step lands. Runs gain the `paused` status.
 - Workflow node runs keep one row per node and loop round (`round`) with the node's `input` and
   `output` (a pair over 64 KiB goes to object storage, `payload_ref`); the instance detail
   returns them.

@@ -32,6 +32,7 @@ impl EngineModel for WorkflowModel {
     fn routes(&self) -> Router<EngineState> {
         crate::admin::routes()
             .merge(crate::instance_admin::routes())
+            .merge(crate::instance_control::routes())
             .merge(crate::dead_letter_admin::routes())
             .merge(crate::simulate::routes())
     }

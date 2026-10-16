@@ -3933,3 +3933,94 @@ async fn a_node_run_keeps_its_round_and_input() {
         "the wait node's input carries the trigger's output: {input}"
     );
 }
+
+async fn instance_state(state: &EngineState, instance_id: Uuid) -> (String, i64) {
+    sqlx::query_as("SELECT status, row_version FROM workflow_instance WHERE id = $1")
+        .bind(instance_id)
+        .fetch_one(&state.base.db)
+        .await
+        .expect("read instance")
+}
+
+/// M3-T3: a failed run retries from its failed step; a run can be paused
+/// (no pass runs it) and resumed.
+#[tokio::test]
+async fn a_failed_run_retries_and_a_run_pauses_and_resumes() {
+    let state = skip_if_no_db!(test_state().await);
+    let user_id = seed_user(&state.base.db).await;
+
+    let failing = json!({
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": {"trigger_type": "manual"}},
+            {"id": "cr", "type": "create_record", "config": {"entity": "wf_no_such_entity"}}
+        ],
+        "edges": [{"from_node": "t", "from_port": "out", "to_node": "cr", "to_port": "data"}]
+    });
+    let version_id = publish_workflow(&state.base.db, "retry-test", failing).await;
+    let instance_id = attome_workflow::instance_admin::start_instance_internal(
+        &state,
+        version_id,
+        None,
+        Some(user_id),
+        None,
+        json!({}),
+    )
+    .await
+    .expect("start");
+    assert_eq!(run_to_checkpoint(&state, instance_id).await, "failed");
+    let (_, row_version) = instance_state(&state, instance_id).await;
+    let retried =
+        attome_workflow::instance_control::retry_run(&state, instance_id, row_version, user_id)
+            .await
+            .expect("retry");
+    assert_eq!(retried.status, "running");
+    let step: String = sqlx::query_scalar(
+        "SELECT status FROM workflow_node_run WHERE instance_id = $1 AND node_id = 'cr'",
+    )
+    .bind(instance_id)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("read step");
+    assert_eq!(step, "pending", "the failed step runs again");
+    // The entity still does not exist, so the retried step fails again.
+    assert_eq!(run_to_checkpoint(&state, instance_id).await, "failed");
+
+    let waiting = json!({
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": {"trigger_type": "manual"}},
+            {"id": "w", "type": "wait", "config": {"delay_seconds": 3600}}
+        ],
+        "edges": [{"from_node": "t", "from_port": "out", "to_node": "w", "to_port": "in"}]
+    });
+    let version_id = publish_workflow(&state.base.db, "pause-test", waiting).await;
+    let instance_id = attome_workflow::instance_admin::start_instance_internal(
+        &state,
+        version_id,
+        None,
+        Some(user_id),
+        None,
+        json!({}),
+    )
+    .await
+    .expect("start");
+    assert_eq!(run_to_checkpoint(&state, instance_id).await, "waiting");
+    let (_, row_version) = instance_state(&state, instance_id).await;
+    attome_workflow::instance_control::pause_run(&state, instance_id, row_version, user_id)
+        .await
+        .expect("pause");
+    attome_workflow::scheduler::execute_instance(&state, instance_id)
+        .await
+        .expect("a pass over a paused run is a no-op");
+    let (status, row_version) = instance_state(&state, instance_id).await;
+    assert_eq!(status, "paused");
+    assert!(
+        attome_workflow::instance_control::pause_run(&state, instance_id, row_version, user_id)
+            .await
+            .is_err(),
+        "a paused run cannot be paused again"
+    );
+    attome_workflow::instance_control::resume_run(&state, instance_id, row_version, user_id)
+        .await
+        .expect("resume");
+    assert_eq!(run_to_checkpoint(&state, instance_id).await, "waiting");
+}
