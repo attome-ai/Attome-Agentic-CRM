@@ -12,7 +12,7 @@
 //! `"feature.{key}"` in `setting_catalog.rs`'s `feature_flag_settings()` —
 //! `FeatureFlagRegistry::new()` asserts this at boot.
 
-use attome_modules::{MODULE_CONTENT, MODULE_CORE, MODULE_MARKETING, MODULE_PROJECT};
+use attome_modules::{MODULE_CONTENT, MODULE_CORE, MODULE_MARKETING, MODULE_PROJECT, MODULE_SALES};
 
 use crate::feature_flag_descriptor::FeatureFlag;
 
@@ -21,7 +21,50 @@ pub(crate) fn all() -> Vec<FeatureFlag> {
     all.extend(scan_flags());
     all.extend(e13_flags());
     all.extend(e14_flags());
+    all.extend(d6_flags());
     all
+}
+
+/// D6-T13: opportunity lines and what builds on them stay off until
+/// switched on; a deployment without them keeps the typed amount.
+fn d6_flags() -> Vec<FeatureFlag> {
+    vec![
+        FeatureFlag::new(
+            "sales.opportunity_lines",
+            MODULE_SALES,
+            "Product lines on opportunities, priced and totalled; off keeps the typed amount.",
+            false,
+            &[],
+        ),
+        FeatureFlag::new(
+            "sales.recurring_lines",
+            MODULE_SALES,
+            "Recurring values on opportunity lines (per period over a term).",
+            false,
+            &["sales.opportunity_lines"],
+        ),
+        FeatureFlag::new(
+            "sales.schedules",
+            MODULE_SALES,
+            "Revenue and quantity schedules on opportunity lines.",
+            false,
+            &["sales.opportunity_lines"],
+        ),
+        FeatureFlag::new(
+            "sales.quote_sync",
+            MODULE_SALES,
+            "Sync between an opportunity's lines and its primary quote.",
+            false,
+            &["sales.opportunity_lines"],
+        ),
+        FeatureFlag::new(
+            "sales.product_suggestions",
+            MODULE_SALES,
+            "Agent-drafted product suggestions for an opportunity.",
+            false,
+            &["sales.opportunity_lines"],
+        ),
+    ]
 }
 
 /// E14-T1: website tracking, off until switched on; every part of it needs

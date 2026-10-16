@@ -9,8 +9,10 @@
 pub mod competitors;
 pub mod dialer;
 pub mod enrichment;
+pub mod flags;
 pub mod model;
 pub mod orgchart;
+pub mod pricing;
 
 pub use model::SalesModel;
 

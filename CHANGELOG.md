@@ -28,6 +28,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Billing and sales logic, pure and tested: subscription segments read as of a date, charge models
+  (flat, per unit, tiered, volume, setup fee, minimum commitment), billing periods with proration,
+  payment allocation (oldest first or as the payer says, overpayment to credit), opportunity
+  line pricing; `sales.*` feature flags for opportunity lines and what builds on them (all off).
 - Website tracking feature flags, all off by default: `marketing.tracking` and its parts
   (external sites, identify, company, custom events, alerts).
 - Engine crates for the business modules, each behind its own module switch: `attome-sales`

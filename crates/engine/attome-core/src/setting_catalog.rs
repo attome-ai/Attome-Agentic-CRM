@@ -310,6 +310,26 @@ fn feature_flag_settings() -> Vec<SettingDescriptor> {
             "feature.marketing.tracking_alerts",
             "Stored policy value for the marketing.tracking_alerts feature flag (E14-T1).",
         ),
+        scan(
+            "feature.sales.opportunity_lines",
+            "Stored policy value for the sales.opportunity_lines feature flag (D6-T13).",
+        ),
+        scan(
+            "feature.sales.recurring_lines",
+            "Stored policy value for the sales.recurring_lines feature flag (D6-T13).",
+        ),
+        scan(
+            "feature.sales.schedules",
+            "Stored policy value for the sales.schedules feature flag (D6-T13).",
+        ),
+        scan(
+            "feature.sales.quote_sync",
+            "Stored policy value for the sales.quote_sync feature flag (D6-T13).",
+        ),
+        scan(
+            "feature.sales.product_suggestions",
+            "Stored policy value for the sales.product_suggestions feature flag (D6-T13).",
+        ),
         SettingDescriptor::new(
             "feature.core.beta_ui",
             "Stored policy value for the core.beta_ui feature flag (M95, D-430): \
