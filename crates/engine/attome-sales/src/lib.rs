@@ -9,6 +9,7 @@
 pub mod attainment;
 pub mod catalogue;
 pub mod competitor_mentions;
+pub mod competitor_routes;
 pub mod competitors;
 pub mod cpq;
 pub mod cpq_pricing;
@@ -56,5 +57,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<undo::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dialer::outcome::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<dialer::build::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<competitor_routes::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

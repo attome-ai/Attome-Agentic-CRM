@@ -112,6 +112,22 @@ impl EngineModel for SalesModel {
                 post(crate::opportunity_lines::post_sales_deal_discount),
             )
             .route(
+                "/api/v1/sales/competitor-mentions/{id}/confirm",
+                post(crate::competitor_routes::post_sales_mention_confirm),
+            )
+            .route(
+                "/api/v1/sales/competitor-mentions/{id}/reject",
+                post(crate::competitor_routes::post_sales_mention_reject),
+            )
+            .route(
+                "/api/v1/sales/opportunities/{id}/battlecards",
+                get(crate::competitor_routes::get_sales_battlecards),
+            )
+            .route(
+                "/api/v1/sales/competitors/{id}/head-to-head",
+                get(crate::competitor_routes::get_sales_head_to_head),
+            )
+            .route(
                 "/api/v1/sales/opportunities/{id}/change-owner",
                 post(crate::owner_change::post_sales_change_owner),
             )

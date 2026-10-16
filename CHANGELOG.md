@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Competitor routes: `POST /api/v1/sales/competitor-mentions/{id}/confirm` and `/reject`
+  (`If-Match`; confirm puts the competitor on the deal as `suspected`),
+  `GET /api/v1/sales/opportunities/{id}/battlecards` and
+  `GET /api/v1/sales/competitors/{id}/head-to-head` (over the deals the caller may read).
 - Competitor mentions: a minute job reads new emails and notes about a deal (or its account)
   and proposes each tracked competitor they name as a `competitor_mention` (status `proposed`),
   matched as a whole word after Arabic normalisation, written as the deal owner only when the
