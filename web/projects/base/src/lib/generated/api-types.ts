@@ -17987,6 +17987,7 @@ export interface components {
          *     `unauthorized`: Missing or invalid credentials.
          *     `forbidden`: The caller lacks the privilege for this action.
          *     `attribute_not_writable`: The write sets an attribute the caller may not write; `field` names it.
+         *     `limit_exceeded`: The request is past a limit; `limit`, `value` and `next` say which and what to do.
          *     `conflict`: The request conflicts with the current state.
          *     `version_conflict`: The record changed since the caller read it; read it again and retry.
          *     `duplicate_detected`: The save matches existing records under a blocking duplicate rule.
@@ -18013,7 +18014,7 @@ export interface components {
          *     `internal_error` (retryable): An unexpected error; the request id finds it in the logs.
          * @enum {string}
          */
-        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "internal_error";
+        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "limit_exceeded" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "internal_error";
         /**
          * @description `ErrorResponse.details`: its shape depends on the `error` code —
          *     a list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on
@@ -18052,7 +18053,7 @@ export interface components {
             effect?: string | null;
             /**
              * @description Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,
-             *     `attribute_not_writable`,
+             *     `attribute_not_writable`, `limit_exceeded`,
              *     `conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,
              *     `validation_error`, `feature_unavailable`, `feature_hidden`,
              *     `rate_limit_exceeded`, `overloaded`, `capability_unavailable`,
