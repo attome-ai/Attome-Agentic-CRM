@@ -1,0 +1,499 @@
+{
+  "author": "packs",
+  "checksum": "sha256:f621833178837375d81da1837d231effec3fca807960f4457b69c448fea546d9",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Employee service (W8-T1): HR offerings employees request, and HR cases on the service ticket: the HR category, the offering and the employee, with a confidential flag and confidential notes readable only through the HR Confidential field profile held by the HR Specialist role.",
+  "format": "attome-changeset/v1",
+  "id": "01a143cb-bca4-727a-be1a-0752fec541fc",
+  "layer": "product",
+  "name": "human-resources-cases",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "HR Offering",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "hr_offering",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "hr_offering"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "hr_offering",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "hr_offering",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Description",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "description",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "hr_offering",
+        "field": "description"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Category",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "category",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "payroll",
+              "leave",
+              "benefits",
+              "letters",
+              "onboarding",
+              "offboarding",
+              "grievance",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "hr_offering",
+        "field": "category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Confidential by Default",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "confidential_by_default",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "hr_offering",
+        "field": "confidential_by_default"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Active",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_active",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "hr_offering",
+        "field": "is_active"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "HR Offering",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "hr_offering_ref",
+          "lookup_entity": "hr_offering",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "service_ticket",
+        "field": "hr_offering_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Employee",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "employee_ref",
+          "lookup_entity": "employee",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "service_ticket",
+        "field": "employee_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Confidential",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_confidential",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "service_ticket",
+        "field": "is_confidential"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "personal",
+          "display_name": "Confidential Notes",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "confidential_notes",
+          "lookup_entity": null,
+          "max_length": 8000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "service_ticket",
+        "field": "confidential_notes"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خدمة الموارد البشرية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "locale": "ar",
+        "object_key": "hr_offering",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "locale": "ar",
+        "object_key": "hr_offering.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم العربي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "locale": "ar",
+        "object_key": "hr_offering.name_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الوصف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "locale": "ar",
+        "object_key": "hr_offering.description",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفئة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "locale": "ar",
+        "object_key": "hr_offering.category",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سرية افتراضيا"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "locale": "ar",
+        "object_key": "hr_offering.confidential_by_default",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مفعلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "locale": "ar",
+        "object_key": "hr_offering.is_active",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خدمة الموارد البشرية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "locale": "ar",
+        "object_key": "service_ticket.hr_offering_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الموظف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "locale": "ar",
+        "object_key": "service_ticket.employee_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سري"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "locale": "ar",
+        "object_key": "service_ticket.is_confidential",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ملاحظات سرية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "locale": "ar",
+        "object_key": "service_ticket.confidential_notes",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Reads and writes the confidential notes on HR cases.",
+          "is_customized": false,
+          "name": "HR Confidential"
+        }
+      },
+      "op": "upsert_field_profile",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "profile": "HR Confidential"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "service_ticket",
+        "field": "confidential_notes",
+        "profile": "HR Confidential"
+      }
+    },
+    {
+      "args": {},
+      "op": "assign_field_profile",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "profile": "HR Confidential",
+        "role": "HR Specialist"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view",
+      "service"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "human-resources",
+  "seq": 3,
+  "title": "Pack: HR offerings and confidential HR cases"
+}
