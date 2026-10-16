@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Deal splits: `PUT /api/v1/sales/opportunities/{id}/splits` replaces a deal's splits under its lock,
+  checks that each revenue split type totals 100% and that members are on the deal's team, and stores
+  each split's amount (rounded once, remainder to the owner). On a won deal the change needs a reason
+  and waits on approval (`sales.split_change`), applied only if the deal has not changed since.
+  `opportunity_split` is now written only through this route.
 - Agent actions `commission.explain_line` (a statement line's stored explanation, under the caller's
   record rules and field grants) and `commission.draft_plan_from_policy` (checks a plan drafted from a
   policy document compiles and returns the normalised draft; writes nothing).

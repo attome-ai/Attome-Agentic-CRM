@@ -2,7 +2,10 @@
 //! `sales` module is on.
 use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_SALES, ModuleId};
-use axum::{Router, routing::post};
+use axum::{
+    Router,
+    routing::{post, put},
+};
 
 /// Registered in `attome::boot::register_engines`.
 #[derive(Debug)]
@@ -23,10 +26,25 @@ impl EngineModel for SalesModel {
         &["points_model", "points_rule", "points_score"]
     }
 
+    /// D7-T4: splits are written only through `PUT .../splits`, which checks
+    /// their rules and stores their amounts.
+    fn engine_owned_entities(&self) -> &'static [&'static str] {
+        &["opportunity_split"]
+    }
+
+    fn engine_managed_fields(&self) -> &'static [(&'static str, &'static str)] {
+        &[("opportunity_split", "amount")]
+    }
+
     fn routes(&self) -> Router<EngineState> {
-        Router::new().route(
-            "/api/v1/sales/call-lists/{id}/claim",
-            post(crate::dialer::claim::post_claim),
-        )
+        Router::new()
+            .route(
+                "/api/v1/sales/call-lists/{id}/claim",
+                post(crate::dialer::claim::post_claim),
+            )
+            .route(
+                "/api/v1/sales/opportunities/{id}/splits",
+                put(crate::split_store::put_sales_splits),
+            )
     }
 }

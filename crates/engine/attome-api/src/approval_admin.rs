@@ -110,6 +110,7 @@ pub const KNOWN_ACTION_TYPES: &[&str] = &[
     ACTION_SECURITY_REWRAP,
     attome_commission::dispute::ACTION_ADJUSTMENT_APPLY,
     attome_commission::close::ACTION_PERIOD_CLOSE,
+    attome_sales::split_store::ACTION_SPLIT_CHANGE,
     attome_security::admin::ACTION_ROLE_GRANT,
     attome_compliance::retention_admin::ACTION_RETENTION_APPROVE,
     attome_records::query_admin::ACTION_QUERY_PUBLISH,
@@ -1051,6 +1052,15 @@ async fn dispatch_approved(
                 approver_id,
             )
             .await?;
+            serde_json::to_value(&response).map_err(AppError::internal)?
+        }
+        attome_sales::split_store::ACTION_SPLIT_CHANGE => {
+            // D7-T5: an approved split change on a won deal, applied only if
+            // the deal is unchanged since it was proposed.
+            let proposal: attome_sales::split_store::SplitProposal =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let response =
+                attome_sales::split_store::do_apply_proposal(state, &proposal, approver_id).await?;
             serde_json::to_value(&response).map_err(AppError::internal)?
         }
         attome_commission::close::ACTION_PERIOD_CLOSE => {

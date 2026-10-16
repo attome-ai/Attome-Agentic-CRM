@@ -22,6 +22,7 @@ pub mod price_resolution;
 pub mod pricing;
 pub mod scoring;
 pub mod scoring_run;
+pub mod split_store;
 pub mod splits;
 
 pub use model::SalesModel;
@@ -33,5 +34,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 32;
 /// This crate's slice of the workspace OpenAPI document, merged in by
 /// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    <dialer::claim::ApiDocFragment as utoipa::OpenApi>::openapi()
+    let mut doc = <dialer::claim::ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(<split_store::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc
 }
