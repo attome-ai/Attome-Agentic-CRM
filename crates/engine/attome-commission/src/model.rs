@@ -1,7 +1,10 @@
 //! `EngineModel` registration: mounted only when the `commission` module is on.
 use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_COMMISSION, ModuleId};
-use axum::{Router, routing::post};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 
 /// Registered in `attome::boot::register_engines`.
 #[derive(Debug)]
@@ -21,9 +24,22 @@ impl EngineModel for CommissionModel {
     }
 
     fn routes(&self) -> Router<EngineState> {
-        Router::new().route(
-            "/api/v1/commission/periods/{id}/runs",
-            post(crate::run::post_run),
-        )
+        Router::new()
+            .route(
+                "/api/v1/commission/periods/{id}/runs",
+                post(crate::run::post_run),
+            )
+            .route(
+                "/api/v1/commission/statements/me",
+                get(crate::statement::get_my_statement),
+            )
+            .route(
+                "/api/v1/commission/statements",
+                get(crate::statement::get_statements),
+            )
+            .route(
+                "/api/v1/commission/estimate",
+                post(crate::statement::post_estimate),
+            )
     }
 }

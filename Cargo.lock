@@ -632,6 +632,7 @@ dependencies = [
  "attome-db",
  "attome-jobs",
  "attome-modules",
+ "attome-security",
  "attome-server",
  "attome-types",
  "axum",

@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Commission statements: `GET /api/v1/commission/statements/me?period_id=` and
+  `GET /api/v1/commission/statements?period_id=&participant_id=` list statement lines, adjustments and
+  clawbacks under the commission roles' record rules, amounts hidden without the amount field grant;
+  `POST /api/v1/commission/estimate` prices one of the caller's opportunities in the open period and
+  writes nothing. Calculation runs now stamp lines and payouts with the participant's user as owner.
 - Commission calculation runs: `POST /api/v1/commission/periods/{id}/runs` (privilege `comp_run.create`,
   `409` on an approved or locked period) queues a run that computes statement lines and payouts per
   participant in batches, resuming from its cursor after a restart.

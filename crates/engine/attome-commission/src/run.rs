@@ -6,6 +6,10 @@
 //! `comp_payout`, then moves the run's `cursor` to that participant, so a
 //! run stopped half way resumes where it left off.
 //!
+//! Lines and payouts are owned by the participant's user, so the owner-only
+//! record rules of the commission roles (F10-T13) show each seller their own
+//! and a manager their team's.
+//!
 //! A participant's quota is their `revenue` sales quota for the period (none
 //! is zero: attainment is then 0 and band rules see it as such).
 
@@ -217,6 +221,84 @@ async fn pay_participant(
     ends: NaiveDate,
 ) -> Result<(), AppError> {
     let db = &state.base.db;
+    let (credits, quota) = inputs(db, participant, user, period, starts, ends).await?;
+    let mut tx = attome_db::tx::begin(db).await?;
+    sqlx::query("DELETE FROM comp_statement_line WHERE run_ref = $1 AND participant_ref = $2")
+        .bind(run)
+        .bind(participant)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    sqlx::query("DELETE FROM comp_payout WHERE run_ref = $1 AND participant_ref = $2")
+        .bind(run)
+        .bind(participant)
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    let mut total = Decimal::ZERO;
+    for component in components {
+        for line in evaluate(component, &credits, quota) {
+            total += line.payout;
+            let explanation: Vec<serde_json::Value> = line
+                .steps
+                .iter()
+                .map(|s| {
+                    let values: serde_json::Map<String, serde_json::Value> = s
+                        .values
+                        .iter()
+                        .map(|(k, v)| ((*k).to_owned(), serde_json::Value::String(v.clone())))
+                        .collect();
+                    serde_json::json!({ "key": s.key, "values": values })
+                })
+                .collect();
+            sqlx::query(
+                "INSERT INTO comp_statement_line \
+                   (run_ref, participant_ref, component_ref, credit_ref, amount, explanation, \
+                    owner_ref) \
+                 VALUES ($1, $2, $3, $4, $5::numeric, $6, $7)",
+            )
+            .bind(run)
+            .bind(participant)
+            .bind(component.id)
+            .bind(line.credit)
+            .bind(line.payout.to_string())
+            .bind(serde_json::Value::Array(explanation).to_string())
+            .bind(user)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+        }
+    }
+    sqlx::query(
+        "INSERT INTO comp_payout (run_ref, participant_ref, amount, status, owner_ref) \
+         VALUES ($1, $2, $3::numeric, 'calculated', $4)",
+    )
+    .bind(run)
+    .bind(participant)
+    .bind(total.to_string())
+    .bind(user)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    sqlx::query("UPDATE comp_run SET cursor = $2 WHERE id = $1")
+        .bind(run)
+        .bind(participant.to_string())
+        .execute(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+    attome_db::tx::commit(tx).await?;
+    Ok(())
+}
+
+/// A participant's credits in the period and their revenue quota for it.
+pub(crate) async fn inputs(
+    db: &attome_db::DbPool,
+    participant: Uuid,
+    user: Option<Uuid>,
+    period: Uuid,
+    starts: NaiveDate,
+    ends: NaiveDate,
+) -> Result<(Vec<Credit>, Decimal), AppError> {
     let credits: Vec<(Uuid, Option<String>, Option<String>)> = sqlx::query_as(
         "SELECT id, source_id, amount::text FROM comp_credit \
          WHERE participant_ref = $1 AND period_ref = $2 \
@@ -266,78 +348,16 @@ async fn pay_participant(
         }
         None => Decimal::ZERO,
     };
-    let mut tx = attome_db::tx::begin(db).await?;
-    sqlx::query("DELETE FROM comp_statement_line WHERE run_ref = $1 AND participant_ref = $2")
-        .bind(run)
-        .bind(participant)
-        .execute(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
-    sqlx::query("DELETE FROM comp_payout WHERE run_ref = $1 AND participant_ref = $2")
-        .bind(run)
-        .bind(participant)
-        .execute(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
-    let mut total = Decimal::ZERO;
-    for component in components {
-        for line in evaluate(component, &credits, quota) {
-            total += line.payout;
-            let explanation: Vec<serde_json::Value> = line
-                .steps
-                .iter()
-                .map(|s| {
-                    let values: serde_json::Map<String, serde_json::Value> = s
-                        .values
-                        .iter()
-                        .map(|(k, v)| ((*k).to_owned(), serde_json::Value::String(v.clone())))
-                        .collect();
-                    serde_json::json!({ "key": s.key, "values": values })
-                })
-                .collect();
-            sqlx::query(
-                "INSERT INTO comp_statement_line \
-                   (run_ref, participant_ref, component_ref, credit_ref, amount, explanation) \
-                 VALUES ($1, $2, $3, $4, $5::numeric, $6)",
-            )
-            .bind(run)
-            .bind(participant)
-            .bind(component.id)
-            .bind(line.credit)
-            .bind(line.payout.to_string())
-            .bind(serde_json::Value::Array(explanation).to_string())
-            .execute(&mut *tx)
-            .await
-            .map_err(AppError::internal)?;
-        }
-    }
-    sqlx::query(
-        "INSERT INTO comp_payout (run_ref, participant_ref, amount, status) \
-         VALUES ($1, $2, $3::numeric, 'calculated')",
-    )
-    .bind(run)
-    .bind(participant)
-    .bind(total.to_string())
-    .execute(&mut *tx)
-    .await
-    .map_err(AppError::internal)?;
-    sqlx::query("UPDATE comp_run SET cursor = $2 WHERE id = $1")
-        .bind(run)
-        .bind(participant.to_string())
-        .execute(&mut *tx)
-        .await
-        .map_err(AppError::internal)?;
-    attome_db::tx::commit(tx).await?;
-    Ok(())
+    Ok((credits, quota))
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
-pub struct StartRunBody {
+pub struct CommissionRunBody {
     pub plan_version_id: Uuid,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
-pub struct RunStarted {
+pub struct CommissionRunStarted {
     pub run_id: Uuid,
 }
 
@@ -346,9 +366,9 @@ pub struct RunStarted {
     path = "/api/v1/commission/periods/{id}/runs",
     tag = "commission",
     params(("id" = Uuid, Path, description = "The commission period")),
-    request_body = StartRunBody,
+    request_body = CommissionRunBody,
     responses(
-        (status = 202, description = "The run is queued", body = RunStarted),
+        (status = 202, description = "The run is queued", body = CommissionRunStarted),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
         (status = 403, description = "Caller lacks comp_run.create", body = ErrorResponse),
         (status = 404, description = "No such period", body = ErrorResponse),
@@ -361,8 +381,8 @@ pub(crate) async fn post_run(
     State(state): State<EngineState>,
     ctx: Authorized<Privilege<CompRunCreate>>,
     Path(period): Path<Uuid>,
-    Json(body): Json<StartRunBody>,
-) -> Result<(StatusCode, Json<RunStarted>), AppError> {
+    Json(body): Json<CommissionRunBody>,
+) -> Result<(StatusCode, Json<CommissionRunStarted>), AppError> {
     let status: Option<Option<String>> = sqlx::query_scalar(
         "SELECT status FROM comp_period WHERE id = $1 AND (is_active IS NULL OR is_active = true)",
     )
@@ -406,11 +426,14 @@ pub(crate) async fn post_run(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    Ok((StatusCode::ACCEPTED, Json(RunStarted { run_id })))
+    Ok((StatusCode::ACCEPTED, Json(CommissionRunStarted { run_id })))
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(post_run), components(schemas(StartRunBody, RunStarted)))]
+#[openapi(
+    paths(post_run),
+    components(schemas(CommissionRunBody, CommissionRunStarted))
+)]
 pub(crate) struct ApiDocFragment;
 
 #[cfg(test)]
