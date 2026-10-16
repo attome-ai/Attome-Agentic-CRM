@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Supplier SLAs: setting a ticket's `supplier_vendor_id` (with `supplier_target_minutes`) starts a
+  supplier clock; it stops when the work comes back or the ticket resolves, and is met or breached
+  against the supplier's own target, reported per supplier apart from the customer's SLA.
 - Tasks have checklists (`task_checklist_item`) and repeat: a completed task with a
   `recurrence_rule` (`weekly`, `monthly`, `FREQ=...;INTERVAL=n`) gets its next task, with a fresh copy
   of its checklist, within 15 minutes.

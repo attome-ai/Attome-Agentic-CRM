@@ -14,6 +14,7 @@ pub mod queue;
 pub mod routing;
 pub mod seed;
 pub mod sla;
+pub mod supplier_sla;
 pub mod timeline;
 pub mod token;
 

@@ -1091,6 +1091,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-contract-counterparty",
         // V2-T2: task checklists and recurring tasks.
         "attome-task-checklist",
+        // G9-T3: supplier SLA clocks.
+        "attome-service-supplier-sla",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

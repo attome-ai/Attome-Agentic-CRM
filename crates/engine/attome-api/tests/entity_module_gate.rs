@@ -276,6 +276,7 @@ fn production_map() -> EntityModuleMap {
         "service_sla_clock",
         // D-517 — append-only SLA calculation evidence.
         "service_sla_calculation",
+        "supplier_sla_clock",
         // M84 Phase 1 (Queue Management, D-464) — already in attome-service's
         // real `owned_entities()` since that shipped; this fixture was
         // never updated to match (found by REVIEW-2026-09-02 follow-up

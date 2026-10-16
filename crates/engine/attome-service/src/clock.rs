@@ -1047,6 +1047,8 @@ pub async fn sweep_auto_pause(db: &DbPool) -> Result<u64, AppError> {
     for ticket_id in ticket_ids {
         let paused_or_resumed = reconcile_auto_pause(db, ticket_id).await?;
         let resolved_changed = reconcile_resolved_at(db, ticket_id).await?;
+        // G9-T3: the supplier clock follows the ticket's hand-off.
+        crate::supplier_sla::reconcile(db, ticket_id, Utc::now()).await?;
         // G10-T2: a newly resolved case uses its cases entitlement, once.
         if resolved_changed {
             crate::entitlement::on_ticket_resolved(db, ticket_id).await?;

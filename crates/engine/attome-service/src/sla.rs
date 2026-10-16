@@ -923,6 +923,8 @@ pub async fn sweep_breaches(
     db: &DbPool,
     notification_cfg: &attome_config::NotificationSection,
 ) -> Result<u64, AppError> {
+    // G9-T3: supplier clocks past due are breached in the same sweep.
+    crate::supplier_sla::mark_overdue(db, Utc::now()).await?;
     let due: Vec<Uuid> = sqlx::query_scalar(
         "SELECT t.id FROM service_ticket t \
          WHERE t.resolution_due_at IS NOT NULL AND t.resolution_due_at < NOW() \

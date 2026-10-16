@@ -348,6 +348,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
         name: "attome-task-checklist",
         json: include_str!("../../../../../changesets/platform/0060-attome-task-checklist.json"),
     },
+    PlatformChangeset {
+        file: "0061-attome-service-supplier-sla.json",
+        name: "attome-service-supplier-sla",
+        json: include_str!(
+            "../../../../../changesets/platform/0061-attome-service-supplier-sla.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

@@ -194,7 +194,7 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
     [service, [
       'service_work_request', 'service_sla_policy', 'service_ticket', 'service_offering',
       'service_sla_clock', 'service_work_queue', 'service_work_queue_member',
-      'service_sla_calculation',
+      'service_sla_calculation', 'supplier_sla_clock',
     ]],
     [portal, ['webportal', 'webportal_user']],
     [assetManagement, ['asset', 'location']],

@@ -32,6 +32,8 @@ impl EngineModel for ServiceModel {
             "service_sla_clock",
             // D-517 — append-only evidence of every SLA due-date calculation.
             "service_sla_calculation",
+            // G9-T3: `platform-bundles/attome-service-supplier-sla.json`.
+            "supplier_sla_clock",
             // M84 Phase 1 (Queue Management, D-464).
             "service_work_queue",
             "service_work_queue_member",

@@ -7,6 +7,7 @@ import { ServiceSlaClockFormComponent } from './forms/sla-clock-form/service-sla
 import { ServiceWorkQueueFormComponent } from './forms/work-queue-form/service-work-queue-form.component';
 import { ServiceWorkQueueMemberFormComponent } from './forms/work-queue-member-form/service-work-queue-member-form.component';
 import { ServiceSlaCalculationFormComponent } from './forms/sla-calculation-form/service-sla-calculation-form.component';
+import { SupplierSlaClockFormComponent } from './forms/supplier-sla-clock-form/supplier-sla-clock-form.component';
 import { SlaBadgeCellComponent } from './sla/sla-badge-cell/sla-badge-cell.component';
 
 // service module had no form registration at all before this — all 7
@@ -30,4 +31,5 @@ export function registerServiceEntityForms(registry: EntityRouteRegistry): void 
   registry.register('service_work_queue', { formComponent: ServiceWorkQueueFormComponent });
   registry.register('service_work_queue_member', { formComponent: ServiceWorkQueueMemberFormComponent });
   registry.register('service_sla_calculation', { formComponent: ServiceSlaCalculationFormComponent });
+  registry.register('supplier_sla_clock', { formComponent: SupplierSlaClockFormComponent });
 }
