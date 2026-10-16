@@ -501,14 +501,27 @@ pub(crate) async fn post_sales_line(
     Json(body): Json<SalesLineBody>,
 ) -> Result<(StatusCode, Json<SalesLinesChanged>), AppError> {
     let expected = if_match(&headers)?;
+    let changed = add_line(&state, &ctx, opportunity, expected, &body).await?;
+    Ok((StatusCode::CREATED, Json(changed)))
+}
+
+/// Adds a line and reprices the deal, as the caller (the route and the
+/// `sales.opportunity_line.add` agent action share it).
+pub async fn add_line(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    opportunity: Uuid,
+    expected: i64,
+    body: &SalesLineBody,
+) -> Result<SalesLinesChanged, AppError> {
     check_kind(body.line_kind.as_deref(), body.recurrence.as_deref())?;
     let quantity = optional_dec("quantity", body.quantity.as_deref())?.unwrap_or("1".into());
     let sales = optional_dec("sales_price", body.sales_price.as_deref())?;
     let pct = optional_dec("discount_percent", body.discount_percent.as_deref())?;
     let amt = optional_dec("discount_amount", body.discount_amount.as_deref())?;
-    require(&state, &ctx, opportunity, RecordAction::Update).await?;
-    check_recurring(&state, &ctx, body.line_kind.as_deref()).await?;
-    let (mut tx, price_list, currency) = begin_change(&state, opportunity, expected).await?;
+    require(state, ctx, opportunity, RecordAction::Update).await?;
+    check_recurring(state, ctx, body.line_kind.as_deref()).await?;
+    let (mut tx, price_list, currency) = begin_change(state, opportunity, expected).await?;
     let list = list_price(&mut tx, price_list, currency.as_deref(), body.product_ref).await?;
     let line: Uuid = sqlx::query_scalar(
         "INSERT INTO opportunity_line \
@@ -537,7 +550,7 @@ pub(crate) async fn post_sales_line(
     let totals = reprice_in_tx(&mut tx, opportunity).await?;
     event(
         &mut tx,
-        &state,
+        state,
         line,
         AuditOperation::Create,
         "sales.line_added",
@@ -545,10 +558,7 @@ pub(crate) async fn post_sales_line(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    Ok((
-        StatusCode::CREATED,
-        Json(changed(opportunity, Some(line), totals)),
-    ))
+    Ok(changed(opportunity, Some(line), totals))
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -600,14 +610,28 @@ pub(crate) async fn patch_sales_line(
     Json(body): Json<SalesLinePatch>,
 ) -> Result<Json<SalesLinesChanged>, AppError> {
     let expected = if_match(&headers)?;
+    Ok(Json(
+        change_line(&state, &ctx, opportunity, line, expected, &body).await?,
+    ))
+}
+
+/// Changes a line and reprices the deal, as the caller.
+pub async fn change_line(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    opportunity: Uuid,
+    line: Uuid,
+    expected: i64,
+    body: &SalesLinePatch,
+) -> Result<SalesLinesChanged, AppError> {
     check_kind(body.line_kind.as_deref(), body.recurrence.as_deref())?;
     let quantity = optional_dec("quantity", body.quantity.as_deref())?;
     let sales = optional_dec("sales_price", body.sales_price.as_deref())?;
     let pct = optional_dec("discount_percent", body.discount_percent.as_deref())?;
     let amt = optional_dec("discount_amount", body.discount_amount.as_deref())?;
-    require(&state, &ctx, opportunity, RecordAction::Update).await?;
-    check_recurring(&state, &ctx, body.line_kind.as_deref()).await?;
-    let (mut tx, _, _) = begin_change(&state, opportunity, expected).await?;
+    require(state, ctx, opportunity, RecordAction::Update).await?;
+    check_recurring(state, ctx, body.line_kind.as_deref()).await?;
+    let (mut tx, _, _) = begin_change(state, opportunity, expected).await?;
     let updated = sqlx::query(
         "UPDATE opportunity_line SET \
              quantity = COALESCE($3::numeric, quantity), \
@@ -638,7 +662,7 @@ pub(crate) async fn patch_sales_line(
     let totals = reprice_in_tx(&mut tx, opportunity).await?;
     event(
         &mut tx,
-        &state,
+        state,
         line,
         AuditOperation::Update,
         "sales.line_changed",
@@ -646,7 +670,7 @@ pub(crate) async fn patch_sales_line(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    Ok(Json(changed(opportunity, Some(line), totals)))
+    Ok(changed(opportunity, Some(line), totals))
 }
 
 #[utoipa::path(
@@ -676,8 +700,21 @@ pub(crate) async fn delete_sales_line(
     headers: HeaderMap,
 ) -> Result<Json<SalesLinesChanged>, AppError> {
     let expected = if_match(&headers)?;
-    require(&state, &ctx, opportunity, RecordAction::Update).await?;
-    let (mut tx, _, _) = begin_change(&state, opportunity, expected).await?;
+    Ok(Json(
+        remove_line(&state, &ctx, opportunity, line, expected).await?,
+    ))
+}
+
+/// Removes a line (and its line splits) and reprices the deal, as the caller.
+pub async fn remove_line(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    opportunity: Uuid,
+    line: Uuid,
+    expected: i64,
+) -> Result<SalesLinesChanged, AppError> {
+    require(state, ctx, opportunity, RecordAction::Update).await?;
+    let (mut tx, _, _) = begin_change(state, opportunity, expected).await?;
     let removed = sqlx::query(
         "UPDATE opportunity_line SET is_active = false, modified_at = now(), \
              row_version = row_version + 1 \
@@ -700,7 +737,7 @@ pub(crate) async fn delete_sales_line(
     let totals = reprice_in_tx(&mut tx, opportunity).await?;
     event(
         &mut tx,
-        &state,
+        state,
         line,
         AuditOperation::SoftDelete,
         "sales.line_removed",
@@ -708,7 +745,7 @@ pub(crate) async fn delete_sales_line(
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    Ok(Json(changed(opportunity, Some(line), totals)))
+    Ok(changed(opportunity, Some(line), totals))
 }
 
 #[derive(Debug, Deserialize, ToSchema)]

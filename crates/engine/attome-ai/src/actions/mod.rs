@@ -38,6 +38,7 @@ pub mod record_schema;
 pub mod record_update_field;
 pub mod record_write;
 pub mod route_classify;
+pub mod sales_lines;
 pub mod search_records;
 pub mod sentiment;
 pub mod summary_context;
@@ -85,6 +86,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.push(crate::orchestrate::descriptor());
     all.extend(duplicates::descriptors());
     all.extend(commission::descriptors());
+    all.extend(sales_lines::descriptors());
     all
 }
 
@@ -130,5 +132,6 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.push(Box::new(crate::orchestrate::AgentDelegate));
     all.extend(duplicates::executors());
     all.extend(commission::executors());
+    all.extend(sales_lines::executors());
     all
 }

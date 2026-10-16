@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Agent actions `sales.opportunity_line.add`, `.update` and `.remove` (confirmed writes through the line
+  routes' own functions: priced, locked and version-checked) and `sales.products.suggest` (products
+  most often won together with the deal's, as a draft).
 - Revenue and quantity schedules: `POST /api/v1/sales/opportunity-lines/{line_id}/schedule` spreads a
   line evenly, by a percentage pattern (totalling 100) or by hand (totalling the line);
   `POST /api/v1/sales/opportunities/{id}/schedules/shift` moves a deal's rows by whole months when the
