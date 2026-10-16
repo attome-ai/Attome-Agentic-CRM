@@ -4793,6 +4793,38 @@ export interface paths {
         patch: operations["update_query"];
         trace?: never;
     };
+    "/api/v1/admin/rate-limits/bans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_rate_limit_bans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/rate-limits/bans/{bucket}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["lift_rate_limit_ban"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/records/posture": {
         parameters: {
             query?: never;
@@ -13292,6 +13324,15 @@ export interface components {
             /** Format: int64 */
             row_version: number;
         };
+        /** @description Q20-T5: one active temporary ban. */
+        ActiveBan: {
+            /** @description `user:{id}` or `ip:{address}`. */
+            bucket: string;
+            /** @description The limit category that tripped last. */
+            category?: string | null;
+            /** Format: int64 */
+            seconds_left: number;
+        };
         /** @description `POST .../fields/{field_id}/choices`. */
         AddChoiceBody: {
             /** @description Place after this value; omitted = at the end. */
@@ -21170,6 +21211,23 @@ export interface components {
                 revoked_at?: string | null;
                 /** Format: uuid */
                 subject_user_id: string;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_ActiveBan: {
+            items: {
+                /** @description `user:{id}` or `ip:{address}`. */
+                bucket: string;
+                /** @description The limit category that tripped last. */
+                category?: string | null;
+                /** Format: int64 */
+                seconds_left: number;
             }[];
             /** Format: int64 */
             page: number;
@@ -46622,6 +46680,92 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_rate_limit_bans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every temporary ban still in force */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ActiveBan"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    lift_rate_limit_ban: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `user:{id}` or `ip:{address}` */
+                bucket: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The ban is lifted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No ban for that caller */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
