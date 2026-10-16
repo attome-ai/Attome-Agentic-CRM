@@ -556,6 +556,23 @@ async fn create_upload_session(
         RecordAction::Update,
     )
     .await?;
+    // K1-T2: no upload into a file someone else has checked out.
+    let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
+    if attome_records::entity_mutation::file_checked_out_by_other(
+        &mut conn,
+        &entity_name,
+        record_id,
+        std::slice::from_ref(&field_name),
+        Some(ctx.user_id),
+    )
+    .await?
+    .is_some()
+    {
+        return Err(AppError::Conflict(
+            "the file is checked out by someone else; it can change after check-in",
+        ));
+    }
+    drop(conn);
     Ok(Json(
         start_upload(
             &state,

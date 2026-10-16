@@ -23,6 +23,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- File check-out: `POST /api/v1/{entity}/{id}/files/{field}/checkout` locks a record's file for the
+  caller; while it is held nobody else may upload or store a new version of it (409). `DELETE` checks
+  it in; an administrator breaks someone else's lock with `?force=true`. All audited (migration
+  `0064`).
 - File share links: `POST /api/v1/{entity}/{id}/files/{field}/share-links` makes an expiring link
   (at most 30 days) to a stored file, with an optional password and download limit; `GET` lists a
   field's links and `DELETE …/share-links/{link_id}` revokes one. Anyone with the link opens it at

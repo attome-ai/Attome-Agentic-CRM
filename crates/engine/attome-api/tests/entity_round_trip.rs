@@ -4091,6 +4091,140 @@ fn upsert_by_external_id_and_lookup_by_external_id() {
     })
 }
 
+/// K1-T2: while one person has a file checked out, another cannot check it
+/// out or store a new version of it (administrators included); the holder
+/// checks in, and an administrator may break someone else's lock only with
+/// `force`.
+#[test]
+fn checked_out_file_refuses_others_until_checked_in() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (alice, _) = seed_admin_with_id(&system).await;
+        let (bob, _) = seed_admin_with_id(&system).await;
+        let app = full_app(system);
+        let (entity, entity_id) = create_entity(&app, &alice, "chkout").await;
+        create_field(
+            &app,
+            &alice,
+            &entity_id,
+            r#"{"logicalname":"title","name":"Title","field_type":"text"}"#,
+        )
+        .await;
+        create_field(
+            &app,
+            &alice,
+            &entity_id,
+            r#"{"logicalname":"doc","name":"Doc","field_type":"file"}"#,
+        )
+        .await;
+        let send = |method: &str,
+                    uri: String,
+                    cookie: &str,
+                    if_match: Option<i64>,
+                    body: Option<serde_json::Value>| {
+            let mut req = Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("cookie", cookie)
+                .header("content-type", "application/json");
+            if let Some(version) = if_match {
+                req = req.header("if-match", format!("\"{version}\""));
+            }
+            req.body(body.map_or_else(Body::empty, |b| Body::from(b.to_string())))
+                .unwrap()
+        };
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                format!("/api/v1/{entity}"),
+                &alice,
+                None,
+                Some(serde_json::json!({"title": "contract"})),
+            ))
+            .await
+            .expect("create");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let created = body_json(res).await;
+        let id = created["id"].as_str().expect("id").to_owned();
+        let version = created["row_version"].as_i64().expect("version");
+        let checkout = format!("/api/v1/{entity}/{id}/files/doc/checkout");
+
+        for _ in 0..2 {
+            let res = app
+                .clone()
+                .oneshot(send(
+                    "POST",
+                    checkout.clone(),
+                    &alice,
+                    None,
+                    Some(serde_json::json!({"note": "editing the terms"})),
+                ))
+                .await
+                .expect("alice checks out");
+            assert_eq!(res.status(), StatusCode::OK, "taking it again is a no-op");
+        }
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                checkout.clone(),
+                &bob,
+                None,
+                Some(serde_json::json!({})),
+            ))
+            .await
+            .expect("bob checks out");
+        assert_eq!(res.status(), StatusCode::CONFLICT);
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "PATCH",
+                format!("/api/v1/{entity}/{id}"),
+                &bob,
+                Some(version),
+                Some(serde_json::json!({"doc": format!("{entity}/{id}/doc/x-new.pdf")})),
+            ))
+            .await
+            .expect("bob stores a new version");
+        assert_eq!(res.status(), StatusCode::CONFLICT);
+
+        let res = app
+            .clone()
+            .oneshot(send("DELETE", checkout.clone(), &bob, None, None))
+            .await
+            .expect("bob checks in alice's lock");
+        assert_eq!(res.status(), StatusCode::FORBIDDEN);
+        let res = app
+            .clone()
+            .oneshot(send(
+                "DELETE",
+                format!("{checkout}?force=true"),
+                &bob,
+                None,
+                None,
+            ))
+            .await
+            .expect("bob breaks the lock");
+        assert_eq!(res.status(), StatusCode::NO_CONTENT);
+
+        let res = app
+            .clone()
+            .oneshot(send("GET", checkout.clone(), &alice, None, None))
+            .await
+            .expect("status");
+        assert_eq!(res.status(), StatusCode::OK);
+        let status = body_json(res).await;
+        assert!(status["checkout"].is_null(), "{status}");
+        let res = app
+            .oneshot(send("DELETE", checkout, &alice, None, None))
+            .await
+            .expect("nothing to check in");
+        assert_eq!(res.status(), StatusCode::NOT_FOUND);
+    })
+}
+
 /// S1-T3: `?select=` narrows `data` on a read and on a write's answer to the
 /// named attributes (the envelope stays), and an unknown name is a 422 that
 /// writes nothing.

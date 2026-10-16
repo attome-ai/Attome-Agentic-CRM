@@ -40,6 +40,7 @@
 //! 404 without `MODULE_DOCUMENT`. Everything else — every route path, wire
 //! shape, privilege check and migration — is unchanged.
 
+pub mod checkout;
 pub mod documents_tree;
 pub mod engine;
 pub mod files;
@@ -59,5 +60,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = files::openapi_fragment();
     doc.merge(documents_tree::openapi_fragment());
     doc.merge(share::openapi_fragment());
+    doc.merge(checkout::openapi_fragment());
     doc
 }

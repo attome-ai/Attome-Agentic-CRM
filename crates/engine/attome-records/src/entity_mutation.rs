@@ -439,6 +439,64 @@ impl FileOwner {
     }
 }
 
+/// K1-T2: the first file field of `fields` someone other than `writer`
+/// has checked out on this record (`file_checkout`), if any. `writer` is
+/// `None` for a writer who can never hold a check-out (a portal user).
+pub async fn file_checked_out_by_other(
+    conn: &mut PgConnection,
+    entity_name: &str,
+    record_id: Uuid,
+    fields: &[String],
+    writer: Option<Uuid>,
+) -> Result<Option<String>, AppError> {
+    if fields.is_empty() {
+        return Ok(None);
+    }
+    sqlx::query_scalar(
+        "SELECT field FROM file_checkout \
+          WHERE entity = $1 AND record_id = $2 AND field = ANY($3) \
+            AND checked_out_by IS DISTINCT FROM $4 \
+          ORDER BY field LIMIT 1",
+    )
+    .bind(entity_name)
+    .bind(record_id)
+    .bind(fields)
+    .bind(writer)
+    .fetch_optional(conn)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// K1-T2: a write that stores a new file in a field someone else has
+/// checked out is refused (409), administrators included: they break the
+/// lock first, which is audited.
+async fn refuse_checked_out_file_fields(
+    tx: &mut PgConnection,
+    entity_name: &str,
+    record_id: Option<Uuid>,
+    writer: Option<Uuid>,
+    attrs: &[AttrInfo],
+    obj: &serde_json::Map<String, Value>,
+) -> Result<(), AppError> {
+    let Some(record_id) = record_id else {
+        return Ok(());
+    };
+    let fields: Vec<String> = attrs
+        .iter()
+        .filter(|a| a.is_file_backed() && obj.contains_key(&a.logicalname))
+        .map(|a| a.logicalname.clone())
+        .collect();
+    match file_checked_out_by_other(tx, entity_name, record_id, &fields, writer).await? {
+        Some(field) => {
+            tracing::info!(entity = entity_name, %record_id, field, "write refused: file checked out");
+            Err(AppError::Conflict(
+                "the file is checked out by someone else; it can change after check-in",
+            ))
+        }
+        None => Ok(()),
+    }
+}
+
 /// Who is writing a file field, for [`lock_file_field_sessions`].
 #[derive(Clone, Copy)]
 pub(crate) enum FileWriter {
@@ -460,6 +518,15 @@ async fn lock_file_fields_for(
     match principal {
         Principal::Staff(ctx) => {
             if mode.enforce_file_session_ownership() {
+                refuse_checked_out_file_fields(
+                    tx,
+                    entity_name,
+                    record_id,
+                    Some(ctx.user_id),
+                    attrs,
+                    obj,
+                )
+                .await?;
                 let writer = FileWriter::Staff {
                     user_id: ctx.user_id,
                     is_admin: ctx.is_admin,
@@ -473,6 +540,7 @@ async fn lock_file_fields_for(
         // Whether the field is writable at all is the plan's check, before
         // this.
         Principal::Portal(plan) => {
+            refuse_checked_out_file_fields(tx, entity_name, record_id, None, attrs, obj).await?;
             let writer = FileWriter::Portal(plan.portal_user_id);
             lock_file_field_sessions(tx, writer, entity_name, record_id, attrs, obj).await
         }
