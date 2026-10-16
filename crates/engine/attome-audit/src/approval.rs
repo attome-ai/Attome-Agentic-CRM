@@ -714,6 +714,128 @@ pub async fn create_request_delegation(
     Ok(id)
 }
 
+/// Z10-T7: hands all of `from_user`'s approval standing to `to_user` for an
+/// absence, from `valid_from` to `valid_to`. `source` is `out_of_office` (the
+/// signed-in user's own `PUT /api/v1/approvals/out-of-office`) or `leave`:
+/// W6 calls this with `leave` when a leave request is approved, so
+/// approvals keep moving while the approver is away. An earlier delegation
+/// of the same user and source that overlaps the new window is ended
+/// (soft-deleted) in the same transaction as the insert and the `Access` +
+/// `Grant` event. Returns the new delegation's id.
+pub async fn upsert_absence_delegation(
+    state: &EngineState,
+    from_user: Uuid,
+    to_user: Uuid,
+    valid_from: DateTime<Utc>,
+    valid_to: DateTime<Utc>,
+    source: &str,
+) -> Result<Uuid, AppError> {
+    if from_user == to_user {
+        return Err(AppError::Validation(
+            "cannot delegate to yourself".to_string(),
+        ));
+    }
+    if valid_to <= valid_from {
+        return Err(AppError::Validation(
+            "valid_to must be after valid_from".to_string(),
+        ));
+    }
+    if !matches!(source, "leave" | "out_of_office") {
+        return Err(AppError::Validation(format!(
+            "unknown delegation source {source:?}"
+        )));
+    }
+    let live: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM user_account          WHERE id = $1 AND (is_active IS NULL OR is_active = true))",
+    )
+    .bind(to_user)
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if !live {
+        return Err(AppError::Validation(
+            "the delegate is not an active user".to_string(),
+        ));
+    }
+
+    let id = Uuid::now_v7();
+    let mut tx = crate::security::SecurityTx::begin(
+        state,
+        SecurityEvent::new(
+            MandatoryCategory::Access,
+            AuditOperation::Grant,
+            from_user,
+            "approval_delegation",
+            Some(id),
+        )
+        .named(format!("absence:{source}"))
+        .comment(format!(
+            "approval standing of {from_user} delegated to {to_user} from {valid_from} to              {valid_to} ({source})"
+        )),
+    )
+    .await?;
+    sqlx::query(
+        "UPDATE approval_delegation SET is_deleted = true          WHERE from_user = $1 AND source = $2 AND NOT is_deleted            AND valid_from < $4 AND valid_to > $3",
+    )
+    .bind(from_user)
+    .bind(source)
+    .bind(valid_from)
+    .bind(valid_to)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    sqlx::query(
+        "INSERT INTO approval_delegation              (id, from_user, to_user, valid_from, valid_to, scope, created_by, source)          VALUES ($1, $2, $3, $4, $5, 'all', $2, $6)",
+    )
+    .bind(id)
+    .bind(from_user)
+    .bind(to_user)
+    .bind(valid_from)
+    .bind(valid_to)
+    .bind(source)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    tx.commit().await?;
+    Ok(id)
+}
+
+/// Z10-T7: ends `from_user`'s current and future absence delegations of
+/// `source`, with an `Access` + `Revoke` event in the same transaction.
+/// Returns how many were ended.
+pub async fn end_absence_delegation(
+    state: &EngineState,
+    from_user: Uuid,
+    source: &str,
+) -> Result<u64, AppError> {
+    let mut tx = crate::security::SecurityTx::begin(
+        state,
+        SecurityEvent::new(
+            MandatoryCategory::Access,
+            AuditOperation::Revoke,
+            from_user,
+            "approval_delegation",
+            None,
+        )
+        .named(format!("absence:{source}"))
+        .comment(format!(
+            "absence delegation ({source}) of {from_user} ended"
+        )),
+    )
+    .await?;
+    let ended = sqlx::query(
+        "UPDATE approval_delegation SET is_deleted = true          WHERE from_user = $1 AND source = $2 AND NOT is_deleted AND valid_to > NOW()",
+    )
+    .bind(from_user)
+    .bind(source)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected();
+    tx.commit().await?;
+    Ok(ended)
+}
+
 /// Applies one due step timeout and writes the matching audit event — the
 /// audit-aware wrapper around `attome_approval::apply_step_timeout_with`, which
 /// has no audit-writing capability of its own (base layer, guidelines §1).

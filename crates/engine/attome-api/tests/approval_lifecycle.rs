@@ -1095,3 +1095,96 @@ async fn admin_list_approvals_page_base_is_one() {
     );
     assert_eq!(dflt["items"][0]["id"], p1["items"][0]["id"]);
 }
+
+fn out_of_office_request(cookie: &str, body: Option<Value>) -> Request<Body> {
+    let builder = Request::builder()
+        .method(if body.is_some() { "PUT" } else { "DELETE" })
+        .uri("/api/v1/approvals/out-of-office")
+        .header("cookie", cookie)
+        .header("origin", "http://localhost:4200")
+        .header("sec-fetch-site", "same-origin")
+        .header("content-type", "application/json");
+    builder
+        .body(body.map_or_else(Body::empty, |b| Body::from(b.to_string())))
+        .unwrap()
+}
+
+async fn live_out_of_office(db: &attome_db::DbPool, user: Uuid) -> i64 {
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM approval_delegation          WHERE from_user = $1 AND source = 'out_of_office' AND NOT is_deleted",
+    )
+    .bind(user)
+    .fetch_one(db)
+    .await
+    .expect("count delegations")
+}
+
+/// Z10-T7: a user cannot hand their approvals to themselves.
+#[tokio::test]
+async fn out_of_office_cannot_target_self() {
+    let system = skip_if_no_db!(test_system(72).await);
+    let (me, cookie) = seed_user(&system, false).await;
+    let app = full_app(system);
+    let from = chrono::Utc::now();
+    let resp = app
+        .oneshot(out_of_office_request(
+            &cookie,
+            Some(serde_json::json!({
+                "to_user": me,
+                "valid_from": from,
+                "valid_to": from + chrono::Duration::days(3),
+            })),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
+}
+
+/// Z10-T7: a second, overlapping out-of-office replaces the first, and
+/// DELETE ends it.
+#[tokio::test]
+async fn out_of_office_replaces_overlap() {
+    let system = skip_if_no_db!(test_system(72).await);
+    let db = system.state().base.db.clone();
+    let (me, cookie) = seed_user(&system, false).await;
+    let (first, _) = seed_user(&system, false).await;
+    let (second, _) = seed_user(&system, false).await;
+    let app = full_app(system);
+    let from = chrono::Utc::now();
+    for to in [first, second] {
+        let resp = app
+            .clone()
+            .oneshot(out_of_office_request(
+                &cookie,
+                Some(serde_json::json!({
+                    "to_user": to,
+                    "valid_from": from,
+                    "valid_to": from + chrono::Duration::days(5),
+                })),
+            ))
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+    assert_eq!(
+        live_out_of_office(&db, me).await,
+        1,
+        "the overlap is replaced"
+    );
+    let current: Uuid = sqlx::query_scalar(
+        "SELECT to_user FROM approval_delegation          WHERE from_user = $1 AND source = 'out_of_office' AND NOT is_deleted",
+    )
+    .bind(me)
+    .fetch_one(&db)
+    .await
+    .expect("current delegate");
+    assert_eq!(current, second);
+
+    let resp = app
+        .oneshot(out_of_office_request(&cookie, None))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert_eq!(body_json(resp).await["ended"], 1);
+    assert_eq!(live_out_of_office(&db, me).await, 0);
+}

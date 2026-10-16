@@ -3224,6 +3224,24 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 Some(json!({"decision": "approve", "row_version": submitted.row_version})),
             )
         }
+        "PUT /api/v1/approvals/out-of-office" => {
+            // Z10-T7: the caller hands their approval standing to another user.
+            let (delegate, _) = seed_user(&fx.base, "ooo-delegate").await;
+            let from = chrono::Utc::now();
+            request(
+                "PUT",
+                "/api/v1/approvals/out-of-office",
+                t,
+                Some(json!({
+                    "to_user": delegate,
+                    "valid_from": from,
+                    "valid_to": from + chrono::Duration::days(7),
+                })),
+            )
+        }
+        "DELETE /api/v1/approvals/out-of-office" => {
+            request("DELETE", "/api/v1/approvals/out-of-office", t, None)
+        }
         "POST /api/v1/approvals/{id}/decide" => {
             // D-549 — the approver-facing route: a plan-bearing request whose
             // current step names the caller, by a different requester.

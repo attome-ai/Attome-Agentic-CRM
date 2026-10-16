@@ -2076,6 +2076,84 @@ async fn delegate_approval(
     Ok(Json(DelegateResponse { delegation_id }))
 }
 
+#[derive(Deserialize, ToSchema)]
+struct OutOfOfficeBody {
+    /// Who decides your approvals while you are away.
+    to_user: Uuid,
+    valid_from: DateTime<Utc>,
+    valid_to: DateTime<Utc>,
+}
+
+#[derive(Serialize, ToSchema)]
+struct OutOfOfficeResponse {
+    delegation_id: Uuid,
+}
+
+#[derive(Serialize, ToSchema)]
+struct OutOfOfficeEnded {
+    /// How many current or future out-of-office delegations were ended.
+    ended: u64,
+}
+
+/// `PUT /api/v1/approvals/out-of-office` (Z10-T7) — the signed-in user hands
+/// their approval standing to another user while they are away. Acts only on
+/// the caller's own id; an overlapping earlier out-of-office delegation is
+/// replaced. `attome_audit::approval::upsert_absence_delegation` checks the
+/// window and the delegate and writes the `Access` + `Grant` event with the
+/// delegation.
+#[utoipa::path(
+    put,
+    path = "/api/v1/approvals/out-of-office",
+    tag = "approvals",
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Access, attome_audit::AuditOperation::Grant)])))),
+    request_body = OutOfOfficeBody,
+    responses(
+        (status = 200, description = "Success", body = OutOfOfficeResponse),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 422, description = "Delegating to yourself, an empty window, or an inactive delegate", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn put_out_of_office(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped>,
+    Json(body): Json<OutOfOfficeBody>,
+) -> Result<Json<OutOfOfficeResponse>, AppError> {
+    let delegation_id = attome_audit::approval::upsert_absence_delegation(
+        &state,
+        ctx.user_id,
+        body.to_user,
+        body.valid_from,
+        body.valid_to,
+        "out_of_office",
+    )
+    .await?;
+    Ok(Json(OutOfOfficeResponse { delegation_id }))
+}
+
+/// `DELETE /api/v1/approvals/out-of-office` (Z10-T7) — ends the signed-in
+/// user's current and future out-of-office delegations.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/approvals/out-of-office",
+    tag = "approvals",
+    extensions(("x-audit" = json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Access, attome_audit::AuditOperation::Revoke)])))),
+    responses(
+        (status = 200, description = "Success", body = OutOfOfficeEnded),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn delete_out_of_office(
+    State(state): State<EngineState>,
+    ctx: Authorized<RecordScoped>,
+) -> Result<Json<OutOfOfficeEnded>, AppError> {
+    let ended =
+        attome_audit::approval::end_absence_delegation(&state, ctx.user_id, "out_of_office")
+            .await?;
+    Ok(Json(OutOfOfficeEnded { ended }))
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/approvals", get(list_approvals))
@@ -2095,6 +2173,10 @@ pub fn routes() -> Router<EngineState> {
             "/api/v1/approvals/{id}/decide",
             post(decide_approval_eligible),
         )
+        .route(
+            "/api/v1/approvals/out-of-office",
+            axum::routing::put(put_out_of_office).delete(delete_out_of_office),
+        )
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI document. Separate per file
@@ -2111,9 +2193,19 @@ pub fn routes() -> Router<EngineState> {
         batch_decide,
         retry_execution,
         delegate_approval,
-        decide_approval_eligible
+        decide_approval_eligible,
+        put_out_of_office,
+        delete_out_of_office
     ),
-    components(schemas(BatchItem, BatchDecideBody, BatchOutcome, BatchDecideResponse))
+    components(schemas(
+        BatchItem,
+        BatchDecideBody,
+        BatchOutcome,
+        BatchDecideResponse,
+        OutOfOfficeBody,
+        OutOfOfficeResponse,
+        OutOfOfficeEnded
+    ))
 )]
 struct ApiDocFragment;
 

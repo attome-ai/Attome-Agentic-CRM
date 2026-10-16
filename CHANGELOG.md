@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Approval out-of-office: `PUT /api/v1/approvals/out-of-office` hands the signed-in user's approval
+  standing to another user for a window (an overlapping earlier one is replaced) and
+  `DELETE /api/v1/approvals/out-of-office` ends it; leave approvals use the same delegation with
+  source `leave`. Approval requests can be recalled while pending and resubmitted, linked to the
+  recalled one (`parent_request_id`).
 - Deal teams and splits (`sales.deal_teams`, `sales.splits`, `sales.line_splits`,
   `sales.partner_members`, `sales.team_suggestions`, all off by default): team members with roles,
   revenue splits that total 100% and overlay splits, rounding remainder to the owner; see
