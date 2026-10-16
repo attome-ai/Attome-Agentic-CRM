@@ -347,6 +347,8 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
                 env!("CARGO_PKG_VERSION"),
             );
             tracing::info!("metrics store: sampling every minute, kept 30 days");
+            // AB10-T1: the built-in alert rules, evaluated on that store.
+            attome_server::alerts::spawn(base_state.db.clone());
         }
 
         attome_server::spawn_pool_gauge_refresh(

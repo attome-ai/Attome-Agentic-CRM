@@ -236,6 +236,14 @@ pub fn spawn(
                 }
             }
             let mut samples = parse(&handle.render());
+            // Every series names its node, so counters of different nodes
+            // never read as one series (AB10-T1 sums rises per series).
+            for sample in &mut samples {
+                sample
+                    .labels
+                    .entry("node".to_owned())
+                    .or_insert_with(|| Value::String(node.clone()));
+            }
             samples.push(node_up(&node, version));
             if let Err(error) = insert(&db, now, &samples).await {
                 tracing::warn!(%error, "metrics store: this minute's samples were not stored");

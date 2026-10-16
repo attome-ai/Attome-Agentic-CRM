@@ -23,6 +23,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Built-in alerting with no Prometheus: the rules in `observability/builtin-alerts.json` (error rate,
+  database pool timeouts, dead-letter jobs, job backlog, audit chain lag, file store down, changes
+  paused, a node that stopped reporting) are evaluated every minute on the built-in metrics store;
+  state in `ops_alert`, firings and resolutions in `ops_alert_event` (migration `0065`). Stored
+  metric samples now carry a `node` label.
 - Log a call in one step from a record's Activities tab: direction, minutes, notes and (when the crm
   pack adds it) outcome, saved as a completed call, with an optional next step created as a task.
 - Kanban views take `sum_field`, `weighted_field`, `state_entered_field`, `stalled_after_days` and

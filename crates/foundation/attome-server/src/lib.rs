@@ -1,3 +1,4 @@
+pub mod alerts;
 pub mod api_usage;
 pub mod apikey_touch;
 pub mod app;

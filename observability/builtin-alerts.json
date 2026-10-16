@@ -1,0 +1,106 @@
+{
+  "_comment": "AB10-T1: alert rules the server evaluates itself, every minute, on the built-in metrics store (ops_metric_sample) when no Prometheus runs. Kinds: threshold (the latest minute's value, aggregated over the matching series), increase (a counter's rise over the window), ratio (one increase over another) and stale (a series, grouped by a label, that stopped reporting). A match value ending in * is a prefix. observability/alerts.yml stays the Prometheus definition of the same signals.",
+  "rules": [
+    {
+      "name": "HighHttpErrorRate",
+      "severity": "warning",
+      "summary": "More than 2% of requests failed with a 5xx status over 5 minutes",
+      "runbook": "observability/RUNBOOK.md#highhttperrorrate",
+      "kind": "ratio",
+      "metric": "axum_http_requests_total",
+      "match": { "status": "5*" },
+      "denominator": { "metric": "axum_http_requests_total" },
+      "min_denominator": 20,
+      "window_minutes": 5,
+      "op": ">",
+      "value": 0.02,
+      "for_minutes": 5
+    },
+    {
+      "name": "DbPoolAcquireTimeouts",
+      "severity": "warning",
+      "summary": "Requests timed out waiting for a database connection",
+      "runbook": "observability/RUNBOOK.md#dbpoolnearexhaustion",
+      "kind": "increase",
+      "metric": "db_pool_acquire_timeouts_total",
+      "window_minutes": 5,
+      "op": ">",
+      "value": 0,
+      "for_minutes": 0
+    },
+    {
+      "name": "JobsInDeadLetter",
+      "severity": "warning",
+      "summary": "Background jobs failed for good and wait in the dead-letter queue",
+      "runbook": "observability/RUNBOOK.md#apalisdeadlettergrowing",
+      "kind": "threshold",
+      "metric": "apalis_dead_letter_jobs",
+      "aggregate": "max",
+      "op": ">",
+      "value": 0,
+      "for_minutes": 10
+    },
+    {
+      "name": "JobBacklogOld",
+      "severity": "warning",
+      "summary": "The oldest waiting background job has waited more than 15 minutes",
+      "runbook": "observability/RUNBOOK.md#apalisoldestpendingagehigh",
+      "kind": "threshold",
+      "metric": "apalis_oldest_pending_age_seconds",
+      "aggregate": "max",
+      "op": ">",
+      "value": 900,
+      "for_minutes": 10
+    },
+    {
+      "name": "AuditChainerLag",
+      "severity": "critical",
+      "summary": "Audit events wait more than 5 minutes to be sealed into the chain",
+      "runbook": "observability/RUNBOOK.md#auditchainerlaghigh",
+      "kind": "threshold",
+      "metric": "audit_chainer_lag_seconds",
+      "aggregate": "max",
+      "op": ">",
+      "value": 300,
+      "for_minutes": 10
+    },
+    {
+      "name": "ObjectStorageDown",
+      "severity": "critical",
+      "summary": "The file store does not answer",
+      "runbook": "observability/RUNBOOK.md#objectstoragedown",
+      "kind": "threshold",
+      "metric": "object_storage_up",
+      "aggregate": "min",
+      "op": "<",
+      "value": 1,
+      "for_minutes": 5
+    },
+    {
+      "name": "ChangesPaused",
+      "severity": "info",
+      "summary": "The deployment is read-only: changes are paused",
+      "runbook": "observability/RUNBOOK.md#changespaused",
+      "kind": "threshold",
+      "metric": "attome_read_only",
+      "aggregate": "max",
+      "op": ">",
+      "value": 0,
+      "for_minutes": 1
+    },
+    {
+      "name": "NodeStoppedReporting",
+      "severity": "critical",
+      "summary": "A server node stopped sending its heartbeat",
+      "runbook": "observability/RUNBOOK.md#nodestoppedreporting",
+      "kind": "stale",
+      "metric": "attome_node_up",
+      "group_by": "node",
+      "window_minutes": 60,
+      "stale_after_minutes": 3,
+      "op": ">",
+      "value": 0,
+      "for_minutes": 0
+    }
+  ]
+}

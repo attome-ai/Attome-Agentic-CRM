@@ -295,6 +295,24 @@ space before `DiskSpaceCritical`.
 Below 5% free. Postgres refuses writes when its data filesystem fills, so treat this as an
 imminent outage: free space now.
 
+## Built-in alerts (no Prometheus)
+
+`observability/builtin-alerts.json` is evaluated by the server itself every minute on the built-in
+metrics store when `observability.builtin_store` is on (the default on Solo). Each rule's state is in
+`ops_alert`, every firing and resolution in `ops_alert_event`. Most rules point at the sections of this
+runbook above; two are only built in:
+
+### ChangesPaused
+
+The deployment is read-only: an operator paused changes, or the disk is nearly full (AB5-T6). Reads
+work; writes answer `503 read_only`. Check `GET /api/v1/admin/ops/overview` and free disk space, then
+lift the pause.
+
+### NodeStoppedReporting
+
+A node that sent its heartbeat in the last hour has not for three minutes. Check the node's process
+and logs; a node taken out on purpose stops being reported an hour later.
+
 ## Capability gate (D-344)
 
 ### CapabilityUnavailable
