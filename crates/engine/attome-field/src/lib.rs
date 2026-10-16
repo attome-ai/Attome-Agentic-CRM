@@ -522,6 +522,9 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
     if options.get("create_only").is_some_and(|s| !s.is_boolean()) {
         return Err(AppError::Validation("create_only: true or false".into()));
     }
+    if let Some(counter) = options.get("counts_changes") {
+        validate_change_counter(field_type, counter)?;
+    }
     if let Some(editable_by) = options.get("editable_by")
         && !matches!(editable_by.as_str(), Some("everyone" | "integrations_only"))
     {
@@ -540,6 +543,7 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
                 || map.contains_key("unique")
                 || map.contains_key("strict")
                 || map.contains_key("create_only")
+                || map.contains_key("counts_changes")
                 || map.contains_key("editable_by") =>
         {
             let mut map = map.clone();
@@ -549,6 +553,7 @@ pub fn validate_options(field_type: &FieldType, options: &Value) -> Result<(), A
             map.remove("unique");
             map.remove("strict");
             map.remove("create_only");
+            map.remove("counts_changes");
             map.remove("editable_by");
             if map.is_empty() {
                 // Only a default or scan settings: nothing else to check.
@@ -754,6 +759,104 @@ pub fn integrations_only(options: Option<&Value>) -> bool {
         == Some("integrations_only")
 }
 
+/// Which changes of the watched field a change counter counts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CountedChange {
+    /// Any change to a different value (empty counts as a value).
+    Any,
+    /// A move to a later date or time, or a higher number.
+    Later,
+    /// A move to an earlier date or time, or a lower number.
+    Earlier,
+}
+
+/// D5-T1: a number field that counts how often another field of the same
+/// record changed (`options.counts_changes: {"field": "close_date",
+/// "when": "later"}`), such as how many times a deal's close date was pushed
+/// out. The engine adds one on every update that makes such a change; a
+/// first value set where there was none is not counted.
+pub fn change_counter(options: Option<&Value>) -> Option<(&str, CountedChange)> {
+    let counter = options?.get("counts_changes")?;
+    let field = counter.get("field")?.as_str()?;
+    let when = match counter.get("when").and_then(Value::as_str).unwrap_or("any") {
+        "later" => CountedChange::Later,
+        "earlier" => CountedChange::Earlier,
+        _ => CountedChange::Any,
+    };
+    Some((field, when))
+}
+
+fn validate_change_counter(field_type: &FieldType, counter: &Value) -> Result<(), AppError> {
+    if *field_type != FieldType::Number {
+        return Err(AppError::Validation(
+            "counts_changes: only a number field can count changes".into(),
+        ));
+    }
+    let field_ok = counter
+        .get("field")
+        .and_then(Value::as_str)
+        .is_some_and(|f| !f.trim().is_empty());
+    let when_ok = counter
+        .get("when")
+        .is_none_or(|w| matches!(w.as_str(), Some("any" | "later" | "earlier")));
+    if !field_ok || !when_ok {
+        return Err(AppError::Validation(
+            "counts_changes: {\"field\": name, \"when\": any | later | earlier}".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// D5-T1: whether moving `old` to `new` is a change `when` counts. Numbers
+/// compare as numbers, dates and times as instants (a bare date is its
+/// midnight UTC), anything else as text. A first value (no `old`) is never
+/// counted.
+pub fn counts_as_change(old: Option<&Value>, new: Option<&Value>, when: CountedChange) -> bool {
+    let old = old.filter(|v| !v.is_null());
+    let Some(old) = old else {
+        return false;
+    };
+    let new = new.filter(|v| !v.is_null());
+    let Some(new) = new else {
+        return when == CountedChange::Any;
+    };
+    let ordering = match (old.as_f64(), new.as_f64()) {
+        (Some(a), Some(b)) => a.partial_cmp(&b),
+        _ => match (as_instant(old), as_instant(new)) {
+            (Some(a), Some(b)) => Some(a.cmp(&b)),
+            _ => {
+                let (a, b) = (value_text(old), value_text(new));
+                Some(a.cmp(&b))
+            }
+        },
+    };
+    match (when, ordering) {
+        (CountedChange::Any, Some(o)) => o != std::cmp::Ordering::Equal,
+        (CountedChange::Later, Some(o)) => o == std::cmp::Ordering::Less,
+        (CountedChange::Earlier, Some(o)) => o == std::cmp::Ordering::Greater,
+        (_, None) => false,
+    }
+}
+
+fn as_instant(value: &Value) -> Option<chrono::DateTime<chrono::Utc>> {
+    let text = value.as_str()?.trim();
+    if let Ok(at) = chrono::DateTime::parse_from_rfc3339(text) {
+        return Some(at.with_timezone(&chrono::Utc));
+    }
+    if let Ok(at) = chrono::DateTime::parse_from_str(text, "%Y-%m-%dT%H:%M:%S%.f%#z") {
+        return Some(at.with_timezone(&chrono::Utc));
+    }
+    let date = chrono::NaiveDate::parse_from_str(text.get(..10)?, "%Y-%m-%d").ok()?;
+    Some(date.and_hms_opt(0, 0, 0)?.and_utc())
+}
+
+fn value_text(value: &Value) -> String {
+    match value {
+        Value::String(s) => s.clone(),
+        other => other.to_string(),
+    }
+}
+
 /// Q15-T4: a field set when the record is created and never changed after
 /// (`options.create_only: true`); an update that names it is refused.
 pub fn create_only(options: Option<&Value>) -> bool {
@@ -923,6 +1026,47 @@ mod tests {
         )));
         assert!(!is_unique(Some(&serde_json::json!({ "unique": false }))));
         assert!(!is_unique(None));
+    }
+
+    /// D5-T1: a change counter counts the moves its `when` names, never a
+    /// first value, and only a number field may count.
+    #[test]
+    fn change_counter_counts_the_named_moves() {
+        use serde_json::json;
+        let later = json!({"counts_changes": {"field": "close_date", "when": "later"}});
+        assert_eq!(
+            change_counter(Some(&later)),
+            Some(("close_date", CountedChange::Later))
+        );
+        let (a, b) = (json!("2026-10-01"), json!("2026-11-01T00:00:00+00:00"));
+        assert!(counts_as_change(Some(&a), Some(&b), CountedChange::Later));
+        assert!(!counts_as_change(Some(&b), Some(&a), CountedChange::Later));
+        assert!(counts_as_change(Some(&b), Some(&a), CountedChange::Earlier));
+        assert!(!counts_as_change(None, Some(&b), CountedChange::Any));
+        assert!(!counts_as_change(
+            Some(&json!("2026-10-01T00:00:00+00:00")),
+            Some(&json!("2026-10-01")),
+            CountedChange::Any
+        ));
+        assert!(counts_as_change(
+            Some(&json!(3)),
+            Some(&json!(5)),
+            CountedChange::Later
+        ));
+        assert!(counts_as_change(
+            Some(&json!("x")),
+            None,
+            CountedChange::Any
+        ));
+        assert!(validate_options(&FieldType::Number, &later).is_ok());
+        assert!(validate_options(&FieldType::Text, &later).is_err());
+        assert!(
+            validate_options(
+                &FieldType::Number,
+                &json!({"counts_changes": {"field": "close_date", "when": "sideways"}})
+            )
+            .is_err()
+        );
     }
 
     /// A29-T4: `editable_by` locks a field to integrations.

@@ -1433,6 +1433,31 @@ fn entity_has_active_state_model(state: &EngineState, entity_name: &str) -> bool
 /// D-789: the live row `record_id` of `entity_name` (every column, sensitive
 /// ones included — it builds evaluation contexts and lock comparisons only,
 /// never a response), or `None` when there is no live row.
+/// D5-T1: for each change-counter attribute whose watched field this write
+/// changes the way it counts, its stored count plus one.
+fn change_counter_values(
+    attrs: &[AttrInfo],
+    stored: &serde_json::Map<String, Value>,
+    body: &serde_json::Map<String, Value>,
+) -> Vec<(String, Value)> {
+    attrs
+        .iter()
+        .filter_map(|attr| {
+            let (watched, when) = attome_field::change_counter(attr.options.as_ref())?;
+            if !body.contains_key(watched)
+                || !attome_field::counts_as_change(stored.get(watched), body.get(watched), when)
+            {
+                return None;
+            }
+            let count = stored
+                .get(&attr.logicalname)
+                .and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|f| f as i64)))
+                .unwrap_or(0);
+            Some((attr.logicalname.clone(), Value::from(count + 1)))
+        })
+        .collect()
+}
+
 async fn fetch_stored_record(
     tx: &mut Transaction<'_, Postgres>,
     entity_name: &str,
@@ -2670,8 +2695,12 @@ pub async fn update_one_as(
     // ones (partial-update semantics).
     let mut rules =
         crate::business_rules::WritePipeline::new(state, entity_name, attrs, &principal);
+    let has_change_counter = attrs
+        .iter()
+        .any(|a| attome_field::change_counter(a.options.as_ref()).is_some());
     let stored = if rules.is_some()
         || attrs.iter().any(AttrInfo::is_formula)
+        || has_change_counter
         || entity_has_active_state_model(state, entity_name)
     {
         fetch_stored_record(tx, entity_name, record_id, attrs).await?
@@ -2755,6 +2784,10 @@ pub async fn update_one_as(
     let mut computed = compute_formula_values(state, entity_name, attrs, m0).await?;
     if let (Some(pipeline), Some(fired)) = (&rules, &fired) {
         computed.extend(pipeline.always_values(fired, m0).await?);
+    }
+    // D5-T1: change counters see this write's change to their watched field.
+    if has_change_counter && let Some(stored) = &stored {
+        computed.extend(change_counter_values(attrs, stored, obj));
     }
     let warnings = match rules.as_mut() {
         Some(pipeline) => {

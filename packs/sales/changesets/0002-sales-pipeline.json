@@ -1,0 +1,1332 @@
+{
+  "author": "packs",
+  "checksum": "sha256:2a848d68ec90f7f4aa2af7a65cad724a022ef6cba512044a04b98953e5011b4e",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Sales pipelines (D5-T1): stages as records with order, default probability and a stalled limit per pipeline; probability, weighted amount, pipeline, won and lost reasons, main competitor and a close-date push counter on the opportunity; contact roles on deals.",
+  "format": "attome-changeset/v1",
+  "id": "01a14327-d1b8-7555-9e21-e3aa59395a80",
+  "layer": "product",
+  "name": "sales-pipeline",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Opportunity Stage",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "opportunity_stage",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "opportunity_stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "opportunity_stage",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Stage Code",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "stage",
+          "lookup_entity": null,
+          "max_length": 50,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "opportunity_stage",
+        "field": "stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Pipeline",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "pipeline",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "new_business",
+              "renewal",
+              "upsell"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "opportunity_stage",
+        "field": "pipeline"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Order",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "sort_order",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "opportunity_stage",
+        "field": "sort_order"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Default Probability (%)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "probability",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "max": 100,
+            "min": 0
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "opportunity_stage",
+        "field": "probability"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Stalled After (days)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "stalled_after_days",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "min": 0
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "opportunity_stage",
+        "field": "stalled_after_days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Closed Stage",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_closed",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "opportunity_stage",
+        "field": "is_closed"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Pipeline",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "pipeline",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "new_business",
+              "renewal",
+              "upsell"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "opportunity",
+        "field": "pipeline"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Probability (%)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "probability",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "max": 100,
+            "min": 0
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "opportunity",
+        "field": "probability"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Weighted Amount",
+          "field_type": "formula",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "weighted_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "expression": "amount * probability / 100",
+            "result_type": "number"
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "opportunity",
+        "field": "weighted_amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Won Reason",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "won_reason",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "price",
+              "product_fit",
+              "relationship",
+              "service",
+              "timing",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "opportunity",
+        "field": "won_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lost Reason",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "lost_reason",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "price",
+              "competitor",
+              "no_budget",
+              "no_decision",
+              "product_gap",
+              "timing",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "opportunity",
+        "field": "lost_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Main Competitor",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "competitor_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "opportunity",
+        "field": "competitor_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Close Date Pushed",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "close_date_push_count",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "counts_changes": {
+              "field": "close_date",
+              "when": "later"
+            }
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "opportunity",
+        "field": "close_date_push_count"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Opportunity Contact Role",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "opportunity_contact_role",
+          "primary_name_attribute": null
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "opportunity_contact_role"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Opportunity",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "opportunity_ref",
+          "lookup_entity": "opportunity",
+          "max_length": null,
+          "on_target_delete": "cascade-deactivate",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "opportunity_contact_role",
+        "field": "opportunity_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Contact",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "contact_ref",
+          "lookup_entity": "contact",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "opportunity_contact_role",
+        "field": "contact_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Role",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "role",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "decision_maker",
+              "economic_buyer",
+              "technical_buyer",
+              "champion",
+              "influencer",
+              "user",
+              "other"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "opportunity_contact_role",
+        "field": "role"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Primary Contact",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_primary",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "opportunity_contact_role",
+        "field": "is_primary"
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Prospecting",
+          "pipeline": "new_business",
+          "probability": 10,
+          "sort_order": 1,
+          "stage": "prospecting",
+          "stalled_after_days": 14
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "new_business",
+          "stage": "prospecting"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Qualification",
+          "pipeline": "new_business",
+          "probability": 20,
+          "sort_order": 2,
+          "stage": "qualification",
+          "stalled_after_days": 14
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "new_business",
+          "stage": "qualification"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Proposal",
+          "pipeline": "new_business",
+          "probability": 50,
+          "sort_order": 3,
+          "stage": "proposal",
+          "stalled_after_days": 21
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "new_business",
+          "stage": "proposal"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Negotiation",
+          "pipeline": "new_business",
+          "probability": 75,
+          "sort_order": 4,
+          "stage": "negotiation",
+          "stalled_after_days": 21
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "new_business",
+          "stage": "negotiation"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": true,
+          "name": "Closed Won",
+          "pipeline": "new_business",
+          "probability": 100,
+          "sort_order": 5,
+          "stage": "closed_won"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "new_business",
+          "stage": "closed_won"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": true,
+          "name": "Closed Lost",
+          "pipeline": "new_business",
+          "probability": 0,
+          "sort_order": 6,
+          "stage": "closed_lost"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "new_business",
+          "stage": "closed_lost"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Prospecting",
+          "pipeline": "renewal",
+          "probability": 10,
+          "sort_order": 1,
+          "stage": "prospecting",
+          "stalled_after_days": 14
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "renewal",
+          "stage": "prospecting"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Qualification",
+          "pipeline": "renewal",
+          "probability": 20,
+          "sort_order": 2,
+          "stage": "qualification",
+          "stalled_after_days": 14
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "renewal",
+          "stage": "qualification"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Proposal",
+          "pipeline": "renewal",
+          "probability": 50,
+          "sort_order": 3,
+          "stage": "proposal",
+          "stalled_after_days": 21
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "renewal",
+          "stage": "proposal"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Negotiation",
+          "pipeline": "renewal",
+          "probability": 75,
+          "sort_order": 4,
+          "stage": "negotiation",
+          "stalled_after_days": 21
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "renewal",
+          "stage": "negotiation"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": true,
+          "name": "Closed Won",
+          "pipeline": "renewal",
+          "probability": 100,
+          "sort_order": 5,
+          "stage": "closed_won"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "renewal",
+          "stage": "closed_won"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": true,
+          "name": "Closed Lost",
+          "pipeline": "renewal",
+          "probability": 0,
+          "sort_order": 6,
+          "stage": "closed_lost"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "renewal",
+          "stage": "closed_lost"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Prospecting",
+          "pipeline": "upsell",
+          "probability": 10,
+          "sort_order": 1,
+          "stage": "prospecting",
+          "stalled_after_days": 14
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "upsell",
+          "stage": "prospecting"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Qualification",
+          "pipeline": "upsell",
+          "probability": 20,
+          "sort_order": 2,
+          "stage": "qualification",
+          "stalled_after_days": 14
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "upsell",
+          "stage": "qualification"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Proposal",
+          "pipeline": "upsell",
+          "probability": 50,
+          "sort_order": 3,
+          "stage": "proposal",
+          "stalled_after_days": 21
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "upsell",
+          "stage": "proposal"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": false,
+          "name": "Negotiation",
+          "pipeline": "upsell",
+          "probability": 75,
+          "sort_order": 4,
+          "stage": "negotiation",
+          "stalled_after_days": 21
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "upsell",
+          "stage": "negotiation"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": true,
+          "name": "Closed Won",
+          "pipeline": "upsell",
+          "probability": 100,
+          "sort_order": 5,
+          "stage": "closed_won"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "upsell",
+          "stage": "closed_won"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "pipeline",
+          "stage"
+        ],
+        "values": {
+          "is_closed": true,
+          "name": "Closed Lost",
+          "pipeline": "upsell",
+          "probability": 0,
+          "sort_order": 6,
+          "stage": "closed_lost"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "opportunity_stage",
+        "key": {
+          "pipeline": "upsell",
+          "stage": "closed_lost"
+        }
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرحلة الفرصة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_stage",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "دور جهة الاتصال في الفرصة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_contact_role",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مسار المبيعات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.pipeline",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاحتمالية (%)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.probability",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ المرجح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.weighted_amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سبب الفوز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.won_reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سبب الخسارة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.lost_reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنافس الرئيسي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.competitor_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرات تأجيل الإغلاق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity.close_date_push_count",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_stage.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رمز المرحلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_stage.stage",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مسار المبيعات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_stage.pipeline",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الترتيب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_stage.sort_order",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاحتمالية الافتراضية (%)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_stage.probability",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "متوقفة بعد (أيام)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_stage.stalled_after_days",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرحلة مغلقة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_stage.is_closed",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفرصة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_contact_role.opportunity_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "جهة الاتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_contact_role.contact_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدور"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_contact_role.role",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "جهة الاتصال الرئيسية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "locale": "ar",
+        "object_key": "opportunity_contact_role.is_primary",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "state",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 2,
+  "title": "Pack: sales pipelines"
+}

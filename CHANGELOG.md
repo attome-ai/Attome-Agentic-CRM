@@ -23,6 +23,12 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Sales pipelines in the sales pack (changeset `0002-sales-pipeline`): stages as records with order,
+  default probability and a stalled limit per pipeline (new business, renewal, upsell);
+  probability, weighted amount, pipeline, won and lost reasons, main competitor and a close-date
+  push counter on the opportunity; contact roles on deals; Arabic labels.
+- A number field can count changes of another field: `options.counts_changes: {"field": ...,
+  "when": "any" | "later" | "earlier"}` adds one on every update that makes such a change.
 - `?select=a,b` on `GET /api/v1/{entity}/{id}` and on the answers of create, update and upsert:
   `data` carries only the named attributes; a name the caller cannot read is a `422`, refused
   before anything is written.
