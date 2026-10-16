@@ -1,0 +1,2176 @@
+{
+  "author": "packs",
+  "checksum": "sha256:716bca751dca9a483da365fa5c375bb45d2e68c4f143d4affd08ea2740990c05",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "F10-T13: the Commission Seller, Commission Manager, Sales Ops and Commission Finance roles. A seller reads only the plan participation, credits, statement lines, payouts, adjustments, draws and disputes they own (owner-only access); a manager reads their team's; sales ops and finance read all. Every pay amount is sensitive, so search, reports and query execution mask it for anyone without the Commission Amounts field profile, which only these four roles hold.",
+  "format": "attome-changeset/v1",
+  "id": "01a14494-3091-77da-b052-1682d572b42e",
+  "layer": "product",
+  "name": "commission-pay-visibility",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "data_classification": "confidential",
+          "display_name": "Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "comp_credit",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "confidential",
+          "display_name": "Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "comp_statement_line",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "confidential",
+          "display_name": "Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "comp_payout",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "confidential",
+          "display_name": "Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "comp_adjustment",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "confidential",
+          "display_name": "Amount per Period",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "amount_per_period",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "comp_draw",
+        "field": "amount_per_period"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "confidential",
+          "display_name": "Balance",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "balance",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "comp_draw",
+        "field": "balance"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "confidential",
+          "display_name": "Cap per Deal",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "cap_per_deal",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "comp_component",
+        "field": "cap_per_deal"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "confidential",
+          "display_name": "Cap per Period",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "cap_per_period",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "update_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "comp_component",
+        "field": "cap_per_period"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on comp_adjustment",
+          "key": "comp_adjustment.create",
+          "name": "comp_adjustment.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "privilege": "comp_adjustment.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on comp_adjustment",
+          "key": "comp_adjustment.read",
+          "name": "comp_adjustment.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "privilege": "comp_adjustment.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on comp_adjustment",
+          "key": "comp_adjustment.update",
+          "name": "comp_adjustment.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "privilege": "comp_adjustment.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on comp_component",
+          "key": "comp_component.create",
+          "name": "comp_component.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "privilege": "comp_component.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on comp_component",
+          "key": "comp_component.read",
+          "name": "comp_component.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "privilege": "comp_component.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on comp_component",
+          "key": "comp_component.update",
+          "name": "comp_component.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "privilege": "comp_component.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on comp_credit",
+          "key": "comp_credit.create",
+          "name": "comp_credit.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "privilege": "comp_credit.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on comp_credit",
+          "key": "comp_credit.read",
+          "name": "comp_credit.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "privilege": "comp_credit.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on comp_credit",
+          "key": "comp_credit.update",
+          "name": "comp_credit.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "privilege": "comp_credit.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on comp_dispute",
+          "key": "comp_dispute.create",
+          "name": "comp_dispute.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "privilege": "comp_dispute.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on comp_dispute",
+          "key": "comp_dispute.read",
+          "name": "comp_dispute.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "privilege": "comp_dispute.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on comp_dispute",
+          "key": "comp_dispute.update",
+          "name": "comp_dispute.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "privilege": "comp_dispute.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on comp_draw",
+          "key": "comp_draw.create",
+          "name": "comp_draw.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "privilege": "comp_draw.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on comp_draw",
+          "key": "comp_draw.read",
+          "name": "comp_draw.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "privilege": "comp_draw.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on comp_draw",
+          "key": "comp_draw.update",
+          "name": "comp_draw.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "privilege": "comp_draw.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on comp_payout",
+          "key": "comp_payout.create",
+          "name": "comp_payout.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "privilege": "comp_payout.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on comp_payout",
+          "key": "comp_payout.read",
+          "name": "comp_payout.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "privilege": "comp_payout.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on comp_payout",
+          "key": "comp_payout.update",
+          "name": "comp_payout.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "privilege": "comp_payout.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on comp_period",
+          "key": "comp_period.create",
+          "name": "comp_period.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "privilege": "comp_period.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on comp_period",
+          "key": "comp_period.read",
+          "name": "comp_period.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "privilege": "comp_period.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on comp_period",
+          "key": "comp_period.update",
+          "name": "comp_period.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "privilege": "comp_period.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on comp_plan",
+          "key": "comp_plan.create",
+          "name": "comp_plan.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "privilege": "comp_plan.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on comp_plan",
+          "key": "comp_plan.read",
+          "name": "comp_plan.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "privilege": "comp_plan.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on comp_plan",
+          "key": "comp_plan.update",
+          "name": "comp_plan.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "privilege": "comp_plan.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on comp_plan_version",
+          "key": "comp_plan_version.create",
+          "name": "comp_plan_version.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "privilege": "comp_plan_version.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on comp_plan_version",
+          "key": "comp_plan_version.read",
+          "name": "comp_plan_version.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "privilege": "comp_plan_version.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on comp_plan_version",
+          "key": "comp_plan_version.update",
+          "name": "comp_plan_version.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "privilege": "comp_plan_version.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on comp_run",
+          "key": "comp_run.create",
+          "name": "comp_run.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "privilege": "comp_run.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on comp_run",
+          "key": "comp_run.read",
+          "name": "comp_run.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "privilege": "comp_run.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on comp_run",
+          "key": "comp_run.update",
+          "name": "comp_run.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "privilege": "comp_run.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on comp_statement_line",
+          "key": "comp_statement_line.create",
+          "name": "comp_statement_line.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "privilege": "comp_statement_line.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on comp_statement_line",
+          "key": "comp_statement_line.read",
+          "name": "comp_statement_line.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "privilege": "comp_statement_line.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on comp_statement_line",
+          "key": "comp_statement_line.update",
+          "name": "comp_statement_line.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "privilege": "comp_statement_line.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: create on plan_participant",
+          "key": "plan_participant.create",
+          "name": "plan_participant.create"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "privilege": "plan_participant.create"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: read on plan_participant",
+          "key": "plan_participant.read",
+          "name": "plan_participant.read"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "privilege": "plan_participant.read"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Per-entity privilege: update on plan_participant",
+          "key": "plan_participant.update",
+          "name": "plan_participant.update"
+        }
+      },
+      "op": "ensure_privilege",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "privilege": "plan_participant.update"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Reads commission amounts: credits, statement lines, payouts, adjustments, draws and caps.",
+          "is_customized": false,
+          "name": "Commission Amounts"
+        }
+      },
+      "op": "upsert_field_profile",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "profile": "Commission Amounts"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "comp_credit",
+        "field": "amount",
+        "profile": "Commission Amounts"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "comp_statement_line",
+        "field": "amount",
+        "profile": "Commission Amounts"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "comp_payout",
+        "field": "amount",
+        "profile": "Commission Amounts"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "comp_adjustment",
+        "field": "amount",
+        "profile": "Commission Amounts"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "comp_draw",
+        "field": "amount_per_period",
+        "profile": "Commission Amounts"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "comp_draw",
+        "field": "balance",
+        "profile": "Commission Amounts"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "comp_component",
+        "field": "cap_per_deal",
+        "profile": "Commission Amounts"
+      }
+    },
+    {
+      "args": {
+        "permissions": {
+          "can_read": true,
+          "can_update": true
+        }
+      },
+      "op": "set_field_profile_field",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "comp_component",
+        "field": "cap_per_period",
+        "profile": "Commission Amounts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 0,
+          "description": "Reads their own plan, credits, statement and payouts; raises disputes.",
+          "is_customized": false,
+          "name": "Commission Seller",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "privilege": "comp_plan.read",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "privilege": "comp_plan_version.read",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "privilege": "comp_component.read",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "privilege": "comp_period.read",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "privilege": "plan_participant.read",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "privilege": "comp_credit.read",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "privilege": "comp_statement_line.read",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "privilege": "comp_payout.read",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "privilege": "comp_adjustment.read",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "privilege": "comp_draw.read",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "privilege": "comp_dispute.read",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "privilege": "comp_dispute.create",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_visible": true
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "plan_participant",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_visible": true
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "comp_credit",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_visible": true
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "comp_statement_line",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_visible": true
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "comp_payout",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_visible": true
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "comp_adjustment",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_visible": true
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "comp_draw",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 0,
+          "read_owner_visible": true,
+          "write_access_level": 0,
+          "write_owner_visible": true
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "comp_dispute",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {},
+      "op": "assign_field_profile",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "profile": "Commission Amounts",
+        "role": "Commission Seller"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 1,
+          "description": "Reads the pay of their team; reviews disputes.",
+          "is_customized": false,
+          "name": "Commission Manager",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "privilege": "comp_plan.read",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "privilege": "comp_plan_version.read",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "privilege": "comp_component.read",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "privilege": "comp_period.read",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "privilege": "plan_participant.read",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "privilege": "comp_credit.read",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "privilege": "comp_statement_line.read",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "privilege": "comp_payout.read",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "privilege": "comp_adjustment.read",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "privilege": "comp_draw.read",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "privilege": "comp_dispute.read",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "privilege": "comp_dispute.update",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 1,
+          "read_owner_visible": true,
+          "write_access_level": 1,
+          "write_owner_visible": false
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "entity": "plan_participant",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 1,
+          "read_owner_visible": true,
+          "write_access_level": 1,
+          "write_owner_visible": false
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "entity": "comp_credit",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 1,
+          "read_owner_visible": true,
+          "write_access_level": 1,
+          "write_owner_visible": false
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "entity": "comp_statement_line",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 1,
+          "read_owner_visible": true,
+          "write_access_level": 1,
+          "write_owner_visible": false
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "entity": "comp_payout",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 1,
+          "read_owner_visible": true,
+          "write_access_level": 1,
+          "write_owner_visible": false
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "entity": "comp_adjustment",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 1,
+          "read_owner_visible": true,
+          "write_access_level": 1,
+          "write_owner_visible": false
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "entity": "comp_draw",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "access": {
+          "delete_access_level": 0,
+          "delete_owner_visible": false,
+          "read_access_level": 1,
+          "read_owner_visible": true,
+          "write_access_level": 1,
+          "write_owner_visible": false
+        }
+      },
+      "op": "set_role_entity_access",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "entity": "comp_dispute",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {},
+      "op": "assign_field_profile",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "profile": "Commission Amounts",
+        "role": "Commission Manager"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Runs plans, periods, credits and calculation; reads all pay.",
+          "is_customized": false,
+          "name": "Sales Ops",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "privilege": "comp_plan.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "privilege": "comp_plan.create",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "privilege": "comp_plan.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "privilege": "comp_plan_version.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "privilege": "comp_plan_version.create",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "privilege": "comp_plan_version.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "privilege": "comp_component.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "privilege": "comp_component.create",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "privilege": "comp_component.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "privilege": "comp_period.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "privilege": "comp_period.create",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 108,
+      "target": {
+        "privilege": "comp_period.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 109,
+      "target": {
+        "privilege": "plan_participant.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 110,
+      "target": {
+        "privilege": "plan_participant.create",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 111,
+      "target": {
+        "privilege": "plan_participant.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 112,
+      "target": {
+        "privilege": "comp_credit.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 113,
+      "target": {
+        "privilege": "comp_credit.create",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 114,
+      "target": {
+        "privilege": "comp_credit.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 115,
+      "target": {
+        "privilege": "comp_statement_line.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 116,
+      "target": {
+        "privilege": "comp_statement_line.create",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 117,
+      "target": {
+        "privilege": "comp_statement_line.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 118,
+      "target": {
+        "privilege": "comp_payout.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 119,
+      "target": {
+        "privilege": "comp_payout.create",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 120,
+      "target": {
+        "privilege": "comp_payout.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 121,
+      "target": {
+        "privilege": "comp_adjustment.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 122,
+      "target": {
+        "privilege": "comp_adjustment.create",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 123,
+      "target": {
+        "privilege": "comp_adjustment.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 124,
+      "target": {
+        "privilege": "comp_draw.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 125,
+      "target": {
+        "privilege": "comp_draw.create",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 126,
+      "target": {
+        "privilege": "comp_draw.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 127,
+      "target": {
+        "privilege": "comp_dispute.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 128,
+      "target": {
+        "privilege": "comp_dispute.create",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 129,
+      "target": {
+        "privilege": "comp_dispute.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 130,
+      "target": {
+        "privilege": "comp_run.read",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 131,
+      "target": {
+        "privilege": "comp_run.create",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 132,
+      "target": {
+        "privilege": "comp_run.update",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {},
+      "op": "assign_field_profile",
+      "phase": "expand",
+      "seq": 133,
+      "target": {
+        "profile": "Commission Amounts",
+        "role": "Sales Ops"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "access_level": 3,
+          "description": "Approves periods and payouts; reads all pay.",
+          "is_customized": false,
+          "name": "Commission Finance",
+          "position_hierarchy_enabled": false
+        }
+      },
+      "op": "upsert_role",
+      "phase": "expand",
+      "seq": 134,
+      "target": {
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 135,
+      "target": {
+        "privilege": "comp_plan.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 136,
+      "target": {
+        "privilege": "comp_plan_version.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 137,
+      "target": {
+        "privilege": "comp_component.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 138,
+      "target": {
+        "privilege": "comp_period.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 139,
+      "target": {
+        "privilege": "comp_period.update",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 140,
+      "target": {
+        "privilege": "plan_participant.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 141,
+      "target": {
+        "privilege": "comp_credit.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 142,
+      "target": {
+        "privilege": "comp_statement_line.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 143,
+      "target": {
+        "privilege": "comp_payout.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 144,
+      "target": {
+        "privilege": "comp_payout.update",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 145,
+      "target": {
+        "privilege": "comp_adjustment.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 146,
+      "target": {
+        "privilege": "comp_draw.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 147,
+      "target": {
+        "privilege": "comp_dispute.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {
+        "depth": null
+      },
+      "op": "grant_role_privilege",
+      "phase": "expand",
+      "seq": 148,
+      "target": {
+        "privilege": "comp_run.read",
+        "role": "Commission Finance"
+      }
+    },
+    {
+      "args": {},
+      "op": "assign_field_profile",
+      "phase": "expand",
+      "seq": 149,
+      "target": {
+        "profile": "Commission Amounts",
+        "role": "Commission Finance"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "commission",
+  "seq": 2,
+  "title": "Pack: commission roles and pay visibility"
+}

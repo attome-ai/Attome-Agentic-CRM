@@ -29,7 +29,10 @@ limit, payment terms and credit hold on `account` (F5). It builds on crm (`accou
 Sales commissions (F10): `comp_plan` with versions and components (rate tables, tiers, caps, gates),
 `plan_participant`, `comp_period`, `comp_credit` from deals, orders, invoices and payments,
 calculation runs (`comp_run`) with `comp_statement_line`s and `comp_payout`s, adjustments, disputes and
-draws. Every amount, rate and balance is a masked field; the `commission` engine computes them.
+draws; the `commission` engine computes the amounts. `0002` adds the Commission Seller (reads only
+what they own), Commission Manager (their team), Sales Ops and Commission Finance (all) roles, and
+makes every amount, cap and balance sensitive behind the Commission Amounts field profile those
+roles hold, so search, reports and query execution mask pay for everyone else.
 
 ## marketing
 
