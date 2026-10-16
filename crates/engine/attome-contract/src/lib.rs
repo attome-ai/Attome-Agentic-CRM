@@ -6,6 +6,7 @@
 //! it. Gated on the `contract` module.
 
 pub mod amendment;
+pub mod counterparty;
 pub mod dates;
 pub mod model;
 
@@ -16,7 +17,7 @@ pub use model::ContractModel;
 pub const ADVISORY_LOCK_NAMESPACE: i32 = 40;
 
 /// This crate's slice of the workspace OpenAPI document, merged in by
-/// `attome::openapi::document()`. Empty until the first route lands.
+/// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    utoipa::openapi::OpenApiBuilder::new().build()
+    <counterparty::ApiDocFragment as utoipa::OpenApi>::openapi()
 }

@@ -158,6 +158,10 @@ const UNGATED_BY_DESIGN: &[(&str, &str)] = &[
         "attome-contract claims it through EngineModel::owned_entities at runtime",
     ),
     (
+        "counterparty_match_proposal",
+        "attome-contract claims it through EngineModel::owned_entities at runtime",
+    ),
+    (
         "contract_comparison",
         "attome-contract claims it through EngineModel::owned_entities at runtime",
     ),

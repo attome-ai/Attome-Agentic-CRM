@@ -1672,6 +1672,11 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             request("DELETE", "/api/v1/admin/slo/targets/S2", t, None)
         }
 
+        // ── contract counterparty matching (W1-T3) ──────────────────────────
+        "POST /api/v1/contract/counterparty-match/run" => {
+            request("POST", "/api/v1/contract/counterparty-match/run", t, None)
+        }
+
         // ── metrics (D-786) ─────────────────────────────────────────────────
         "POST /api/v1/metrics/{id}/compute" => {
             let id = query_metric(fx).await;

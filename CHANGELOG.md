@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Counterparty matching for contracts: `POST /api/v1/contract/counterparty-match/run` (administrators)
+  queues a job that proposes an account for each contract naming its counterparty only as text
+  (Arabic spelling variants folded, exact name then whole-word prefix); `POST
+  /api/v1/contract/counterparty-proposals/{id}/decide` confirms (setting the contract's account) or
+  dismisses a proposal, with the new `contract.counterparty_confirm` privilege.
 - Contract key dates run nightly: each active contract's notice deadline is kept current, a
   "Renew, renegotiate or terminate" task opens for its owner 30 days before it, obligation owners
   are reminded 7 days before a due date, overdue obligations go to the contract owner, and a

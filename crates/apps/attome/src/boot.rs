@@ -1087,6 +1087,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-grc-regulatory-change",
         // B16-T7: scan-action bindings (code pattern to action).
         "attome-scan",
+        // W1-T3: counterparty match proposals.
+        "attome-contract-counterparty",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }

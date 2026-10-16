@@ -402,6 +402,10 @@ pub enum EngineJob {
     /// tasks, obligation reminders and escalations, recurring obligations).
     /// Bare unit variant; the handler reads the tables as they are now.
     ContractKeyDates,
+    /// W1-T3: proposes accounts for contracts that name their counterparty
+    /// only as text. Enqueued on demand by an administrator; bare unit
+    /// variant.
+    ContractCounterpartyMatch,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -840,6 +844,7 @@ impl EngineJob {
             | Self::BinDeleteAlertSweep
             | Self::TagExpirySweep
             | Self::ContractKeyDates
+            | Self::ContractCounterpartyMatch
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -925,6 +930,7 @@ impl EngineJob {
             EngineJob::BinDeleteAlertSweep => "BinDeleteAlertSweep",
             EngineJob::TagExpirySweep => "TagExpirySweep",
             EngineJob::ContractKeyDates => "ContractKeyDates",
+            EngineJob::ContractCounterpartyMatch => "ContractCounterpartyMatch",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1022,6 +1028,7 @@ impl EngineJob {
             | Self::BinDeleteAlertSweep
             | Self::TagExpirySweep
             | Self::ContractKeyDates
+            | Self::ContractCounterpartyMatch
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1132,6 +1139,7 @@ impl EngineJob {
             | Self::BinDeleteAlertSweep
             | Self::TagExpirySweep
             | Self::ContractKeyDates
+            | Self::ContractCounterpartyMatch
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1458,6 +1466,7 @@ mod tests {
         assert_round_trips(EngineJob::BinDeleteAlertSweep);
         assert_round_trips(EngineJob::TagExpirySweep);
         assert_round_trips(EngineJob::ContractKeyDates);
+        assert_round_trips(EngineJob::ContractCounterpartyMatch);
     }
 
     #[test]

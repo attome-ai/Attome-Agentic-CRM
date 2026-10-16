@@ -201,6 +201,7 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
     [contractManagement, [
       'amendment', 'clause', 'contract', 'obligation',
       'contract_playbook_rule', 'contract_version', 'contract_comparison', 'contract_import',
+      'counterparty_match_proposal',
     ]],
     [crm, ['account', 'activity', 'contact', 'lead', 'opportunity']],
     [customerService, ['customer']],

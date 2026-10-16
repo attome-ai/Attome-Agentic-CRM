@@ -7,6 +7,7 @@ import { ContractPlaybookRuleFormComponent } from './forms/contract-playbook-rul
 import { ContractVersionFormComponent } from './forms/contract-version-form/contract-version-form.component';
 import { ContractComparisonFormComponent } from './forms/contract-comparison-form/contract-comparison-form.component';
 import { ContractImportFormComponent } from './forms/contract-import-form/contract-import-form.component';
+import { CounterpartyMatchProposalFormComponent } from './forms/counterparty-match-proposal-form/counterparty-match-proposal-form.component';
 
 // The contract-management vertical's entity forms (verticals/contract-management/bundle.json).
 // SYSTEM-CHANGES.md Topic 14: every entity has its own form in code; these are
@@ -25,4 +26,5 @@ export function registerContractManagementEntityForms(registry: EntityRouteRegis
   registry.register('contract_version', { formComponent: ContractVersionFormComponent });
   registry.register('contract_comparison', { formComponent: ContractComparisonFormComponent });
   registry.register('contract_import', { formComponent: ContractImportFormComponent });
+  registry.register('counterparty_match_proposal', { formComponent: CounterpartyMatchProposalFormComponent });
 }

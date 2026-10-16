@@ -23,6 +23,7 @@ attome-security.workspace = true
 attome-server.workspace   = true
 attome-storage.workspace  = true
 attome-testkit            = { workspace = true, features = ["app-config"] }
+attome-types.workspace    = true
 axum.workspace            = true
 chrono.workspace          = true
 serde_json.workspace      = true

@@ -711,14 +711,19 @@ dependencies = [
 name = "attome-contract"
 version = "0.1.0"
 dependencies = [
+ "attome-audit",
  "attome-config",
  "attome-core",
  "attome-db",
+ "attome-jobs",
  "attome-modules",
  "attome-notification",
+ "attome-rules",
+ "attome-server",
  "attome-types",
  "axum",
  "chrono",
+ "serde",
  "serde_json",
  "sqlx",
  "tracing",
@@ -1766,6 +1771,7 @@ dependencies = [
  "attome-server",
  "attome-storage",
  "attome-testkit",
+ "attome-types",
  "axum",
  "chrono",
  "serde_json",

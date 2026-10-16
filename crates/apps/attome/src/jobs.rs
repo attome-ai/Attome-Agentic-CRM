@@ -930,6 +930,15 @@ async fn dispatch_platform_job(
         }
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.
+        // W1-T3: counterparty match proposals, on demand.
+        EngineJob::ContractCounterpartyMatch => {
+            let run = attome_contract::counterparty::run_match(&db).await?;
+            tracing::info!(
+                contracts = run.contracts_seen,
+                proposals = run.proposals,
+                "contract counterparty match: run finished"
+            );
+        }
         // W1-T4: contract key dates, nightly.
         EngineJob::ContractKeyDates => {
             let run = attome_contract::dates::run(

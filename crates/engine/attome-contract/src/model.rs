@@ -1,7 +1,7 @@
 //! `EngineModel` registration: mounted only when the `contract` module is on.
 use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_CONTRACT, ModuleId};
-use axum::Router;
+use axum::{Router, routing::post};
 
 /// Registered in `attome::boot::register_engines`.
 #[derive(Debug)]
@@ -23,10 +23,20 @@ impl EngineModel for ContractModel {
             "contract_comparison",
             "contract_import",
             "contract_playbook_rule",
+            // `platform-bundles/attome-contract-counterparty.json`.
+            "counterparty_match_proposal",
         ]
     }
 
     fn routes(&self) -> Router<EngineState> {
         Router::new()
+            .route(
+                "/api/v1/contract/counterparty-proposals/{id}/decide",
+                post(crate::counterparty::post_decide),
+            )
+            .route(
+                "/api/v1/contract/counterparty-match/run",
+                post(crate::counterparty::post_run),
+            )
     }
 }

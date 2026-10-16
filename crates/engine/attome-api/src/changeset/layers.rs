@@ -183,6 +183,10 @@ pub const PLATFORM_BUNDLES: &[(&str, &str)] = &[
         include_str!("../../../../../platform-bundles/attome-contract.json"),
     ),
     (
+        "attome-contract-counterparty",
+        include_str!("../../../../../platform-bundles/attome-contract-counterparty.json"),
+    ),
+    (
         "attome-dashboard",
         include_str!("../../../../../platform-bundles/attome-dashboard.json"),
     ),
