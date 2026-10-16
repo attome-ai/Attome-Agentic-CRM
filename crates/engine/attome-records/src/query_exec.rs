@@ -1300,6 +1300,73 @@ pub async fn execute_stored_query(
     execute_stored_query_with_definition(state, ctx, body, None).await
 }
 
+/// E7-T3: page size for the id-only reads below.
+const ID_PAGE_SIZE: i64 = 200;
+
+/// E7-T3: the record ids a stored query returns to `ctx`, through the very
+/// same path as [`execute_stored_query`] (pinned version, privilege gate,
+/// record scoping, read-only pool, statement timeout) with only the `id`
+/// column selected, paged to the end or to `limit`. `restrict_to` keeps only
+/// the given ids. A query without an `id` column is refused by the column
+/// check that `select` already runs.
+pub async fn execute_stored_query_ids(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    query_id: Uuid,
+    restrict_to: Option<&[Uuid]>,
+    limit: Option<i64>,
+) -> Result<Vec<Uuid>, AppError> {
+    let keep: Option<std::collections::HashSet<Uuid>> =
+        restrict_to.map(|ids| ids.iter().copied().collect());
+    let cap = usize::try_from(limit.unwrap_or(i64::MAX).max(0)).unwrap_or(usize::MAX);
+    let mut out = Vec::new();
+    let mut after: Option<Uuid> = None;
+    let mut page = 1;
+    loop {
+        let mut request =
+            ExecuteQueryRequest::for_published_widget(query_id, None, ID_PAGE_SIZE, Vec::new());
+        request.select = Some(vec!["id".to_owned()]);
+        request.after_id = after;
+        request.page = page;
+        let response = execute_stored_query(state, ctx, request).await?;
+        let rows = response.data.records.len() as i64;
+        for record in &response.data.records {
+            let Some(id) = record
+                .get("id")
+                .and_then(Value::as_str)
+                .and_then(|s| Uuid::parse_str(s).ok())
+            else {
+                continue;
+            };
+            if keep.as_ref().is_none_or(|k| k.contains(&id)) {
+                out.push(id);
+                if out.len() >= cap {
+                    return Ok(out);
+                }
+            }
+        }
+        match response.data.next_cursor {
+            Some(cursor) => after = Some(cursor),
+            None if after.is_none() && rows == ID_PAGE_SIZE => page += 1,
+            None => break,
+        }
+    }
+    Ok(out)
+}
+
+/// E7-T3: how many rows the stored query returns to `ctx`: the exact count,
+/// or the planner's estimate once the set is too large to count.
+pub async fn estimate_stored_query_rows(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    query_id: Uuid,
+) -> Result<i64, AppError> {
+    let mut request = ExecuteQueryRequest::for_published_widget(query_id, None, 1, Vec::new());
+    request.include_total = true;
+    let response = execute_stored_query(state, ctx, request).await?;
+    Ok(response.data.total.unwrap_or(0))
+}
+
 /// D-543 — the definition a published dashboard captured at publish, replacing
 /// the parts of a query/view that execution would otherwise read live. Built
 /// server-side from a published snapshot; never accepted from a client
