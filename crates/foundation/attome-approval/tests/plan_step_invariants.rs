@@ -84,6 +84,7 @@ fn n_of_m_plan(n: i32, approvers: usize) -> ApprovalPlan {
             approvers: (0..approvers).map(|i| format!("user:{i}")).collect(),
             sla_minutes: Some(60),
             on_timeout: OnTimeout::Escalate,
+            extras: Default::default(),
         }],
     }
 }

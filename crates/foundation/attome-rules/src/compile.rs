@@ -218,11 +218,23 @@ mod tests {
         let schema = Schema::new()
             .with_field("amount", Type::Number)
             .with_field("name", Type::Text);
-        let diagnostic = compile_inner("amount + name", &schema, Budgets::default()).unwrap_err();
+        let diagnostic = compile_inner(
+            "amount + name",
+            &schema,
+            crate::LanguageVersion::V1,
+            Budgets::default(),
+        )
+        .unwrap_err();
         assert!(matches!(diagnostic.error, RulesError::Type(_)));
         assert_eq!(diagnostic.span, Some((0, 13)));
 
-        let diagnostic = compile_inner("nope(1)", &schema, Budgets::default()).unwrap_err();
+        let diagnostic = compile_inner(
+            "nope(1)",
+            &schema,
+            crate::LanguageVersion::V1,
+            Budgets::default(),
+        )
+        .unwrap_err();
         assert!(matches!(diagnostic.error, RulesError::UnknownFunction(_)));
         assert_eq!(diagnostic.span, Some((0, 4)));
     }
