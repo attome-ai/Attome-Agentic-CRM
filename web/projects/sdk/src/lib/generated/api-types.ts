@@ -5404,6 +5404,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/security/mfa/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["mfa_coverage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/security/mfa/coverage/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["mfa_coverage_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/security/organizations": {
         parameters: {
             query?: never;
@@ -17949,6 +17981,40 @@ export interface components {
             request_id: string;
         };
         /**
+         * @description Every `error` code the API answers with.
+         *
+         *     `not_found`: No such resource, or the caller may not see it.
+         *     `unauthorized`: Missing or invalid credentials.
+         *     `forbidden`: The caller lacks the privilege for this action.
+         *     `attribute_not_writable`: The write sets an attribute the caller may not write; `field` names it.
+         *     `conflict`: The request conflicts with the current state.
+         *     `version_conflict`: The record changed since the caller read it; read it again and retry.
+         *     `duplicate_detected`: The save matches existing records under a blocking duplicate rule.
+         *     `idempotency_conflict`: The idempotency key was used for a different request.
+         *     `validation_error`: The request failed validation.
+         *     `rule_violation`: A business rule refused the write; `rule_id` names it.
+         *     `field_locked`: A business rule locks a field the write changed.
+         *     `field_locked_required`: A locked field is required and was left empty.
+         *     `feature_unavailable`: The feature is not available on this deployment.
+         *     `feature_hidden`: The feature is switched off for this deployment.
+         *     `rate_limit_exceeded` (retryable): Too many requests; wait for `Retry-After`.
+         *     `overloaded` (retryable): The server is overloaded; retry shortly.
+         *     `capability_unavailable` (retryable): A service the request needs is down; retry after `Retry-After`.
+         *     `metadata_authoring_locked`: Metadata changes are locked on this deployment.
+         *     `transition_not_allowed`: The state model does not allow this change of state.
+         *     `reauth_required`: The action needs a fresh sign-in or second factor first.
+         *     `server_timeout` (retryable): The request took too long; it may be retried.
+         *     `query_timeout`: An interactive query ran past its limit; run it as an export.
+         *     `read_only` (retryable): Changes are paused on this deployment; reads still work.
+         *     `payload_too_large`: The request body is too large or too deeply nested.
+         *     `idempotency_outcome_unknown`: An earlier attempt with this key did not finish; its outcome is unknown.
+         *     `idempotency_replay_unavailable`: The stored response for this key can no longer be replayed.
+         *     `method_not_allowed`: The path exists but not for this method; see `Allow`.
+         *     `internal_error` (retryable): An unexpected error; the request id finds it in the logs.
+         * @enum {string}
+         */
+        ErrorCode: "not_found" | "unauthorized" | "forbidden" | "attribute_not_writable" | "conflict" | "version_conflict" | "duplicate_detected" | "idempotency_conflict" | "validation_error" | "rule_violation" | "field_locked" | "field_locked_required" | "feature_unavailable" | "feature_hidden" | "rate_limit_exceeded" | "overloaded" | "capability_unavailable" | "metadata_authoring_locked" | "transition_not_allowed" | "reauth_required" | "server_timeout" | "query_timeout" | "read_only" | "payload_too_large" | "idempotency_outcome_unknown" | "idempotency_replay_unavailable" | "method_not_allowed" | "internal_error";
+        /**
          * @description `ErrorResponse.details`: its shape depends on the `error` code —
          *     a list of [`FieldError`] on `validation_error`, [`RuleViolationDetails`] on
          *     `rule_violation`, [`FieldLockedDetails`] on `field_locked` and
@@ -20048,6 +20114,35 @@ export interface components {
             threshold_crit?: number | null;
             /** Format: double */
             threshold_warn?: number | null;
+        };
+        /** @description One active account's second factors. */
+        MfaCoverageRow: {
+            /** @description An administrator with no phishing-resistant factor (a passkey). */
+            admin_missing_phishing_resistant: boolean;
+            email?: string | null;
+            /**
+             * @description `totp`, `recovery` (unused recovery codes left); `passkey` when
+             *     passkeys exist.
+             */
+            factors: string[];
+            is_admin: boolean;
+            /** @description The names of the account's roles. */
+            roles: string[];
+            /** Format: uuid */
+            user_id: string;
+        };
+        /** @description One role's coverage. */
+        MfaCoverageSummary: {
+            /** @description The role's name; absent for accounts with no role. */
+            role?: string | null;
+            /** Format: uuid */
+            role_id?: string | null;
+            /** Format: int64 */
+            users: number;
+            /** Format: int64 */
+            with_totp: number;
+            /** Format: int64 */
+            without_mfa: number;
         };
         MfaEnrollment: {
             /** @description `otpauth://` URI, for a QR code. */
@@ -22720,6 +22815,30 @@ export interface components {
                 at: string;
                 /** Format: double */
                 value: number;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_MfaCoverageRow: {
+            items: {
+                /** @description An administrator with no phishing-resistant factor (a passkey). */
+                admin_missing_phishing_resistant: boolean;
+                email?: string | null;
+                /**
+                 * @description `totp`, `recovery` (unused recovery codes left); `passkey` when
+                 *     passkeys exist.
+                 */
+                factors: string[];
+                is_admin: boolean;
+                /** @description The names of the account's roles. */
+                roles: string[];
+                /** Format: uuid */
+                user_id: string;
             }[];
             /** Format: int64 */
             page: number;
@@ -48447,6 +48566,87 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    mfa_coverage: {
+        parameters: {
+            query?: {
+                /** @description Only members of this role. */
+                role_id?: string;
+                /** @description Only accounts with no second factor at all. */
+                missing_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Active accounts with their second factors, administrators first (at most 500) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_MfaCoverageRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    mfa_coverage_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Per role: active members, with a TOTP app, without any second factor */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MfaCoverageSummary"][];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks the required privilege */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
