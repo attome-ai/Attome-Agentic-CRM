@@ -11113,7 +11113,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["move_instance"];
+        post: operations["workflow_instance_move"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11127,7 +11127,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["move_preview"];
+        get: operations["workflow_instance_move_preview"];
         put?: never;
         post?: never;
         delete?: never;
@@ -11145,7 +11145,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["pause_instance"];
+        post: operations["workflow_instance_pause"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11161,7 +11161,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["resume_instance"];
+        post: operations["workflow_instance_resume"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11177,7 +11177,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["retry_instance"];
+        post: operations["workflow_instance_retry"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18432,6 +18432,13 @@ export interface components {
              *     place. Not with `after_id` (422).
              */
             seek?: unknown;
+            /**
+             * @description S1-T1: the attributes to return, in this order; `id` is always
+             *     included. Absent returns the query's full column list. A name the
+             *     query does not return, or one the caller may not read, is the same
+             *     422 `unknown attribute`.
+             */
+            select?: string[] | null;
             /**
              * Format: uuid
              * @description Direct list/view selection. The view resolves to its referenced SQL query.
@@ -67188,7 +67195,7 @@ export interface operations {
             };
         };
     };
-    move_instance: {
+    workflow_instance_move: {
         parameters: {
             query?: never;
             header?: never;
@@ -67259,7 +67266,7 @@ export interface operations {
             };
         };
     };
-    move_preview: {
+    workflow_instance_move_preview: {
         parameters: {
             query: {
                 target_version_id: string;
@@ -67319,7 +67326,7 @@ export interface operations {
             };
         };
     };
-    pause_instance: {
+    workflow_instance_pause: {
         parameters: {
             query?: never;
             header?: never;
@@ -67372,7 +67379,7 @@ export interface operations {
             };
         };
     };
-    resume_instance: {
+    workflow_instance_resume: {
         parameters: {
             query?: never;
             header?: never;
@@ -67425,7 +67432,7 @@ export interface operations {
             };
         };
     };
-    retry_instance: {
+    workflow_instance_retry: {
         parameters: {
             query?: never;
             header?: never;

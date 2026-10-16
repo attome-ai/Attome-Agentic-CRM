@@ -56855,7 +56855,7 @@
         "tags": [
           "workflow"
         ],
-        "operationId": "move_instance",
+        "operationId": "workflow_instance_move",
         "parameters": [
           {
             "name": "id",
@@ -56963,7 +56963,7 @@
         "tags": [
           "workflow"
         ],
-        "operationId": "move_preview",
+        "operationId": "workflow_instance_move_preview",
         "parameters": [
           {
             "name": "id",
@@ -57051,7 +57051,7 @@
         "tags": [
           "workflow"
         ],
-        "operationId": "pause_instance",
+        "operationId": "workflow_instance_pause",
         "parameters": [
           {
             "name": "id",
@@ -57139,7 +57139,7 @@
         "tags": [
           "workflow"
         ],
-        "operationId": "resume_instance",
+        "operationId": "workflow_instance_resume",
         "parameters": [
           {
             "name": "id",
@@ -57227,7 +57227,7 @@
         "tags": [
           "workflow"
         ],
-        "operationId": "retry_instance",
+        "operationId": "workflow_instance_retry",
         "parameters": [
           {
             "name": "id",
@@ -79933,6 +79933,16 @@
           },
           "seek": {
             "description": "AA4-T4: start a keyset page at this sort value (\"jump to M\", \"jump\nto March\"): the first page holds the rows whose `order_by` value is\nat or after it (at or before it for `desc`), with a `next_cursor` as\nusual. Coerced and bound like a filter value on the sort column, so a\nvalue of the wrong type is a 422; no rows are counted to find the\nplace. Not with `after_id` (422)."
+          },
+          "select": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "S1-T1: the attributes to return, in this order; `id` is always\nincluded. Absent returns the query's full column list. A name the\nquery does not return, or one the caller may not read, is the same\n422 `unknown attribute`."
           },
           "view_id": {
             "type": [
