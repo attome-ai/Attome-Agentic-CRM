@@ -422,3 +422,80 @@ async fn every_operation_the_check_constraint_allows_can_actually_be_written() {
          round-trip through the feed"
     );
 }
+
+/// Y7-T4: a rewound consumer reads its events again, and the apply-once set
+/// stops it applying any of them twice.
+#[tokio::test]
+async fn a_rewound_consumer_rereads_and_applies_each_event_once() {
+    let _serial = serialize().await;
+    let db = skip_if_no_db!(test_db().await);
+    let consumer = consumer_name("rewind");
+    let entity = entity_name();
+    let first = Uuid::now_v7();
+    emit_committed(&db, &entity, first, ChangeOperation::Create).await;
+    emit_committed(&db, &entity, Uuid::now_v7(), ChangeOperation::Update).await;
+
+    // Apply as a consumer does: claim, then work, in one transaction.
+    let apply_all = |db: DbPool, consumer: String, entity: String| async move {
+        let mut conn = db.acquire().await.expect("acquire");
+        let mut applied = 0;
+        loop {
+            let batch = change_feed::read_batch(&mut conn, &consumer, 100)
+                .await
+                .expect("read");
+            if batch.is_empty() {
+                break;
+            }
+            for event in &batch {
+                if event.entity_logicalname == entity
+                    && change_feed::claim_apply(&mut conn, &consumer, event.id)
+                        .await
+                        .expect("claim")
+                {
+                    applied += 1;
+                }
+                change_feed::advance(&mut conn, &consumer, event)
+                    .await
+                    .expect("advance");
+            }
+        }
+        applied
+    };
+    let deadline = std::time::Instant::now() + DRAIN_TIMEOUT;
+    let mut applied = 0;
+    while applied < 2 && std::time::Instant::now() < deadline {
+        applied += apply_all(db.clone(), consumer.clone(), entity.clone()).await;
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+    assert_eq!(applied, 2, "both events are applied once");
+
+    let seq: i64 = sqlx::query_scalar("SELECT seq FROM entity_change_event WHERE record_id = $1")
+        .bind(first)
+        .fetch_one(&db)
+        .await
+        .expect("read seq");
+    let mut conn = db.acquire().await.expect("acquire");
+    change_feed::rewind(&mut conn, &consumer, change_feed::RewindTo::Seq(seq))
+        .await
+        .expect("rewind");
+    drop(conn);
+    let reread = drain_at_least(&db, &consumer, &entity, 2).await;
+    assert_eq!(reread.len(), 2, "the rewound consumer reads both again");
+    let mut conn = db.acquire().await.expect("acquire");
+    let rows: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM change_consumer_applied WHERE consumer = $1")
+            .bind(&consumer)
+            .fetch_one(&mut *conn)
+            .await
+            .expect("count applied");
+    assert_eq!(rows, 2, "nothing was applied twice");
+    assert!(matches!(
+        change_feed::rewind(
+            &mut conn,
+            "no-such-consumer",
+            change_feed::RewindTo::Seq(seq)
+        )
+        .await,
+        Err(attome_types::AppError::NotFound)
+    ));
+}
