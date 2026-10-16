@@ -925,16 +925,86 @@ async fn list_consumers(
     )))
 }
 
+/// Y7-T4: where to rewind a consumer to; exactly one of the two.
+#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
+pub struct RewindBody {
+    /// The first event at or after this sequence number.
+    pub to_seq: Option<i64>,
+    /// The first event written at or after this time.
+    pub to_time: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+/// Y7-T4: moves a consumer back so it reads the feed again from a sequence
+/// number or a time, within what the feed still holds. A consumer applies
+/// each event once, so what it already applied is skipped.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/change-feed/consumers/{name}/rewind",
+    tag = "admin",
+    params(("name" = String, Path, description = "The consumer's name")),
+    request_body = RewindBody,
+    extensions(("x-audit" = serde_json::json!(attome_audit::security::x_audit(&[(attome_audit::AuditCategory::Configuration, attome_audit::AuditOperation::Update)])))),
+    responses(
+        (status = 204, description = "The consumer reads again from that point"),
+        (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
+        (status = 403, description = "Caller lacks the required privilege", body = ErrorResponse),
+        (status = 404, description = "No such consumer", body = ErrorResponse),
+        (status = 422, description = "Neither or both points given, or the feed no longer holds that point", body = ErrorResponse),
+    ),
+    security(("session_cookie" = []), ("api_key" = [])),
+)]
+async fn rewind_consumer(
+    State(state): State<EngineState>,
+    ctx: Authorized<Admin>,
+    axum::extract::Path(name): axum::extract::Path<String>,
+    Json(body): Json<RewindBody>,
+) -> Result<axum::http::StatusCode, AppError> {
+    let to = match (body.to_seq, body.to_time) {
+        (Some(seq), None) => attome_core::change_feed::RewindTo::Seq(seq),
+        (None, Some(at)) => attome_core::change_feed::RewindTo::Time(at),
+        _ => {
+            return Err(AppError::Validation(
+                "give exactly one of to_seq and to_time".into(),
+            ));
+        }
+    };
+    let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    attome_core::change_feed::rewind(&mut tx, &name, to).await?;
+    attome_audit::security::write_security_event(
+        &mut tx,
+        &attome_audit::audit_service(&state),
+        attome_audit::security::SecurityEvent::new(
+            attome_audit::security::MandatoryCategory::Configuration,
+            attome_audit::AuditOperation::Update,
+            ctx.user_id,
+            "change_consumer_cursor",
+            None,
+        )
+        .named("change_feed.consumer_rewind"),
+    )
+    .await?;
+    tx.commit().await.map_err(AppError::internal)?;
+    tracing::info!(consumer = %name, ?to, "change feed: consumer rewound");
+    Ok(axum::http::StatusCode::NO_CONTENT)
+}
+
 pub fn routes() -> Router<EngineState> {
     Router::new()
         .route("/api/v1/admin/changes", get(list_changes))
         .route("/api/v1/admin/change-feed/consumers", get(list_consumers))
+        .route(
+            "/api/v1/admin/change-feed/consumers/{name}/rewind",
+            axum::routing::post(rewind_consumer),
+        )
 }
 
 /// P-api-contract Phase 1 — this file's slice of the workspace OpenAPI
 /// document; merged in by `crate::openapi()`.
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(list_changes, list_consumers))]
+#[openapi(
+    paths(list_changes, list_consumers, rewind_consumer),
+    components(schemas(RewindBody))
+)]
 struct ApiDocFragment;
 
 pub(crate) fn openapi_fragment() -> utoipa::openapi::OpenApi {

@@ -28,6 +28,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/admin/change-feed/consumers/{name}/rewind` moves a change-feed consumer back to a
+  sequence number or a time within retention (audited); consumers record applied events
+  (`change_consumer_applied`) so a re-read event is never applied twice.
 - The change-event outbox carries what changed: `changed_attributes`, `before` / `after` values
   (a sensitive field as `{"ref": true}`) and a global `seq`, written by create, update, delete and
   restore. Workflows can start on `delete`, `restore` and `merge`, and an `update` trigger may list

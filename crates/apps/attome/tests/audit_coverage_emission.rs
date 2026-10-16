@@ -4267,6 +4267,34 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                 None,
             )
         }
+        "POST /api/v1/admin/change-feed/consumers/{name}/rewind" => {
+            // A consumer exists once it first reads; seed one, and an event
+            // to rewind to.
+            let consumer = uniq("rewind-consumer");
+            sqlx::query("INSERT INTO change_consumer_cursor (consumer) VALUES ($1)")
+                .bind(&consumer)
+                .execute(&fx.base.db)
+                .await
+                .expect("seed consumer");
+            sqlx::query(
+                "INSERT INTO entity_change_event (entity_logicalname, record_id, operation) \
+                 VALUES ('rewind_probe', $1, 'create')",
+            )
+            .bind(Uuid::now_v7())
+            .execute(&fx.base.db)
+            .await
+            .expect("seed event");
+            let seq: i64 = sqlx::query_scalar("SELECT max(seq) FROM entity_change_event")
+                .fetch_one(&fx.base.db)
+                .await
+                .expect("read seq");
+            request(
+                "POST",
+                &format!("/api/v1/admin/change-feed/consumers/{consumer}/rewind"),
+                t,
+                Some(json!({"to_seq": seq})),
+            )
+        }
         "POST /api/v1/workflow/instances" => {
             let logicalname = published_workflow(fx).await;
             request(

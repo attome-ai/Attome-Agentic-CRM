@@ -399,6 +399,100 @@ pub async fn advance(
     Ok(())
 }
 
+/// Y7-T4: where to move a consumer's cursor back to.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum RewindTo {
+    /// The first event at or after this global sequence number.
+    Seq(i64),
+    /// The first event written at or after this time.
+    Time(chrono::DateTime<chrono::Utc>),
+}
+
+/// Y7-T4: moves `consumer`'s cursor back so it reads again from `to`, within
+/// what the feed still holds. `NotFound` for an unknown consumer;
+/// `Validation` when the feed no longer holds events from that point (they
+/// were pruned) or holds none after it. An expired consumer becomes active
+/// again. Consumers apply idempotently ([`claim_apply`]), so reading an
+/// event again never applies it twice.
+pub async fn rewind(conn: &mut PgConnection, consumer: &str, to: RewindTo) -> Result<(), AppError> {
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM change_consumer_cursor WHERE consumer = $1)",
+    )
+    .bind(consumer)
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    if !exists {
+        return Err(AppError::NotFound);
+    }
+    let (oldest_seq, oldest_at): (Option<i64>, Option<chrono::DateTime<chrono::Utc>>) =
+        sqlx::query_as("SELECT min(seq), min(created_at) FROM entity_change_event")
+            .fetch_one(&mut *conn)
+            .await
+            .map_err(AppError::internal)?;
+    let retained = match to {
+        RewindTo::Seq(seq) => oldest_seq.is_some_and(|o| o <= seq),
+        RewindTo::Time(at) => oldest_at.is_some_and(|o| o <= at),
+    };
+    if !retained {
+        return Err(AppError::Validation(
+            "the change feed no longer holds events from that point".into(),
+        ));
+    }
+    let first: Option<i64> = match to {
+        RewindTo::Seq(seq) => sqlx::query_scalar(
+            "SELECT min(commit_xid::text::bigint) FROM entity_change_event WHERE seq >= $1",
+        )
+        .bind(seq),
+        RewindTo::Time(at) => sqlx::query_scalar(
+            "SELECT min(commit_xid::text::bigint) FROM entity_change_event WHERE created_at >= $1",
+        )
+        .bind(at),
+    }
+    .fetch_one(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    let Some(first) = first else {
+        return Err(AppError::Validation(
+            "the change feed holds no events after that point".into(),
+        ));
+    };
+    sqlx::query(
+        "UPDATE change_consumer_cursor \
+            SET last_commit_xid = ($2 - 1)::text::xid8, last_id = NULL, \
+                status = 'active', expired_at = NULL, updated_at = NOW() \
+          WHERE consumer = $1",
+    )
+    .bind(consumer)
+    .bind(first)
+    .execute(&mut *conn)
+    .await
+    .map_err(AppError::internal)?;
+    Ok(())
+}
+
+/// Y7-T4: records that `consumer` applies `event_id`, in the consumer's own
+/// transaction. `false` when it already did: skip the event. A crash after
+/// the work commits but before the cursor advances re-reads the event and
+/// finds it claimed.
+pub async fn claim_apply(
+    conn: &mut PgConnection,
+    consumer: &str,
+    event_id: Uuid,
+) -> Result<bool, AppError> {
+    let inserted = sqlx::query(
+        "INSERT INTO change_consumer_applied (consumer, event_id) VALUES ($1, $2) \
+         ON CONFLICT DO NOTHING",
+    )
+    .bind(consumer)
+    .bind(event_id)
+    .execute(conn)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected();
+    Ok(inserted == 1)
+}
+
 /// M01 §7 C-04 — rows deleted per `DELETE` inside one batch of [`prune`]'s
 /// loop. A first-ever run against years of unpruned history (D-358 shipped
 /// with no caller — see that item) can be an arbitrarily large backlog;
