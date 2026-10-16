@@ -32,6 +32,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Timers (migration `0094`): one `timer` table for every point in time the platform waits for, with a
+  sweep every 15 seconds that claims due timers once (`SKIP LOCKED`) and runs each as its own job.
 - Consent ledger (migration `0093`): every marketing consent grant and withdrawal is an insert-only
   event with its proof, and the current state per person or account, purpose and channel is kept in
   the same transaction; the send gate allows a message only with a grant in force and no account-wide

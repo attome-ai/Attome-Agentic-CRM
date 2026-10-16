@@ -153,6 +153,7 @@ pub mod state;
 pub mod state_registry;
 pub mod theme_store;
 pub mod theme_tokens;
+pub mod timer;
 pub mod transfer_gate;
 /// C5 (chatbot plan) — the `WorkflowStarter` seam `attome-ai`'s `workflow.start`
 /// reaches `attome-workflow` through without a dependency cycle.

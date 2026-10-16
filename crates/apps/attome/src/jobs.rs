@@ -930,6 +930,29 @@ async fn dispatch_platform_job(
         }
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.
+        // M10-T1: due timers become one job each.
+        EngineJob::TimerSweep => {
+            let mut conn = db.acquire().await?;
+            let claimed = attome_core::timer::claim_due(&mut conn, chrono::Utc::now()).await?;
+            drop(conn);
+            for timer in &claimed {
+                attome_jobs::enqueue_on_pool(&db, EngineJob::TimerFire { timer_id: timer.id })
+                    .await?;
+            }
+            if !claimed.is_empty() {
+                tracing::info!(fired = claimed.len(), "timers: due timers queued");
+            }
+        }
+        // M10-T1: one fired timer. No kind has an action yet; each later
+        // feature registers its kind here.
+        EngineJob::TimerFire { timer_id } => {
+            let mut conn = db.acquire().await?;
+            if let Some(timer) = attome_core::timer::load(&mut conn, timer_id).await? {
+                let error = format!("no action is registered for timer kind {:?}", timer.kind);
+                tracing::warn!(%timer_id, kind = %timer.kind, "timers: no action for this kind");
+                attome_core::timer::settle(&mut conn, timer_id, Some(&error)).await?;
+            }
+        }
         // K6-T3: scheduled recrawls, hourly.
         EngineJob::WebcrawlRecrawlDue => {
             let queued =
@@ -2040,6 +2063,7 @@ const DEDUP_KEY_DEAL_RISK: &str = "deal-risk";
 const DEDUP_KEY_FORECAST_RECOMPUTE: &str = "forecast-recompute";
 const DEDUP_KEY_MRR_SNAPSHOT: &str = "mrr-snapshot";
 const DEDUP_KEY_WEBCRAWL_RECRAWL_DUE: &str = "webcrawl-recrawl-due";
+const DEDUP_KEY_TIMER_SWEEP: &str = "timer-sweep";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2101,6 +2125,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::ForecastRecompute => DEDUP_KEY_FORECAST_RECOMPUTE,
         EngineJob::MrrSnapshot => DEDUP_KEY_MRR_SNAPSHOT,
         EngineJob::WebcrawlRecrawlDue => DEDUP_KEY_WEBCRAWL_RECRAWL_DUE,
+        EngineJob::TimerSweep => DEDUP_KEY_TIMER_SWEEP,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2414,6 +2439,17 @@ pub fn spawn_tag_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
         EngineJob::TagExpirySweep,
         DEDUP_KEY_TAG_EXPIRY,
         "tag expiry",
+    );
+}
+
+/// M10-T1: every 15 seconds, the due timers.
+pub fn spawn_timer_sweep_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::TimerSweep,
+        DEDUP_KEY_TIMER_SWEEP,
+        "timer sweep",
     );
 }
 

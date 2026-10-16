@@ -422,6 +422,12 @@ pub enum EngineJob {
     /// K6-T3: queues a crawl for every website source due on its schedule.
     /// Bare unit variant.
     WebcrawlRecrawlDue,
+    /// M10-T1: claims due timers and queues a `TimerFire` for each. Bare
+    /// unit variant.
+    TimerSweep,
+    /// M10-T1: runs one fired timer's action. Pure pointer; the handler
+    /// reads the timer row.
+    TimerFire { timer_id: Uuid },
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -850,6 +856,7 @@ impl EngineJob {
             | Self::PruneRecoveryArchive
             | Self::RevalidateFieldSecurityProfiles
             | Self::WorkflowExecute { .. }
+            | Self::TimerFire { .. }
             | Self::WorkflowSlaSweep
             | Self::WorkflowEntityTriggerDispatch
             | Self::ComputeMetricSnapshots
@@ -867,6 +874,7 @@ impl EngineJob {
             | Self::ForecastRecompute
             | Self::MrrSnapshot
             | Self::WebcrawlRecrawlDue
+            | Self::TimerSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -959,6 +967,8 @@ impl EngineJob {
             EngineJob::ForecastRecompute => "ForecastRecompute",
             EngineJob::MrrSnapshot => "MrrSnapshot",
             EngineJob::WebcrawlRecrawlDue => "WebcrawlRecrawlDue",
+            EngineJob::TimerSweep => "TimerSweep",
+            EngineJob::TimerFire { .. } => "TimerFire",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1014,6 +1024,7 @@ impl EngineJob {
             Self::SendEmail(_)
             | Self::ScanUploadedFile { .. }
             | Self::WorkflowExecute { .. }
+            | Self::TimerFire { .. }
             | Self::FanOutNotification { .. }
             | Self::BackfillRecipientForNewUser { .. }
             | Self::EventsDeliverWebhook { .. }
@@ -1063,6 +1074,7 @@ impl EngineJob {
             | Self::ForecastRecompute
             | Self::MrrSnapshot
             | Self::WebcrawlRecrawlDue
+            | Self::TimerSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1180,6 +1192,7 @@ impl EngineJob {
             | Self::ForecastRecompute
             | Self::MrrSnapshot
             | Self::WebcrawlRecrawlDue
+            | Self::TimerSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1219,6 +1232,7 @@ impl EngineJob {
             | Self::ApplyStagedImport(_)
             | Self::ScanUploadedFile { .. }
             | Self::WorkflowExecute { .. }
+            | Self::TimerFire { .. }
             | Self::CrawlWebsite { .. }
             | Self::CascadeDeactivateDependents { .. }
             | Self::DataExport(_)
@@ -1513,6 +1527,10 @@ mod tests {
         assert_round_trips(EngineJob::ForecastRecompute);
         assert_round_trips(EngineJob::MrrSnapshot);
         assert_round_trips(EngineJob::WebcrawlRecrawlDue);
+        assert_round_trips(EngineJob::TimerSweep);
+        assert_round_trips(EngineJob::TimerFire {
+            timer_id: Uuid::now_v7(),
+        });
     }
 
     #[test]
