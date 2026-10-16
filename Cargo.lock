@@ -1337,7 +1337,11 @@ dependencies = [
  "attome-core",
  "attome-modules",
  "axum",
+ "chrono",
+ "rust_decimal",
+ "serde",
  "utoipa",
+ "uuid",
 ]
 
 [[package]]

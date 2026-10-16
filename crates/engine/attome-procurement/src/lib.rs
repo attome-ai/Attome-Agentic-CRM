@@ -6,7 +6,9 @@
 //! as later tasks add it (three-way match, approval routing, budget checks).
 //! Gated on the `procurement` module.
 
+pub mod budget;
 pub mod model;
+pub mod scorecard;
 
 pub use model::ProcurementModel;
 
