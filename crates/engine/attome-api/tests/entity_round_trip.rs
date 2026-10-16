@@ -4091,6 +4091,91 @@ fn upsert_by_external_id_and_lookup_by_external_id() {
     })
 }
 
+/// S1-T3: `?select=` narrows `data` on a read and on a write's answer to the
+/// named attributes (the envelope stays), and an unknown name is a 422 that
+/// writes nothing.
+#[test]
+fn get_one_and_patch_with_select_return_named_attributes() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (logicalname, admin_cookie, app) = provision_test_entity(system, "select").await;
+        let send =
+            |method: &str, uri: String, if_match: Option<i64>, body: Option<serde_json::Value>| {
+                let mut req = Request::builder()
+                    .method(method)
+                    .uri(uri)
+                    .header("cookie", &admin_cookie)
+                    .header("content-type", "application/json");
+                if let Some(version) = if_match {
+                    req = req.header("if-match", format!("\"{version}\""));
+                }
+                req.body(body.map_or_else(Body::empty, |b| Body::from(b.to_string())))
+                    .unwrap()
+            };
+        let res = app
+            .clone()
+            .oneshot(send(
+                "POST",
+                format!("/api/v1/{logicalname}?select=title"),
+                None,
+                Some(serde_json::json!({"title": "deal", "amount": 5})),
+            ))
+            .await
+            .expect("create");
+        assert_eq!(res.status(), StatusCode::CREATED);
+        let created = body_json(res).await;
+        let keys: Vec<&String> = created["data"].as_object().expect("data").keys().collect();
+        assert_eq!(keys, vec!["title"], "{created}");
+        let id = created["id"].as_str().expect("id").to_owned();
+        let version = created["row_version"].as_i64().expect("row version");
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "GET",
+                format!("/api/v1/{logicalname}/{id}?select=amount"),
+                None,
+                None,
+            ))
+            .await
+            .expect("get");
+        assert_eq!(res.status(), StatusCode::OK);
+        let got = body_json(res).await;
+        assert_eq!(got["data"], serde_json::json!({"amount": 5}), "{got}");
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "PATCH",
+                format!("/api/v1/{logicalname}/{id}?select=nope"),
+                Some(version),
+                Some(serde_json::json!({"title": "never written"})),
+            ))
+            .await
+            .expect("bad select");
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+        let res = app
+            .clone()
+            .oneshot(send(
+                "PATCH",
+                format!("/api/v1/{logicalname}/{id}?select=title"),
+                Some(version),
+                Some(serde_json::json!({"amount": 7})),
+            ))
+            .await
+            .expect("patch");
+        assert_eq!(res.status(), StatusCode::OK);
+        let patched = body_json(res).await;
+        assert_eq!(
+            patched["data"],
+            serde_json::json!({"title": "deal"}),
+            "{patched}"
+        );
+        assert_eq!(patched["row_version"], version + 1, "{patched}");
+    })
+}
+
 /// Q15-T4: a create-only attribute is set on create and an update that
 /// names it is refused with 403 `attribute_not_writable` naming it, not
 /// silently dropped; the record keeps its value.

@@ -23,6 +23,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `?select=a,b` on `GET /api/v1/{entity}/{id}` and on the answers of create, update and upsert:
+  `data` carries only the named attributes; a name the caller cannot read is a `422`, refused
+  before anything is written.
+- Boot queues an index build for every lookup column that has none, and new text and JSON columns
+  are compressed with lz4 when PostgreSQL offers it.
 - Duplicate rules compare `phone`, `email`, `id`, `name` and `phonetic` keys (Arabic names meet their
   Latin spellings), keep each candidate's per-field scores, and scan a whole table in the background:
   `POST /api/v1/admin/data/match-rules/{id}/scan`, on save, and on `scan_schedule` (`hourly`, `daily`,

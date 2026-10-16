@@ -185,6 +185,7 @@ pub async fn field_changes_from_obj(
     params(
         ("entity" = String, Path),
         ("id" = Uuid, Path),
+        super::response::SelectParam,
     ),
     responses(
         (status = 200, description = "Success"),
@@ -200,8 +201,12 @@ pub(super) async fn get_record(
     // is the record-level half, which needs the database and so cannot move.
     ctx: Authorized<RecordScoped<Read>>,
     Path((entity_input, record_id)): Path<(String, Uuid)>,
+    axum::extract::Query(select): axum::extract::Query<super::response::SelectParam>,
     headers: axum::http::HeaderMap,
 ) -> Result<axum::response::Response, AppError> {
+    let select =
+        super::response::resolve_select(&state, &ctx, &entity_input, select.select.as_deref())
+            .await?;
     let (entity_id, entity_name, attrs, _) = resolve_entity(&state, &entity_input).await?;
     // A polymorphic-audit row (`audit_header`/`audit_detail`/
     // `audit_snapshot`) that resolves to a business record is gated
@@ -286,7 +291,9 @@ pub(super) async fn get_record(
     .fetch_optional(pool)
     .await
     .map_err(AppError::internal)?;
-    let response = response.with_merged_into(merged_into);
+    let response = response
+        .with_merged_into(merged_into)
+        .selected(select.as_deref());
     let etag = row_version_etag(response.row_version);
     Ok((
         StatusCode::OK,
@@ -436,7 +443,7 @@ async fn read_record_for(
     post,
     path = "/api/v1/{entity}",
     tag = "entity",
-    params(("entity" = String, Path)),
+    params(("entity" = String, Path), super::response::SelectParam),
     responses(
         (status = 201, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -452,10 +459,15 @@ pub(super) async fn create_record(
     Extension(claims): Extension<SessionClaims>,
     recording: RecordingCtx,
     Path(entity_input): Path<String>,
+    axum::extract::Query(select): axum::extract::Query<super::response::SelectParam>,
     cookie: Option<Extension<attome_server::middleware::auth::CookieSession>>,
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<axum::response::Response, AppError> {
+    // S1-T3: a bad `select` refuses the request before anything is written.
+    let select =
+        super::response::resolve_select(&state, &ctx, &entity_input, select.select.as_deref())
+            .await?;
     // A29-T4: people may not write a field locked to integrations.
     if let Some(fields) = body.as_object() {
         super::upsert::refuse_integration_only_fields(
@@ -484,7 +496,7 @@ pub(super) async fn create_record(
     Ok(super::response::write_response(
         StatusCode::CREATED,
         super::response::return_pref(&headers),
-        response,
+        response.selected(select.as_deref()),
     ))
 }
 
@@ -1143,10 +1155,15 @@ pub(super) async fn update_record(
     Extension(claims): Extension<SessionClaims>,
     recording: RecordingCtx,
     Path((entity_input, record_id)): Path<(String, Uuid)>,
+    axum::extract::Query(select): axum::extract::Query<super::response::SelectParam>,
     cookie: Option<Extension<attome_server::middleware::auth::CookieSession>>,
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<axum::response::Response, AppError> {
+    // S1-T3: a bad `select` refuses the request before anything is written.
+    let select =
+        super::response::resolve_select(&state, &ctx, &entity_input, select.select.as_deref())
+            .await?;
     // A29-T4: people may not write a field locked to integrations.
     if let Some(fields) = body.as_object() {
         super::upsert::refuse_integration_only_fields(
@@ -1198,7 +1215,7 @@ pub(super) async fn update_record(
     Ok(super::response::write_response(
         StatusCode::OK,
         super::response::return_pref(&headers),
-        response,
+        response.selected(select.as_deref()),
     ))
 }
 

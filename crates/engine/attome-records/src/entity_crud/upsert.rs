@@ -79,7 +79,7 @@ pub(super) struct UpsertQuery {
     post,
     path = "/api/v1/{entity}/upsert",
     tag = "entity",
-    params(("entity" = String, Path), UpsertQuery),
+    params(("entity" = String, Path), UpsertQuery, super::response::SelectParam),
     responses(
         (status = 201, description = "Success. With `Prefer: return=minimal`, only `{id, row_version}` (a MinimalRecord), with `Preference-Applied` and `ETag`", body = EntityRecordResponse),
         (status = 401, description = "Missing or invalid credentials", body = ErrorResponse),
@@ -105,10 +105,15 @@ pub(super) async fn upsert_record(
     recording: RecordingCtx,
     Path(entity_input): Path<String>,
     Query(query): Query<UpsertQuery>,
+    Query(select): Query<super::response::SelectParam>,
     cookie: Option<Extension<attome_server::middleware::auth::CookieSession>>,
     headers: axum::http::HeaderMap,
     Json(body): Json<Value>,
 ) -> Result<axum::response::Response, AppError> {
+    // S1-T3: a bad `select` refuses the request before anything is written.
+    let select =
+        super::response::resolve_select(&state, &ctx, &entity_input, select.select.as_deref())
+            .await?;
     // A29-T4: people may not write a field locked to integrations.
     let parts: Vec<&serde_json::Map<String, Value>> = ["match", "data"]
         .iter()
@@ -128,7 +133,7 @@ pub(super) async fn upsert_record(
     Ok(super::response::write_response(
         status,
         super::response::return_pref(&headers),
-        record,
+        record.selected(select.as_deref()),
     ))
 }
 

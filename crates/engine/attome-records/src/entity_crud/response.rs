@@ -168,7 +168,68 @@ impl std::fmt::Debug for EntityRecordResponse {
     }
 }
 
+/// S1-T3: `?select=a,b` on a record read or write: the answer's `data` (and
+/// `lookups`) carry only the named attributes.
+#[derive(Debug, Default, serde::Deserialize, utoipa::IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct SelectParam {
+    /// Comma-separated attribute names. `data` carries only these; `id`,
+    /// `row_version` and the rest of the envelope always come back. A name
+    /// that is not an attribute the caller may read is a 422.
+    pub select: Option<String>,
+}
+
+/// The names in a `select` value, trimmed, empty ones dropped; `None` when
+/// nothing is named.
+pub(super) fn parse_select(raw: Option<&str>) -> Option<Vec<String>> {
+    let names: Vec<String> = raw?
+        .split(',')
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .map(str::to_owned)
+        .collect();
+    (!names.is_empty()).then_some(names)
+}
+
+/// S1-T3: the checked `select` list for `entity_input`, before any write
+/// runs, so a bad name refuses the request instead of answering a write that
+/// already happened with an error.
+pub(super) async fn resolve_select(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    entity_input: &str,
+    raw: Option<&str>,
+) -> Result<Option<Vec<String>>, attome_types::AppError> {
+    let Some(names) = parse_select(raw) else {
+        return Ok(None);
+    };
+    let (_, entity_name, attrs, _) = super::resolve::resolve_entity(state, entity_input).await?;
+    for name in &names {
+        let known = attrs.iter().any(|attr| &attr.logicalname == name);
+        if !known || !ctx.has_field_read_grant(&entity_name, name) {
+            return Err(attome_types::AppError::Validation(format!(
+                "unknown attribute: {name}"
+            )));
+        }
+    }
+    Ok(Some(names))
+}
+
 impl EntityRecordResponse {
+    /// S1-T3: keeps only the selected attributes in `data` and `lookups`.
+    pub(super) fn selected(mut self, names: Option<&[String]>) -> Self {
+        let Some(names) = names else {
+            return self;
+        };
+        if let Some(data) = self.data.as_object_mut() {
+            data.retain(|key, _| names.iter().any(|name| name == key));
+        }
+        if let Some(lookups) = self.lookups.as_mut() {
+            lookups.retain(|key, _| names.iter().any(|name| name == key));
+        }
+        self
+    }
+
     /// See the `approval_request_id` field.
     pub(crate) fn with_approval_request_id(mut self, id: Option<Uuid>) -> Self {
         self.approval_request_id = id;
@@ -398,5 +459,24 @@ pub(super) fn build_response(
         duplicate_warnings: Vec::new(),
         hidden_duplicates: 0,
         merged_into: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_select_trims_and_splits() {
+        assert_eq!(
+            parse_select(Some(" name, amount ,,owner_ref ")),
+            Some(vec![
+                "name".to_owned(),
+                "amount".to_owned(),
+                "owner_ref".to_owned()
+            ])
+        );
+        assert_eq!(parse_select(Some(" , ")), None);
+        assert_eq!(parse_select(None), None);
     }
 }
