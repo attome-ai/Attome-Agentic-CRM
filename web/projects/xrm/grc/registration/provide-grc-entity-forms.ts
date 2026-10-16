@@ -14,6 +14,8 @@ import { GrcControlRequirementFormComponent } from '../forms/grc-control-require
 import { GrcPolicyFormComponent } from '../forms/grc-policy-form/grc-policy-form.component';
 import { GrcAssessmentFormComponent } from '../forms/grc-assessment-form/grc-assessment-form.component';
 import { GrcFindingFormComponent } from '../forms/grc-finding-form/grc-finding-form.component';
+import { GrcRegulatoryChangeFormComponent } from '../forms/grc-regulatory-change-form/grc-regulatory-change-form.component';
+import { GrcRegulatoryChangeLinkFormComponent } from '../forms/grc-regulatory-change-link-form/grc-regulatory-change-link-form.component';
 
 /**
  * M20-grc.md Phase 1 checklist's Angular entry. `grc_control_requirement`
@@ -45,4 +47,6 @@ export function registerGrcEntityForms(registry: EntityRouteRegistry): void {
   registry.register('grc_risk', { formComponent: GrcRiskFormComponent });
   registry.register('grc_risk_dependency', { formComponent: GrcRiskDependencyFormComponent });
   registry.register('grc_policy_ack', { formComponent: GrcPolicyAckFormComponent });
+  registry.register('grc_regulatory_change', { formComponent: GrcRegulatoryChangeFormComponent });
+  registry.register('grc_regulatory_change_link', { formComponent: GrcRegulatoryChangeLinkFormComponent });
 }

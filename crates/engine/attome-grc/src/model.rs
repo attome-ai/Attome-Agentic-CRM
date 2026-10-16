@@ -54,6 +54,9 @@ impl EngineModel for GrcModel {
             "grc_risk_dependency",
             "grc_policy",
             "grc_policy_ack",
+            // R12-T1: `platform-bundles/attome-grc-regulatory-change.json`.
+            "grc_regulatory_change",
+            "grc_regulatory_change_link",
         ]
     }
 

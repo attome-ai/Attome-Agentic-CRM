@@ -324,6 +324,13 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
         name: "attome-metric-governance",
         json: include_str!("../../../../../changesets/platform/0056-attome-metric-governance.json"),
     },
+    PlatformChangeset {
+        file: "0057-attome-grc-regulatory-change.json",
+        name: "attome-grc-regulatory-change",
+        json: include_str!(
+            "../../../../../changesets/platform/0057-attome-grc-regulatory-change.json"
+        ),
+    },
 ];
 
 #[cfg(test)]

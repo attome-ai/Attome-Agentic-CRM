@@ -335,6 +335,8 @@ fn production_map() -> EntityModuleMap {
         "grc_risk_dependency",
         "grc_policy",
         "grc_policy_ack",
+        "grc_regulatory_change",
+        "grc_regulatory_change_link",
     ] {
         map.claim(entity, owner("attome-grc", MODULE_GRC));
     }

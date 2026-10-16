@@ -22,6 +22,7 @@
 pub mod auth;
 pub mod lifecycle;
 pub mod model;
+pub mod reg_change;
 pub mod seed;
 
 pub use model::GrcModel;

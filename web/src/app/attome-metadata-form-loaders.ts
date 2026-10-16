@@ -172,6 +172,7 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
       'grc_control_requirement', 'grc_policy', 'grc_assessment', 'grc_finding',
       'grc_regulation', 'grc_requirement', 'grc_control', 'grc_assessment_item',
       'grc_evidence', 'grc_risk', 'grc_risk_dependency', 'grc_policy_ack',
+      'grc_regulatory_change', 'grc_regulatory_change_link',
     ]],
     // C6 (D-556) — `ai_agent_policy` and `ai_capability_pack` joined
     // this group with the capability-administration forms
