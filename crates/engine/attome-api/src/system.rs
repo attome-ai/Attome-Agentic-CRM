@@ -160,6 +160,8 @@ impl EngineSystem {
             .merge(crate::app_admin::routes())
             // AA13-T8: SLO budgets and the deployment's own targets.
             .merge(crate::slo_admin::routes())
+            // C4-T1: mentions in text about a record.
+            .merge(crate::mentions::routes())
             // AC7-T11: what this deployment runs.
             .merge(crate::sbom_admin::routes())
             // A30-T1: environment variable values.

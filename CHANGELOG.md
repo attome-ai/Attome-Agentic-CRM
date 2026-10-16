@@ -28,6 +28,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Mentions: `POST /api/v1/{entity}/{id}/mentions` notifies everyone a text names as
+  `@[user:<id>]` or `@[team:<id>]` who may read the record; nobody else hears of it.
 - Profiler probes keep a latency histogram; stats carry `p50_ms`/`p95_ms`/`p99_ms`, and
   `attome_profiler::budget_findings` names probes over their p95 budget.
 - One-time codes (`attome_auth::otp`): six digits, peppered hash, 60 seconds, single use, five
