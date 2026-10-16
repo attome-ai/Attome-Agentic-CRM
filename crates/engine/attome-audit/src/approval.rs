@@ -112,6 +112,20 @@ pub async fn gate_regarding(
     gate_inner(state, action_type, payload, requester, regarding, false).await
 }
 
+/// An approval that is always required, regarding a record (F10-T7's
+/// period close): unlike [`gate`], it never answers "no approval needed".
+pub async fn gate_regarding_required(
+    state: &EngineState,
+    action_type: &str,
+    payload: Value,
+    requester: Uuid,
+    regarding: Option<(&str, Uuid)>,
+) -> Result<ApprovalRequest, AppError> {
+    gate_inner(state, action_type, payload, requester, regarding, true)
+        .await?
+        .ok_or_else(|| AppError::internal("a required approval was not opened"))
+}
+
 async fn gate_inner(
     state: &EngineState,
     action_type: &str,

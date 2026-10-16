@@ -109,6 +109,7 @@ pub(crate) use attome_dashboard::lifecycle::ACTION_DASHBOARD_PUBLISH;
 pub const KNOWN_ACTION_TYPES: &[&str] = &[
     ACTION_SECURITY_REWRAP,
     attome_commission::dispute::ACTION_ADJUSTMENT_APPLY,
+    attome_commission::close::ACTION_PERIOD_CLOSE,
     attome_security::admin::ACTION_ROLE_GRANT,
     attome_compliance::retention_admin::ACTION_RETENTION_APPROVE,
     attome_records::query_admin::ACTION_QUERY_PUBLISH,
@@ -1052,6 +1053,19 @@ async fn dispatch_approved(
             .await?;
             serde_json::to_value(&response).map_err(AppError::internal)?
         }
+        attome_commission::close::ACTION_PERIOD_CLOSE => {
+            // F10-T7: finance's approval locks the period.
+            #[derive(serde::Deserialize)]
+            struct PeriodClosePayload {
+                period_id: Uuid,
+            }
+            let payload: PeriodClosePayload =
+                serde_json::from_value(request.payload.clone()).map_err(AppError::internal)?;
+            let response =
+                attome_commission::close::do_close_period(state, payload.period_id, approver_id)
+                    .await?;
+            serde_json::to_value(&response).map_err(AppError::internal)?
+        }
         attome_commission::dispute::ACTION_ADJUSTMENT_APPLY => {
             // F10-T8: an adjustment above the approval amount is written only
             // here, once approved, with the request's id on it.
@@ -1762,6 +1776,9 @@ async fn do_decide(
     // comment on the record's audit event (a no-op for any other request).
     if request.status == ApprovalStatus::Rejected {
         attome_state::approval::settle_after_close(state, &request, decider_id, comment.as_deref())
+            .await;
+        // F10-T7: a rejected period close goes back to open.
+        attome_commission::close::settle_rejected(state, &request, decider_id, comment.as_deref())
             .await;
     }
 

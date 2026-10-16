@@ -137,6 +137,7 @@ type RunRow = (
     Option<String>,
     NaiveDate,
     NaiveDate,
+    Option<String>,
 );
 
 /// Runs (or resumes) one calculation run; the number of participants
@@ -144,17 +145,23 @@ type RunRow = (
 pub async fn execute(state: &EngineState, run: Uuid) -> Result<u64, AppError> {
     let row: Option<RunRow> = sqlx::query_as(
         "SELECT r.period_ref, r.plan_version_ref, r.status, r.cursor, \
-                p.starts_on::date, p.ends_on::date \
+                p.starts_on::date, p.ends_on::date, p.status \
          FROM comp_run r JOIN comp_period p ON p.id = r.period_ref WHERE r.id = $1",
     )
     .bind(run)
     .fetch_optional(&state.base.db)
     .await
     .map_err(AppError::internal)?;
-    let Some((period, version, status, cursor, starts, ends)) = row else {
+    let Some((period, version, status, cursor, starts, ends, period_status)) = row else {
         return Ok(0);
     };
     if matches!(status.as_deref(), Some("done" | "failed")) {
+        return Ok(0);
+    }
+    // F10-T7: a closed period is never recalculated.
+    if crate::close::is_closed(period_status.as_deref()) {
+        tracing::warn!(%run, %period, "commission run: the period is closed; nothing recalculated");
+        set_status(state, run, "failed").await?;
         return Ok(0);
     }
     set_status(state, run, "running").await?;

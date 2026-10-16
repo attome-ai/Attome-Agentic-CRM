@@ -53,5 +53,9 @@ impl EngineModel for CommissionModel {
                 "/api/v1/commission/adjustments",
                 post(crate::dispute::post_adjustment),
             )
+            .route(
+                "/api/v1/commission/periods/{id}/submit",
+                post(crate::close::post_submit),
+            )
     }
 }

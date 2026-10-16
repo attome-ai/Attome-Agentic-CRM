@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Commission period close: `POST /api/v1/commission/periods/{id}/submit` (`If-Match`) puts an open
+  period in review and opens a finance approval (`commission.period_close`) regarding it; approval
+  locks the period and approves its calculated payouts, rejection reopens it with the comment. A
+  calculation run never recalculates an approved or locked period.
 - Commission disputes and adjustments: `POST /api/v1/commission/disputes` (the line's owner),
   `POST /api/v1/commission/disputes/{id}/decision` (accept, reject or adjust) and
   `POST /api/v1/commission/adjustments` (reason required); an adjustment above the new
