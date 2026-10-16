@@ -34,6 +34,7 @@
 //! - [`predictions`] — `GET /api/v1/predictions`.
 
 pub mod admin;
+pub mod causal;
 pub mod features;
 pub mod model;
 pub mod predictions;
