@@ -521,6 +521,7 @@ const INTERNAL_PREFIXES: &[&str] = &[
     "catalog/",
     "attome-service/",
     "attome-sales/",
+    "attome-commission/",
 ];
 
 /// L7-T1: the lag a new cursor for `consumer` allows.

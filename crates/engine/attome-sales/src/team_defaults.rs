@@ -149,6 +149,20 @@ pub async fn sweep_new_deals(state: &EngineState) -> Result<u64, AppError> {
     let Some(last) = events.last().cloned() else {
         return Ok(0);
     };
+    // Without the packs that define these tables there is nothing to do;
+    // the cursor still moves past the batch.
+    let installed: bool = sqlx::query_scalar(
+        "SELECT bool_and(to_regclass(t) IS NOT NULL) FROM unnest($1::text[]) AS t",
+    )
+    .bind(&["user_default_team_member", "opportunity_team_member"][..])
+    .fetch_one(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+    if !installed {
+        let mut conn = state.base.db.acquire().await.map_err(AppError::internal)?;
+        attome_core::change_feed::advance(&mut conn, DEFAULT_TEAM_CONSUMER, &last).await?;
+        return Ok(0);
+    }
     let mut deals: Vec<Uuid> = events
         .iter()
         .filter(|e| {

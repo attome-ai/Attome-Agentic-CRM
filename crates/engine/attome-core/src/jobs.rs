@@ -450,6 +450,9 @@ pub enum EngineJob {
     /// D7-T3: gives new deals their owner's default team, off the change
     /// feed. Bare unit variant.
     SalesDefaultTeamSweep,
+    /// F10-T3: writes commission credits for won deals, off the change
+    /// feed. Bare unit variant.
+    CommissionCreditSweep,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -904,6 +907,7 @@ impl EngineJob {
             | Self::MarketingSweep
             | Self::RoleGrantExpiry
             | Self::SalesDefaultTeamSweep
+            | Self::CommissionCreditSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1005,6 +1009,7 @@ impl EngineJob {
             EngineJob::MarketingSweep => "MarketingSweep",
             EngineJob::RoleGrantExpiry => "RoleGrantExpiry",
             EngineJob::SalesDefaultTeamSweep => "SalesDefaultTeamSweep",
+            EngineJob::CommissionCreditSweep => "CommissionCreditSweep",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1116,6 +1121,7 @@ impl EngineJob {
             | Self::MarketingSweep
             | Self::RoleGrantExpiry
             | Self::SalesDefaultTeamSweep
+            | Self::CommissionCreditSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1241,6 +1247,7 @@ impl EngineJob {
             | Self::MarketingSweep
             | Self::RoleGrantExpiry
             | Self::SalesDefaultTeamSweep
+            | Self::CommissionCreditSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1583,6 +1590,7 @@ mod tests {
         assert_round_trips(EngineJob::MarketingSweep);
         assert_round_trips(EngineJob::RoleGrantExpiry);
         assert_round_trips(EngineJob::SalesDefaultTeamSweep);
+        assert_round_trips(EngineJob::CommissionCreditSweep);
         assert_round_trips(EngineJob::SalesDefaultTeamApply {
             owner_id: Uuid::now_v7(),
         });

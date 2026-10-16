@@ -5,6 +5,7 @@
 //! module.
 
 pub mod close;
+pub mod credit;
 pub mod dispute;
 pub mod model;
 pub mod rules;

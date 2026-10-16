@@ -78,6 +78,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_tag_expiry_scheduler(db.clone(), std::time::Duration::from_secs(3600));
     // E9-T7: marketing hand-offs past their SLA, every five minutes.
     crate::jobs::spawn_marketing_sweep_scheduler(db.clone(), std::time::Duration::from_secs(300));
+    // F10-T3: commission credits for won deals, every minute.
+    crate::jobs::spawn_commission_credit_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // D7-T3: new deals get their owner's default team, every minute.
     crate::jobs::spawn_sales_default_team_scheduler(db.clone(), std::time::Duration::from_secs(60));
     // Q10-T6: role grants past their end date, hourly.

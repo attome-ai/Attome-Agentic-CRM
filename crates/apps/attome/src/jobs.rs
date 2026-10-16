@@ -952,6 +952,13 @@ async fn dispatch_platform_job(
                 tracing::info!(moved, "nurture: people moved between tracks");
             }
         }
+        // F10-T3: commission credits for won deals.
+        EngineJob::CommissionCreditSweep => {
+            let written = attome_commission::credit::sweep_won_deals(&attome_state).await?;
+            if written > 0 {
+                tracing::info!(written, "commission credits: written for won deals");
+            }
+        }
         // D7-T3: new deals get their owner's default team.
         EngineJob::SalesDefaultTeamSweep => {
             let added = attome_sales::team_defaults::sweep_new_deals(&attome_state).await?;
@@ -2142,6 +2149,7 @@ const DEDUP_KEY_SEGMENT_REFRESH_DUE: &str = "segment-refresh-due";
 const DEDUP_KEY_MARKETING_SWEEP: &str = "marketing-sweep";
 const DEDUP_KEY_ROLE_GRANT_EXPIRY: &str = "role-grant-expiry";
 const DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP: &str = "sales-default-team-sweep";
+const DEDUP_KEY_COMMISSION_CREDIT_SWEEP: &str = "commission-credit-sweep";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2209,6 +2217,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::MarketingSweep => DEDUP_KEY_MARKETING_SWEEP,
         EngineJob::RoleGrantExpiry => DEDUP_KEY_ROLE_GRANT_EXPIRY,
         EngineJob::SalesDefaultTeamSweep => DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP,
+        EngineJob::CommissionCreditSweep => DEDUP_KEY_COMMISSION_CREDIT_SWEEP,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2533,6 +2542,17 @@ pub fn spawn_marketing_sweep_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::MarketingSweep,
         DEDUP_KEY_MARKETING_SWEEP,
         "marketing sweep",
+    );
+}
+
+/// F10-T3: every minute, commission credits for won deals.
+pub fn spawn_commission_credit_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::CommissionCreditSweep,
+        DEDUP_KEY_COMMISSION_CREDIT_SWEEP,
+        "commission credits",
     );
 }
 

@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Commission credits from won deals: each revenue split of a deal at `closed_won` credits its member's
+  plan participation once (keyed by the split), dated on the close date; a credit dated in a closed
+  period lands in the next open one with an adjustment naming the closed period.
 - `POST /api/v1/sales/opportunities/{id}/change-owner` moves a deal to a new owner in one transaction:
   the new owner's share and team membership, the old owner kept with a role or removed, and their
   splits moved or kept, with an owner-change Access event.
