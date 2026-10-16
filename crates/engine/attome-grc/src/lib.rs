@@ -24,6 +24,7 @@ pub mod lifecycle;
 pub mod mapping;
 pub mod model;
 pub mod reg_change;
+pub mod risk;
 pub mod seed;
 
 pub use model::GrcModel;
