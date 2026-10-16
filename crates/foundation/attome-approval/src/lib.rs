@@ -1294,6 +1294,23 @@ pub async fn decide_step(
 /// [`attome_db::BeforeCommit`] hook, exactly as [`decide_with`] is to
 /// [`decide`].
 #[allow(clippy::too_many_arguments)]
+/// Records a decision's electronic signature (D-133 sign-off) on its grant,
+/// in the caller's transaction. Approval tables are written only by this
+/// crate (Z10-T12).
+pub async fn set_grant_signature(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    grant_id: Uuid,
+    signature: &serde_json::Value,
+) -> Result<(), AppError> {
+    sqlx::query("UPDATE approval_grant SET signature = $1::jsonb WHERE id = $2")
+        .bind(signature)
+        .bind(grant_id)
+        .execute(&mut **tx)
+        .await
+        .map_err(AppError::internal)?;
+    Ok(())
+}
+
 pub async fn decide_step_with(
     pool: &PgPool,
     request_id: Uuid,

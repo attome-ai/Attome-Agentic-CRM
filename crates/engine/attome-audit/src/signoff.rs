@@ -211,12 +211,7 @@ pub async fn record_decision_digest_in_tx(
         "recorded_at": Utc::now().to_rfc3339(),
     });
 
-    sqlx::query("UPDATE approval_grant SET signature = $1::jsonb WHERE id = $2")
-        .bind(&signature_json)
-        .bind(grant.id)
-        .execute(&mut **tx)
-        .await
-        .map_err(AppError::internal)?;
+    attome_approval::set_grant_signature(tx, grant.id, &signature_json).await?;
 
     let (user_ctx, organization_ref) = fetch_audit_ctx(state, decider_id).await;
     let event = AuditEvent {
