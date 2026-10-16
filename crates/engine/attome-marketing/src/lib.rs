@@ -9,6 +9,7 @@ pub mod abm;
 pub mod address_check;
 pub mod attribution;
 pub mod deliverability;
+pub mod events;
 pub mod handoff_sla;
 pub mod loyalty;
 pub mod model;
@@ -28,5 +29,7 @@ pub const ADVISORY_LOCK_NAMESPACE: i32 = 34;
 /// This crate's slice of the workspace OpenAPI document, merged in by
 /// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    <segment_insight::ApiDocFragment as utoipa::OpenApi>::openapi()
+    let mut doc = <segment_insight::ApiDocFragment as utoipa::OpenApi>::openapi();
+    doc.merge(<events::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc
 }

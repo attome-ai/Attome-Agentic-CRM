@@ -1,7 +1,10 @@
 //! `EngineModel` registration: mounted only when the `marketing` module is on.
 use attome_core::{EngineModel, EngineState};
 use attome_modules::{MODULE_MARKETING, ModuleId};
-use axum::{Router, routing::get};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 
 /// Registered in `attome::boot::register_engines`.
 #[derive(Debug)]
@@ -22,6 +25,18 @@ impl EngineModel for MarketingModel {
 
     fn routes(&self) -> Router<EngineState> {
         Router::new()
+            .route(
+                "/api/v1/marketing/events/{id}/registrations",
+                post(crate::events::post_marketing_registration),
+            )
+            .route(
+                "/api/v1/marketing/events/{id}/registrations/{registration_id}/cancel",
+                post(crate::events::post_marketing_registration_cancel),
+            )
+            .route(
+                "/api/v1/marketing/events/{id}/check-in",
+                post(crate::events::post_marketing_check_in),
+            )
             .route(
                 "/api/v1/marketing/lists/{id}/count",
                 get(crate::segment_insight::get_marketing_list_count),

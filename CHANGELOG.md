@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Event registration: `POST /api/v1/marketing/events/{id}/registrations` registers up to capacity and
+  waitlists the rest with a random ticket code for the QR; `.../registrations/{registration_id}/cancel`
+  gives the freed seat to the first waiting person; `POST .../check-in {ticket_code}` checks a person in
+  once.
 - `GET /api/v1/{entity}/{id}/ancestors` and `.../descendants` take `?field=` to choose which
   self-referencing lookup to walk (a contact's `reports_to` or its dotted-line manager); without it an
   entity with two such lookups answers 422 asking for it.
