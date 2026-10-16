@@ -69855,9 +69855,24 @@
           "role_id"
         ],
         "properties": {
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Q10-T6: why the role was given."
+          },
           "role_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "valid_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Q10-T6: when the grant ends (it is removed then, ending the user's\nsessions); absent means it does not end. Must be in the future."
           }
         }
       },

@@ -14055,8 +14055,16 @@ export interface components {
             ticket_id: string;
         };
         AssignUserRoleBody: {
+            /** @description Q10-T6: why the role was given. */
+            reason?: string | null;
             /** Format: uuid */
             role_id: string;
+            /**
+             * Format: date-time
+             * @description Q10-T6: when the grant ends (it is removed then, ending the user's
+             *     sessions); absent means it does not end. Must be in the future.
+             */
+            valid_until?: string | null;
         };
         AssignUserRoleResponse: {
             approval_pending: boolean;
