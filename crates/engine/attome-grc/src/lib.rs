@@ -21,6 +21,7 @@
 //! M45 Phase 2/3, which has not shipped).
 pub mod auth;
 pub mod lifecycle;
+pub mod mapping;
 pub mod model;
 pub mod reg_change;
 pub mod seed;
