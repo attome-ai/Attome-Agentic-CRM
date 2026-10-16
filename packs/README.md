@@ -140,3 +140,10 @@ The enterprise-architecture pack's `0002` (X11) adds portfolio fields with TIME 
 interfaces, architecture reviews and roadmap items. The asset-management `0002`, field-service `0003`,
 contract-management `0002`, vendor-supplier `0002`, finance `0002` and human-resources `0003`
 changesets extend those packs (I8, I9, H6, I1, I5, I10, W1, W2, W4, W8).
+
+## regions
+
+Region presets (X12): the country, tax-rate and identity-document reference entities, then Saudi
+Arabia (`0001`) and the UAE and Egypt (`0002`): currency, VAT rates, ID and registration-number
+patterns with their check-digit rule, mobile and address formats, and a business-week calendar with
+the fixed-date public holidays. Hijri holidays follow the moon sighting and are added per year.

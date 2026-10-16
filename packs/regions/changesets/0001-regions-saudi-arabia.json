@@ -1,0 +1,1737 @@
+{
+  "author": "packs",
+  "checksum": "sha256:4f763e1468a383d2c3399218a81038b15d80d84dcc567ce61740dd79d1687fbc",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Region presets (X12-T1): the country, tax-rate and identity-document reference entities every region shares, and Saudi Arabia: SAR, VAT 15% with zero-rated and exempt categories, the national ID, Iqama and CR formats (the ID and Iqama check digit is Luhn), the +966 mobile format, the national address format, and a Sunday-to-Thursday business calendar in Asia/Riyadh with the fixed-date public holidays (Founding Day, National Day). Eid holidays follow the moon sighting and are added per year (Z12).",
+  "format": "attome-changeset/v1",
+  "id": "01a143dc-5910-7a6f-a9a9-96e3e7b78bc6",
+  "layer": "product",
+  "name": "regions-saudi-arabia",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "business_key": [
+            "code"
+          ],
+          "category": "Other",
+          "display_name": "Country",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "region_country",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "region_country"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "ISO Code",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "code",
+          "lookup_entity": null,
+          "max_length": 2,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "region_country",
+        "field": "code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "region_country",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "region_country",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "currency_code",
+          "lookup_entity": null,
+          "max_length": 3,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "region_country",
+        "field": "currency_code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency Decimals",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "currency_minor_units",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "region_country",
+        "field": "currency_minor_units"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Standard VAT %",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "vat_standard_rate",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "region_country",
+        "field": "vat_standard_rate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Phone Prefix",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "phone_prefix",
+          "lookup_entity": null,
+          "max_length": 6,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "region_country",
+        "field": "phone_prefix"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Mobile Pattern",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "mobile_pattern",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "region_country",
+        "field": "mobile_pattern"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Address Format",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "address_format",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "region_country",
+        "field": "address_format"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Postal Code Pattern",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "postal_code_pattern",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "region_country",
+        "field": "postal_code_pattern"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Business Calendar",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "calendar_name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "region_country",
+        "field": "calendar_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Date Calendar",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "default_date_calendar",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "gregorian",
+              "hijri",
+              "both"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "region_country",
+        "field": "default_date_calendar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Week Starts",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "week_start",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "sat",
+              "sun",
+              "mon"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "region_country",
+        "field": "week_start"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Time Zone",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "time_zone",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "region_country",
+        "field": "time_zone"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "E-invoicing",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "einvoicing_system",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "region_country",
+        "field": "einvoicing_system"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "business_key": [
+            "code"
+          ],
+          "category": "Other",
+          "display_name": "Tax Rate",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "region_tax_rate",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "region_tax_rate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Country Code",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "country_code",
+          "lookup_entity": null,
+          "max_length": 2,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "region_tax_rate",
+        "field": "country_code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Country",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "country_ref",
+          "lookup_entity": "region_country",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "region_tax_rate",
+        "field": "country_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Code",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "code",
+          "lookup_entity": null,
+          "max_length": 20,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "region_tax_rate",
+        "field": "code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "region_tax_rate",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "region_tax_rate",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Category",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "category",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "standard",
+              "reduced",
+              "zero_rated",
+              "exempt",
+              "out_of_scope"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "region_tax_rate",
+        "field": "category"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Rate %",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "rate",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "region_tax_rate",
+        "field": "rate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Effective From",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "effective_from",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "region_tax_rate",
+        "field": "effective_from"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Effective To",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "effective_to",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "region_tax_rate",
+        "field": "effective_to"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "business_key": [
+            "code"
+          ],
+          "category": "Other",
+          "display_name": "Identity Document Kind",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "region_id_kind",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "region_id_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Country Code",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "country_code",
+          "lookup_entity": null,
+          "max_length": 2,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "region_id_kind",
+        "field": "country_code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Country",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "country_ref",
+          "lookup_entity": "region_country",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "region_id_kind",
+        "field": "country_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Code",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "code",
+          "lookup_entity": null,
+          "max_length": 30,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "region_id_kind",
+        "field": "code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "region_id_kind",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "region_id_kind",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Applies To",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "applies_to",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "person",
+              "organisation"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "region_id_kind",
+        "field": "applies_to"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Pattern",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "pattern",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "region_id_kind",
+        "field": "pattern"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Check Digit",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "check_digit",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "none",
+              "luhn",
+              "mod11",
+              "custom"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "region_id_kind",
+        "field": "check_digit"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رمز الدولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.code",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم العربي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.name_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العملة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.currency_code",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خانات العملة العشرية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.currency_minor_units",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نسبة ضريبة القيمة المضافة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.vat_standard_rate",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مفتاح الاتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.phone_prefix",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نمط الجوال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.mobile_pattern",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "صيغة العنوان"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.address_format",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نمط الرمز البريدي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.postal_code_pattern",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تقويم العمل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.calendar_name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تقويم التواريخ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.default_date_calendar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بداية الأسبوع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.week_start",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المنطقة الزمنية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.time_zone",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفوترة الإلكترونية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_country.einvoicing_system",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نسبة الضريبة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_tax_rate",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رمز الدولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_tax_rate.country_code",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_tax_rate.country_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرمز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_tax_rate.code",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_tax_rate.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم العربي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_tax_rate.name_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفئة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_tax_rate.category",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النسبة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_tax_rate.rate",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سارية من"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_tax_rate.effective_from",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سارية حتى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_tax_rate.effective_to",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نوع وثيقة الهوية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_id_kind",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رمز الدولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_id_kind.country_code",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_id_kind.country_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرمز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_id_kind.code",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_id_kind.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم العربي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_id_kind.name_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ينطبق على"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_id_kind.applies_to",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النمط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_id_kind.pattern",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خانة التحقق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "locale": "ar",
+        "object_key": "region_id_kind.check_digit",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "address_format": "{building_number} {street}, {district}, {city} {postal_code}-{additional_number}; short address {short_address}",
+          "calendar_name": "Saudi Arabia Business Week",
+          "code": "SA",
+          "currency_code": "SAR",
+          "currency_minor_units": 2,
+          "default_date_calendar": "both",
+          "einvoicing_system": "ZATCA FATOORA",
+          "mobile_pattern": "^\\+9665[0-9]{8}$",
+          "name": "Saudi Arabia",
+          "name_ar": "المملكة العربية السعودية",
+          "phone_prefix": "+966",
+          "postal_code_pattern": "^[0-9]{5}$",
+          "time_zone": "Asia/Riyadh",
+          "vat_standard_rate": 15,
+          "week_start": "sun"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "region_country",
+        "key": {
+          "code": "SA"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "category": "standard",
+          "code": "SA-VAT-S",
+          "country_code": "SA",
+          "effective_from": "2020-07-01",
+          "name": "VAT standard",
+          "name_ar": "ضريبة القيمة المضافة - النسبة الأساسية",
+          "rate": 15
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "region_tax_rate",
+        "key": {
+          "code": "SA-VAT-S"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "category": "zero_rated",
+          "code": "SA-VAT-Z",
+          "country_code": "SA",
+          "effective_from": "2018-01-01",
+          "name": "VAT zero-rated",
+          "name_ar": "ضريبة القيمة المضافة - نسبة صفرية",
+          "rate": 0
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "region_tax_rate",
+        "key": {
+          "code": "SA-VAT-Z"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "category": "exempt",
+          "code": "SA-VAT-E",
+          "country_code": "SA",
+          "effective_from": "2018-01-01",
+          "name": "VAT exempt",
+          "name_ar": "معفى من ضريبة القيمة المضافة",
+          "rate": 0
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "region_tax_rate",
+        "key": {
+          "code": "SA-VAT-E"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "applies_to": "person",
+          "check_digit": "luhn",
+          "code": "SA-NID",
+          "country_code": "SA",
+          "name": "National ID",
+          "name_ar": "الهوية الوطنية",
+          "pattern": "^1[0-9]{9}$"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "region_id_kind",
+        "key": {
+          "code": "SA-NID"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "applies_to": "person",
+          "check_digit": "luhn",
+          "code": "SA-IQAMA",
+          "country_code": "SA",
+          "name": "Iqama (resident ID)",
+          "name_ar": "هوية مقيم",
+          "pattern": "^2[0-9]{9}$"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "region_id_kind",
+        "key": {
+          "code": "SA-IQAMA"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "applies_to": "organisation",
+          "check_digit": "none",
+          "code": "SA-CR",
+          "country_code": "SA",
+          "name": "Commercial Registration",
+          "name_ar": "السجل التجاري",
+          "pattern": "^[0-9]{10}$"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "region_id_kind",
+        "key": {
+          "code": "SA-CR"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "applies_to": "organisation",
+          "check_digit": "none",
+          "code": "SA-VATNO",
+          "country_code": "SA",
+          "name": "VAT Registration Number",
+          "name_ar": "الرقم الضريبي",
+          "pattern": "^3[0-9]{13}3$"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "region_id_kind",
+        "key": {
+          "code": "SA-VATNO"
+        }
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Sunday to Thursday, 08:00-17:00 Riyadh time.",
+          "hours": {
+            "mon": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ],
+            "sun": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ],
+            "thu": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ],
+            "tue": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ],
+            "wed": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ]
+          },
+          "is_customized": false,
+          "is_default": false,
+          "name": "Saudi Arabia Business Week",
+          "tz": "Asia/Riyadh",
+          "working_days": [
+            "sun",
+            "mon",
+            "tue",
+            "wed",
+            "thu"
+          ]
+        }
+      },
+      "op": "upsert_calendar",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "calendar": "Saudi Arabia Business Week"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-02-22",
+          "name": "Founding Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "calendar": "Saudi Arabia Business Week",
+        "date": "2026-02-22"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-09-23",
+          "name": "National Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "calendar": "Saudi Arabia Business Week",
+        "date": "2026-09-23"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-02-22",
+          "name": "Founding Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "calendar": "Saudi Arabia Business Week",
+        "date": "2027-02-22"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-09-23",
+          "name": "National Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "calendar": "Saudi Arabia Business Week",
+        "date": "2027-09-23"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "regions",
+  "seq": 1,
+  "title": "Pack: region presets and Saudi Arabia"
+}

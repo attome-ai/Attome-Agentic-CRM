@@ -1,0 +1,756 @@
+{
+  "author": "packs",
+  "checksum": "sha256:9b30717501134f21d6bf76aee733edc92505180dd620aff9c991976f9389cb5b",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Region presets (X12-T2) in the Saudi shape: the UAE (AED, VAT 5%, Emirates ID with a Luhn check digit, TRN, +971 mobiles, a Monday-to-Friday calendar in Asia/Dubai) and Egypt (EGP, VAT 14%, the 14-digit national ID, tax registration number, +20 mobiles, a Sunday-to-Thursday calendar in Africa/Cairo), each with its fixed-date public holidays. Holidays on the Hijri calendar follow the moon sighting and are added per year (Z12).",
+  "format": "attome-changeset/v1",
+  "id": "01a143dc-e2a5-702d-a4e9-85e7eaaded8f",
+  "layer": "product",
+  "name": "regions-uae-egypt",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "address_format": "{building}, {street}, {area}, {city}, {emirate}; Makani {makani_number}",
+          "calendar_name": "UAE Business Week",
+          "code": "AE",
+          "currency_code": "AED",
+          "currency_minor_units": 2,
+          "default_date_calendar": "gregorian",
+          "einvoicing_system": "UAE e-invoicing (Peppol)",
+          "mobile_pattern": "^\\+9715[0-9]{8}$",
+          "name": "United Arab Emirates",
+          "name_ar": "الإمارات العربية المتحدة",
+          "phone_prefix": "+971",
+          "postal_code_pattern": "",
+          "time_zone": "Asia/Dubai",
+          "vat_standard_rate": 5,
+          "week_start": "mon"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "region_country",
+        "key": {
+          "code": "AE"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "address_format": "{building_number} {street}, {district}, {city}, {governorate} {postal_code}",
+          "calendar_name": "Egypt Business Week",
+          "code": "EG",
+          "currency_code": "EGP",
+          "currency_minor_units": 2,
+          "default_date_calendar": "gregorian",
+          "einvoicing_system": "ETA e-invoice",
+          "mobile_pattern": "^\\+201[0125][0-9]{8}$",
+          "name": "Egypt",
+          "name_ar": "جمهورية مصر العربية",
+          "phone_prefix": "+20",
+          "postal_code_pattern": "^[0-9]{5}$",
+          "time_zone": "Africa/Cairo",
+          "vat_standard_rate": 14,
+          "week_start": "sat"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "region_country",
+        "key": {
+          "code": "EG"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "category": "standard",
+          "code": "AE-VAT-S",
+          "country_code": "AE",
+          "effective_from": "2018-01-01",
+          "name": "VAT standard",
+          "name_ar": "ضريبة القيمة المضافة - النسبة الأساسية",
+          "rate": 5
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "region_tax_rate",
+        "key": {
+          "code": "AE-VAT-S"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "category": "zero_rated",
+          "code": "AE-VAT-Z",
+          "country_code": "AE",
+          "effective_from": "2018-01-01",
+          "name": "VAT zero-rated",
+          "name_ar": "ضريبة القيمة المضافة - نسبة صفرية",
+          "rate": 0
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "region_tax_rate",
+        "key": {
+          "code": "AE-VAT-Z"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "category": "exempt",
+          "code": "AE-VAT-E",
+          "country_code": "AE",
+          "effective_from": "2018-01-01",
+          "name": "VAT exempt",
+          "name_ar": "معفى من ضريبة القيمة المضافة",
+          "rate": 0
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "region_tax_rate",
+        "key": {
+          "code": "AE-VAT-E"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "category": "standard",
+          "code": "EG-VAT-S",
+          "country_code": "EG",
+          "effective_from": "2017-07-01",
+          "name": "VAT standard",
+          "name_ar": "ضريبة القيمة المضافة - النسبة العامة",
+          "rate": 14
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "region_tax_rate",
+        "key": {
+          "code": "EG-VAT-S"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "category": "exempt",
+          "code": "EG-VAT-E",
+          "country_code": "EG",
+          "effective_from": "2016-09-08",
+          "name": "VAT exempt",
+          "name_ar": "معفى من ضريبة القيمة المضافة",
+          "rate": 0
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "region_tax_rate",
+        "key": {
+          "code": "EG-VAT-E"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "applies_to": "person",
+          "check_digit": "luhn",
+          "code": "AE-EID",
+          "country_code": "AE",
+          "name": "Emirates ID",
+          "name_ar": "الهوية الإماراتية",
+          "pattern": "^784[0-9]{12}$"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "region_id_kind",
+        "key": {
+          "code": "AE-EID"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "applies_to": "organisation",
+          "check_digit": "none",
+          "code": "AE-TRN",
+          "country_code": "AE",
+          "name": "Tax Registration Number",
+          "name_ar": "رقم التسجيل الضريبي",
+          "pattern": "^100[0-9]{12}$"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "region_id_kind",
+        "key": {
+          "code": "AE-TRN"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "applies_to": "person",
+          "check_digit": "custom",
+          "code": "EG-NID",
+          "country_code": "EG",
+          "name": "National ID",
+          "name_ar": "الرقم القومي",
+          "pattern": "^[23][0-9]{2}(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])[0-9]{7}$"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "region_id_kind",
+        "key": {
+          "code": "EG-NID"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "code"
+        ],
+        "values": {
+          "applies_to": "organisation",
+          "check_digit": "none",
+          "code": "EG-TRN",
+          "country_code": "EG",
+          "name": "Tax Registration Number",
+          "name_ar": "رقم التسجيل الضريبي",
+          "pattern": "^[0-9]{9}$"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "region_id_kind",
+        "key": {
+          "code": "EG-TRN"
+        }
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Monday to Friday, 08:00-17:00 Dubai time.",
+          "hours": {
+            "fri": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ],
+            "mon": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ],
+            "thu": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ],
+            "tue": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ],
+            "wed": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ]
+          },
+          "is_customized": false,
+          "is_default": false,
+          "name": "UAE Business Week",
+          "tz": "Asia/Dubai",
+          "working_days": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ]
+        }
+      },
+      "op": "upsert_calendar",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "calendar": "UAE Business Week"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-01-01",
+          "name": "New Year's Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "calendar": "UAE Business Week",
+        "date": "2026-01-01"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-12-01",
+          "name": "Commemoration Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "calendar": "UAE Business Week",
+        "date": "2026-12-01"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-12-02",
+          "name": "National Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "calendar": "UAE Business Week",
+        "date": "2026-12-02"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-12-03",
+          "name": "National Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "calendar": "UAE Business Week",
+        "date": "2026-12-03"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-01-01",
+          "name": "New Year's Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "calendar": "UAE Business Week",
+        "date": "2027-01-01"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-12-01",
+          "name": "Commemoration Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "calendar": "UAE Business Week",
+        "date": "2027-12-01"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-12-02",
+          "name": "National Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "calendar": "UAE Business Week",
+        "date": "2027-12-02"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-12-03",
+          "name": "National Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "calendar": "UAE Business Week",
+        "date": "2027-12-03"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "description": "Sunday to Thursday, 08:00-17:00 Cairo time.",
+          "hours": {
+            "mon": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ],
+            "sun": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ],
+            "thu": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ],
+            "tue": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ],
+            "wed": [
+              {
+                "end_minute": 1020,
+                "start_minute": 480
+              }
+            ]
+          },
+          "is_customized": false,
+          "is_default": false,
+          "name": "Egypt Business Week",
+          "tz": "Africa/Cairo",
+          "working_days": [
+            "sun",
+            "mon",
+            "tue",
+            "wed",
+            "thu"
+          ]
+        }
+      },
+      "op": "upsert_calendar",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "calendar": "Egypt Business Week"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-01-07",
+          "name": "Coptic Christmas"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2026-01-07"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-01-25",
+          "name": "Revolution Day (25 January)"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2026-01-25"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-04-25",
+          "name": "Sinai Liberation Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2026-04-25"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-05-01",
+          "name": "Labour Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2026-05-01"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-06-30",
+          "name": "June 30 Revolution"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2026-06-30"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-07-23",
+          "name": "Revolution Day (23 July)"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2026-07-23"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2026-10-06",
+          "name": "Armed Forces Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2026-10-06"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-01-07",
+          "name": "Coptic Christmas"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2027-01-07"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-01-25",
+          "name": "Revolution Day (25 January)"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2027-01-25"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-04-25",
+          "name": "Sinai Liberation Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2027-04-25"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-05-01",
+          "name": "Labour Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2027-05-01"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-06-30",
+          "name": "June 30 Revolution"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2027-06-30"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-07-23",
+          "name": "Revolution Day (23 July)"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2027-07-23"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "holiday_date": "2027-10-06",
+          "name": "Armed Forces Day"
+        }
+      },
+      "op": "add_calendar_holiday",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "calendar": "Egypt Business Week",
+        "date": "2027-10-06"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "regions",
+  "seq": 2,
+  "title": "Pack: UAE and Egypt region presets"
+}
