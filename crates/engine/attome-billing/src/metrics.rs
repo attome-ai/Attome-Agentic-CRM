@@ -47,14 +47,22 @@ pub fn monthly(amount: Decimal, frequency: &str) -> Decimal {
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, ToSchema)]
 pub struct Movements {
     pub currency: String,
+    #[schema(value_type = String)]
     pub start_mrr: Decimal,
+    #[schema(value_type = String)]
     pub mrr: Decimal,
+    #[schema(value_type = String)]
     pub arr: Decimal,
+    #[schema(value_type = String)]
     pub new: Decimal,
+    #[schema(value_type = String)]
     pub expansion: Decimal,
+    #[schema(value_type = String)]
     pub contraction: Decimal,
+    #[schema(value_type = String)]
     pub churn: Decimal,
     /// Percent; `None` without starting revenue.
+    #[schema(value_type = Option<String>)]
     pub net_retention: Option<Decimal>,
 }
 
