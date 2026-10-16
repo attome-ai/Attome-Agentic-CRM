@@ -738,6 +738,7 @@ async fn bulk_edit_undo(
             matched: count,
             unchanged: 0,
             undo: Vec::new(),
+            approval_request_id: None,
         }),
     ))
 }
