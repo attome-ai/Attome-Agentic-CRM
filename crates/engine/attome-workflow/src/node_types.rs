@@ -457,7 +457,7 @@ pub enum SideEffect {
     None,
     /// Create/Update Record — routes through the existing
     /// `X-Idempotency-Key`-equivalent entity-write path, keyed on
-    /// `(instance_id, node_id)` (§4.4 mechanism 1).
+    /// `(instance_id, node_id, round)` (§4.4 mechanism 1, M3-T2).
     EntityIdempotencyKey,
     /// Send Notification / Webhook — checked against the checkpoint's
     /// `fired_side_effects` set before firing (§4.4 mechanism 2).

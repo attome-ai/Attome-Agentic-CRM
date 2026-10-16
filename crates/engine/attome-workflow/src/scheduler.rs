@@ -364,11 +364,12 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
             entry.started_at.get_or_insert(Utc::now());
             entry.attempt_count += 1;
             let attempt_count = entry.attempt_count;
+            let round = entry.round;
 
             let outcome = match node_type {
                 Some(node_type) => {
                     execute_node(
-                        state, &sys_ctx, &instance, node, node_type, &input, &mut fired,
+                        state, &sys_ctx, &instance, node, node_type, &input, &mut fired, round,
                     )
                     .await
                 }
@@ -1269,6 +1270,32 @@ async fn cache_lookup(
     .map_err(AppError::internal)
 }
 
+/// M3-T2: the idempotency key of one effect: the run, the node and its loop
+/// round. Round 0 keeps the key every run had before rounds existed, so a
+/// run resumed across the upgrade finds its earlier effects; a later round
+/// is a new effect, never a replay of the first.
+pub(crate) fn effect_key(instance: Uuid, node_id: &str, round: i32) -> String {
+    if round == 0 {
+        format!("{instance}:{node_id}")
+    } else {
+        format!("{instance}:{node_id}:{round}")
+    }
+}
+
+/// M3-T2: a node round's entry in the checkpoint's `fired_side_effects`
+/// (round 0 is the bare node id, as stored before rounds existed).
+pub(crate) fn fired_key(node_id: &str, round: i32) -> String {
+    if round == 0 {
+        node_id.to_owned()
+    } else {
+        format!("{node_id}#{round}")
+    }
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one node run's context, passed straight to the node's executor"
+)]
 async fn execute_node(
     state: &EngineState,
     ctx: &std::sync::Arc<SecurityContext>,
@@ -1277,6 +1304,7 @@ async fn execute_node(
     node_type: NodeType,
     input: &Value,
     fired: &mut HashSet<String>,
+    round: i32,
 ) -> Result<NodeOutcome, AppError> {
     if node_type.is_cacheable() {
         let hash = output_hash(node, input);
@@ -1313,15 +1341,15 @@ async fn execute_node(
             })
         }
         NodeType::CreateRecord | NodeType::UpdateRecord => {
-            execute_entity_write(state, ctx, instance, node, node_type, input).await
+            execute_entity_write(state, ctx, instance, node, node_type, input, round).await
         }
         NodeType::RestoreRecord => execute_restore_record(state, ctx, node, input).await,
         NodeType::DuplicateCheck => execute_duplicate_check(state, ctx, node, input).await,
-        NodeType::Assign => execute_assign(state, ctx, instance, node, input).await,
+        NodeType::Assign => execute_assign(state, ctx, instance, node, input, round).await,
         NodeType::SendNotification => {
-            execute_send_notification(state, instance, node, input, fired).await
+            execute_send_notification(state, instance, node, input, fired, round).await
         }
-        NodeType::Webhook => execute_webhook(instance, node, input, fired).await,
+        NodeType::Webhook => execute_webhook(instance, node, input, fired, round).await,
         NodeType::Approval => execute_approval(state, instance, node, input).await,
         NodeType::Wait => Ok(execute_wait(node)),
         NodeType::WaitForEvent => Ok(execute_wait_for_event(node)),
@@ -1340,7 +1368,7 @@ async fn execute_node(
         NodeType::Join => Ok(NodeOutcome::Succeeded {
             output: input.get("in").cloned().unwrap_or(Value::Null),
         }),
-        NodeType::AgentStep => execute_agent_step(state, ctx, node, input, fired).await,
+        NodeType::AgentStep => execute_agent_step(state, ctx, node, input, fired, round).await,
         NodeType::Route => execute_route(state, ctx, node, input).await,
     }
 }
@@ -1469,6 +1497,7 @@ async fn execute_assign(
     instance: &InstanceRow,
     node: &GraphNode,
     input: &Value,
+    round: i32,
 ) -> Result<NodeOutcome, AppError> {
     use crate::assign::{self, Strategy};
     let entity_name = node
@@ -1583,7 +1612,16 @@ async fn execute_assign(
         "record_id": record_id.to_string(),
         "data": { "owner_ref": chosen.to_string() },
     });
-    execute_entity_write(state, ctx, instance, node, NodeType::UpdateRecord, &write).await
+    execute_entity_write(
+        state,
+        ctx,
+        instance,
+        node,
+        NodeType::UpdateRecord,
+        &write,
+        round,
+    )
+    .await
 }
 
 async fn execute_restore_record(
@@ -1651,7 +1689,7 @@ async fn execute_restore_record(
 /// `attome_server::middleware::idempotency_durable` — the SAME durable
 /// Postgres tier the HTTP `X-Idempotency-Key` mandatory-operation path uses
 /// (guidelines §9/§13: reuse, don't invent a second mechanism), keyed on
-/// `(instance_id, node_id)` instead of an HTTP request identity. A crash
+/// `(instance_id, node_id, round)` ([`effect_key`], M3-T2) instead of an HTTP request identity. A crash
 /// between the entity INSERT/UPDATE committing and the workflow checkpoint
 /// committing now replays as a cache hit (`AcquireOutcome::Replay`), not a
 /// second write: `acquire_or_check`'s claim row and `complete_in_tx`'s
@@ -1664,6 +1702,7 @@ async fn execute_entity_write(
     node: &GraphNode,
     node_type: NodeType,
     input: &Value,
+    round: i32,
 ) -> Result<NodeOutcome, AppError> {
     let entity_name = node
         .config
@@ -1707,7 +1746,7 @@ async fn execute_entity_write(
     } else {
         "workflow.update_record"
     };
-    let client_key = format!("{}:{}", instance.id, node.id);
+    let client_key = effect_key(instance.id, &node.id, round);
     let body_hash = entity_write_body_hash(&data);
 
     let record_id = match idempotency_durable::acquire_or_check(
@@ -1898,8 +1937,9 @@ async fn execute_send_notification(
     node: &GraphNode,
     input: &Value,
     fired: &mut HashSet<String>,
+    round: i32,
 ) -> Result<NodeOutcome, AppError> {
-    if fired.contains(&node.id) {
+    if fired.contains(&fired_key(&node.id, round)) {
         return Ok(NodeOutcome::Succeeded {
             output: serde_json::json!({ "skipped_replay": true }),
         });
@@ -1959,7 +1999,7 @@ async fn execute_send_notification(
         req,
     )
     .await?;
-    fired.insert(node.id.clone());
+    fired.insert(fired_key(&node.id, round));
     let _ = instance;
     Ok(NodeOutcome::Succeeded {
         output: serde_json::json!({ "dispatch_id": dispatch_id }),
@@ -1995,8 +2035,9 @@ async fn execute_webhook(
     node: &GraphNode,
     input: &Value,
     fired: &mut HashSet<String>,
+    round: i32,
 ) -> Result<NodeOutcome, AppError> {
-    if fired.contains(&node.id) {
+    if fired.contains(&fired_key(&node.id, round)) {
         return Ok(NodeOutcome::Succeeded {
             output: serde_json::json!({ "skipped_replay": true }),
         });
@@ -2034,7 +2075,7 @@ async fn execute_webhook(
         .map_err(|e| {
             AppError::Validation(format!("webhook node {:?} target rejected: {e}", node.id))
         })?
-        .header("Idempotency-Key", format!("{}:{}", instance.id, node.id))
+        .header("Idempotency-Key", effect_key(instance.id, &node.id, round))
         .json(&body);
     let response = request.send().await.map_err(AppError::internal)?;
     let status = response.status().as_u16();
@@ -2043,7 +2084,7 @@ async fn execute_webhook(
             "webhook returned status {status}"
         )));
     }
-    fired.insert(node.id.clone());
+    fired.insert(fired_key(&node.id, round));
     Ok(NodeOutcome::Succeeded {
         output: serde_json::json!({ "status": status }),
     })
@@ -2149,8 +2190,9 @@ async fn execute_agent_step(
     node: &GraphNode,
     input: &Value,
     fired: &mut HashSet<String>,
+    round: i32,
 ) -> Result<NodeOutcome, AppError> {
-    if fired.contains(&node.id) {
+    if fired.contains(&fired_key(&node.id, round)) {
         return Ok(NodeOutcome::Succeeded {
             output: serde_json::json!({ "skipped_replay": true }),
         });
@@ -2231,7 +2273,7 @@ async fn execute_agent_step(
     )
     .await?;
 
-    fired.insert(node.id.clone());
+    fired.insert(fired_key(&node.id, round));
     Ok(NodeOutcome::Succeeded {
         output: serde_json::json!({
             "session_id": session.id,
@@ -2686,7 +2728,7 @@ mod webhook_ssrf_tests {
         let instance = dummy_instance();
         let node = webhook_node(url);
         let mut fired = HashSet::new();
-        let err = execute_webhook(&instance, &node, &serde_json::json!({}), &mut fired)
+        let err = execute_webhook(&instance, &node, &serde_json::json!({}), &mut fired, 0)
             .await
             .expect_err("a non-routable webhook target must be rejected, not dialed");
         assert!(
@@ -2728,7 +2770,7 @@ mod webhook_ssrf_tests {
         let mut node = webhook_node("http://example.invalid/");
         node.config = serde_json::json!({});
         let mut fired = HashSet::new();
-        let err = execute_webhook(&instance, &node, &serde_json::json!({}), &mut fired)
+        let err = execute_webhook(&instance, &node, &serde_json::json!({}), &mut fired, 0)
             .await
             .expect_err("missing config.url must still be an error");
         // `AppError::Internal`'s `Display` is deliberately masked to a fixed
@@ -2744,6 +2786,34 @@ mod webhook_ssrf_tests {
             }
             other => panic!("expected AppError::Internal, got: {other:?}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod effect_key_tests {
+    use super::*;
+
+    #[test]
+    fn round_zero_keeps_the_key_runs_had_before_rounds() {
+        let run = Uuid::from_u128(1);
+        assert_eq!(
+            effect_key(run, "n1", 0),
+            "00000000-0000-0000-0000-000000000001:n1"
+        );
+        assert_eq!(fired_key("n1", 0), "n1");
+    }
+
+    #[test]
+    fn each_loop_round_is_its_own_effect() {
+        let run = Uuid::from_u128(1);
+        let keys: HashSet<String> = (0..3).map(|r| effect_key(run, "n1", r)).collect();
+        assert_eq!(keys.len(), 3, "a later round never replays an earlier one");
+        assert_ne!(fired_key("n1", 1), fired_key("n1", 2));
+        assert_ne!(
+            effect_key(run, "n1", 1),
+            effect_key(Uuid::from_u128(2), "n1", 1),
+            "runs never share a key"
+        );
     }
 }
 
