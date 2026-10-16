@@ -13,9 +13,11 @@ publish.workspace      = true
 [dependencies]
 attome-core.workspace = true
 attome-modules.workspace = true
+attome-rules.workspace = true
 axum.workspace = true
 serde.workspace = true
 utoipa.workspace = true
+uuid.workspace = true
 
 [lints]
 workspace = true

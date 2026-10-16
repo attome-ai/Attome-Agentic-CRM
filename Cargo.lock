@@ -615,9 +615,11 @@ version = "0.1.0"
 dependencies = [
  "attome-core",
  "attome-modules",
+ "attome-rules",
  "axum",
  "serde",
  "utoipa",
+ "uuid",
 ]
 
 [[package]]
