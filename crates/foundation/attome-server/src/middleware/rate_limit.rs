@@ -133,7 +133,8 @@ fn header_value_from_u64(n: u64) -> HeaderValue {
 /// four computed from the same atomic read the admit/reject decision came
 /// from (P-rate-limit-atomicity §4.1/§4.3), never a separately-timed lookup
 /// that could disagree with it.
-fn apply_rate_limit_headers(headers: &mut HeaderMap, outcome: RateLimitOutcome) {
+fn apply_rate_limit_headers(headers: &mut HeaderMap, outcome: RateLimitOutcome, policy: &str) {
+    apply_ietf_headers(headers, outcome, policy);
     headers.insert(
         "x-ratelimit-limit",
         header_value_from_u64(outcome.limit as u64),
@@ -152,6 +153,104 @@ fn apply_rate_limit_headers(headers: &mut HeaderMap, outcome: RateLimitOutcome) 
             header_value_from_u64(outcome.retry_after_secs),
         );
     }
+}
+
+/// Q20-T4: the IETF `RateLimit-Policy` / `RateLimit` pair
+/// (draft-ietf-httpapi-ratelimit-headers) beside the older `X-RateLimit-*`
+/// set: the policy names the category, its quota and its 60-second window;
+/// `RateLimit` carries what is left and when the window frees up.
+fn apply_ietf_headers(headers: &mut HeaderMap, outcome: RateLimitOutcome, policy: &str) {
+    if let Ok(value) = HeaderValue::from_str(&format!("\"{policy}\";q={};w=60", outcome.limit)) {
+        headers.insert("ratelimit-policy", value);
+    }
+    if let Ok(value) = HeaderValue::from_str(&format!(
+        "\"{policy}\";r={};t={}",
+        outcome.remaining, outcome.retry_after_secs
+    )) {
+        headers.insert("ratelimit", value);
+    }
+}
+
+/// Q20-T4: a caller (a user, or an address when anonymous) that trips a
+/// limit in this many separate windows within [`TRIP_MEMORY`] is refused
+/// outright for [`BAN_DURATION`]. Only the first refusal of a window counts,
+/// so one burst is one trip, not one per refused request. Constants, like the
+/// MFA budget below: a threshold a deployment could raise is one a
+/// misconfiguration could disable.
+pub const BAN_AFTER_TRIPPED_WINDOWS: i64 = 5;
+/// How long tripped windows are remembered toward a ban.
+pub const TRIP_MEMORY: std::time::Duration = std::time::Duration::from_secs(60 * 60);
+/// How long a temporary ban lasts.
+pub const BAN_DURATION: std::time::Duration = std::time::Duration::from_secs(15 * 60);
+/// Every bucket banned since the set was last read, for the admin screen
+/// (Q20-T5); a member whose ban key has expired is no longer banned.
+pub const BANNED_SET: &str = "base:rl:banned";
+
+/// The key holding `bucket`'s ban (`user:{id}` or `ip:{address}`); its value
+/// is the category that tripped last, its TTL what remains of the ban.
+pub fn ban_key(bucket: &str) -> String {
+    attome_cache::rate_limit::storage_key(&format!("base:rl:ban:{bucket}"))
+}
+
+/// Seconds left on `bucket`'s ban, or `None` when it is not banned.
+pub async fn active_ban(redis: &Store, bucket: &str) -> Result<Option<u64>, AppError> {
+    Ok(redis
+        .ttl_secs(ban_key(bucket))
+        .await?
+        .map(|left| left.max(1) as u64))
+}
+
+/// Counts a refused request toward a ban (see [`BAN_AFTER_TRIPPED_WINDOWS`]).
+/// Best-effort: the refusal itself already happened, so a store failure here
+/// is logged and changes nothing the caller sees.
+async fn note_trip(redis: &Store, bucket: &str, category: &str, retry_after_secs: u64) {
+    let result: Result<(), AppError> = async {
+        let window =
+            attome_cache::rate_limit::storage_key(&format!("base:rl:tripped:{bucket}:{category}"));
+        let ttl = std::time::Duration::from_secs(retry_after_secs.max(1));
+        if !redis.set_nx(&window, "1", Some(ttl)).await? {
+            return Ok(());
+        }
+        let trips_key = attome_cache::rate_limit::storage_key(&format!("base:rl:trips:{bucket}"));
+        let trips = redis.incr_with_ttl(&trips_key, TRIP_MEMORY).await?;
+        if trips >= BAN_AFTER_TRIPPED_WINDOWS {
+            redis
+                .set(ban_key(bucket), category, Some(BAN_DURATION))
+                .await?;
+            redis.del(&trips_key).await?;
+            redis.sadd(BANNED_SET, bucket).await?;
+            metrics::counter!("security_rejection_total", "reason" => "temporary_ban").increment(1);
+            tracing::warn!(
+                bucket,
+                category,
+                ban_secs = BAN_DURATION.as_secs(),
+                "rate limit: temporary ban after repeated limit trips"
+            );
+        }
+        Ok(())
+    }
+    .await;
+    if let Err(e) = result {
+        tracing::warn!(error = %e, bucket, "rate limit: trip not counted toward a ban");
+    }
+}
+
+/// The 429 a banned caller gets: no handler runs, and `Retry-After` is what
+/// is left of the ban.
+fn banned_response(left_secs: u64) -> Response {
+    let mut resp = AppError::TooManyRequests {
+        retry_after_secs: Some(left_secs),
+    }
+    .into_response();
+    let headers = resp.headers_mut();
+    headers.insert(
+        axum::http::header::RETRY_AFTER,
+        header_value_from_u64(left_secs),
+    );
+    if let Ok(value) = HeaderValue::from_str(&format!("\"ban\";r=0;t={left_secs}")) {
+        headers.insert("ratelimit", value);
+    }
+    resp
 }
 
 /// Per-account attempt budget shared by every second-factor route: login-time
@@ -281,22 +380,37 @@ pub async fn rate_limit(
         anonymous_rpm
     };
 
+    // Q20-T4: a banned caller is refused before its budget is even read.
+    // Fails closed on a store error, like the budget check itself.
+    match active_ban(&state.redis_coordination, &bucket).await {
+        Ok(Some(left)) => return banned_response(left),
+        Ok(None) => {}
+        Err(e) => return e.into_response(),
+    }
+
     let key = format!("base:rl:{bucket}:{category}");
     match attome_cache::rate_limit::check(&state.redis_coordination, &key, limit as i32).await {
         Ok(outcome) if outcome.allowed => {
             let mut resp = next.run(req).await;
-            apply_rate_limit_headers(resp.headers_mut(), outcome);
+            apply_rate_limit_headers(resp.headers_mut(), outcome, category);
             resp
         }
         Ok(outcome) => {
             // P-observability-completion — SecurityAnomalyRateHigh alert
             // source; no-op if no recorder was ever installed.
             metrics::counter!("security_rejection_total", "reason" => "rate_limit").increment(1);
+            note_trip(
+                &state.redis_coordination,
+                &bucket,
+                category,
+                outcome.retry_after_secs,
+            )
+            .await;
             let mut resp = AppError::TooManyRequests {
                 retry_after_secs: Some(outcome.retry_after_secs),
             }
             .into_response();
-            apply_rate_limit_headers(resp.headers_mut(), outcome);
+            apply_rate_limit_headers(resp.headers_mut(), outcome, category);
             resp
         }
         Err(e) => e.into_response(),
@@ -328,6 +442,13 @@ pub async fn pre_auth_rate_limit(
     let ip = client_ip(&req, &state.config)
         .map(|ip| rate_limit_subject(ip, state.config.rate_limit.ipv6_bucket_prefix))
         .unwrap_or_else(|| "unknown".to_owned());
+    // Q20-T4: the same address bucket the category middleware bans.
+    let bucket = format!("ip:{ip}");
+    match active_ban(&state.redis_coordination, &bucket).await {
+        Ok(Some(left)) => return banned_response(left),
+        Ok(None) => {}
+        Err(e) => return e.into_response(),
+    }
     let key = format!("base:rl:preauth-ip:{ip}");
     let limit = state.config.rate_limit.pre_auth_rpm;
 
@@ -342,11 +463,18 @@ pub async fn pre_auth_rate_limit(
         // response/headers exist yet to clobber.
         Ok(outcome) if outcome.allowed => next.run(req).await,
         Ok(outcome) => {
+            note_trip(
+                &state.redis_coordination,
+                &bucket,
+                "pre_auth",
+                outcome.retry_after_secs,
+            )
+            .await;
             let mut resp = AppError::TooManyRequests {
                 retry_after_secs: Some(outcome.retry_after_secs),
             }
             .into_response();
-            apply_rate_limit_headers(resp.headers_mut(), outcome);
+            apply_rate_limit_headers(resp.headers_mut(), outcome, "pre_auth");
             resp
         }
         Err(e) => e.into_response(),
@@ -425,6 +553,61 @@ mod tests {
             result.is_err(),
             "an unreachable Redis must fail the budget closed"
         );
+    }
+
+    /// Q20-T4: one burst is one trip however many requests it refuses;
+    /// trips in five separate windows ban the caller, and the ban's 429
+    /// carries what is left of it.
+    #[tokio::test]
+    async fn repeated_trips_in_separate_windows_ban_the_caller() {
+        let store = attome_cache::Store::memory();
+        let bucket = format!("ip:test-{}", Uuid::now_v7());
+        for _ in 0..10 {
+            note_trip(&store, &bucket, "api", 30).await;
+        }
+        assert_eq!(active_ban(&store, &bucket).await.unwrap(), None);
+        for category in ["credential", "mfa", "presign", "webchat"] {
+            note_trip(&store, &bucket, category, 30).await;
+        }
+        let left = active_ban(&store, &bucket)
+            .await
+            .unwrap()
+            .expect("five tripped windows ban the caller");
+        assert!(left > 0 && left <= BAN_DURATION.as_secs(), "{left}");
+        let other = format!("ip:test-{}", Uuid::now_v7());
+        assert_eq!(active_ban(&store, &other).await.unwrap(), None);
+
+        let resp = banned_response(left);
+        assert_eq!(resp.status(), axum::http::StatusCode::TOO_MANY_REQUESTS);
+        assert_eq!(
+            resp.headers().get("retry-after").unwrap(),
+            left.to_string().as_str()
+        );
+        assert_eq!(
+            resp.headers().get("ratelimit").unwrap(),
+            format!("\"ban\";r=0;t={left}").as_str()
+        );
+    }
+
+    /// Q20-T4: the IETF pair names the category, its quota and window, and
+    /// what is left.
+    #[test]
+    fn ietf_rate_limit_headers_name_the_policy() {
+        let mut headers = HeaderMap::new();
+        let outcome = RateLimitOutcome {
+            allowed: false,
+            limit: 10,
+            remaining: 0,
+            retry_after_secs: 42,
+            reset_unix: 0,
+        };
+        apply_rate_limit_headers(&mut headers, outcome, "credential");
+        assert_eq!(
+            headers.get("ratelimit-policy").unwrap(),
+            "\"credential\";q=10;w=60"
+        );
+        assert_eq!(headers.get("ratelimit").unwrap(), "\"credential\";r=0;t=42");
+        assert_eq!(headers.get("retry-after").unwrap(), "42");
     }
 
     #[test]
