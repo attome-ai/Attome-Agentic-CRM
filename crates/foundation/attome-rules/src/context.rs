@@ -87,6 +87,9 @@ pub struct Context {
     timezone: Tz,
     fields: HashMap<String, Value>,
     related: HashMap<String, HashMap<String, Value>>,
+    /// Z11-T5: the base currency and, per currency, the value of one unit
+    /// in the base currency. Supplied by the caller; never looked up.
+    rates: Option<(String, HashMap<String, f64>)>,
 }
 
 impl Context {
@@ -96,7 +99,44 @@ impl Context {
             timezone: chrono_tz::UTC,
             fields: HashMap::new(),
             related: HashMap::new(),
+            rates: None,
         }
+    }
+
+    /// Z11-T5: the rates `convert` uses. `rates` gives, per currency, the
+    /// value of one unit in `base`; the base itself is 1. Every code must be
+    /// a known ISO 4217 code and every rate finite and positive.
+    pub fn with_rates(
+        mut self,
+        base: String,
+        rates: Vec<(String, f64)>,
+    ) -> Result<Self, RulesError> {
+        let base_code =
+            crate::currency::known(&base).ok_or_else(|| RulesError::UnknownCurrency(base))?;
+        let mut table = HashMap::with_capacity(rates.len() + 1);
+        for (code, rate) in rates {
+            let known =
+                crate::currency::known(&code).ok_or_else(|| RulesError::UnknownCurrency(code))?;
+            if !rate.is_finite() || rate <= 0.0 {
+                return Err(RulesError::Eval(format!(
+                    "the rate for {known} must be a finite positive number"
+                )));
+            }
+            table.insert(known, rate);
+        }
+        table.insert(base_code.clone(), 1.0);
+        self.rates = Some((base_code, table));
+        Ok(self)
+    }
+
+    /// Z11-T5: the value of one unit of `code` in the base currency.
+    pub fn rate(&self, code: &str) -> Result<f64, RulesError> {
+        let known = crate::currency::known(code)
+            .ok_or_else(|| RulesError::UnknownCurrency(code.to_owned()))?;
+        self.rates
+            .as_ref()
+            .and_then(|(_, table)| table.get(&known).copied())
+            .ok_or(RulesError::NoRate(known))
     }
 
     /// BRU-C4: the zone today() and month/year arithmetic use.

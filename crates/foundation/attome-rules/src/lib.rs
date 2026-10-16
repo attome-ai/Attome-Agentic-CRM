@@ -100,6 +100,7 @@ mod ast;
 mod budget;
 mod compile;
 mod context;
+pub mod currency;
 mod error;
 mod eval;
 mod lexer;

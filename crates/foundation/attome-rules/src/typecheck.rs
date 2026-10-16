@@ -377,6 +377,25 @@ fn typecheck_call(
             }
             Ok(Type::Number)
         }
+        // Z11-T5 (V2).
+        "round_currency" => {
+            arity(name, args.len(), 2, 2)?;
+            require(&arg_types[0], &Type::Number, "round_currency's amount")?;
+            require(&arg_types[1], &Type::Text, "round_currency's currency")?;
+            Ok(Type::Number)
+        }
+        "convert" => {
+            arity(name, args.len(), 3, 3)?;
+            require(&arg_types[0], &Type::Number, "convert's amount")?;
+            require(&arg_types[1], &Type::Text, "convert's from currency")?;
+            require(&arg_types[2], &Type::Text, "convert's to currency")?;
+            Ok(Type::Number)
+        }
+        "minor_units" => {
+            arity(name, args.len(), 1, 1)?;
+            require(&arg_types[0], &Type::Text, name)?;
+            Ok(Type::Number)
+        }
         other => Err(RulesError::UnknownFunction(other.to_owned())),
     };
     result.map_err(RulesDiagnostic::without_span)
@@ -496,6 +515,9 @@ fn rejects_null_call(name: &str) -> bool {
             | "ceil"
             | "power"
             | "clamp"
+            | "round_currency"
+            | "convert"
+            | "minor_units"
     )
 }
 

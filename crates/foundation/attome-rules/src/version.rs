@@ -46,6 +46,10 @@ const ADDED: &[(&str, LanguageVersion)] = &[
     ("ceil", LanguageVersion::V2),
     ("power", LanguageVersion::V2),
     ("clamp", LanguageVersion::V2),
+    // Z11-T5: currency functions.
+    ("round_currency", LanguageVersion::V2),
+    ("convert", LanguageVersion::V2),
+    ("minor_units", LanguageVersion::V2),
 ];
 
 /// The version a function needs.

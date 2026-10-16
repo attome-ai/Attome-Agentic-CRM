@@ -137,6 +137,14 @@ pub enum RulesError {
 
     #[error("{0} exceeded")]
     Budget(BudgetKind),
+
+    /// Z11-T5: a currency code the ISO 4217 table does not know.
+    #[error("unknown currency: {0}")]
+    UnknownCurrency(String),
+
+    /// Z11-T5: the context carries no rate for this currency.
+    #[error("no exchange rate for {0}")]
+    NoRate(String),
 }
 
 impl RulesError {
@@ -160,6 +168,8 @@ impl RulesError {
             Self::NullOperand { .. } => "rules.null.operand",
             Self::ContextTypeMismatch { .. } => "rules.context.type_mismatch",
             Self::UnknownTimezone(_) => "rules.context.unknown_timezone",
+            Self::UnknownCurrency(_) => "rules.currency.unknown",
+            Self::NoRate(_) => "rules.currency.no_rate",
             Self::Budget(kind) => kind.code(),
         }
     }

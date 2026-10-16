@@ -596,6 +596,47 @@ impl Evaluator<'_> {
                     (other, _, _) => Err(eval_type_err(name, "numbers", other)),
                 }
             }
+            // Z11-T5 (V2): currency functions.
+            "round_currency" => {
+                let v = self.eval_only(args, 2, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match (&v[0], &v[1]) {
+                    (Value::Number(n), Value::Text(code)) => {
+                        let digits = crate::currency::minor_units(code)
+                            .ok_or_else(|| RulesError::UnknownCurrency(code.clone()))?;
+                        round_decimal(*n, digits as i32).map(Value::Number)
+                    }
+                    (other, _) => Err(eval_type_err(name, "(number, text)", other)),
+                }
+            }
+            "convert" => {
+                let v = self.eval_only(args, 3, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match (&v[0], &v[1], &v[2]) {
+                    (Value::Number(n), Value::Text(from), Value::Text(to)) => {
+                        let from_rate = self.ctx.rate(from)?;
+                        let to_rate = self.ctx.rate(to)?;
+                        finite(n * from_rate / to_rate).map(Value::Number)
+                    }
+                    (other, _, _) => Err(eval_type_err(name, "(number, text, text)", other)),
+                }
+            }
+            "minor_units" => {
+                let v = self.eval_only(args, 1, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match &v[0] {
+                    Value::Text(code) => crate::currency::minor_units(code)
+                        .map(|d| Value::Number(f64::from(d)))
+                        .ok_or_else(|| RulesError::UnknownCurrency(code.clone())),
+                    other => Err(eval_type_err(name, "text", other)),
+                }
+            }
             other => Err(RulesError::UnknownFunction(other.to_owned())),
         }
     }
