@@ -10452,6 +10452,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/opportunities/{id}/deal-discount": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_deal_discount"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/opportunities/{id}/lines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_sales_lines"];
+        put?: never;
+        post: operations["post_sales_line"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sales/opportunities/{id}/lines/{line_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_sales_line"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_sales_line"];
+        trace?: never;
+    };
     "/api/v1/sales/opportunities/{id}/splits": {
         parameters: {
             query?: never;
@@ -24610,6 +24658,31 @@ export interface components {
             total: number;
         };
         /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_SalesOpportunityLine: {
+            items: {
+                discount_amount?: string | null;
+                discount_percent?: string | null;
+                /** Format: uuid */
+                id: string;
+                line_kind?: string | null;
+                line_total?: string | null;
+                list_price?: string | null;
+                name?: string | null;
+                /** Format: uuid */
+                product_ref?: string | null;
+                quantity?: string | null;
+                recurrence?: string | null;
+                sales_price?: string | null;
+                term_months?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
         PaginatedResponse_ScanHit: {
             items: {
                 /** @description The field that matched. */
@@ -27908,12 +27981,68 @@ export interface components {
             /** @description The account team roles to copy, e.g. `["account_manager", "pre_sales"]`. */
             roles: string[];
         };
+        SalesDealDiscountBody: {
+            /** @description Decimal text, 0 to 100; null removes it. */
+            percent?: string | null;
+        };
         SalesDefaultTeamApply: {
             queued: boolean;
         };
         SalesDefaultTeamPreview: {
             /** @description The caller's open deals that miss at least one default member. */
             opportunity_ids: string[];
+        };
+        SalesLineBody: {
+            description?: string | null;
+            discount_amount?: string | null;
+            discount_percent?: string | null;
+            /** @description `one_time` (default) or `recurring`. */
+            line_kind?: string | null;
+            /** Format: uuid */
+            product_ref: string;
+            /** @description Decimal text; 1 when absent. */
+            quantity?: string | null;
+            /** @description `monthly` or `yearly`, for a recurring line. */
+            recurrence?: string | null;
+            sales_price?: string | null;
+            /** Format: int32 */
+            term_months?: number | null;
+        };
+        SalesLinePatch: {
+            description?: string | null;
+            discount_amount?: string | null;
+            discount_percent?: string | null;
+            line_kind?: string | null;
+            quantity?: string | null;
+            recurrence?: string | null;
+            sales_price?: string | null;
+            /** Format: int32 */
+            term_months?: number | null;
+        };
+        SalesLinesChanged: {
+            /** Format: uuid */
+            line_id?: string | null;
+            one_time_total: string;
+            /** Format: uuid */
+            opportunity_id: string;
+            recurring_annual: string;
+            total_contract_value: string;
+        };
+        SalesOpportunityLine: {
+            discount_amount?: string | null;
+            discount_percent?: string | null;
+            /** Format: uuid */
+            id: string;
+            line_kind?: string | null;
+            line_total?: string | null;
+            list_price?: string | null;
+            name?: string | null;
+            /** Format: uuid */
+            product_ref?: string | null;
+            quantity?: string | null;
+            recurrence?: string | null;
+            sales_price?: string | null;
+            term_months?: string | null;
         };
         SalesOwnerChanged: {
             /** Format: uuid */
@@ -65982,6 +66111,360 @@ export interface operations {
                 };
             };
             /** @description The new owner is already the owner, or their roles do not allow editing deals */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_deal_discount: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The opportunity's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesDealDiscountBody"];
+            };
+        };
+        responses: {
+            /** @description The deal discount is set and the deal repriced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesLinesChanged"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version, or the deal is being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing, or a percent outside 0 to 100 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_sales_lines: {
+        parameters: {
+            query?: {
+                page?: number;
+                /** @description Up to 500. */
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's lines */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_SalesOpportunityLine"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_line: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The opportunity's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The opportunity */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesLineBody"];
+            };
+        };
+        responses: {
+            /** @description The line is added and the deal repriced */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesLinesChanged"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version, or the deal is being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing, a bad number, or product_not_on_price_list */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_sales_line: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The opportunity's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The opportunity */
+                id: string;
+                /** @description The line */
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The line is removed and the deal repriced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesLinesChanged"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such line on this opportunity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version, or the deal is being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    patch_sales_line: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The opportunity's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The opportunity */
+                id: string;
+                /** @description The line */
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesLinePatch"];
+            };
+        };
+        responses: {
+            /** @description The line is changed and the deal repriced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesLinesChanged"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not update this opportunity */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such line on this opportunity */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version, or the deal is being changed */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or a bad value */
             422: {
                 headers: {
                     [name: string]: unknown;
