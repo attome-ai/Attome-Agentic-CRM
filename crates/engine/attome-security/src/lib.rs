@@ -8,6 +8,7 @@ pub mod db;
 pub mod entity_privileges;
 pub mod field_gate;
 pub mod mfa;
+pub mod mfa_policy;
 pub mod model;
 pub mod reconcile;
 pub mod resolver;
@@ -17,6 +18,7 @@ pub mod rls_fragment;
 /// D-792 — the fleet console's rollout privilege and role.
 pub mod rollout;
 pub mod seed;
+pub mod session_policy;
 pub mod strict_authz;
 pub mod visibility;
 
