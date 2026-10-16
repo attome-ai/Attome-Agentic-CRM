@@ -8717,6 +8717,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/commission/adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["commission_post_adjustment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/disputes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["commission_post_dispute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/disputes/{id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["commission_post_decision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/commission/estimate": {
         parameters: {
             query?: never;
@@ -8726,7 +8774,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["post_estimate"];
+        post: operations["commission_post_estimate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8742,7 +8790,23 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["post_run"];
+        post: operations["commission_post_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/periods/{id}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["commission_post_submit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8756,7 +8820,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_statements"];
+        get: operations["commission_get_statements"];
         put?: never;
         post?: never;
         delete?: never;
@@ -8772,7 +8836,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_my_statement"];
+        get: operations["commission_get_my_statement"];
         put?: never;
         post?: never;
         delete?: never;
@@ -16074,6 +16138,48 @@ export interface components {
             /** Format: int64 */
             version_no: number;
         };
+        CommissionAdjustmentBody: {
+            /** @description Decimal text; negative takes pay away. */
+            amount: string;
+            /** Format: uuid */
+            participant_id: string;
+            /** Format: uuid */
+            period_id: string;
+            reason: string;
+        };
+        /** @description The adjustment written, or the approval it waits on. */
+        CommissionAdjustmentOutcome: {
+            /**
+             * Format: uuid
+             * @description The new `comp_adjustment`, when written.
+             */
+            adjustment_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The approval request, when the amount is above the threshold.
+             */
+            approval_request_id?: string | null;
+        };
+        CommissionDisputeBody: {
+            reason: string;
+            /** Format: uuid */
+            statement_line_id: string;
+        };
+        CommissionDisputeCreated: {
+            /** Format: uuid */
+            dispute_id: string;
+        };
+        /**
+         * @description A reviewer's decision on a dispute.
+         * @enum {string}
+         */
+        CommissionDisputeDecision: "accept" | "reject" | "adjust";
+        CommissionDisputeDecisionBody: {
+            /** @description Required for `adjust`: the adjustment, as decimal text. */
+            amount?: string | null;
+            comment: string;
+            decision: components["schemas"]["CommissionDisputeDecision"];
+        };
         /** @description What one opportunity would pay if it closed now. */
         CommissionEstimate: {
             /** Format: uuid */
@@ -16091,6 +16197,19 @@ export interface components {
         CommissionEstimateBody: {
             /** Format: uuid */
             opportunity_id: string;
+        };
+        CommissionPeriodClosed: {
+            /** Format: int64 */
+            payouts_approved: number;
+            /** Format: uuid */
+            period_id: string;
+        };
+        CommissionPeriodSubmitted: {
+            /** Format: uuid */
+            approval_request_id: string;
+            /** Format: uuid */
+            period_id: string;
+            status: string;
         };
         CommissionRunBody: {
             /** Format: uuid */
@@ -60247,7 +60366,226 @@ export interface operations {
             };
         };
     };
-    post_estimate: {
+    commission_post_adjustment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommissionAdjustmentBody"];
+            };
+        };
+        responses: {
+            /** @description The adjustment is written */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionAdjustmentOutcome"];
+                };
+            };
+            /** @description Above the approval amount: an approval request is open and nothing is written yet */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionAdjustmentOutcome"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks comp_adjustment.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such period or participant */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The period is approved or locked */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No reason, or the amount is not a non-zero number */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    commission_post_dispute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommissionDisputeBody"];
+            };
+        };
+        responses: {
+            /** @description The dispute is open */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionDisputeCreated"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks comp_dispute.create, or the line is not theirs */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such statement line */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No reason given */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    commission_post_decision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The dispute */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommissionDisputeDecisionBody"];
+            };
+        };
+        responses: {
+            /** @description Decided; an adjustment is written when it is within the approval amount */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionAdjustmentOutcome"];
+                };
+            };
+            /** @description The adjustment waits on approval; the dispute stays open until it is written */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionAdjustmentOutcome"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks comp_dispute.update, or comp_adjustment.create to adjust */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such dispute */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The dispute is already decided, or its period is approved or locked */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No comment, or an adjust without an amount */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    commission_post_estimate: {
         parameters: {
             query?: never;
             header?: never;
@@ -60298,7 +60636,7 @@ export interface operations {
             };
         };
     };
-    post_run: {
+    commission_post_run: {
         parameters: {
             query?: never;
             header?: never;
@@ -60361,7 +60699,78 @@ export interface operations {
             };
         };
     };
-    get_statements: {
+    commission_post_submit: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The period's row_version, quoted */
+                "If-Match": string;
+            };
+            path: {
+                /** @description The commission period */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description In review; a finance approval regarding the period is open */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionPeriodSubmitted"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks comp_period.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such period */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Stale row_version, or the period is not open */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description If-Match missing or malformed */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    commission_get_statements: {
         parameters: {
             query: {
                 period_id: string;
@@ -60405,7 +60814,7 @@ export interface operations {
             };
         };
     };
-    get_my_statement: {
+    commission_get_my_statement: {
         parameters: {
             query: {
                 period_id: string;

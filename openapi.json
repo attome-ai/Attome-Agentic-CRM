@@ -45276,12 +45276,325 @@
         ]
       }
     },
+    "/api/v1/commission/adjustments": {
+      "post": {
+        "tags": [
+          "commission"
+        ],
+        "operationId": "commission_post_adjustment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommissionAdjustmentBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The adjustment is written",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionAdjustmentOutcome"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Above the approval amount: an approval request is open and nothing is written yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionAdjustmentOutcome"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks comp_adjustment.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such period or participant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The period is approved or locked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No reason, or the amount is not a non-zero number",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/commission/disputes": {
+      "post": {
+        "tags": [
+          "commission"
+        ],
+        "operationId": "commission_post_dispute",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommissionDisputeBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "The dispute is open",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionDisputeCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks comp_dispute.create, or the line is not theirs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such statement line",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No reason given",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/commission/disputes/{id}/decision": {
+      "post": {
+        "tags": [
+          "commission"
+        ],
+        "operationId": "commission_post_decision",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The dispute",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommissionDisputeDecisionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decided; an adjustment is written when it is within the approval amount",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionAdjustmentOutcome"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The adjustment waits on approval; the dispute stays open until it is written",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionAdjustmentOutcome"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks comp_dispute.update, or comp_adjustment.create to adjust",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such dispute",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The dispute is already decided, or its period is approved or locked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No comment, or an adjust without an amount",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/commission/estimate": {
       "post": {
         "tags": [
           "commission"
         ],
-        "operationId": "post_estimate",
+        "operationId": "commission_post_estimate",
         "requestBody": {
           "content": {
             "application/json": {
@@ -45354,7 +45667,7 @@
         "tags": [
           "commission"
         ],
-        "operationId": "post_run",
+        "operationId": "commission_post_run",
         "parameters": [
           {
             "name": "id",
@@ -45448,12 +45761,120 @@
         }
       }
     },
+    "/api/v1/commission/periods/{id}/submit": {
+      "post": {
+        "tags": [
+          "commission"
+        ],
+        "operationId": "commission_post_submit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The commission period",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "The period's row_version, quoted",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "In review; a finance approval regarding the period is open",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionPeriodSubmitted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks comp_period.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such period",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stale row_version, or the period is not open",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "If-Match missing or malformed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/commission/statements": {
       "get": {
         "tags": [
           "commission"
         ],
-        "operationId": "get_statements",
+        "operationId": "commission_get_statements",
         "parameters": [
           {
             "name": "period_id",
@@ -45540,7 +45961,7 @@
         "tags": [
           "commission"
         ],
-        "operationId": "get_my_statement",
+        "operationId": "commission_get_my_statement",
         "parameters": [
           {
             "name": "period_id",
@@ -75020,6 +75441,113 @@
           }
         }
       },
+      "CommissionAdjustmentBody": {
+        "type": "object",
+        "required": [
+          "participant_id",
+          "period_id",
+          "amount",
+          "reason"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "Decimal text; negative takes pay away."
+          },
+          "participant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "CommissionAdjustmentOutcome": {
+        "type": "object",
+        "description": "The adjustment written, or the approval it waits on.",
+        "properties": {
+          "adjustment_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The new `comp_adjustment`, when written."
+          },
+          "approval_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The approval request, when the amount is above the threshold."
+          }
+        }
+      },
+      "CommissionDisputeBody": {
+        "type": "object",
+        "required": [
+          "statement_line_id",
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "statement_line_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CommissionDisputeCreated": {
+        "type": "object",
+        "required": [
+          "dispute_id"
+        ],
+        "properties": {
+          "dispute_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CommissionDisputeDecision": {
+        "type": "string",
+        "description": "A reviewer's decision on a dispute.",
+        "enum": [
+          "accept",
+          "reject",
+          "adjust"
+        ]
+      },
+      "CommissionDisputeDecisionBody": {
+        "type": "object",
+        "required": [
+          "decision",
+          "comment"
+        ],
+        "properties": {
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Required for `adjust`: the adjustment, as decimal text."
+          },
+          "comment": {
+            "type": "string"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/CommissionDisputeDecision"
+          }
+        }
+      },
       "CommissionEstimate": {
         "type": "object",
         "description": "What one opportunity would pay if it closed now.",
@@ -75057,6 +75585,45 @@
           "opportunity_id": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "CommissionPeriodClosed": {
+        "type": "object",
+        "required": [
+          "period_id",
+          "payouts_approved"
+        ],
+        "properties": {
+          "payouts_approved": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "period_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CommissionPeriodSubmitted": {
+        "type": "object",
+        "required": [
+          "period_id",
+          "status",
+          "approval_request_id"
+        ],
+        "properties": {
+          "approval_request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
           }
         }
       },
