@@ -78,7 +78,11 @@ type ComponentRow = (
     Option<String>,
 );
 
-async fn components(state: &EngineState, version: Uuid) -> Result<Vec<Component>, String> {
+/// The plan version's components, compiled; why not when one fails.
+pub(crate) async fn components(
+    state: &EngineState,
+    version: Uuid,
+) -> Result<Vec<Component>, String> {
     let rows: Vec<ComponentRow> = sqlx::query_as(
         "SELECT id, rate_table, tier_mode, cap_per_deal::text, cap_per_period::text, \
                 gate_attainment_percent::text, floor_margin_percent::text \
