@@ -227,6 +227,49 @@ pub async fn sync_attribute_index_on_connection(
     Ok(())
 }
 
+/// Y2-T3: the live lookup attributes (`type` 11) whose physical column has
+/// no index leading with it, as `(entity, field)`. A lookup column is always
+/// meant to be indexed (FK existence and cascade checks); one created before
+/// that rule, or whose build failed, shows up here.
+pub async fn lookup_columns_without_index(db: &DbPool) -> Result<Vec<(String, String)>, AppError> {
+    sqlx::query_as(
+        "SELECT e.logicalname::text, a.logicalname::text
+           FROM attribute_info a
+           JOIN entity_info e ON e.id = a.entity_ref
+           JOIN pg_class t ON t.relname::text = e.logicalname::text
+                          AND t.relnamespace = current_schema()::regnamespace
+                          AND t.relkind = 'r'
+           JOIN pg_attribute c ON c.attrelid = t.oid AND c.attname::text = a.logicalname::text
+                              AND NOT c.attisdropped
+          WHERE a.type = 11
+            AND COALESCE(a.is_active, true) AND COALESCE(e.is_active, true)
+            AND NOT EXISTS (SELECT 1 FROM pg_index i
+                             WHERE i.indrelid = t.oid AND i.indkey[0] = c.attnum)
+          ORDER BY 1, 2",
+    )
+    .fetch_all(db)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// Y2-T3: builds the missing lookup-column indexes found by
+/// [`lookup_columns_without_index`], each `CONCURRENTLY` (no write lock), at
+/// most four at a time ([`ATTRIBUTE_INDEX_CONNECTION_LIMIT`]). A column whose
+/// build is already running elsewhere is skipped. Returns how many were
+/// built; a second run reports 0. Boot enqueues the same work as durable
+/// `BuildAttributeIndex` jobs instead of calling this inline.
+pub async fn backfill_lookup_indexes(config: &AppConfig, db: &DbPool) -> Result<u32, AppError> {
+    let mut built = 0u32;
+    for (entity, field) in lookup_columns_without_index(db).await? {
+        match sync_attribute_index(config, &entity, &field, true).await {
+            Ok(()) => built += 1,
+            Err(AppError::Conflict(_)) => {}
+            Err(e) => return Err(e),
+        }
+    }
+    Ok(built)
+}
+
 /// A29-T1: how many values of a field more than one live record holds; an
 /// external id cannot be declared on a field while this is above zero.
 pub async fn count_duplicate_values(

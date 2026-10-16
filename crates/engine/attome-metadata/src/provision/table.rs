@@ -557,6 +557,37 @@ async fn backfill_timestamptz(
     Ok(())
 }
 
+/// Y2-T7: the column types whose values go to TOAST and are worth lz4.
+fn compresses_with_lz4(pg_type: &str) -> bool {
+    let upper = pg_type.trim().to_ascii_uppercase();
+    upper.starts_with("TEXT") || upper.starts_with("JSONB")
+}
+
+/// Y2-T7: whether this server was built with lz4 (`default_toast_compression`
+/// offers it). Asked once per process; a server without it gets a single
+/// warning and pglz columns.
+async fn lz4_available(db: &DbPool) -> bool {
+    static AVAILABLE: tokio::sync::OnceCell<bool> = tokio::sync::OnceCell::const_new();
+    // A failed probe is not cached: the next column asks again.
+    let probe = AVAILABLE
+        .get_or_try_init(|| async {
+            let available = sqlx::query_scalar::<_, bool>(
+                "SELECT EXISTS (SELECT 1 FROM pg_settings \
+                 WHERE name = 'default_toast_compression' AND 'lz4' = ANY(enumvals))",
+            )
+            .fetch_one(db)
+            .await?;
+            if !available {
+                tracing::warn!(
+                    "this PostgreSQL has no lz4; new text and JSON columns use the default compression"
+                );
+            }
+            Ok::<bool, sqlx::Error>(available)
+        })
+        .await;
+    probe.copied().unwrap_or(false)
+}
+
 /// Adds the physical column backing an attribute, if it doesn't already exist.
 /// Idempotent and self-healing, same rationale as `provision_table`.
 pub(super) async fn provision_column(
@@ -580,12 +611,20 @@ pub(super) async fn provision_column(
         return Ok(());
     }
 
+    let pg_type = pg_type_for(field_type, is_multi);
+    // Y2-T7: new text and JSON columns compress with lz4 (faster than the
+    // default pglz at a similar ratio). Existing columns are left alone;
+    // their new values keep pglz.
+    let compression = if compresses_with_lz4(pg_type) && lz4_available(db).await {
+        " COMPRESSION lz4"
+    } else {
+        ""
+    };
     exec_ddl_locked(
         db,
         &[],
         &format!(
-            r#"ALTER TABLE "{entity_logicalname}" ADD COLUMN IF NOT EXISTS "{field_logicalname}" {}"#,
-            pg_type_for(field_type, is_multi),
+            r#"ALTER TABLE "{entity_logicalname}" ADD COLUMN IF NOT EXISTS "{field_logicalname}" {pg_type}{compression}"#,
         ),
     )
     .await

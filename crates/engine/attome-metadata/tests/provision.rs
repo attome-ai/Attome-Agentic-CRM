@@ -28,7 +28,8 @@
 use attome_db::DbPool;
 use attome_metadata::provision::{
     ensure_attribute, ensure_default_query, ensure_entity, ensure_entity_list_views,
-    resync_seeded_query_sql, set_default_query_display_column, sync_attribute_index_on_connection,
+    lookup_columns_without_index, resync_seeded_query_sql, set_default_query_display_column,
+    sync_attribute_index_on_connection,
 };
 use attome_testkit::skip_if_no_db;
 use chrono::{DateTime, NaiveDate, Utc};
@@ -271,6 +272,98 @@ async fn reseeding_the_same_entity_and_attributes_is_fully_idempotent() {
     assert_eq!(
         cols, expected,
         "re-seeding must leave exactly the expected column set, no duplicates"
+    );
+}
+
+/// Y2-T7: a new text column, and a new JSON column, compress with lz4 when
+/// the server offers it; a number column has no compression setting.
+#[tokio::test]
+async fn text_column_uses_lz4() {
+    let db = skip_if_no_db!(test_db().await);
+    let logicalname = format!("test_lz4_{}", &Uuid::now_v7().simple().to_string()[..12]);
+    let entity_id = ensure_entity(&db, &logicalname, "Lz4", Some("title"), false)
+        .await
+        .expect("ensure_entity");
+    for (field, kind) in [("note", "text"), ("score", "number")] {
+        ensure_attribute(
+            &db, entity_id, field, field, kind, false, false, false, false, None, None,
+        )
+        .await
+        .expect("ensure_attribute");
+    }
+    let lz4: bool = sqlx::query_scalar(
+        "SELECT EXISTS (SELECT 1 FROM pg_settings WHERE name = 'default_toast_compression' AND 'lz4' = ANY(enumvals))",
+    )
+    .fetch_one(&db)
+    .await
+    .expect("lz4 probe");
+    let compression = |field: &'static str| {
+        let db = db.clone();
+        let table = logicalname.clone();
+        async move {
+            sqlx::query_scalar::<_, String>(
+                "SELECT attcompression::text FROM pg_attribute WHERE attrelid = to_regclass($1) AND attname = $2",
+            )
+            .bind(table)
+            .bind(field)
+            .fetch_one(&db)
+            .await
+            .expect("pg_attribute row")
+        }
+    };
+    if lz4 {
+        assert_eq!(compression("note").await, "l");
+    }
+    assert_eq!(compression("score").await, "");
+}
+
+/// Y2-T3: a lookup column provisioned without an index is found by the
+/// backfill's finder, and once its index is built it is no longer listed.
+#[tokio::test]
+async fn lookup_attribute_gets_index() {
+    let db = skip_if_no_db!(test_db().await);
+    let suffix = &Uuid::now_v7().simple().to_string()[..12];
+    let target = format!("test_lkt_{suffix}");
+    let source = format!("test_lks_{suffix}");
+    let target_id = ensure_entity(&db, &target, "Target", Some("title"), false)
+        .await
+        .expect("ensure target");
+    let source_id = ensure_entity(&db, &source, "Source", Some("title"), false)
+        .await
+        .expect("ensure source");
+    ensure_attribute(
+        &db,
+        source_id,
+        "target_ref",
+        "Target",
+        "lookup",
+        false,
+        false,
+        false,
+        false,
+        Some(target_id),
+        None,
+    )
+    .await
+    .expect("ensure lookup attribute");
+
+    let mine = (source.clone(), "target_ref".to_owned());
+    let missing = lookup_columns_without_index(&db).await.expect("finder");
+    assert!(
+        missing.contains(&mine),
+        "a lookup column without an index is listed: {missing:?}"
+    );
+
+    let mut conn = skip_if_no_db!(direct_connection().await);
+    sync_attribute_index_on_connection(&mut conn, &source, "target_ref", true)
+        .await
+        .expect("build the lookup index");
+    conn.close().await.expect("close direct session");
+
+    let missing = lookup_columns_without_index(&db).await.expect("finder");
+    assert!(
+        !missing.contains(&mine),
+        "an indexed lookup column is not listed again"
     );
 }
 

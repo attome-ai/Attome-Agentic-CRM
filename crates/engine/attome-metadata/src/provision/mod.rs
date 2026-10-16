@@ -44,9 +44,10 @@ mod table;
 mod tests;
 
 pub use attribute::{
-    MAX_ATTRIBUTES_PER_ENTITY, attribute_index_requires_async, count_duplicate_values,
-    ensure_attribute, ensure_entity, sync_attribute_index, sync_attribute_index_on_connection,
-    sync_external_id_index, sync_field_constraints, table_row_count_exceeds,
+    MAX_ATTRIBUTES_PER_ENTITY, attribute_index_requires_async, backfill_lookup_indexes,
+    count_duplicate_values, ensure_attribute, ensure_entity, lookup_columns_without_index,
+    sync_attribute_index, sync_attribute_index_on_connection, sync_external_id_index,
+    sync_field_constraints, table_row_count_exceeds,
 };
 pub use bundle_walk::seed_bundle_for_tests;
 pub use business_key::{

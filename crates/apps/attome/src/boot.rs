@@ -1129,6 +1129,7 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
     apply_configured_packs(system.state(), config).await?;
     platform_seed_lock.release().await;
     replay_erasures(system.state(), config).await?;
+    enqueue_lookup_index_backfill(system.state()).await;
     attome_profiler::record("boot.post_build", t_post_build.elapsed());
 
     Ok(Boot {
@@ -1156,6 +1157,41 @@ pub fn request_stop() {
 /// backup folder) a replay that fails stops the boot: the restored database
 /// could otherwise serve erased people. On an ordinary boot a ledger that
 /// cannot be read is logged and the boot goes on.
+/// Y2-T3: every live lookup column without an index gets a durable
+/// `BuildAttributeIndex` job (built `CONCURRENTLY` by the worker, never
+/// inline at boot), deduplicated so a job still waiting from an earlier boot
+/// is not queued twice. Best-effort: a failure is logged and the next boot
+/// looks again.
+async fn enqueue_lookup_index_backfill(state: &EngineState) {
+    let missing =
+        match attome_metadata::provision::lookup_columns_without_index(&state.base.db).await {
+            Ok(missing) => missing,
+            Err(error) => {
+                tracing::warn!(%error, "lookup index backfill: could not list missing indexes");
+                return;
+            }
+        };
+    let mut queued = 0usize;
+    for (entity, field) in missing {
+        let key = format!("lookup-index:{entity}:{field}");
+        let job = attome_core::jobs::EngineJob::BuildAttributeIndex {
+            entity_logicalname: entity,
+            field_logicalname: field,
+        };
+        match attome_jobs::enqueue_dedup(&state.base.db, job, &key).await {
+            Ok(true) => queued += 1,
+            Ok(false) => {}
+            Err(error) => {
+                tracing::warn!(%error, "lookup index backfill: could not queue a build");
+                return;
+            }
+        }
+    }
+    if queued > 0 {
+        tracing::info!(queued, "lookup index backfill: index builds queued");
+    }
+}
+
 async fn replay_erasures(
     state: &EngineState,
     config: &AppConfig,

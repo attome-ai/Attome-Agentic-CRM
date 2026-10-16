@@ -595,7 +595,10 @@ async fn dispatch_platform_job(
             field_logicalname,
         } => {
             let wanted: Option<bool> = sqlx::query_scalar(
-                r#"SELECT (COALESCE(a.is_sortable, false) OR COALESCE(a.is_filterable, false))
+                // A lookup column is always indexed (FK existence and
+                // cascade checks), like the admin route's own intent.
+                r#"SELECT (COALESCE(a.is_sortable, false) OR COALESCE(a.is_filterable, false)
+                           OR a.type = 11)
                    FROM attribute_info a
                    JOIN entity_info e ON e.id = a.entity_ref
                   WHERE e.logicalname = $1 AND a.logicalname = $2
