@@ -10279,6 +10279,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/shared-files/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["download_shared_file"];
+        put?: never;
+        post: operations["open_shared_file"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sidebar/admin": {
         parameters: {
             query?: never;
@@ -11575,6 +11591,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/{entity}/{id}/files/{field}/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_file_checkout"];
+        put?: never;
+        post: operations["check_out_file"];
+        delete: operations["check_in_file"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/{entity}/{id}/files/{field}/download-url": {
         parameters: {
             query?: never;
@@ -11586,6 +11618,38 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/{id}/files/{field}/share-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_file_share_links"];
+        put?: never;
+        post: operations["create_file_share_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/{entity}/{id}/files/{field}/share-links/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revoke_file_share_link"];
         options?: never;
         head?: never;
         patch?: never;
@@ -15158,6 +15222,10 @@ export interface components {
             /** @description `inbound` (the visitor) or `outbound` (the bot, or a human agent). */
             direction: string;
         };
+        CheckoutRequest: {
+            /** @description Why it is checked out, shown to others (at most 500 characters). */
+            note?: string | null;
+        };
         /** @description One session a supervisor delegated to (N8-T1's run tree). */
         ChildSession: {
             /**
@@ -16327,6 +16395,29 @@ export interface components {
             run_as: string;
             skip_if_empty?: boolean;
         };
+        /** @description `POST /api/v1/{entity}/{id}/files/{field}/share-links`. */
+        CreateShareLinkRequest: {
+            /**
+             * Format: int64
+             * @description Hours until the link stops working, 1 to 720 (30 days); 72 when absent.
+             */
+            expires_in_hours?: number | null;
+            /**
+             * @description For a multi-file field, which stored object to share (one of the
+             *     field's keys); ignored for a single-file field.
+             */
+            key?: string | null;
+            /**
+             * Format: int32
+             * @description Optional limit on downloads, at least 1.
+             */
+            max_downloads?: number | null;
+            /**
+             * @description Optional; whoever opens the link must give it. The same strength
+             *     rules as an account password apply.
+             */
+            password?: string | null;
+        };
         CreateSpaceBody: {
             description?: string | null;
             name: string;
@@ -16482,6 +16573,19 @@ export interface components {
             id: string;
             /** Format: uuid */
             root_section_id: string;
+        };
+        /** @description A new link. `token` and `path` are shown this once. */
+        CreatedShareLink: {
+            /** Format: date-time */
+            expires_at: string;
+            has_password: boolean;
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            max_downloads?: number | null;
+            /** @description The public path to hand out: `/api/v1/shared-files/{token}`. */
+            path: string;
+            token: string;
         };
         /** @description The platform's canonical keyset-pagination envelope (guidelines §12), for an access pattern where an exact `total` would need an unbounded scan. `next_cursor` is opaque; `None` means there is no further page. `total`, when present, is the exact size of the whole window; routes that send it send it on the first page only. */
         CursorPage_ChangeFeedEntry: {
@@ -17752,6 +17856,7 @@ export interface components {
             effect?: string | null;
             /**
              * @description Stable machine-readable code — `not_found`, `unauthorized`, `forbidden`,
+             *     `attribute_not_writable`,
              *     `conflict`, `version_conflict`, `duplicate_detected`, `idempotency_conflict`,
              *     `validation_error`, `feature_unavailable`, `feature_hidden`,
              *     `rate_limit_exceeded`, `overloaded`, `capability_unavailable`,
@@ -17767,7 +17872,9 @@ export interface components {
             error: string;
             /**
              * @description Present on `field_locked` / `field_locked_required` (D-789): the first
-             *     refused field (every one is in `details.fields`).
+             *     refused field (every one is in `details.fields`); on
+             *     `attribute_not_writable` (Q15-T4): the attribute the caller may not
+             *     write.
              */
             field?: string | null;
             /**
@@ -18409,6 +18516,20 @@ export interface components {
             /** @enum {string} */
             state: "erased";
             value: string;
+        };
+        /** @description Who holds a file's check-out. */
+        FileCheckout: {
+            /** Format: date-time */
+            checked_out_at: string;
+            /** Format: uuid */
+            checked_out_by: string;
+            note?: string | null;
+        };
+        /** @description `GET …/checkout`: the lock, when one is held. */
+        FileCheckoutStatus: {
+            checkout?: null | components["schemas"]["FileCheckout"];
+            /** @description Whether the caller holds it. */
+            held_by_me: boolean;
         };
         FileVersionResponse: {
             content_type?: string | null;
@@ -20305,6 +20426,10 @@ export interface components {
              */
             scope: string;
             title: string;
+        };
+        /** @description `POST /api/v1/shared-files/{token}`. */
+        OpenShareLinkRequest: {
+            password?: string | null;
         };
         /** @description One node, from its heartbeat in the metrics store. */
         OpsNode: {
@@ -23317,6 +23442,33 @@ export interface components {
                 status: components["schemas"]["SessionStatus"];
                 surface: string;
                 tainted: boolean;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_ShareLinkSummary: {
+            items: {
+                /** Format: date-time */
+                created_at: string;
+                /** Format: uuid */
+                created_by?: string | null;
+                /** Format: int32 */
+                download_count: number;
+                /** Format: date-time */
+                expires_at: string;
+                has_password: boolean;
+                /** Format: uuid */
+                id: string;
+                /** Format: int32 */
+                max_downloads?: number | null;
+                object_key: string;
+                /** Format: date-time */
+                revoked_at?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -26797,6 +26949,31 @@ export interface components {
          * @enum {string}
          */
         Severity: "error" | "warning";
+        /** @description One link of a field, as its owner sees it (never the token). */
+        ShareLinkSummary: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            created_by?: string | null;
+            /** Format: int32 */
+            download_count: number;
+            /** Format: date-time */
+            expires_at: string;
+            has_password: boolean;
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            max_downloads?: number | null;
+            object_key: string;
+            /** Format: date-time */
+            revoked_at?: string | null;
+        };
+        /** @description What opening a password link answers. */
+        SharedFileUrl: {
+            download_url: string;
+            /** Format: int64 */
+            expires_in_secs: number;
+        };
         SidebarAdminItem: {
             color?: string | null;
             /** Format: int32 */
@@ -63270,6 +63447,88 @@ export interface operations {
             };
         };
     };
+    download_shared_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description To a five-minute download URL */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The link needs a password: open it with POST */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    open_shared_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpenShareLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description A five-minute download URL */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedFileUrl"];
+                };
+            };
+            /** @description Password missing or wrong */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live link */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     list_sidebar_admin: {
         parameters: {
             query?: {
@@ -66015,7 +66274,14 @@ export interface operations {
     };
     create_record: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Comma-separated attribute names. `data` carries only these; `id`,
+                 *     `row_version` and the rest of the envelope always come back. A name
+                 *     that is not an attribute the caller may read is a 422.
+                 */
+                select?: string;
+            };
             header?: never;
             path: {
                 entity: string;
@@ -67050,6 +67316,12 @@ export interface operations {
                  *     entity's business key.
                  */
                 key?: string;
+                /**
+                 * @description Comma-separated attribute names. `data` carries only these; `id`,
+                 *     `row_version` and the rest of the envelope always come back. A name
+                 *     that is not an attribute the caller may read is a 422.
+                 */
+                select?: string;
             };
             header?: never;
             path: {
@@ -67148,7 +67420,14 @@ export interface operations {
     };
     get_record: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Comma-separated attribute names. `data` carries only these; `id`,
+                 *     `row_version` and the rest of the envelope always come back. A name
+                 *     that is not an attribute the caller may read is a 422.
+                 */
+                select?: string;
+            };
             header?: never;
             path: {
                 entity: string;
@@ -67795,6 +68074,182 @@ export interface operations {
             };
         };
     };
+    get_file_checkout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+                field: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Who holds the file's check-out, if anyone */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileCheckoutStatus"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record or field */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    check_out_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+                field: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Checked out to the caller */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FileCheckout"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not change the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record or field */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Someone else has it checked out */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    check_in_file: {
+        parameters: {
+            query?: {
+                /** @description An administrator breaks someone else's lock. */
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+                field: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Released */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Someone else holds it and the caller is not an administrator breaking it */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not checked out */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     get_download_url: {
         parameters: {
             query?: never;
@@ -67853,6 +68308,171 @@ export interface operations {
             };
             /** @description Request failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_file_share_links: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+                field: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The field's links, newest first (page 1 holds them all) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_ShareLinkSummary"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not read the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record or field */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_file_share_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+                field: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateShareLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description The link; its token is shown only now */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedShareLink"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not change the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such record or field */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Request failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    revoke_file_share_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity: string;
+                id: string;
+                field: string;
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller may not change the record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such live link on this field */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
