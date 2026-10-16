@@ -39,6 +39,7 @@ use axum::{
     routing::post,
 };
 use serde::Serialize;
+use serde_json::{Value, json};
 use uuid::Uuid;
 
 /// D-195/P-four-eyes-approval §5 step 9.
@@ -53,6 +54,10 @@ pub struct ErasureResult {
     /// to destroy) — not an error, since requesting erasure for a record
     /// with no protected history is a legitimate no-op.
     key_destroyed: bool,
+    /// R2-T2: the erasure certificate: what was erased, when and by whom,
+    /// its SHA-256 digest, and the deployment's audit signature over that
+    /// digest when an audit signing key is configured.
+    certificate: Value,
 }
 
 impl std::fmt::Debug for ErasureResult {
@@ -238,11 +243,55 @@ pub async fn do_erase_record(
     )
     .await;
 
+    let certificate = erasure_certificate(
+        state,
+        &logicalname,
+        record_id,
+        actor_id,
+        key_destroyed,
+        &json!({
+            "archive_values": archived_erased,
+            "release_report_items": report_erased,
+            "workflow_payloads": payloads_erased,
+        }),
+    );
     Ok(ErasureResult {
         record_id,
         entity_name: logicalname,
         key_destroyed,
+        certificate,
     })
+}
+
+/// R2-T2: a certificate of one erasure. The digest covers the canonical
+/// JSON of everything above it; the signature, when the deployment signs its
+/// audit chain, is that key's signature over the digest.
+fn erasure_certificate(
+    state: &EngineState,
+    entity: &str,
+    record_id: Uuid,
+    actor_id: Uuid,
+    key_destroyed: bool,
+    erased: &Value,
+) -> Value {
+    use sha2::{Digest, Sha256};
+    let body = json!({
+        "kind": "erasure",
+        "entity": entity,
+        "record_id": record_id,
+        "erased_at": chrono::Utc::now().to_rfc3339(),
+        "erased_by": actor_id,
+        "audit_key_destroyed": key_destroyed,
+        "erased": erased,
+    });
+    let digest = format!(
+        "{:x}",
+        Sha256::digest(serde_json::to_vec(&body).unwrap_or_default())
+    );
+    let signature = state.audit_signer.as_ref().map(
+        |signer| json!({"key_id": signer.key_id, "signature": signer.sign("erasure", &digest)}),
+    );
+    json!({ "body": body, "sha256": digest, "signature": signature })
 }
 
 pub fn routes() -> Router<EngineState> {
