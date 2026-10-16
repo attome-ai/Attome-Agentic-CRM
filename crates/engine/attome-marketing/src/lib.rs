@@ -15,6 +15,7 @@ pub mod model;
 pub mod nurture_tracks;
 pub mod referral;
 pub mod segment;
+pub mod segment_insight;
 pub mod send_time;
 pub mod tracking;
 
@@ -25,7 +26,7 @@ pub use model::MarketingModel;
 pub const ADVISORY_LOCK_NAMESPACE: i32 = 34;
 
 /// This crate's slice of the workspace OpenAPI document, merged in by
-/// `attome::openapi::document()`. Empty until the first route lands.
+/// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    utoipa::openapi::OpenApiBuilder::new().build()
+    <segment_insight::ApiDocFragment as utoipa::OpenApi>::openapi()
 }

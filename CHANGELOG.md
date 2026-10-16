@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Marketing list insight: `GET /api/v1/marketing/lists/{id}/count` (estimate or `exact`, and the people
+  reachable for a `purpose_key`), `.../sample`, `.../explain/{person_id}` (which step put them in or left
+  them out) and `.../members-as-of?at=`, all as the caller and never naming people they cannot read.
 - Win/loss reviews: a deal closing at or above its stage's `review_amount_threshold` gets a draft
   `win_loss_review` with a snapshot of its competitors and a task for its owner due in seven days, made
   after the close and once per outcome.
