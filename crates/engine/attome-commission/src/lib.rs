@@ -6,6 +6,7 @@
 
 pub mod model;
 pub mod rules;
+pub mod run;
 
 pub use model::CommissionModel;
 
@@ -14,7 +15,7 @@ pub use model::CommissionModel;
 pub const ADVISORY_LOCK_NAMESPACE: i32 = 36;
 
 /// This crate's slice of the workspace OpenAPI document, merged in by
-/// `attome::openapi::document()`. Empty until the first route lands.
+/// `attome::openapi::document()`.
 pub fn openapi() -> utoipa::openapi::OpenApi {
-    utoipa::openapi::OpenApiBuilder::new().build()
+    <run::ApiDocFragment as utoipa::OpenApi>::openapi()
 }

@@ -812,6 +812,11 @@ async fn dispatch_platform_job(
         EngineJob::CrawlWebsite { target_id } => {
             attome_webcrawl::crawl::run(&attome_state, target_id).await?;
         }
+        // F10-T5: one commission calculation run.
+        EngineJob::CommissionRun { run_id } => {
+            let paid = attome_commission::run::execute(&attome_state, run_id).await?;
+            tracing::info!(%run_id, participants = paid, "commission run: complete");
+        }
         EngineJob::EventsDispatchTick => {
             let enqueued = attome_events::dispatch::dispatch_pending(&attome_state).await?;
             if enqueued > 0 {

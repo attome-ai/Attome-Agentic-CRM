@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Commission calculation runs: `POST /api/v1/commission/periods/{id}/runs` (privilege `comp_run.create`,
+  `409` on an approved or locked period) queues a run that computes statement lines and payouts per
+  participant in batches, resuming from its cursor after a restart.
 - A/B variants for feature flags: a subject's variant comes from a stable hash of the flag and the
   subject, split by the variants' weights, and outcomes are recorded per variant for comparison
   (migration `0099`).

@@ -304,6 +304,10 @@ pub enum EngineJob {
     /// `POST /api/v1/webcrawl/targets` and `.../recrawl`, both
     /// `Authorized<Admin>`-gated.
     CrawlWebsite { target_id: Uuid },
+    /// F10-T5: computes (or resumes) one commission calculation run,
+    /// enqueued by `POST /api/v1/commission/periods/{id}/runs`. Pure
+    /// pointer; the run's `cursor` makes a retry resume.
+    CommissionRun { run_id: Uuid },
     /// TECHNICAL-DUE-DILIGENCE-2026-08-24 finding 3.2 (T2-2) — the async half
     /// of `attome_server::entity_mutation::apply_dependents_on_delete`'s
     /// `OnTargetDelete::CascadeDeactivate` handling. A dependent group at or
@@ -839,6 +843,7 @@ impl EngineJob {
             | Self::ApplyChangesets { .. }
             | Self::RunDataStep { .. }
             | Self::CrawlWebsite { .. }
+            | Self::CommissionRun { .. }
             | Self::CascadeDeactivateDependents { .. }
             | Self::DataExport(_)
             | Self::DataProfile(_)
@@ -964,6 +969,7 @@ impl EngineJob {
             EngineJob::WorkflowSlaSweep => "WorkflowSlaSweep",
             EngineJob::WorkflowEntityTriggerDispatch => "WorkflowEntityTriggerDispatch",
             EngineJob::CrawlWebsite { .. } => "CrawlWebsite",
+            EngineJob::CommissionRun { .. } => "CommissionRun",
             EngineJob::CascadeDeactivateDependents { .. } => "CascadeDeactivateDependents",
             EngineJob::ComputeMetricSnapshots => "ComputeMetricSnapshots",
             EngineJob::EventsDispatchTick => "EventsDispatchTick",
@@ -1132,6 +1138,7 @@ impl EngineJob {
             // maintenance.
             Self::RewrapSecrets { .. }
             | Self::CrawlWebsite { .. }
+            | Self::CommissionRun { .. }
             | Self::FleetRolloutStep { .. } => JobPriority::Normal,
         }
     }
@@ -1262,6 +1269,7 @@ impl EngineJob {
             | Self::WorkflowExecute { .. }
             | Self::TimerFire { .. }
             | Self::CrawlWebsite { .. }
+            | Self::CommissionRun { .. }
             | Self::CascadeDeactivateDependents { .. }
             | Self::DataExport(_)
             | Self::DataProfile(_)
@@ -1828,6 +1836,13 @@ mod tests {
     #[test]
     fn workflow_entity_trigger_dispatch_round_trips_as_a_bare_unit_variant() {
         assert_round_trips(EngineJob::WorkflowEntityTriggerDispatch);
+    }
+
+    #[test]
+    fn commission_run_round_trips() {
+        assert_round_trips(EngineJob::CommissionRun {
+            run_id: Uuid::now_v7(),
+        });
     }
 
     #[test]
