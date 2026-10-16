@@ -1,0 +1,1180 @@
+{
+  "author": "packs",
+  "checksum": "sha256:01487a6fcf9a6515a1caa717ce736aecbcf121fa40e37ccd4a99beb013acd122",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "H6-T1: the software catalogue is keyed on its normalised name and version, and ships end-of-support and end-of-life dates for common operating systems, databases, runtimes and office software, taken from endoflife.date (lifecycle source `endoflife_date`). Products it does not cover are entered by hand (`manual`).",
+  "format": "attome-changeset/v1",
+  "id": "01a144ad-d5ad-7ec3-9ab5-8adeeb3dc0e4",
+  "layer": "product",
+  "name": "asset-management-software-lifecycle",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "business_key": [
+            "normalised_name",
+            "version"
+          ],
+          "category": "Other",
+          "display_name": "Software",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "software_product",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "update_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "software_product"
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2020-01-14",
+          "end_of_support": "2015-01-13",
+          "lifecycle_source": "endoflife_date",
+          "name": "Windows Server 2008 R2",
+          "normalised_name": "windows_server",
+          "publisher": "Microsoft",
+          "version": "2008 R2"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "windows_server",
+          "version": "2008 R2"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2023-10-10",
+          "end_of_support": "2018-10-09",
+          "lifecycle_source": "endoflife_date",
+          "name": "Windows Server 2012 R2",
+          "normalised_name": "windows_server",
+          "publisher": "Microsoft",
+          "version": "2012 R2"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "windows_server",
+          "version": "2012 R2"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2027-01-12",
+          "end_of_support": "2022-01-11",
+          "lifecycle_source": "endoflife_date",
+          "name": "Windows Server 2016",
+          "normalised_name": "windows_server",
+          "publisher": "Microsoft",
+          "version": "2016"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "windows_server",
+          "version": "2016"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2029-01-09",
+          "end_of_support": "2024-01-09",
+          "lifecycle_source": "endoflife_date",
+          "name": "Windows Server 2019",
+          "normalised_name": "windows_server",
+          "publisher": "Microsoft",
+          "version": "2019"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "windows_server",
+          "version": "2019"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2031-10-14",
+          "end_of_support": "2026-10-13",
+          "lifecycle_source": "endoflife_date",
+          "name": "Windows Server 2022",
+          "normalised_name": "windows_server",
+          "publisher": "Microsoft",
+          "version": "2022"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "windows_server",
+          "version": "2022"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2025-10-14",
+          "end_of_support": "2025-10-14",
+          "lifecycle_source": "endoflife_date",
+          "name": "Windows 10 22H2",
+          "normalised_name": "windows",
+          "publisher": "Microsoft",
+          "version": "10 22H2"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "windows",
+          "version": "10 22H2"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2024-07-09",
+          "end_of_support": "2019-07-09",
+          "lifecycle_source": "endoflife_date",
+          "name": "SQL Server 2014",
+          "normalised_name": "sql_server",
+          "publisher": "Microsoft",
+          "version": "2014"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "sql_server",
+          "version": "2014"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2026-07-14",
+          "end_of_support": "2021-07-13",
+          "lifecycle_source": "endoflife_date",
+          "name": "SQL Server 2016",
+          "normalised_name": "sql_server",
+          "publisher": "Microsoft",
+          "version": "2016"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "sql_server",
+          "version": "2016"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2027-10-12",
+          "end_of_support": "2022-10-11",
+          "lifecycle_source": "endoflife_date",
+          "name": "SQL Server 2017",
+          "normalised_name": "sql_server",
+          "publisher": "Microsoft",
+          "version": "2017"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "sql_server",
+          "version": "2017"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2030-01-08",
+          "end_of_support": "2025-02-28",
+          "lifecycle_source": "endoflife_date",
+          "name": "SQL Server 2019",
+          "normalised_name": "sql_server",
+          "publisher": "Microsoft",
+          "version": "2019"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "sql_server",
+          "version": "2019"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2033-01-11",
+          "end_of_support": "2028-01-11",
+          "lifecycle_source": "endoflife_date",
+          "name": "SQL Server 2022",
+          "normalised_name": "sql_server",
+          "publisher": "Microsoft",
+          "version": "2022"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "sql_server",
+          "version": "2022"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2025-10-14",
+          "end_of_support": "2020-10-13",
+          "lifecycle_source": "endoflife_date",
+          "name": "Office 2016",
+          "normalised_name": "office",
+          "publisher": "Microsoft",
+          "version": "2016"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "office",
+          "version": "2016"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2025-10-14",
+          "end_of_support": "2023-10-10",
+          "lifecycle_source": "endoflife_date",
+          "name": "Office 2019",
+          "normalised_name": "office",
+          "publisher": "Microsoft",
+          "version": "2019"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "office",
+          "version": "2019"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2025-10-14",
+          "end_of_support": "2020-10-13",
+          "lifecycle_source": "endoflife_date",
+          "name": "Exchange Server 2016",
+          "normalised_name": "exchange_server",
+          "publisher": "Microsoft",
+          "version": "2016"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "exchange_server",
+          "version": "2016"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2025-10-14",
+          "end_of_support": "2024-01-09",
+          "lifecycle_source": "endoflife_date",
+          "name": "Exchange Server 2019",
+          "normalised_name": "exchange_server",
+          "publisher": "Microsoft",
+          "version": "2019"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "exchange_server",
+          "version": "2019"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2024-11-12",
+          "end_of_support": "2024-11-12",
+          "lifecycle_source": "endoflife_date",
+          "name": ".NET 6",
+          "normalised_name": "dotnet",
+          "publisher": "Microsoft",
+          "version": "6"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "dotnet",
+          "version": "6"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2026-11-10",
+          "end_of_support": "2026-11-10",
+          "lifecycle_source": "endoflife_date",
+          "name": ".NET 8",
+          "normalised_name": "dotnet",
+          "publisher": "Microsoft",
+          "version": "8"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "dotnet",
+          "version": "8"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2028-04-30",
+          "end_of_support": "2023-05-31",
+          "lifecycle_source": "endoflife_date",
+          "name": "Ubuntu 18.04",
+          "normalised_name": "ubuntu",
+          "publisher": "Canonical",
+          "version": "18.04"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "ubuntu",
+          "version": "18.04"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2030-04-30",
+          "end_of_support": "2025-05-31",
+          "lifecycle_source": "endoflife_date",
+          "name": "Ubuntu 20.04",
+          "normalised_name": "ubuntu",
+          "publisher": "Canonical",
+          "version": "20.04"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "ubuntu",
+          "version": "20.04"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2032-04-30",
+          "end_of_support": "2027-06-01",
+          "lifecycle_source": "endoflife_date",
+          "name": "Ubuntu 22.04",
+          "normalised_name": "ubuntu",
+          "publisher": "Canonical",
+          "version": "22.04"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "ubuntu",
+          "version": "22.04"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2034-04-30",
+          "end_of_support": "2029-05-31",
+          "lifecycle_source": "endoflife_date",
+          "name": "Ubuntu 24.04",
+          "normalised_name": "ubuntu",
+          "publisher": "Canonical",
+          "version": "24.04"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "ubuntu",
+          "version": "24.04"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2024-06-30",
+          "end_of_support": "2019-08-06",
+          "lifecycle_source": "endoflife_date",
+          "name": "Red Hat Enterprise Linux 7",
+          "normalised_name": "rhel",
+          "publisher": "Red Hat",
+          "version": "7"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "rhel",
+          "version": "7"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2029-05-31",
+          "end_of_support": "2024-05-31",
+          "lifecycle_source": "endoflife_date",
+          "name": "Red Hat Enterprise Linux 8",
+          "normalised_name": "rhel",
+          "publisher": "Red Hat",
+          "version": "8"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "rhel",
+          "version": "8"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2032-05-31",
+          "end_of_support": "2027-05-31",
+          "lifecycle_source": "endoflife_date",
+          "name": "Red Hat Enterprise Linux 9",
+          "normalised_name": "rhel",
+          "publisher": "Red Hat",
+          "version": "9"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "rhel",
+          "version": "9"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2024-06-30",
+          "end_of_support": "2020-08-06",
+          "lifecycle_source": "endoflife_date",
+          "name": "CentOS 7",
+          "normalised_name": "centos",
+          "publisher": "CentOS Project",
+          "version": "7"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "centos",
+          "version": "7"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2024-06-30",
+          "end_of_support": "2022-09-10",
+          "lifecycle_source": "endoflife_date",
+          "name": "Debian 10",
+          "normalised_name": "debian",
+          "publisher": "Debian Project",
+          "version": "10"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "debian",
+          "version": "10"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2026-08-31",
+          "end_of_support": "2024-08-14",
+          "lifecycle_source": "endoflife_date",
+          "name": "Debian 11",
+          "normalised_name": "debian",
+          "publisher": "Debian Project",
+          "version": "11"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "debian",
+          "version": "11"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2028-06-30",
+          "end_of_support": "2026-06-10",
+          "lifecycle_source": "endoflife_date",
+          "name": "Debian 12",
+          "normalised_name": "debian",
+          "publisher": "Debian Project",
+          "version": "12"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "debian",
+          "version": "12"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2024-11-21",
+          "end_of_support": "2024-11-21",
+          "lifecycle_source": "endoflife_date",
+          "name": "PostgreSQL 12",
+          "normalised_name": "postgresql",
+          "publisher": "PostgreSQL Global Development Group",
+          "version": "12"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "postgresql",
+          "version": "12"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2025-11-13",
+          "end_of_support": "2025-11-13",
+          "lifecycle_source": "endoflife_date",
+          "name": "PostgreSQL 13",
+          "normalised_name": "postgresql",
+          "publisher": "PostgreSQL Global Development Group",
+          "version": "13"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "postgresql",
+          "version": "13"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2026-11-12",
+          "end_of_support": "2026-11-12",
+          "lifecycle_source": "endoflife_date",
+          "name": "PostgreSQL 14",
+          "normalised_name": "postgresql",
+          "publisher": "PostgreSQL Global Development Group",
+          "version": "14"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "postgresql",
+          "version": "14"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2027-11-11",
+          "end_of_support": "2027-11-11",
+          "lifecycle_source": "endoflife_date",
+          "name": "PostgreSQL 15",
+          "normalised_name": "postgresql",
+          "publisher": "PostgreSQL Global Development Group",
+          "version": "15"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "postgresql",
+          "version": "15"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2028-11-09",
+          "end_of_support": "2028-11-09",
+          "lifecycle_source": "endoflife_date",
+          "name": "PostgreSQL 16",
+          "normalised_name": "postgresql",
+          "publisher": "PostgreSQL Global Development Group",
+          "version": "16"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "postgresql",
+          "version": "16"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2029-11-08",
+          "end_of_support": "2029-11-08",
+          "lifecycle_source": "endoflife_date",
+          "name": "PostgreSQL 17",
+          "normalised_name": "postgresql",
+          "publisher": "PostgreSQL Global Development Group",
+          "version": "17"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "postgresql",
+          "version": "17"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2025-04-30",
+          "end_of_support": "2023-10-18",
+          "lifecycle_source": "endoflife_date",
+          "name": "Node.js 18",
+          "normalised_name": "nodejs",
+          "publisher": "OpenJS Foundation",
+          "version": "18"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "nodejs",
+          "version": "18"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2026-04-30",
+          "end_of_support": "2024-10-22",
+          "lifecycle_source": "endoflife_date",
+          "name": "Node.js 20",
+          "normalised_name": "nodejs",
+          "publisher": "OpenJS Foundation",
+          "version": "20"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "nodejs",
+          "version": "20"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2027-04-30",
+          "end_of_support": "2025-10-21",
+          "lifecycle_source": "endoflife_date",
+          "name": "Node.js 22",
+          "normalised_name": "nodejs",
+          "publisher": "OpenJS Foundation",
+          "version": "22"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "nodejs",
+          "version": "22"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2024-10-07",
+          "end_of_support": "2021-05-03",
+          "lifecycle_source": "endoflife_date",
+          "name": "Python 3.8",
+          "normalised_name": "python",
+          "publisher": "Python Software Foundation",
+          "version": "3.8"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "python",
+          "version": "3.8"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2025-10-31",
+          "end_of_support": "2022-05-17",
+          "lifecycle_source": "endoflife_date",
+          "name": "Python 3.9",
+          "normalised_name": "python",
+          "publisher": "Python Software Foundation",
+          "version": "3.9"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "python",
+          "version": "3.9"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2026-10-31",
+          "end_of_support": "2023-04-05",
+          "lifecycle_source": "endoflife_date",
+          "name": "Python 3.10",
+          "normalised_name": "python",
+          "publisher": "Python Software Foundation",
+          "version": "3.10"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "python",
+          "version": "3.10"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2027-10-31",
+          "end_of_support": "2024-04-02",
+          "lifecycle_source": "endoflife_date",
+          "name": "Python 3.11",
+          "normalised_name": "python",
+          "publisher": "Python Software Foundation",
+          "version": "3.11"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "python",
+          "version": "3.11"
+        }
+      }
+    },
+    {
+      "args": {
+        "key_fields": [
+          "normalised_name",
+          "version"
+        ],
+        "values": {
+          "end_of_life": "2028-10-31",
+          "end_of_support": "2025-04-02",
+          "lifecycle_source": "endoflife_date",
+          "name": "Python 3.12",
+          "normalised_name": "python",
+          "publisher": "Python Software Foundation",
+          "version": "3.12"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "software_product",
+        "key": {
+          "normalised_name": "python",
+          "version": "3.12"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "asset-management",
+  "seq": 3,
+  "title": "Pack: software end-of-support dataset"
+}

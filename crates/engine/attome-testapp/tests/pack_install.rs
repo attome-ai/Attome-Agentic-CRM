@@ -262,3 +262,34 @@ fn the_calling_metric_queries_run() {
         assert_eq!(ran, 5, "the five calling metric queries");
     });
 }
+
+/// I8-T1, H6-T1: the asset-management pack on the crm pack, with the
+/// software end-of-support dataset seeded once.
+#[test]
+fn the_asset_management_pack_installs_once_with_its_software_dataset() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        installs_once(&app, "crm", &["account", "contact"]).await;
+        installs_once(
+            &app,
+            "asset-management",
+            &[
+                "asset",
+                "asset_type",
+                "software_product",
+                "software_licence",
+            ],
+        )
+        .await;
+        let seeded: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM software_product \
+             WHERE is_active IS NOT FALSE AND lifecycle_source = 'endoflife_date'",
+        )
+        .fetch_one(app.db())
+        .await
+        .expect("count software");
+        assert_eq!(seeded, 42, "the end-of-support dataset, once");
+    });
+}
