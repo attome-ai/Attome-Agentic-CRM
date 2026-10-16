@@ -36,7 +36,10 @@ pub const CHANNELS: &[&str] = &["in_app", "email", "sms", "push", "chat"];
 
 /// Platform event names a dispatch can be categorized under without a
 /// template (`dispatch::create_dispatch_in_tx`'s `category`).
-pub const EVENT_CATEGORIES: &[&str] = &[crate::reminders::REMINDER_CATEGORY];
+pub const EVENT_CATEGORIES: &[&str] = &[
+    crate::reminders::REMINDER_CATEGORY,
+    crate::follows::FOLLOW_CATEGORY,
+];
 
 /// Upper bound on the rows one PUT may write.
 const MAX_ITEMS_PER_PUT: usize = 200;

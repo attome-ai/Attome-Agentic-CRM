@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Follower notifications: a change, deletion or restore of a record tells its followers and its owner in
+  the app (never the person who made it, never someone who can no longer read it), under the new
+  `record_followed` notification preference category.
 - `POST /api/v1/sales/call-lists/{id}/build` fills a call list as the caller from its saved query, the
   caller's phone calls due today, or named records (each read-checked), skipping records without a
   phone; a rebuild keeps existing members and adds only new ones (up to 10,000).

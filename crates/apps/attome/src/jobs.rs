@@ -958,6 +958,13 @@ async fn dispatch_platform_job(
                 tracing::info!(moved, "nurture: people moved between tracks");
             }
         }
+        // C2-T1: followers hear about changes to records they follow.
+        EngineJob::NotificationFollowSweep => {
+            let sent = attome_notification::follows::sweep(&attome_state).await?;
+            if sent > 0 {
+                tracing::info!(sent, "follows: followers notified");
+            }
+        }
         // D6-T8: line snapshots past their day.
         EngineJob::SalesSnapshotPrune => {
             let removed = attome_sales::undo::prune(&attome_state.base.db).await?;
@@ -2173,6 +2180,7 @@ const DEDUP_KEY_ROLE_GRANT_EXPIRY: &str = "role-grant-expiry";
 const DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP: &str = "sales-default-team-sweep";
 const DEDUP_KEY_COMMISSION_CREDIT_SWEEP: &str = "commission-credit-sweep";
 const DEDUP_KEY_SALES_SNAPSHOT_PRUNE: &str = "sales-snapshot-prune";
+const DEDUP_KEY_NOTIFICATION_FOLLOW_SWEEP: &str = "notification-follow-sweep";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2242,6 +2250,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::SalesDefaultTeamSweep => DEDUP_KEY_SALES_DEFAULT_TEAM_SWEEP,
         EngineJob::CommissionCreditSweep => DEDUP_KEY_COMMISSION_CREDIT_SWEEP,
         EngineJob::SalesSnapshotPrune => DEDUP_KEY_SALES_SNAPSHOT_PRUNE,
+        EngineJob::NotificationFollowSweep => DEDUP_KEY_NOTIFICATION_FOLLOW_SWEEP,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2566,6 +2575,17 @@ pub fn spawn_marketing_sweep_scheduler(db: DbPool, interval: std::time::Duration
         EngineJob::MarketingSweep,
         DEDUP_KEY_MARKETING_SWEEP,
         "marketing sweep",
+    );
+}
+
+/// C2-T1: every minute, follower notifications.
+pub fn spawn_notification_follow_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::NotificationFollowSweep,
+        DEDUP_KEY_NOTIFICATION_FOLLOW_SWEEP,
+        "notification follow sweep",
     );
 }
 

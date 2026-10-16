@@ -3,6 +3,7 @@ pub mod approval_timeouts;
 mod consent_gate;
 pub mod dispatch;
 pub mod engine;
+pub mod follows;
 pub mod model;
 pub mod poller;
 pub mod preferences;
