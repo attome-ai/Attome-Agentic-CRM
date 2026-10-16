@@ -253,11 +253,6 @@ impl EntityRecordResponse {
         self
     }
 
-    /// The record's own columns.
-    pub(crate) fn data(&self) -> &Value {
-        &self.data
-    }
-
     /// See the `duplicate_warnings` and `hidden_duplicates` fields.
     pub(crate) fn with_duplicates(
         mut self,

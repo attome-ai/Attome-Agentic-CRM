@@ -950,6 +950,7 @@ mod backstop_ttl_tests {
             approvers: vec!["user:a".to_string()],
             sla_minutes,
             on_timeout: attome_approval::OnTimeout::Escalate,
+            extras: Default::default(),
         }
     }
 

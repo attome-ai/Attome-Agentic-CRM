@@ -246,6 +246,7 @@ async fn submit_with_plan_regarding_round_trips_the_plan() {
                 ],
                 sla_minutes: Some(60),
                 on_timeout: OnTimeout::Escalate,
+                extras: Default::default(),
             },
             ApprovalStep {
                 mode: StepMode::Any,
@@ -253,6 +254,7 @@ async fn submit_with_plan_regarding_round_trips_the_plan() {
                 approvers: vec!["role:manager".to_string()],
                 sla_minutes: None,
                 on_timeout: OnTimeout::AutoReject,
+                extras: Default::default(),
             },
         ],
     };

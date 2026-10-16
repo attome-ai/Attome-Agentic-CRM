@@ -3237,6 +3237,7 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                     approvers: vec![format!("user:{}", fx.admin_id)],
                     sla_minutes: None,
                     on_timeout: attome_approval::OnTimeout::Escalate,
+                    extras: Default::default(),
                 }],
             };
             let submitted = attome_approval::submit_with_plan(
@@ -3268,6 +3269,7 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
                     approvers: vec![format!("user:{}", fx.admin_id)],
                     sla_minutes: None,
                     on_timeout: attome_approval::OnTimeout::Escalate,
+                    extras: Default::default(),
                 }],
             };
             let submitted = attome_approval::submit_with_plan(

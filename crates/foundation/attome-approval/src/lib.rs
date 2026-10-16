@@ -309,6 +309,33 @@ impl ApprovalPlan {
                     }
                 }
             }
+            let extras = &step.extras;
+            if extras
+                .skip_unless
+                .as_ref()
+                .is_some_and(|e| e.chars().count() > MAX_SKIP_UNLESS_CHARS)
+            {
+                return Err(AppError::Validation(format!(
+                    "plan step {i} skip_unless is longer than {MAX_SKIP_UNLESS_CHARS} characters"
+                )));
+            }
+            if let Some(reminder) = extras.reminder_minutes {
+                if !(1..=MAX_SLA_MINUTES).contains(&reminder) {
+                    return Err(AppError::Validation(format!(
+                        "plan step {i} reminder_minutes must be between 1 and {MAX_SLA_MINUTES}"
+                    )));
+                }
+                if step.sla_minutes.is_some_and(|sla| reminder >= sla) {
+                    return Err(AppError::Validation(format!(
+                        "plan step {i} reminder_minutes must come before sla_minutes"
+                    )));
+                }
+            }
+            if extras.requires_signature && !extras.requires_human {
+                return Err(AppError::Validation(format!(
+                    "plan step {i} needs a signature, so a person must decide it"
+                )));
+            }
             if let Some(sla) = step.sla_minutes {
                 if sla < 1 {
                     return Err(AppError::Validation(format!(
@@ -322,7 +349,51 @@ impl ApprovalPlan {
                 }
             }
         }
+        self.validate_groups()
+    }
+
+    /// Z10-T2: a group's steps are consecutive and time out the same way.
+    fn validate_groups(&self) -> Result<(), AppError> {
+        let mut closed: std::collections::HashSet<u16> = std::collections::HashSet::new();
+        let mut current: Option<u16> = None;
+        for (i, step) in self.steps.iter().enumerate() {
+            let group = step.extras.group;
+            if group != current {
+                if let Some(done) = current {
+                    closed.insert(done);
+                }
+                if let Some(g) = group
+                    && closed.contains(&g)
+                {
+                    return Err(AppError::Validation(format!(
+                        "plan step {i} rejoins group {g}; a group's steps must be consecutive"
+                    )));
+                }
+                current = group;
+            } else if group.is_some() && self.steps[i - 1].on_timeout != step.on_timeout {
+                return Err(AppError::Validation(format!(
+                    "plan step {i} times out differently from the rest of its group"
+                )));
+            }
+        }
         Ok(())
+    }
+
+    /// Z10-T2: the steps that run together with `step` — the consecutive
+    /// steps sharing its group, or just itself.
+    pub fn stage_of(&self, step: usize) -> std::ops::Range<usize> {
+        let Some(group) = self.steps.get(step).and_then(|s| s.extras.group) else {
+            return step..step + 1;
+        };
+        let mut start = step;
+        while start > 0 && self.steps[start - 1].extras.group == Some(group) {
+            start -= 1;
+        }
+        let mut end = step + 1;
+        while end < self.steps.len() && self.steps[end].extras.group == Some(group) {
+            end += 1;
+        }
+        start..end
     }
 }
 
@@ -348,7 +419,71 @@ pub struct ApprovalStep {
     pub sla_minutes: Option<i64>,
     #[serde(default)]
     pub on_timeout: OnTimeout,
+    /// Z10-T2: conditions, grouping, evidence and reminders. Flattened, so
+    /// the JSON keys sit on the step itself and a plan stored before them
+    /// reads with every default.
+    #[serde(flatten)]
+    pub extras: StepExtras,
 }
+
+/// Z10-T2: what a step may add to who decides it and how.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
+pub struct StepExtras {
+    /// A rules expression; the step runs only when it is true.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub skip_unless: Option<String>,
+    /// Consecutive steps with the same group run together, in parallel.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<u16>,
+    /// The decider confirms with a fresh sign-in or second factor.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub requires_step_up: bool,
+    /// The decision is signed.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub requires_signature: bool,
+    /// A person decides, never an agent.
+    #[serde(default = "default_true", skip_serializing_if = "is_true")]
+    pub requires_human: bool,
+    /// Remind the approvers this long after the step started waiting.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reminder_minutes: Option<i64>,
+    /// Who an escalation goes to (an approver token).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub escalate_to: Option<String>,
+    /// SLA and reminder minutes count business hours only.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub business_hours: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn is_true(b: &bool) -> bool {
+    *b
+}
+
+fn is_false(b: &bool) -> bool {
+    !*b
+}
+
+impl Default for StepExtras {
+    fn default() -> Self {
+        Self {
+            skip_unless: None,
+            group: None,
+            requires_step_up: false,
+            requires_signature: false,
+            requires_human: true,
+            reminder_minutes: None,
+            escalate_to: None,
+            business_hours: false,
+        }
+    }
+}
+
+/// The longest `skip_unless` expression a step takes.
+pub const MAX_SKIP_UNLESS_CHARS: usize = 2000;
 
 impl ApprovalStep {
     /// How many *distinct decisions* this step needs before it closes,
@@ -2354,7 +2489,84 @@ mod tests {
             approvers: vec!["user:a".to_string()],
             sla_minutes: Some(60),
             on_timeout: OnTimeout::Escalate,
+            extras: Default::default(),
         }
+    }
+
+    fn grouped(group: Option<u16>) -> ApprovalStep {
+        let mut step = any_step();
+        step.extras.group = group;
+        step
+    }
+
+    #[test]
+    fn validate_rejects_non_consecutive_group() {
+        let ok = ApprovalPlan {
+            steps: vec![grouped(Some(1)), grouped(Some(1)), grouped(None)],
+        };
+        assert!(ok.validate().is_ok());
+        let split = ApprovalPlan {
+            steps: vec![grouped(Some(1)), grouped(None), grouped(Some(1))],
+        };
+        assert!(split.validate().is_err());
+        let mut mixed = vec![grouped(Some(2)), grouped(Some(2))];
+        mixed[1].on_timeout = OnTimeout::AutoReject;
+        assert!(ApprovalPlan { steps: mixed }.validate().is_err());
+    }
+
+    #[test]
+    fn validate_rejects_reminder_after_sla() {
+        let mut step = any_step();
+        step.extras.reminder_minutes = Some(60);
+        assert!(
+            ApprovalPlan {
+                steps: vec![step.clone()]
+            }
+            .validate()
+            .is_err()
+        );
+        step.extras.reminder_minutes = Some(30);
+        assert!(
+            ApprovalPlan {
+                steps: vec![step.clone()]
+            }
+            .validate()
+            .is_ok()
+        );
+        step.extras.requires_signature = true;
+        step.extras.requires_human = false;
+        assert!(ApprovalPlan { steps: vec![step] }.validate().is_err());
+    }
+
+    #[test]
+    fn stage_of_groups_consecutive_steps() {
+        let plan = ApprovalPlan {
+            steps: vec![
+                grouped(None),
+                grouped(Some(1)),
+                grouped(Some(1)),
+                grouped(None),
+            ],
+        };
+        assert_eq!(plan.stage_of(0), 0..1);
+        assert_eq!(plan.stage_of(1), 1..3);
+        assert_eq!(plan.stage_of(2), 1..3);
+        assert_eq!(plan.stage_of(3), 3..4);
+    }
+
+    #[test]
+    fn old_plan_json_deserializes_with_defaults() {
+        let plan: ApprovalPlan = serde_json::from_value(serde_json::json!({
+            "steps": [{"mode": "any", "approvers": ["user:a"], "sla_minutes": 60}]
+        }))
+        .expect("an old plan reads");
+        assert_eq!(plan.steps[0].extras, StepExtras::default());
+        assert!(plan.steps[0].extras.requires_human);
+        let back = serde_json::to_value(&plan).expect("writes");
+        assert!(
+            back["steps"][0].get("group").is_none(),
+            "absent keys stay absent: {back}"
+        );
     }
 
     /// BAP-7 / BAP-F6 (BAP-D3): `required_count` counts principal slots and

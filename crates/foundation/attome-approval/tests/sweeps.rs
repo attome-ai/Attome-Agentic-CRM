@@ -110,6 +110,7 @@ fn plan_with_sla(sla_minutes: Option<i64>) -> ApprovalPlan {
             approvers: vec!["user:a".to_string()],
             sla_minutes,
             on_timeout: OnTimeout::Escalate,
+            extras: Default::default(),
         }],
     }
 }

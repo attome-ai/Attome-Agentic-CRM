@@ -231,6 +231,7 @@ async fn due_auto_approve_timeout(pool: &PgPool, requested_by: Uuid) -> Approval
             approvers: vec!["user:a".to_string()],
             sla_minutes: Some(1),
             on_timeout: OnTimeout::AutoApprove,
+            extras: Default::default(),
         }],
     };
     let request = submit_with_plan(
@@ -402,6 +403,7 @@ async fn a_failing_plan_submit_hook_leaves_no_request_row() {
             approvers: vec!["user:a".to_string()],
             sla_minutes: Some(60),
             on_timeout: OnTimeout::Escalate,
+            extras: Default::default(),
         }],
     };
 

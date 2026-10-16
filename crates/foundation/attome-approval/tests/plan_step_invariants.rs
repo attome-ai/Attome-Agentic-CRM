@@ -190,6 +190,7 @@ async fn all_step_requires_every_named_principal() {
             approvers: vec!["user:0".to_string(), "user:1".to_string()],
             sla_minutes: Some(60),
             on_timeout: OnTimeout::Escalate,
+            extras: Default::default(),
         }],
     };
     let request = submit_with_plan(
@@ -251,6 +252,7 @@ async fn approving_one_step_advances_to_the_next_without_closing_the_request() {
                 approvers: vec!["user:0".to_string()],
                 sla_minutes: Some(60),
                 on_timeout: OnTimeout::Escalate,
+                extras: Default::default(),
             },
             ApprovalStep {
                 mode: StepMode::Any,
@@ -258,6 +260,7 @@ async fn approving_one_step_advances_to_the_next_without_closing_the_request() {
                 approvers: vec!["user:1".to_string()],
                 sla_minutes: Some(60),
                 on_timeout: OnTimeout::Escalate,
+                extras: Default::default(),
             },
         ],
     };
@@ -406,6 +409,7 @@ async fn auto_approve_timeout_is_recorded_as_decided_by_policy() {
             approvers: vec!["user:0".to_string()],
             sla_minutes: Some(1),
             on_timeout: OnTimeout::AutoApprove,
+            extras: Default::default(),
         }],
     };
     let request = submit_with_plan(
@@ -468,6 +472,7 @@ async fn auto_reject_timeout_is_recorded_as_decided_by_policy() {
             approvers: vec!["user:0".to_string()],
             sla_minutes: Some(1),
             on_timeout: OnTimeout::AutoReject,
+            extras: Default::default(),
         }],
     };
     let request = submit_with_plan(
@@ -512,6 +517,7 @@ async fn escalate_timeout_fires_once_and_decides_nothing() {
             approvers: vec!["user:0".to_string()],
             sla_minutes: Some(1),
             on_timeout: OnTimeout::Escalate,
+            extras: Default::default(),
         }],
     };
     let request = submit_with_plan(
@@ -569,6 +575,7 @@ fn all_of_two_plan() -> ApprovalPlan {
             approvers: vec!["user:a".to_string(), "user:b".to_string()],
             sla_minutes: Some(60),
             on_timeout: OnTimeout::Escalate,
+            extras: Default::default(),
         }],
     }
 }
@@ -656,6 +663,7 @@ async fn an_expired_request_is_not_auto_approved_by_a_step_timeout() {
             approvers: vec!["user:a".to_string()],
             sla_minutes: Some(1),
             on_timeout: OnTimeout::AutoApprove,
+            extras: Default::default(),
         }],
     };
     let request = submit_with_plan(
@@ -781,6 +789,7 @@ async fn an_n_of_m_above_its_population_refuses_every_approval() {
             approvers: vec!["role:finance".to_string()],
             sla_minutes: Some(60),
             on_timeout: OnTimeout::Escalate,
+            extras: Default::default(),
         }],
     };
     let request = submit_with_plan(
@@ -901,6 +910,7 @@ async fn an_out_of_range_sla_does_not_stop_other_timeouts_firing() {
             approvers: vec!["user:a".to_string()],
             sla_minutes: Some(1),
             on_timeout: OnTimeout::Escalate,
+            extras: Default::default(),
         }],
     };
     let bad = submit_with_plan(
