@@ -977,6 +977,9 @@ async fn dispatch_platform_job(
                 tracing::info!(added, "default team: members added to new deals");
             }
         }
+        EngineJob::SalesCallOutcomeRules { attempt_id } => {
+            attome_sales::dialer::outcome::apply_rules(&attome_state, attempt_id).await?;
+        }
         EngineJob::SalesScheduleShift {
             opportunity_id,
             months,

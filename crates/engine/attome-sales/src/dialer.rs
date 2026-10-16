@@ -2,3 +2,4 @@
 
 pub mod claim;
 pub mod hours;
+pub mod outcome;

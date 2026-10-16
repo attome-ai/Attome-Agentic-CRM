@@ -310,6 +310,9 @@ pub enum EngineJob {
     /// D6-T6: moves a large deal's schedule rows by whole months, after the
     /// user agreed to it.
     SalesScheduleShift { opportunity_id: Uuid, months: i32 },
+    /// D21-T5: applies a call list's outcome rules for one saved attempt,
+    /// after the attempt committed.
+    SalesCallOutcomeRules { attempt_id: Uuid },
     /// F10-T5: computes (or resumes) one commission calculation run,
     /// enqueued by `POST /api/v1/commission/periods/{id}/runs`. Pure
     /// pointer; the run's `cursor` makes a retry resume.
@@ -862,6 +865,7 @@ impl EngineJob {
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::SalesScheduleShift { .. }
+            | Self::SalesCallOutcomeRules { .. }
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
             | Self::CascadeDeactivateDependents { .. }
@@ -994,6 +998,7 @@ impl EngineJob {
             EngineJob::CrawlWebsite { .. } => "CrawlWebsite",
             EngineJob::SalesDefaultTeamApply { .. } => "SalesDefaultTeamApply",
             EngineJob::SalesScheduleShift { .. } => "SalesScheduleShift",
+            EngineJob::SalesCallOutcomeRules { .. } => "SalesCallOutcomeRules",
             EngineJob::CommissionRun { .. } => "CommissionRun",
             EngineJob::CommissionRecalcPreview { .. } => "CommissionRecalcPreview",
             EngineJob::CascadeDeactivateDependents { .. } => "CascadeDeactivateDependents",
@@ -1172,6 +1177,7 @@ impl EngineJob {
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::SalesScheduleShift { .. }
+            | Self::SalesCallOutcomeRules { .. }
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
             | Self::FleetRolloutStep { .. } => JobPriority::Normal,
@@ -1309,6 +1315,7 @@ impl EngineJob {
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
             | Self::SalesScheduleShift { .. }
+            | Self::SalesCallOutcomeRules { .. }
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
             | Self::CascadeDeactivateDependents { .. }
@@ -1614,6 +1621,9 @@ mod tests {
         assert_round_trips(EngineJob::SalesSnapshotPrune);
         assert_round_trips(EngineJob::SalesDefaultTeamApply {
             owner_id: Uuid::now_v7(),
+        });
+        assert_round_trips(EngineJob::SalesCallOutcomeRules {
+            attempt_id: Uuid::now_v7(),
         });
         assert_round_trips(EngineJob::SalesScheduleShift {
             opportunity_id: Uuid::now_v7(),

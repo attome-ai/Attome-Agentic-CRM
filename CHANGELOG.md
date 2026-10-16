@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/sales/call-list-members/{id}/outcome` saves a call attempt for the member the caller
+  claimed, finishes or re-queues the member, and queues the list's outcome rules (lead status, deal stage,
+  a callback task, the wrong-number flag), applied after commit as the caller and never twice.
 - Commission into payroll: locking a period emits `commission.period_accrued`;
   `POST /api/v1/hr/payroll-handoff` returns the payroll CSV and moves its approved commission payouts to
   `exported`; `POST /api/v1/hr/payroll-handoff/confirm` marks them `paid` with `commission.payout_paid`.

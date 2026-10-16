@@ -52,5 +52,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<schedules::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<quote_sync::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<undo::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<dialer::outcome::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }
