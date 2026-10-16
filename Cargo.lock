@@ -619,7 +619,9 @@ dependencies = [
  "attome-core",
  "attome-modules",
  "axum",
+ "rust_decimal",
  "utoipa",
+ "uuid",
 ]
 
 [[package]]
@@ -701,6 +703,8 @@ dependencies = [
  "attome-core",
  "attome-modules",
  "axum",
+ "chrono",
+ "serde_json",
  "utoipa",
 ]
 

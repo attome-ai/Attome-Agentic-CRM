@@ -5,6 +5,7 @@
 //! from the matching pack; this crate holds the engine code that acts on them as later tasks add
 //! it. Gated on the `contract` module.
 
+pub mod amendment;
 pub mod model;
 
 pub use model::ContractModel;

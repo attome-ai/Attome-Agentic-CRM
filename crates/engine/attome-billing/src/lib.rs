@@ -7,6 +7,7 @@
 pub mod model;
 pub mod payment;
 pub mod subscription;
+pub mod tax;
 
 pub use model::BillingModel;
 

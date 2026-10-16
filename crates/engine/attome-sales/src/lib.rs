@@ -8,7 +8,9 @@
 
 pub mod attainment;
 pub mod competitors;
+pub mod cpq;
 pub mod dialer;
+pub mod discount_policy;
 pub mod enrichment;
 pub mod flags;
 pub mod model;
