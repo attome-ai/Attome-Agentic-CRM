@@ -3676,3 +3676,134 @@ async fn drain_audit_chainer(db: &attome_db::DbPool) {
     }
     panic!("the audit chainer still had pending events after 100 runs");
 }
+
+/// M1-T5: an event at the chain-depth limit starts nothing; one below it
+/// starts an instance that carries its depth.
+#[tokio::test]
+async fn a_flow_chain_stops_at_depth_eight() {
+    let state = skip_if_no_db!(test_state().await);
+    let entity = format!("wf_chain_depth_{}", Uuid::now_v7().simple());
+    let graph = json!({
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": {
+                "trigger_type": "create", "entity_logicalname": entity
+            }},
+            {"id": "w", "type": "wait", "config": {"delay_seconds": 3600}}
+        ],
+        "edges": [{"from_node": "t", "from_port": "out", "to_node": "w", "to_port": "in"}]
+    });
+    let version_id = publish_workflow(&state.base.db, "chain-depth-test", graph).await;
+
+    let mut events = Vec::new();
+    for depth in [7_i16, attome_workflow::instance_admin::MAX_CHAIN_DEPTH] {
+        let event_id: Uuid = sqlx::query_scalar(
+            "INSERT INTO entity_change_event (entity_logicalname, record_id, operation, chain_depth) \
+             VALUES ($1, $2, 'create', $3) RETURNING id",
+        )
+        .bind(&entity)
+        .bind(Uuid::now_v7())
+        .bind(depth)
+        .fetch_one(&state.base.db)
+        .await
+        .expect("insert event");
+        events.push(event_id);
+    }
+
+    let below = attome_workflow::instance_admin::start_instance_for_event(
+        &state,
+        version_id,
+        "t",
+        None,
+        None,
+        json!({}),
+        events[0],
+    )
+    .await
+    .expect("start below the limit")
+    .expect("an instance starts below the limit");
+    let depth: i16 = sqlx::query_scalar("SELECT chain_depth FROM workflow_instance WHERE id = $1")
+        .bind(below)
+        .fetch_one(&state.base.db)
+        .await
+        .expect("read depth");
+    assert_eq!(depth, 7);
+
+    let at_limit = attome_workflow::instance_admin::start_instance_for_event(
+        &state,
+        version_id,
+        "t",
+        None,
+        None,
+        json!({}),
+        events[1],
+    )
+    .await
+    .expect("a refused start is not an error");
+    assert!(at_limit.is_none(), "an event at depth 8 must start nothing");
+}
+
+/// M1-T5: past `settings.max_concurrent_runs` a start is queued, and the
+/// sweep starts it once a run finishes.
+#[tokio::test]
+async fn a_capped_flow_queues_extra_runs() {
+    let state = skip_if_no_db!(test_state().await);
+    let graph = json!({
+        "settings": {"max_concurrent_runs": 1},
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": {"trigger_type": "manual"}},
+            {"id": "w", "type": "wait", "config": {"delay_seconds": 3600}}
+        ],
+        "edges": [{"from_node": "t", "from_port": "out", "to_node": "w", "to_port": "in"}]
+    });
+    let version_id = publish_workflow(&state.base.db, "concurrency-cap-test", graph).await;
+    let status = |id: Uuid| {
+        let db = state.base.db.clone();
+        async move {
+            sqlx::query_scalar::<_, String>("SELECT status FROM workflow_instance WHERE id = $1")
+                .bind(id)
+                .fetch_one(&db)
+                .await
+                .expect("read status")
+        }
+    };
+
+    let first = attome_workflow::instance_admin::start_instance_internal(
+        &state,
+        version_id,
+        None,
+        None,
+        None,
+        json!({}),
+    )
+    .await
+    .expect("first start");
+    let second = attome_workflow::instance_admin::start_instance_internal(
+        &state,
+        version_id,
+        None,
+        None,
+        None,
+        json!({}),
+    )
+    .await
+    .expect("second start");
+    assert_eq!(status(first).await, "running");
+    assert_eq!(status(second).await, "queued");
+
+    attome_workflow::instance_admin::promote_queued(&state)
+        .await
+        .expect("promote");
+    assert_eq!(status(second).await, "queued", "no slot is free yet");
+
+    sqlx::query(
+        "UPDATE workflow_instance SET status = 'completed', completed_at = NOW() WHERE id = $1",
+    )
+    .bind(first)
+    .execute(&state.base.db)
+    .await
+    .expect("finish the first run");
+    attome_workflow::instance_admin::promote_queued(&state)
+        .await
+        .expect("promote");
+    assert_eq!(status(second).await, "running");
+}

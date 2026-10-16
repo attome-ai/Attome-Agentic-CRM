@@ -219,7 +219,7 @@ async fn cancel_instance(
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     let rows = sqlx::query(
         "UPDATE workflow_instance SET status = 'cancelled', completed_at = NOW(), row_version = row_version + 1 \
-         WHERE id = $1 AND row_version = $2 AND status IN ('running', 'waiting')",
+         WHERE id = $1 AND row_version = $2 AND status IN ('queued', 'running', 'waiting')",
     )
     .bind(instance_id)
     .bind(body.row_version)
@@ -429,6 +429,110 @@ pub async fn start_instance_for_event(
     .await
 }
 
+/// M1-T5: how deep a chain of flow-triggered flows may go. An event a
+/// user's write produced has depth 0; a flow started by it writes events of
+/// depth 1, and so on; an event at this depth starts nothing.
+pub const MAX_CHAIN_DEPTH: i16 = 8;
+
+/// The graph's `settings.max_concurrent_runs`, when set to a positive number.
+pub fn max_concurrent_runs(graph: &serde_json::Value) -> Option<i64> {
+    graph
+        .pointer("/settings/max_concurrent_runs")
+        .and_then(serde_json::Value::as_i64)
+        .filter(|n| *n > 0)
+}
+
+/// Running or waiting instances of the flow `definition_version_id` belongs
+/// to, over all its versions.
+async fn active_runs(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    definition_version_id: Uuid,
+) -> Result<i64, AppError> {
+    sqlx::query_scalar(
+        "SELECT COUNT(*) FROM workflow_instance i \
+           JOIN workflow_definition_version v ON v.id = i.definition_version_id \
+          WHERE v.definition_id = (SELECT definition_id FROM workflow_definition_version WHERE id = $1) \
+            AND i.status IN ('running', 'waiting')",
+    )
+    .bind(definition_version_id)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(AppError::internal)
+}
+
+/// M1-T5: starts queued instances of every capped flow that has a free slot,
+/// oldest first. Run by the minute sweep (`EngineJob::WorkflowSlaSweep`).
+/// The cap is the flow's published version's; a flow no longer capped
+/// starts all its queued runs. Returns how many started.
+pub async fn promote_queued(state: &EngineState) -> Result<u64, AppError> {
+    let flows: Vec<Uuid> = sqlx::query_scalar(
+        "SELECT DISTINCT v.definition_id FROM workflow_instance i \
+           JOIN workflow_definition_version v ON v.id = i.definition_version_id \
+          WHERE i.status = 'queued'",
+    )
+    .fetch_all(&state.base.db)
+    .await
+    .map_err(AppError::internal)?;
+
+    let mut started = 0u64;
+    for definition_id in flows {
+        let mut tx = attome_db::tx::begin(&state.base.db).await?;
+        let published: Option<serde_json::Value> = sqlx::query_scalar(
+            "SELECT v.graph FROM workflow_definition d \
+               LEFT JOIN workflow_definition_version v \
+                 ON v.definition_id = d.id AND v.status = 'published' \
+              WHERE d.id = $1 FOR UPDATE OF d",
+        )
+        .bind(definition_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(AppError::internal)?
+        .flatten();
+        let active: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM workflow_instance i \
+               JOIN workflow_definition_version v ON v.id = i.definition_version_id \
+              WHERE v.definition_id = $1 AND i.status IN ('running', 'waiting')",
+        )
+        .bind(definition_id)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        let free = match published.as_ref().and_then(max_concurrent_runs) {
+            Some(cap) => (cap - active).max(0),
+            None => i64::from(i32::MAX),
+        };
+        if free == 0 {
+            continue;
+        }
+        let ids: Vec<Uuid> = sqlx::query_scalar(
+            "UPDATE workflow_instance SET status = 'running', row_version = row_version + 1 \
+              WHERE id IN (SELECT i.id FROM workflow_instance i \
+                             JOIN workflow_definition_version v ON v.id = i.definition_version_id \
+                            WHERE v.definition_id = $1 AND i.status = 'queued' \
+                            ORDER BY i.started_at, i.id LIMIT $2 FOR UPDATE OF i SKIP LOCKED) \
+              RETURNING id",
+        )
+        .bind(definition_id)
+        .bind(free)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(AppError::internal)?;
+        for instance_id in &ids {
+            attome_jobs::enqueue_in_tx(
+                &mut tx,
+                attome_core::jobs::EngineJob::WorkflowExecute {
+                    instance_id: *instance_id,
+                },
+            )
+            .await
+            .map_err(AppError::internal)?;
+        }
+        tx.commit().await.map_err(AppError::internal)?;
+        started += ids.len() as u64;
+    }
+    Ok(started)
+}
+
 async fn start_instance_inner(
     state: &EngineState,
     definition_version_id: Uuid,
@@ -460,14 +564,62 @@ async fn start_instance_inner(
     };
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
+
+    // M1-T5: a start from an event a flow's own write produced carries that
+    // event's chain depth; past `MAX_CHAIN_DEPTH` the chain stops here, so a
+    // flow that triggers itself (or two that trigger each other) cannot loop.
+    let chain_depth: i16 = match trigger_event_id {
+        Some(event_id) => {
+            sqlx::query_scalar("SELECT chain_depth FROM entity_change_event WHERE id = $1")
+                .bind(event_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(AppError::internal)?
+                .unwrap_or(0)
+        }
+        None => 0,
+    };
+    if chain_depth >= MAX_CHAIN_DEPTH {
+        metrics::counter!("workflow_chain_depth_stops_total").increment(1);
+        tracing::error!(
+            %definition_version_id,
+            trigger_node_id = %entry_node_id,
+            chain_depth,
+            "workflow start refused: the trigger chain reached its depth limit; \
+             a flow's writes keep triggering flows"
+        );
+        return Ok(None);
+    }
+
+    // M1-T5: a flow may cap its parallel runs (`settings.max_concurrent_runs`
+    // in the graph); a start past the cap is stored `queued` and the minute
+    // sweep (`promote_queued`) starts it when a run finishes. The definition
+    // row lock serializes this flow's capped starts so two cannot both see a
+    // free slot; an uncapped flow takes no lock.
+    let queued = match max_concurrent_runs(&graph_json) {
+        Some(cap) => {
+            sqlx::query(
+                "SELECT d.id FROM workflow_definition d \
+                   JOIN workflow_definition_version v ON v.definition_id = d.id \
+                  WHERE v.id = $1 FOR UPDATE OF d",
+            )
+            .bind(definition_version_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(AppError::internal)?;
+            active_runs(&mut tx, definition_version_id).await? >= cap
+        }
+        None => false,
+    };
+
     // The conflict target names 0501's partial unique index; a NULL
     // `trigger_event_id` (every non-entity start) never matches its predicate,
     // so those inserts behave exactly as before.
     let inserted: Option<Uuid> = sqlx::query_scalar(
         "INSERT INTO workflow_instance \
             (definition_version_id, trigger_node_id, correlation_entity_id, status, started_by, \
-             context, node_data, trigger_event_id) \
-         VALUES ($1, $2, $3, 'running', $4, $5, $6, $7) \
+             context, node_data, trigger_event_id, chain_depth) \
+         VALUES ($1, $2, $3, $8, $4, $5, $6, $7, $9) \
          ON CONFLICT (definition_version_id, trigger_node_id, trigger_event_id) \
              WHERE trigger_event_id IS NOT NULL DO NOTHING \
          RETURNING id",
@@ -479,6 +631,8 @@ async fn start_instance_inner(
     .bind(&context)
     .bind(serde_json::json!({ &entry_node_id: context.clone() }))
     .bind(trigger_event_id)
+    .bind(if queued { "queued" } else { "running" })
+    .bind(chain_depth)
     .fetch_optional(&mut *tx)
     .await
     .map_err(AppError::internal)?;
@@ -499,12 +653,14 @@ async fn start_instance_inner(
     .await
     .map_err(AppError::internal)?;
 
-    attome_jobs::enqueue_in_tx(
-        &mut tx,
-        attome_core::jobs::EngineJob::WorkflowExecute { instance_id },
-    )
-    .await
-    .map_err(AppError::internal)?;
+    if !queued {
+        attome_jobs::enqueue_in_tx(
+            &mut tx,
+            attome_core::jobs::EngineJob::WorkflowExecute { instance_id },
+        )
+        .await
+        .map_err(AppError::internal)?;
+    }
 
     // Plan 4.3 (C19): this shared primitive (the manual-start HTTP handler
     // above and `scheduler::execute_sub_workflow` both call it) previously

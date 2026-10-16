@@ -791,6 +791,11 @@ async fn dispatch_platform_job(
             if started > 0 {
                 tracing::info!(started, "workflow schedule triggers: flows started");
             }
+            // M1-T5: queued runs of capped flows start as slots free up.
+            let promoted = attome_workflow::instance_admin::promote_queued(&attome_state).await?;
+            if promoted > 0 {
+                tracing::info!(promoted, "workflow queued runs: started");
+            }
         }
         EngineJob::WorkflowEntityTriggerDispatch => {
             let started = attome_workflow::entity_trigger::dispatch_pending(&attome_state).await?;

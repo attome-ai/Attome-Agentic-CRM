@@ -1443,6 +1443,19 @@ async fn execute_entity_write(
     };
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
+    // M1-T5: the change event this write produces carries the run's chain
+    // depth plus one (`entity_change_event.chain_depth` defaults from this
+    // transaction-local setting), so a flow its write triggers knows how
+    // deep the chain is.
+    sqlx::query(
+        "SELECT set_config('attome.workflow_chain_depth', \
+                COALESCE((SELECT (chain_depth + 1)::text FROM workflow_instance WHERE id = $1), '1'), \
+                true)",
+    )
+    .bind(instance.id)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
     let org_ref = attome_core::ROOT_ORGANIZATION_ID;
     let user_id = ctx.user_id;
 

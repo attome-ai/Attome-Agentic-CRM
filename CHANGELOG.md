@@ -25,6 +25,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Workflows cannot loop: a flow started by another flow's write carries a chain depth, and a
+  chain stops at depth 8 (`workflow_chain_depth_stops_total`). A flow's graph may set
+  `settings.max_concurrent_runs`; extra runs wait as `queued` and start as runs finish.
 - Schedule-triggered workflows now start on their own: a trigger with `trigger_type: "schedule"`
   takes `schedule: {every_minutes | daily_at + weekdays | cron}` in the deployment's time zone and
   starts once per slot (`workflow_schedule_slot`); unpublishing stops it.
