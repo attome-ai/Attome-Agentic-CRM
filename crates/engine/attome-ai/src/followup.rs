@@ -64,11 +64,7 @@ pub fn window_start(day: NaiveDate) -> NaiveDate {
 /// The SQL that finds a rule's candidates: `(record id, owner)` rows, with
 /// `$1` the idle cutoff and `$2` the limit. Names come from `attrs` (the
 /// entity's validated attributes) only.
-pub fn candidate_sql(
-    reason: &str,
-    entity: &str,
-    attrs: &[String],
-) -> Result<String, DetectError> {
+pub fn candidate_sql(reason: &str, entity: &str, attrs: &[String]) -> Result<String, DetectError> {
     let has = |a: &str| attrs.iter().any(|x| x == a);
     let table = quote_ident(entity);
     match reason {
@@ -198,8 +194,7 @@ pub async fn detect(
 pub async fn active_rules(db: &attome_db::DbPool) -> Result<Vec<FollowupRule>, AppError> {
     let rows: Vec<(Uuid, Option<String>, Option<String>, Option<i64>)> = sqlx::query_as(
         "SELECT id, reason, target_entity, idle_days::bigint FROM ai_followup_rule \
-         WHERE COALESCE(is_active, true) AND (is_deleted IS NULL OR is_deleted = false) \
-         ORDER BY id",
+         WHERE COALESCE(is_active, true) ORDER BY id",
     )
     .fetch_all(db)
     .await
