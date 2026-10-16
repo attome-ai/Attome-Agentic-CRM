@@ -1,0 +1,1898 @@
+{
+  "author": "packs",
+  "checksum": "sha256:6a956b63520b82605349ed29ea16912a4b83bd0db457b0847f2e6129c314082c",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Call lists and the power dialer (D21-T2): lists filled from a view, due call tasks or by hand; members with claim, attempts and snooze; append-only call attempts; outcome rules; calling hours per country; caller ids per country.",
+  "format": "attome-changeset/v1",
+  "id": "01a143b4-c3aa-7c47-9b69-2f93135540f3",
+  "layer": "product",
+  "name": "sales-dialer",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Call List",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "call_list",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "call_list"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "call_list",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "view",
+              "tasks_due",
+              "manual"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "call_list",
+        "field": "source_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "View",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "view_ref",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "call_list",
+        "field": "view_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Shared",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_shared",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "call_list",
+        "field": "is_shared"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Max Attempts per Record",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "max_attempts_per_record",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "call_list",
+        "field": "max_attempts_per_record"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Max Attempts per Day",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "max_attempts_per_day",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "call_list",
+        "field": "max_attempts_per_day"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Retry Wait (minutes)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "retry_wait_minutes",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "call_list",
+        "field": "retry_wait_minutes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Countdown (seconds)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "countdown_seconds",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "call_list",
+        "field": "countdown_seconds"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Voicemail Drop",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "voicemail_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "call_list",
+        "field": "voicemail_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Script",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "script_ref",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "call_list",
+        "field": "script_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "active",
+              "closed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "call_list",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Call List Member",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "call_list_member",
+          "primary_name_attribute": "entity_name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "call_list_member"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "List",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "list_ref",
+          "lookup_entity": "call_list",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "call_list_member",
+        "field": "list_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Record Type",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "entity_name",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "call_list_member",
+        "field": "entity_name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Record",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "record_id",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "call_list_member",
+        "field": "record_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Position",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "position",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "call_list_member",
+        "field": "position"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "member_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "pending",
+              "claimed",
+              "done",
+              "skipped",
+              "snoozed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "call_list_member",
+        "field": "member_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Claimed By",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "claimed_by",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "call_list_member",
+        "field": "claimed_by"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Claimed At",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "claimed_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "call_list_member",
+        "field": "claimed_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Attempts",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "attempts",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "call_list_member",
+        "field": "attempts"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Last Attempt",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "last_attempt_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "call_list_member",
+        "field": "last_attempt_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Next Attempt After",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "next_attempt_after",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "call_list_member",
+        "field": "next_attempt_after"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Skip Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "skip_reason",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "call_list_member",
+        "field": "skip_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Call Attempt",
+          "is_append_only": true,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "call_attempt",
+          "primary_name_attribute": "outcome"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "call_attempt"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Member",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "member_ref",
+          "lookup_entity": "call_list_member",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "call_attempt",
+        "field": "member_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Activity",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "activity_id",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "call_attempt",
+        "field": "activity_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Attempt",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "attempt_number",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "call_attempt",
+        "field": "attempt_number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Outcome",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "outcome",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "connected",
+              "no_answer",
+              "busy",
+              "wrong_number",
+              "voicemail_left",
+              "call_back_later",
+              "not_interested"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "call_attempt",
+        "field": "outcome"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Duration (seconds)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "duration_seconds",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "call_attempt",
+        "field": "duration_seconds"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Script Answers",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "script_answers",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "call_attempt",
+        "field": "script_answers"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Voicemail Dropped",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "voicemail_dropped",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "call_attempt",
+        "field": "voicemail_dropped"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Caller Id",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "caller_id_number",
+          "lookup_entity": null,
+          "max_length": 32,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "call_attempt",
+        "field": "caller_id_number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Call Outcome Rule",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "call_outcome_rule",
+          "primary_name_attribute": "outcome"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "call_outcome_rule"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "List",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "list_ref",
+          "lookup_entity": "call_list",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "call_outcome_rule",
+        "field": "list_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Outcome",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "outcome",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "connected",
+              "no_answer",
+              "busy",
+              "wrong_number",
+              "voicemail_left",
+              "call_back_later",
+              "not_interested"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "call_outcome_rule",
+        "field": "outcome"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Set Lead Status",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "set_lead_status",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "call_outcome_rule",
+        "field": "set_lead_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Set Opportunity Stage",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "set_opportunity_stage",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "call_outcome_rule",
+        "field": "set_opportunity_stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Call Back After (minutes)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "callback_after_minutes",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "call_outcome_rule",
+        "field": "callback_after_minutes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Stop Sequence",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "stop_sequence",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "call_outcome_rule",
+        "field": "stop_sequence"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Calling Hours",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "calling_hours",
+          "primary_name_attribute": "country_code"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "calling_hours"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Country",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "country_code",
+          "lookup_entity": null,
+          "max_length": 2,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "calling_hours",
+        "field": "country_code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Weekday",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "weekday",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "calling_hours",
+        "field": "weekday"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Start (local)",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "start_local",
+          "lookup_entity": null,
+          "max_length": 5,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "calling_hours",
+        "field": "start_local"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "End (local)",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "end_local",
+          "lookup_entity": null,
+          "max_length": 5,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "calling_hours",
+        "field": "end_local"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Caller Id Rule",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "caller_id_rule",
+          "primary_name_attribute": "country_code"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "caller_id_rule"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Country",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "country_code",
+          "lookup_entity": null,
+          "max_length": 2,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "caller_id_rule",
+        "field": "country_code"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Phone Number",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "phone_number",
+          "lookup_entity": null,
+          "max_length": 32,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "caller_id_rule",
+        "field": "phone_number"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قائمة الاتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list.source_kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العرض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list.view_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مشتركة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list.is_shared",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أقصى محاولات لكل سجل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list.max_attempts_per_record",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أقصى محاولات يوميا"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list.max_attempts_per_day",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الانتظار قبل الإعادة (دقائق)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list.retry_wait_minutes",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العد التنازلي (ثوان)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list.countdown_seconds",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ترك رسالة صوتية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list.voicemail_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النص"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list.script_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "عضو قائمة الاتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list_member",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "القائمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list_member.list_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نوع السجل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list_member.entity_name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السجل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list_member.record_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الترتيب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list_member.position",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list_member.member_status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "محجوز بواسطة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list_member.claimed_by",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "وقت الحجز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list_member.claimed_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المحاولات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list_member.attempts",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر محاولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list_member.last_attempt_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المحاولة التالية بعد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list_member.next_attempt_after",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سبب التخطي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_list_member.skip_reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "محاولة الاتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_attempt",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العضو"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_attempt.member_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النشاط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_attempt.activity_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رقم المحاولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_attempt.attempt_number",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النتيجة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_attempt.outcome",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المدة (ثوان)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_attempt.duration_seconds",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إجابات النص"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_attempt.script_answers",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تركت رسالة صوتية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_attempt.voicemail_dropped",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رقم المتصل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_attempt.caller_id_number",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قاعدة نتيجة الاتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_outcome_rule",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "القائمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_outcome_rule.list_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النتيجة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_outcome_rule.outcome",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تعيين حالة العميل المحتمل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_outcome_rule.set_lead_status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تعيين مرحلة الفرصة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_outcome_rule.set_opportunity_stage",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "معاودة الاتصال بعد (دقائق)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_outcome_rule.callback_after_minutes",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إيقاف التسلسل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "locale": "ar",
+        "object_key": "call_outcome_rule.stop_sequence",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ساعات الاتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "locale": "ar",
+        "object_key": "calling_hours",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "locale": "ar",
+        "object_key": "calling_hours.country_code",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اليوم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "locale": "ar",
+        "object_key": "calling_hours.weekday",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "البداية (محلي)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "locale": "ar",
+        "object_key": "calling_hours.start_local",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النهاية (محلي)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "locale": "ar",
+        "object_key": "calling_hours.end_local",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قاعدة رقم المتصل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "locale": "ar",
+        "object_key": "caller_id_rule",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "locale": "ar",
+        "object_key": "caller_id_rule.country_code",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رقم الهاتف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "locale": "ar",
+        "object_key": "caller_id_rule.phone_number",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "sales",
+  "seq": 6,
+  "title": "Pack: sales call lists and dialer"
+}

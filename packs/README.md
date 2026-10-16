@@ -23,3 +23,24 @@ append-only `payment_allocation` to invoices, `payment_refund`, `payment_dispute
 `saved_payment_method` (the gateway token is masked), `payment_link` and `gateway_payout`, plus credit
 limit, payment terms and credit hold on `account` (F5). It builds on crm (`account`) and sales
 (`product`, `order`, `quote`) and on an `invoice` and a `contract` entity; install it after them.
+
+## commission
+
+Sales commissions (F10): `comp_plan` with versions and components (rate tables, tiers, caps, gates),
+`plan_participant`, `comp_period`, `comp_credit` from deals, orders, invoices and payments,
+calculation runs (`comp_run`) with `comp_statement_line`s and `comp_payout`s, adjustments, disputes and
+draws. Every amount, rate and balance is a masked field; the `commission` engine computes them.
+
+## marketing
+
+Email deliverability (E6): the `marketing_deliverability_policy` and an email status with engagement
+and sunset dates on `contact` and `lead` (from crm).
+
+## offline
+
+Offline profiles (B18): `offline_profile` per role (storage and days-offline limits) and
+`offline_profile_entity` per entity (the stored query, related lookups, files, row cap) the
+`offline` engine syncs to devices.
+
+The sales pack's `0006` adds call lists and the power dialer (D21): `call_list`, `call_list_member`,
+append-only `call_attempt`, `call_outcome_rule`, `calling_hours` and `caller_id_rule`.

@@ -1,0 +1,555 @@
+{
+  "author": "packs",
+  "checksum": "sha256:bf3bcb90f279a8b40d18c4c1d677e9136a974460a0ca740b6e83aebca4efee33",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Offline profiles (B18-T2): what a role keeps on a device - storage and days-offline limits, maps - and, per entity, the stored query that picks the records, related lookups and files to bring, and a row cap.",
+  "format": "attome-changeset/v1",
+  "id": "01a143b4-c79b-75c4-bd3b-b0df21a94299",
+  "layer": "product",
+  "name": "offline-profiles",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Offline Profile",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "offline_profile",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "offline_profile"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "offline_profile",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Role",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "role_ref",
+          "lookup_entity": "role",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "offline_profile",
+        "field": "role_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Max Storage (MB)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "max_storage_mb",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "offline_profile",
+        "field": "max_storage_mb"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Max Days Offline",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "max_days_offline",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "offline_profile",
+        "field": "max_days_offline"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Include Maps",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "include_maps",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "offline_profile",
+        "field": "include_maps"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Enabled",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "offline_profile",
+        "field": "is_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Offline Profile Entity",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "offline_profile_entity",
+          "primary_name_attribute": "entity_logicalname"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "offline_profile_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Profile",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "profile_ref",
+          "lookup_entity": "offline_profile",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "offline_profile_entity",
+        "field": "profile_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Entity",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "entity_logicalname",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "offline_profile_entity",
+        "field": "entity_logicalname"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Stored Query",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "stored_query_ref",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "offline_profile_entity",
+        "field": "stored_query_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Related Lookups",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "include_related",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "offline_profile_entity",
+        "field": "include_related"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Include Files",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "include_files",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "offline_profile_entity",
+        "field": "include_files"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Max Rows",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "max_rows",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "offline_profile_entity",
+        "field": "max_rows"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ملف العمل دون اتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدور"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile.role_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أقصى تخزين (م.ب)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile.max_storage_mb",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أقصى أيام دون اتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile.max_days_offline",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تضمين الخرائط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile.include_maps",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مفعل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile.is_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "كيان ملف العمل دون اتصال"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile_entity",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الملف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile_entity.profile_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الكيان"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile_entity.entity_logicalname",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاستعلام المحفوظ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile_entity.stored_query_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "البحث المرتبط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile_entity.include_related",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تضمين الملفات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile_entity.include_files",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أقصى عدد صفوف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "locale": "ar",
+        "object_key": "offline_profile_entity.max_rows",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "offline",
+  "seq": 1,
+  "title": "Pack: offline profiles"
+}

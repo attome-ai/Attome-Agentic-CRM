@@ -1,0 +1,3192 @@
+{
+  "author": "packs",
+  "checksum": "sha256:21a6af79c58a52a75cfc9dcf35ca7a9583a625b231e3b5f087c15e22a6eb3bd5",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Sales commissions (F10-T2): plans and their versions and components, participants, periods, credits, calculation runs with statement lines and payouts, adjustments, disputes and draws. Amounts and rates are masked fields.",
+  "format": "attome-changeset/v1",
+  "id": "01a143b4-c5a0-73ff-a4f4-da3cde519e2c",
+  "layer": "product",
+  "name": "commission",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Compensation Plan",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "comp_plan",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "comp_plan"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "comp_plan",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name_ar",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "comp_plan",
+        "field": "name_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Fiscal Year",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "fiscal_year",
+          "lookup_entity": null,
+          "max_length": 20,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "comp_plan",
+        "field": "fiscal_year"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "published",
+              "retired"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "comp_plan",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Plan Version",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "comp_plan_version",
+          "primary_name_attribute": "compiled_hash"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "comp_plan_version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Plan",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "plan_ref",
+          "lookup_entity": "comp_plan",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "comp_plan_version",
+        "field": "plan_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Version",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "version",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "comp_plan_version",
+        "field": "version"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Compiled Hash",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "compiled_hash",
+          "lookup_entity": null,
+          "max_length": 128,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "comp_plan_version",
+        "field": "compiled_hash"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Published",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "published_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "comp_plan_version",
+        "field": "published_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Plan Component",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "comp_component",
+          "primary_name_attribute": "kind"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "comp_component"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Plan Version",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "plan_version_ref",
+          "lookup_entity": "comp_plan_version",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "comp_component",
+        "field": "plan_version_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Kind",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "new_business",
+              "renewal",
+              "product_bonus",
+              "mbo",
+              "spiff",
+              "partner_referral",
+              "partner_margin",
+              "rebate"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "comp_component",
+        "field": "kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Measure",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "measure",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "split_amount",
+              "order_amount",
+              "invoice_amount",
+              "payment_amount"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "comp_component",
+        "field": "measure"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Rate Table",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "rate_table",
+          "lookup_entity": null,
+          "max_length": 8000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "comp_component",
+        "field": "rate_table"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Tier Mode",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "tier_mode",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "retroactive",
+              "marginal"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "comp_component",
+        "field": "tier_mode"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Cap per Deal",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "cap_per_deal",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "comp_component",
+        "field": "cap_per_deal"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Cap per Period",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "cap_per_period",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "comp_component",
+        "field": "cap_per_period"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Gate Attainment %",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "gate_attainment_percent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "comp_component",
+        "field": "gate_attainment_percent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Floor Margin %",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "floor_margin_percent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "comp_component",
+        "field": "floor_margin_percent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Multi-year Rule",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "multi_year_rule",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "first_year",
+              "each_year_invoiced"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "comp_component",
+        "field": "multi_year_rule"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Plan Participant",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "plan_participant",
+          "primary_name_attribute": "role"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "plan_participant"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Plan Version",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "plan_version_ref",
+          "lookup_entity": "comp_plan_version",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "plan_participant",
+        "field": "plan_version_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "User",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "user_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "plan_participant",
+        "field": "user_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Partner Account",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "partner_account_ref",
+          "lookup_entity": "account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "plan_participant",
+        "field": "partner_account_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Role",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "role",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "plan_participant",
+        "field": "role"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Starts",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "starts_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "plan_participant",
+        "field": "starts_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Ends",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "ends_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "plan_participant",
+        "field": "ends_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Acceptance",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "acceptance_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "pending",
+              "accepted",
+              "declined"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "plan_participant",
+        "field": "acceptance_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Signature Envelope",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "envelope_id",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "plan_participant",
+        "field": "envelope_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Commission Period",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "comp_period",
+          "primary_name_attribute": "fiscal_period"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "comp_period"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Fiscal Period",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "fiscal_period",
+          "lookup_entity": null,
+          "max_length": 20,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "comp_period",
+        "field": "fiscal_period"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Starts",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "starts_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "comp_period",
+        "field": "starts_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Ends",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "ends_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "comp_period",
+        "field": "ends_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "open",
+              "in_review",
+              "approved",
+              "locked"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "comp_period",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Commission Credit",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "comp_credit",
+          "primary_name_attribute": "source_id"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "entity": "comp_credit"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Participant",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "participant_ref",
+          "lookup_entity": "plan_participant",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "entity": "comp_credit",
+        "field": "participant_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Period",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "period_ref",
+          "lookup_entity": "comp_period",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "entity": "comp_credit",
+        "field": "period_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "split",
+              "order",
+              "invoice",
+              "payment",
+              "credit_note",
+              "refund"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "entity": "comp_credit",
+        "field": "source_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source Record",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source_id",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "entity": "comp_credit",
+        "field": "source_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "entity": "comp_credit",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Currency",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "currency",
+          "lookup_entity": null,
+          "max_length": 3,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "entity": "comp_credit",
+        "field": "currency"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Credited On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "credited_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "entity": "comp_credit",
+        "field": "credited_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reverses",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reverses_credit_ref",
+          "lookup_entity": "comp_credit",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "entity": "comp_credit",
+        "field": "reverses_credit_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Calculation Run",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "comp_run",
+          "primary_name_attribute": "status"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "entity": "comp_run"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Period",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "period_ref",
+          "lookup_entity": "comp_period",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "entity": "comp_run",
+        "field": "period_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Plan Version",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "plan_version_ref",
+          "lookup_entity": "comp_plan_version",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "entity": "comp_run",
+        "field": "plan_version_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "queued",
+              "running",
+              "done",
+              "failed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "entity": "comp_run",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Cursor",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "cursor",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "entity": "comp_run",
+        "field": "cursor"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Started",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "started_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "entity": "comp_run",
+        "field": "started_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Finished",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "finished_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "entity": "comp_run",
+        "field": "finished_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Statement Line",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "comp_statement_line",
+          "primary_name_attribute": "tier_reached"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "entity": "comp_statement_line"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Run",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "run_ref",
+          "lookup_entity": "comp_run",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "entity": "comp_statement_line",
+        "field": "run_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Participant",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "participant_ref",
+          "lookup_entity": "plan_participant",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "entity": "comp_statement_line",
+        "field": "participant_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Component",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "component_ref",
+          "lookup_entity": "comp_component",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "entity": "comp_statement_line",
+        "field": "component_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Credit",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "credit_ref",
+          "lookup_entity": "comp_credit",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "entity": "comp_statement_line",
+        "field": "credit_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "entity": "comp_statement_line",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Rate",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "rate",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "entity": "comp_statement_line",
+        "field": "rate"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Tier Reached",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "tier_reached",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "entity": "comp_statement_line",
+        "field": "tier_reached"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Explanation",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "explanation",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "entity": "comp_statement_line",
+        "field": "explanation"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Payout",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "comp_payout",
+          "primary_name_attribute": "status"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "entity": "comp_payout"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Run",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "run_ref",
+          "lookup_entity": "comp_run",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "entity": "comp_payout",
+        "field": "run_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Participant",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "participant_ref",
+          "lookup_entity": "plan_participant",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "entity": "comp_payout",
+        "field": "participant_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "entity": "comp_payout",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "calculated",
+              "approved",
+              "exported",
+              "paid"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "entity": "comp_payout",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Adjustment",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "comp_adjustment",
+          "primary_name_attribute": "reason"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "entity": "comp_adjustment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Participant",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "participant_ref",
+          "lookup_entity": "plan_participant",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "entity": "comp_adjustment",
+        "field": "participant_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Period",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "period_ref",
+          "lookup_entity": "comp_period",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "entity": "comp_adjustment",
+        "field": "period_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Amount",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "entity": "comp_adjustment",
+        "field": "amount"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reason",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "entity": "comp_adjustment",
+        "field": "reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Approval Request",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "approval_request_id",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "comp_adjustment",
+        "field": "approval_request_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Dispute",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "comp_dispute",
+          "primary_name_attribute": "reason"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "entity": "comp_dispute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Statement Line",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "statement_line_ref",
+          "lookup_entity": "comp_statement_line",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "entity": "comp_dispute",
+        "field": "statement_line_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reason",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "entity": "comp_dispute",
+        "field": "reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "open",
+              "accepted",
+              "rejected",
+              "adjusted"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "entity": "comp_dispute",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Reviewer Comment",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reviewer_comment",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 76,
+      "target": {
+        "entity": "comp_dispute",
+        "field": "reviewer_comment"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Draw",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "comp_draw",
+          "primary_name_attribute": "kind"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 77,
+      "target": {
+        "entity": "comp_draw"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Participant",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "participant_ref",
+          "lookup_entity": "plan_participant",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 78,
+      "target": {
+        "entity": "comp_draw",
+        "field": "participant_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Kind",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "recoverable",
+              "non_recoverable"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 79,
+      "target": {
+        "entity": "comp_draw",
+        "field": "kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Amount per Period",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "amount_per_period",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 80,
+      "target": {
+        "entity": "comp_draw",
+        "field": "amount_per_period"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Balance",
+          "field_type": "currency",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": true,
+          "is_sortable": false,
+          "logicalname": "balance",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 81,
+      "target": {
+        "entity": "comp_draw",
+        "field": "balance"
+      }
+    },
+    {
+      "args": {
+        "display_name": "خطة العمولات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 82,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_plan",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 83,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_plan.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم العربي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 84,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_plan.name_ar",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السنة المالية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 85,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_plan.fiscal_year",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 86,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_plan.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إصدار الخطة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 87,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_plan_version",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الخطة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 88,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_plan_version.plan_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإصدار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 89,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_plan_version.version",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بصمة الترجمة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 90,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_plan_version.compiled_hash",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ النشر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 91,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_plan_version.published_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مكون الخطة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 92,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_component",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إصدار الخطة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 93,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_component.plan_version_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النوع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 94,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_component.kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المقياس"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 95,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_component.measure",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "جدول المعدلات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 96,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_component.rate_table",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نمط الشرائح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 97,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_component.tier_mode",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحد لكل صفقة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 98,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_component.cap_per_deal",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحد لكل فترة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 99,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_component.cap_per_period",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نسبة الإنجاز الدنيا"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 100,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_component.gate_attainment_percent",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "هامش الحد الأدنى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 101,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_component.floor_margin_percent",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "قاعدة السنوات المتعددة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 102,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_component.multi_year_rule",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مشارك في الخطة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 103,
+      "target": {
+        "locale": "ar",
+        "object_key": "plan_participant",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إصدار الخطة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 104,
+      "target": {
+        "locale": "ar",
+        "object_key": "plan_participant.plan_version_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المستخدم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 105,
+      "target": {
+        "locale": "ar",
+        "object_key": "plan_participant.user_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حساب الشريك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 106,
+      "target": {
+        "locale": "ar",
+        "object_key": "plan_participant.partner_account_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدور"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 107,
+      "target": {
+        "locale": "ar",
+        "object_key": "plan_participant.role",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "يبدأ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 108,
+      "target": {
+        "locale": "ar",
+        "object_key": "plan_participant.starts_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ينتهي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 109,
+      "target": {
+        "locale": "ar",
+        "object_key": "plan_participant.ends_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "القبول"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 110,
+      "target": {
+        "locale": "ar",
+        "object_key": "plan_participant.acceptance_status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مظروف التوقيع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 111,
+      "target": {
+        "locale": "ar",
+        "object_key": "plan_participant.envelope_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "فترة العمولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 112,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_period",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفترة المالية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 113,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_period.fiscal_period",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تبدأ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 114,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_period.starts_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تنتهي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 115,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_period.ends_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 116,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_period.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "رصيد العمولة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 117,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_credit",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المشارك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 118,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_credit.participant_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفترة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 119,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_credit.period_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 120,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_credit.source_kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سجل المصدر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 121,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_credit.source_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 122,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_credit.amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العملة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 123,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_credit.currency",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تاريخ القيد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 124,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_credit.credited_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "يعكس"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 125,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_credit.reverses_credit_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تشغيل الاحتساب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 126,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_run",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفترة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 127,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_run.period_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إصدار الخطة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 128,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_run.plan_version_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 129,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_run.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المؤشر"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 130,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_run.cursor",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "البداية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 131,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_run.started_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النهاية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 132,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_run.finished_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند الكشف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 133,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_statement_line",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التشغيل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 134,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_statement_line.run_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المشارك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 135,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_statement_line.participant_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المكون"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 136,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_statement_line.component_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرصيد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 137,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_statement_line.credit_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 138,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_statement_line.amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المعدل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 139,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_statement_line.rate",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الشريحة المحققة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 140,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_statement_line.tier_reached",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الشرح"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 141,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_statement_line.explanation",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الصرف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 142,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_payout",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التشغيل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 143,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_payout.run_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المشارك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 144,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_payout.participant_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 145,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_payout.amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 146,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_payout.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "التسوية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 147,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_adjustment",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المشارك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 148,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_adjustment.participant_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الفترة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 149,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_adjustment.period_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 150,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_adjustment.amount",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السبب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 151,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_adjustment.reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "طلب الموافقة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 152,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_adjustment.approval_request_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاعتراض"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 153,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_dispute",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بند الكشف"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 154,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_dispute.statement_line_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السبب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 155,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_dispute.reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 156,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_dispute.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "تعليق المراجع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 157,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_dispute.reviewer_comment",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السلفة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 158,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_draw",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المشارك"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 159,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_draw.participant_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النوع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 160,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_draw.kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المبلغ لكل فترة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 161,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_draw.amount_per_period",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرصيد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 162,
+      "target": {
+        "locale": "ar",
+        "object_key": "comp_draw.balance",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "commission",
+  "seq": 1,
+  "title": "Pack: sales commissions"
+}

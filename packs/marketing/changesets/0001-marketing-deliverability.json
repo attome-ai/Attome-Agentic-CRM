@@ -1,0 +1,890 @@
+{
+  "author": "packs",
+  "checksum": "sha256:0b901eb7fdcb82df9501935fa968fb21e197156d513f15653fef795cbd8bbe08",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Email deliverability (E6-T3): the deployment deliverability policy (bounce and complaint warning levels, sunsetting unengaged contacts, DMARC, blocklist and postmaster checks, seed tests) and an email status with engagement dates on contacts and leads.",
+  "format": "attome-changeset/v1",
+  "id": "01a143b4-c1db-7b04-8b5b-07307d378751",
+  "layer": "product",
+  "name": "marketing-deliverability",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Deliverability Policy",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "marketing_deliverability_policy",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "marketing_deliverability_policy"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Bounce Warning %",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "bounce_warn_percent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "bounce_warn_percent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Complaint Warning %",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "complaint_warn_percent",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "complaint_warn_percent"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Sunset Unengaged",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "sunset_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "sunset_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Sunset After (months)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "sunset_months",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "sunset_months"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "DMARC Checks",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "dmarc_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "dmarc_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Blocklist Checks",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "blocklist_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "blocklist_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Postmaster Data",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "postmaster_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "postmaster_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "SNDS Data",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "snds_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "snds_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Seed Tests",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "seed_test_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "seed_test_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Marketing Owner Role",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "marketing_owner_role",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "marketing_deliverability_policy",
+        "field": "marketing_owner_role"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Email Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "email_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "unknown",
+              "valid",
+              "invalid",
+              "risky"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "contact",
+        "field": "email_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Email Status Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "email_status_reason",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "contact",
+        "field": "email_status_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Last Marketing Engagement",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "last_marketing_engagement_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "contact",
+        "field": "last_marketing_engagement_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Marketing Sunset",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "marketing_sunset_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "contact",
+        "field": "marketing_sunset_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Re-engagement Sent",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reengagement_sent_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "contact",
+        "field": "reengagement_sent_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Email Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "email_status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "unknown",
+              "valid",
+              "invalid",
+              "risky"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "lead",
+        "field": "email_status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Email Status Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "email_status_reason",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "lead",
+        "field": "email_status_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Last Marketing Engagement",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "last_marketing_engagement_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "lead",
+        "field": "last_marketing_engagement_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Marketing Sunset",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "marketing_sunset_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "lead",
+        "field": "marketing_sunset_at"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Re-engagement Sent",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reengagement_sent_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "lead",
+        "field": "reengagement_sent_at"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سياسة قابلية التسليم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نسبة تحذير الارتداد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.bounce_warn_percent",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "نسبة تحذير الشكاوى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.complaint_warn_percent",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إيقاف غير المتفاعلين"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.sunset_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإيقاف بعد (أشهر)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.sunset_months",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "فحوص DMARC"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.dmarc_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "فحوص القوائم السوداء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.blocklist_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بيانات Postmaster"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.postmaster_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بيانات SNDS"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.snds_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اختبارات البذور"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.seed_test_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "دور مسؤول التسويق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_deliverability_policy.marketing_owner_role",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حالة البريد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.email_status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سبب حالة البريد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.email_status_reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل تسويقي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.last_marketing_engagement_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إيقاف التسويق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.marketing_sunset_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إرسال إعادة التفاعل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.reengagement_sent_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "حالة البريد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.email_status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سبب حالة البريد"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.email_status_reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "آخر تفاعل تسويقي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.last_marketing_engagement_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إيقاف التسويق"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.marketing_sunset_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إرسال إعادة التفاعل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.reengagement_sent_at",
+        "object_kind": "attribute"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 1,
+  "title": "Pack: marketing deliverability"
+}

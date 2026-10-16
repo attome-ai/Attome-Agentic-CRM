@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Packs: `commission` (plans, credits, runs, payouts, masked amounts), `marketing` (deliverability
+  policy, email status on contacts and leads), `offline` (offline profiles) and the sales dialer
+  (`call_list`, members, attempts, outcome rules, calling hours, caller ids).
 - Billing pack (`packs/billing`): subscriptions with lines, dated segments and planned charges;
   payments, allocations, refunds, disputes, saved methods, payment links and payouts.
 - Sales pack: account plans with goals, a products-by-department whitespace grid and actions
