@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Consent ledger (migration `0093`): every marketing consent grant and withdrawal is an insert-only
+  event with its proof, and the current state per person or account, purpose and channel is kept in
+  the same transaction; the send gate allows a message only with a grant in force and no account-wide
+  opt-out, failing closed otherwise. `POST /api/v1/consents/withdraw` takes an optional `channel`
+  and writes the ledger; anonymous form captures wait for confirmation before they count.
 - Workflows have an "Assign Owner" node: it sets a record's owner from a team, queue or role by round
   robin (remembered per node, migration `0092`), fewest records, skills, territory owner or rules,
   falling back to a queue when nobody fits.

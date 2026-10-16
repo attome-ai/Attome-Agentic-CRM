@@ -26,6 +26,54 @@ use uuid::Uuid;
 
 const CONSENT_ENTITY: &str = "audit_consent";
 
+/// E27-T1: mirrors a consent row about a known record into the consent
+/// ledger (`crate::consent`) in the same transaction, so the send gate sees
+/// it. A row that names no record (only a free-text subject) stays in
+/// `audit_consent` alone.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one consent row's fields, passed through unchanged from the two routes"
+)]
+async fn mirror_to_ledger(
+    tx: &mut attome_db::Tx<'_>,
+    consent_id: Uuid,
+    regarding_entity: Option<&str>,
+    regarding_id: Option<&str>,
+    purpose_key: &str,
+    channel: Option<&str>,
+    grant: bool,
+    source: &str,
+    evidence: Option<&str>,
+    actor: Option<Uuid>,
+) -> Result<(), AppError> {
+    let (Some(entity), Some(id)) = (
+        regarding_entity.map(str::trim).filter(|e| !e.is_empty()),
+        regarding_id.and_then(|i| Uuid::parse_str(i.trim()).ok()),
+    ) else {
+        return Ok(());
+    };
+    crate::consent::record(
+        tx,
+        &crate::consent::ConsentChange {
+            subject_entity: entity.to_owned(),
+            subject_id: id,
+            purpose_key: purpose_key.to_owned(),
+            channel: channel
+                .map(str::trim)
+                .filter(|c| !c.is_empty())
+                .unwrap_or("any")
+                .to_owned(),
+            grant,
+            source: source.to_owned(),
+            proof: serde_json::json!({ "audit_consent_id": consent_id, "evidence": evidence }),
+            occurred_at: chrono::Utc::now(),
+            recorded_by: actor,
+        },
+    )
+    .await?;
+    Ok(())
+}
+
 async fn purpose_id_by_key(db: &DbPool, key: &str) -> Result<Uuid, AppError> {
     sqlx::query_scalar::<_, Uuid>(
         "SELECT id FROM audit_consent_purpose WHERE key = $1 AND is_active = true",
@@ -60,6 +108,10 @@ struct WithdrawConsentBody {
     regarding_entity: Option<String>,
     regarding_id: Option<String>,
     evidence: Option<String>,
+    /// E27-T1: the channel the consent is for (`any` when absent): `email`,
+    /// `sms`, `whatsapp`, `phone` or `ads`.
+    #[serde(default)]
+    channel: Option<String>,
 }
 
 /// `POST /api/v1/consents/withdraw` — inserts the withdrawal row (D-428:
@@ -117,6 +169,20 @@ async fn withdraw_consent(
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+
+    mirror_to_ledger(
+        &mut tx,
+        row.0,
+        body.regarding_entity.as_deref(),
+        body.regarding_id.as_deref(),
+        body.purpose_key.trim(),
+        body.channel.as_deref(),
+        false,
+        "api",
+        body.evidence.as_deref(),
+        Some(ctx.user_id),
+    )
+    .await?;
 
     attome_audit::security::write_security_event(
         &mut tx,
@@ -214,6 +280,9 @@ async fn capture_consent(
     .fetch_one(&mut *tx)
     .await
     .map_err(AppError::internal)?;
+
+    // E27-T1: an anonymous form's grant is not trusted for sending: it
+    // reaches the consent ledger only once confirmed (double opt-in, E27-T3).
 
     // No authenticated actor: this is the one genuinely public, anonymous
     // route in this crate (see module doc). `Uuid::nil()` per D-541 rule 6,

@@ -39,6 +39,7 @@
 
 pub mod archive;
 pub mod archive_admin;
+pub mod consent;
 pub mod consent_admin;
 pub mod consent_seed;
 pub mod dsr_admin;
