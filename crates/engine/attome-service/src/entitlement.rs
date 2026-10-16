@@ -204,6 +204,51 @@ pub async fn record_usage(
     Ok(Some(used))
 }
 
+/// On a ticket's resolution (`resolved_at` just stamped), takes one case
+/// off its attached `cases` entitlement, once per ticket (the usage
+/// reference is `service_ticket:{id}`). Does nothing where the
+/// customer-service pack's entitlement tables are not installed, or the
+/// ticket has no entitlement of that kind. Called from the ticket event
+/// sweep (`clock::sweep_auto_pause`).
+pub async fn on_ticket_resolved(
+    db: &attome_db::DbPool,
+    ticket: Uuid,
+) -> Result<Option<Consumption>, AppError> {
+    let installed: bool = sqlx::query_scalar("SELECT to_regclass('entitlement_usage') IS NOT NULL")
+        .fetch_one(db)
+        .await
+        .map_err(AppError::internal)?;
+    if !installed {
+        return Ok(None);
+    }
+    let found: Option<(Uuid, NaiveDate)> = sqlx::query_as(
+        "SELECT e.id, COALESCE(t.resolved_at, now())::date FROM service_ticket t          JOIN entitlement e ON e.id = t.entitlement_ref          WHERE t.id = $1 AND e.kind = 'cases' AND t.resolved_at IS NOT NULL",
+    )
+    .bind(ticket)
+    .fetch_optional(db)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((entitlement, on)) = found else {
+        return Ok(None);
+    };
+    let mut tx = attome_db::tx::begin(db).await?;
+    let used = record_usage(
+        &mut tx,
+        entitlement,
+        &format!("service_ticket:{ticket}"),
+        1.0,
+        on,
+    )
+    .await?;
+    attome_db::tx::commit(tx).await?;
+    if let Some(u) = used
+        && u.overage > 0.0
+    {
+        tracing::info!(%ticket, %entitlement, overage = u.overage, "entitlement: case beyond the entitlement is billable");
+    }
+    Ok(used)
+}
+
 #[cfg(test)]
 mod entitlement_check {
     use super::*;
