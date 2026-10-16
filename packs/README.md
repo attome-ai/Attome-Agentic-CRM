@@ -107,3 +107,36 @@ The sales pack's `0009`–`0011` add forecasts, territories, playbooks, deal tea
 order totals, quotas, and contact-role influence behind the Deal Attitude field profile; the crm pack's
 `0003` adds the contact org chart, enrichment fields and ISIC sections; the marketing pack's `0003`
 adds events.
+
+## Industry packs
+
+Each industry pack is one changeset of entities, a stage model on its main record, roles with their
+grants, report queries for its dashboards and a sidebar. Systems of record (core banking, HIS, ERP,
+SIS, BSS and OSS) stay outside and are referenced by id, never copied.
+
+- `government` (X5): licences with review, inspection, issue, suspension, revocation and expiry;
+  checklists, fees, inspections, violations with objection and appeal, correspondence numbered per
+  Hijri or Gregorian year, committees and numbered decisions, benefit cases.
+- `financial-services` (X3): products, financial accounts read from core banking, KYC with risk rating
+  and periodic review, financing applications with Islamic structures, credit reviews decided by a
+  person, regulated complaints, masked cards.
+- `healthcare` (X4): patients (health data masked as special category), providers, locations,
+  appointments, visits, referrals with SLAs, NPHIES pre-authorisation, care programmes, complaints.
+- `manufacturing` (X6): customer sites, sales agreements with planned and actual volumes, rebates and
+  payouts, tenders with local-content scores, samples, quality complaints through 8D, compliance
+  documents.
+- `nonprofit` (X7): households, funds by type (zakat, sadaqah, waqf and others), gifts with
+  yearly-numbered receipts, pledges, appeals, waqf assets and distributions, programmes, aid cases kept
+  apart from fundraisers by role.
+- `education` (X8): families, students and guardians with consent, programmes and intakes, admissions
+  through stages to an offer, scholarships, fee plans, success alerts.
+- `retail` (X9): chains, routes, outlets, store visits and shelf audits, in-store and van orders,
+  seasonal trade promotions and claims, retailer agreements, recalls.
+- `telecom-energy` (X10): service sites, a catalogue mirrored from the BSS, installed services and
+  meters, connection and move requests, outages by area, regulated complaints, vulnerable-customer
+  flags, dealers.
+
+The enterprise-architecture pack's `0002` (X11) adds portfolio fields with TIME decisions, assessments,
+interfaces, architecture reviews and roadmap items. The asset-management `0002`, field-service `0003`,
+contract-management `0002`, vendor-supplier `0002`, finance `0002` and human-resources `0003`
+changesets extend those packs (I8, I9, H6, I1, I5, I10, W1, W2, W4, W8).
