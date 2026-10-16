@@ -153,7 +153,8 @@ pub(crate) async fn get_sales_price_list_products(
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .map(str::to_owned);
-    let mut count = sqlx::query_scalar::<_, i64>(&format!("SELECT COUNT(*) {from}"))
+    let count_sql = format!("SELECT COUNT(*) {from}");
+    let mut count = sqlx::query_scalar::<_, i64>(&count_sql)
         .bind(price_list)
         .bind(on)
         .bind(&pattern)

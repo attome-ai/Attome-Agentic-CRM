@@ -22,7 +22,6 @@ use attome_types::{AppError, ErrorResponse};
 use axum::{
     Json,
     extract::{Path, State},
-    http::StatusCode,
 };
 use chrono::{Months, NaiveDate};
 use rust_decimal::{Decimal, RoundingStrategy};

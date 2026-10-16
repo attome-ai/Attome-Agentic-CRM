@@ -6257,12 +6257,13 @@ fn phone_and_arabic_name_rules_match_variants_with_field_scores() {
                 ))
                 .await
                 .expect("create match rule");
-            assert_eq!(
-                res.status(),
-                StatusCode::CREATED,
-                "{:?}",
-                body_json(res).await
-            );
+            let status = res.status();
+            let rule_body = body_json(res).await;
+            assert_eq!(status, StatusCode::CREATED, "{rule_body:?}");
+            let rule_id: Uuid = rule_body["id"]
+                .as_str()
+                .and_then(|s| s.parse().ok())
+                .expect("the created rule has an id");
             let mut ids = Vec::new();
             for value in values {
                 let res = app
@@ -6286,12 +6287,12 @@ fn phone_and_arabic_name_rules_match_variants_with_field_scores() {
                     .unwrap();
                 ids.push(id);
             }
+            // The rule's own scan: the shared sweep races the other tests'.
+            attome_api::duplicates_match::run_match_scan(&state, rule_id, None)
+                .await
+                .expect("match scan");
             pairs.push((logicalname, field, ids));
         }
-
-        attome_api::duplicates_match::run_match_sweep(&state)
-            .await
-            .expect("match sweep");
 
         for (logicalname, field, ids) in pairs {
             let found: Vec<(Uuid, Uuid, Option<Value>)> = sqlx::query_as(
@@ -7253,12 +7254,13 @@ fn data_match_sweep_blocking_key_narrows_the_candidate_set() {
             .oneshot(create_rule_req)
             .await
             .expect("create match rule");
-        assert_eq!(
-            res.status(),
-            StatusCode::CREATED,
-            "{:?}",
-            body_json(res).await
-        );
+        let status = res.status();
+        let rule_body = body_json(res).await;
+        assert_eq!(status, StatusCode::CREATED, "{rule_body:?}");
+        let rule_id: Uuid = rule_body["id"]
+            .as_str()
+            .and_then(|s| s.parse().ok())
+            .expect("the created rule has an id");
 
         let create = |code: &'static str, notes: &'static str| {
             let app = app.clone();
@@ -7290,9 +7292,12 @@ fn data_match_sweep_blocking_key_narrows_the_candidate_set() {
         let similar_but_not_blocked =
             create("Z999", "the quick brown fox jumps over the lazy dog").await;
 
-        let stats = attome_api::duplicates_match::run_match_sweep(&state)
+        // The rule's own scan, not the shared change-feed sweep: tests in
+        // this binary share one database, and another test's sweep can read
+        // (and advance past) these records' events first.
+        let stats = attome_api::duplicates_match::run_match_scan(&state, rule_id, None)
             .await
-            .expect("match sweep");
+            .expect("match scan");
         assert!(
             stats.candidates_written >= 1,
             "the blocked pair must be found: {stats:?}"
