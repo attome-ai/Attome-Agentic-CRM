@@ -135,12 +135,15 @@ async fn emit_and_locate(db: &attome_db::DbPool, entity: &str, record_id: Uuid) 
 
 /// Directly upserts `consumer`'s cursor to `last_commit_xid`, bypassing
 /// `change_feed::advance` (which requires an already-visible event row to
-/// advance past) — a test fixture, not production behavior.
+/// advance past) — a test fixture, not production behavior. Its lag limit
+/// is far beyond the 90-day backdating below, so L7-T1's `expire_lagging`
+/// (run before every prune) keeps it active.
 async fn set_cursor(db: &attome_db::DbPool, consumer: &str, last_commit_xid: i64) {
     sqlx::query(
-        "INSERT INTO change_consumer_cursor (consumer, last_commit_xid) \
-         VALUES ($1, $2::text::xid8) \
-         ON CONFLICT (consumer) DO UPDATE SET last_commit_xid = EXCLUDED.last_commit_xid",
+        "INSERT INTO change_consumer_cursor (consumer, last_commit_xid, max_lag_hours) \
+         VALUES ($1, $2::text::xid8, 100000) \
+         ON CONFLICT (consumer) DO UPDATE SET last_commit_xid = EXCLUDED.last_commit_xid, \
+             max_lag_hours = EXCLUDED.max_lag_hours",
     )
     .bind(consumer)
     .bind(last_commit_xid)

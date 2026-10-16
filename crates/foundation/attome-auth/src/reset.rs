@@ -229,8 +229,8 @@ async fn confirm_inner(
     // UPDATE below (which DOES check `used_at IS NULL`) is what reports
     // Conflict, not a misleading Unauthorized. Only expiry short-circuits to
     // Unauthorized before that point.
-    let row: Option<(Uuid, Uuid, String)> = sqlx::query_as(
-        "SELECT id, user_ref, secret_hash FROM password_reset_token
+    let row: Option<(Uuid, Uuid, String, bool)> = sqlx::query_as(
+        "SELECT id, user_ref, secret_hash, used_at IS NOT NULL FROM password_reset_token
          WHERE public_id = $1 AND expires_at > NOW()",
     )
     .bind(public_id)
@@ -238,15 +238,15 @@ async fn confirm_inner(
     .await
     .map_err(AppError::internal)?;
 
-    let (token_id, user_id) = match row {
-        Some((token_id, user_id, secret_hash)) => {
+    let (token_id, user_id, already_used) = match row {
+        Some((token_id, user_id, secret_hash, already_used)) => {
             // `OkNeedsRehash` (a retired pepper id) is still a match; the token
             // is consumed below either way, so nothing to rewrite.
             if verify_peppered_secret(ring, secret, &secret_hash).await? == VerifyOutcome::Fail {
                 return Err(AppError::Unauthorized);
             }
             *subject = Some(user_id);
-            (token_id, user_id)
+            (token_id, user_id, already_used)
         }
         None => {
             // Same verifier class as a wrong secret on a current row (I17).
@@ -254,6 +254,13 @@ async fn confirm_inner(
             return Err(AppError::Unauthorized);
         }
     };
+
+    // A used token is a Conflict whatever password came with it (the new
+    // password is by then the current one, so the reuse rule below would
+    // otherwise answer first). The guarded UPDATE still settles a race.
+    if already_used {
+        return Err(AppError::Conflict("reset token already used"));
+    }
 
     // Q7-T1: not the current password nor one of the last five.
     if crate::password_policy::reused(db, user_id, plain_password).await? {

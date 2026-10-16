@@ -678,8 +678,8 @@ fn value_tokens(format: &str) -> Vec<String> {
     let mut rest = format;
     while let Some(open) = rest.find('{') {
         let after = &rest[open + 1..];
-        if after.starts_with('{') {
-            rest = &after[1..];
+        if let Some(escaped) = after.strip_prefix('{') {
+            rest = escaped;
             continue;
         }
         let Some(close) = after.find('}') else { break };

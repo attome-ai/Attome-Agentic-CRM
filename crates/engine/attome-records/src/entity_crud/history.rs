@@ -14,7 +14,7 @@
 //! and so is a field that is no longer an attribute of the entity. A readable
 //! sensitive field is reported as changed with `masked = true` and no values
 //! (the audit writer already stores its values masked). A value the audit
-//! writer stored encrypted (any `value_mode`, D-540) is reported the same
+//! writer withheld (`value_withheld`, D-540) is reported the same
 //! way until audited decryption exists (audit plan Phase 6.4), never as
 //! ciphertext. A field whose old and new values are both empty is omitted.
 //! A change whose every
@@ -240,7 +240,7 @@ async fn conflict_details(
         {
             let shown = readable_attr(ctx, &entity_name, &attrs, field)
                 .filter(|a| !a.is_sensitive && !row_sensitive.unwrap_or(false))
-                .filter(|_| value_mode.is_none());
+                .filter(|_| !value_withheld(state, *value_mode));
             if shown.is_none() {
                 hidden += 1;
                 continue;
@@ -265,6 +265,20 @@ async fn conflict_details(
             "hidden_changes": hidden,
         }),
     }))
+}
+
+/// D-540: whether a detail row's stored values are withheld from a history
+/// read. `Restricted` (1) and `NotCaptured` (2) always are. `Encrypted` (0)
+/// is ciphertext only when the deployment encrypts audit values (an erasure
+/// key is configured); without one the writer stores it as written, so it is
+/// shown. Decrypting for this read is the audit plan's Phase 6.4 (audited
+/// decryption), not built yet. Legacy rows (NULL) are shown.
+fn value_withheld(state: &EngineState, value_mode: Option<i16>) -> bool {
+    match value_mode {
+        None => false,
+        Some(0) => state.audit_erasure_key.is_some(),
+        Some(_) => true,
+    }
 }
 
 /// One change to a record: who made it, when, and which fields moved.
@@ -558,13 +572,10 @@ pub async fn record_history(
         {
             continue;
         }
-        // D-540: a row with a `value_mode` stores ciphertext (Encrypted,
-        // Restricted) or nothing (NotCaptured). Decrypting for this read is
-        // the audit plan's Phase 6.4 (audited decryption, its own
-        // permission), not built yet, so such values are reported as masked
-        // rather than handed to the client as ciphertext. Legacy rows (NULL
-        // `value_mode`) were stored as written and are shown as before.
-        let masked = attr.is_sensitive || row_sensitive.unwrap_or(false) || value_mode.is_some();
+        // D-540: see `value_withheld`.
+        let masked = attr.is_sensitive
+            || row_sensitive.unwrap_or(false)
+            || value_withheld(state, value_mode);
         let field_type = FieldType::from_int(attr.field_type_int).map(|t| t.as_str().to_owned());
         let field = if masked {
             RecordHistoryField {
@@ -771,7 +782,8 @@ async fn values_before(
         let Some(attr) = readable.get(field.as_str()) else {
             continue;
         };
-        if attr.is_sensitive || row_sensitive.unwrap_or(false) || value_mode.is_some() {
+        if attr.is_sensitive || row_sensitive.unwrap_or(false) || value_withheld(state, value_mode)
+        {
             return Err(AppError::Validation(format!(
                 "{field}: a withheld value cannot be restored"
             )));
@@ -1042,7 +1054,7 @@ pub async fn search_history(
                       (EXTRACT(EPOCH FROM h.changed_on) * 1000000)::bigint AS micros \
                FROM audit_header h JOIN audit_detail d ON d.audit_ref = h.id \
                WHERE h.entity_name = $1 AND d.field_name = $2 AND h.changed_on IS NOT NULL \
-                 AND d.value_mode IS NULL AND COALESCE(d.is_sensitive, false) = false \
+                 AND {readable_mode} AND COALESCE(d.is_sensitive, false) = false \
                  AND ($3::timestamptz IS NULL OR h.changed_on >= $3) \
                  AND ($4::timestamptz IS NULL OR h.changed_on < $4) \
                  AND ({old}) AND ({new}) \
@@ -1053,6 +1065,11 @@ pub async fn search_history(
         old = compare_sql("d.old_value", query.old_op, numeric, 6),
         new = compare_sql("d.new_value", query.new_op, numeric, 7),
         rls = pred.as_ref().map_or("", |p| p.sql.as_str()),
+        readable_mode = if state.audit_erasure_key.is_some() {
+            "d.value_mode IS NULL"
+        } else {
+            "(d.value_mode IS NULL OR d.value_mode = 0)"
+        },
     );
     let mut q = sqlx::query_as::<_, HistoryMatch>(&sql)
         .bind(&entity)

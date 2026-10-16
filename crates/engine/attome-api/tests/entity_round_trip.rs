@@ -3118,7 +3118,9 @@ fn external_id_field_is_unique_per_entity() {
         assert_eq!(res.status(), StatusCode::CONFLICT);
 
         // A3-T6: a number range and a strict required value are CHECK
-        // constraints in the database too.
+        // constraints in the database too. A fresh entity: a strict
+        // required field is refused while existing records lack it.
+        let (logicalname, entity_id) = create_entity(&app, &admin_cookie, "extck").await;
         create_field(
             &app,
             &admin_cookie,

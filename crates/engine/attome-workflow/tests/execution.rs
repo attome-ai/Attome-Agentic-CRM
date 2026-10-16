@@ -3143,6 +3143,22 @@ async fn create_record_node_grants_the_creator_share_to_started_by() {
     )
     .await
     .expect("provision test entity");
+    // A record needs at least one recognised field.
+    attome_metadata::provision::ensure_attribute(
+        &state.base.db,
+        entity_id,
+        "name",
+        "Name",
+        "text",
+        false,
+        false,
+        false,
+        false,
+        None,
+        None,
+    )
+    .await
+    .expect("provision name attribute");
     state.entities.swap(
         attome_core::build_registry(&state.base.db)
             .await
@@ -3165,7 +3181,7 @@ async fn create_record_node_grants_the_creator_share_to_started_by() {
         None,
         Some(user_id),
         None,
-        json!({}),
+        json!({"name": "owned by the starter"}),
     )
     .await
     .expect("start instance");
