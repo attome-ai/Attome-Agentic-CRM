@@ -12,6 +12,7 @@ publish.workspace      = true
 
 [dependencies]
 attome-audit.workspace    = true
+attome-calendar.workspace = true
 attome-core.workspace     = true
 attome-db.workspace       = true
 attome-metadata.workspace = true

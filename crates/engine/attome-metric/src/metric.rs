@@ -229,32 +229,133 @@ fn evaluate_status(actual: f64, direction: &str, target: Option<&TargetRow>) -> 
     }
 }
 
-/// Pure — unit-tested directly. No per-tenant calendar/timezone exists yet
-/// (same gap `attome_dashboard::context`'s own `@current_date` doc comment
-/// already documents) — every boundary is UTC calendar time. `week` starts
-/// Monday (ISO 8601), `quarter` starts on a calendar-quarter boundary
-/// (Jan/Apr/Jul/Oct).
-// `pub` (D-480) — `attome_dashboard::scenario::evaluate` reuses this to resolve
-// "the current period" for a query/manual metric the same way this module's
-// own scheduled sweep does.
-#[expect(
-    clippy::expect_used,
-    reason = "each expect() here guards an invariant its message states"
-)]
-pub fn period_start_for(period: &str, now: DateTime<Utc>) -> Result<NaiveDate, AppError> {
-    let today = now.date_naive();
-    let start = match period {
-        "day" => today,
-        "week" => today - chrono::Duration::days(today.weekday().num_days_from_monday() as i64),
-        "month" => today
-            .with_day(1)
-            .expect("day 1 is always valid for any year/month"),
-        "quarter" => {
-            let quarter_start_month = ((today.month() - 1) / 3) * 3 + 1;
-            NaiveDate::from_ymd_opt(today.year(), quarter_start_month, 1)
-                .expect("quarter-start month is always 1, 4, 7, or 10 — always valid")
+/// Which calendar a metric's periods follow (roadmap P9-T4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CalendarKind {
+    #[default]
+    Gregorian,
+    /// Umm al-Qura months and years.
+    Hijri,
+}
+
+/// How periods are cut: the calendar, the first day of a week and the
+/// month a fiscal year starts in (1 is a calendar year).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PeriodCalendar {
+    pub kind: CalendarKind,
+    pub week_start: chrono::Weekday,
+    pub fiscal_start_month: u32,
+}
+
+impl Default for PeriodCalendar {
+    fn default() -> Self {
+        Self {
+            kind: CalendarKind::Gregorian,
+            week_start: chrono::Weekday::Mon,
+            fiscal_start_month: 1,
         }
-        "year" => NaiveDate::from_ymd_opt(today.year(), 1, 1).expect("Jan 1 is always valid"),
+    }
+}
+
+impl PeriodCalendar {
+    /// Reads a week start code: `sat`, `sun` or `mon`.
+    pub fn week_start_from(code: &str) -> Result<chrono::Weekday, AppError> {
+        match code.trim().to_ascii_lowercase().as_str() {
+            "sat" | "saturday" => Ok(chrono::Weekday::Sat),
+            "sun" | "sunday" => Ok(chrono::Weekday::Sun),
+            "mon" | "monday" => Ok(chrono::Weekday::Mon),
+            other => Err(AppError::Validation(format!(
+                "unknown week start: {other} (use sat, sun or mon)"
+            ))),
+        }
+    }
+}
+
+fn ymd(year: i32, month: u32, day: u32) -> Result<NaiveDate, AppError> {
+    NaiveDate::from_ymd_opt(year, month, day)
+        .ok_or_else(|| AppError::Validation(format!("{year}-{month}-{day} is not a date")))
+}
+
+fn add_months(date: NaiveDate, months: u32) -> Result<NaiveDate, AppError> {
+    date.checked_add_months(chrono::Months::new(months))
+        .ok_or_else(|| AppError::Validation("the period ends outside the supported range".into()))
+}
+
+/// The period containing `now`: its first day and the day after its last
+/// (roadmap P9-T4). Every boundary is UTC calendar time (no per-deployment
+/// time zone exists yet, as `attome_dashboard::context` documents).
+///
+/// - `week` starts on `calendar.week_start` (Saturday, Sunday or Monday).
+/// - `quarter` and `year` follow the fiscal year starting in
+///   `calendar.fiscal_start_month`: with April, Q1 is April to June and the
+///   year runs April to March.
+/// - On the Hijri calendar, `month` and `year` are Umm al-Qura months and
+///   years; `day`, `week` and `quarter` have no Hijri meaning and are a
+///   validation error.
+pub fn period_bounds(
+    period: &str,
+    calendar: PeriodCalendar,
+    now: DateTime<Utc>,
+) -> Result<(NaiveDate, NaiveDate), AppError> {
+    let today = now.date_naive();
+    if calendar.kind == CalendarKind::Hijri {
+        let table = attome_calendar::hijri::HijriCalendar::umm_al_qura();
+        let hijri = table
+            .to_hijri(today)
+            .map_err(|e| AppError::Validation(format!("no Hijri date for {today}: {e}")))?;
+        let bounds = match period {
+            "month" => table.month_bounds(hijri.year, hijri.month),
+            "year" => table.year_bounds(hijri.year),
+            "day" | "week" | "quarter" => {
+                return Err(AppError::Validation(format!(
+                    "a Hijri metric period is month or year, not {period}"
+                )));
+            }
+            other => {
+                return Err(AppError::Validation(format!(
+                    "unknown metric period: {other}"
+                )));
+            }
+        };
+        return bounds.map_err(|e| AppError::Validation(format!("Hijri period: {e}")));
+    }
+    let fiscal = calendar.fiscal_start_month;
+    if !(1..=12).contains(&fiscal) {
+        return Err(AppError::Validation(format!(
+            "the fiscal year start month must be 1 to 12, not {fiscal}"
+        )));
+    }
+    // Months since the fiscal year started, 0 to 11.
+    let into_year = (today.month() + 12 - fiscal) % 12;
+    let year_start = |months_back: u32| -> Result<NaiveDate, AppError> {
+        let first = ymd(today.year(), today.month(), 1)?;
+        first
+            .checked_sub_months(chrono::Months::new(months_back))
+            .ok_or_else(|| {
+                AppError::Validation("the period starts outside the supported range".into())
+            })
+    };
+    let bounds = match period {
+        "day" => (today, today + chrono::Duration::days(1)),
+        "week" => {
+            let back = (today.weekday().num_days_from_monday() + 7
+                - calendar.week_start.num_days_from_monday())
+                % 7;
+            let start = today - chrono::Duration::days(i64::from(back));
+            (start, start + chrono::Duration::days(7))
+        }
+        "month" => {
+            let start = ymd(today.year(), today.month(), 1)?;
+            (start, add_months(start, 1)?)
+        }
+        "quarter" => {
+            let start = year_start(into_year % 3)?;
+            (start, add_months(start, 3)?)
+        }
+        "year" => {
+            let start = year_start(into_year)?;
+            (start, add_months(start, 12)?)
+        }
         other => {
             // R-13 item 4: `period` is client-authored metadata (the
             // metric's own `period` field), not an internal invariant — an
@@ -265,7 +366,16 @@ pub fn period_start_for(period: &str, now: DateTime<Utc>) -> Result<NaiveDate, A
             )));
         }
     };
-    Ok(start)
+    Ok(bounds)
+}
+
+/// The first day of the period containing `now` on the default calendar:
+/// Gregorian, weeks from Monday (ISO 8601), calendar quarters and years.
+// `pub` (D-480) — `attome_dashboard::scenario::evaluate` reuses this to resolve
+// "the current period" for a query/manual metric the same way this module's
+// own scheduled sweep does.
+pub fn period_start_for(period: &str, now: DateTime<Utc>) -> Result<NaiveDate, AppError> {
+    period_bounds(period, PeriodCalendar::default(), now).map(|(start, _)| start)
 }
 
 // ── Data access ──────────────────────────────────────────────────────────
@@ -1291,6 +1401,97 @@ mod tests {
             period_start_for("fortnight", now),
             Err(AppError::Validation(_))
         ));
+    }
+
+    fn at(day: &str) -> DateTime<Utc> {
+        DateTime::parse_from_rfc3339(&format!("{day}T12:00:00Z"))
+            .unwrap()
+            .with_timezone(&Utc)
+    }
+
+    fn d(y: i32, m: u32, day: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(y, m, day).unwrap()
+    }
+
+    #[test]
+    fn fiscal_year_starting_april_bounds() {
+        let cal = PeriodCalendar {
+            fiscal_start_month: 4,
+            ..PeriodCalendar::default()
+        };
+        let now = at("2026-02-10");
+        assert_eq!(
+            period_bounds("year", cal, now).unwrap(),
+            (d(2025, 4, 1), d(2026, 4, 1))
+        );
+        assert_eq!(
+            period_bounds("quarter", cal, now).unwrap(),
+            (d(2026, 1, 1), d(2026, 4, 1)),
+            "February is in the fiscal Q4, January to March"
+        );
+        let now = at("2026-05-20");
+        assert_eq!(
+            period_bounds("quarter", cal, now).unwrap(),
+            (d(2026, 4, 1), d(2026, 7, 1))
+        );
+        assert_eq!(
+            period_bounds("year", cal, now).unwrap(),
+            (d(2026, 4, 1), d(2027, 4, 1))
+        );
+        let bad = PeriodCalendar {
+            fiscal_start_month: 13,
+            ..PeriodCalendar::default()
+        };
+        assert!(matches!(
+            period_bounds("year", bad, now),
+            Err(AppError::Validation(_))
+        ));
+    }
+
+    #[test]
+    fn week_starting_sunday_bounds() {
+        // Friday 16 October 2026.
+        let now = at("2026-10-16");
+        let sunday = PeriodCalendar {
+            week_start: PeriodCalendar::week_start_from("sun").unwrap(),
+            ..PeriodCalendar::default()
+        };
+        assert_eq!(
+            period_bounds("week", sunday, now).unwrap(),
+            (d(2026, 10, 11), d(2026, 10, 18))
+        );
+        let saturday = PeriodCalendar {
+            week_start: chrono::Weekday::Sat,
+            ..PeriodCalendar::default()
+        };
+        assert_eq!(
+            period_bounds("week", saturday, now).unwrap(),
+            (d(2026, 10, 10), d(2026, 10, 17))
+        );
+        assert_eq!(
+            period_bounds("week", saturday, at("2026-10-17")).unwrap().0,
+            d(2026, 10, 17),
+            "a Saturday starts its own week"
+        );
+        assert!(PeriodCalendar::week_start_from("wed").is_err());
+    }
+
+    #[test]
+    fn hijri_month_bounds_ramadan_1447() {
+        let cal = PeriodCalendar {
+            kind: CalendarKind::Hijri,
+            ..PeriodCalendar::default()
+        };
+        // 1 March 2026 is in Ramadan 1447, which began on 18 February 2026.
+        let (start, end) = period_bounds("month", cal, at("2026-03-01")).unwrap();
+        assert_eq!(start, d(2026, 2, 18));
+        assert!((29..=30).contains(&(end - start).num_days()));
+        assert!(matches!(
+            period_bounds("week", cal, at("2026-03-01")),
+            Err(AppError::Validation(_))
+        ));
+        let (year_start, year_end) = period_bounds("year", cal, at("2026-03-01")).unwrap();
+        assert!(year_start <= start && end <= year_end);
     }
 
     #[test]

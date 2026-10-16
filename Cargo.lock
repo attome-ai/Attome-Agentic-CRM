@@ -1154,6 +1154,7 @@ version = "0.1.0"
 dependencies = [
  "attome-audit",
  "attome-cache",
+ "attome-calendar",
  "attome-config",
  "attome-core",
  "attome-db",
