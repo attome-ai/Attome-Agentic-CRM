@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Workflows have an "Assign Owner" node: it sets a record's owner from a team, queue or role by round
+  robin (remembered per node, migration `0092`), fewest records, skills, territory owner or rules,
+  falling back to a queue when nobody fits.
 - Watch-only website sources import nothing (the import route refuses them) and report each page
   whose text changed as a `webcrawl.page_changed` change event with the added and removed lines.
 - Website crawls are scope-aware and polite: include and exclude patterns (exclude wins), sitemap

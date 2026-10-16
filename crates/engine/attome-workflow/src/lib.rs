@@ -1,4 +1,5 @@
 pub mod admin;
+pub mod assign;
 pub mod catalog_backfill;
 pub mod dead_letter_admin;
 pub mod engine;

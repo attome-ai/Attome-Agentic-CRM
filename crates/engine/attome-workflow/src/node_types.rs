@@ -97,10 +97,15 @@ pub enum NodeType {
     /// of its entity and takes `found` (with the matches the flow's identity
     /// may read and a count of the rest) or `none`. Reads only.
     DuplicateCheck,
+    /// M11-T1: sets the record's owner from a team, queue or role by a
+    /// strategy (`rule`, `round_robin`, `least_loaded`, `skills`,
+    /// `territory`), falling back to a queue when nobody fits; see
+    /// `crate::assign` and `scheduler::execute_assign`.
+    Assign,
 }
 
 impl NodeType {
-    pub const ALL: [Self; 16] = [
+    pub const ALL: [Self; 17] = [
         Self::Trigger,
         Self::Condition,
         Self::CreateRecord,
@@ -117,6 +122,7 @@ impl NodeType {
         Self::Route,
         Self::RestoreRecord,
         Self::DuplicateCheck,
+        Self::Assign,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -137,6 +143,7 @@ impl NodeType {
             Self::Route => "route",
             Self::RestoreRecord => "restore_record",
             Self::DuplicateCheck => "duplicate_check",
+            Self::Assign => "assign",
         }
     }
 
@@ -167,7 +174,8 @@ impl NodeType {
             // `RestoreRecord` needs no stored key: restoring a record that is
             // already live is a no-op success, so a replay after the restore
             // committed changes nothing (`scheduler::execute_restore_record`).
-            Self::CreateRecord | Self::UpdateRecord | Self::RestoreRecord => {
+            // M11-T1: `Assign` writes the owner through the same entity path.
+            Self::CreateRecord | Self::UpdateRecord | Self::RestoreRecord | Self::Assign => {
                 SideEffect::EntityIdempotencyKey
             }
             // `AgentStep` joins the fired-marker mechanism, not the entity
@@ -255,6 +263,7 @@ impl NodeType {
             Self::Route => &[("context", PortType::Json, true)],
             Self::RestoreRecord => &[("record_id", PortType::RecordId, true)],
             Self::DuplicateCheck => &[("record_id", PortType::RecordId, true)],
+            Self::Assign => &[("record_id", PortType::RecordId, true)],
         }
     }
 
@@ -305,6 +314,7 @@ impl NodeType {
             Self::Route => &[("matched", PortType::Json), ("unmatched", PortType::Json)],
             Self::RestoreRecord => &[("record", PortType::RecordId)],
             Self::DuplicateCheck => &[("found", PortType::Json), ("none", PortType::Json)],
+            Self::Assign => &[("record", PortType::RecordId)],
         }
     }
 
@@ -343,11 +353,13 @@ impl NodeType {
             // Entity writes, replayable because the entity path keys on
             // `(instance_id, node_id)` — the same reason `side_effect()`
             // returns `EntityIdempotencyKey`.
-            Self::CreateRecord | Self::UpdateRecord | Self::RestoreRecord => NodeCapability {
-                risk: RiskTier::Reversible,
-                effect: Effect::Write,
-                retry: RetryClass::Idempotent,
-            },
+            Self::CreateRecord | Self::UpdateRecord | Self::RestoreRecord | Self::Assign => {
+                NodeCapability {
+                    risk: RiskTier::Reversible,
+                    effect: Effect::Write,
+                    retry: RetryClass::Idempotent,
+                }
+            }
             // Leaves the deployment. A notification cannot be un-sent, which is
             // why `side_effect()` gives it the fired-marker mechanism rather
             // than a replayable key — and why the retry class says a key is
@@ -666,6 +678,7 @@ mod tests {
             NodeType::CreateRecord,
             NodeType::UpdateRecord,
             NodeType::RestoreRecord,
+            NodeType::Assign,
             NodeType::SendNotification,
             NodeType::Webhook,
             NodeType::AgentStep,
@@ -783,7 +796,7 @@ mod tests {
         for node in NodeType::ALL {
             let _ = node.capability();
         }
-        assert_eq!(NodeType::ALL.len(), 16, "the node set is closed (I-5)");
+        assert_eq!(NodeType::ALL.len(), 17, "the node set is closed (I-5)");
     }
 
     /// `Split`/`Join` are graph-shape markers, not the branching type

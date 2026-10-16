@@ -137,6 +137,10 @@ export const NODE_TYPES: NodeTypeSpec[] = [
   { type: 'duplicate_check', label: 'If a Duplicate Exists',
     inputs: [{ name: 'record_id', portType: 'record_id', required: true }],
     outputs: [{ name: 'found', portType: 'json' }, { name: 'none', portType: 'json' }] },
+  // M11-T1: set the record's owner by a strategy.
+  { type: 'assign', label: 'Assign Owner',
+    inputs: [{ name: 'record_id', portType: 'record_id', required: true }],
+    outputs: [{ name: 'record', portType: 'record_id' }] },
 ];
 
 export function nodeTypeSpec(type: string): NodeTypeSpec | undefined {
@@ -249,6 +253,30 @@ export const NODE_CONFIG_SCHEMA: Record<string, NodeConfigField[]> = {
   duplicate_check: [
     { key: 'entity', label: 'Entity', kind: 'entity', required: true,
       hint: 'The record comes from the wired "record_id" input; "found" lists the matches under the entity\'s duplicate rules.' },
+  ],
+  // scheduler::execute_assign
+  assign: [
+    { key: 'entity', label: 'Entity', kind: 'entity', required: true,
+      hint: 'The record comes from the wired "record_id" input; its owner is set.' },
+    { key: 'strategy', label: 'Strategy', kind: 'select', default: 'round_robin',
+      options: [
+        { value: 'round_robin',  label: 'Round robin' },
+        { value: 'least_loaded', label: 'Fewest records' },
+        { value: 'skills',       label: 'Skills match' },
+        { value: 'territory',    label: 'Territory owner' },
+        { value: 'rule',         label: 'Rules' },
+      ] },
+    { key: 'team_ref', label: 'Team ID', kind: 'text', hint: 'Candidates: members of this team.' },
+    { key: 'queue_ref', label: 'Queue ID', kind: 'text', hint: 'Candidates: members of this work queue.' },
+    { key: 'role_ref', label: 'Role ID', kind: 'text', hint: 'Candidates: holders of this role.' },
+    { key: 'skills', label: 'Required skills', kind: 'json',
+      showIf: { key: 'strategy', in: ['skills'] }, hint: 'A list of skill names, e.g. ["Arabic", "Billing"].' },
+    { key: 'territory_field', label: 'Territory attribute', kind: 'text', default: 'territory_ref',
+      showIf: { key: 'strategy', in: ['territory'] } },
+    { key: 'rules', label: 'Rules', kind: 'json', showIf: { key: 'strategy', in: ['rule'] },
+      hint: 'A list of {"field", "equals", "user"}; the first match wins.' },
+    { key: 'fallback_queue_ref', label: 'Fallback queue ID', kind: 'text',
+      hint: 'When nobody fits, the next member of this queue gets the record.' },
   ],
   // scheduler::execute_restore_record
   restore_record: [

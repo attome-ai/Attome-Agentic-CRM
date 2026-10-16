@@ -1317,6 +1317,7 @@ async fn execute_node(
         }
         NodeType::RestoreRecord => execute_restore_record(state, ctx, node, input).await,
         NodeType::DuplicateCheck => execute_duplicate_check(state, ctx, node, input).await,
+        NodeType::Assign => execute_assign(state, ctx, instance, node, input).await,
         NodeType::SendNotification => {
             execute_send_notification(state, instance, node, input, fired).await
         }
@@ -1458,6 +1459,131 @@ async fn execute_duplicate_check(
             "hidden": found.hidden,
         }),
     })
+}
+
+/// M11-T1: picks the owner (`crate::assign`) and writes `owner_ref` through
+/// the same entity path, and idempotency key, as `UpdateRecord`.
+async fn execute_assign(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    instance: &InstanceRow,
+    node: &GraphNode,
+    input: &Value,
+) -> Result<NodeOutcome, AppError> {
+    use crate::assign::{self, Strategy};
+    let entity_name = node
+        .config
+        .get("entity")
+        .and_then(Value::as_str)
+        .ok_or_else(|| AppError::internal(format!("node {:?} missing config.entity", node.id)))?;
+    let strategy = node
+        .config
+        .get("strategy")
+        .and_then(Value::as_str)
+        .and_then(Strategy::parse)
+        .unwrap_or(Strategy::RoundRobin);
+    let uuid_of = |v: Option<&Value>| {
+        v.and_then(Value::as_str)
+            .and_then(|s| Uuid::parse_str(s).ok())
+    };
+    let team = uuid_of(node.config.get("team_ref"));
+    let queue = uuid_of(node.config.get("queue_ref"));
+    let role = uuid_of(node.config.get("role_ref"));
+    let fallback_queue = node
+        .config
+        .get("fallback_queue_ref")
+        .and_then(Value::as_str)
+        .and_then(|s| Uuid::parse_str(s).ok());
+    let rules: Vec<Value> = node
+        .config
+        .get("rules")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let required_skills: Vec<String> = node
+        .config
+        .get("skills")
+        .and_then(Value::as_array)
+        .map(|a| {
+            a.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default();
+    let territory_field = node
+        .config
+        .get("territory_field")
+        .and_then(Value::as_str)
+        .unwrap_or("territory_ref");
+    let record_id = input
+        .get("record_id")
+        .and_then(|v| v.as_str().or_else(|| v.get("id").and_then(Value::as_str)))
+        .and_then(|s| Uuid::parse_str(s).ok())
+        .ok_or_else(|| AppError::Validation("assign node has no resolvable record_id".into()))?;
+    if state.entities.load().get(entity_name).is_none() {
+        return Err(AppError::internal(format!(
+            "unknown entity {entity_name:?} in workflow node config"
+        )));
+    }
+    let record: Option<Value> = sqlx::query_scalar(&format!(
+        "SELECT to_jsonb(t) FROM {} t WHERE t.id = $1",
+        attome_core::quote_ident(entity_name)
+    ))
+    .bind(record_id)
+    .fetch_optional(&state.base.db)
+    .await
+    .map_err(attome_db::classify)?;
+    let record = record
+        .and_then(|r| r.as_object().cloned())
+        .ok_or(AppError::NotFound)?;
+    let pool = assign::candidates(state, team, queue, role).await?;
+    let chosen = match strategy {
+        Strategy::Rule => assign::by_rule(&rules, &record),
+        Strategy::RoundRobin => {
+            assign::round_robin(state, instance.definition_version_id, &node.id, &pool).await?
+        }
+        Strategy::LeastLoaded => {
+            let loads = assign::loads(state, entity_name, &pool).await?;
+            assign::least_loaded(&pool, &loads)
+        }
+        Strategy::Skills => {
+            let held = assign::skills(state, &pool).await?;
+            assign::best_skilled(&pool, &held, &required_skills)
+        }
+        Strategy::Territory => match record
+            .get(territory_field)
+            .and_then(Value::as_str)
+            .and_then(|s| Uuid::parse_str(s).ok())
+        {
+            Some(territory) => assign::territory_owner(state, territory).await?,
+            None => None,
+        },
+    };
+    let chosen = match (chosen, fallback_queue) {
+        (Some(user), _) => user,
+        (None, Some(queue)) => {
+            let members = assign::queue_members(state, queue).await?;
+            assign::round_robin(
+                state,
+                instance.definition_version_id,
+                &format!("{}#fallback", node.id),
+                &members,
+            )
+            .await?
+            .ok_or_else(|| AppError::Validation("nobody to assign the record to".into()))?
+        }
+        (None, None) => {
+            return Err(AppError::Validation(
+                "nobody to assign the record to".into(),
+            ));
+        }
+    };
+    let write = serde_json::json!({
+        "record_id": record_id.to_string(),
+        "data": { "owner_ref": chosen.to_string() },
+    });
+    execute_entity_write(state, ctx, instance, node, NodeType::UpdateRecord, &write).await
 }
 
 async fn execute_restore_record(

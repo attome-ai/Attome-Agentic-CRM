@@ -389,6 +389,17 @@ fn simulate_node(
             simulate_entity_write(state, node, node_type, input)
         }
         NodeType::RestoreRecord => simulate_restore_record(state, node),
+        // M11-T1: a dry run picks nobody and writes nothing.
+        NodeType::Assign => Ok(SimOutcome::Succeeded {
+            output: input.get("record_id").cloned().unwrap_or(Value::Null),
+            would_have: Some(format!(
+                "would assign the record by {}",
+                node.config
+                    .get("strategy")
+                    .and_then(Value::as_str)
+                    .unwrap_or("round_robin")
+            )),
+        }),
         // A15-T9: a dry run looks nothing up and follows `none`.
         NodeType::DuplicateCheck => Ok(SimOutcome::Branch {
             taken_port: "none",
