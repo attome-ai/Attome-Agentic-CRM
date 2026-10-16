@@ -53623,6 +53623,115 @@
         }
       }
     },
+    "/api/v1/sales/call-lists/{id}/build": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_sales_build_list",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The call list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesBuildListBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Members added from the list's source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesBuildStats"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks call_list.update, or may not read a named record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list, saved query or record",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The list is being filled by another request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The list has no usable source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/sales/call-lists/{id}/claim": {
       "post": {
         "tags": [
@@ -76107,6 +76216,22 @@
             "type": "integer",
             "format": "int32",
             "minimum": 0
+          }
+        }
+      },
+      "CallListRecord": {
+        "type": "object",
+        "required": [
+          "entity",
+          "record_id"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string"
+          },
+          "record_id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -108270,6 +108395,43 @@
             "items": {
               "$ref": "#/components/schemas/SurfaceSwitchView"
             }
+          }
+        }
+      },
+      "SalesBuildListBody": {
+        "type": "object",
+        "properties": {
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CallListRecord"
+            },
+            "description": "For a `manual` list: the records to add."
+          }
+        }
+      },
+      "SalesBuildStats": {
+        "type": "object",
+        "required": [
+          "added",
+          "already_on_list",
+          "without_phone"
+        ],
+        "properties": {
+          "added": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "already_on_list": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "without_phone": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },

@@ -10484,6 +10484,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/call-lists/{id}/build": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_build_list"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sales/call-lists/{id}/claim": {
         parameters: {
             query?: never;
@@ -15728,6 +15744,11 @@ export interface components {
             end_minute: number;
             /** Format: int32 */
             start_minute: number;
+        };
+        CallListRecord: {
+            entity: string;
+            /** Format: uuid */
+            record_id: string;
         };
         CancelBody: {
             /** Format: int64 */
@@ -28202,6 +28223,18 @@ export interface components {
         };
         RuntimeSwitchView: {
             surfaces: components["schemas"]["SurfaceSwitchView"][];
+        };
+        SalesBuildListBody: {
+            /** @description For a `manual` list: the records to add. */
+            records?: components["schemas"]["CallListRecord"][];
+        };
+        SalesBuildStats: {
+            /** Format: int64 */
+            added: number;
+            /** Format: int64 */
+            already_on_list: number;
+            /** Format: int64 */
+            without_phone: number;
         };
         SalesCallOutcomeBody: {
             activity_id?: string | null;
@@ -66635,6 +66668,78 @@ export interface operations {
                 };
             };
             /** @description Unknown outcome */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_build_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The call list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesBuildListBody"];
+            };
+        };
+        responses: {
+            /** @description Members added from the list's source */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesBuildStats"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks call_list.update, or may not read a named record */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list, saved query or record */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The list is being filled by another request */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The list has no usable source */
             422: {
                 headers: {
                     [name: string]: unknown;
