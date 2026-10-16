@@ -16,7 +16,8 @@ use attome_security::SecurityContextExt;
 use attome_server::authz::{Admin, Authorized};
 use attome_types::{AppError, ErrorResponse, OnePageQuery, PageWindow, PaginatedResponse};
 use attome_webcrawl::model::{
-    CreateTargetBody, ImportBody, ImportResult, PageListItem, SelectionBody, TargetListItem,
+    CreateTargetBody, ImportBody, ImportResult, PageListItem, SelectionBody, TARGET_COLUMNS,
+    TargetListItem,
 };
 use attome_webcrawl::safety;
 use axum::{
@@ -60,13 +61,13 @@ async fn list_targets(
         offset,
     } = q.window();
 
-    let items = sqlx::query_as::<_, TargetListItem>(
-        "SELECT id, url, status, max_depth, pages_found, pages_imported, last_error, last_crawled_at, created_at \
+    let items = sqlx::query_as::<_, TargetListItem>(&format!(
+        "SELECT {TARGET_COLUMNS} \
          FROM webcrawl_target \
          WHERE is_deleted = FALSE \
          ORDER BY created_at DESC \
-         LIMIT $1 OFFSET $2",
-    )
+         LIMIT $1 OFFSET $2"
+    ))
     .bind(page_size)
     .bind(offset)
     .fetch_all(&state.base.db)
@@ -105,6 +106,7 @@ async fn create_target(
 ) -> Result<(StatusCode, Json<TargetListItem>), AppError> {
     require_enabled(&state)?;
 
+    body.validate_settings().map_err(AppError::Validation)?;
     let url_str = body.url.trim();
     // A bare domain ("techbay.io") has no scheme, which `Url::parse` rejects
     // outright rather than guessing one — default to https, same as a
@@ -156,37 +158,71 @@ async fn create_target(
             .await
             .map_err(AppError::internal)?;
 
-    let (status_code, event_name, row): (StatusCode, &str, TargetListItem) = if let Some(
-        existing_id,
-    ) = existing_id
-    {
-        let row = sqlx::query_as(
+    let (status_code, event_name, row): (StatusCode, &str, TargetListItem) =
+        if let Some(existing_id) = existing_id {
+            let row = sqlx::query_as(&format!(
                 "UPDATE webcrawl_target \
-                 SET status = 'pending', last_error = NULL, max_depth = $2, \
-                     row_version = row_version + 1, updated_at = NOW() \
-                 WHERE id = $1 \
-                 RETURNING id, url, status, max_depth, pages_found, pages_imported, last_error, last_crawled_at, created_at",
-            )
+             SET status = 'pending', last_error = NULL, max_depth = $2, \
+                 include_patterns = COALESCE($3, include_patterns), \
+                 exclude_patterns = COALESCE($4, exclude_patterns), \
+                 languages = COALESCE($5, languages), \
+                 audience = COALESCE($6, audience), \
+                 import_mode = COALESCE($7, import_mode), \
+                 schedule = COALESCE($8, schedule), \
+                 sitemap_url = COALESCE($9, sitemap_url), \
+                 watch_only = COALESCE($10, watch_only), \
+                 allow_host = COALESCE($11, allow_host), \
+                 credential_ref = COALESCE($12, credential_ref), \
+                 row_version = row_version + 1, updated_at = NOW() \
+             WHERE id = $1 \
+             RETURNING {TARGET_COLUMNS}"
+            ))
             .bind(existing_id)
             .bind(max_depth as i16)
+            .bind(body.include_patterns.as_deref())
+            .bind(body.exclude_patterns.as_deref())
+            .bind(body.languages.clone())
+            .bind(body.audience.as_deref())
+            .bind(body.import_mode.as_deref())
+            .bind(body.schedule.as_deref())
+            .bind(body.sitemap_url.as_deref())
+            .bind(body.watch_only)
+            .bind(body.allow_host.as_deref())
+            .bind(body.credential_ref.as_deref())
             .fetch_one(&mut *tx)
             .await
             .map_err(AppError::internal)?;
-        (StatusCode::OK, "webcrawl_target_recrawled", row)
-    } else {
-        let row = sqlx::query_as(
-                "INSERT INTO webcrawl_target (url, created_by, max_depth) \
-                 VALUES ($1, $2, $3) \
-                 RETURNING id, url, status, max_depth, pages_found, pages_imported, last_error, last_crawled_at, created_at",
-            )
+            (StatusCode::OK, "webcrawl_target_recrawled", row)
+        } else {
+            let row = sqlx::query_as(&format!(
+                "INSERT INTO webcrawl_target \
+                 (url, created_by, max_depth, include_patterns, exclude_patterns, languages, \
+                  audience, import_mode, schedule, sitemap_url, watch_only, allow_host, \
+                  credential_ref) \
+             VALUES ($1, $2, $3, COALESCE($4, ''), COALESCE($5, ''), \
+                     COALESCE($6, '{{}}'::text[]), COALESCE($7, 'internal'), \
+                     COALESCE($8, 'review'), COALESCE($9, 'manual'), $10, \
+                     COALESCE($11, false), COALESCE($12, ''), $13) \
+             RETURNING {TARGET_COLUMNS}"
+            ))
             .bind(url.as_str())
             .bind(ctx.user_id)
             .bind(max_depth as i16)
+            .bind(body.include_patterns.as_deref())
+            .bind(body.exclude_patterns.as_deref())
+            .bind(body.languages.clone())
+            .bind(body.audience.as_deref())
+            .bind(body.import_mode.as_deref())
+            .bind(body.schedule.as_deref())
+            .bind(body.sitemap_url.as_deref())
+            .bind(body.watch_only)
+            .bind(body.allow_host.as_deref())
+            .bind(body.credential_ref.as_deref())
             .fetch_one(&mut *tx)
             .await
             .map_err(AppError::internal)?;
-        (StatusCode::CREATED, "webcrawl_target_created", row)
-    };
+            (StatusCode::CREATED, "webcrawl_target_created", row)
+        };
 
     attome_jobs::enqueue_in_tx(
         &mut tx,
@@ -235,12 +271,12 @@ async fn recrawl_target(
 
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
 
-    let row: Option<TargetListItem> = sqlx::query_as(
+    let row: Option<TargetListItem> = sqlx::query_as(&format!(
         "UPDATE webcrawl_target \
          SET status = 'pending', last_error = NULL, row_version = row_version + 1, updated_at = NOW() \
          WHERE id = $1 AND is_deleted = FALSE \
-         RETURNING id, url, status, max_depth, pages_found, pages_imported, last_error, last_crawled_at, created_at",
-    )
+         RETURNING {TARGET_COLUMNS}"
+    ))
     .bind(id)
     .fetch_optional(&mut *tx)
     .await

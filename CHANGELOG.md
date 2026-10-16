@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Website crawl sources take settings: include and exclude path patterns, languages, audience,
+  import mode, schedule, sitemap URL, watch-only and one allowed intranet host, on
+  `POST /api/v1/webcrawl/targets` and in every target read; pages keep their ETag, last-modified
+  date, content hash, missing count, alias and language (migration 0081).
 - Approval out-of-office: `PUT /api/v1/approvals/out-of-office` hands the signed-in user's approval
   standing to another user for a window (an overlapping earlier one is replaced) and
   `DELETE /api/v1/approvals/out-of-office` ends it; leave approvals use the same delegation with
