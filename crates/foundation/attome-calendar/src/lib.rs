@@ -77,6 +77,7 @@
 
 pub mod availability;
 pub mod hijri;
+pub mod recurrence;
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt;

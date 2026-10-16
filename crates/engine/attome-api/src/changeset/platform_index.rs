@@ -343,6 +343,11 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0059-attome-contract-counterparty.json"
         ),
     },
+    PlatformChangeset {
+        file: "0060-attome-task-checklist.json",
+        name: "attome-task-checklist",
+        json: include_str!("../../../../../changesets/platform/0060-attome-task-checklist.json"),
+    },
 ];
 
 #[cfg(test)]

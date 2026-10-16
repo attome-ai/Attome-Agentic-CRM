@@ -406,6 +406,9 @@ pub enum EngineJob {
     /// only as text. Enqueued on demand by an administrator; bare unit
     /// variant.
     ContractCounterpartyMatch,
+    /// V2-T2: creates the next task for every completed recurring task.
+    /// Bare unit variant.
+    RecurringTaskRoll,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -845,6 +848,7 @@ impl EngineJob {
             | Self::TagExpirySweep
             | Self::ContractKeyDates
             | Self::ContractCounterpartyMatch
+            | Self::RecurringTaskRoll
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -931,6 +935,7 @@ impl EngineJob {
             EngineJob::TagExpirySweep => "TagExpirySweep",
             EngineJob::ContractKeyDates => "ContractKeyDates",
             EngineJob::ContractCounterpartyMatch => "ContractCounterpartyMatch",
+            EngineJob::RecurringTaskRoll => "RecurringTaskRoll",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1029,6 +1034,7 @@ impl EngineJob {
             | Self::TagExpirySweep
             | Self::ContractKeyDates
             | Self::ContractCounterpartyMatch
+            | Self::RecurringTaskRoll
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1140,6 +1146,7 @@ impl EngineJob {
             | Self::TagExpirySweep
             | Self::ContractKeyDates
             | Self::ContractCounterpartyMatch
+            | Self::RecurringTaskRoll
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1467,6 +1474,7 @@ mod tests {
         assert_round_trips(EngineJob::TagExpirySweep);
         assert_round_trips(EngineJob::ContractKeyDates);
         assert_round_trips(EngineJob::ContractCounterpartyMatch);
+        assert_round_trips(EngineJob::RecurringTaskRoll);
     }
 
     #[test]

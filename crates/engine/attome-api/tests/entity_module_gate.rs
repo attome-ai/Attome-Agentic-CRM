@@ -110,6 +110,10 @@ const UNGATED_BY_DESIGN: &[(&str, &str)] = &[
         "scan_action",
         "core platform (platform-bundles/attome-scan.json, B16-T7)",
     ),
+    (
+        "task_checklist_item",
+        "core platform: checklists of core activity tasks (platform-bundles/attome-task-checklist.json, V2-T2)",
+    ),
     // Engines with no EngineModel impl and no licence gate on their routes.
     (
         "audit_header",

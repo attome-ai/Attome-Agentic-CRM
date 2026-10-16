@@ -930,6 +930,14 @@ async fn dispatch_platform_job(
         }
         // C4 (row A-40): the confirm-lease backstop. Self-contained in
         // attome-ai, runtime pool only, same shape as `AiQualityMonitor` above.
+        // V2-T2: the next task of every completed recurring task.
+        EngineJob::RecurringTaskRoll => {
+            let created =
+                attome_project::tasks::roll_recurring(&db, chrono::Utc::now().date_naive()).await?;
+            if created > 0 {
+                tracing::info!(created, "recurring tasks: next tasks created");
+            }
+        }
         // W1-T3: counterparty match proposals, on demand.
         EngineJob::ContractCounterpartyMatch => {
             let run = attome_contract::counterparty::run_match(&db).await?;
@@ -1988,6 +1996,7 @@ const DEDUP_KEY_AI_TOOL_CALL_SWEEP: &str = "ai-tool-call-sweep";
 const DEDUP_KEY_BIN_DELETE_ALERT: &str = "bin-delete-alert";
 const DEDUP_KEY_TAG_EXPIRY: &str = "tag-expiry";
 const DEDUP_KEY_CONTRACT_KEY_DATES: &str = "contract-key-dates";
+const DEDUP_KEY_RECURRING_TASK_ROLL: &str = "recurring-task-roll";
 const DEDUP_KEY_ACCESS_REVIEW_CAMPAIGN_SWEEP: &str = "access-review-campaign-sweep";
 const DEDUP_KEY_DATA_MATCH_SWEEP: &str = "data-match-sweep";
 const DEDUP_KEY_API_USAGE_ROLLUP: &str = "api-usage-rollup";
@@ -2043,6 +2052,7 @@ fn schedule_name_for(job: &EngineJob) -> Option<&'static str> {
         EngineJob::BinDeleteAlertSweep => DEDUP_KEY_BIN_DELETE_ALERT,
         EngineJob::TagExpirySweep => DEDUP_KEY_TAG_EXPIRY,
         EngineJob::ContractKeyDates => DEDUP_KEY_CONTRACT_KEY_DATES,
+        EngineJob::RecurringTaskRoll => DEDUP_KEY_RECURRING_TASK_ROLL,
         EngineJob::AiQualityMonitor => DEDUP_KEY_AI_QUALITY_MONITOR,
         EngineJob::PruneIdempotencyRecords => DEDUP_KEY_PRUNE_IDEMPOTENCY_RECORDS,
         EngineJob::PruneAuthTokens => DEDUP_KEY_PRUNE_AUTH_TOKENS,
@@ -2356,6 +2366,17 @@ pub fn spawn_tag_expiry_scheduler(db: DbPool, interval: std::time::Duration) {
         EngineJob::TagExpirySweep,
         DEDUP_KEY_TAG_EXPIRY,
         "tag expiry",
+    );
+}
+
+/// V2-T2: every quarter hour, the next task of each completed recurring task.
+pub fn spawn_recurring_task_roll_scheduler(db: DbPool, interval: std::time::Duration) {
+    spawn_dedup_scheduler(
+        db,
+        interval,
+        EngineJob::RecurringTaskRoll,
+        DEDUP_KEY_RECURRING_TASK_ROLL,
+        "recurring task roll",
     );
 }
 

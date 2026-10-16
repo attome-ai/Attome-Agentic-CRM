@@ -32,6 +32,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Tasks have checklists (`task_checklist_item`) and repeat: a completed task with a
+  `recurrence_rule` (`weekly`, `monthly`, `FREQ=...;INTERVAL=n`) gets its next task, with a fresh copy
+  of its checklist, within 15 minutes.
+- Approved contract amendments take effect on their date: the nightly key-date run folds their changed
+  terms into the contract's current terms (and end date) and marks them effective.
 - Counterparty matching for contracts: `POST /api/v1/contract/counterparty-match/run` (administrators)
   queues a job that proposes an account for each contract naming its counterparty only as text
   (Arabic spelling variants folded, exact name then whole-word prefix); `POST

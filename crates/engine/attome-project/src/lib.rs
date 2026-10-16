@@ -10,6 +10,7 @@ pub mod portfolio_program;
 pub mod risk;
 pub mod seed;
 pub mod summary;
+pub mod tasks;
 pub mod timesheet;
 pub mod utilization;
 pub(crate) mod variance;

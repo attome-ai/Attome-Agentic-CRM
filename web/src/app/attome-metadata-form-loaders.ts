@@ -141,7 +141,7 @@ function registerLoaders(registry: EntityRouteRegistry, injector: EnvironmentInj
       'docgen_template', 'communication', 'communication_event', 'follow', 'glossary_term',
       'license', 'profiler_finding', 'record_relationship', 'resource_skill',
       'resource_availability', 'tag_category', 'tag_item', 'reminder', 'activity',
-      'scan_action',
+      'scan_action', 'task_checklist_item',
     ]],
     [workflow, ['workflow_definition']],
     [dashboard, ['attome_dashboard', 'dashboard_page']],

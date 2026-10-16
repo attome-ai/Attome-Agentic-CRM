@@ -23,7 +23,7 @@
 
 use attome_db::DbPool;
 use attome_types::AppError;
-use chrono::{Months, NaiveDate};
+use chrono::NaiveDate;
 use uuid::Uuid;
 
 /// Rows per batch.
@@ -68,61 +68,9 @@ pub fn renewal_due(deadline: NaiveDate, lead_days: i64, today: NaiveDate) -> boo
         .is_some_and(|opens| opens <= today)
 }
 
-/// How often an obligation repeats.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Recurrence {
-    Daily(u32),
-    Weekly(u32),
-    Monthly(u32),
-    Yearly(u32),
-}
-
-/// Reads a recurrence rule: `daily`, `weekly`, `monthly`, `quarterly`,
-/// `yearly` (or `annually`), or an iCalendar `FREQ=…;INTERVAL=n` rule.
-/// `None` for anything else.
-pub fn parse_recurrence(rule: &str) -> Option<Recurrence> {
-    let rule = rule
-        .trim()
-        .trim_start_matches("RRULE:")
-        .to_ascii_uppercase();
-    match rule.as_str() {
-        "DAILY" => return Some(Recurrence::Daily(1)),
-        "WEEKLY" => return Some(Recurrence::Weekly(1)),
-        "MONTHLY" => return Some(Recurrence::Monthly(1)),
-        "QUARTERLY" => return Some(Recurrence::Monthly(3)),
-        "YEARLY" | "ANNUALLY" => return Some(Recurrence::Yearly(1)),
-        _ => {}
-    }
-    let mut freq = None;
-    let mut interval = 1u32;
-    for part in rule.split(';') {
-        let (key, value) = part.split_once('=')?;
-        match key.trim() {
-            "FREQ" => freq = Some(value.trim().to_owned()),
-            "INTERVAL" => interval = value.trim().parse().ok().filter(|n| *n > 0)?,
-            _ => {}
-        }
-    }
-    match freq.as_deref()? {
-        "DAILY" => Some(Recurrence::Daily(interval)),
-        "WEEKLY" => Some(Recurrence::Weekly(interval)),
-        "MONTHLY" => Some(Recurrence::Monthly(interval)),
-        "YEARLY" => Some(Recurrence::Yearly(interval)),
-        _ => None,
-    }
-}
-
-/// The next occurrence after `after`. A monthly rule keeps to the month's
-/// last day when the day does not exist (31 January, then 28 or 29
-/// February).
-pub fn next_occurrence(rule: Recurrence, after: NaiveDate) -> Option<NaiveDate> {
-    match rule {
-        Recurrence::Daily(n) => after.checked_add_signed(chrono::Duration::days(i64::from(n))),
-        Recurrence::Weekly(n) => after.checked_add_signed(chrono::Duration::weeks(i64::from(n))),
-        Recurrence::Monthly(n) => after.checked_add_months(Months::new(n)),
-        Recurrence::Yearly(n) => after.checked_add_months(Months::new(n.checked_mul(12)?)),
-    }
-}
+// The recurrence rules live in the calendar crate so obligations, tasks
+// and anything else that repeats read them the same way.
+pub use attome_calendar::recurrence::{Recurrence, next_occurrence, parse_recurrence};
 
 /// What one run did.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -623,24 +571,5 @@ mod tests {
         );
         assert!(renewal_due(day(2026, 10, 31), 30, day(2026, 10, 1)));
         assert!(!renewal_due(day(2026, 10, 31), 30, day(2026, 9, 30)));
-    }
-
-    #[test]
-    fn monthly_recurrence_end_of_month() {
-        let monthly = parse_recurrence("monthly");
-        assert_eq!(monthly, Some(Recurrence::Monthly(1)));
-        let next = monthly.and_then(|r| next_occurrence(r, day(2026, 1, 31)));
-        assert_eq!(next, Some(day(2026, 2, 28)));
-        let leap = monthly.and_then(|r| next_occurrence(r, day(2028, 1, 31)));
-        assert_eq!(leap, Some(day(2028, 2, 29)));
-        assert_eq!(
-            parse_recurrence("RRULE:FREQ=MONTHLY;INTERVAL=3")
-                .and_then(|r| next_occurrence(r, day(2026, 11, 30))),
-            Some(day(2027, 2, 28))
-        );
-        assert_eq!(parse_recurrence("quarterly"), Some(Recurrence::Monthly(3)));
-        assert_eq!(parse_recurrence("FREQ=HOURLY"), None);
-        assert_eq!(parse_recurrence("FREQ=WEEKLY;INTERVAL=0"), None);
-        assert_eq!(parse_recurrence("sometimes"), None);
     }
 }

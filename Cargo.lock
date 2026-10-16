@@ -712,6 +712,7 @@ name = "attome-contract"
 version = "0.1.0"
 dependencies = [
  "attome-audit",
+ "attome-calendar",
  "attome-config",
  "attome-core",
  "attome-db",

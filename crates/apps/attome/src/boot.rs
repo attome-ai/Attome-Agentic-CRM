@@ -1089,6 +1089,8 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-scan",
         // W1-T3: counterparty match proposals.
         "attome-contract-counterparty",
+        // V2-T2: task checklists and recurring tasks.
+        "attome-task-checklist",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
     }
