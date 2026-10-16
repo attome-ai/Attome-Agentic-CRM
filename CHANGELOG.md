@@ -25,6 +25,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `GET /api/v1/admin/security/mfa/coverage` (with `role_id` and `missing_only`) lists each active
+  account's second factors and flags administrators without a phishing-resistant factor;
+  `…/coverage/summary` counts per role.
 - Environment variables: a new `environment_variable` metadata kind (type text, number, boolean, url
   or secret; required; default; descriptions) travels with configuration, while each deployment sets
   its own values at `/api/v1/admin/env-variables` (set, clear, history; a secret is encrypted and never

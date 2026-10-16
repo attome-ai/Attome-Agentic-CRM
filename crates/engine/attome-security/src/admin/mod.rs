@@ -26,6 +26,7 @@ mod grants;
 mod identity_links;
 mod invitations;
 mod mfa;
+mod mfa_coverage;
 mod organizations;
 mod positions;
 mod privileges;
@@ -73,6 +74,7 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
         shares::openapi_fragment(),
         field_security::openapi_fragment(),
         mfa::openapi_fragment(),
+        mfa_coverage::openapi_fragment(),
         account_state::openapi_fragment(),
         invitations::openapi_fragment(),
         identity_links::openapi_fragment(),
@@ -102,6 +104,7 @@ pub fn routes() -> Router<EngineState> {
         .merge(shares::routes())
         .merge(field_security::routes())
         .merge(mfa::routes())
+        .merge(mfa_coverage::routes())
         .merge(account_state::routes())
         .merge(invitations::routes())
         .merge(identity_links::routes())

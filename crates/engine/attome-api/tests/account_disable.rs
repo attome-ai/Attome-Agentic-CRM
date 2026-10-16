@@ -584,3 +584,58 @@ fn mfa_reset_ends_sessions() {
         );
     })
 }
+
+/// Q5-T9: the coverage report lists an account's second factors and flags
+/// an administrator with no phishing-resistant factor.
+#[test]
+fn coverage_flags_admin_without_passkey() {
+    attome_testkit::run_shared(async {
+        let system = skip_if_no_db!(test_system().await);
+        let (admin_id, admin_cookie) = seed_admin(&system).await;
+        let (target_id, _) = seed_target_with_api_key(&system).await;
+        let db = system.state().base.db.clone();
+        sqlx::query(
+            "INSERT INTO user_mfa (user_ref, secret_encrypted, confirmed_at) VALUES ($1, 'x', NOW())",
+        )
+        .bind(target_id)
+        .execute(&db)
+        .await
+        .expect("insert throwaway mfa enrollment");
+        let app = full_app(system);
+
+        let req = Request::builder()
+            .method("GET")
+            .uri("/api/v1/admin/security/mfa/coverage")
+            .header("cookie", &admin_cookie)
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.clone().oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+        let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+        let items = body["items"].as_array().expect("items");
+        let row = |id: Uuid| {
+            items
+                .iter()
+                .find(|r| r["user_id"] == id.to_string())
+                .cloned()
+        };
+        let admin = row(admin_id).expect("the admin is listed");
+        assert_eq!(admin["is_admin"], true);
+        assert_eq!(admin["admin_missing_phishing_resistant"], true);
+        let target = row(target_id).expect("the target is listed");
+        assert_eq!(target["factors"], serde_json::json!(["totp"]));
+        assert_eq!(target["admin_missing_phishing_resistant"], false);
+
+        let req = Request::builder()
+            .method("GET")
+            .uri("/api/v1/admin/security/mfa/coverage/summary")
+            .header("cookie", &admin_cookie)
+            .body(Body::empty())
+            .unwrap();
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+    })
+}
