@@ -1355,6 +1355,7 @@ dependencies = [
  "attome-core",
  "attome-modules",
  "axum",
+ "base64 0.23.1",
  "chrono",
  "rust_decimal",
  "serde",

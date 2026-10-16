@@ -34,3 +34,13 @@ deployment's overspend policy says.
 
 Each part is a percentage, and the score is their weighted mean (40, 40 and 20 by default) over the
 parts that had anything to measure that month.
+
+## Three-way match
+
+`attome_procurement::match_` checks a vendor bill against its order and receipts before it is
+posted. Per order line, everything billed so far may not exceed the accepted received quantity
+(received less rejected), and the billed unit price may not exceed the ordered price by more than
+the price tolerance (2% by default). A bill with only a net total is compared with the value of what
+was received and not yet billed. A quantity problem wins over a price problem, and either sets the
+bill's match status for a person to resolve. The vendor's ZATCA QR code is decoded and its VAT
+number, total and VAT compared with the bill.
