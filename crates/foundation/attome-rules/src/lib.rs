@@ -95,6 +95,7 @@
 //! assert_eq!(compiled.eval(&ctx).unwrap(), Value::Bool(true));
 //! ```
 
+pub mod arabic;
 mod ast;
 mod budget;
 mod compile;

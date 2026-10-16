@@ -485,6 +485,117 @@ impl Evaluator<'_> {
                 let v = self.eval_only(args, 1, name, trace)?;
                 Ok(Value::Bool(v[0].is_null()))
             }
+            // Z11-T2 (V2): text and number functions.
+            "normalize_ar" => {
+                let v = self.eval_only(args, 1, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match &v[0] {
+                    Value::Text(s) => mk_text(crate::arabic::normalize_ar(s), self.budgets),
+                    other => Err(eval_type_err(name, "text", other)),
+                }
+            }
+            "concat" => {
+                if args.is_empty() {
+                    return Err(arity_err(name, ">= 1", 0));
+                }
+                let mut vals = Vec::with_capacity(args.len());
+                for a in args {
+                    vals.push(self.eval(a, trace)?);
+                }
+                if let Some(e) = null_operand_if_any(name, &vals) {
+                    return Err(e);
+                }
+                let mut out = String::new();
+                for v in &vals {
+                    match v {
+                        Value::Text(s) => out.push_str(s),
+                        other => return Err(eval_type_err(name, "text", other)),
+                    }
+                    if out.chars().count() > self.budgets.max_string_len {
+                        return Err(RulesError::Budget(BudgetKind::StringLength));
+                    }
+                }
+                mk_text(out, self.budgets)
+            }
+            "substr" => {
+                let v = self.eval_only(args, 3, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match (&v[0], &v[1], &v[2]) {
+                    (Value::Text(s), Value::Number(start), Value::Number(len)) => {
+                        mk_text(substr(s, *start, *len), self.budgets)
+                    }
+                    (other, _, _) => Err(eval_type_err(name, "(text, number, number)", other)),
+                }
+            }
+            "replace" => {
+                let v = self.eval_only(args, 3, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match (&v[0], &v[1], &v[2]) {
+                    (Value::Text(s), Value::Text(from), Value::Text(to)) => {
+                        if from.is_empty() {
+                            return mk_text(s.clone(), self.budgets);
+                        }
+                        mk_text(s.replace(from.as_str(), to), self.budgets)
+                    }
+                    (other, _, _) => Err(eval_type_err(name, "text", other)),
+                }
+            }
+            "abs" | "floor" | "ceil" => {
+                let v = self.eval_only(args, 1, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                let n = match &v[0] {
+                    Value::Number(n) => *n,
+                    other => return Err(eval_type_err(name, "number", other)),
+                };
+                let r = match name {
+                    "abs" => n.abs(),
+                    "floor" => n.floor(),
+                    _ => n.ceil(),
+                };
+                finite(r).map(Value::Number)
+            }
+            "power" => {
+                let v = self.eval_only(args, 2, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match (&v[0], &v[1]) {
+                    (Value::Number(base), Value::Number(k)) => {
+                        if k.fract() != 0.0 || !(0.0..=10.0).contains(k) {
+                            return Err(RulesError::Eval(
+                                "power's exponent must be a whole number from 0 to 10".into(),
+                            ));
+                        }
+                        finite(base.powi(*k as i32)).map(Value::Number)
+                    }
+                    (other, _) => Err(eval_type_err(name, "numbers", other)),
+                }
+            }
+            "clamp" => {
+                let v = self.eval_only(args, 3, name, trace)?;
+                if let Some(e) = null_operand_if_any(name, &v) {
+                    return Err(e);
+                }
+                match (&v[0], &v[1], &v[2]) {
+                    (Value::Number(n), Value::Number(lo), Value::Number(hi)) => {
+                        if lo > hi {
+                            return Err(RulesError::Eval(
+                                "clamp's lower bound is above its upper bound".into(),
+                            ));
+                        }
+                        finite(n.clamp(*lo, *hi)).map(Value::Number)
+                    }
+                    (other, _, _) => Err(eval_type_err(name, "numbers", other)),
+                }
+            }
             other => Err(RulesError::UnknownFunction(other.to_owned())),
         }
     }
@@ -599,6 +710,17 @@ fn values_equal(a: &Value, b: &Value) -> bool {
         (Value::Choice(x), Value::Text(y)) | (Value::Text(x), Value::Choice(y)) => x == y,
         _ => a == b,
     }
+}
+
+/// Z11-T2: `len` characters of `s` from character `start` (0-based); a
+/// range outside the text gives the part inside it, possibly empty.
+fn substr(s: &str, start: f64, len: f64) -> String {
+    if !start.is_finite() || !len.is_finite() || len <= 0.0 {
+        return String::new();
+    }
+    let start = start.max(0.0).floor() as usize;
+    let len = len.floor() as usize;
+    s.chars().skip(start).take(len).collect()
 }
 
 fn mk_text(s: String, budgets: &Budgets) -> Result<Value, RulesError> {

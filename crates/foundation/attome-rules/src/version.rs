@@ -34,7 +34,19 @@ impl LanguageVersion {
 }
 
 /// Functions and the version that added them; anything not listed is V1.
-const ADDED: &[(&str, LanguageVersion)] = &[("endswith", LanguageVersion::V2)];
+const ADDED: &[(&str, LanguageVersion)] = &[
+    ("endswith", LanguageVersion::V2),
+    // Z11-T2: text and number functions.
+    ("normalize_ar", LanguageVersion::V2),
+    ("concat", LanguageVersion::V2),
+    ("substr", LanguageVersion::V2),
+    ("replace", LanguageVersion::V2),
+    ("abs", LanguageVersion::V2),
+    ("floor", LanguageVersion::V2),
+    ("ceil", LanguageVersion::V2),
+    ("power", LanguageVersion::V2),
+    ("clamp", LanguageVersion::V2),
+];
 
 /// The version a function needs.
 pub(crate) fn function_version(name: &str) -> LanguageVersion {

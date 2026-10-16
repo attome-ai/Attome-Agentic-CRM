@@ -332,6 +332,51 @@ fn typecheck_call(
             arity(name, args.len(), 1, 1)?;
             Ok(Type::Bool)
         }
+        // Z11-T2 (V2).
+        "normalize_ar" => {
+            arity(name, args.len(), 1, 1)?;
+            require(&arg_types[0], &Type::Text, name)?;
+            Ok(Type::Text)
+        }
+        "concat" => {
+            arity_at_least(name, args.len(), 1)?;
+            for t in &arg_types {
+                require(t, &Type::Text, name)?;
+            }
+            Ok(Type::Text)
+        }
+        "substr" => {
+            arity(name, args.len(), 3, 3)?;
+            require(&arg_types[0], &Type::Text, "substr's text")?;
+            require(&arg_types[1], &Type::Number, "substr's start")?;
+            require(&arg_types[2], &Type::Number, "substr's length")?;
+            Ok(Type::Text)
+        }
+        "replace" => {
+            arity(name, args.len(), 3, 3)?;
+            for t in &arg_types {
+                require(t, &Type::Text, name)?;
+            }
+            Ok(Type::Text)
+        }
+        "abs" | "floor" | "ceil" => {
+            arity(name, args.len(), 1, 1)?;
+            require(&arg_types[0], &Type::Number, name)?;
+            Ok(Type::Number)
+        }
+        "power" => {
+            arity(name, args.len(), 2, 2)?;
+            require(&arg_types[0], &Type::Number, "power's base")?;
+            require(&arg_types[1], &Type::Number, "power's exponent")?;
+            Ok(Type::Number)
+        }
+        "clamp" => {
+            arity(name, args.len(), 3, 3)?;
+            for t in &arg_types {
+                require(t, &Type::Number, name)?;
+            }
+            Ok(Type::Number)
+        }
         other => Err(RulesError::UnknownFunction(other.to_owned())),
     };
     result.map_err(RulesDiagnostic::without_span)
@@ -434,7 +479,23 @@ fn rejects_null_binary(op: BinaryOp) -> bool {
 fn rejects_null_call(name: &str) -> bool {
     matches!(
         name,
-        "len" | "lower" | "upper" | "trim" | "contains" | "startswith" | "date_add" | "date_diff"
+        "len"
+            | "lower"
+            | "upper"
+            | "trim"
+            | "contains"
+            | "startswith"
+            | "date_add"
+            | "date_diff"
+            | "normalize_ar"
+            | "concat"
+            | "substr"
+            | "replace"
+            | "abs"
+            | "floor"
+            | "ceil"
+            | "power"
+            | "clamp"
     )
 }
 
