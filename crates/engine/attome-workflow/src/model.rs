@@ -149,6 +149,13 @@ pub struct NodeRunState {
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub row_version: i64,
+    /// M3-T1: the loop round this row is for (0 outside a loop).
+    pub round: i32,
+    /// M3-T1: the input the node ran with and the output it produced, set
+    /// during the pass that ran it and written at its checkpoint (a pair
+    /// over [`crate::scheduler::INLINE_PAYLOAD_MAX`] goes to object storage).
+    pub input: Option<serde_json::Value>,
+    pub output: Option<serde_json::Value>,
     /// True only for node_runs touched during the current pass — the
     /// checkpoint write only upserts these, per §4.4's "one checkpoint
     /// write per pass" cost model.
@@ -178,6 +185,7 @@ pub(crate) struct NodeRunRow {
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub row_version: i64,
+    pub round: i32,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -199,11 +207,19 @@ impl std::fmt::Debug for InstanceListItem {
 #[derive(Serialize, ToSchema)]
 pub struct NodeRunSummary {
     pub node_id: String,
+    /// M3-T1: the loop round (0 outside a loop).
+    pub round: i32,
     pub status: String,
     pub attempt_count: i32,
     pub last_error: Option<String>,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
+    /// The node's input and output; absent for a large pair kept in object
+    /// storage (`payload_ref`) or a node that has not run.
+    pub input: Option<serde_json::Value>,
+    pub output: Option<serde_json::Value>,
+    /// The object-storage key of a large input/output pair.
+    pub payload_ref: Option<String>,
 }
 
 impl std::fmt::Debug for NodeRunSummary {

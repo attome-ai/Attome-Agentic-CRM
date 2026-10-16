@@ -49,11 +49,15 @@ struct InstanceDetailRow {
 #[derive(sqlx::FromRow)]
 struct NodeRunSummaryRow {
     node_id: String,
+    round: i32,
     status: String,
     attempt_count: i32,
     last_error: Option<String>,
     started_at: Option<chrono::DateTime<chrono::Utc>>,
     completed_at: Option<chrono::DateTime<chrono::Utc>>,
+    input: Option<serde_json::Value>,
+    output: Option<serde_json::Value>,
+    payload_ref: Option<String>,
 }
 
 #[derive(Deserialize, IntoParams)]
@@ -160,8 +164,9 @@ async fn get_instance(
     .ok_or(AppError::NotFound)?;
 
     let node_run_rows: Vec<NodeRunSummaryRow> = sqlx::query_as(
-        "SELECT node_id, status, attempt_count, last_error, started_at, completed_at \
-         FROM workflow_node_run WHERE instance_id = $1 ORDER BY started_at NULLS LAST",
+        "SELECT node_id, round, status, attempt_count, last_error, started_at, completed_at, \
+                input, output, payload_ref \
+         FROM workflow_node_run WHERE instance_id = $1 ORDER BY started_at NULLS LAST, round",
     )
     .bind(instance_id)
     .fetch_all(&state.base.db)
@@ -172,11 +177,15 @@ async fn get_instance(
         .into_iter()
         .map(|r| NodeRunSummary {
             node_id: r.node_id,
+            round: r.round,
             status: r.status,
             attempt_count: r.attempt_count,
             last_error: r.last_error,
             started_at: r.started_at,
             completed_at: r.completed_at,
+            input: r.input,
+            output: r.output,
+            payload_ref: r.payload_ref,
         })
         .collect();
 

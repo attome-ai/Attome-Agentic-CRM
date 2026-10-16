@@ -28,6 +28,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Workflow node runs keep one row per node and loop round (`round`) with the node's `input` and
+  `output` (a pair over 64 KiB goes to object storage, `payload_ref`); the instance detail
+  returns them.
 - A create or update with `Attome-Duplicate-Check: skip` bypasses the write-time duplicate
   check; it needs the new `duplicate.bypass` privilege (403 without) and leaves a
   `duplicate_check_skipped` audit event in the write's transaction.

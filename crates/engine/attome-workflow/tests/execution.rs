@@ -3893,3 +3893,43 @@ async fn a_starter_without_access_cannot_write_through_a_flow() {
         .expect("count rows");
     assert_eq!(after, before, "the flow must not create the record");
 }
+
+/// M3-T1: a node run's row keeps the round and the input the node ran with.
+#[tokio::test]
+async fn a_node_run_keeps_its_round_and_input() {
+    let state = skip_if_no_db!(test_state().await);
+    let user_id = seed_user(&state.base.db).await;
+    let graph = json!({
+        "nodes": [
+            {"id": "t", "type": "trigger", "config": {"trigger_type": "manual"}},
+            {"id": "w", "type": "wait", "config": {"delay_seconds": 3600}}
+        ],
+        "edges": [{"from_node": "t", "from_port": "out", "to_node": "w", "to_port": "in"}]
+    });
+    let version_id = publish_workflow(&state.base.db, "node-run-payload-test", graph).await;
+    let instance_id = attome_workflow::instance_admin::start_instance_internal(
+        &state,
+        version_id,
+        None,
+        Some(user_id),
+        None,
+        json!({"greeting": "hello"}),
+    )
+    .await
+    .expect("start instance");
+    assert_eq!(run_to_checkpoint(&state, instance_id).await, "waiting");
+
+    let (round, input): (i32, Option<serde_json::Value>) = sqlx::query_as(
+        "SELECT round, input FROM workflow_node_run WHERE instance_id = $1 AND node_id = 'w'",
+    )
+    .bind(instance_id)
+    .fetch_one(&state.base.db)
+    .await
+    .expect("read the wait node's run");
+    assert_eq!(round, 0);
+    let input = input.expect("the input is recorded");
+    assert!(
+        input.to_string().contains("hello"),
+        "the wait node's input carries the trigger's output: {input}"
+    );
+}

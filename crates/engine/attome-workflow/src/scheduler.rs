@@ -44,6 +44,11 @@ use crate::trigger_index;
 
 const MAX_PASS_ITERATIONS: usize = 2000;
 
+/// M3-T1: the largest serialized input/output pair a node-run row holds
+/// inline; a larger one is written to object storage and the row keeps its
+/// key (`payload_ref`).
+pub const INLINE_PAYLOAD_MAX: usize = 64 * 1024;
+
 /// Invariant behind the `node_runs.get_mut(&node_id)` lookups in the execute
 /// pass: every one of them is preceded, in the same loop iteration, by a
 /// `node_runs.entry(node_id.clone()).or_insert_with(..)` that guarantees the
@@ -354,6 +359,7 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
                 .entry(node_id.clone())
                 .or_insert_with(|| new_node_run_state(&node_id));
             entry.dirty = true;
+            entry.input = Some(input.clone());
             entry.started_at.get_or_insert(Utc::now());
             entry.attempt_count += 1;
             let attempt_count = entry.attempt_count;
@@ -390,6 +396,7 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
                     if cacheable {
                         entry.output_hash = Some(output_hash(node, &input));
                     }
+                    entry.output = Some(output.clone());
                     node_data.insert(node_id.clone(), output);
                 }
                 Ok(NodeOutcome::Branch { taken_port, output }) => {
@@ -399,6 +406,7 @@ async fn execute_claimed(state: &EngineState, instance_id: Uuid) -> Result<PassO
                         entry.status = "succeeded".into();
                         entry.completed_at = Some(Utc::now());
                         entry.output_hash = output_hash;
+                        entry.output = Some(output.clone());
                     }
                     node_data.insert(node_id.clone(), output);
                     mark_untaken_branch(&graph, &node_id, taken_port, &mut node_runs);
@@ -684,6 +692,18 @@ async fn commit_checkpoint(
     node_runs: HashMap<String, NodeRunState>,
     pending_waits: Vec<PendingWait>,
 ) -> Result<Checkpoint, AppError> {
+    // M3-T1: each dirty run's input/output pair, stored inline or — over
+    // `INLINE_PAYLOAD_MAX` — written to object storage first, before the
+    // transaction opens (no external I/O inside it). A checkpoint that then
+    // loses its CAS leaves an unreferenced object, removed by retention.
+    let mut payloads: HashMap<String, StoredPayload> = HashMap::new();
+    for (node_id, nr) in &node_runs {
+        if nr.dirty && (nr.input.is_some() || nr.output.is_some()) {
+            let id = nr.id.unwrap_or_else(Uuid::now_v7);
+            payloads.insert(node_id.clone(), store_payload(state, id, nr).await);
+        }
+    }
+
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
 
     // C-10: the canonical audit-service builder — this used to be its own
@@ -704,17 +724,23 @@ async fn commit_checkpoint(
         if !nr.dirty {
             continue;
         }
-        let id = nr.id.unwrap_or_else(Uuid::now_v7);
+        let payload = payloads.remove(node_id).unwrap_or_default();
+        let id = payload.id.or(nr.id).unwrap_or_else(Uuid::now_v7);
         node_run_ids.insert(node_id.clone(), id);
         sqlx::query(
             "INSERT INTO workflow_node_run \
-                (id, instance_id, node_id, status, output_hash, attempt_count, last_error, started_at, completed_at) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
-             ON CONFLICT (instance_id, node_id) DO UPDATE SET \
+                (id, instance_id, node_id, status, output_hash, attempt_count, last_error, started_at, completed_at, \
+                 round, input, output, payload_ref) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
+             ON CONFLICT (instance_id, node_id, round) DO UPDATE SET \
                 status = EXCLUDED.status, output_hash = EXCLUDED.output_hash, \
                 attempt_count = EXCLUDED.attempt_count, last_error = EXCLUDED.last_error, \
                 started_at = COALESCE(workflow_node_run.started_at, EXCLUDED.started_at), \
-                completed_at = EXCLUDED.completed_at, row_version = workflow_node_run.row_version + 1",
+                completed_at = EXCLUDED.completed_at, \
+                input = CASE WHEN $14 THEN EXCLUDED.input ELSE workflow_node_run.input END, \
+                output = CASE WHEN $14 THEN EXCLUDED.output ELSE workflow_node_run.output END, \
+                payload_ref = CASE WHEN $14 THEN EXCLUDED.payload_ref ELSE workflow_node_run.payload_ref END, \
+                row_version = workflow_node_run.row_version + 1",
         )
         .bind(id)
         .bind(instance.id)
@@ -725,6 +751,11 @@ async fn commit_checkpoint(
         .bind(&nr.last_error)
         .bind(nr.started_at)
         .bind(nr.completed_at)
+        .bind(nr.round)
+        .bind(&payload.input)
+        .bind(&payload.output)
+        .bind(&payload.payload_ref)
+        .bind(payload.id.is_some())
         .execute(&mut *tx)
         .await
         .map_err(AppError::internal)?;
@@ -849,13 +880,56 @@ async fn load_instance(
     .map_err(AppError::internal)
 }
 
+/// M3-T1: one node run's input/output as the checkpoint writes it. `id` is
+/// set when this pass produced a pair to write (absent: keep the stored one).
+#[derive(Debug, Default)]
+struct StoredPayload {
+    id: Option<Uuid>,
+    input: Option<Value>,
+    output: Option<Value>,
+    payload_ref: Option<String>,
+}
+
+/// Inline when the pair is small, else an object-storage write keyed by the
+/// node run's id. A failed write keeps the pair out of the row (logged): the
+/// run itself is what matters, its recorded payload is for inspection.
+async fn store_payload(state: &EngineState, id: Uuid, nr: &NodeRunState) -> StoredPayload {
+    let pair = serde_json::json!({ "input": nr.input, "output": nr.output });
+    let bytes = serde_json::to_vec(&pair).unwrap_or_default();
+    if bytes.len() <= INLINE_PAYLOAD_MAX {
+        return StoredPayload {
+            id: Some(id),
+            input: nr.input.clone(),
+            output: nr.output.clone(),
+            payload_ref: None,
+        };
+    }
+    let key = format!("workflow/node-run/{id}.json");
+    match attome_storage::mirror::write_object(&state.base.storage, &key, bytes).await {
+        Ok(()) => StoredPayload {
+            id: Some(id),
+            input: None,
+            output: None,
+            payload_ref: Some(key),
+        },
+        Err(e) => {
+            tracing::warn!(node_run_id = %id, error = %e, "workflow node payload not stored");
+            StoredPayload {
+                id: Some(id),
+                ..StoredPayload::default()
+            }
+        }
+    }
+}
+
 async fn load_node_runs(
     db: &sqlx::PgPool,
     instance_id: Uuid,
 ) -> Result<HashMap<String, NodeRunState>, AppError> {
     let rows: Vec<NodeRunRow> = sqlx::query_as(
-        "SELECT id, node_id, status, output_hash, attempt_count, last_error, started_at, completed_at, row_version \
-         FROM workflow_node_run WHERE instance_id = $1",
+        "SELECT id, node_id, status, output_hash, attempt_count, last_error, started_at, completed_at, \
+                row_version, round \
+         FROM workflow_node_run WHERE instance_id = $1 ORDER BY round",
     )
     .bind(instance_id)
     .fetch_all(db)
@@ -877,6 +951,11 @@ async fn load_node_runs(
                     started_at: r.started_at,
                     completed_at: r.completed_at,
                     row_version: r.row_version,
+                    // The latest round wins the map entry (rows load in
+                    // round order).
+                    round: r.round,
+                    input: None,
+                    output: None,
                     dirty: false,
                 },
             )
@@ -895,6 +974,9 @@ pub(crate) fn new_node_run_state(node_id: &str) -> NodeRunState {
         started_at: None,
         completed_at: None,
         row_version: 0,
+        round: 0,
+        input: None,
+        output: None,
         dirty: false,
     }
 }
