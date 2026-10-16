@@ -54915,6 +54915,95 @@
         ]
       }
     },
+    "/api/v1/sales/undo/{snapshot_id}": {
+      "post": {
+        "tags": [
+          "sales"
+        ],
+        "operationId": "post_sales_undo",
+        "parameters": [
+          {
+            "name": "snapshot_id",
+            "in": "path",
+            "description": "The snapshot a deal discount or quote sync answered with",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The deal's lines are back as they were, repriced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesUndone"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the change's author, or caller may not update the deal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already undone, past 30 minutes, or the lines changed since",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
     "/api/v1/scan/find": {
       "get": {
         "tags": [
@@ -107764,6 +107853,14 @@
           "recurring_annual": {
             "type": "string"
           },
+          "snapshot_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "D6-T8: for a deal discount, the snapshot that undoes it\n(`POST /api/v1/sales/undo/{snapshot_id}`, 30 minutes)."
+          },
           "total_contract_value": {
             "type": "string"
           }
@@ -108122,6 +108219,14 @@
               "$ref": "#/components/schemas/SyncLine"
             }
           },
+          "snapshot_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "D6-T8: the snapshot that undoes the sync (30 minutes)."
+          },
           "status": {
             "type": "string",
             "description": "`synced`, `in_sync` or `sync_both_changed`."
@@ -108248,6 +108353,23 @@
               "string",
               "null"
             ],
+            "format": "uuid"
+          }
+        }
+      },
+      "SalesUndone": {
+        "type": "object",
+        "required": [
+          "opportunity_id",
+          "lines_restored"
+        ],
+        "properties": {
+          "lines_restored": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "opportunity_id": {
+            "type": "string",
             "format": "uuid"
           }
         }

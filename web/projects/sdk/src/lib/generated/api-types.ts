@@ -10628,6 +10628,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sales/undo/{snapshot_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_sales_undo"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/scan/find": {
         parameters: {
             query?: never;
@@ -28115,6 +28131,12 @@ export interface components {
             /** Format: uuid */
             opportunity_id: string;
             recurring_annual: string;
+            /**
+             * Format: uuid
+             * @description D6-T8: for a deal discount, the snapshot that undoes it
+             *     (`POST /api/v1/sales/undo/{snapshot_id}`, 30 minutes).
+             */
+            snapshot_id?: string | null;
             total_contract_value: string;
         };
         SalesOpportunityLine: {
@@ -28216,6 +28238,11 @@ export interface components {
             /** Format: uuid */
             opportunity_id: string;
             quote_lines?: components["schemas"]["SyncLine"][] | null;
+            /**
+             * Format: uuid
+             * @description D6-T8: the snapshot that undoes the sync (30 minutes).
+             */
+            snapshot_id?: string | null;
             /** @description `synced`, `in_sync` or `sync_both_changed`. */
             status: string;
         };
@@ -28261,6 +28288,11 @@ export interface components {
             access_level?: null | components["schemas"]["TeamAccess"];
             /** Format: uuid */
             team_role_ref?: string | null;
+        };
+        SalesUndone: {
+            lines_restored: number;
+            /** Format: uuid */
+            opportunity_id: string;
         };
         SbomResponse: {
             packs: components["schemas"]["InstalledPack"][];
@@ -67275,6 +67307,65 @@ export interface operations {
             };
             /** @description No such price list */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_sales_undo: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The snapshot a deal discount or quote sync answered with */
+                snapshot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal's lines are back as they were, repriced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesUndone"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not the change's author, or caller may not update the deal */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such snapshot */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already undone, past 30 minutes, or the lines changed since */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
