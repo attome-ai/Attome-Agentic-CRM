@@ -8717,6 +8717,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/commission/estimate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_estimate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/commission/periods/{id}/runs": {
         parameters: {
             query?: never;
@@ -8727,6 +8743,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["post_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_statements"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/commission/statements/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_my_statement"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -16026,6 +16074,51 @@ export interface components {
             /** Format: int64 */
             version_no: number;
         };
+        /** @description What one opportunity would pay if it closed now. */
+        CommissionEstimate: {
+            /** Format: uuid */
+            participant_id: string;
+            /** @description The opportunity's own payout across the plan's components. */
+            payout: string;
+            /**
+             * @description How the period's total changes with it (more than `payout` when it
+             *     lifts every credit into a higher retroactive band).
+             */
+            period_change: string;
+            /** Format: uuid */
+            period_id: string;
+        };
+        CommissionEstimateBody: {
+            /** Format: uuid */
+            opportunity_id: string;
+        };
+        CommissionRunBody: {
+            /** Format: uuid */
+            plan_version_id: string;
+        };
+        CommissionRunStarted: {
+            /** Format: uuid */
+            run_id: string;
+        };
+        /** @description One row of a statement. */
+        CommissionStatementRow: {
+            /** @description Absent when the caller may not see pay amounts. */
+            amount?: string | null;
+            /** Format: uuid */
+            component_id?: string | null;
+            /** Format: uuid */
+            credit_id?: string | null;
+            /** @description A line's explanation steps; an adjustment's reason. */
+            explanation?: unknown;
+            /** Format: uuid */
+            id: string;
+            /** @description `line`, `adjustment` or `clawback`. */
+            kind: string;
+            /** Format: uuid */
+            participant_id?: string | null;
+            /** Format: uuid */
+            run_id?: string | null;
+        };
         CommunicationResponse: {
             channel: string;
             /** Format: uuid */
@@ -22083,6 +22176,33 @@ export interface components {
                  */
                 last_indexed_at?: string | null;
                 name?: string | null;
+            }[];
+            /** Format: int64 */
+            page: number;
+            /** Format: int64 */
+            page_size: number;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @description The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page. */
+        PaginatedResponse_CommissionStatementRow: {
+            items: {
+                /** @description Absent when the caller may not see pay amounts. */
+                amount?: string | null;
+                /** Format: uuid */
+                component_id?: string | null;
+                /** Format: uuid */
+                credit_id?: string | null;
+                /** @description A line's explanation steps; an adjustment's reason. */
+                explanation?: unknown;
+                /** Format: uuid */
+                id: string;
+                /** @description `line`, `adjustment` or `clawback`. */
+                kind: string;
+                /** Format: uuid */
+                participant_id?: string | null;
+                /** Format: uuid */
+                run_id?: string | null;
             }[];
             /** Format: int64 */
             page: number;
@@ -28405,10 +28525,6 @@ export interface components {
             allowed_action_ids?: string[] | null;
             /** @description **Required.** `"read"` | `"reversible"` | `"consequential"`. */
             risk_ceiling: string;
-        };
-        StartRunBody: {
-            /** Format: uuid */
-            plan_version_id: string;
         };
         /** @description Body of `POST /api/v1/ai/conversations/{id}/runs` (N7-T1). */
         StartRunRequest: {
@@ -60131,6 +60247,57 @@ export interface operations {
             };
         };
     };
+    post_estimate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommissionEstimateBody"];
+            };
+        };
+        responses: {
+            /** @description What the opportunity would pay in the current period */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommissionEstimate"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks comp_statement_line.read, or the opportunity is not theirs */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such opportunity, no open period, or the caller is on no published plan */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     post_run: {
         parameters: {
             query?: never;
@@ -60143,7 +60310,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["StartRunBody"];
+                "application/json": components["schemas"]["CommissionRunBody"];
             };
         };
         responses: {
@@ -60153,7 +60320,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunStarted"];
+                    "application/json": components["schemas"]["CommissionRunStarted"];
                 };
             };
             /** @description Missing or invalid credentials */
@@ -60185,6 +60352,92 @@ export interface operations {
             };
             /** @description The period is approved or locked */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_statements: {
+        parameters: {
+            query: {
+                period_id: string;
+                /** @description Only this participant's rows. */
+                participant_id?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The statements the caller may read for the period: a manager's team, or everyone for sales ops and finance */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CommissionStatementRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks comp_statement_line.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_my_statement: {
+        parameters: {
+            query: {
+                period_id: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's statement for the period */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_CommissionStatementRow"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks comp_statement_line.read */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

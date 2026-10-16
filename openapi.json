@@ -45276,6 +45276,79 @@
         ]
       }
     },
+    "/api/v1/commission/estimate": {
+      "post": {
+        "tags": [
+          "commission"
+        ],
+        "operationId": "post_estimate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommissionEstimateBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "What the opportunity would pay in the current period",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommissionEstimate"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks comp_statement_line.read, or the opportunity is not theirs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such opportunity, no open period, or the caller is on no published plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit-exempt": {
+          "note": "read-only estimate",
+          "reason": "dry_run",
+          "via": null
+        }
+      }
+    },
     "/api/v1/commission/periods/{id}/runs": {
       "post": {
         "tags": [
@@ -45298,7 +45371,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/StartRunBody"
+                "$ref": "#/components/schemas/CommissionRunBody"
               }
             }
           },
@@ -45310,7 +45383,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunStarted"
+                  "$ref": "#/components/schemas/CommissionRunStarted"
                 }
               }
             }
@@ -45373,6 +45446,170 @@
           ],
           "policy": "entity_policy"
         }
+      }
+    },
+    "/api/v1/commission/statements": {
+      "get": {
+        "tags": [
+          "commission"
+        ],
+        "operationId": "get_statements",
+        "parameters": [
+          {
+            "name": "period_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "participant_id",
+            "in": "query",
+            "description": "Only this participant's rows.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The statements the caller may read for the period: a manager's team, or everyone for sales ops and finance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CommissionStatementRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks comp_statement_line.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/commission/statements/me": {
+      "get": {
+        "tags": [
+          "commission"
+        ],
+        "operationId": "get_my_statement",
+        "parameters": [
+          {
+            "name": "period_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's statement for the period",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_CommissionStatementRow"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks comp_statement_line.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
       }
     },
     "/api/v1/composite": {
@@ -74783,6 +75020,126 @@
           }
         }
       },
+      "CommissionEstimate": {
+        "type": "object",
+        "description": "What one opportunity would pay if it closed now.",
+        "required": [
+          "period_id",
+          "participant_id",
+          "payout",
+          "period_change"
+        ],
+        "properties": {
+          "participant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "payout": {
+            "type": "string",
+            "description": "The opportunity's own payout across the plan's components."
+          },
+          "period_change": {
+            "type": "string",
+            "description": "How the period's total changes with it (more than `payout` when it\nlifts every credit into a higher retroactive band)."
+          },
+          "period_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CommissionEstimateBody": {
+        "type": "object",
+        "required": [
+          "opportunity_id"
+        ],
+        "properties": {
+          "opportunity_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CommissionRunBody": {
+        "type": "object",
+        "required": [
+          "plan_version_id"
+        ],
+        "properties": {
+          "plan_version_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CommissionRunStarted": {
+        "type": "object",
+        "required": [
+          "run_id"
+        ],
+        "properties": {
+          "run_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CommissionStatementRow": {
+        "type": "object",
+        "description": "One row of a statement.",
+        "required": [
+          "id",
+          "kind"
+        ],
+        "properties": {
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Absent when the caller may not see pay amounts."
+          },
+          "component_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "credit_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "explanation": {
+            "description": "A line's explanation steps; an adjustment's reason."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "description": "`line`, `adjustment` or `clawback`."
+          },
+          "participant_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "run_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "CommunicationResponse": {
         "type": "object",
         "required": [
@@ -90038,6 +90395,89 @@
                     "string",
                     "null"
                   ]
+                }
+              }
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "page_size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PaginatedResponse_CommissionStatementRow": {
+        "type": "object",
+        "description": "The platform's canonical list envelope (guidelines §12). `total` is the size of the whole set, not of `items`. `page` echoes the page served; every offset list is one-based (D-793): page 1 is the first page.",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One row of a statement.",
+              "required": [
+                "id",
+                "kind"
+              ],
+              "properties": {
+                "amount": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Absent when the caller may not see pay amounts."
+                },
+                "component_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "credit_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "explanation": {
+                  "description": "A line's explanation steps; an adjustment's reason."
+                },
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "kind": {
+                  "type": "string",
+                  "description": "`line`, `adjustment` or `clawback`."
+                },
+                "participant_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "run_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
                 }
               }
             }
@@ -106678,18 +107118,6 @@
           }
         },
         "additionalProperties": false
-      },
-      "StartRunBody": {
-        "type": "object",
-        "required": [
-          "plan_version_id"
-        ],
-        "properties": {
-          "plan_version_id": {
-            "type": "string",
-            "format": "uuid"
-          }
-        }
       },
       "StartRunRequest": {
         "type": "object",
