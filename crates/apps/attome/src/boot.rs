@@ -1066,6 +1066,18 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-ai-bot-analytics-data",
     )
     .await?;
+    // AI4-T2, AI5-T1, AI6-T1, AK3-T2: the follow-up, collections, meeting and
+    // work-share definitions. The follow-up and meeting changesets seed draft
+    // `ai_agent` rows, so they run after `attome-ai-agent`; before the second
+    // `seed_all` below, which mints their entities' privileges.
+    for name in [
+        "attome-ai-followup",
+        "attome-ai-collections",
+        "attome-ai-meeting",
+        "attome-ai-work-share",
+    ] {
+        attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;
+    }
 
     // Not a duplicate of `.build()`'s own `seed_all` (CLEANUP-REVIEW 1.5
     // checked): `attome_report{,_schedule}`, the bot-analytics bundles and every

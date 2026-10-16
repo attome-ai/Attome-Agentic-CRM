@@ -282,6 +282,26 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
             "../../../../../changesets/platform/0048-attome-ai-bot-analytics-data.json"
         ),
     },
+    PlatformChangeset {
+        file: "0049-attome-ai-followup.json",
+        name: "attome-ai-followup",
+        json: include_str!("../../../../../changesets/platform/0049-attome-ai-followup.json"),
+    },
+    PlatformChangeset {
+        file: "0050-attome-ai-collections.json",
+        name: "attome-ai-collections",
+        json: include_str!("../../../../../changesets/platform/0050-attome-ai-collections.json"),
+    },
+    PlatformChangeset {
+        file: "0051-attome-ai-meeting.json",
+        name: "attome-ai-meeting",
+        json: include_str!("../../../../../changesets/platform/0051-attome-ai-meeting.json"),
+    },
+    PlatformChangeset {
+        file: "0052-attome-ai-work-share.json",
+        name: "attome-ai-work-share",
+        json: include_str!("../../../../../changesets/platform/0052-attome-ai-work-share.json"),
+    },
 ];
 
 #[cfg(test)]
