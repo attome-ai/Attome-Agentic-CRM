@@ -70,6 +70,14 @@ impl EngineModel for SalesModel {
                 post(crate::team_defaults::post_sales_copy_account_team),
             )
             .route(
+                "/api/v1/sales/opportunity-lines/{line_id}/schedule",
+                post(crate::schedules::post_sales_line_schedule),
+            )
+            .route(
+                "/api/v1/sales/opportunities/{id}/schedules/shift",
+                post(crate::schedules::post_sales_schedule_shift),
+            )
+            .route(
                 "/api/v1/sales/price-lists/{id}/products",
                 get(crate::catalogue::get_sales_price_list_products),
             )

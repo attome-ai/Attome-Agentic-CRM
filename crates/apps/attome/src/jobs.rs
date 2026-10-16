@@ -972,6 +972,14 @@ async fn dispatch_platform_job(
                 tracing::info!(added, "default team: members added to new deals");
             }
         }
+        EngineJob::SalesScheduleShift {
+            opportunity_id,
+            months,
+        } => {
+            let moved =
+                attome_sales::schedules::run_shift(&attome_state, opportunity_id, months).await?;
+            tracing::info!(%opportunity_id, months, moved, "sales schedule shift: complete");
+        }
         EngineJob::SalesDefaultTeamApply { owner_id } => {
             let added = attome_sales::team_defaults::run_apply(&attome_state, owner_id).await?;
             tracing::info!(%owner_id, added, "default team: applied to open deals");

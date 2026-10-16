@@ -307,6 +307,9 @@ pub enum EngineJob {
     /// D7-T3: adds an owner's default team to their open deals that miss a
     /// member, in batches. Enqueued by `POST /api/v1/sales/default-team/apply`.
     SalesDefaultTeamApply { owner_id: Uuid },
+    /// D6-T6: moves a large deal's schedule rows by whole months, after the
+    /// user agreed to it.
+    SalesScheduleShift { opportunity_id: Uuid, months: i32 },
     /// F10-T5: computes (or resumes) one commission calculation run,
     /// enqueued by `POST /api/v1/commission/periods/{id}/runs`. Pure
     /// pointer; the run's `cursor` makes a retry resume.
@@ -856,6 +859,7 @@ impl EngineJob {
             | Self::RunDataStep { .. }
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
+            | Self::SalesScheduleShift { .. }
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
             | Self::CascadeDeactivateDependents { .. }
@@ -986,6 +990,7 @@ impl EngineJob {
             EngineJob::WorkflowEntityTriggerDispatch => "WorkflowEntityTriggerDispatch",
             EngineJob::CrawlWebsite { .. } => "CrawlWebsite",
             EngineJob::SalesDefaultTeamApply { .. } => "SalesDefaultTeamApply",
+            EngineJob::SalesScheduleShift { .. } => "SalesScheduleShift",
             EngineJob::CommissionRun { .. } => "CommissionRun",
             EngineJob::CommissionRecalcPreview { .. } => "CommissionRecalcPreview",
             EngineJob::CascadeDeactivateDependents { .. } => "CascadeDeactivateDependents",
@@ -1161,6 +1166,7 @@ impl EngineJob {
             Self::RewrapSecrets { .. }
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
+            | Self::SalesScheduleShift { .. }
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
             | Self::FleetRolloutStep { .. } => JobPriority::Normal,
@@ -1296,6 +1302,7 @@ impl EngineJob {
             | Self::TimerFire { .. }
             | Self::CrawlWebsite { .. }
             | Self::SalesDefaultTeamApply { .. }
+            | Self::SalesScheduleShift { .. }
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
             | Self::CascadeDeactivateDependents { .. }
@@ -1600,6 +1607,10 @@ mod tests {
         assert_round_trips(EngineJob::CommissionCreditSweep);
         assert_round_trips(EngineJob::SalesDefaultTeamApply {
             owner_id: Uuid::now_v7(),
+        });
+        assert_round_trips(EngineJob::SalesScheduleShift {
+            opportunity_id: Uuid::now_v7(),
+            months: -2,
         });
         assert_round_trips(EngineJob::TimerFire {
             timer_id: Uuid::now_v7(),

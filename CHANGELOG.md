@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Revenue and quantity schedules: `POST /api/v1/sales/opportunity-lines/{line_id}/schedule` spreads a
+  line evenly, by a percentage pattern (totalling 100) or by hand (totalling the line);
+  `POST /api/v1/sales/opportunities/{id}/schedules/shift` moves a deal's rows by whole months when the
+  user agrees, by a job past 500 rows. Behind `sales.schedules`.
 - `GET /api/v1/sales/price-lists/{id}/products?q=&sku=&on=` lists the products a line can use on a
   date with their list price and quantity breaks, searched by name or SKU, filtered by the caller's
   product record rules.
