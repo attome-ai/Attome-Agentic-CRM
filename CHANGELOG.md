@@ -32,6 +32,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Packs: `privacy` (processing activities, DPIA, breaches), `internal-audit`, `bcm` (impact
+  analysis, plans, exercises) and `recruiting`.
 - Packs: `fulfilment`, `partner` and `workforce`; marketing campaigns and lists; sales opportunity
   lines and competitors with win-loss reviews.
 - Packs: `commission` (plans, credits, runs, payouts, masked amounts), `marketing` (deliverability

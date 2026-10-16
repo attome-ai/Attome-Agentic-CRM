@@ -64,3 +64,23 @@ schedules and shift assignments, preferences, swap requests and overtime offers,
 
 The marketing pack's `0002` adds campaigns with members and marketing lists with combinations.
 The sales pack's `0007` adds opportunity lines and schedules, `0008` competitors and win-loss reviews.
+
+## privacy
+
+Privacy programme (R5): a record of processing activities, impact assessments (DPIA) and personal
+data breaches with when they were found and the deadline to notify the regulator.
+
+## internal-audit
+
+Internal audit (R13): engagements, workpapers with evidence files, findings with rating, owner and
+due date, and follow-ups until a finding is verified closed.
+
+## bcm
+
+Business continuity (R15): business impact analysis per process (RTO, RPO, maximum tolerable
+downtime), continuity plans and exercises with achieved recovery times.
+
+## recruiting
+
+Recruiting (W7): requisitions, job postings, candidates (personal data), applications through
+stages, interviews with scorecards, and offers (salary masked).
