@@ -1,10 +1,10 @@
 {
   "author": "packs",
-  "checksum": "sha256:89f0b190c413e66e1cdb343879dfe81b943a2aa2bde670b2a94c664e64837841",
+  "checksum": "sha256:f6b9b32c9a2f2cf4675f6b0f856383c31790bb285b779891e2c4442819758ed8",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Deal teams and splits (D7-T1): team roles, opportunity team members, split types, splits and default team members, with seeded roles and split types. Quotes (D9-T1): number, version and primary flag, validity, terms, totals and a VAT estimate on the quote, discount and tax on its lines. Orders (D10-T1): order lines that mirror quote lines, totals, payment terms and delivery address. Quotas (D12-T1): a quota per person, position and period with its measure.",
   "format": "attome-changeset/v1",
-  "id": "01a143bf-e3bf-7b92-9d96-68150b29469c",
+  "id": "01a143c5-5ff5-742f-b0d7-c2527b0e1804",
   "layer": "product",
   "name": "sales-teams-quotes-orders-quotas",
   "opened_at": "2026-10-16T00:00:00Z",
@@ -12,6 +12,9 @@
     {
       "args": {
         "definition": {
+          "business_key": [
+            "name"
+          ],
           "category": "Other",
           "display_name": "Team Role",
           "is_append_only": false,
@@ -290,6 +293,9 @@
     {
       "args": {
         "definition": {
+          "business_key": [
+            "name"
+          ],
           "category": "Other",
           "display_name": "Split Type",
           "is_append_only": false,

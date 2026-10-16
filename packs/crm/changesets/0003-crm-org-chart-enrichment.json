@@ -1,10 +1,10 @@
 {
   "author": "packs",
-  "checksum": "sha256:e6f93e1f410c65c7aca8be680db1e0d9e0dda74178e77caed1c5c8740dd956a2",
+  "checksum": "sha256:0dc7a7a3310a400951c383796787f961687bc0375bfbfd25877b13de0995e394",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Org chart (D23-T2): reports-to, dotted line, department and former-employee fields on contact. Enrichment (D24-T2): legal names, CR and VAT numbers, ISIC industry, size and revenue bands, founding year, head office, logo, social links and technologies on account; department, seniority, email verification, mobile, city, country and LinkedIn on contact and lead. The ISIC code list entity with its 21 sections (D24-T3 seeds the full list). Lead qualification fields (D3-T1): budget, authority, need, timeline and disqualify reason.",
   "format": "attome-changeset/v1",
-  "id": "01a143c1-c0d1-7333-aa9f-2ebf23e758e3",
+  "id": "01a143c5-6196-73ff-afb6-a1dd59f57b47",
   "layer": "product",
   "name": "crm-org-chart-enrichment",
   "opened_at": "2026-10-16T00:00:00Z",
@@ -12,6 +12,9 @@
     {
       "args": {
         "definition": {
+          "business_key": [
+            "code"
+          ],
           "category": "Other",
           "display_name": "Industry Code",
           "is_append_only": false,

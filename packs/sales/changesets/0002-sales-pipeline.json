@@ -1,6 +1,6 @@
 {
   "author": "packs",
-  "checksum": "sha256:2a848d68ec90f7f4aa2af7a65cad724a022ef6cba512044a04b98953e5011b4e",
+  "checksum": "sha256:3b5767c4e25b92489fcb6701faea47be4824dbd137f28340bac994e68bf3b0d7",
   "closed_at": "2026-10-16T00:00:00Z",
   "description": "Sales pipelines (D5-T1): stages as records with order, default probability and a stalled limit per pipeline; probability, weighted amount, pipeline, won and lost reasons, main competitor and a close-date push counter on the opportunity; contact roles on deals.",
   "format": "attome-changeset/v1",
@@ -12,6 +12,10 @@
     {
       "args": {
         "definition": {
+          "business_key": [
+            "pipeline",
+            "stage"
+          ],
           "category": "Other",
           "display_name": "Opportunity Stage",
           "is_append_only": false,
