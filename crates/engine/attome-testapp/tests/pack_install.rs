@@ -232,3 +232,33 @@ fn the_commission_pack_installs_once_with_masked_amounts() {
         assert_eq!(roles, 4, "the four pay roles, once");
     });
 }
+
+/// D21-T10: the calling metric queries run against the installed dialer
+/// entities.
+#[test]
+fn the_calling_metric_queries_run() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        installs_once(&app, "crm", &["lead"]).await;
+        installs_once(&app, "sales", &["call_attempt", "call_list_member"]).await;
+        let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../../packs/sales/changesets/0013-sales-calling-metrics.json");
+        let doc: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&file).expect("read")).expect("json");
+        let mut ran = 0;
+        for op in doc["operations"].as_array().expect("operations") {
+            if op["op"] != "upsert_query" {
+                continue;
+            }
+            let sql = op["args"]["definition"]["sql"].as_str().expect("sql");
+            sqlx::query(sql)
+                .fetch_all(app.db())
+                .await
+                .unwrap_or_else(|e| panic!("{sql}: {e}"));
+            ran += 1;
+        }
+        assert_eq!(ran, 5, "the five calling metric queries");
+    });
+}
