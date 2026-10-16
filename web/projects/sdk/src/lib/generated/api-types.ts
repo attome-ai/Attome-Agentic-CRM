@@ -9396,6 +9396,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/marketing/events/{id}/check-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_marketing_check_in"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/events/{id}/registrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_marketing_registration"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/events/{id}/registrations/{registration_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["post_marketing_registration_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/lists/{id}/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_marketing_list_count"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/lists/{id}/explain/{person_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_marketing_list_explain"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/lists/{id}/members-as-of": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_marketing_list_members_as_of"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/marketing/lists/{id}/sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_marketing_list_sample"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mcp": {
         parameters: {
             query?: never;
@@ -15292,6 +15404,12 @@ export interface components {
         BulkEditSubmitted: {
             /**
              * Format: uuid
+             * @description B5-T3: set when the edit is above the approval count; it runs once
+             *     that approval is given, and `id` is empty until then.
+             */
+            approval_request_id?: string | null;
+            /**
+             * Format: uuid
              * @description The bulk operation applying the edit; follow it at
              *     `/api/v1/{entity}/bulk/{id}`. Empty when no record needed a change.
              */
@@ -19380,6 +19498,17 @@ export interface components {
             row_version: number;
             status: string;
         };
+        /** @description One step of why a person is in a list or not. */
+        ExplainStep: {
+            /** @description Whether the step's list holds the person. */
+            holds: boolean;
+            /** Format: uuid */
+            list_id: string;
+            /** @description Whether the person is in after this step. */
+            member_after: boolean;
+            /** @description `base` (the list's own query or members), then each combination. */
+            step: string;
+        };
         ExplainedFilter: {
             field: string;
             field_display_name?: string | null;
@@ -20907,6 +21036,72 @@ export interface components {
             name: string;
             status: components["schemas"]["PlanStatus"];
             version: string;
+        };
+        MarketingCancelled: {
+            /**
+             * Format: uuid
+             * @description The waiting registration that took the freed seat.
+             */
+            promoted?: string | null;
+            /** Format: uuid */
+            registration_id: string;
+        };
+        MarketingCheckInBody: {
+            /** @description The code on the ticket. */
+            ticket_code: string;
+        };
+        MarketingCheckedIn: {
+            attendee_name?: string | null;
+            /** @description False when the person had already been checked in. */
+            first_check_in: boolean;
+            /** Format: uuid */
+            registration_id: string;
+        };
+        MarketingListCount: {
+            /** @description `estimate` or `exact`. */
+            basis: string;
+            /** Format: int64 */
+            count: number;
+            /** Format: uuid */
+            list_id: string;
+            /**
+             * Format: int64
+             * @description People with active consent for the purpose, an email that is not
+             *     suppressed, and no marketing sunset.
+             */
+            reachable?: number | null;
+        };
+        MarketingListExplanation: {
+            /** Format: uuid */
+            list_id: string;
+            member: boolean;
+            /** Format: uuid */
+            person_id: string;
+            steps: components["schemas"]["ExplainStep"][];
+        };
+        MarketingListSample: {
+            /** Format: uuid */
+            list_id: string;
+            person_ids: string[];
+            target_entity: string;
+        };
+        MarketingRegistration: {
+            /** Format: uuid */
+            registration_id: string;
+            /** @description `registered` or `waitlisted`. */
+            status: string;
+            /** @description The ticket code the QR shows. */
+            ticket_code: string;
+        };
+        MarketingRegistrationBody: {
+            attendee_email?: string | null;
+            attendee_name: string;
+            /** Format: uuid */
+            contact_ref?: string | null;
+            /** Format: uuid */
+            lead_ref?: string | null;
+            /** @description `form`, `portal`, `import` or `staff` (default). */
+            source?: string | null;
         };
         /** @description One field of a match rule (`match_rule.fields`). */
         MatchField: {
@@ -63254,6 +63449,413 @@ export interface operations {
             };
         };
     };
+    post_marketing_check_in: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The event */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarketingCheckInBody"];
+            };
+        };
+        responses: {
+            /** @description Checked in (a repeat scan answers the same, not twice) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketingCheckedIn"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_event_registration.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No registration for this event has that code */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The registration is cancelled or still waiting */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_marketing_registration: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The event */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarketingRegistrationBody"];
+            };
+        };
+        responses: {
+            /** @description Registered, or waitlisted when the event is full */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketingRegistration"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_event_registration.create */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such event */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The event is closed, cancelled or done, or busy */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No attendee name */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_marketing_registration_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The event */
+                id: string;
+                /** @description The registration */
+                registration_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Cancelled; the first waiting person takes the seat */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketingCancelled"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_event_registration.update */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such registration for this event */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Already cancelled or attended, or the event is busy */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_marketing_list_count: {
+        parameters: {
+            query?: {
+                /** @description Evaluate the list instead of estimating. */
+                exact?: boolean;
+                /** @description Also count the people reachable for this consent purpose by email. */
+                purpose_key?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The marketing list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The list's size and, for a purpose, how many are reachable */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketingListCount"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_marketing_list_explain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The marketing list */
+                id: string;
+                /** @description The person */
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Which step put the person in or left them out */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketingListExplanation"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list, or a person the caller cannot read */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_marketing_list_members_as_of: {
+        parameters: {
+            query: {
+                at: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The marketing list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The people in the list at that time that the caller may read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedResponse_String"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_marketing_list_sample: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The marketing list */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Up to 20 people of the list the caller may read */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketingListSample"];
+                };
+            };
+            /** @description Missing or invalid credentials */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Caller lacks marketing_list.read */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description No such list */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     mcp_endpoint: {
         parameters: {
             query?: never;
@@ -73396,7 +73998,13 @@ export interface operations {
     };
     list_ancestors: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description The self-referencing lookup to walk; needed when the entity has more
+                 *     than one.
+                 */
+                field?: string;
+            };
             header?: never;
             path: {
                 entity: string;
@@ -73758,7 +74366,13 @@ export interface operations {
     };
     list_descendants: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description The self-referencing lookup to walk; needed when the entity has more
+                 *     than one.
+                 */
+                field?: string;
+            };
             header?: never;
             path: {
                 entity: string;

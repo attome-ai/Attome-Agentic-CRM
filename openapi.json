@@ -48479,6 +48479,648 @@
         ]
       }
     },
+    "/api/v1/marketing/events/{id}/check-in": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "operationId": "post_marketing_check_in",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketingCheckInBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Checked in (a repeat scan answers the same, not twice)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingCheckedIn"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_event_registration.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No registration for this event has that code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The registration is cancelled or still waiting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/marketing/events/{id}/registrations": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "operationId": "post_marketing_registration",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketingRegistrationBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Registered, or waitlisted when the event is full",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingRegistration"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_event_registration.create",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The event is closed, cancelled or done, or busy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No attendee name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "create"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/marketing/events/{id}/registrations/{registration_id}/cancel": {
+      "post": {
+        "tags": [
+          "marketing"
+        ],
+        "operationId": "post_marketing_registration_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The event",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "registration_id",
+            "in": "path",
+            "description": "The registration",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled; the first waiting person takes the seat",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingCancelled"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_event_registration.update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such registration for this event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already cancelled or attended, or the event is busy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ],
+        "x-audit": {
+          "events": [
+            {
+              "category": "business_event",
+              "operation": "update"
+            }
+          ],
+          "policy": "entity_policy"
+        }
+      }
+    },
+    "/api/v1/marketing/lists/{id}/count": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "operationId": "get_marketing_list_count",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "exact",
+            "in": "query",
+            "description": "Evaluate the list instead of estimating.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "purpose_key",
+            "in": "query",
+            "description": "Also count the people reachable for this consent purpose by email.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The list's size and, for a purpose, how many are reachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingListCount"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/marketing/lists/{id}/explain/{person_id}": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "operationId": "get_marketing_list_explain",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "person_id",
+            "in": "path",
+            "description": "The person",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Which step put the person in or left them out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingListExplanation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list, or a person the caller cannot read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/marketing/lists/{id}/members-as-of": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "operationId": "get_marketing_list_members_as_of",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "at",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The people in the list at that time that the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse_String"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
+    "/api/v1/marketing/lists/{id}/sample": {
+      "get": {
+        "tags": [
+          "marketing"
+        ],
+        "operationId": "get_marketing_list_sample",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The marketing list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Up to 20 people of the list the caller may read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketingListSample"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks marketing_list.read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session_cookie": []
+          },
+          {
+            "api_key": []
+          }
+        ]
+      }
+    },
     "/api/v1/mcp": {
       "post": {
         "tags": [
@@ -64145,6 +64787,15 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "field",
+            "in": "query",
+            "description": "The self-referencing lookup to walk; needed when the entity has more\nthan one.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -64745,6 +65396,15 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "field",
+            "in": "query",
+            "description": "The self-referencing lookup to walk; needed when the entity has more\nthan one.",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -74957,6 +75617,14 @@
           "undo"
         ],
         "properties": {
+          "approval_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "B5-T3: set when the edit is above the approval count; it runs once\nthat approval is given, and `id` is empty until then."
+          },
           "id": {
             "type": [
               "string",
@@ -85043,6 +85711,34 @@
           }
         }
       },
+      "ExplainStep": {
+        "type": "object",
+        "description": "One step of why a person is in a list or not.",
+        "required": [
+          "step",
+          "list_id",
+          "holds",
+          "member_after"
+        ],
+        "properties": {
+          "holds": {
+            "type": "boolean",
+            "description": "Whether the step's list holds the person."
+          },
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "member_after": {
+            "type": "boolean",
+            "description": "Whether the person is in after this step."
+          },
+          "step": {
+            "type": "string",
+            "description": "`base` (the list's own query or members), then each combination."
+          }
+        }
+      },
       "ExplainedFilter": {
         "type": "object",
         "required": [
@@ -88836,6 +89532,203 @@
           },
           "version": {
             "type": "string"
+          }
+        }
+      },
+      "MarketingCancelled": {
+        "type": "object",
+        "required": [
+          "registration_id"
+        ],
+        "properties": {
+          "promoted": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The waiting registration that took the freed seat."
+          },
+          "registration_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "MarketingCheckInBody": {
+        "type": "object",
+        "required": [
+          "ticket_code"
+        ],
+        "properties": {
+          "ticket_code": {
+            "type": "string",
+            "description": "The code on the ticket."
+          }
+        }
+      },
+      "MarketingCheckedIn": {
+        "type": "object",
+        "required": [
+          "registration_id",
+          "first_check_in"
+        ],
+        "properties": {
+          "attendee_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "first_check_in": {
+            "type": "boolean",
+            "description": "False when the person had already been checked in."
+          },
+          "registration_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "MarketingListCount": {
+        "type": "object",
+        "required": [
+          "list_id",
+          "count",
+          "basis"
+        ],
+        "properties": {
+          "basis": {
+            "type": "string",
+            "description": "`estimate` or `exact`."
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reachable": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "People with active consent for the purpose, an email that is not\nsuppressed, and no marketing sunset."
+          }
+        }
+      },
+      "MarketingListExplanation": {
+        "type": "object",
+        "required": [
+          "list_id",
+          "person_id",
+          "member",
+          "steps"
+        ],
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "member": {
+            "type": "boolean"
+          },
+          "person_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExplainStep"
+            }
+          }
+        }
+      },
+      "MarketingListSample": {
+        "type": "object",
+        "required": [
+          "list_id",
+          "target_entity",
+          "person_ids"
+        ],
+        "properties": {
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "person_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "target_entity": {
+            "type": "string"
+          }
+        }
+      },
+      "MarketingRegistration": {
+        "type": "object",
+        "required": [
+          "registration_id",
+          "status",
+          "ticket_code"
+        ],
+        "properties": {
+          "registration_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "description": "`registered` or `waitlisted`."
+          },
+          "ticket_code": {
+            "type": "string",
+            "description": "The ticket code the QR shows."
+          }
+        }
+      },
+      "MarketingRegistrationBody": {
+        "type": "object",
+        "required": [
+          "attendee_name"
+        ],
+        "properties": {
+          "attendee_email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "attendee_name": {
+            "type": "string"
+          },
+          "contact_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "lead_ref": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`form`, `portal`, `import` or `staff` (default)."
           }
         }
       },
