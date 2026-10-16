@@ -101,6 +101,18 @@
       "op": ">",
       "value": 0,
       "for_minutes": 0
+    },
+    {
+      "name": "ChangeFeedConsumerLagging",
+      "severity": "warning",
+      "summary": "A change-feed consumer is more than 5 minutes behind",
+      "runbook": "observability/RUNBOOK.md#changefeedconsumerlagging",
+      "kind": "threshold",
+      "metric": "change_feed_consumer_lag_seconds",
+      "aggregate": "max",
+      "op": ">",
+      "value": 300,
+      "for_minutes": 0
     }
   ]
 }

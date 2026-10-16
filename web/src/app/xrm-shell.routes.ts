@@ -435,6 +435,12 @@ export const xrmShellRoutes: Routes = [
             loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.SloComponent),
           },
           {
+            // Y7-T6: change-feed consumers and how far behind each is.
+            path: 'events-monitor',
+            canActivate: [authGuard],
+            loadComponent: () => import('@attome/xrm/core/admin/modules').then(m => m.EventsMonitorComponent),
+          },
+          {
             // A30-T3: this deployment's environment variable values.
             path: 'env-variables',
             canActivate: [authGuard],

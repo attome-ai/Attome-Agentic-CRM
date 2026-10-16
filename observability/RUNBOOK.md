@@ -248,6 +248,16 @@ replay cannot tell a wait pending at the change from a later one, so handle a st
 instance. A replay that still fails keeps it and is audited as failed. Discard one you have handled another way with
 `DELETE /api/v1/workflow/trigger-dead-letters/{event_id}`. Both are audited.
 
+### ChangeFeedConsumerLagging
+
+A change-feed consumer (a workflow trigger dispatcher, the search indexer, a webhook subscription)
+has an unread event older than 5 minutes. `GET /api/v1/admin/change-feed/consumers` (the Events
+monitor screen) shows which one, its lag in events and seconds, and when it last read. An internal
+consumer that stopped reading usually means its job is failing: look for its job in the
+dead-letter list and its errors in the logs. A consumer that missed work it should redo can be
+rewound with `POST /api/v1/admin/change-feed/consumers/{name}/rewind`; it skips events it already
+applied.
+
 ## Object storage and files
 
 ### ObjectStorageDown

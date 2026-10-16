@@ -28,6 +28,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Events monitor (`/admin/events-monitor`): every change-feed consumer with unread events, how far
+  behind it is and when it last read; the built-in `ChangeFeedConsumerLagging` alert fires past
+  five minutes.
 - `POST /api/v1/admin/change-feed/consumers/{name}/rewind` moves a change-feed consumer back to a
   sequence number or a time within retention (audited); consumers record applied events
   (`change_consumer_applied`) so a re-read event is never applied twice.

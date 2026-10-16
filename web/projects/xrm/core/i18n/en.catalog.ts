@@ -211,6 +211,14 @@ export const xrmEn = {
       email: 'Email', models: 'AI models', other: 'Other',
     },
   },
+  eventsMonitor: {
+    title: 'Events monitor',
+    intro: 'Every reader of the change feed: how many events it has not read yet, how old the oldest is, and when it last read. One more than five minutes behind raises an alert.',
+    consumer: 'Consumer', kind: 'Kind', status: 'Status', lagEvents: 'Unread events', lagTime: 'Behind by',
+    lastRead: 'Last read (UTC)', empty: 'No consumers yet.',
+    kinds: { internal: 'Platform', external: 'Subscription' },
+    statuses: { active: 'Keeping up', behind: 'Behind', expired: 'Expired' },
+  },
   sloPage: {
     title: 'Service levels',
     intro: 'Each service-level class over the last 30 days: the share of its error budget left and its latency targets. Set this deployment’s own targets within half to three times the reference.',

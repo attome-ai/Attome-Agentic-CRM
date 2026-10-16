@@ -16,3 +16,4 @@ export { DeploysComponent } from './deploys/deploys.component';
 export { LabelWorkbenchComponent } from './label-workbench/label-workbench.component';
 export { EnvVariablesComponent } from './env-variables/env-variables.component';
 export { SloComponent } from './slo/slo.component';
+export { EventsMonitorComponent } from './events-monitor/events-monitor.component';
