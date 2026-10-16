@@ -1008,6 +1008,10 @@ async fn dispatch_platform_job(
                 tracing::info!(added, "default team: members added to new deals");
             }
         }
+        EngineJob::AiFollowupRuleRun { rule_id } => {
+            let found = attome_ai::followup_routes::run_rule(&attome_state, rule_id).await?;
+            tracing::info!(%rule_id, found, "follow-up rule run: complete");
+        }
         EngineJob::SalesCallOutcomeRules { attempt_id } => {
             attome_sales::dialer::outcome::apply_rules(&attome_state, attempt_id).await?;
         }

@@ -108,6 +108,8 @@ impl EngineModel for ActionModel {
             // identical middleware stack and MODULE_AI licence gate as every
             // other action route.
             .merge(crate::conversation_routes::routes())
+            // AI4-T6 — follow-ups.
+            .merge(crate::followup_routes::routes())
             // C10-B — the chatbot analytics report, admin-gated.
             .merge(crate::analytics::routes())
             // C11 B5 — the runtime AI switch, admin-gated and audited.

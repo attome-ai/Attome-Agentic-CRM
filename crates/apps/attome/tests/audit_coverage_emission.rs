@@ -1701,6 +1701,25 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             request("DELETE", "/api/v1/admin/slo/targets/S2", t, None)
         }
 
+        // ── follow-up rules (AI4-T6) ────────────────────────────────────────
+        "POST /api/v1/admin/ai/follow-up-rules/{id}/run" => {
+            let id = Uuid::now_v7();
+            sqlx::query(
+                "INSERT INTO ai_followup_rule (id, name, reason, target_entity, idle_days, is_active) \
+                 VALUES ($1, 'Emission rule', 'overdue_task', 'activity', 3, true)",
+            )
+            .bind(id)
+            .execute(&fx.base.db)
+            .await
+            .expect("insert follow-up rule");
+            request(
+                "POST",
+                &format!("/api/v1/admin/ai/follow-up-rules/{id}/run"),
+                t,
+                None,
+            )
+        }
+
         // ── metrics (D-786) ─────────────────────────────────────────────────
         "POST /api/v1/metrics/{id}/compute" => {
             let id = query_metric(fx).await;

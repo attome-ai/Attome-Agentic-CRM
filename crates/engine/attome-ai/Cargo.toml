@@ -21,6 +21,7 @@ attome-core.workspace         = true
 attome-db.workspace           = true
 attome-field.workspace        = true
 attome-inference.workspace    = true
+attome-jobs.workspace         = true
 attome-metadata.workspace     = true
 attome-model.workspace        = true
 attome-modules.workspace      = true
@@ -48,7 +49,6 @@ utoipa.workspace              = true
 uuid.workspace                = true
 
 [dev-dependencies]
-attome-jobs.workspace     = true
 attome-project.workspace  = true
 attome-service.workspace  = true
 attome-storage.workspace  = true

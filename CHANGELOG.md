@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Follow-up routes: `GET /api/v1/ai/follow-ups` (the caller's open follow-ups),
+  `POST /api/v1/ai/follow-ups/{id}/dismiss` (`If-Match`, owner only) and
+  `POST /api/v1/admin/ai/follow-up-rules/{id}/run` (queues one rule's scan, audited as configuration).
 - Event registration: `POST /api/v1/marketing/events/{id}/registrations` registers up to capacity and
   waitlists the rest with a random ticket code for the QR; `.../registrations/{registration_id}/cancel`
   gives the freed seat to the first waiting person; `POST .../check-in {ticket_code}` checks a person in

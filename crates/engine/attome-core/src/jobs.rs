@@ -313,6 +313,8 @@ pub enum EngineJob {
     /// D21-T5: applies a call list's outcome rules for one saved attempt,
     /// after the attempt committed.
     SalesCallOutcomeRules { attempt_id: Uuid },
+    /// AI4-T6: one follow-up rule's scan, queued by hand.
+    AiFollowupRuleRun { rule_id: Uuid },
     /// F10-T5: computes (or resumes) one commission calculation run,
     /// enqueued by `POST /api/v1/commission/periods/{id}/runs`. Pure
     /// pointer; the run's `cursor` makes a retry resume.
@@ -875,6 +877,7 @@ impl EngineJob {
             | Self::SalesDefaultTeamApply { .. }
             | Self::SalesScheduleShift { .. }
             | Self::SalesCallOutcomeRules { .. }
+            | Self::AiFollowupRuleRun { .. }
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
             | Self::CascadeDeactivateDependents { .. }
@@ -1011,6 +1014,7 @@ impl EngineJob {
             EngineJob::SalesDefaultTeamApply { .. } => "SalesDefaultTeamApply",
             EngineJob::SalesScheduleShift { .. } => "SalesScheduleShift",
             EngineJob::SalesCallOutcomeRules { .. } => "SalesCallOutcomeRules",
+            EngineJob::AiFollowupRuleRun { .. } => "AiFollowupRuleRun",
             EngineJob::CommissionRun { .. } => "CommissionRun",
             EngineJob::CommissionRecalcPreview { .. } => "CommissionRecalcPreview",
             EngineJob::CascadeDeactivateDependents { .. } => "CascadeDeactivateDependents",
@@ -1196,6 +1200,7 @@ impl EngineJob {
             | Self::SalesDefaultTeamApply { .. }
             | Self::SalesScheduleShift { .. }
             | Self::SalesCallOutcomeRules { .. }
+            | Self::AiFollowupRuleRun { .. }
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
             | Self::FleetRolloutStep { .. } => JobPriority::Normal,
@@ -1337,6 +1342,7 @@ impl EngineJob {
             | Self::SalesDefaultTeamApply { .. }
             | Self::SalesScheduleShift { .. }
             | Self::SalesCallOutcomeRules { .. }
+            | Self::AiFollowupRuleRun { .. }
             | Self::CommissionRun { .. }
             | Self::CommissionRecalcPreview { .. }
             | Self::CascadeDeactivateDependents { .. }
@@ -1645,6 +1651,9 @@ mod tests {
         assert_round_trips(EngineJob::AiFollowupScan);
         assert_round_trips(EngineJob::SalesDefaultTeamApply {
             owner_id: Uuid::now_v7(),
+        });
+        assert_round_trips(EngineJob::AiFollowupRuleRun {
+            rule_id: Uuid::now_v7(),
         });
         assert_round_trips(EngineJob::SalesCallOutcomeRules {
             attempt_id: Uuid::now_v7(),

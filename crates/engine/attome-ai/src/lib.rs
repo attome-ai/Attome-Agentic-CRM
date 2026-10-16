@@ -95,6 +95,7 @@ pub mod execute;
 /// C10-B — thumbs feedback on a turn's answer.
 pub mod feedback;
 pub mod followup;
+pub mod followup_routes;
 pub mod gate;
 /// BIN-FX1 — the pooled generation client, built once per config.
 pub mod inference_client;
@@ -206,6 +207,8 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(write_policy::openapi_fragment());
     doc.merge(evidence::openapi_fragment());
     doc.merge(mcp_client::openapi_fragment());
+    // AI4-T6 — `/ai/follow-ups…` and the rule run route.
+    doc.merge(followup_routes::openapi_fragment());
     doc
 }
 
