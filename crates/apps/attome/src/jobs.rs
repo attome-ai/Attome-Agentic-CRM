@@ -954,6 +954,7 @@ async fn dispatch_platform_job(
                 reminders = run.reminders,
                 escalations = run.escalations,
                 rolled_forward = run.rolled_forward,
+                amendments = run.amendments_applied,
                 "contract key dates: run finished"
             );
         }

@@ -79,8 +79,10 @@ fn key_dates_run_once_per_night() {
             .id;
         let today = day(6, 1);
 
-        // Ends 30 June with 10 days' notice: the deadline is 20 June, and
-        // the renewal task opens 30 days before it.
+        // Ends 30 June with 10 days' notice; an approved amendment
+        // (W1-T11) effective last week moves the end to 10 July, so the
+        // deadline is 30 June and the renewal task opens 30 days before it.
+        // A second amendment, effective next month, waits.
         let contract: Uuid = sqlx::query_scalar(
             "INSERT INTO contract (title, status, end_date, notice_period_days, owner_ref) \
              VALUES ('Key dates test', 'active', $1, 10, $2) RETURNING id",
@@ -121,10 +123,30 @@ fn key_dates_run_once_per_night() {
         )
         .await;
 
+        for (effective, terms) in [
+            (day(5, 25), r#"{"end_date":"2026-07-10","payment_days":45}"#),
+            (day(7, 1), r#"{"payment_days":60}"#),
+        ] {
+            sqlx::query(
+                "INSERT INTO amendment (title, contract_ref, effective_date, changed_terms, status) \
+                 VALUES ('Extension', $1, $2, $3, 'approved')",
+            )
+            .bind(contract)
+            .bind(effective)
+            .bind(terms)
+            .execute(app.db())
+            .await
+            .expect("insert amendment");
+        }
+
         let cfg = &app.state.base.config.notification;
         let first = dates::run(app.db(), cfg, KeyDateSettings::default(), today)
             .await
             .expect("first run");
+        assert_eq!(
+            first.amendments_applied, 1,
+            "only the amendment already in effect"
+        );
         assert!(first.deadlines_written >= 1);
         assert_eq!(first.renewal_tasks, 1, "renewal_task_created_once");
         assert!(first.reminders >= 1, "obligation_reminded_once");
@@ -145,7 +167,21 @@ fn key_dates_run_once_per_night() {
                 .fetch_one(app.db())
                 .await
                 .expect("read deadline");
-        assert_eq!(deadline, Some(day(6, 20)));
+        assert_eq!(
+            deadline,
+            Some(day(6, 30)),
+            "10 days before the amended end date"
+        );
+        let (terms, end): (Option<String>, Option<NaiveDate>) =
+            sqlx::query_as("SELECT current_terms, end_date::date FROM contract WHERE id = $1")
+                .bind(contract)
+                .fetch_one(app.db())
+                .await
+                .expect("read terms");
+        assert_eq!(end, Some(day(7, 10)));
+        let terms: serde_json::Value =
+            serde_json::from_str(terms.as_deref().unwrap_or("{}")).expect("terms JSON");
+        assert_eq!(terms["payment_days"], 45);
         let tasks: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM activity WHERE entity_name = 'contract' AND record_id = $1 \
              AND activity_type = 'task' AND subject = $2",

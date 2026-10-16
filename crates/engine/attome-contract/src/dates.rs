@@ -132,6 +132,8 @@ pub struct KeyDateRun {
     pub reminders: u64,
     pub escalations: u64,
     pub rolled_forward: u64,
+    /// Approved amendments that took effect (W1-T11).
+    pub amendments_applied: u64,
 }
 
 /// Runs every step for `today`.
@@ -151,6 +153,8 @@ pub async fn run(
     if !installed {
         return Ok(out);
     }
+    // Today's amendments first, so deadlines follow the terms in force.
+    apply_amendments(db, today, &mut out).await?;
     contracts(db, settings, today, &mut out).await?;
     remind(db, notification, settings, today, &mut out).await?;
     escalate(db, notification, today, &mut out).await?;
@@ -446,6 +450,123 @@ async fn roll_forward(db: &DbPool, out: &mut KeyDateRun) -> Result<(), AppError>
         }
     }
     Ok(())
+}
+
+type DueAmendment = (Uuid, Uuid, NaiveDate, Option<String>);
+
+/// W1-T11: approved amendments whose effective date has come are folded
+/// over their contract's current terms (in effective-date order, then
+/// creation order) and marked `effective`, one contract per transaction.
+/// The amendment rows are the history; only `current_terms` and, when an
+/// amendment changes it, `end_date` are rewritten. The status change makes
+/// a second run apply nothing.
+async fn apply_amendments(
+    db: &DbPool,
+    today: NaiveDate,
+    out: &mut KeyDateRun,
+) -> Result<(), AppError> {
+    let installed: bool = sqlx::query_scalar("SELECT to_regclass('amendment') IS NOT NULL")
+        .fetch_one(db)
+        .await
+        .map_err(AppError::internal)?;
+    if !installed {
+        return Ok(());
+    }
+    loop {
+        let due: Vec<DueAmendment> = sqlx::query_as(
+            "SELECT id, contract_ref, effective_date::date, changed_terms FROM amendment \
+             WHERE (is_active IS NULL OR is_active = true) AND status = 'approved' \
+               AND contract_ref IS NOT NULL AND effective_date::date <= $1 \
+             ORDER BY contract_ref, effective_date, created_at, id LIMIT $2",
+        )
+        .bind(today)
+        .bind(BATCH)
+        .fetch_all(db)
+        .await
+        .map_err(AppError::internal)?;
+        if due.is_empty() {
+            break;
+        }
+        let full = due.len() as i64 == BATCH;
+        let mut contracts: Vec<Uuid> = due.iter().map(|d| d.1).collect();
+        contracts.dedup();
+        for contract in contracts {
+            let mine: Vec<&DueAmendment> = due.iter().filter(|d| d.1 == contract).collect();
+            out.amendments_applied += apply_to_contract(db, contract, &mine).await?;
+        }
+        if !full {
+            break;
+        }
+    }
+    Ok(())
+}
+
+async fn apply_to_contract(
+    db: &DbPool,
+    contract: Uuid,
+    due: &[&DueAmendment],
+) -> Result<u64, AppError> {
+    let mut tx = attome_db::tx::begin(db).await?;
+    let row: Option<(Option<String>, Option<NaiveDate>)> = sqlx::query_as(
+        "SELECT current_terms, end_date::date FROM contract WHERE id = $1 FOR UPDATE",
+    )
+    .bind(contract)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    let Some((terms_text, end_date)) = row else {
+        return Ok(0);
+    };
+    let base: serde_json::Map<String, serde_json::Value> = terms_text
+        .as_deref()
+        .and_then(|t| serde_json::from_str(t).ok())
+        .unwrap_or_default();
+    let amendments: Vec<crate::amendment::Amendment> = due
+        .iter()
+        .enumerate()
+        .map(
+            |(i, (_, _, effective_date, changed))| crate::amendment::Amendment {
+                effective_date: *effective_date,
+                sequence: u32::try_from(i).unwrap_or(u32::MAX),
+                changed_terms: changed
+                    .as_deref()
+                    .and_then(|t| serde_json::from_str(t).ok())
+                    .unwrap_or_default(),
+            },
+        )
+        .collect();
+    let today = amendments
+        .iter()
+        .map(|a| a.effective_date)
+        .max()
+        .unwrap_or(NaiveDate::MIN);
+    let terms = crate::amendment::current_terms(&base, &amendments, today);
+    let new_end = crate::amendment::current_end_date(&terms, end_date);
+    let ids: Vec<Uuid> = due.iter().map(|d| d.0).collect();
+    let marked = sqlx::query(
+        "UPDATE amendment SET status = 'effective', modified_at = now(), \
+         row_version = row_version + 1 WHERE id = ANY($1) AND status = 'approved'",
+    )
+    .bind(&ids)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?
+    .rows_affected();
+    if marked == 0 {
+        return Ok(0);
+    }
+    sqlx::query(
+        "UPDATE contract SET current_terms = $2, end_date = $3, modified_at = now(), \
+         row_version = row_version + 1 WHERE id = $1",
+    )
+    .bind(contract)
+    .bind(serde_json::Value::Object(terms).to_string())
+    .bind(new_end)
+    .execute(&mut *tx)
+    .await
+    .map_err(AppError::internal)?;
+    tx.commit().await.map_err(AppError::internal)?;
+    Ok(marked)
 }
 
 /// Sends one in-app notification; a failure is logged, never fatal, since
