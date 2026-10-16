@@ -23,6 +23,7 @@ pub mod orgchart;
 pub mod owner_change;
 pub mod price_resolution;
 pub mod pricing;
+pub mod quote_sync;
 pub mod schedules;
 pub mod scoring;
 pub mod scoring_run;
@@ -48,5 +49,6 @@ pub fn openapi() -> utoipa::openapi::OpenApi {
     doc.merge(<opportunity_lines::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<catalogue::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc.merge(<schedules::ApiDocFragment as utoipa::OpenApi>::openapi());
+    doc.merge(<quote_sync::ApiDocFragment as utoipa::OpenApi>::openapi());
     doc
 }

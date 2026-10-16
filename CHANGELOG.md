@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/sales/opportunities/{id}/sync {direction: from_quote, force}` replaces a deal's lines
+  with copies of its primary quote's and reprices it; when both changed since the last sync it answers
+  `409 sync_both_changed` with both line sets. `to_quote` is refused (quotes change through CPQ).
+  Behind `sales.quote_sync`.
 - Agent actions `sales.opportunity_line.add`, `.update` and `.remove` (confirmed writes through the line
   routes' own functions: priced, locked and version-checked) and `sales.products.suggest` (products
   most often won together with the deal's, as a draft).

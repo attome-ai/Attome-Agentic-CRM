@@ -92,6 +92,10 @@ impl EngineModel for SalesModel {
                     .delete(crate::opportunity_lines::delete_sales_line),
             )
             .route(
+                "/api/v1/sales/opportunities/{id}/sync",
+                post(crate::quote_sync::post_sales_quote_sync),
+            )
+            .route(
                 "/api/v1/sales/opportunities/{id}/deal-discount",
                 post(crate::opportunity_lines::post_sales_deal_discount),
             )
