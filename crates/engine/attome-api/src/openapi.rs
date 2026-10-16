@@ -36,6 +36,7 @@ pub fn openapi_document() -> utoipa::openapi::OpenApi {
         crate::live::openapi_fragment(),
         crate::calendar_admin::openapi_fragment(),
         crate::app_admin::openapi_fragment(),
+        crate::slo_admin::openapi_fragment(),
         crate::metadata_label_admin::openapi_fragment(),
         crate::bundle::routes::openapi_fragment(),
         crate::bundle::break_glass::openapi_fragment(),

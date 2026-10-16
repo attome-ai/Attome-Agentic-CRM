@@ -1627,6 +1627,30 @@ async fn drive(fx: &Fx, key: &str) -> Option<(Request<Body>, Option<StatusCode>)
             request("DELETE", "/api/v1/admin/profiler/stats", t, None)
         }
 
+        // ── SLO targets (AA13-T8) ───────────────────────────────────────────
+        "PUT /api/v1/admin/slo/targets/{class_id}" => {
+            sqlx::query("DELETE FROM ops_slo_target_override WHERE class_id = 'S1'")
+                .execute(&fx.base.db)
+                .await
+                .expect("clear S1 override");
+            request(
+                "PUT",
+                "/api/v1/admin/slo/targets/S1",
+                t,
+                Some(json!({"p95_ms": 40, "p99_ms": 90})),
+            )
+        }
+        "DELETE /api/v1/admin/slo/targets/{class_id}" => {
+            sqlx::query(
+                "INSERT INTO ops_slo_target_override (class_id, p95_ms, p99_ms, updated_by) VALUES ('S2', 400, 700, $1) ON CONFLICT (class_id) DO NOTHING",
+            )
+            .bind(Uuid::nil())
+            .execute(&fx.base.db)
+            .await
+            .expect("seed S2 override");
+            request("DELETE", "/api/v1/admin/slo/targets/S2", t, None)
+        }
+
         // ── metrics (D-786) ─────────────────────────────────────────────────
         "POST /api/v1/metrics/{id}/compute" => {
             let id = query_metric(fx).await;

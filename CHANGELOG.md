@@ -25,6 +25,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `GET /api/v1/admin/slo`: every SLO class with its status and 30-day error budget, computed by the
+  server from its built-in metrics store (no Prometheus needed), its reference latency targets and
+  any target the deployment set. `PUT /api/v1/admin/slo/targets/{class_id}` sets the deployment's own
+  p95/p99 within half to three times the reference (row-version checked); `DELETE` goes back to the
+  reference. Both audited (migration `0066`).
 - Email test mode: `email.test_mode_catch_all` sends every email to one address instead of its
   recipients (an `X-Attome-Original-To` header names them), so a development or copied deployment
   never mails a real person; the server warns at boot while it is on.

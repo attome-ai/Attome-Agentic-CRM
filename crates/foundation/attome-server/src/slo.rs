@@ -46,6 +46,30 @@ pub struct SloClass {
     pub matcher: serde_json::Value,
     #[serde(default)]
     pub error_objective: Option<f64>,
+    /// Reference latency targets per deployment profile (`solo`, `team`,
+    /// `ha`, `scale`).
+    #[serde(default)]
+    pub targets: Option<HashMap<String, Targets>>,
+}
+
+impl SloClass {
+    /// The reference targets for `profile`, when the class has latency
+    /// targets.
+    pub fn targets_for(&self, profile: &str) -> Option<Targets> {
+        self.targets.as_ref()?.get(profile).copied()
+    }
+}
+
+/// One profile's latency targets for a class (absent where the catalogue
+/// sets none).
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq)]
+pub struct Targets {
+    #[serde(default)]
+    pub p50_ms: Option<f64>,
+    #[serde(default)]
+    pub p95_ms: Option<f64>,
+    #[serde(default)]
+    pub p99_ms: Option<f64>,
 }
 
 impl SloClass {

@@ -51,6 +51,8 @@ mod changes_admin;
 /// translation, the JCS checksum and the review summary. `pub` for the same
 /// reason `bundle` is: the apply engine and `crates/server` consume it.
 pub mod changeset;
+/// AA13-T8 — `/api/v1/admin/slo`.
+mod slo_admin;
 // `kind = "chart"` view_metadata schema/validator. D-528 moved it to
 // `attome-core` so the dashboard crate can share its types;
 // `view_admin::validate_view_kind_metadata` keeps its crate-local path.
