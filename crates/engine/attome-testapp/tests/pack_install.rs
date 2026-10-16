@@ -60,7 +60,69 @@ fn the_crm_pack_installs_once() {
         let Some(app) = TestApp::start().await else {
             return;
         };
-        installs_once(&app, "crm", &["account", "contact", "lead", "opportunity"]).await;
+        installs_once(
+            &app,
+            "crm",
+            &[
+                "account",
+                "contact",
+                "lead",
+                "opportunity",
+                "contact_account_role",
+                "account_team_member",
+                "customer_address",
+            ],
+        )
+        .await;
+        let sensitive: Vec<String> = sqlx::query_scalar(
+            "SELECT a.logicalname FROM attribute_info a JOIN entity_info e ON e.id = a.entity_ref WHERE e.logicalname = 'contact' AND a.is_sensitive ORDER BY a.logicalname",
+        )
+        .fetch_all(app.db())
+        .await
+        .expect("read contact fields");
+        for field in ["birth_date", "iqama_no", "national_id"] {
+            assert!(
+                sensitive.iter().any(|f| f == field),
+                "contact.{field} is sensitive"
+            );
+        }
+    });
+}
+
+/// D5-T1, D8-T1: the sales pack, on top of the crm pack, adds pipelines with
+/// stages as records (seeded for every pipeline), contact roles on deals and
+/// the catalogue and pricing entities.
+#[test]
+fn the_sales_pack_installs_once_on_the_crm_pack() {
+    attome_testkit::run_shared(async {
+        let Some(app) = TestApp::start().await else {
+            return;
+        };
+        installs_once(&app, "crm", &["opportunity"]).await;
+        installs_once(
+            &app,
+            "sales",
+            &[
+                "product",
+                "price_list",
+                "opportunity_stage",
+                "opportunity_contact_role",
+                "unit_group",
+                "unit",
+                "product_family",
+                "price_break",
+                "account_price",
+                "related_product",
+            ],
+        )
+        .await;
+        let stages: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM opportunity_stage WHERE is_active = true AND pipeline = 'new_business'",
+        )
+        .fetch_one(app.db())
+        .await
+        .expect("count stages");
+        assert_eq!(stages, 6, "every pipeline has its six default stages, once");
     });
 }
 

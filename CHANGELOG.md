@@ -23,6 +23,13 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- The crm pack (changeset `0002-crm-customers-activities`): business and person accounts,
+  communication preferences and sensitive personal-data fields on contacts, contact roles across
+  accounts over time, account teams, typed addresses on any record; visits, outcomes, attendees,
+  next steps and a consented check-in location on activities.
+- The sales pack (changeset `0003-sales-catalogue`): Arabic product names, product families,
+  units of measure with conversions, price list validity, list price and cost per unit, price
+  breaks, account prices, related products, revenue recognition and return policy.
 - Sales pipelines in the sales pack (changeset `0002-sales-pipeline`): stages as records with order,
   default probability and a stalled limit per pipeline (new business, renewal, upsell);
   probability, weighted amount, pipeline, won and lost reasons, main competitor and a close-date
