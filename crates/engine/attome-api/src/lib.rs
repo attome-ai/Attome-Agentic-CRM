@@ -223,6 +223,7 @@ mod sidebar_seed;
 mod signoff;
 mod system;
 mod system_health;
+pub mod table_health;
 /// Core platform tagging (`tag_category`/`tag_item`) — see that
 /// module's own doc comment. No `EngineModel`/licence gate, same posture as
 /// `note_seed`/`follow_seed`.

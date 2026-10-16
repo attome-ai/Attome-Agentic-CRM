@@ -32,6 +32,10 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Table health: `GET /api/v1/admin/entities/{entity_id}/health` and `GET /api/v1/admin/table-health` report
+  each entity table's size, live and dead rows, last autovacuum, unused indexes, lookups with no index
+  and seven-day growth, from the statistics views only; a daily job keeps the size samples (migration
+  `0101`).
 - Follow-up routes: `GET /api/v1/ai/follow-ups` (the caller's open follow-ups),
   `POST /api/v1/ai/follow-ups/{id}/dismiss` (`If-Match`, owner only) and
   `POST /api/v1/admin/ai/follow-up-rules/{id}/run` (queues one rule's scan, audited as configuration).

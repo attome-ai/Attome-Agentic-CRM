@@ -78,6 +78,8 @@ pub fn spawn_worker_schedulers(config: &AppConfig, base_state: &AppState) {
     crate::jobs::spawn_tag_expiry_scheduler(db.clone(), std::time::Duration::from_secs(3600));
     // E9-T7: marketing hand-offs past their SLA, every five minutes.
     crate::jobs::spawn_marketing_sweep_scheduler(db.clone(), std::time::Duration::from_secs(300));
+    // Y2-T8: the table-health sample, daily.
+    crate::jobs::spawn_table_health_scheduler(db.clone(), std::time::Duration::from_secs(86_400));
     // AI4-T5: follow-up stall scans, hourly.
     crate::jobs::spawn_ai_followup_scheduler(db.clone(), std::time::Duration::from_secs(3600));
     // D25-T3: win/loss reviews for big closes, every minute.
