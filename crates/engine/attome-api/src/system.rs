@@ -318,6 +318,8 @@ impl EngineSystem {
             // is mounted through `ModelRegistry` by `DocumentModel` instead,
             // gated on MODULE_DOCUMENT — see `attome_document`'s crate doc.
             .merge(attome_document::files::routes())
+            // K1-T1: share links, and their public download routes.
+            .merge(attome_document::share::routes())
             // M52 Phase 1 (D-465) — outbound compose/reply. No
             // `strict_authz` layer: authorization is per-record via
             // `RecordScoped<Update>` + `require_record_access`, same posture

@@ -23,6 +23,11 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- File share links: `POST /api/v1/{entity}/{id}/files/{field}/share-links` makes an expiring link
+  (at most 30 days) to a stored file, with an optional password and download limit; `GET` lists a
+  field's links and `DELETE …/share-links/{link_id}` revokes one. Anyone with the link opens it at
+  `GET /api/v1/shared-files/{token}` (or `POST` with the password); every download is counted and
+  audited (migration `0063`).
 - The crm pack (changeset `0002-crm-customers-activities`): business and person accounts,
   communication preferences and sensitive personal-data fields on contacts, contact roles across
   accounts over time, account teams, typed addresses on any record; visits, outcomes, attendees,

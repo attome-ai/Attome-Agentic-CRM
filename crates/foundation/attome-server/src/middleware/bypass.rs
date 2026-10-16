@@ -142,6 +142,9 @@ pub const BYPASS_SUBTREE_PREFIXES: &[&str] = &[
     "/api/v1/auth/oidc/",
     "/api/v1/auth/identity-link-callback/",
     "/api/v1/auth/step-up-callback/",
+    // K1-T1: a file share link is opened by someone outside the deployment;
+    // the secret token in the path is the credential.
+    "/api/v1/shared-files/",
 ];
 
 pub fn is_bypass(path: &str) -> bool {

@@ -44,6 +44,7 @@ pub mod documents_tree;
 pub mod engine;
 pub mod files;
 pub mod files_scan;
+pub mod share;
 
 pub use engine::DocumentModel;
 
@@ -57,5 +58,6 @@ pub use engine::DocumentModel;
 pub fn openapi() -> utoipa::openapi::OpenApi {
     let mut doc = files::openapi_fragment();
     doc.merge(documents_tree::openapi_fragment());
+    doc.merge(share::openapi_fragment());
     doc
 }

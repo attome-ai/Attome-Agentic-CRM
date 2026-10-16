@@ -107,6 +107,10 @@ pub const RATE_LIMIT_CATEGORIES: &[(&str, &str, &str)] = &[
     // category is the same defense-in-depth second layer those two routes
     // get, not the only control.
     ("POST", "/api/v1/omnichannel/webchat/message", "webchat"),
+    // K1-T1: anonymous, token-guessing class like `portal_status`; the
+    // password POST also checks a person-chosen secret.
+    ("GET", "/api/v1/shared-files/{token}", "portal_status"),
+    ("POST", "/api/v1/shared-files/{token}", "password_reset"),
     ("GET", "/api/v1/omnichannel/webchat/poll", "webchat"),
 ];
 pub(crate) const DEFAULT_CATEGORY: &str = "api";

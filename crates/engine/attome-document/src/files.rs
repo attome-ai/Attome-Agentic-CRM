@@ -147,7 +147,7 @@ pub fn is_image_field(state: &EngineState, entity: &str, field: &str) -> bool {
 /// confirms the field stores file keys: `file` (int code 12, or legacy alias
 /// 13 — the same pair `attome_core::FieldType::from_int` recognises,
 /// C-16/M01 §7) or `image` (18, U9), whose storage type is `file`.
-async fn resolve_file_field(
+pub(crate) async fn resolve_file_field(
     state: &EngineState,
     entity_input: &str,
     field_input: &str,
