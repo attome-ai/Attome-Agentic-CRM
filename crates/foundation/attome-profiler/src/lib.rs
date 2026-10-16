@@ -397,8 +397,9 @@ local function admit(name)
     return false
 end
 
-local function bump(stat_key, ms)
+local function bump(stat_key, ms, bucket)
     redis.call('HINCRBY', stat_key, 'count', 1)
+    redis.call('HINCRBY', stat_key, 'h' .. bucket, 1)
     redis.call('HINCRBYFLOAT', stat_key, 'sum_ms', ms)
     local min = redis.call('HGET', stat_key, 'min_ms')
     if not min or tonumber(ms) < tonumber(min) then
@@ -412,11 +413,12 @@ local function bump(stat_key, ms)
 end
 
 for i = 3, #KEYS do
-    local offset = (i - 3) * 2
+    local offset = (i - 3) * 3
     local name = ARGV[6 + offset]
     local ms = ARGV[7 + offset]
+    local bucket = ARGV[8 + offset]
     if admit(name) then
-        bump(KEYS[i], ms)
+        bump(KEYS[i], ms, bucket)
         if i == 3 then
             top_ok = true
         end
@@ -504,7 +506,7 @@ pub async fn flush(
         keys.push(stat_key(name));
     }
 
-    let mut args: Vec<String> = Vec::with_capacity(entries.len() * 2 + 5);
+    let mut args: Vec<String> = Vec::with_capacity(entries.len() * 3 + 5);
     args.push(STAT_TTL.as_millis().to_string());
     args.push(TRACE_TTL.as_millis().to_string());
     args.push(TRACE_CAP.to_string());
@@ -513,6 +515,7 @@ pub async fn flush(
     for (name, ms) in &entries {
         args.push(name.to_string());
         args.push(ms.to_string());
+        args.push(bucket_of(*ms).to_string());
     }
 
     let dropped_by_cap: i64 = tokio::time::timeout(
@@ -654,6 +657,88 @@ pub struct StatRow {
     pub avg_ms: f64,
     pub min_ms: f64,
     pub max_ms: f64,
+    /// U5-T1: percentiles from the probe's latency histogram (bucket upper
+    /// bounds, within about 19%); absent for a probe recorded before the
+    /// histogram existed.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub p50_ms: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub p95_ms: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub p99_ms: Option<f64>,
+}
+
+/// U5-T1: buckets per doubling of the latency (a bucket spans about 19%).
+const BUCKETS_PER_DOUBLING: f64 = 4.0;
+
+/// The histogram bucket `ms` falls in: quarter-doublings of microseconds.
+pub fn bucket_of(ms: f64) -> u32 {
+    let micros = (ms * 1000.0).max(0.0);
+    ((micros + 1.0).log2() * BUCKETS_PER_DOUBLING).floor() as u32
+}
+
+/// The largest latency, in milliseconds, bucket `b` holds.
+pub fn bucket_upper_ms(b: u32) -> f64 {
+    ((f64::from(b + 1) / BUCKETS_PER_DOUBLING).exp2() - 1.0) / 1000.0
+}
+
+/// The `q` quantile (0-1) of a histogram of `(bucket, count)`, as the upper
+/// bound of the bucket it falls in; `None` for an empty histogram.
+pub fn quantile(histogram: &[(u32, u64)], q: f64) -> Option<f64> {
+    let total: u64 = histogram.iter().map(|(_, c)| c).sum();
+    if total == 0 {
+        return None;
+    }
+    let mut sorted = histogram.to_vec();
+    sorted.sort_unstable_by_key(|(b, _)| *b);
+    let wanted = ((q.clamp(0.0, 1.0) * total as f64).ceil() as u64).max(1);
+    let mut seen = 0;
+    for (bucket, count) in &sorted {
+        seen += count;
+        if seen >= wanted {
+            return Some(bucket_upper_ms(*bucket));
+        }
+    }
+    sorted.last().map(|(b, _)| bucket_upper_ms(*b))
+}
+
+/// U5-T1: a latency budget for every probe under a name prefix.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Budget {
+    /// A probe name or a dotted prefix (`"entity.create"` covers
+    /// `"entity.create.db_insert"`).
+    pub prefix: String,
+    pub p95_ms: f64,
+}
+
+/// U5-T1: a probe over its budget.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Finding {
+    pub name: String,
+    pub p95_ms: f64,
+    pub budget_ms: f64,
+    pub count: u64,
+}
+
+/// Every probe whose p95 is over the budget of the longest prefix that
+/// covers it. Probes with fewer than `min_count` calls are not judged.
+pub fn budget_findings(rows: &[StatRow], budgets: &[Budget], min_count: u64) -> Vec<Finding> {
+    rows.iter()
+        .filter(|r| r.count >= min_count)
+        .filter_map(|r| {
+            let budget = budgets
+                .iter()
+                .filter(|b| r.name == b.prefix || r.name.starts_with(&format!("{}.", b.prefix)))
+                .max_by_key(|b| b.prefix.len())?;
+            let p95 = r.p95_ms?;
+            (p95 > budget.p95_ms).then(|| Finding {
+                name: r.name.clone(),
+                p95_ms: p95,
+                budget_ms: budget.p95_ms,
+                count: r.count,
+            })
+        })
+        .collect()
 }
 
 /// Cursor-based `SCAN` (never blocking `KEYS`) over the probe-name keyspace —
@@ -732,6 +817,12 @@ async fn read_stats_inner(redis: &Store) -> Result<Vec<StatRow>, ProfilerError> 
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0.0);
             let name = key.strip_prefix(STAT_PREFIX).unwrap_or(key).to_string();
+            let histogram: Vec<(u32, u64)> = map
+                .iter()
+                .filter_map(|(field, value)| {
+                    Some((field.strip_prefix('h')?.parse().ok()?, value.parse().ok()?))
+                })
+                .collect();
             let avg_ms = if count > 0 {
                 total_ms / count as f64
             } else {
@@ -744,6 +835,9 @@ async fn read_stats_inner(redis: &Store) -> Result<Vec<StatRow>, ProfilerError> 
                 avg_ms,
                 min_ms,
                 max_ms,
+                p50_ms: quantile(&histogram, 0.50),
+                p95_ms: quantile(&histogram, 0.95),
+                p99_ms: quantile(&histogram, 0.99),
             });
         }
     }
@@ -851,7 +945,59 @@ mod tests {
             avg_ms: 1.0,
             min_ms: 1.0,
             max_ms: 1.0,
+            p50_ms: None,
+            p95_ms: None,
+            p99_ms: None,
         }
+    }
+
+    #[test]
+    fn histogram_percentiles_land_in_the_right_bucket() {
+        // 90 calls near 2 ms and 10 near 50 ms.
+        let mut counts: HashMap<u32, u64> = HashMap::new();
+        for _ in 0..90 {
+            *counts.entry(bucket_of(2.0)).or_default() += 1;
+        }
+        for _ in 0..10 {
+            *counts.entry(bucket_of(50.0)).or_default() += 1;
+        }
+        let histogram: Vec<(u32, u64)> = counts.into_iter().collect();
+        let p50 = quantile(&histogram, 0.5).expect("p50");
+        let p95 = quantile(&histogram, 0.95).expect("p95");
+        assert!((2.0..2.5).contains(&p50), "{p50}");
+        assert!((50.0..60.0).contains(&p95), "{p95}");
+        assert_eq!(quantile(&[], 0.5), None);
+        // Each value is at or under its bucket's upper bound.
+        for ms in [0.0, 0.01, 1.0, 7.3, 250.0, 9000.0] {
+            assert!(ms <= bucket_upper_ms(bucket_of(ms)) + 1e-9, "{ms}");
+        }
+    }
+
+    #[test]
+    fn budget_findings_judge_the_longest_matching_prefix() {
+        let mut slow = row("entity.create.db_insert");
+        slow.count = 50;
+        slow.p95_ms = Some(40.0);
+        let mut fine = row("entity.read");
+        fine.count = 50;
+        fine.p95_ms = Some(5.0);
+        let mut rare = row("entity.delete");
+        rare.count = 2;
+        rare.p95_ms = Some(500.0);
+        let budgets = vec![
+            Budget {
+                prefix: "entity".into(),
+                p95_ms: 100.0,
+            },
+            Budget {
+                prefix: "entity.create".into(),
+                p95_ms: 30.0,
+            },
+        ];
+        let findings = budget_findings(&[slow, fine, rare], &budgets, 10);
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].name, "entity.create.db_insert");
+        assert_eq!(findings[0].budget_ms, 30.0);
     }
 
     #[test]

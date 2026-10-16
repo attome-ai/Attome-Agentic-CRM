@@ -28,6 +28,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Profiler probes keep a latency histogram; stats carry `p50_ms`/`p95_ms`/`p99_ms`, and
+  `attome_profiler::budget_findings` names probes over their p95 budget.
 - One-time codes (`attome_auth::otp`): six digits, peppered hash, 60 seconds, single use, five
   tries, Arabic-Indic digits accepted; table `one_time_code` (migration 0075).
 - `GET /api/v1/{entity}/{id}?expand=<lookups>` returns up to five lookups' target records inline
