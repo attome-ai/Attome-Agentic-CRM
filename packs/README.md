@@ -44,3 +44,23 @@ Offline profiles (B18): `offline_profile` per role (storage and days-offline lim
 
 The sales pack's `0006` adds call lists and the power dialer (D21): `call_list`, `call_list_member`,
 append-only `call_attempt`, `call_outcome_rule`, `calling_hours` and `caller_id_rule`.
+
+## fulfilment
+
+Fulfilment and delivery (F6): `stock_location`, `fulfilment_order` and lines sourced from an `order`,
+`shipment`s with packages and lines, append-only `delivery_proof`, holds and exceptions.
+
+## partner
+
+Partner relationship management (F9): programmes and tiers, deal registration, applications and
+onboarding, certifications, market development funds with requests and claims, tier change
+proposals, and partner fields on `account` and `lead`.
+
+## workforce
+
+Workforce management (G17): planning groups, shift templates and breaks, rule sets per country,
+schedules and shift assignments, preferences, swap requests and overtime offers, which the
+`workforce` engine's staffing and shift-rule checks work on.
+
+The marketing pack's `0002` adds campaigns with members and marketing lists with combinations.
+The sales pack's `0007` adds opportunity lines and schedules, `0008` competitors and win-loss reviews.
