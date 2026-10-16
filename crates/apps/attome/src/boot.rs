@@ -1076,6 +1076,7 @@ async fn init_inner(config: &AppConfig) -> Result<Boot, Box<dyn std::error::Erro
         "attome-ai-collections",
         "attome-ai-meeting",
         "attome-ai-work-share",
+        "attome-ai-work-share-data",
         "attome-contract",
     ] {
         attome_api::changeset::boot::apply_platform_definition(system.state(), name).await?;

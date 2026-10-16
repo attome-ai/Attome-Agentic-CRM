@@ -1,13 +1,13 @@
 {
-  "author": "packs",
-  "checksum": "sha256:bb2df84a5c2824047e8cd196c5a106773784116ba0704fb51360d006c8f34cef",
-  "closed_at": "2026-10-16T00:00:00Z",
-  "description": "AI meetings (AI6-T1): the brief written before a meeting and the notes written after it (summary, action items, decisions), and the Meeting agent definition, seeded as a draft on the example model. The meeting and the account are referenced by entity name and record id.",
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:8b26ca54493e337082aa4af7b99fb3e543529f31ef89621612bab7ce718ddfb7",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-meeting.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
-  "id": "01a143c3-f8a9-74a3-a50c-f36f7f02e054",
+  "id": "8c07a7f6-2e76-71e0-99aa-84e9ac4f810f",
   "layer": "platform",
   "name": "attome-ai-meeting",
-  "opened_at": "2026-10-16T00:00:00Z",
+  "opened_at": "2026-09-29T00:00:00Z",
   "operations": [
     {
       "args": {
@@ -32,53 +32,21 @@
     {
       "args": {
         "definition": {
-          "data_classification": "general",
-          "display_name": "Meeting Entity",
-          "field_type": "text",
+          "category": "Other",
+          "display_name": "Meeting Notes",
+          "is_append_only": false,
+          "is_audited": true,
           "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "meeting_entity",
-          "lookup_entity": null,
-          "max_length": 100,
-          "on_target_delete": "orphan",
-          "options": null
-        }
+          "logicalname": "ai_meeting_notes",
+          "primary_name_attribute": "meeting_id"
+        },
+        "list_views": false
       },
-      "op": "add_field",
+      "op": "create_entity",
       "phase": "expand",
       "seq": 2,
       "target": {
-        "entity": "ai_meeting_brief",
-        "field": "meeting_entity"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Meeting",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": true,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "meeting_id",
-          "lookup_entity": null,
-          "max_length": 64,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 3,
-      "target": {
-        "entity": "ai_meeting_brief",
-        "field": "meeting_id"
+        "entity": "ai_meeting_notes"
       }
     },
     {
@@ -101,7 +69,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 4,
+      "seq": 3,
       "target": {
         "entity": "ai_meeting_brief",
         "field": "account_entity"
@@ -127,7 +95,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 5,
+      "seq": 4,
       "target": {
         "entity": "ai_meeting_brief",
         "field": "account_id"
@@ -153,10 +121,36 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 6,
+      "seq": 5,
       "target": {
         "entity": "ai_meeting_brief",
         "field": "brief_text"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Generated",
+          "field_type": "date",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "generated_at",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "ai_meeting_brief",
+        "field": "generated_at"
       }
     },
     {
@@ -195,16 +189,16 @@
       "args": {
         "definition": {
           "data_classification": "general",
-          "display_name": "Generated",
-          "field_type": "date",
+          "display_name": "Meeting Entity",
+          "field_type": "text",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,
           "is_sensitive": false,
-          "is_sortable": true,
-          "logicalname": "generated_at",
+          "is_sortable": false,
+          "logicalname": "meeting_entity",
           "lookup_entity": null,
-          "max_length": null,
+          "max_length": 100,
           "on_target_delete": "orphan",
           "options": null
         }
@@ -214,7 +208,33 @@
       "seq": 8,
       "target": {
         "entity": "ai_meeting_brief",
-        "field": "generated_at"
+        "field": "meeting_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Meeting",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "meeting_id",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "ai_meeting_brief",
+        "field": "meeting_id"
       }
     },
     {
@@ -243,134 +263,10 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 9,
+      "seq": 10,
       "target": {
         "entity": "ai_meeting_brief",
         "field": "status"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "category": "Other",
-          "display_name": "Meeting Notes",
-          "is_append_only": false,
-          "is_audited": true,
-          "is_customized": false,
-          "logicalname": "ai_meeting_notes",
-          "primary_name_attribute": "meeting_id"
-        },
-        "list_views": false
-      },
-      "op": "create_entity",
-      "phase": "expand",
-      "seq": 10,
-      "target": {
-        "entity": "ai_meeting_notes"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Meeting Entity",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "meeting_entity",
-          "lookup_entity": null,
-          "max_length": 100,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 11,
-      "target": {
-        "entity": "ai_meeting_notes",
-        "field": "meeting_entity"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Meeting",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": true,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "meeting_id",
-          "lookup_entity": null,
-          "max_length": 64,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 12,
-      "target": {
-        "entity": "ai_meeting_notes",
-        "field": "meeting_id"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Transcript",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "transcript_ref",
-          "lookup_entity": null,
-          "max_length": 100,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 13,
-      "target": {
-        "entity": "ai_meeting_notes",
-        "field": "transcript_ref"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Summary",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "summary",
-          "lookup_entity": null,
-          "max_length": 20000,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 14,
-      "target": {
-        "entity": "ai_meeting_notes",
-        "field": "summary"
       }
     },
     {
@@ -393,7 +289,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 15,
+      "seq": 11,
       "target": {
         "entity": "ai_meeting_notes",
         "field": "action_items_json"
@@ -419,7 +315,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 16,
+      "seq": 12,
       "target": {
         "entity": "ai_meeting_notes",
         "field": "decisions"
@@ -451,10 +347,62 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 17,
+      "seq": 13,
       "target": {
         "entity": "ai_meeting_notes",
         "field": "language"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Meeting Entity",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "meeting_entity",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "ai_meeting_notes",
+        "field": "meeting_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Meeting",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "meeting_id",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "ai_meeting_notes",
+        "field": "meeting_id"
       }
     },
     {
@@ -483,7 +431,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 18,
+      "seq": 16,
       "target": {
         "entity": "ai_meeting_notes",
         "field": "status"
@@ -491,236 +439,54 @@
     },
     {
       "args": {
-        "display_name": "موجز الاجتماع"
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Summary",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "summary",
+          "lookup_entity": null,
+          "max_length": 20000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
       },
-      "op": "set_label",
+      "op": "add_field",
       "phase": "expand",
-      "seq": 19,
+      "seq": 17,
       "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_brief",
-        "object_kind": "entity"
+        "entity": "ai_meeting_notes",
+        "field": "summary"
       }
     },
     {
       "args": {
-        "display_name": "كيان الاجتماع"
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Transcript",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "transcript_ref",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
       },
-      "op": "set_label",
+      "op": "add_field",
       "phase": "expand",
-      "seq": 20,
+      "seq": 18,
       "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_brief.meeting_entity",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "الاجتماع"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 21,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_brief.meeting_id",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "كيان الحساب"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 22,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_brief.account_entity",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "الحساب"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 23,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_brief.account_id",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "الموجز"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 24,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_brief.brief_text",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "اللغة"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 25,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_brief.language",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "وقت الإنشاء"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 26,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_brief.generated_at",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "الحالة"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 27,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_brief.status",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "محضر الاجتماع"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 28,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_notes",
-        "object_kind": "entity"
-      }
-    },
-    {
-      "args": {
-        "display_name": "كيان الاجتماع"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 29,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_notes.meeting_entity",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "الاجتماع"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 30,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_notes.meeting_id",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "النص المفرغ"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 31,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_notes.transcript_ref",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "الملخص"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 32,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_notes.summary",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "بنود العمل"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 33,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_notes.action_items_json",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "القرارات"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 34,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_notes.decisions",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "اللغة"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 35,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_notes.language",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "الحالة"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 36,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_meeting_notes.status",
-        "object_kind": "attribute"
+        "entity": "ai_meeting_notes",
+        "field": "transcript_ref"
       }
     },
     {
@@ -738,12 +504,246 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 37,
+      "seq": 19,
       "target": {
         "entity": "ai_agent",
         "key": {
           "name": "meeting_agent"
         }
+      }
+    },
+    {
+      "args": {
+        "display_name": "موجز الاجتماع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_brief",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "كيان الاجتماع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_brief.meeting_entity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاجتماع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_brief.meeting_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "كيان الحساب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_brief.account_entity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحساب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_brief.account_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الموجز"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_brief.brief_text",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اللغة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_brief.language",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "وقت الإنشاء"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_brief.generated_at",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_brief.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "محضر الاجتماع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_notes",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "كيان الاجتماع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_notes.meeting_entity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاجتماع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_notes.meeting_id",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النص المفرغ"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_notes.transcript_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الملخص"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_notes.summary",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "بنود العمل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_notes.action_items_json",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "القرارات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_notes.decisions",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اللغة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_notes.language",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_meeting_notes.status",
+        "object_kind": "attribute"
       }
     }
   ],
@@ -751,7 +751,7 @@
     "modules": [
       "core"
     ],
-    "platform": ">=4.0.1"
+    "platform": ">=0.1.0"
   },
   "scope": "platform",
   "seq": 51,

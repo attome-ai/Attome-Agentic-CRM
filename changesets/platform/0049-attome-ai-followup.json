@@ -1,13 +1,13 @@
 {
-  "author": "packs",
-  "checksum": "sha256:e552585065b0ecfc0dbb76616d13a80834dd3b107c4bf78c4fbf273b053374e5",
-  "closed_at": "2026-10-16T00:00:00Z",
-  "description": "AI follow-ups (AI4-T2): the follow-up rule (which stalled deals, overdue tasks or unanswered customers to chase, after how many idle days, by reminder, draft or message, on which channel, under a daily cap) and the Follow-up agent definition, seeded as a draft on the example model.",
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:907166799b713ca14ebd7f6c1b7939386042a68cf6e4d4e77feadff09074884d",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-followup.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
-  "id": "01a143c3-f591-7729-91f3-fd1266bd5bb8",
+  "id": "555e3ffb-91d2-736e-b813-da63b1e0bd07",
   "layer": "platform",
   "name": "attome-ai-followup",
-  "opened_at": "2026-10-16T00:00:00Z",
+  "opened_at": "2026-09-29T00:00:00Z",
   "operations": [
     {
       "args": {
@@ -33,48 +33,22 @@
       "args": {
         "definition": {
           "data_classification": "general",
-          "display_name": "Name",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": true,
-          "logicalname": "name",
-          "lookup_entity": null,
-          "max_length": 200,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 2,
-      "target": {
-        "entity": "ai_followup_rule",
-        "field": "name"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Reason",
+          "display_name": "Channel",
           "field_type": "choice",
           "is_customized": false,
-          "is_filterable": true,
-          "is_required": true,
+          "is_filterable": false,
+          "is_required": false,
           "is_sensitive": false,
           "is_sortable": false,
-          "logicalname": "reason",
+          "logicalname": "channel",
           "lookup_entity": null,
           "max_length": null,
           "on_target_delete": "orphan",
           "options": {
             "choices": [
-              "stalled_deal",
-              "overdue_task",
-              "unanswered_customer"
+              "email",
+              "whatsapp",
+              "internal"
             ],
             "multi": false
           }
@@ -82,36 +56,36 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 3,
+      "seq": 2,
       "target": {
         "entity": "ai_followup_rule",
-        "field": "reason"
+        "field": "channel"
       }
     },
     {
       "args": {
         "definition": {
           "data_classification": "general",
-          "display_name": "Entity",
-          "field_type": "text",
+          "display_name": "Daily Cap",
+          "field_type": "number",
           "is_customized": false,
           "is_filterable": false,
-          "is_required": true,
+          "is_required": false,
           "is_sensitive": false,
           "is_sortable": false,
-          "logicalname": "target_entity",
+          "logicalname": "daily_cap",
           "lookup_entity": null,
-          "max_length": 100,
+          "max_length": null,
           "on_target_delete": "orphan",
           "options": null
         }
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 4,
+      "seq": 3,
       "target": {
         "entity": "ai_followup_rule",
-        "field": "target_entity"
+        "field": "daily_cap"
       }
     },
     {
@@ -134,10 +108,36 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 5,
+      "seq": 4,
       "target": {
         "entity": "ai_followup_rule",
         "field": "idle_days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Active",
+          "field_type": "bool",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_active",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "ai_followup_rule",
+        "field": "is_active"
       }
     },
     {
@@ -177,25 +177,18 @@
       "args": {
         "definition": {
           "data_classification": "general",
-          "display_name": "Channel",
-          "field_type": "choice",
+          "display_name": "Name",
+          "field_type": "text",
           "is_customized": false,
           "is_filterable": false,
-          "is_required": false,
+          "is_required": true,
           "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "channel",
+          "is_sortable": true,
+          "logicalname": "name",
           "lookup_entity": null,
-          "max_length": null,
+          "max_length": 200,
           "on_target_delete": "orphan",
-          "options": {
-            "choices": [
-              "email",
-              "whatsapp",
-              "internal"
-            ],
-            "multi": false
-          }
+          "options": null
         }
       },
       "op": "add_field",
@@ -203,25 +196,32 @@
       "seq": 7,
       "target": {
         "entity": "ai_followup_rule",
-        "field": "channel"
+        "field": "name"
       }
     },
     {
       "args": {
         "definition": {
           "data_classification": "general",
-          "display_name": "Daily Cap",
-          "field_type": "number",
+          "display_name": "Reason",
+          "field_type": "choice",
           "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
+          "is_filterable": true,
+          "is_required": true,
           "is_sensitive": false,
           "is_sortable": false,
-          "logicalname": "daily_cap",
+          "logicalname": "reason",
           "lookup_entity": null,
           "max_length": null,
           "on_target_delete": "orphan",
-          "options": null
+          "options": {
+            "choices": [
+              "stalled_deal",
+              "overdue_task",
+              "unanswered_customer"
+            ],
+            "multi": false
+          }
         }
       },
       "op": "add_field",
@@ -229,23 +229,23 @@
       "seq": 8,
       "target": {
         "entity": "ai_followup_rule",
-        "field": "daily_cap"
+        "field": "reason"
       }
     },
     {
       "args": {
         "definition": {
           "data_classification": "general",
-          "display_name": "Active",
-          "field_type": "bool",
+          "display_name": "Entity",
+          "field_type": "text",
           "is_customized": false,
-          "is_filterable": true,
-          "is_required": false,
+          "is_filterable": false,
+          "is_required": true,
           "is_sensitive": false,
           "is_sortable": false,
-          "logicalname": "is_active",
+          "logicalname": "target_entity",
           "lookup_entity": null,
-          "max_length": null,
+          "max_length": 100,
           "on_target_delete": "orphan",
           "options": null
         }
@@ -255,124 +255,7 @@
       "seq": 9,
       "target": {
         "entity": "ai_followup_rule",
-        "field": "is_active"
-      }
-    },
-    {
-      "args": {
-        "display_name": "قاعدة المتابعة"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 10,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_followup_rule",
-        "object_kind": "entity"
-      }
-    },
-    {
-      "args": {
-        "display_name": "الاسم"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 11,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_followup_rule.name",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "السبب"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 12,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_followup_rule.reason",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "الكيان"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 13,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_followup_rule.target_entity",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "أيام الخمول"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 14,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_followup_rule.idle_days",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "الطريقة"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 15,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_followup_rule.mode",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "القناة"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 16,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_followup_rule.channel",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "الحد اليومي"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 17,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_followup_rule.daily_cap",
-        "object_kind": "attribute"
-      }
-    },
-    {
-      "args": {
-        "display_name": "مفعلة"
-      },
-      "op": "set_label",
-      "phase": "expand",
-      "seq": 18,
-      "target": {
-        "locale": "ar",
-        "object_key": "ai_followup_rule.is_active",
-        "object_kind": "attribute"
+        "field": "target_entity"
       }
     },
     {
@@ -390,12 +273,129 @@
       },
       "op": "upsert_record",
       "phase": "expand",
-      "seq": 19,
+      "seq": 10,
       "target": {
         "entity": "ai_agent",
         "key": {
           "name": "followup_agent"
         }
+      }
+    },
+    {
+      "args": {
+        "display_name": "قاعدة المتابعة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_followup_rule",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_followup_rule.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "السبب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_followup_rule.reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الكيان"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_followup_rule.target_entity",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "أيام الخمول"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_followup_rule.idle_days",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الطريقة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_followup_rule.mode",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "القناة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_followup_rule.channel",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحد اليومي"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_followup_rule.daily_cap",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مفعلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "locale": "ar",
+        "object_key": "ai_followup_rule.is_active",
+        "object_kind": "attribute"
       }
     }
   ],
@@ -403,7 +403,7 @@
     "modules": [
       "core"
     ],
-    "platform": ">=4.0.1"
+    "platform": ">=0.1.0"
   },
   "scope": "platform",
   "seq": 49,

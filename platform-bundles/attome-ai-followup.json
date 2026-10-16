@@ -1,0 +1,181 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "core"
+    ]
+  },
+  "entities": [
+    {
+      "category": "Other",
+      "display_name": "Follow-up Rule",
+      "is_append_only": false,
+      "is_audited": true,
+      "is_customized": false,
+      "logicalname": "ai_followup_rule",
+      "primary_name_attribute": "name",
+      "attributes": [
+        {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Reason",
+          "field_type": "choice",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "reason",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "stalled_deal",
+              "overdue_task",
+              "unanswered_customer"
+            ],
+            "multi": false
+          }
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Entity",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "target_entity",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Idle Days",
+          "field_type": "number",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "idle_days",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Mode",
+          "field_type": "choice",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "mode",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "remind_owner",
+              "draft_message",
+              "send_message"
+            ],
+            "multi": false
+          }
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Channel",
+          "field_type": "choice",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "channel",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "email",
+              "whatsapp",
+              "internal"
+            ],
+            "multi": false
+          }
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Daily Cap",
+          "field_type": "number",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "daily_cap",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Active",
+          "field_type": "bool",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_active",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      ]
+    }
+  ],
+  "record_sets": [
+    {
+      "entity": "ai_agent",
+      "key_fields": [
+        "name"
+      ],
+      "rows": [
+        {
+          "description": "Drafts follow-ups for stalled deals, overdue tasks and unanswered customers.",
+          "name": "followup_agent",
+          "primary_model_ref": "f0dec27f-25ed-53e0-9fd7-3bab36817288",
+          "status": "draft",
+          "system_instructions": "You draft follow-up messages for the record you are given. Keep them short and polite, write in the customer's language (Arabic or English), and refer only to facts in the record. Never promise prices, discounts, delivery dates or deadlines."
+        }
+      ]
+    }
+  ]
+}

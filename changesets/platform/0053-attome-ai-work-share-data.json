@@ -1,0 +1,47 @@
+{
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:7c9038d353d3f4bc70a35d0e9b9c2a9eed218286fd787d35d6c552dde49c6a6f",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-work-share-data.json (Solution 7 Phase 1.5, D-785).",
+  "format": "attome-changeset/v1",
+  "id": "4ff1204b-ae16-7ae6-b3c4-e435a8fdc09f",
+  "layer": "platform",
+  "name": "attome-ai-work-share-data",
+  "opened_at": "2026-09-29T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "key_fields": [
+          "process_key"
+        ],
+        "values": {
+          "completion_attribute": "status",
+          "completion_values": "resolved,closed",
+          "entity_logical_name": "service_ticket",
+          "is_active": true,
+          "label": "Ticket resolved",
+          "label_ar": "تذكرة محلولة",
+          "process_key": "service.ticket_resolved"
+        }
+      },
+      "op": "upsert_record",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "ai_work_measure",
+        "key": {
+          "process_key": "service.ticket_resolved"
+        }
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "platform",
+  "seq": 53,
+  "title": "Platform definitions: attome-ai-work-share-data"
+}

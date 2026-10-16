@@ -67,6 +67,18 @@ pub const PLATFORM_BUNDLES: &[(&str, &str)] = &[
         include_str!("../../../../../platform-bundles/attome-ai-capability-pack.json"),
     ),
     (
+        "attome-ai-collections",
+        include_str!("../../../../../platform-bundles/attome-ai-collections.json"),
+    ),
+    (
+        "attome-ai-followup",
+        include_str!("../../../../../platform-bundles/attome-ai-followup.json"),
+    ),
+    (
+        "attome-ai-meeting",
+        include_str!("../../../../../platform-bundles/attome-ai-meeting.json"),
+    ),
+    (
         "attome-ai-model-catalog",
         include_str!("../../../../../platform-bundles/attome-ai-model-catalog.json"),
     ),
@@ -99,92 +111,12 @@ pub const PLATFORM_BUNDLES: &[(&str, &str)] = &[
         include_str!("../../../../../platform-bundles/attome-ai-tone-data.json"),
     ),
     (
-        "attome-audit",
-        include_str!("../../../../../platform-bundles/attome-audit.json"),
+        "attome-ai-work-share",
+        include_str!("../../../../../platform-bundles/attome-ai-work-share.json"),
     ),
     (
-        "attome-compliance-consent",
-        include_str!("../../../../../platform-bundles/attome-compliance-consent.json"),
-    ),
-    (
-        "attome-compliance-legal-matter",
-        include_str!("../../../../../platform-bundles/attome-compliance-legal-matter.json"),
-    ),
-    (
-        "xrm-core-api-key",
-        include_str!("../../../../../platform-bundles/xrm-core-api-key.json"),
-    ),
-    (
-        "xrm-core-authentication-type",
-        include_str!("../../../../../platform-bundles/xrm-core-authentication-type.json"),
-    ),
-    (
-        "xrm-core-authentication-type-data",
-        include_str!("../../../../../platform-bundles/xrm-core-authentication-type-data.json"),
-    ),
-    (
-        "attome-dashboard",
-        include_str!("../../../../../platform-bundles/attome-dashboard.json"),
-    ),
-    (
-        "attome-docgen",
-        include_str!("../../../../../platform-bundles/attome-docgen.json"),
-    ),
-    (
-        "attome-document",
-        include_str!("../../../../../platform-bundles/attome-document.json"),
-    ),
-    (
-        "attome-metadata-autovalue",
-        include_str!("../../../../../platform-bundles/attome-metadata-autovalue.json"),
-    ),
-    (
-        "attome-grc",
-        include_str!("../../../../../platform-bundles/attome-grc.json"),
-    ),
-    (
-        "attome-integration",
-        include_str!("../../../../../platform-bundles/attome-integration.json"),
-    ),
-    (
-        "attome-metric",
-        include_str!("../../../../../platform-bundles/attome-metric.json"),
-    ),
-    (
-        "attome-notification",
-        include_str!("../../../../../platform-bundles/attome-notification.json"),
-    ),
-    (
-        "attome-portal",
-        include_str!("../../../../../platform-bundles/attome-portal.json"),
-    ),
-    (
-        "attome-project",
-        include_str!("../../../../../platform-bundles/attome-project.json"),
-    ),
-    (
-        "xrm-reminder",
-        include_str!("../../../../../platform-bundles/xrm-reminder.json"),
-    ),
-    (
-        "attome-report",
-        include_str!("../../../../../platform-bundles/attome-report.json"),
-    ),
-    (
-        "attome-report-reports",
-        include_str!("../../../../../platform-bundles/attome-report-reports.json"),
-    ),
-    (
-        "attome-s2s",
-        include_str!("../../../../../platform-bundles/attome-s2s.json"),
-    ),
-    (
-        "attome-search-saved-search",
-        include_str!("../../../../../platform-bundles/attome-search-saved-search.json"),
-    ),
-    (
-        "attome-security",
-        include_str!("../../../../../platform-bundles/attome-security.json"),
+        "attome-ai-work-share-data",
+        include_str!("../../../../../platform-bundles/attome-ai-work-share-data.json"),
     ),
     (
         "attome-api-activity",
@@ -231,6 +163,82 @@ pub const PLATFORM_BUNDLES: &[(&str, &str)] = &[
         include_str!("../../../../../platform-bundles/attome-api-tag.json"),
     ),
     (
+        "attome-audit",
+        include_str!("../../../../../platform-bundles/attome-audit.json"),
+    ),
+    (
+        "attome-compliance-consent",
+        include_str!("../../../../../platform-bundles/attome-compliance-consent.json"),
+    ),
+    (
+        "attome-compliance-legal-matter",
+        include_str!("../../../../../platform-bundles/attome-compliance-legal-matter.json"),
+    ),
+    (
+        "attome-contract",
+        include_str!("../../../../../platform-bundles/attome-contract.json"),
+    ),
+    (
+        "attome-dashboard",
+        include_str!("../../../../../platform-bundles/attome-dashboard.json"),
+    ),
+    (
+        "attome-docgen",
+        include_str!("../../../../../platform-bundles/attome-docgen.json"),
+    ),
+    (
+        "attome-document",
+        include_str!("../../../../../platform-bundles/attome-document.json"),
+    ),
+    (
+        "attome-grc",
+        include_str!("../../../../../platform-bundles/attome-grc.json"),
+    ),
+    (
+        "attome-integration",
+        include_str!("../../../../../platform-bundles/attome-integration.json"),
+    ),
+    (
+        "attome-metadata-autovalue",
+        include_str!("../../../../../platform-bundles/attome-metadata-autovalue.json"),
+    ),
+    (
+        "attome-metric",
+        include_str!("../../../../../platform-bundles/attome-metric.json"),
+    ),
+    (
+        "attome-notification",
+        include_str!("../../../../../platform-bundles/attome-notification.json"),
+    ),
+    (
+        "attome-portal",
+        include_str!("../../../../../platform-bundles/attome-portal.json"),
+    ),
+    (
+        "attome-project",
+        include_str!("../../../../../platform-bundles/attome-project.json"),
+    ),
+    (
+        "attome-report",
+        include_str!("../../../../../platform-bundles/attome-report.json"),
+    ),
+    (
+        "attome-report-reports",
+        include_str!("../../../../../platform-bundles/attome-report-reports.json"),
+    ),
+    (
+        "attome-s2s",
+        include_str!("../../../../../platform-bundles/attome-s2s.json"),
+    ),
+    (
+        "attome-search-saved-search",
+        include_str!("../../../../../platform-bundles/attome-search-saved-search.json"),
+    ),
+    (
+        "attome-security",
+        include_str!("../../../../../platform-bundles/attome-security.json"),
+    ),
+    (
         "attome-service",
         include_str!("../../../../../platform-bundles/attome-service.json"),
     ),
@@ -241,6 +249,22 @@ pub const PLATFORM_BUNDLES: &[(&str, &str)] = &[
     (
         "attome-workflow",
         include_str!("../../../../../platform-bundles/attome-workflow.json"),
+    ),
+    (
+        "xrm-core-api-key",
+        include_str!("../../../../../platform-bundles/xrm-core-api-key.json"),
+    ),
+    (
+        "xrm-core-authentication-type",
+        include_str!("../../../../../platform-bundles/xrm-core-authentication-type.json"),
+    ),
+    (
+        "xrm-core-authentication-type-data",
+        include_str!("../../../../../platform-bundles/xrm-core-authentication-type-data.json"),
+    ),
+    (
+        "xrm-reminder",
+        include_str!("../../../../../platform-bundles/xrm-reminder.json"),
     ),
 ];
 

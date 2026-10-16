@@ -303,9 +303,16 @@ pub const PLATFORM_CHANGESETS: &[PlatformChangeset] = &[
         json: include_str!("../../../../../changesets/platform/0052-attome-ai-work-share.json"),
     },
     PlatformChangeset {
-        file: "0053-attome-contract.json",
+        file: "0053-attome-ai-work-share-data.json",
+        name: "attome-ai-work-share-data",
+        json: include_str!(
+            "../../../../../changesets/platform/0053-attome-ai-work-share-data.json"
+        ),
+    },
+    PlatformChangeset {
+        file: "0054-attome-contract.json",
         name: "attome-contract",
-        json: include_str!("../../../../../changesets/platform/0053-attome-contract.json"),
+        json: include_str!("../../../../../changesets/platform/0054-attome-contract.json"),
     },
 ];
 

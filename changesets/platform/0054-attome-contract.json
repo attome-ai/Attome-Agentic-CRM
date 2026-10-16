@@ -1,14 +1,54 @@
 {
-  "author": "packs",
-  "checksum": "sha256:1d56f43e7f78c22cfbcc8d6cc9882999f178a3da39c87c221710644eabfe19de",
-  "closed_at": "2026-10-16T00:00:00Z",
-  "description": "Contract engine records (W1-T2): playbook rules checked against clauses, contract versions, comparisons between two versions and proposed imports. The contract itself is a pack record, referenced by record id.",
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:9117b057748e8cdd17c49bf61f4fbf92ee99e0369c94e894dd0470737e48a24f",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-contract.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
-  "id": "01a143ca-7372-7efd-89f4-25fc6fb8a23f",
+  "id": "bb1d00b9-7f3a-762d-b78c-df12a01d32ff",
   "layer": "platform",
   "name": "attome-contract",
-  "opened_at": "2026-10-16T00:00:00Z",
+  "opened_at": "2026-09-29T00:00:00Z",
   "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Contract Comparison",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": false,
+          "logicalname": "contract_comparison",
+          "primary_name_attribute": "contract_id"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "contract_comparison"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Contract Import",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": false,
+          "logicalname": "contract_import",
+          "primary_name_attribute": "status"
+        },
+        "list_views": false
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "contract_import"
+      }
+    },
     {
       "args": {
         "definition": {
@@ -24,146 +64,9 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 1,
-      "target": {
-        "entity": "contract_playbook_rule"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Clause Key",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": true,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "clause_key",
-          "lookup_entity": null,
-          "max_length": 100,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 2,
-      "target": {
-        "entity": "contract_playbook_rule",
-        "field": "clause_key"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Condition",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "condition",
-          "lookup_entity": null,
-          "max_length": 2000,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
       "seq": 3,
       "target": {
-        "entity": "contract_playbook_rule",
-        "field": "condition"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Severity",
-          "field_type": "choice",
-          "is_customized": false,
-          "is_filterable": true,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "severity",
-          "lookup_entity": null,
-          "max_length": null,
-          "on_target_delete": "orphan",
-          "options": {
-            "choices": [
-              "info",
-              "needs_legal",
-              "block"
-            ],
-            "multi": false
-          }
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 4,
-      "target": {
-        "entity": "contract_playbook_rule",
-        "field": "severity"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Message",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "message",
-          "lookup_entity": null,
-          "max_length": 1000,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 5,
-      "target": {
-        "entity": "contract_playbook_rule",
-        "field": "message"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Arabic Message",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "message_ar",
-          "lookup_entity": null,
-          "max_length": 1000,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 6,
-      "target": {
-        "entity": "contract_playbook_rule",
-        "field": "message_ar"
+        "entity": "contract_playbook_rule"
       }
     },
     {
@@ -181,7 +84,7 @@
       },
       "op": "create_entity",
       "phase": "expand",
-      "seq": 7,
+      "seq": 4,
       "target": {
         "entity": "contract_version"
       }
@@ -206,245 +109,10 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 8,
-      "target": {
-        "entity": "contract_version",
-        "field": "contract_id"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "File",
-          "field_type": "file",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "file",
-          "lookup_entity": null,
-          "max_length": null,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 9,
-      "target": {
-        "entity": "contract_version",
-        "field": "file"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Source",
-          "field_type": "choice",
-          "is_customized": false,
-          "is_filterable": true,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "source",
-          "lookup_entity": null,
-          "max_length": null,
-          "on_target_delete": "orphan",
-          "options": {
-            "choices": [
-              "draft",
-              "counterparty_upload",
-              "signed"
-            ],
-            "multi": false
-          }
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 10,
-      "target": {
-        "entity": "contract_version",
-        "field": "source"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Version",
-          "field_type": "number",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": true,
-          "logicalname": "version_no",
-          "lookup_entity": null,
-          "max_length": null,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 11,
-      "target": {
-        "entity": "contract_version",
-        "field": "version_no"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Created By",
-          "field_type": "lookup",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "created_by_ref",
-          "lookup_entity": "user_account",
-          "max_length": null,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 12,
-      "target": {
-        "entity": "contract_version",
-        "field": "created_by_ref"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "category": "Other",
-          "display_name": "Contract Comparison",
-          "is_append_only": false,
-          "is_audited": true,
-          "is_customized": false,
-          "logicalname": "contract_comparison",
-          "primary_name_attribute": "contract_id"
-        },
-        "list_views": false
-      },
-      "op": "create_entity",
-      "phase": "expand",
-      "seq": 13,
-      "target": {
-        "entity": "contract_comparison"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Contract",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": true,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "contract_id",
-          "lookup_entity": null,
-          "max_length": 64,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 14,
+      "seq": 5,
       "target": {
         "entity": "contract_comparison",
         "field": "contract_id"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "From Version",
-          "field_type": "lookup",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "from_version_ref",
-          "lookup_entity": "contract_version",
-          "max_length": null,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 15,
-      "target": {
-        "entity": "contract_comparison",
-        "field": "from_version_ref"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "To Version",
-          "field_type": "lookup",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "to_version_ref",
-          "lookup_entity": "contract_version",
-          "max_length": null,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 16,
-      "target": {
-        "entity": "contract_comparison",
-        "field": "to_version_ref"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Differences",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "diff_json",
-          "lookup_entity": null,
-          "max_length": 200000,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 17,
-      "target": {
-        "entity": "contract_comparison",
-        "field": "diff_json"
       }
     },
     {
@@ -467,10 +135,36 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 18,
+      "seq": 6,
       "target": {
         "entity": "contract_comparison",
         "field": "deviations_json"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Differences",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "diff_json",
+          "lookup_entity": null,
+          "max_length": 200000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "contract_comparison",
+        "field": "diff_json"
       }
     },
     {
@@ -500,7 +194,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 19,
+      "seq": 8,
       "target": {
         "entity": "contract_comparison",
         "field": "status"
@@ -509,21 +203,27 @@
     {
       "args": {
         "definition": {
-          "category": "Other",
-          "display_name": "Contract Import",
-          "is_append_only": false,
-          "is_audited": true,
+          "data_classification": "general",
+          "display_name": "Contract",
+          "field_type": "text",
           "is_customized": false,
-          "logicalname": "contract_import",
-          "primary_name_attribute": "status"
-        },
-        "list_views": false
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "contract_id",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
       },
-      "op": "create_entity",
+      "op": "add_field",
       "phase": "expand",
-      "seq": 20,
+      "seq": 9,
       "target": {
-        "entity": "contract_import"
+        "entity": "contract_import",
+        "field": "contract_id"
       }
     },
     {
@@ -546,7 +246,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 21,
+      "seq": 10,
       "target": {
         "entity": "contract_import",
         "field": "file"
@@ -572,7 +272,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 22,
+      "seq": 11,
       "target": {
         "entity": "contract_import",
         "field": "proposed_json"
@@ -606,7 +306,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 23,
+      "seq": 12,
       "target": {
         "entity": "contract_import",
         "field": "status"
@@ -616,11 +316,148 @@
       "args": {
         "definition": {
           "data_classification": "general",
-          "display_name": "Contract",
+          "display_name": "Clause Key",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "clause_key",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "contract_playbook_rule",
+        "field": "clause_key"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Condition",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "condition",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "contract_playbook_rule",
+        "field": "condition"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Message",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "message",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "contract_playbook_rule",
+        "field": "message"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Message",
           "field_type": "text",
           "is_customized": false,
           "is_filterable": false,
           "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "message_ar",
+          "lookup_entity": null,
+          "max_length": 1000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "contract_playbook_rule",
+        "field": "message_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Severity",
+          "field_type": "choice",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "severity",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "info",
+              "needs_legal",
+              "block"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "contract_playbook_rule",
+        "field": "severity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Contract",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": true,
           "is_sensitive": false,
           "is_sortable": false,
           "logicalname": "contract_id",
@@ -632,10 +469,173 @@
       },
       "op": "add_field",
       "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "contract_version",
+        "field": "contract_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "File",
+          "field_type": "file",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "file",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "contract_version",
+        "field": "file"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Source",
+          "field_type": "choice",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "counterparty_upload",
+              "signed"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "contract_version",
+        "field": "source"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Version",
+          "field_type": "number",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "version_no",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "contract_version",
+        "field": "version_no"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "From Version",
+          "field_type": "lookup",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "from_version_ref",
+          "lookup_entity": "contract_version",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "contract_comparison",
+        "field": "from_version_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "To Version",
+          "field_type": "lookup",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "to_version_ref",
+          "lookup_entity": "contract_version",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "contract_comparison",
+        "field": "to_version_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Created By",
+          "field_type": "lookup",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "created_by_ref",
+          "lookup_entity": "user_account",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
       "seq": 24,
       "target": {
-        "entity": "contract_import",
-        "field": "contract_id"
+        "entity": "contract_version",
+        "field": "created_by_ref"
       }
     },
     {
@@ -955,9 +955,9 @@
     "modules": [
       "core"
     ],
-    "platform": ">=4.0.1"
+    "platform": ">=0.1.0"
   },
   "scope": "platform",
-  "seq": 53,
+  "seq": 54,
   "title": "Platform definitions: attome-contract"
 }

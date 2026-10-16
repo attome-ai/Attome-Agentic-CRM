@@ -1,0 +1,332 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "core"
+    ]
+  },
+  "entities": [
+    {
+      "category": "Other",
+      "display_name": "Collection Rule",
+      "is_append_only": false,
+      "is_audited": true,
+      "is_customized": false,
+      "logicalname": "ai_collection_rule",
+      "primary_name_attribute": "name",
+      "attributes": [
+        {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Kind",
+          "field_type": "choice",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "invoice_due",
+              "invoice_overdue",
+              "renewal_due"
+            ],
+            "multi": false
+          }
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Offset Days",
+          "field_type": "number",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "offset_days",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Channel",
+          "field_type": "choice",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "channel",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "email",
+              "whatsapp",
+              "sms"
+            ],
+            "multi": false
+          }
+        },
+        {
+          "data_classification": "general",
+          "display_name": "English Text",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "template_text_en",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Arabic Text",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "template_text_ar",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Max Reminders",
+          "field_type": "number",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "max_reminders",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Active",
+          "field_type": "bool",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "is_active",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      ]
+    },
+    {
+      "category": "Other",
+      "display_name": "Payment Promise",
+      "is_append_only": false,
+      "is_audited": true,
+      "is_customized": false,
+      "logicalname": "ai_payment_promise",
+      "primary_name_attribute": "invoice_number",
+      "attributes": [
+        {
+          "data_classification": "general",
+          "display_name": "Invoice Entity",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "invoice_entity",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Invoice",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "invoice_id",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Invoice Number",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "invoice_number",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Customer Entity",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "customer_entity",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Customer",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "customer_id",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Promised Amount",
+          "field_type": "currency",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "promised_amount",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Promised Date",
+          "field_type": "date",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "promised_date",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Source",
+          "field_type": "choice",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "source",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "agent",
+              "staff",
+              "portal"
+            ],
+            "multi": false
+          }
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "open",
+              "kept",
+              "broken"
+            ],
+            "multi": false
+          }
+        },
+        {
+          "data_classification": "general",
+          "display_name": "Note",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "note",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      ]
+    }
+  ]
+}

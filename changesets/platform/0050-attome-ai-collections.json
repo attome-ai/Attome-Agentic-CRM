@@ -1,13 +1,13 @@
 {
-  "author": "packs",
-  "checksum": "sha256:806fd70a2e13f69a7b6c8547030c286d245825bfdfbd5583b581cc08fe19c171",
-  "closed_at": "2026-10-16T00:00:00Z",
-  "description": "AI collections (AI5-T1): the collection rule (when and how to remind about an invoice or renewal, on which channel, with which English and Arabic text, up to how many times) and the payment promise a customer gives. The invoice and the customer are pack records, referenced by entity name and record id.",
+  "author": "platform-bundles (converted by scripts/changesets/from-bundle.mjs)",
+  "checksum": "sha256:88d3be00565237d243abd6be03791e39c861c384e0e33ef5a83fbe69bbde8cfa",
+  "closed_at": "2026-09-29T00:00:00Z",
+  "description": "Converted from platform-bundles/attome-ai-collections.json (Solution 7 Phase 1.5, D-785).",
   "format": "attome-changeset/v1",
-  "id": "01a143c3-f718-7f42-b440-4e8c20347a14",
+  "id": "6de72737-684d-7f77-ac46-43d11f1c35d7",
   "layer": "platform",
   "name": "attome-ai-collections",
-  "opened_at": "2026-10-16T00:00:00Z",
+  "opened_at": "2026-09-29T00:00:00Z",
   "operations": [
     {
       "args": {
@@ -32,86 +32,21 @@
     {
       "args": {
         "definition": {
-          "data_classification": "general",
-          "display_name": "Name",
-          "field_type": "text",
+          "category": "Other",
+          "display_name": "Payment Promise",
+          "is_append_only": false,
+          "is_audited": true,
           "is_customized": false,
-          "is_filterable": false,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": true,
-          "logicalname": "name",
-          "lookup_entity": null,
-          "max_length": 200,
-          "on_target_delete": "orphan",
-          "options": null
-        }
+          "logicalname": "ai_payment_promise",
+          "primary_name_attribute": "invoice_number"
+        },
+        "list_views": false
       },
-      "op": "add_field",
+      "op": "create_entity",
       "phase": "expand",
       "seq": 2,
       "target": {
-        "entity": "ai_collection_rule",
-        "field": "name"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Kind",
-          "field_type": "choice",
-          "is_customized": false,
-          "is_filterable": true,
-          "is_required": true,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "kind",
-          "lookup_entity": null,
-          "max_length": null,
-          "on_target_delete": "orphan",
-          "options": {
-            "choices": [
-              "invoice_due",
-              "invoice_overdue",
-              "renewal_due"
-            ],
-            "multi": false
-          }
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 3,
-      "target": {
-        "entity": "ai_collection_rule",
-        "field": "kind"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Offset Days",
-          "field_type": "number",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "offset_days",
-          "lookup_entity": null,
-          "max_length": null,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 4,
-      "target": {
-        "entity": "ai_collection_rule",
-        "field": "offset_days"
+        "entity": "ai_payment_promise"
       }
     },
     {
@@ -141,88 +76,10 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 5,
+      "seq": 3,
       "target": {
         "entity": "ai_collection_rule",
         "field": "channel"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "English Text",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "template_text_en",
-          "lookup_entity": null,
-          "max_length": 4000,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 6,
-      "target": {
-        "entity": "ai_collection_rule",
-        "field": "template_text_en"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Arabic Text",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "template_text_ar",
-          "lookup_entity": null,
-          "max_length": 4000,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 7,
-      "target": {
-        "entity": "ai_collection_rule",
-        "field": "template_text_ar"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Max Reminders",
-          "field_type": "number",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "max_reminders",
-          "lookup_entity": null,
-          "max_length": null,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 8,
-      "target": {
-        "entity": "ai_collection_rule",
-        "field": "max_reminders"
       }
     },
     {
@@ -245,7 +102,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 9,
+      "seq": 4,
       "target": {
         "entity": "ai_collection_rule",
         "field": "is_active"
@@ -254,99 +111,164 @@
     {
       "args": {
         "definition": {
-          "category": "Other",
-          "display_name": "Payment Promise",
-          "is_append_only": false,
-          "is_audited": true,
+          "data_classification": "general",
+          "display_name": "Kind",
+          "field_type": "choice",
           "is_customized": false,
-          "logicalname": "ai_payment_promise",
-          "primary_name_attribute": "invoice_number"
-        },
-        "list_views": false
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "invoice_due",
+              "invoice_overdue",
+              "renewal_due"
+            ],
+            "multi": false
+          }
+        }
       },
-      "op": "create_entity",
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "ai_collection_rule",
+        "field": "kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Max Reminders",
+          "field_type": "number",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "max_reminders",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "ai_collection_rule",
+        "field": "max_reminders"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "ai_collection_rule",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Offset Days",
+          "field_type": "number",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "offset_days",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "ai_collection_rule",
+        "field": "offset_days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Arabic Text",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "template_text_ar",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "ai_collection_rule",
+        "field": "template_text_ar"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "English Text",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "template_text_en",
+          "lookup_entity": null,
+          "max_length": 4000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
       "phase": "expand",
       "seq": 10,
       "target": {
-        "entity": "ai_payment_promise"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Invoice Entity",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "invoice_entity",
-          "lookup_entity": null,
-          "max_length": 100,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 11,
-      "target": {
-        "entity": "ai_payment_promise",
-        "field": "invoice_entity"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Invoice",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": true,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "invoice_id",
-          "lookup_entity": null,
-          "max_length": 64,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 12,
-      "target": {
-        "entity": "ai_payment_promise",
-        "field": "invoice_id"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Invoice Number",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "invoice_number",
-          "lookup_entity": null,
-          "max_length": 100,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
-      "seq": 13,
-      "target": {
-        "entity": "ai_payment_promise",
-        "field": "invoice_number"
+        "entity": "ai_collection_rule",
+        "field": "template_text_en"
       }
     },
     {
@@ -369,7 +291,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 14,
+      "seq": 11,
       "target": {
         "entity": "ai_payment_promise",
         "field": "customer_entity"
@@ -395,10 +317,114 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 15,
+      "seq": 12,
       "target": {
         "entity": "ai_payment_promise",
         "field": "customer_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Invoice Entity",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "invoice_entity",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "ai_payment_promise",
+        "field": "invoice_entity"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Invoice",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "invoice_id",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "ai_payment_promise",
+        "field": "invoice_id"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Invoice Number",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "invoice_number",
+          "lookup_entity": null,
+          "max_length": 100,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "ai_payment_promise",
+        "field": "invoice_number"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Note",
+          "field_type": "text",
+          "is_customized": false,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "note",
+          "lookup_entity": null,
+          "max_length": 2000,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "ai_payment_promise",
+        "field": "note"
       }
     },
     {
@@ -421,7 +447,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 16,
+      "seq": 17,
       "target": {
         "entity": "ai_payment_promise",
         "field": "promised_amount"
@@ -447,7 +473,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 17,
+      "seq": 18,
       "target": {
         "entity": "ai_payment_promise",
         "field": "promised_date"
@@ -480,7 +506,7 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 18,
+      "seq": 19,
       "target": {
         "entity": "ai_payment_promise",
         "field": "source"
@@ -513,36 +539,10 @@
       },
       "op": "add_field",
       "phase": "expand",
-      "seq": 19,
-      "target": {
-        "entity": "ai_payment_promise",
-        "field": "status"
-      }
-    },
-    {
-      "args": {
-        "definition": {
-          "data_classification": "general",
-          "display_name": "Note",
-          "field_type": "text",
-          "is_customized": false,
-          "is_filterable": false,
-          "is_required": false,
-          "is_sensitive": false,
-          "is_sortable": false,
-          "logicalname": "note",
-          "lookup_entity": null,
-          "max_length": 2000,
-          "on_target_delete": "orphan",
-          "options": null
-        }
-      },
-      "op": "add_field",
-      "phase": "expand",
       "seq": 20,
       "target": {
         "entity": "ai_payment_promise",
-        "field": "note"
+        "field": "status"
       }
     },
     {
@@ -810,7 +810,7 @@
     "modules": [
       "core"
     ],
-    "platform": ">=4.0.1"
+    "platform": ">=0.1.0"
   },
   "scope": "platform",
   "seq": 50,

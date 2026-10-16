@@ -1,0 +1,29 @@
+{
+  "format": "attome-bundle/v1",
+  "requires": {
+    "platform_version": ">=0.1.0",
+    "schema_version": 1,
+    "modules": [
+      "core"
+    ]
+  },
+  "record_sets": [
+    {
+      "entity": "ai_work_measure",
+      "key_fields": [
+        "process_key"
+      ],
+      "rows": [
+        {
+          "completion_attribute": "status",
+          "completion_values": "resolved,closed",
+          "entity_logical_name": "service_ticket",
+          "is_active": true,
+          "label": "Ticket resolved",
+          "label_ar": "تذكرة محلولة",
+          "process_key": "service.ticket_resolved"
+        }
+      ]
+    }
+  ]
+}
