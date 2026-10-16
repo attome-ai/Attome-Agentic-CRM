@@ -97,6 +97,12 @@ pub struct ExecuteQueryRequest {
     /// version each widget was published with and executes it through this.
     #[serde(default)]
     query_version_id: Option<Uuid>,
+    /// S1-T1: the attributes to return, in this order; `id` is always
+    /// included. Absent returns the query's full column list. A name the
+    /// query does not return, or one the caller may not read, is the same
+    /// 422 `unknown attribute`.
+    #[serde(default)]
+    select: Option<Vec<String>>,
 }
 
 impl std::fmt::Debug for ExecuteQueryRequest {
@@ -133,6 +139,7 @@ impl ExecuteQueryRequest {
             seek: None,
             related_to: None,
             query_version_id,
+            select: None,
         }
     }
 
@@ -991,6 +998,101 @@ fn query_exec_error(
     ))
 }
 
+/// S1-T1: the most names one `select` takes.
+const MAX_SELECT: usize = 100;
+
+/// S1-T1: a `select` list's own shape, before any query runs.
+fn check_select_shape(names: &[String]) -> Result<(), AppError> {
+    if names.len() > MAX_SELECT {
+        return Err(AppError::Validation(format!(
+            "select takes at most {MAX_SELECT} attributes"
+        )));
+    }
+    let mut seen = std::collections::HashSet::new();
+    for name in names {
+        if !seen.insert(name.as_str()) {
+            return Err(AppError::Validation(format!("select names {name} twice")));
+        }
+    }
+    Ok(())
+}
+
+/// S1-T1: the names to return, in the request's order, with `id` first
+/// when the request left it out. `columns` holds only what the caller may
+/// read, so a hidden attribute fails exactly like a missing one.
+fn resolve_select(columns: &[ColumnDef], requested: &[String]) -> Result<Vec<String>, AppError> {
+    check_select_shape(requested)?;
+    let mut out = Vec::with_capacity(requested.len() + 1);
+    if !requested.iter().any(|n| n == "id") {
+        out.push("id".to_owned());
+    }
+    for name in requested {
+        if !columns.iter().any(|c| &c.name == name) {
+            return Err(AppError::Validation(format!("unknown attribute: {name}")));
+        }
+        out.push(name.clone());
+    }
+    Ok(out)
+}
+
+#[cfg(test)]
+mod select_tests {
+    use super::*;
+
+    fn col(name: &str) -> ColumnDef {
+        ColumnDef {
+            name: name.to_owned(),
+            display_name: name.to_owned(),
+            data_type: "text".to_owned(),
+            is_visible: true,
+            is_sortable: true,
+            is_searchable: true,
+            is_clickable: false,
+            route_template: String::new(),
+            lookup_target_entity: None,
+            choice_styles: None,
+        }
+    }
+
+    fn names(list: &[&str]) -> Vec<String> {
+        list.iter().map(|s| (*s).to_owned()).collect()
+    }
+
+    #[test]
+    fn select_keeps_order_and_adds_id() {
+        let columns = vec![col("id"), col("name"), col("city")];
+        assert_eq!(
+            resolve_select(&columns, &names(&["city", "name"])).expect("select"),
+            names(&["id", "city", "name"])
+        );
+        assert_eq!(
+            resolve_select(&columns, &names(&["name", "id"])).expect("select"),
+            names(&["name", "id"])
+        );
+    }
+
+    #[test]
+    fn select_rejects_unknown_and_hidden_alike() {
+        // `salary` exists but the caller may not read it, so it is not in
+        // the columns the caller gets.
+        let columns = vec![col("id"), col("name")];
+        let hidden = resolve_select(&columns, &names(&["salary"])).expect_err("hidden");
+        let missing = resolve_select(&columns, &names(&["nope"])).expect_err("missing");
+        assert_eq!(
+            hidden.to_string().replace("salary", "X"),
+            missing.to_string().replace("nope", "X")
+        );
+    }
+
+    #[test]
+    fn select_rejects_more_than_100_names() {
+        let many: Vec<String> = (0..101).map(|i| format!("c{i}")).collect();
+        assert!(check_select_shape(&many).is_err());
+        assert!(check_select_shape(&names(&["a", "a"])).is_err());
+        assert!(check_select_shape(&names(&["a", "b"])).is_ok());
+    }
+}
+
 #[cfg(test)]
 mod query_exec_error_tests {
     use super::*;
@@ -1245,6 +1347,11 @@ pub async fn execute_stored_query_with_definition(
     // reuse `read_pool` (that one may fall through to the full-privilege `db`
     // pool, reopening P1.1e's SELECT-only isolation for stored SQL).
     let db = state.base.readonly_query_pool(ctx.user_id).await;
+    // S1-T1: checked against the output columns once they are known.
+    let select_names = body.select.clone();
+    if let Some(names) = &select_names {
+        check_select_shape(names)?;
+    }
     let qrow = lookup(db, &body).await?;
     // D-521 — pinned SQL, live security: resolved before the privilege gate
     // below so a wrong version is refused the same way for every caller, but
@@ -2182,10 +2289,24 @@ pub async fn execute_stored_query_with_definition(
             });
         }
     }
-    let columns: Vec<ColumnDef> = columns
+    let mut columns: Vec<ColumnDef> = columns
         .into_iter()
         .filter(|column| !sensitive.contains(column.name.as_str()))
         .collect();
+    // S1-T1: only the named columns, in the caller's order; a hidden column
+    // is not in `columns`, so it reads as unknown, like a missing one.
+    if let Some(names) = &select_names {
+        let selected = resolve_select(&columns, names)?;
+        columns = selected
+            .iter()
+            .filter_map(|name| columns.iter().find(|c| &c.name == name).cloned())
+            .collect();
+        for record in &mut records {
+            if let Some(obj) = record.as_object_mut() {
+                obj.retain(|key, _| selected.iter().any(|s| s == key));
+            }
+        }
+    }
 
     // Grid/list name resolution: additive `__lookups` sidecar per row, same
     // wire pattern D-077 gave single-record reads — computed after `columns`

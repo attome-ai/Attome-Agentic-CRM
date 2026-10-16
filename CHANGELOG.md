@@ -28,6 +28,8 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- `POST /api/v1/query/execute` takes `select`: the attributes to return, in order (`id` always);
+  a name the caller may not read is the same 422 as one that does not exist.
 - Billing and sales logic, pure and tested: subscription segments read as of a date, charge models
   (flat, per unit, tiered, volume, setup fee, minimum commitment), billing periods with proration,
   payment allocation (oldest first or as the payer says, overpayment to credit), opportunity
