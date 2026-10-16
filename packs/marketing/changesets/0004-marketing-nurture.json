@@ -1,0 +1,1539 @@
+{
+  "author": "packs",
+  "checksum": "sha256:c2e835b2a37445b78b384634341d0ed95d5720c08cc022046c12d3965c35f59c",
+  "closed_at": "2026-10-16T00:00:00Z",
+  "description": "Nurture (E9-T1): a programme runs a journey (a workflow definition) for an audience list at a cadence, with its optional parts (tracks, pause, recycling, SLA, content selection, agent suggestions) each off until switched on; tracks per lifecycle stage, interest and language; content per track (an email, article or event, in order). Leads and contacts gain lifecycle stage, nurture interest, recycle reason and wake-up date; a lead keeps the campaign it came from (D3-T1).",
+  "format": "attome-changeset/v1",
+  "id": "01a14492-89a6-7b97-811b-f261bbe9d56a",
+  "layer": "product",
+  "name": "marketing-nurture",
+  "opened_at": "2026-10-16T00:00:00Z",
+  "operations": [
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Nurture Programme",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "marketing_nurture_program",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 1,
+      "target": {
+        "entity": "marketing_nurture_program"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 2,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Journey",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "journey_ref",
+          "lookup_entity": "workflow_definition",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 3,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "journey_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Audience",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "audience_list_ref",
+          "lookup_entity": "marketing_list",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 4,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "audience_list_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Cadence (days)",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "cadence_days",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 5,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "cadence_days"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Prospects Only",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "acquisition_only",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 6,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "acquisition_only"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Tracks",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "tracks_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 7,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "tracks_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Pause",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "pause_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 8,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "pause_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Recycling",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "recycling_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 9,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "recycling_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Hand-off SLA",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "sla_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 10,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "sla_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Content Selection",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "content_selection_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 11,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "content_selection_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Agent Suggestions",
+          "field_type": "bool",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "agent_suggestions_enabled",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 12,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "agent_suggestions_enabled"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "SLA Business Hours",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "sla_business_hours",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 13,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "sla_business_hours"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Status",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "status",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "draft",
+              "active",
+              "paused",
+              "retired"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 14,
+      "target": {
+        "entity": "marketing_nurture_program",
+        "field": "status"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Nurture Track",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "marketing_nurture_track",
+          "primary_name_attribute": "name"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 15,
+      "target": {
+        "entity": "marketing_nurture_track"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Name",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "name",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 16,
+      "target": {
+        "entity": "marketing_nurture_track",
+        "field": "name"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Programme",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "program_ref",
+          "lookup_entity": "marketing_nurture_program",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 17,
+      "target": {
+        "entity": "marketing_nurture_track",
+        "field": "program_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lifecycle Stage",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "lifecycle_stage",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "subscriber",
+              "lead",
+              "marketing_qualified",
+              "any"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 18,
+      "target": {
+        "entity": "marketing_nurture_track",
+        "field": "lifecycle_stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Interest",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "interest",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 19,
+      "target": {
+        "entity": "marketing_nurture_track",
+        "field": "interest"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Language",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "language",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "ar",
+              "en",
+              "any"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 20,
+      "target": {
+        "entity": "marketing_nurture_track",
+        "field": "language"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Position",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "position",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 21,
+      "target": {
+        "entity": "marketing_nurture_track",
+        "field": "position"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "category": "Other",
+          "display_name": "Nurture Content",
+          "is_append_only": false,
+          "is_audited": true,
+          "is_customized": true,
+          "logicalname": "marketing_nurture_content",
+          "primary_name_attribute": "content_ref"
+        }
+      },
+      "op": "create_entity",
+      "phase": "expand",
+      "seq": 22,
+      "target": {
+        "entity": "marketing_nurture_content"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Track",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "track_ref",
+          "lookup_entity": "marketing_nurture_track",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 23,
+      "target": {
+        "entity": "marketing_nurture_content",
+        "field": "track_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Kind",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "content_kind",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "email",
+              "article",
+              "event"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 24,
+      "target": {
+        "entity": "marketing_nurture_content",
+        "field": "content_kind"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Content",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": true,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "content_ref",
+          "lookup_entity": null,
+          "max_length": 64,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 25,
+      "target": {
+        "entity": "marketing_nurture_content",
+        "field": "content_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Position",
+          "field_type": "number",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": true,
+          "logicalname": "position",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 26,
+      "target": {
+        "entity": "marketing_nurture_content",
+        "field": "position"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lifecycle Stage",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "lifecycle_stage",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "subscriber",
+              "lead",
+              "marketing_qualified",
+              "sales_qualified",
+              "customer"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 27,
+      "target": {
+        "entity": "lead",
+        "field": "lifecycle_stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Nurture Interest",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "nurture_interest",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 28,
+      "target": {
+        "entity": "lead",
+        "field": "nurture_interest"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Recycle Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "recycle_reason",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 29,
+      "target": {
+        "entity": "lead",
+        "field": "recycle_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Wake Up On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "wake_up_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 30,
+      "target": {
+        "entity": "lead",
+        "field": "wake_up_on"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Campaign",
+          "field_type": "lookup",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "campaign_ref",
+          "lookup_entity": "campaign",
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 31,
+      "target": {
+        "entity": "lead",
+        "field": "campaign_ref"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Lifecycle Stage",
+          "field_type": "choice",
+          "is_customized": true,
+          "is_filterable": true,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "lifecycle_stage",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": {
+            "choices": [
+              "subscriber",
+              "lead",
+              "marketing_qualified",
+              "sales_qualified",
+              "customer"
+            ],
+            "multi": false
+          }
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 32,
+      "target": {
+        "entity": "contact",
+        "field": "lifecycle_stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Nurture Interest",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "nurture_interest",
+          "lookup_entity": null,
+          "max_length": 200,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 33,
+      "target": {
+        "entity": "contact",
+        "field": "nurture_interest"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Recycle Reason",
+          "field_type": "text",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "recycle_reason",
+          "lookup_entity": null,
+          "max_length": 500,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 34,
+      "target": {
+        "entity": "contact",
+        "field": "recycle_reason"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "data_classification": "general",
+          "display_name": "Wake Up On",
+          "field_type": "date",
+          "is_customized": true,
+          "is_filterable": false,
+          "is_required": false,
+          "is_sensitive": false,
+          "is_sortable": false,
+          "logicalname": "wake_up_on",
+          "lookup_entity": null,
+          "max_length": null,
+          "on_target_delete": "orphan",
+          "options": null
+        }
+      },
+      "op": "add_field",
+      "phase": "expand",
+      "seq": 35,
+      "target": {
+        "entity": "contact",
+        "field": "wake_up_on"
+      }
+    },
+    {
+      "args": {
+        "display_name": "برنامج الرعاية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 36,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 37,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الرحلة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 38,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.journey_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الجمهور"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 39,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.audience_list_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الدورية (أيام)"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 40,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.cadence_days",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "العملاء المحتملون فقط"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 41,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.acquisition_only",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المسارات"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 42,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.tracks_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الإيقاف المؤقت"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 43,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.pause_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "إعادة التدوير"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 44,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.recycling_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اتفاقية التسليم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 45,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.sla_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اختيار المحتوى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 46,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.content_selection_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اقتراحات الوكيل"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 47,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.agent_suggestions_enabled",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "ساعات العمل للاتفاقية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 48,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.sla_business_hours",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحالة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 49,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_program.status",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مسار الرعاية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 50,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_track",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاسم"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 51,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_track.name",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "البرنامج"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 52,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_track.program_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرحلة دورة الحياة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 53,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_track.lifecycle_stage",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الاهتمام"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 54,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_track.interest",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اللغة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 55,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_track.language",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الترتيب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 56,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_track.position",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "محتوى الرعاية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 57,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_content",
+        "object_kind": "entity"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المسار"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 58,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_content.track_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "النوع"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 59,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_content.content_kind",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "المحتوى"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 60,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_content.content_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الترتيب"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 61,
+      "target": {
+        "locale": "ar",
+        "object_key": "marketing_nurture_content.position",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرحلة دورة الحياة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 62,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.lifecycle_stage",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اهتمام الرعاية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 63,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.nurture_interest",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سبب إعادة التدوير"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 64,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.recycle_reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "موعد التنبيه"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 65,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.wake_up_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "الحملة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 66,
+      "target": {
+        "locale": "ar",
+        "object_key": "lead.campaign_ref",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "مرحلة دورة الحياة"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 67,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.lifecycle_stage",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "اهتمام الرعاية"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 68,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.nurture_interest",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "سبب إعادة التدوير"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 69,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.recycle_reason",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "display_name": "موعد التنبيه"
+      },
+      "op": "set_label",
+      "phase": "expand",
+      "seq": 70,
+      "target": {
+        "locale": "ar",
+        "object_key": "contact.wake_up_on",
+        "object_kind": "attribute"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "entity": "lead",
+          "entity_mappings": [],
+          "is_customized": true,
+          "is_report": true,
+          "name": "Marketing: Leads per Lifecycle Stage",
+          "required_privilege": "lead.read",
+          "sql": "SELECT lifecycle_stage, COUNT(*) AS leads FROM lead WHERE is_active = true GROUP BY lifecycle_stage ORDER BY lifecycle_stage",
+          "table_definition": "[]"
+        }
+      },
+      "op": "upsert_query",
+      "phase": "expand",
+      "seq": 71,
+      "target": {
+        "entity": "lead",
+        "query": "Marketing: Leads per Lifecycle Stage"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 46,
+          "entity": null,
+          "icon": "la-seedling",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Nurture"
+          ],
+          "privileges": [],
+          "route": null
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 72,
+      "target": {
+        "path": "Nurture"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 1,
+          "entity": null,
+          "icon": "la-stream",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Nurture",
+            "Programmes"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/marketing_nurture_program/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 73,
+      "target": {
+        "path": "Nurture/Programmes"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 2,
+          "entity": null,
+          "icon": "la-route",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Nurture",
+            "Tracks"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/marketing_nurture_track/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 74,
+      "target": {
+        "path": "Nurture/Tracks"
+      }
+    },
+    {
+      "args": {
+        "definition": {
+          "color": null,
+          "display_order": 3,
+          "entity": null,
+          "icon": "la-file-alt",
+          "is_container": false,
+          "is_customized": true,
+          "is_disabled": false,
+          "module_key": null,
+          "path": [
+            "Nurture",
+            "Content"
+          ],
+          "privileges": [],
+          "route": "/xrm/entity/marketing_nurture_content/list"
+        }
+      },
+      "op": "upsert_sidebar_item",
+      "phase": "expand",
+      "seq": 75,
+      "target": {
+        "path": "Nurture/Content"
+      }
+    }
+  ],
+  "requires": {
+    "modules": [
+      "core",
+      "view"
+    ],
+    "platform": ">=0.1.0"
+  },
+  "scope": "marketing",
+  "seq": 4,
+  "title": "Pack: nurture programmes, tracks and content; lifecycle stage on leads and contacts"
+}
