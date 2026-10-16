@@ -39,6 +39,7 @@ pub mod record_update_field;
 pub mod record_write;
 pub mod route_classify;
 pub mod sales_lines;
+pub mod sales_team;
 pub mod search_records;
 pub mod sentiment;
 pub mod summary_context;
@@ -87,6 +88,7 @@ pub fn all() -> Vec<ActionDescriptor> {
     all.extend(duplicates::descriptors());
     all.extend(commission::descriptors());
     all.extend(sales_lines::descriptors());
+    all.extend(sales_team::descriptors());
     all
 }
 
@@ -133,5 +135,6 @@ pub(crate) fn all_executors() -> Vec<Box<dyn crate::execute::Action>> {
     all.extend(duplicates::executors());
     all.extend(commission::executors());
     all.extend(sales_lines::executors());
+    all.extend(sales_team::executors());
     all
 }

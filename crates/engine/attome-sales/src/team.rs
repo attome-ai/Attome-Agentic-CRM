@@ -322,23 +322,34 @@ pub(crate) async fn post_sales_team_member(
     Path(opportunity): Path<Uuid>,
     Json(body): Json<SalesTeamMemberBody>,
 ) -> Result<(StatusCode, Json<SalesTeamMember>), AppError> {
+    add_member(&state, &ctx, opportunity, body).await
+}
+
+/// Adds a team member as the caller (the route and the `sales.team.add`
+/// agent action share it).
+pub async fn add_member(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    opportunity: Uuid,
+    body: SalesTeamMemberBody,
+) -> Result<(StatusCode, Json<SalesTeamMember>), AppError> {
     if body.user_ref.is_some() == body.partner_contact_ref.is_some() {
         return Err(AppError::Validation(
             "give user_ref or partner_contact_ref, not both".into(),
         ));
     }
-    let entity = require_deal_update(&state, &ctx, opportunity).await?;
+    let entity = require_deal_update(state, ctx, opportunity).await?;
     if body.partner_contact_ref.is_some() {
-        crate::flags::require(&state, &ctx, crate::flags::PARTNER_MEMBERS).await?;
+        crate::flags::require(state, ctx, crate::flags::PARTNER_MEMBERS).await?;
     }
     if let Some(user) = body.user_ref {
-        check_member_access(&state, user, body.access_level).await?;
+        check_member_access(state, user, body.access_level).await?;
     }
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     lock(&mut tx, opportunity).await?;
     let member = add_member_in_tx(
         &mut tx,
-        &state,
+        state,
         entity,
         opportunity,
         NewMember {
@@ -352,7 +363,7 @@ pub(crate) async fn post_sales_team_member(
     .await?;
     let created = read_member(&mut tx, opportunity, member).await?;
     attome_db::tx::commit(tx).await?;
-    invalidate(&state, body.user_ref).await?;
+    invalidate(state, body.user_ref).await?;
     Ok((StatusCode::CREATED, Json(created)))
 }
 
@@ -467,7 +478,17 @@ pub(crate) async fn delete_sales_team_member(
     ctx: Authorized<Privilege<OpportunityUpdate>>,
     Path((opportunity, member)): Path<(Uuid, Uuid)>,
 ) -> Result<StatusCode, AppError> {
-    require_deal_update(&state, &ctx, opportunity).await?;
+    remove_member(&state, &ctx, opportunity, member).await
+}
+
+/// Removes a team member and their share, as the caller.
+pub async fn remove_member(
+    state: &EngineState,
+    ctx: &SecurityContext,
+    opportunity: Uuid,
+    member: Uuid,
+) -> Result<StatusCode, AppError> {
+    require_deal_update(state, ctx, opportunity).await?;
     let mut tx = attome_db::tx::begin(&state.base.db).await?;
     lock(&mut tx, opportunity).await?;
     let current = read_member(&mut tx, opportunity, member).await?;
@@ -495,13 +516,13 @@ pub(crate) async fn delete_sales_team_member(
         .map_err(AppError::internal)?;
     write_security_event(
         &mut tx,
-        &attome_audit::audit_service(&state),
+        &attome_audit::audit_service(state),
         access_event(ctx.user_id, member, AuditOperation::Revoke)
             .comment(format!("deal {opportunity}: member removed")),
     )
     .await?;
     attome_db::tx::commit(tx).await?;
-    invalidate(&state, current.user_ref).await?;
+    invalidate(state, current.user_ref).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

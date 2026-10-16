@@ -464,9 +464,20 @@ pub(crate) async fn put_sales_splits(
     Path(opportunity): Path<Uuid>,
     Json(body): Json<SalesSplitsBody>,
 ) -> Result<(StatusCode, Json<SalesSplitsOutcome>), AppError> {
-    crate::flags::require(&state, &ctx, crate::flags::SPLITS).await?;
+    replace_splits(&state, &ctx, opportunity, body).await
+}
+
+/// Replaces a deal's splits (or proposes the change on a won deal), as the
+/// caller.
+pub async fn replace_splits(
+    state: &EngineState,
+    ctx: &attome_server::security::SecurityContext,
+    opportunity: Uuid,
+    body: SalesSplitsBody,
+) -> Result<(StatusCode, Json<SalesSplitsOutcome>), AppError> {
+    crate::flags::require(state, ctx, crate::flags::SPLITS).await?;
     if body.splits.iter().any(|s| s.line_id.is_some()) {
-        crate::flags::require(&state, &ctx, crate::flags::LINE_SPLITS).await?;
+        crate::flags::require(state, ctx, crate::flags::LINE_SPLITS).await?;
     }
     let entity_id = state
         .entities
@@ -475,8 +486,8 @@ pub(crate) async fn put_sales_splits(
         .map(|m| m.entity_id)
         .ok_or(AppError::NotFound)?;
     attome_records::entity_crud::require_record_access(
-        &state,
-        &ctx,
+        state,
+        ctx,
         entity_id,
         "opportunity",
         opportunity,
@@ -514,7 +525,7 @@ pub(crate) async fn put_sales_splits(
         };
         let payload = serde_json::to_value(&proposal).map_err(AppError::internal)?;
         let request = attome_audit::approval::gate_regarding_required(
-            &state,
+            state,
             ACTION_SPLIT_CHANGE,
             payload,
             ctx.user_id,
@@ -540,7 +551,7 @@ pub(crate) async fn put_sales_splits(
     replace_in_tx(&mut tx, opportunity, owner, &body.splits).await?;
     attome_audit::write_business_event_in_tx(
         &mut tx,
-        &attome_audit::audit_service(&state),
+        &attome_audit::audit_service(state),
         attome_audit::BusinessEvent::new(
             "opportunity",
             opportunity,

@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Agent actions `sales.team.add`, `sales.team.remove` and `sales.splits.propose` (confirmed writes through
+  the team and split routes' own functions; a won deal's split change opens its approval) and
+  `sales.team.suggest` (people on won deals with the same account, as a draft).
 - `POST /api/v1/sales/opportunities/{id}/sync {direction: from_quote, force}` replaces a deal's lines
   with copies of its primary quote's and reprices it; when both changed since the last sync it answers
   `409 sync_both_changed` with both line sets. `to_quote` is refused (quotes change through CPQ).
