@@ -32,6 +32,9 @@ that makes it; the release gate's contract step refuses a release that breaks th
   and carry `Cross-Origin-Resource-Policy: same-origin`.
 
 ### Added
+- Win/loss reviews: a deal closing at or above its stage's `review_amount_threshold` gets a draft
+  `win_loss_review` with a snapshot of its competitors and a task for its owner due in seven days, made
+  after the close and once per outcome.
 - Follower notifications: a change, deletion or restore of a record tells its followers and its owner in
   the app (never the person who made it, never someone who can no longer read it), under the new
   `record_followed` notification preference category.

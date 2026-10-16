@@ -32,6 +32,7 @@ pub mod splits;
 pub mod team;
 pub mod team_defaults;
 pub mod undo;
+pub mod win_loss;
 
 pub use model::SalesModel;
 

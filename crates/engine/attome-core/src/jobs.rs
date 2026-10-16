@@ -467,6 +467,9 @@ pub enum EngineJob {
     /// C2-T1: tells followers about changes to records they follow, off
     /// the change feed. Bare unit variant.
     NotificationFollowSweep,
+    /// D25-T3: win/loss reviews for big closes, off the change feed. Bare
+    /// unit variant.
+    SalesDealCloseSweep,
     /// M03 (Security & Identity) gap 1 / D-434 — periodic sweep: flips every
     /// `access_review` campaign still `active` past its `due_date`
     /// to `completed`, whatever state its items are in. Bare unit variant,
@@ -927,6 +930,7 @@ impl EngineJob {
             | Self::CommissionCreditSweep
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
+            | Self::SalesDealCloseSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1034,6 +1038,7 @@ impl EngineJob {
             EngineJob::CommissionCreditSweep => "CommissionCreditSweep",
             EngineJob::SalesSnapshotPrune => "SalesSnapshotPrune",
             EngineJob::NotificationFollowSweep => "NotificationFollowSweep",
+            EngineJob::SalesDealCloseSweep => "SalesDealCloseSweep",
             EngineJob::AccessReviewCampaignSweep => "AccessReviewCampaignSweep",
             EngineJob::RollbackMigrationRun { .. } => "RollbackMigrationRun",
             EngineJob::DataMatchSweep => "DataMatchSweep",
@@ -1148,6 +1153,7 @@ impl EngineJob {
             | Self::CommissionCreditSweep
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
+            | Self::SalesDealCloseSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::DataMatchScan { .. }
@@ -1279,6 +1285,7 @@ impl EngineJob {
             | Self::CommissionCreditSweep
             | Self::SalesSnapshotPrune
             | Self::NotificationFollowSweep
+            | Self::SalesDealCloseSweep
             | Self::AccessReviewCampaignSweep
             | Self::DataMatchSweep
             | Self::ApiUsageRollup
@@ -1627,6 +1634,7 @@ mod tests {
         assert_round_trips(EngineJob::CommissionCreditSweep);
         assert_round_trips(EngineJob::SalesSnapshotPrune);
         assert_round_trips(EngineJob::NotificationFollowSweep);
+        assert_round_trips(EngineJob::SalesDealCloseSweep);
         assert_round_trips(EngineJob::SalesDefaultTeamApply {
             owner_id: Uuid::now_v7(),
         });
