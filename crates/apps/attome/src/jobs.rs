@@ -786,6 +786,11 @@ async fn dispatch_platform_job(
             if resumed > 0 {
                 tracing::info!(resumed, "workflow SLA sweep: run complete");
             }
+            // M1-T2: schedule-triggered flows ride the same minute sweep.
+            let started = attome_workflow::schedule_trigger::run_due(&attome_state).await?;
+            if started > 0 {
+                tracing::info!(started, "workflow schedule triggers: flows started");
+            }
         }
         EngineJob::WorkflowEntityTriggerDispatch => {
             let started = attome_workflow::entity_trigger::dispatch_pending(&attome_state).await?;

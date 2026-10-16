@@ -8,6 +8,7 @@ pub mod graph;
 pub mod instance_admin;
 pub mod model;
 pub mod node_types;
+pub mod schedule_trigger;
 pub mod scheduler;
 pub mod simulate;
 pub mod sla_sweep;
