@@ -4,6 +4,7 @@ pub mod clock;
 pub mod cmdb_impact;
 pub mod cmdb_reconcile;
 pub mod convert;
+pub mod entitlement;
 mod intake;
 pub mod model;
 pub mod offering;
